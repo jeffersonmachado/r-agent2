@@ -1,0 +1,32 @@
+# Dados de desenvolvimento
+api/data/flows.json
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+

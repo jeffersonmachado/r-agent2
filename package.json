@@ -1,0 +1,18 @@
+{
+  "name": "chatbot-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Engine de fluxo de chatbot (Node.js) com execução determinística e replay.",
+  "scripts": {
+    "test": "jest",
+    "start": "node api/server.js",
+    "start:frontend": "cd frontend && npm start",
+    "start:api": "node api/server.js",
+    "dev": "./scripts/start-dev.sh"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
+
+

@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@theme {
+  /* Cores customizadas - Backgrounds */
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #1a1a1a;
+  --color-bg-elevated: #1f1f1f;
+  --color-bg-hover: #252525;
+  
+  /* Borders */
+  --color-border-default: #2a2a2a;
+  --color-border-hover: #3a3a3a;
+  --color-border-focus: #4a4a4a;
+  
+  /* Text */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a0a0a0;
+  --color-text-tertiary: #707070;
+  --color-text-disabled: #404040;
+  
+  /* Accent */
+  --color-accent-primary: #5e6ad2;
+  --color-accent-hover: #6b77e0;
+  --color-accent-pressed: #525cc4;
+  --color-accent-light: rgba(94, 106, 210, 0.1);
+  
+  /* Status */
+  --color-status-success: #10b981;
+  --color-status-error: #ef4444;
+  --color-status-warning: #f59e0b;
+  --color-status-info: #3b82f6;
+  
+  /* Node types */
+  --color-node-start: #8b5cf6;
+  --color-node-message: #3b82f6;
+  --color-node-user-input: #10b981;
+  --color-node-router: #f59e0b;
+  --color-node-set-variable: #6366f1;
+  --color-node-handoff: #ec4899;
+  --color-node-ai: #14b8a6;
+  --color-node-end: #6b7280;
+  
+  /* Fontes */
+  --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  
+  /* Tamanhos de fonte */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 18px;
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  
+  /* Transições */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+  
+  body {
+    @apply m-0 p-0;
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /* Utilitários customizados para o editor */
+  .node-shadow {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .node-shadow-selected {
+    box-shadow: 0 8px 32px rgba(94, 106, 210, 0.5), 0 4px 16px rgba(94, 106, 210, 0.3);
+  }
+  
+  /* Scrollbar customizada */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thumb-border-default::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-default);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thumb-border-default::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-border-hover);
+  }
+  
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  /* Animações */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slide-in-from-top-2 {
+    from {
+      transform: translateY(-8px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-in {
+    animation: fade-in 0.2s ease-out;
+  }
+  
+  .fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+  
+  .slide-in-from-top-2 {
+    animation: slide-in-from-top-2 0.2s ease-out;
+  }
+  
+  @keyframes slide-in-from-top-4 {
+    from {
+      transform: translateY(-16px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  .slide-in-from-top-4 {
+    animation: slide-in-from-top-4 0.3s ease-out;
+  }
+  
+  .slide-in-from-right {
+    animation: slide-in-from-right 0.3s ease-out;
+  }
+  
+  .duration-200 {
+    animation-duration: 200ms;
+  }
+  
+  .duration-300 {
+    animation-duration: 300ms;
+  }
+}
+

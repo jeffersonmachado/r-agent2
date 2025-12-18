@@ -1,0 +1,418 @@
+const http = require('http');
+const { createServer } = require('./server');
+
+/**
+ * Helper para fazer requisições HTTP simples contra o servidor em teste.
+ *
+ * @param {number} port
+ * @param {string} method
+ * @param {string} path
+ * @param {any} [body]
+ * @returns {Promise<{ status: number, headers: http.IncomingHttpHeaders, body: any }>}
+ */
+function request(port, method, path, body) {
+  return new Promise((resolve, reject) => {
+    const payload =
+      body === undefined ? null : typeof body === 'string' ? body : JSON.stringify(body);
+
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path,
+        method,
+        headers:
+          payload != null
+            ? {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+              }
+            : {},
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          let parsed = null;
+          if (data) {
+            try {
+              parsed = JSON.parse(data);
+            } catch {
+              parsed = data;
+            }
+          }
+          resolve({
+            status: res.statusCode || 0,
+            headers: res.headers,
+            body: parsed,
+          });
+        });
+      },
+    );
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    if (payload != null) {
+      req.write(payload);
+    }
+
+    req.end();
+  });
+}
+
+describe('API server (api/server.js)', () => {
+  /** @type {http.Server} */
+  let server;
+  let port;
+
+  beforeAll((done) => {
+    server = createServer();
+    server.listen(0, () => {
+      const address = server.address();
+      if (address && typeof address === 'object') {
+        port = address.port;
+      } else {
+        port = 0;
+      }
+      done();
+    });
+  });
+
+  afterAll((done) => {
+    if (server) {
+      // Fecha todas as conexões pendentes antes de fechar o servidor
+      server.closeAllConnections();
+      server.close(() => {
+        // Aguarda um pouco para garantir que todas as conexões foram fechadas
+        setTimeout(done, 100);
+      });
+    } else {
+      done();
+    }
+  });
+
+  test('GET /health deve retornar status ok', async () => {
+    const res = await request(port, 'GET', '/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+
+  test('GET /version deve retornar nome e env', async () => {
+    const res = await request(port, 'GET', '/version');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('name', 'chatbot-engine-api');
+    expect(res.body).toHaveProperty('env');
+  });
+
+  test('Fluxo completo: POST /flows -> GET /flows/:id -> validate -> simulate -> GET /replay/:sessionId', async () => {
+    // 1) Cria fluxo mínimo
+    const baseFlow = {
+      tenantId: 'tenant-demo',
+      id: 'flow-test-1',
+      name: 'Fluxo de teste',
+      version: 1,
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    const createRes = await request(port, 'POST', '/flows', baseFlow);
+    expect(createRes.status).toBe(200);
+    expect(createRes.body).toHaveProperty('id');
+    const savedFlow = createRes.body;
+
+    // 2) GET /flows/:id
+    const getRes = await request(port, 'GET', `/flows/${encodeURIComponent(savedFlow.id)}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body).toHaveProperty('id', savedFlow.id);
+
+    // 3) POST /flows/validate
+    const validateRes = await request(port, 'POST', '/flows/validate', savedFlow);
+    expect(validateRes.status).toBe(200);
+    expect(validateRes.body).toHaveProperty('valid');
+    expect(Array.isArray(validateRes.body.errors)).toBe(true);
+
+    // 4) POST /flows/simulate
+    const simulateRes = await request(port, 'POST', '/flows/simulate', {
+      flowId: savedFlow.id,
+      maxSteps: 10,
+    });
+
+    expect(simulateRes.status).toBe(200);
+    expect(simulateRes.body).toHaveProperty('compiledFlowInfo');
+    expect(simulateRes.body).toHaveProperty('steps');
+    expect(simulateRes.body).toHaveProperty('events');
+    expect(simulateRes.body).toHaveProperty('replay');
+
+    const simulation = simulateRes.body;
+    expect(simulation.replay).toHaveProperty('sessionId');
+    const sessionId = simulation.replay.sessionId;
+    expect(typeof sessionId).toBe('string');
+
+    // 5) GET /replay/:sessionId
+    const replayRes = await request(
+      port,
+      'GET',
+      `/replay/${encodeURIComponent(sessionId)}`,
+    );
+    expect(replayRes.status).toBe(200);
+    expect(replayRes.body).toHaveProperty('messages');
+    expect(replayRes.body).toHaveProperty('nodesVisited');
+  });
+
+  test('GET /flows deve retornar array (pode estar vazio)', async () => {
+    const res = await request(port, 'GET', '/flows');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  test('PUT /flows/:id deve atualizar fluxo existente ou criar se não existir', async () => {
+    const flowId = 'flow-put-test';
+    const putRes1 = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, {
+      name: 'Primeira versão',
+      nodes: [],
+    });
+    expect(putRes1.status).toBe(200);
+    expect(putRes1.body).toHaveProperty('id', flowId);
+
+    const putRes2 = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, {
+      name: 'Segunda versão',
+    });
+    expect(putRes2.status).toBe(200);
+    expect(putRes2.body).toHaveProperty('id', flowId);
+    expect(putRes2.body).toHaveProperty('name', 'Segunda versão');
+  });
+
+  test('Fluxo inexistente deve retornar 404 apropriado', async () => {
+    const res = await request(port, 'GET', '/flows/nao-existe');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'flow_not_found' });
+  });
+
+  test('DELETE /flows/:id deve remover fluxo existente', async () => {
+    const flowId = 'flow-delete-test';
+    // Primeiro cria um fluxo
+    const createRes = await request(port, 'POST', '/flows', {
+      id: flowId,
+      name: 'Fluxo para deletar',
+      nodes: [],
+    });
+    expect(createRes.status).toBe(200);
+    expect(createRes.body).toHaveProperty('id', flowId);
+
+    // Verifica que o fluxo existe
+    const getRes = await request(port, 'GET', `/flows/${encodeURIComponent(flowId)}`);
+    expect(getRes.status).toBe(200);
+
+    // Deleta o fluxo
+    const deleteRes = await request(port, 'DELETE', `/flows/${encodeURIComponent(flowId)}`);
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body).toHaveProperty('success', true);
+    expect(deleteRes.body).toHaveProperty('deletedId', flowId);
+
+    // Verifica que o fluxo não existe mais
+    const getResAfter = await request(port, 'GET', `/flows/${encodeURIComponent(flowId)}`);
+    expect(getResAfter.status).toBe(404);
+  });
+
+  test('DELETE /flows/:id deve retornar 404 para fluxo inexistente', async () => {
+    const res = await request(port, 'DELETE', '/flows/nao-existe');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'flow_not_found' });
+  });
+
+  test('Body JSON inválido deve retornar 400 em /flows e /flows/validate', async () => {
+    // Força JSON inválido em /flows
+    const res1 = await request(port, 'POST', '/flows', '{ invalid-json');
+    expect(res1.status).toBe(400);
+    expect(res1.body).toHaveProperty('error', 'bad_request');
+
+    // JSON inválido em /flows/validate
+    const res2 = await request(port, 'POST', '/flows/validate', '{ invalid-json');
+    expect(res2.status).toBe(400);
+    expect(res2.body).toHaveProperty('error', 'bad_request');
+  });
+
+  test('POST /flows/simulate com flowId ausente ou inexistente', async () => {
+    const res1 = await request(port, 'POST', '/flows/simulate', {});
+    expect(res1.status).toBe(400);
+    expect(res1.body).toHaveProperty('error', 'bad_request');
+
+    const res2 = await request(port, 'POST', '/flows/simulate', {
+      flowId: 'nao-existe',
+    });
+    expect(res2.status).toBe(404);
+    expect(res2.body).toHaveProperty('error', 'flow_not_found');
+  });
+
+  test('GET /replay/:sessionId deve retornar 404 se sessão não existir', async () => {
+    const res = await request(port, 'GET', '/replay/sessao-inexistente');
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error', 'session_not_found');
+  });
+
+  test('POST /flows com fluxo sem tenantId usa defaultTenantId', async () => {
+    const flowWithoutTenant = {
+      id: 'flow-no-tenant',
+      name: 'Fluxo sem tenant',
+      nodes: [],
+    };
+
+    const res = await request(port, 'POST', '/flows', flowWithoutTenant);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('tenantId', 'tenant-demo');
+    expect(res.body).toHaveProperty('id', 'flow-no-tenant');
+  });
+
+  test('POST /flows com fluxo sem id gera id automaticamente', async () => {
+    const flowWithoutId = {
+      tenantId: 'tenant-demo',
+      name: 'Fluxo sem id',
+      nodes: [],
+    };
+
+    const res = await request(port, 'POST', '/flows', flowWithoutId);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('id');
+    expect(typeof res.body.id).toBe('string');
+    expect(res.body.id.length).toBeGreaterThan(0);
+  });
+
+  test('PUT /flows/:id com id diferente no body deve usar id da URL', async () => {
+    const flowId = 'flow-url-id';
+    const flow = {
+      id: 'flow-body-id', // diferente do id na URL
+      tenantId: 'tenant-demo',
+      name: 'Teste ID',
+      nodes: [],
+    };
+
+    const res = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, flow);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('id', flowId); // deve usar o id da URL
+  });
+
+  test('POST /flows/simulate aceita maxSteps e executa simulação', async () => {
+    // Primeiro cria um fluxo
+    const flow = {
+      tenantId: 'tenant-demo',
+      id: 'flow-simulate-test',
+      name: 'Fluxo para simulação',
+      version: 1,
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    await request(port, 'POST', '/flows', flow);
+
+    // Simula com maxSteps customizado
+    const res = await request(port, 'POST', '/flows/simulate', {
+      flowId: 'flow-simulate-test',
+      maxSteps: 5,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('steps');
+    expect(Array.isArray(res.body.steps)).toBe(true);
+  });
+
+  test('POST /flows/simulate com maxSteps muito alto deve ser limitado', async () => {
+    const flow = {
+      tenantId: 'tenant-demo',
+      id: 'flow-simulate-limit',
+      name: 'Fluxo para teste de limite',
+      version: 1,
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    await request(port, 'POST', '/flows', flow);
+
+    const res = await request(port, 'POST', '/flows/simulate', {
+      flowId: 'flow-simulate-limit',
+      maxSteps: 10000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('steps');
+    // Deve ter um limite razoável de passos
+    expect(res.body.steps.length).toBeLessThanOrEqual(1000);
+  });
+
+  test('GET /flows retorna todos os fluxos (sem filtro por tenantId)', async () => {
+    const flow1 = {
+      tenantId: 'tenant-1',
+      id: 'flow-tenant-1',
+      name: 'Fluxo Tenant 1',
+      version: 1,
+      nodes: [{ id: 'start', type: 'start', next: 'end' }, { id: 'end', type: 'end' }],
+    };
+
+    const flow2 = {
+      tenantId: 'tenant-2',
+      id: 'flow-tenant-2',
+      name: 'Fluxo Tenant 2',
+      version: 1,
+      nodes: [{ id: 'start', type: 'start', next: 'end' }, { id: 'end', type: 'end' }],
+    };
+
+    await request(port, 'POST', '/flows', flow1);
+    await request(port, 'POST', '/flows', flow2);
+
+    const res = await request(port, 'GET', '/flows');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    // Deve retornar todos os fluxos (sem filtro)
+    expect(res.body.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('POST /flows/validate com fluxo válido retorna valid: true', async () => {
+    const validFlow = {
+      tenantId: 'tenant-demo',
+      id: 'flow-valid',
+      name: 'Fluxo válido',
+      version: 1,
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    const res = await request(port, 'POST', '/flows/validate', validFlow);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('valid', true);
+    expect(res.body).toHaveProperty('errors');
+    expect(Array.isArray(res.body.errors)).toBe(true);
+  });
+
+  test('POST /flows/validate com fluxo inválido retorna valid: false e erros', async () => {
+    const invalidFlow = {
+      tenantId: 'tenant-demo',
+      id: 'flow-invalid',
+      name: 'Fluxo inválido',
+      version: 1,
+      nodes: [
+        { id: 'start', type: 'start', next: 'missing' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    const res = await request(port, 'POST', '/flows/validate', invalidFlow);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('valid', false);
+    expect(res.body).toHaveProperty('errors');
+    expect(Array.isArray(res.body.errors)).toBe(true);
+    expect(res.body.errors.length).toBeGreaterThan(0);
+  });
+});
+
+
+
