@@ -29,6 +29,157 @@ const globalContainerRef = { current: null }; // Armazena referência ao contain
 const flowSocket = new ClassicPreset.Socket('flow');
 
 /**
+ * Renderiza conexões manualmente no SVG usando os sockets do cache
+ * @param {NodeEditor} editor - Editor Rete
+ * @param {ConnectionPlugin} connection - Plugin de conexão
+ * @param {SVGElement} svgElement - Elemento SVG onde renderizar
+ */
+function renderConnectionsManually(editor, connection, svgElement) {
+  if (!editor || !connection || !svgElement) {
+    logger.warn('⚠️ Parâmetros inválidos para renderConnectionsManually', {
+      hasEditor: !!editor,
+      hasConnection: !!connection,
+      hasSvgElement: !!svgElement
+    });
+    return;
+  }
+
+  try {
+    const allConnections = editor.getConnections();
+    const socketsCache = connection.socketsCache;
+    
+    if (!socketsCache || socketsCache.size === 0) {
+      logger.warn('⚠️ socketsCache vazio, não é possível renderizar conexões manualmente');
+      return;
+    }
+
+    logger.info('🎨 Renderizando conexões manualmente', {
+      connectionsCount: allConnections.length,
+      socketsCacheSize: socketsCache.size
+    });
+
+    // Remove paths existentes para evitar duplicatas
+    const existingPaths = svgElement.querySelectorAll('path[data-connection-id]');
+    existingPaths.forEach(path => path.remove());
+
+    let renderedCount = 0;
+    
+    for (const conn of allConnections) {
+      try {
+        // Encontra os sockets no cache
+        const sourceCacheKey = `${conn.source}-${conn.sourceOutput}-output`;
+        const targetCacheKey = `${conn.target}-${conn.targetInput}-input`;
+        
+        const sourceSocketData = socketsCache.get(sourceCacheKey);
+        const targetSocketData = socketsCache.get(targetCacheKey);
+        
+        if (!sourceSocketData || !targetSocketData) {
+          logger.debug('Sockets não encontrados no cache para conexão', {
+            connectionId: conn.id,
+            sourceCacheKey,
+            targetCacheKey,
+            hasSource: !!sourceSocketData,
+            hasTarget: !!targetSocketData
+          });
+          continue;
+        }
+
+        const sourceEl = sourceSocketData.element;
+        const targetEl = targetSocketData.element;
+
+        if (!sourceEl || !targetEl) {
+          logger.debug('Elementos DOM não encontrados para sockets', {
+            connectionId: conn.id,
+            hasSourceEl: !!sourceEl,
+            hasTargetEl: !!targetEl
+          });
+          continue;
+        }
+
+        // Obtém posições dos elementos
+        const sourceRect = sourceEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const svgRect = svgElement.getBoundingClientRect();
+
+        // Calcula posições relativas ao container do editor
+        // IMPORTANTE: getBoundingClientRect retorna posições absolutas da viewport
+        // O SVG está posicionado absolutamente dentro do container, então precisamos
+        // calcular relativas ao container, não ao SVG
+        const container = svgElement.parentElement;
+        const containerRect = container ? container.getBoundingClientRect() : svgRect;
+        
+        // Calcula posições relativas ao container (onde o SVG está posicionado)
+        const x1 = sourceRect.left + sourceRect.width / 2 - containerRect.left;
+        const y1 = sourceRect.top + sourceRect.height / 2 - containerRect.top;
+        const x2 = targetRect.left + targetRect.width / 2 - containerRect.left;
+        const y2 = targetRect.top + targetRect.height / 2 - containerRect.top;
+        
+        // Verifica se as posições são válidas
+        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+          logger.warn('⚠️ Posições inválidas calculadas para conexão', {
+            connectionId: conn.id,
+            x1, y1, x2, y2,
+            sourceRect: { left: sourceRect.left, top: sourceRect.top, width: sourceRect.width, height: sourceRect.height },
+            targetRect: { left: targetRect.left, top: targetRect.top, width: targetRect.width, height: targetRect.height },
+            containerRect: { left: containerRect.left, top: containerRect.top, width: containerRect.width, height: containerRect.height }
+          });
+          continue;
+        }
+        
+        logger.debug('Posições calculadas para conexão', {
+          connectionId: conn.id,
+          sourcePos: { x: x1, y: y1 },
+          targetPos: { x: x2, y: y2 }
+        });
+
+        // Cria path SVG com curva bezier
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const cp1x = x1 + dx * 0.5;
+        const cp1y = y1;
+        const cp2x = x2 - dx * 0.5;
+        const cp2y = y2;
+        
+        path.setAttribute('d', `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`);
+        path.setAttribute('stroke', 'var(--color-accent-primary, #3b82f6)');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('data-connection-id', conn.id);
+        path.setAttribute('class', 'connection-path');
+        path.style.pointerEvents = 'stroke';
+        path.style.cursor = 'pointer';
+
+        svgElement.appendChild(path);
+        renderedCount++;
+
+        logger.debug('✅ Conexão renderizada manualmente', {
+          connectionId: conn.id,
+          source: conn.source,
+          target: conn.target,
+          path: path.getAttribute('d')
+        });
+      } catch (err) {
+        logger.warn('Erro ao renderizar conexão individual', {
+          connectionId: conn.id,
+          error: err.message
+        });
+      }
+    }
+
+    logger.info('✅ Renderização manual concluída', {
+      renderedCount,
+      totalConnections: allConnections.length
+    });
+  } catch (err) {
+    logger.error('❌ Erro ao renderizar conexões manualmente', {
+      error: err.message,
+      stack: err.stack
+    });
+  }
+}
+
+/**
  * Mapa simples de regras de conexão por tipo de nó.
  * - Chave: tipo de nó origem
  * - Valor: array de tipos de nó de destino permitidos
@@ -278,6 +429,12 @@ function FlowNodeComponentWrapper(props) {
           }
         }
         
+        // CRÍTICO: No Rete.js v2, o preset classic do ReactPlugin fornece o bindSocket
+        // quando o connection é passado. O bindSocket deve ser chamado aqui para
+        // vincular o socket ao ConnectionPlugin.
+        // O preset classic do ReactPlugin passa o bindSocket nas props, mas se não vier,
+        // precisamos usar o fallback armazenado.
+        
         // Tenta usar o socketsCache do ConnectionPlugin diretamente
         // O ConnectionPlugin mantém um cache de sockets vinculados
         if (connection && connection.socketsCache) {
@@ -291,7 +448,8 @@ function FlowNodeComponentWrapper(props) {
               : (reteNode.outputs?.[ioKey || 'out'] || (reteNode.outputs instanceof Map ? reteNode.outputs.get(ioKey || 'out') : null));
             
             if (ioToBind) {
-              // Armazena o elemento no cache
+              // CRÍTICO: Armazena o elemento no cache do ConnectionPlugin
+              // Isso é necessário para que o ConnectionPlugin possa renderizar conexões
               connection.socketsCache.set(cacheKey, {
                 element: el,
                 io: ioToBind,
@@ -304,19 +462,23 @@ function FlowNodeComponentWrapper(props) {
               el.setAttribute('data-node-id', nodeId);
               el.setAttribute('data-io-key', ioKey || (type === 'input' ? 'in' : 'out'));
               el.setAttribute('data-socket', socket?.name || 'flow');
+              el.setAttribute('data-socket-type', type);
               
-              logger.debug('Socket vinculado via connection.socketsCache', { 
+              logger.info('✅ Socket adicionado ao cache do ConnectionPlugin', { 
                 nodeId, 
                 type, 
                 ioKey,
                 socketName: socket?.name,
-                cacheKey
+                cacheKey,
+                cacheSize: connection.socketsCache.size
               });
               
-              // Força atualização do ConnectionPlugin para renderizar conexões
+              // CRÍTICO: Força atualização do ConnectionPlugin para renderizar conexões
+              // O ConnectionPlugin precisa saber sobre o socket para renderizar conexões
               if (connection.update && typeof connection.update === 'function') {
                 try {
                   connection.update('socket', { element: el, io: ioToBind });
+                  logger.debug('✅ ConnectionPlugin.update chamado após adicionar socket ao cache');
                 } catch (updateErr) {
                   logger.warn('Erro ao atualizar connection após bind socket', { error: updateErr.message });
                 }
@@ -346,6 +508,14 @@ function FlowNodeComponentWrapper(props) {
               }, 50);
               
               return;
+            } else {
+              logger.warn('⚠️ ioToBind não encontrado para adicionar ao cache', {
+                nodeId,
+                type,
+                ioKey,
+                hasInputs: !!reteNode.inputs,
+                hasOutputs: !!reteNode.outputs
+              });
             }
           } catch (err) {
             logger.warn('Erro ao vincular socket via connection.socketsCache', {
@@ -354,34 +524,18 @@ function FlowNodeComponentWrapper(props) {
               error: err.message
             });
           }
+        } else {
+          logger.warn('⚠️ ConnectionPlugin.socketsCache não disponível', {
+            hasConnection: !!connection,
+            hasSocketsCache: !!(connection && connection.socketsCache)
+          });
         }
         
-        // Tenta usar o método bind do connection diretamente com o input/output do nó
-        if (connection && typeof connection.bind === 'function') {
-          try {
-            // O bind pode receber o elemento e o input/output
-            // IMPORTANTE: No Rete.js v2.0, inputs/outputs são objetos, não Maps
-            const ioToBind = type === 'input' 
-              ? (reteNode.inputs?.[ioKey || 'in'] || (reteNode.inputs instanceof Map ? reteNode.inputs.get(ioKey || 'in') : null))
-              : (reteNode.outputs?.[ioKey || 'out'] || (reteNode.outputs instanceof Map ? reteNode.outputs.get(ioKey || 'out') : null));
-            if (ioToBind) {
-              connection.bind(el, ioToBind);
-              logger.debug('Socket vinculado via connection.bind', { 
-                nodeId, 
-                type, 
-                ioKey,
-                socketName: socket?.name 
-              });
-              return;
-            }
-          } catch (err) {
-            logger.warn('Erro ao vincular socket via connection.bind', {
-              nodeId,
-              type,
-              error: err.message
-            });
-          }
-        }
+        // CRÍTICO: No Rete.js v2, o ConnectionPlugin não tem método bind direto
+        // Os sockets são vinculados através do preset classic que é usado pelo ReactPlugin
+        // O bindSocket vem do preset classic do ReactPlugin quando connection é passado
+        // Por enquanto, apenas prepara o elemento com os atributos corretos
+        // O preset classic do ReactPlugin fará o bind automaticamente
         
         // Fallback: tenta obter o bindSocket do preset do connection diretamente
         let connectionBindSocket = null;
@@ -1455,22 +1609,85 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         globalConnectionBindSocketRef.current = (el, socketOrIo, typeOrUndefined) => {
           if (!el) return;
           
+          const connection = globalConnectionRef.current;
+          const editor = globalEditorRef.current;
+          
           try {
             // Determina se é (el, socket, type) ou (el, io)
-            let socket, type, io;
+            let socket, type, io, nodeId, ioKey;
             if (typeOrUndefined !== undefined) {
               // Assinatura: (el, socket, type)
               socket = socketOrIo;
-              type = typeOrUndefined;
+              // CRÍTICO: Garante que type seja 'input' ou 'output'
+              if (typeof typeOrUndefined === 'string' && (typeOrUndefined === 'input' || typeOrUndefined === 'output')) {
+                type = typeOrUndefined;
+              } else {
+                // Tenta inferir do elemento ou assume input
+                const elType = el.getAttribute('data-socket-type') || el.dataset.socketType;
+                type = (elType === 'input' || elType === 'output') ? elType : 'input';
+              }
+              // Tenta obter nodeId e ioKey do elemento
+              nodeId = el.getAttribute('data-node-id');
+              ioKey = el.getAttribute('data-io-key') || el.dataset.ioKey || (type === 'input' ? 'in' : 'out');
             } else if (socketOrIo && socketOrIo.socket) {
               // Assinatura: (el, io) onde io tem propriedade socket
               io = socketOrIo;
               socket = io.socket || flowSocket;
-              type = io.type || 'input'; // Assume input por padrão
+              // CRÍTICO: Tenta inferir o tipo do io ou do elemento
+              if (typeof io.type === 'string' && (io.type === 'input' || io.type === 'output')) {
+                type = io.type;
+              } else {
+                // Tenta inferir do elemento ou do contexto
+                const elType = el.getAttribute('data-socket-type') || el.dataset.socketType;
+                if (elType === 'input' || elType === 'output') {
+                  type = elType;
+                } else {
+                  // Tenta inferir do ioKey
+                  const inferredIoKey = io.key || el.getAttribute('data-io-key') || el.dataset.ioKey;
+                  type = (inferredIoKey === 'in' || inferredIoKey === 'input') ? 'input' : 'output';
+                }
+              }
+              nodeId = io.node ? String(io.node.id) : el.getAttribute('data-node-id');
+              ioKey = io.key || el.getAttribute('data-io-key') || el.dataset.ioKey;
+            } else if (socketOrIo && socketOrIo.node) {
+              // Assinatura: (el, io) onde io tem propriedade node
+              io = socketOrIo;
+              socket = flowSocket;
+              // Tenta inferir o tipo
+              const elType = el.getAttribute('data-socket-type') || el.dataset.socketType;
+              type = (elType === 'input' || elType === 'output') ? elType : 'input';
+              nodeId = String(io.node.id);
+              ioKey = io.key || 'in';
             } else {
               // Fallback: assume que socketOrIo é o socket
               socket = socketOrIo || flowSocket;
-              type = 'input'; // Assume input por padrão
+              // Tenta inferir o tipo do elemento
+              const elType = el.getAttribute('data-socket-type') || el.dataset.socketType;
+              type = (elType === 'input' || elType === 'output') ? elType : 'input';
+              nodeId = el.getAttribute('data-node-id');
+              ioKey = el.getAttribute('data-io-key') || el.dataset.ioKey || 'in';
+            }
+            
+            // CRÍTICO: Garante que type seja sempre 'input' ou 'output'
+            if (type !== 'input' && type !== 'output') {
+              logger.warn('⚠️ Tipo inválido detectado, corrigindo', { originalType: type, nodeId, ioKey });
+              // Tenta inferir do ioKey como último recurso
+              const inferredIoKey = ioKey || el.getAttribute('data-io-key') || el.dataset.ioKey;
+              type = (inferredIoKey === 'in' || inferredIoKey === 'input') ? 'input' : 'output';
+            }
+            
+            // CRÍTICO: Se temos nodeId mas não temos io, tenta obter do editor
+            if (nodeId && !io && editor) {
+              const reteNode = editor.getNode(nodeId);
+              if (reteNode) {
+                const ioToGet = type === 'input' 
+                  ? (reteNode.inputs?.[ioKey] || (reteNode.inputs instanceof Map ? reteNode.inputs.get(ioKey) : null))
+                  : (reteNode.outputs?.[ioKey] || (reteNode.outputs instanceof Map ? reteNode.outputs.get(ioKey) : null));
+                if (ioToGet) {
+                  io = ioToGet;
+                  logger.debug('io obtido do editor para bindSocket customizado', { nodeId, ioKey, type });
+                }
+              }
             }
             
             // Adiciona atributos necessários
@@ -1499,8 +1716,9 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
             // Remove caracteres inválidos para classes CSS
             socketName = String(socketName || 'flow').replace(/[^a-zA-Z0-9-_]/g, '') || 'flow';
             
-            // Garante que type seja uma string válida
-            const typeStr = String(type || 'input').replace(/[^a-zA-Z0-9-_]/g, '') || 'input';
+            // CRÍTICO: type já foi validado acima como 'input' ou 'output'
+            // Usa diretamente o type validado
+            const typeStr = type; // type já é 'input' ou 'output' após validação acima
             
             el.dataset.socketType = typeStr;
             el.dataset.socketName = socketName;
@@ -1512,14 +1730,29 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
             } else if (type === 'output') {
               el.dataset.ioKey = 'out';
             }
+            // CRÍTICO: Se temos nodeId mas não temos io, tenta obter do editor
+            if (nodeId && !io && editor) {
+              const reteNode = editor.getNode(nodeId);
+              if (reteNode) {
+                const ioToGet = typeStr === 'input' 
+                  ? (reteNode.inputs?.[ioKey] || (reteNode.inputs instanceof Map ? reteNode.inputs.get(ioKey) : null))
+                  : (reteNode.outputs?.[ioKey] || (reteNode.outputs instanceof Map ? reteNode.outputs.get(ioKey) : null));
+                if (ioToGet) {
+                  io = ioToGet;
+                  logger.debug('io obtido do editor para bindSocket customizado', { nodeId, ioKey, type: typeStr });
+                }
+              }
+            }
+            
             // Também define como atributo para garantir compatibilidade
             // Tenta obter nodeId do elemento se já tiver o atributo, senão tenta do io
-            let nodeId = el.getAttribute('data-node-id');
+            if (!nodeId) {
+              nodeId = el.getAttribute('data-node-id');
+            }
             if (!nodeId && io && io.node) {
               nodeId = String(io.node.id);
             } else if (!nodeId && io && typeof io === 'object') {
               // Tenta encontrar o nodeId de outras formas
-              const editor = globalEditorRef.current;
               if (editor) {
                 // Se o elemento já está no DOM, tenta encontrar o nó pai
                 let parent = el.parentElement;
@@ -1532,30 +1765,75 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
             if (nodeId) {
               el.setAttribute('data-node-id', String(nodeId));
             }
-            const ioKey = el.dataset.ioKey || (type === 'input' ? 'in' : 'out');
+            if (!ioKey) {
+              ioKey = el.dataset.ioKey || el.getAttribute('data-io-key') || (typeStr === 'input' ? 'in' : 'out');
+            }
             el.setAttribute('data-io-key', ioKey);
             el.classList.add('socket');
             el.classList.add(`socket-${typeStr}`);
             el.classList.add(`socket-${socketName}`);
             
-            // Se temos io, tenta usar o método bind do ConnectionPlugin
-            if (io && connection && typeof connection.bind === 'function') {
+            // CRÍTICO: Adiciona o socket ao socketsCache do ConnectionPlugin
+            // Isso é necessário para que o ConnectionPlugin possa renderizar as conexões
+            const connection = globalConnectionRef.current;
+            if (connection && connection.socketsCache) {
               try {
-                connection.bind(el, io);
-                logger.debug('Socket vinculado via connection.bind customizado', {
-                  socketType: type,
-                  socketName: socket?.name
+                // Cria uma chave única para o socket no cache
+                // Formato: `${nodeId}-${ioKey}-${typeStr}`
+                const cacheKey = nodeId ? `${nodeId}-${ioKey}-${typeStr}` : `${el.id || Date.now()}-${ioKey}-${typeStr}`;
+                
+                // Adiciona ao cache
+                connection.socketsCache.set(cacheKey, {
+                  element: el,
+                  socket: socket || flowSocket,
+                  type: typeStr,
+                  io: io,
+                  nodeId: nodeId,
+                  ioKey: ioKey
                 });
-                return;
+                
+                logger.info('✅ Socket adicionado ao cache do ConnectionPlugin', {
+                  cacheKey,
+                  nodeId,
+                  ioKey,
+                  type: typeStr,
+                  cacheSize: connection.socketsCache.size
+                });
+                
+                // CRÍTICO: Força atualização do ConnectionPlugin para renderizar conexões
+                if (connection.update && typeof connection.update === 'function') {
+                  try {
+                    connection.update('socket', { element: el, io: io });
+                    logger.debug('✅ ConnectionPlugin.update chamado após adicionar socket ao cache (bindSocket customizado)');
+                  } catch (updateErr) {
+                    logger.warn('Erro ao atualizar connection após adicionar socket ao cache', { 
+                      error: updateErr.message,
+                      nodeId,
+                      ioKey
+                    });
+                  }
+                }
               } catch (err) {
-                logger.warn('Erro ao vincular socket via connection.bind', { error: err.message });
+                logger.warn('Erro ao adicionar socket ao cache', {
+                  error: err.message,
+                  nodeId,
+                  ioKey
+                });
               }
+            } else {
+              logger.warn('⚠️ ConnectionPlugin ou socketsCache não disponível para adicionar socket', {
+                hasConnection: !!connection,
+                hasSocketsCache: !!(connection && connection.socketsCache)
+              });
             }
             
-            logger.debug('Socket preparado para bind via ConnectionPlugin', {
-              socketType: type,
+            logger.debug('Socket preparado e adicionado ao cache', {
+              socketType: typeStr,
               socketName: socket?.name,
-              hasIo: !!io
+              hasIo: !!io,
+              nodeId,
+              ioKey,
+              cacheSize: connection?.socketsCache?.size || 0
             });
           } catch (err) {
             logger.warn('Erro ao criar bindSocket customizado', { error: err.message });
@@ -1572,9 +1850,11 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       
       // Configura o ReactPlugin para usar nosso componente customizado
       // No Rete.js v2.0, o preset classic do ReactPlugin precisa receber o connection
-      // para poder passar o bindSocket corretamente
+      // para poder passar o bindSocket corretamente E renderizar as conexões
+      // CRÍTICO: O preset classic do ReactPlugin renderiza conexões automaticamente
+      // quando o connection é passado, mas apenas se os sockets estiverem vinculados
       const reactPreset = ReactPresets.classic.setup({
-        connection, // Passa o connection para o preset classic
+        connection, // CRÍTICO: Passa o connection para o preset classic renderizar conexões
         customize: {
           node(context) {
             // No Rete.js v2.0, o context.payload É o nó (contém id, data, inputs, outputs, etc.)
@@ -1582,8 +1862,8 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
             // Retornamos uma função que recebe as props e repassa para o wrapper
             return (props) => {
               // O preset classic passa: { data, emit, bindSocket, bindControl }
-              // IMPORTANTE: Se bindSocket não vier nas props, precisamos criar um fallback
-              // usando o bindSocket armazenado do ConnectionPlugin
+              // CRÍTICO: O bindSocket vem do preset classic do ReactPlugin quando connection é passado
+              // Se não vier, usamos o fallback armazenado
               let bindSocketToUse = props.bindSocket;
               if (typeof bindSocketToUse !== 'function') {
                 // Tenta usar o bindSocket armazenado do preset classic do ConnectionPlugin
@@ -1591,7 +1871,7 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
                 if (typeof bindSocketToUse === 'function') {
                   logger.debug('Usando bindSocket do ConnectionPlugin preset como fallback');
                 } else {
-                  logger.warn('bindSocket não disponível nem nas props nem no preset', {
+                  logger.warn('⚠️ bindSocket não disponível nem nas props nem no preset', {
                     hasData: !!props.data,
                     hasBindControl: typeof props.bindControl === 'function',
                     hasEmit: typeof props.emit === 'function',
@@ -1599,15 +1879,22 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
                   });
                 }
               } else {
-                logger.debug('bindSocket recebido do ReactPlugin preset', {
+                logger.debug('✅ bindSocket recebido do ReactPlugin preset', {
                   hasData: !!props.data,
                   hasBindSocket: true,
                 });
+                // CRÍTICO: Armazena o bindSocket do ReactPlugin preset para uso futuro
+                if (!globalConnectionBindSocketRef.current) {
+                  globalConnectionBindSocketRef.current = bindSocketToUse;
+                  logger.info('✅ bindSocket do ReactPlugin preset armazenado globalmente');
+                }
               }
               // Repassamos todas as props para o wrapper, garantindo que bindSocket esteja presente
               return <FlowNodeComponentWrapper {...props} bindSocket={bindSocketToUse} />;
             };
           },
+          // IMPORTANTE: O preset classic do ReactPlugin renderiza conexões automaticamente
+          // quando o connection é passado. Não precisamos customizar a renderização de conexões.
         },
       });
       
@@ -1625,8 +1912,23 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       // 3. Depois, os outros plugins são usados através do AreaPlugin
       // IMPORTANTE: ConnectionPlugin deve ser usado ANTES do ReactPlugin
       // para que as conexões sejam renderizadas corretamente
+      // CRÍTICO: A ordem é importante - connection primeiro, depois reactRender
       area.use(connection);
       area.use(reactRender);
+      
+      // IMPORTANTE: Após usar os plugins, força atualização inicial
+      // Isso garante que o ConnectionPlugin esteja pronto para renderizar conexões
+      if (connection && typeof connection.update === 'function') {
+        try {
+          // Pequeno delay para garantir que tudo está inicializado
+          setTimeout(() => {
+            connection.update();
+            logger.debug('ConnectionPlugin.update chamado após inicialização');
+          }, 50);
+        } catch (err) {
+          logger.warn('Erro ao chamar connection.update na inicialização', { error: err.message });
+        }
+      }
       
       // IMPORTANTE: Após usar os plugins, verifica se o SVG foi criado
       // O ConnectionPlugin deve criar um elemento SVG para renderizar as conexões
@@ -2126,64 +2428,190 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
           emit('NODE_REMOVED', serializeNode(context.data));
           notifyChange();
         } else if (context.type === 'connectioncreated') {
-          logger.debug('Conexão criada detectada', {
+          logger.info('🔗 CONEXÃO CRIADA - Evento detectado', {
             connectionId: context.data?.id,
             source: context.data?.source,
             target: context.data?.target,
             sourceOutput: context.data?.sourceOutput,
             targetInput: context.data?.targetInput,
+            connectionData: context.data,
           });
+          
+          // DEBUG: Verifica estado do editor e plugins
+          const allConnections = editor.getConnections();
+          logger.debug('🔍 Estado antes da validação', {
+            totalConnections: allConnections.length,
+            connectionIds: allConnections.map(c => c.id),
+            hasConnectionPlugin: !!globalConnectionRef.current,
+            hasArea: !!globalAreaRef.current,
+            hasReactPlugin: !!reactRenderPluginRef.current,
+          });
+          
           const valid = validateConnection(context.data);
           if (!valid) {
             // Remove conexão inválida imediatamente
-            logger.warn('Conexão inválida removida', {
+            logger.warn('❌ Conexão inválida removida', {
               connectionId: context.data?.id,
               source: context.data?.source,
               target: context.data?.target,
+              sourceType: editor.getNode(context.data?.source)?.data?.type,
+              targetType: editor.getNode(context.data?.target)?.data?.type,
             });
             editor.removeConnection(context.data.id);
             emit('CONNECTION_REJECTED', serializeConnection(context.data));
           } else {
-            logger.info('Conexão válida criada', {
+            logger.info('✅ Conexão válida criada', {
               connectionId: context.data?.id,
               source: context.data?.source,
               target: context.data?.target,
+              sourceOutput: context.data?.sourceOutput,
+              targetInput: context.data?.targetInput,
             });
             emit('CONNECTION_CREATED', serializeConnection(context.data));
             notifyChange();
             
-            // Verifica se a conexão está sendo renderizada
+            // DEBUG DETALHADO: Verifica renderização da conexão
             setTimeout(() => {
               const container = globalContainerRef.current;
-              if (!container) return;
+              if (!container) {
+                logger.error('❌ Container não encontrado para verificar renderização');
+                return;
+              }
               
+              const connection = globalConnectionRef.current;
+              const area = globalAreaRef.current;
+              
+              // Verifica múltiplas formas de encontrar a conexão renderizada
               const connectionElement = container.querySelector(`[data-connection-id="${context.data?.id}"]`);
-              const svgConnections = container.querySelectorAll('svg path, svg .connection, svg g.connection');
               const svgElement = container.querySelector('svg');
-              logger.debug('Verificação de renderização de conexão', {
+              const svgPaths = container.querySelectorAll('svg path');
+              const svgGConnections = container.querySelectorAll('svg g.connection, svg g[class*="connection"]');
+              const allSvgChildren = svgElement ? Array.from(svgElement.children) : [];
+              
+              // Verifica estilos CSS que podem estar ocultando
+              const svgStyles = svgElement ? {
+                display: window.getComputedStyle(svgElement).display,
+                visibility: window.getComputedStyle(svgElement).visibility,
+                opacity: window.getComputedStyle(svgElement).opacity,
+                zIndex: window.getComputedStyle(svgElement).zIndex,
+                position: window.getComputedStyle(svgElement).position,
+              } : null;
+              
+              // Verifica paths individuais
+              const pathStyles = svgPaths.length > 0 ? Array.from(svgPaths).slice(0, 3).map(path => ({
+                display: window.getComputedStyle(path).display,
+                visibility: window.getComputedStyle(path).visibility,
+                opacity: window.getComputedStyle(path).opacity,
+                stroke: window.getComputedStyle(path).stroke,
+                strokeWidth: window.getComputedStyle(path).strokeWidth,
+              })) : [];
+              
+              logger.info('🔍 DIAGNÓSTICO COMPLETO DE RENDERIZAÇÃO', {
                 connectionId: context.data?.id,
+                // Elementos encontrados
                 hasConnectionElement: !!connectionElement,
-                svgConnectionsCount: svgConnections?.length || 0,
-                allConnections: editor.getConnections().length,
                 hasSvg: !!svgElement,
-                svgChildren: svgElement ? svgElement.children.length : 0,
+                svgPathsCount: svgPaths.length,
+                svgGConnectionsCount: svgGConnections.length,
+                allSvgChildrenCount: allSvgChildren.length,
+                // Estado do editor
+                allConnections: editor.getConnections().length,
+                connectionExists: editor.getConnections().some(c => c.id === context.data?.id),
+                // Estado dos plugins
+                hasConnectionPlugin: !!connection,
+                connectionPluginActive: connection?.active !== false,
+                connectionPresetsCount: connection?.presets?.length || 0,
+                hasArea: !!area,
+                // Estilos CSS
+                svgStyles,
+                pathStyles: pathStyles.length > 0 ? pathStyles : 'Nenhum path encontrado',
+                // Estrutura SVG
+                svgChildrenTypes: allSvgChildren.map(child => ({
+                  tagName: child.tagName,
+                  className: child.className,
+                  id: child.id,
+                })),
                 // Verifica se há elementos com classe connection
                 connectionElements: container.querySelectorAll('.connection').length || 0,
+                // Verifica atributos data
+                dataConnectionElements: container.querySelectorAll('[data-connection-id]').length || 0,
               });
               
-              // Se não há conexões SVG renderizadas, tenta forçar atualização
-              if (svgConnections?.length === 0 && areaRef.current) {
-                logger.warn('Nenhuma conexão SVG encontrada, tentando forçar atualização', {
+              // CRÍTICO: Se não há conexões SVG renderizadas, força renderização
+              // No Rete.js v2, o preset classic do ReactPlugin deve renderizar conexões
+              // mas pode precisar de um trigger manual
+              if (svgPaths.length === 0) {
+                logger.warn('⚠️ Nenhuma conexão SVG encontrada, forçando renderização', {
                   connectionId: context.data?.id,
                 });
-                // Tenta forçar atualização do area
-                if (areaRef.current && typeof areaRef.current.update === 'function') {
+                
+                // CRÍTICO: Força atualização do ConnectionPlugin para renderizar
+                // O ConnectionPlugin precisa saber sobre a conexão para renderizá-la
+                if (connection && typeof connection.update === 'function') {
                   try {
-                    areaRef.current.update('connection', null);
+                    // Atualiza com a conexão específica
+                    connection.update('connection', context.data);
+                    logger.debug('✅ ConnectionPlugin.update chamado com conexão específica');
+                    
+                    // Aguarda um pouco e atualiza novamente para garantir
+                    setTimeout(() => {
+                      if (connection && typeof connection.update === 'function') {
+                        connection.update();
+                        logger.debug('✅ ConnectionPlugin.update() chamado novamente');
+                      }
+                    }, 100);
                   } catch (err) {
-                    logger.warn('Erro ao forçar atualização de conexão', { error: err.message });
+                    logger.warn('❌ Erro ao chamar connection.update', { error: err.message });
                   }
                 }
+                
+                // Força atualização do area também
+                if (areaRef.current && typeof areaRef.current.update === 'function') {
+                  try {
+                    areaRef.current.update('connection', context.data);
+                    logger.debug('✅ AreaPlugin.update chamado com conexão específica');
+                  } catch (err) {
+                    logger.warn('❌ Erro ao chamar area.update', { error: err.message });
+                  }
+                }
+                
+                // CRÍTICO: Força re-renderização do ReactPlugin para garantir que as conexões sejam renderizadas
+                // O ReactPlugin deve renderizar conexões automaticamente quando o connection é passado
+                // Mas pode precisar de um trigger manual através do area
+                if (areaRef.current) {
+                  try {
+                    const allConnections = editor.getConnections();
+                    logger.debug('Forçando re-renderização através do area', {
+                      connectionsCount: allConnections.length
+                    });
+                    
+                    // Força atualização do area que deve triggerar o ReactPlugin
+                    if (typeof areaRef.current.update === 'function') {
+                      areaRef.current.update();
+                      logger.debug('✅ AreaPlugin.update() chamado para forçar renderização');
+                    }
+                  } catch (err) {
+                    logger.warn('Erro ao forçar atualização do area', { error: err.message });
+                  }
+                }
+              } else if (svgPaths.length > 0) {
+                logger.info('✅ Conexões SVG encontradas!', {
+                  count: svgPaths.length,
+                  connectionId: context.data?.id,
+                });
+              } else {
+                // Se ainda não há paths após 200ms, tenta renderizar manualmente
+                setTimeout(() => {
+                  const connection = globalConnectionRef.current;
+                  const svgEl = container.querySelector('svg');
+                  if (connection && svgEl && editor) {
+                    try {
+                      renderConnectionsManually(editor, connection, svgEl);
+                    } catch (err) {
+                      logger.warn('Erro ao renderizar conexões manualmente após criar', { error: err.message });
+                    }
+                  }
+                }, 300);
               }
             }, 200);
           }
@@ -2997,32 +3425,15 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
             socketsInDOM: container?.querySelectorAll('.socket, [data-socket-type]').length || 0
           });
           
-          // Se não houver sockets no cache, tenta vinculá-los manualmente
+          // No Rete.js v2, os sockets são vinculados automaticamente pelo ReactPlugin preset
+          // quando os nós são renderizados. Se não estão no cache, pode ser que ainda
+          // não foram renderizados ou o preset não está configurado corretamente.
           if (socketsCacheSize === 0 && currentSockets && currentSockets.length > 0) {
-            logger.warn('Sockets no DOM mas não no cache do ConnectionPlugin, tentando vincular manualmente');
-            // Tenta vincular os sockets manualmente usando o bindSocket armazenado
-            const bindSocket = globalConnectionBindSocketRef.current;
-            if (bindSocket && typeof bindSocket === 'function') {
-              currentSockets.forEach(socketEl => {
-                try {
-                  const nodeId = socketEl.getAttribute('data-node-id');
-                  const socketType = socketEl.getAttribute('data-socket-type');
-                  const socketKey = socketEl.getAttribute('data-io-key') || socketEl.getAttribute('data-socket-key') || (socketType === 'input' ? 'in' : 'out');
-                  const socketName = socketEl.getAttribute('data-socket') || 'flow';
-                  
-                  if (nodeId) {
-                    const node = editor.getNode(nodeId);
-                    if (node) {
-                      const socket = flowSocket;
-                      bindSocket(socketEl, socket, socketType);
-                      logger.debug('Socket vinculado manualmente', { nodeId, socketType, socketKey });
-                    }
-                  }
-                } catch (err) {
-                  logger.warn('Erro ao vincular socket manualmente', { error: err.message });
-                }
-              });
-            }
+            logger.warn('⚠️ Sockets no DOM mas não no cache do ConnectionPlugin', {
+              socketsCount: currentSockets.length,
+              hint: 'Isso pode ser normal se os sockets ainda não foram vinculados pelo ReactPlugin preset'
+            });
+            // Não tenta vincular manualmente - o ReactPlugin preset fará isso
           }
         }
         
@@ -3095,36 +3506,66 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
                 
                 if (sourceNode && targetNode && sourceOutput) {
                   // CRÍTICO: Verifica se os sockets estão no DOM antes de criar a conexão
-                  // IMPORTANTE: Os sockets usam data-io-key, não data-socket-key
-                  const sourceSocket = container?.querySelector(
-                    `[data-node-id="${sourceNode.id}"][data-socket-type="output"][data-io-key="${outputKey}"]`
-                  );
-                  const targetSocket = container?.querySelector(
-                    `[data-node-id="${targetNode.id}"][data-socket-type="input"][data-io-key="${targetInputKey}"]`
-                  );
+                  // Tenta múltiplas formas de encontrar os sockets
+                  const sourceSocketSelectors = [
+                    `[data-node-id="${sourceNode.id}"][data-socket-type="output"][data-io-key="${outputKey}"]`,
+                    `[data-node-id="${sourceNode.id}"].socket-output[data-io-key="${outputKey}"]`,
+                    `[data-node-id="${sourceNode.id}"][data-socket-type="output"]`,
+                    `[data-node-id="${sourceNode.id}"].socket-output`
+                  ];
+                  
+                  const targetSocketSelectors = [
+                    `[data-node-id="${targetNode.id}"][data-socket-type="input"][data-io-key="${targetInputKey}"]`,
+                    `[data-node-id="${targetNode.id}"].socket-input[data-io-key="${targetInputKey}"]`,
+                    `[data-node-id="${targetNode.id}"][data-socket-type="input"]`,
+                    `[data-node-id="${targetNode.id}"].socket-input`
+                  ];
+                  
+                  let sourceSocket = null;
+                  let targetSocket = null;
+                  
+                  for (const selector of sourceSocketSelectors) {
+                    sourceSocket = container?.querySelector(selector);
+                    if (sourceSocket) break;
+                  }
+                  
+                  for (const selector of targetSocketSelectors) {
+                    targetSocket = container?.querySelector(selector);
+                    if (targetSocket) break;
+                  }
+                  
+                  // No Rete.js v2, os sockets devem ser vinculados pelo ReactPlugin preset
+                  // Se não foram encontrados, aguarda um pouco para que sejam renderizados
+                  // Não tenta vincular manualmente pois connection.bind não existe
                   
                   if (!sourceSocket || !targetSocket) {
-                    logger.warn('Sockets não encontrados no DOM, aguardando...', {
+                    logger.warn('⚠️ Sockets não encontrados no DOM, aguardando...', {
                       sourceId: sourceNode.id,
                       targetId: targetNode.id,
                       hasSourceSocket: !!sourceSocket,
                       hasTargetSocket: !!targetSocket,
                       outputKey,
-                      inputKey: targetInputKey
+                      inputKey: targetInputKey,
+                      // Debug: lista todos os sockets disponíveis
+                      allSockets: container?.querySelectorAll('.socket, [data-socket-type]').length || 0
                     });
                     // Aguarda um pouco e tenta novamente
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    // Verifica novamente
-                    const retrySourceSocket = container?.querySelector(
-                      `[data-node-id="${sourceNode.id}"][data-socket-type="output"][data-io-key="${outputKey}"]`
-                    );
-                    const retryTargetSocket = container?.querySelector(
-                      `[data-node-id="${targetNode.id}"][data-socket-type="input"][data-io-key="${targetInputKey}"]`
-                    );
-                    if (!retrySourceSocket || !retryTargetSocket) {
-                      logger.warn('Sockets ainda não encontrados após retry, pulando conexão', {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // Verifica novamente com os seletores
+                    for (const selector of sourceSocketSelectors) {
+                      sourceSocket = container?.querySelector(selector);
+                      if (sourceSocket) break;
+                    }
+                    for (const selector of targetSocketSelectors) {
+                      targetSocket = container?.querySelector(selector);
+                      if (targetSocket) break;
+                    }
+                    if (!sourceSocket || !targetSocket) {
+                      logger.warn('❌ Sockets ainda não encontrados após retry, pulando conexão', {
                         sourceId: sourceNode.id,
-                        targetId: targetNode.id
+                        targetId: targetNode.id,
+                        hasSourceSocket: !!sourceSocket,
+                        hasTargetSocket: !!targetSocket
                       });
                       connectionsFailed++;
                       continue;
@@ -3179,19 +3620,32 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
                   const connectionPlugin = globalConnectionRef.current;
                   if (connectionPlugin) {
                     try {
-                      // Notifica o plugin sobre a nova conexão
+                      // CRÍTICO: Força atualização do ConnectionPlugin com a conexão específica
                       if (typeof connectionPlugin.update === 'function') {
                         connectionPlugin.update('connection', connection);
+                        logger.info('✅ ConnectionPlugin.update chamado com conexão', {
+                          connectionId: connection.id,
+                          source: connection.source,
+                          target: connection.target
+                        });
                       }
-                      // Também tenta usar o método addConnection do plugin se disponível
-                      if (typeof connectionPlugin.addConnection === 'function') {
-                        connectionPlugin.addConnection(connection);
-                      }
+                      
+                      // Aguarda um pouco e força atualização geral
+                      setTimeout(() => {
+                        if (connectionPlugin && typeof connectionPlugin.update === 'function') {
+                          connectionPlugin.update();
+                          logger.debug('✅ ConnectionPlugin.update() chamado após criar conexão');
+                        }
+                      }, 50);
                     } catch (err) {
-                      logger.warn('Erro ao notificar ConnectionPlugin sobre nova conexão', {
-                        error: err.message
+                      logger.warn('❌ Erro ao notificar ConnectionPlugin sobre nova conexão', {
+                        connectionId: connection.id,
+                        error: err.message,
+                        stack: err.stack
                       });
                     }
+                  } else {
+                    logger.error('❌ ConnectionPlugin não disponível para notificar sobre conexão');
                   }
                   
                   // LOG CRÍTICO: Verifica estado após criar conexão
@@ -3388,9 +3842,21 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
                   connectionsCreated
                 });
                 
-                // Se não houver conexões renderizadas, tenta forçar novamente
+                // Se não houver conexões renderizadas, tenta renderizar manualmente
                 if ((!svgPaths || svgPaths.length === 0) && allConnections.length > 0) {
-                  logger.warn('Nenhuma conexão renderizada no SVG, tentando forçar renderização novamente');
+                  logger.warn('Nenhuma conexão renderizada no SVG, tentando renderizar manualmente');
+                  
+                  // CRÍTICO: Tenta renderizar conexões manualmente usando os sockets do cache
+                  const svgEl = svgElement || container.querySelector('svg');
+                  if (connection && connection.socketsCache && connection.socketsCache.size > 0 && svgEl) {
+                    try {
+                      renderConnectionsManually(editor, connection, svgEl);
+                    } catch (err) {
+                      logger.warn('Erro ao renderizar conexões manualmente', { error: err.message });
+                    }
+                  }
+                  
+                  // Tenta forçar atualização também
                   if (typeof connection.update === 'function') {
                     connection.update();
                   }
