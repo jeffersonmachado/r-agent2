@@ -180,6 +180,89 @@ function renderConnectionsManually(editor, connection, svgElement) {
 }
 
 /**
+ * Atualiza as posições das conexões quando os nós são movidos
+ * @param {NodeEditor} editor - Editor Rete
+ * @param {ConnectionPlugin} connection - Plugin de conexão
+ * @param {SVGElement} svgElement - Elemento SVG onde as conexões estão renderizadas
+ */
+function updateConnectionPositions(editor, connection, svgElement) {
+  if (!editor || !connection || !svgElement) {
+    return;
+  }
+
+  try {
+    const allConnections = editor.getConnections();
+    const socketsCache = connection.socketsCache;
+    
+    if (!socketsCache || socketsCache.size === 0) {
+      return;
+    }
+
+    // Atualiza cada conexão
+    for (const conn of allConnections) {
+      try {
+        const path = svgElement.querySelector(`path[data-connection-id="${conn.id}"]`);
+        if (!path) {
+          // Se o path não existe, tenta criar novamente
+          continue;
+        }
+
+        // Encontra os sockets no cache
+        const sourceCacheKey = `${conn.source}-${conn.sourceOutput}-output`;
+        const targetCacheKey = `${conn.target}-${conn.targetInput}-input`;
+        
+        const sourceSocketData = socketsCache.get(sourceCacheKey);
+        const targetSocketData = socketsCache.get(targetCacheKey);
+        
+        if (!sourceSocketData || !targetSocketData) {
+          continue;
+        }
+
+        const sourceEl = sourceSocketData.element;
+        const targetEl = targetSocketData.element;
+
+        if (!sourceEl || !targetEl) {
+          continue;
+        }
+
+        // Obtém posições dos elementos
+        const sourceRect = sourceEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const container = svgElement.parentElement;
+        const containerRect = container ? container.getBoundingClientRect() : svgElement.getBoundingClientRect();
+
+        // Calcula posições relativas ao container
+        const x1 = sourceRect.left + sourceRect.width / 2 - containerRect.left;
+        const y1 = sourceRect.top + sourceRect.height / 2 - containerRect.top;
+        const x2 = targetRect.left + targetRect.width / 2 - containerRect.left;
+        const y2 = targetRect.top + targetRect.height / 2 - containerRect.top;
+
+        // Verifica se as posições são válidas
+        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+          continue;
+        }
+
+        // Atualiza o path SVG
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const cp1x = x1 + dx * 0.5;
+        const cp1y = y1;
+        const cp2x = x2 - dx * 0.5;
+        const cp2y = y2;
+        
+        path.setAttribute('d', `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`);
+      } catch (err) {
+        // Ignora erros individuais e continua com as outras conexões
+      }
+    }
+  } catch (err) {
+    logger.warn('Erro ao atualizar posições das conexões', {
+      error: err.message
+    });
+  }
+}
+
+/**
  * Mapa simples de regras de conexão por tipo de nó.
  * - Chave: tipo de nó origem
  * - Valor: array de tipos de nó de destino permitidos
@@ -2040,6 +2123,132 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       // Os nós são criados diretamente usando a função factory
       logger.debug('Sistema de nós configurado para v2.0');
       
+      // CRÍTICO: Listener para atualizar conexões quando nós são movidos
+      // Usa requestAnimationFrame para otimizar atualizações durante o arrasto
+      let rafId = null;
+      let isUpdating = false;
+      const updateConnectionsOnNodeMove = () => {
+        if (isUpdating) return; // Evita múltiplas atualizações simultâneas
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+        }
+        rafId = requestAnimationFrame(() => {
+          isUpdating = true;
+          const connection = globalConnectionRef.current;
+          const container = globalContainerRef.current;
+          if (connection && container) {
+            const svgElement = container.querySelector('svg');
+            if (svgElement && editor) {
+              updateConnectionPositions(editor, connection, svgElement);
+            }
+          }
+          isUpdating = false;
+          rafId = null;
+        });
+      };
+
+      // Escuta eventos de movimento de nós no AreaPlugin
+      area.addPipe((context) => {
+        // Detecta quando um nó está sendo arrastado ou movido
+        if (context.type === 'nodetranslate' || context.type === 'nodepicked' || 
+            (context.type === 'pointermove' && context.data?.type === 'node') ||
+            context.type === 'pointerdown' || context.type === 'pointerup') {
+          updateConnectionsOnNodeMove();
+        }
+        return context;
+      });
+
+      // Escuta eventos de movimento do mouse durante o arrasto
+      if (containerRef.current) {
+        let isDragging = false;
+        let dragTarget = null;
+        
+        containerRef.current.addEventListener('mousedown', (e) => {
+          // Verifica se o clique foi em um nó
+          const nodeElement = e.target.closest('[data-node-id]');
+          if (nodeElement) {
+            isDragging = true;
+            dragTarget = nodeElement;
+            updateConnectionsOnNodeMove();
+          }
+        }, true);
+
+        containerRef.current.addEventListener('mousemove', (e) => {
+          if (isDragging) {
+            updateConnectionsOnNodeMove();
+          }
+        }, true);
+
+        containerRef.current.addEventListener('mouseup', () => {
+          if (isDragging) {
+            isDragging = false;
+            dragTarget = null;
+            // Atualiza uma última vez quando soltar
+            updateConnectionsOnNodeMove();
+          }
+        }, true);
+
+        // Também escuta eventos de touch para dispositivos móveis
+        containerRef.current.addEventListener('touchmove', () => {
+          if (isDragging) {
+            updateConnectionsOnNodeMove();
+          }
+        }, true);
+      }
+
+      // CRÍTICO: Usa requestAnimationFrame durante o arrasto para atualizar conexões
+      // Isso garante que as conexões sejam atualizadas suavemente enquanto o nó é arrastado
+      let updateAnimationFrameId = null;
+      const startConnectionUpdates = () => {
+        if (updateAnimationFrameId) return; // Já está atualizando
+        
+        const updateLoop = () => {
+          const connection = globalConnectionRef.current;
+          const container = globalContainerRef.current;
+          if (connection && container) {
+            const svgElement = container.querySelector('svg');
+            if (svgElement && editor) {
+              updateConnectionPositions(editor, connection, svgElement);
+            }
+          }
+          
+          // Continua o loop enquanto estiver arrastando
+          if (updateAnimationFrameId) {
+            updateAnimationFrameId = requestAnimationFrame(updateLoop);
+          }
+        };
+        
+        updateAnimationFrameId = requestAnimationFrame(updateLoop);
+      };
+      
+      const stopConnectionUpdates = () => {
+        if (updateAnimationFrameId) {
+          cancelAnimationFrame(updateAnimationFrameId);
+          updateAnimationFrameId = null;
+          // Atualiza uma última vez quando parar
+          updateConnectionsOnNodeMove();
+        }
+      };
+
+      // Escuta eventos de início e fim de arrasto
+      if (containerRef.current) {
+        containerRef.current.addEventListener('mousedown', (e) => {
+          const nodeElement = e.target.closest('[data-node-id]');
+          if (nodeElement) {
+            startConnectionUpdates();
+          }
+        }, true);
+
+        containerRef.current.addEventListener('mouseup', () => {
+          stopConnectionUpdates();
+        }, true);
+
+        // Também para quando o mouse sai do container
+        containerRef.current.addEventListener('mouseleave', () => {
+          stopConnectionUpdates();
+        }, true);
+      }
+
       // Configura seleção de nós via AreaPlugin
       // O AreaPlugin tem eventos de seleção que podemos usar
       area.addPipe((context) => {
@@ -3159,11 +3368,67 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         // Desabilita notificações durante carregamento
         isLoadingJsonRef.current = true;
         
+        // CRÍTICO: Limpa conexões e paths SVG antes de remover nós
+        // Isso garante que não haja conexões órfãs ou paths SVG antigos
+        const existingConnections = editor.getConnections();
+        logger.debug('Limpando conexões antigas antes de carregar novo fluxo', {
+          connectionsCount: existingConnections.length
+        });
+        
+        // Remove todas as conexões
+        for (const connection of existingConnections) {
+          try {
+            await editor.removeConnection(connection.id);
+          } catch (err) {
+            logger.warn('Erro ao remover conexão durante limpeza', {
+              connectionId: connection.id,
+              error: err.message
+            });
+          }
+        }
+        
+        // CRÍTICO: Limpa paths SVG do DOM
+        if (containerRef.current) {
+          const svgElement = containerRef.current.querySelector('svg');
+          if (svgElement) {
+            // Remove todos os paths de conexões
+            const existingPaths = svgElement.querySelectorAll('path[data-connection-id]');
+            existingPaths.forEach(path => path.remove());
+            logger.debug('Paths SVG antigos removidos', {
+              pathsRemoved: existingPaths.length
+            });
+          }
+        }
+        
         // Limpa nós existentes antes de carregar
         const existingNodes = editor.getNodes();
+        logger.debug('Limpando nós antigos antes de carregar novo fluxo', {
+          nodesCount: existingNodes.length
+        });
+        
         for (const node of existingNodes) {
-          await editor.removeNode(node.id);
+          try {
+            await editor.removeNode(node.id);
+          } catch (err) {
+            logger.warn('Erro ao remover nó durante limpeza', {
+              nodeId: node.id,
+              error: err.message
+            });
+          }
         }
+        
+        // CRÍTICO: Limpa o socketsCache do ConnectionPlugin
+        // Isso garante que sockets antigos não interfiram com os novos
+        const connection = globalConnectionRef.current;
+        if (connection && connection.socketsCache) {
+          connection.socketsCache.clear();
+          logger.debug('socketsCache limpo', {
+            cacheSize: connection.socketsCache.size
+          });
+        }
+        
+        // Aguarda um pouco para garantir que a limpeza foi processada
+        await new Promise(resolve => setTimeout(resolve, 50));
 
         if (!initialFlowJson.nodes || Object.keys(initialFlowJson.nodes).length === 0) {
           logger.debug('JSON sem nós para carregar');
@@ -3417,7 +3682,7 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         
         // CRÍTICO: Verifica se os sockets estão vinculados ao ConnectionPlugin
         // O ConnectionPlugin precisa que os sockets estejam no cache para renderizar conexões
-        const connection = globalConnectionRef.current;
+        // Reutiliza a variável connection já declarada acima
         if (connection && connection.socketsCache) {
           const socketsCacheSize = connection.socketsCache.size;
           logger.debug('Verificação de sockets no cache do ConnectionPlugin', {
@@ -3986,13 +4251,45 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         
         // Log final de verificação
         const finalNodes = editor.getNodes();
+        const finalConnections = editor.getConnections();
         logger.info('Carregamento de JSON concluído', {
           expectedNodes: Object.keys(initialFlowJson.nodes || {}).length,
           loadedNodes: finalNodes.length,
           nodeIds: finalNodes.map(n => n.id),
-          connectionsCount: editor.getConnections().length,
+          connectionsCount: finalConnections.length,
           areaVisible: area ? (containerRef.current?.offsetWidth > 0) : false
         });
+        
+        // CRÍTICO: Força renderização manual das conexões após carregar o novo fluxo
+        // Isso garante que as conexões sejam renderizadas mesmo se o preset classic não funcionar
+        if (finalConnections.length > 0 && containerRef.current) {
+          setTimeout(() => {
+            const connection = globalConnectionRef.current;
+            const container = globalContainerRef.current;
+            if (connection && container) {
+              const svgElement = container.querySelector('svg');
+              if (svgElement && editor) {
+                const allConnections = editor.getConnections();
+                const svgPaths = svgElement.querySelectorAll('path[data-connection-id]');
+                
+                // Se há conexões mas não há paths, ou se há menos paths que conexões, renderiza manualmente
+                if (allConnections.length > 0 && (svgPaths.length === 0 || svgPaths.length < allConnections.length)) {
+                  logger.warn('⚠️ Conexões não renderizadas completamente após carregar fluxo, renderizando manualmente', {
+                    connectionsCount: allConnections.length,
+                    svgPathsCount: svgPaths.length
+                  });
+                  try {
+                    renderConnectionsManually(editor, connection, svgElement);
+                  } catch (err) {
+                    logger.warn('Erro ao renderizar conexões manualmente após carregar fluxo', {
+                      error: err.message
+                    });
+                  }
+                }
+              }
+            }
+          }, 1200); // Aguarda 1.2 segundos para garantir que tudo foi renderizado
+        }
         
         // Marca este JSON como carregado para evitar recarregamentos
         lastLoadedJsonRef.current = jsonString;
