@@ -12,6 +12,7 @@ export function Toolbar({
   onSave,
   onValidate,
   onLoadFlow,
+  onArrange,
   children,
 }) {
   return (
@@ -43,6 +44,12 @@ export function Toolbar({
       {onExportJson && (
         <Button variant="ghost" size="sm" onClick={onExportJson}>
           Exportar
+        </Button>
+      )}
+
+      {onArrange && (
+        <Button variant="ghost" size="sm" onClick={onArrange} title="Organizar nós automaticamente">
+          Organizar
         </Button>
       )}
 

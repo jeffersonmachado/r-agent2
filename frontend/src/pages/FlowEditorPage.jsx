@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { FlowEditor } from '../FlowEditor';
 import { SidebarProperties } from '../SidebarProperties';
 import { Toolbar } from '../Toolbar';
+import { AreaExtensions } from 'rete-area-plugin';
 import { SimulationPanel } from '../simulator/SimulationPanel';
 import { useEditor } from '../state/editorStore';
 import { useTheme } from '../styles/themeContext';
@@ -110,10 +111,44 @@ export function FlowEditorPage() {
   const handleNodeSelected = (node) => {
     // Garante que o node tenha todas as propriedades necessárias
     if (node) {
+      // Obtém informações sobre nós anterior e próximo
+      let previousNodeId = null;
+      let nextNodeId = null;
+      
+      try {
+        if (editorRef.current?.editor?.current) {
+          const editor = editorRef.current.editor.current;
+          const nodeId = String(node.id || '');
+          const allConnections = editor.getConnections();
+          
+          // Encontra nó anterior (conexões onde este nó é o target)
+          for (const conn of allConnections) {
+            const targetId = String(conn.target || '');
+            if (targetId === nodeId) {
+              previousNodeId = String(conn.source || '');
+              break; // Pega apenas o primeiro
+            }
+          }
+          
+          // Encontra nó próximo (conexões onde este nó é o source)
+          for (const conn of allConnections) {
+            const sourceId = String(conn.source || '');
+            if (sourceId === nodeId) {
+              nextNodeId = String(conn.target || '');
+              break; // Pega apenas o primeiro
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn('Erro ao obter conexões do nó', { nodeId: node.id, error: err });
+      }
+      
       const nodeData = {
         id: String(node.id || ''),
         type: node.type || 'unknown',
         config: node.config || {},
+        previousNodeId,
+        nextNodeId,
       };
       logger.debug('handleNodeSelected chamado', {
         nodeData,
@@ -210,6 +245,55 @@ export function FlowEditorPage() {
     }
   };
 
+  const handleArrange = async () => {
+    try {
+      // O editorRef tem a estrutura: { editor: { current: NodeEditor }, arrange, area }
+      const arrange = editorRef.current?.arrange;
+      const area = editorRef.current?.area;
+      const editor = editorRef.current?.editor?.current;
+      
+      if (!arrange || !area || !editor) {
+        showToast('Editor não está pronto', 'warning', 2000);
+        return;
+      }
+      
+      const nodes = editor.getNodes();
+      if (nodes.length === 0) {
+        showToast('Nenhum nó para organizar', 'info', 2000);
+        return;
+      }
+      
+      // Anima a organização de forma suave
+      showToast('Organizando nós...', 'info', 1000);
+      
+      // Usa requestAnimationFrame para animação suave
+      await new Promise(resolve => {
+        requestAnimationFrame(async () => {
+          try {
+            await arrange.layout();
+            resolve();
+          } catch (err) {
+            resolve();
+            throw err;
+          }
+        });
+      });
+      
+      // Aguarda um pouco antes do zoom para a animação completar
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Zoom automático após organizar com animação suave
+      if (nodes.length > 0) {
+        AreaExtensions.zoomAt(area, nodes);
+      }
+      
+      showToast('Nós organizados automaticamente', 'success', 2000);
+    } catch (err) {
+      logger.error('Erro ao organizar nós', { error: err });
+      showToast('Erro ao organizar nós', 'error', 3000);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-bg-primary text-text-primary font-sans">
       <Toolbar
@@ -219,6 +303,7 @@ export function FlowEditorPage() {
         onSave={handleSave}
         onValidate={handleValidate}
         onLoadFlow={null}
+        onArrange={handleArrange}
       >
         <div className="flex items-center gap-3 flex-1">
           <Button variant="primary" size="sm" onClick={() => setShowTemplateSelector(true)}>
@@ -317,6 +402,7 @@ export function FlowEditorPage() {
                 editorRef={editorRef}
                 selectedNodeId={selectedNode?.id}
                 onUpdateNodeConfig={handleUpdateNodeConfig}
+                showToast={showToast}
               />
               <ResizablePanel
                 defaultWidth={sidebarWidth || 300}

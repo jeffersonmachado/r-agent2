@@ -140,6 +140,30 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
         <div className="font-medium text-text-primary font-mono text-xs break-all leading-relaxed">{id}</div>
       </div>
 
+      {/* Nó Anterior */}
+      <div className="p-3.5 rounded-lg bg-bg-tertiary/60 border border-border-default/60">
+        <div className="text-[10px] text-text-tertiary mb-2 uppercase tracking-wider font-semibold">
+          Nó Anterior
+        </div>
+        <div className="font-medium text-text-primary font-mono text-xs break-all leading-relaxed">
+          {selectedNode.previousNodeId || (
+            <span className="text-text-tertiary italic">Nenhum</span>
+          )}
+        </div>
+      </div>
+
+      {/* Nó Próximo */}
+      <div className="p-3.5 rounded-lg bg-bg-tertiary/60 border border-border-default/60">
+        <div className="text-[10px] text-text-tertiary mb-2 uppercase tracking-wider font-semibold">
+          Nó Próximo
+        </div>
+        <div className="font-medium text-text-primary font-mono text-xs break-all leading-relaxed">
+          {selectedNode.nextNodeId || (
+            <span className="text-text-tertiary italic">Nenhum</span>
+          )}
+        </div>
+      </div>
+
       {type === 'message' && (
         <TextAreaField
           label="Texto da mensagem"
