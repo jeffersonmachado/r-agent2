@@ -261,14 +261,14 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
   };
 
   const nodeTypeLabels = {
-    start: 'Start',
-    message: 'Message',
-    user_input: 'Input',
-    router: 'Router',
-    set_variable: 'Variable',
-    handoff: 'Handoff',
-    ai: 'AI',
-    end: 'End',
+    start: 'Início',
+    message: 'Mensagem',
+    user_input: 'Entrada',
+    router: 'Roteador',
+    set_variable: 'Variável',
+    handoff: 'Transferência',
+    ai: 'IA',
+    end: 'Fim',
   };
 
   const nodeTypeIcons = {

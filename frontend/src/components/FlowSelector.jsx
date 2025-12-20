@@ -110,15 +110,10 @@ export function FlowSelector({ onFlowSelected, currentFlowId, refreshTrigger }) 
               loadFlows();
             }
           }}
-          className="flex items-center gap-2 px-3 py-1.5 bg-bg-tertiary border border-border-default rounded-md cursor-pointer text-sm text-text-primary transition-all duration-fast font-medium min-w-[200px] justify-between hover:bg-bg-hover hover:border-border-hover hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
-          title="Selecionar fluxo salvo"
+          className="px-3 py-1.5 bg-bg-tertiary border border-border-default rounded-md cursor-pointer text-sm text-text-primary transition-all duration-fast font-medium hover:bg-bg-hover hover:border-border-hover hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+          title={currentFlow ? `Fluxo atual: ${currentFlow.name || currentFlow.id}` : 'Abrir fluxo salvo'}
         >
-          <span className="flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">
-            {currentFlow ? currentFlow.name || currentFlow.id : 'Selecionar fluxo...'}
-          </span>
-          <span className={`text-xs text-text-tertiary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
-            ▼
-          </span>
+          📂 Abrir
         </button>
       </div>
 

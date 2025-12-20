@@ -7,14 +7,14 @@ import React, { useState } from 'react';
 
 // Cores suaves conforme diretrizes: tons suaves, nunca vibrantes
 export const NODE_TYPES = [
-  { type: 'start', label: 'Start', icon: '●', color: '#4A90E2' },        // Azul suave
-  { type: 'message', label: 'Message', icon: '💬', color: '#52C9A2' },    // Verde suave
-  { type: 'user_input', label: 'Input', icon: '⌨️', color: '#52C9A2' },  // Verde suave
-  { type: 'router', label: 'Router', icon: '🔀', color: '#F5A623' },     // Amarelo suave
-  { type: 'set_variable', label: 'Variable', icon: '📝', color: '#7B68EE' }, // Roxo suave
-  { type: 'handoff', label: 'Handoff', icon: '👤', color: '#9B59B6' },   // Roxo suave
-  { type: 'ai', label: 'AI', icon: '🤖', color: '#16A085' },             // Verde-água suave
-  { type: 'end', label: 'End', icon: '■', color: '#95A5A6' },            // Cinza suave
+  { type: 'start', label: 'Início', icon: '●', color: '#4A90E2' },        // Azul suave
+  { type: 'message', label: 'Mensagem', icon: '💬', color: '#52C9A2' },    // Verde suave
+  { type: 'user_input', label: 'Entrada', icon: '⌨️', color: '#52C9A2' },  // Verde suave
+  { type: 'router', label: 'Roteador', icon: '🔀', color: '#F5A623' },     // Amarelo suave
+  { type: 'set_variable', label: 'Variável', icon: '📝', color: '#7B68EE' }, // Roxo suave
+  { type: 'handoff', label: 'Transferência', icon: '👤', color: '#9B59B6' },   // Roxo suave
+  { type: 'ai', label: 'IA', icon: '🤖', color: '#16A085' },             // Verde-água suave
+  { type: 'end', label: 'Fim', icon: '■', color: '#95A5A6' },            // Cinza suave
 ];
 
 /**
