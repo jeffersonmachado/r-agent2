@@ -342,35 +342,56 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
         // CRÍTICO: Não permite movimento do nó se o clique foi em um socket
         // O Rete.js usa pointerdown, não mousedown
         // Verifica se o target é um socket ou está dentro de um socket
-        const isSocket = e.target.classList.contains('socket') || 
-                         e.target.closest('.socket') ||
-                         e.target.classList.contains('input-socket') ||
-                         e.target.classList.contains('output-socket');
+        const target = e.target;
+        const isSocket = target.classList.contains('socket') || 
+                         target.closest('.socket') ||
+                         target.classList.contains('input-socket') ||
+                         target.classList.contains('output-socket') ||
+                         target.hasAttribute('data-socket-key') ||
+                         target.closest('[data-socket-key]') ||
+                         target.closest('[data-socket]') ||
+                         // Verifica também por elementos SVG que podem ser parte do socket
+                         (target.tagName === 'circle' && target.closest('.socket')) ||
+                         (target.tagName === 'svg' && target.closest('.socket'));
         
         if (isSocket) {
           // Se for um socket, não permite movimento do nó
+          // Não usa preventDefault() para não interferir com o funcionamento do socket
           e.stopPropagation();
           return;
         }
         
         // Também verifica se está dentro de .inputs ou .outputs (mas não no socket)
-        if (e.target === e.currentTarget || e.target.closest('.inputs, .outputs')) {
+        // Se estiver em uma área de input/output mas não no socket, permite movimento
+        const isInIOArea = target.closest('.inputs, .outputs');
+        if (isInIOArea && !isSocket) {
+          // Permite movimento se não for socket
           return;
         }
       }}
       onMouseDown={(e) => {
         // Fallback para mousedown também
-        const isSocket = e.target.classList.contains('socket') || 
-                         e.target.closest('.socket') ||
-                         e.target.classList.contains('input-socket') ||
-                         e.target.classList.contains('output-socket');
+        const target = e.target;
+        const isSocket = target.classList.contains('socket') || 
+                         target.closest('.socket') ||
+                         target.classList.contains('input-socket') ||
+                         target.classList.contains('output-socket') ||
+                         target.hasAttribute('data-socket-key') ||
+                         target.closest('[data-socket-key]') ||
+                         target.closest('[data-socket]') ||
+                         (target.tagName === 'circle' && target.closest('.socket')) ||
+                         (target.tagName === 'svg' && target.closest('.socket'));
         
         if (isSocket) {
+          // Não usa preventDefault() para não interferir com o funcionamento do socket
           e.stopPropagation();
           return;
         }
         
-        if (e.target === e.currentTarget || e.target.closest('.inputs, .outputs')) {
+        // Também verifica se está dentro de .inputs ou .outputs (mas não no socket)
+        const isInIOArea = target.closest('.inputs, .outputs');
+        if (isInIOArea && !isSocket) {
+          // Permite movimento se não for socket
           return;
         }
       }}
@@ -690,7 +711,18 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
               {/* Usa RefSocket dos presets - muito mais simples e aderente ao Rete.js */}
               {/* O RefSocket já tem bindSocket interno, não precisa passar explicitamente */}
               {emit && RefSocket ? (
-                <div style={{ position: 'relative' }}>
+                <div 
+                  style={{ position: 'relative' }}
+                  onPointerDown={(e) => {
+                    // CRÍTICO: Previne que o evento chegue ao nó e inicie o drag
+                    // Não usa preventDefault() para não interferir com o funcionamento do socket
+                    e.stopPropagation();
+                  }}
+                  onMouseDown={(e) => {
+                    // Fallback para mousedown
+                    e.stopPropagation();
+                  }}
+                >
                   <RefSocket
                     name="input-socket"
                     side="input"
@@ -707,11 +739,11 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
                       width: 18px !important;
                       height: 18px !important;
                       border-radius: 50% !important;
-                      background-color: ${safeTheme.colors?.accent?.primary || '#5e6ad2'} !important;
+                      background-color: ${safeTheme.colors?.accent?.primary || '#3b82f6'} !important;
                       border: 3px solid ${safeTheme.colors?.bg?.elevated || safeTheme.colors?.bg?.tertiary || '#1a1a1a'} !important;
                       cursor: pointer !important;
                       transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-                      box-shadow: 0 2px 6px rgba(94, 106, 210, 0.4) !important;
+                      box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4) !important;
                       position: relative !important;
                       z-index: 10 !important;
                       pointer-events: auto !important;
@@ -719,8 +751,8 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
                     [data-node-id="${node.id}"][data-socket-key="${key}"].socket:hover,
                     [data-node-id="${node.id}"][data-socket-key="${key}"].socket:hover > * {
                       transform: scale(1.4) !important;
-                      background-color: ${safeTheme.colors?.accent?.hover || '#6b77e0'} !important;
-                      box-shadow: 0 4px 12px rgba(94, 106, 210, 0.6) !important;
+                      background-color: ${safeTheme.colors?.accent?.hover || '#2563eb'} !important;
+                      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6) !important;
                     }
                   `}</style>
                 </div>
@@ -747,11 +779,11 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
                     width: '18px',
                     height: '18px',
                     borderRadius: '50%',
-                    backgroundColor: safeTheme.colors?.accent?.primary || '#5e6ad2',
+                    backgroundColor: safeTheme.colors?.accent?.primary || '#3b82f6',
                     border: `3px solid ${safeTheme.colors?.bg?.elevated || safeTheme.colors?.bg?.tertiary || '#1a1a1a'}`,
                     cursor: 'pointer',
                     transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: `0 2px 6px ${safeTheme.colors?.accent?.primary || '#5e6ad2'}40`,
+                    boxShadow: `0 2px 6px rgba(59, 130, 246, 0.4)`,
                     position: 'relative',
                     zIndex: 10,
                     pointerEvents: 'auto',
@@ -818,7 +850,18 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
               {/* Usa RefSocket dos presets - muito mais simples e aderente ao Rete.js */}
               {/* O RefSocket já tem bindSocket interno, não precisa passar explicitamente */}
               {emit && RefSocket ? (
-                <div style={{ position: 'relative' }}>
+                <div 
+                  style={{ position: 'relative' }}
+                  onPointerDown={(e) => {
+                    // CRÍTICO: Previne que o evento chegue ao nó e inicie o drag
+                    // Não usa preventDefault() para não interferir com o funcionamento do socket
+                    e.stopPropagation();
+                  }}
+                  onMouseDown={(e) => {
+                    // Fallback para mousedown
+                    e.stopPropagation();
+                  }}
+                >
                   <RefSocket
                     name="output-socket"
                     side="output"
