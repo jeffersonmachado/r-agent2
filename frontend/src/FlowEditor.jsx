@@ -4,6 +4,7 @@ import { ClassicPreset } from 'rete';
 import { AreaExtensions, AreaPlugin } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { ReactPlugin, Presets as ReactPresets } from 'rete-react-plugin';
+import { SelectableConnection } from './components/SelectableConnection';
 import { createRoot } from 'react-dom/client';
 import { ContextMenuPlugin, Presets as ContextMenuPresets } from 'rete-context-menu-plugin';
 import { MinimapPlugin } from 'rete-minimap-plugin';
@@ -69,6 +70,7 @@ function FlowNodeComponentWrapper(props) {
   // - bindSocket: função para vincular sockets (se o plugin passar)
   // - bindControl: função para vincular controls (se o plugin passar)
   // O bindSocket vem das props do preset classic do ReactPlugin
+  // NOTA: No Rete.js v2.0, o RefSocket já tem bindSocket interno, não precisa passar explicitamente
   const pluginBindSocket = props?.bindSocket;
   const { data, emit, bindControl: pluginBindControl } = props || {};
   
@@ -686,7 +688,8 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
               }}
             >
               {/* Usa RefSocket dos presets - muito mais simples e aderente ao Rete.js */}
-              {emit && RefSocket && bindSocket ? (
+              {/* O RefSocket já tem bindSocket interno, não precisa passar explicitamente */}
+              {emit && RefSocket ? (
                 <div style={{ position: 'relative' }}>
                   <RefSocket
                     name="input-socket"
@@ -695,7 +698,7 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
                     socketKey={key}
                     nodeId={node.id}
                     payload={input.socket}
-                    bindSocket={bindSocket}
+                    {...(bindSocket && { bindSocket })}
                   />
                   {/* Estilos customizados aplicados via CSS global */}
                   <style>{`
@@ -813,7 +816,8 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
                 {output.label || key}
               </span>
               {/* Usa RefSocket dos presets - muito mais simples e aderente ao Rete.js */}
-              {emit && RefSocket && bindSocket ? (
+              {/* O RefSocket já tem bindSocket interno, não precisa passar explicitamente */}
+              {emit && RefSocket ? (
                 <div style={{ position: 'relative' }}>
                   <RefSocket
                     name="output-socket"
@@ -822,7 +826,7 @@ function FlowNodeComponent({ node, bindSocket, bindControl, selected, theme, emi
                     socketKey={key}
                     nodeId={node.id}
                     payload={output.socket}
-                    bindSocket={bindSocket}
+                    {...(bindSocket && { bindSocket })}
                   />
                   {/* Estilos customizados aplicados via CSS global */}
                   <style>{`
@@ -939,15 +943,15 @@ function createFlowNode(data) {
  * - onFlowChanged(json): chamado quando o grafo mudar
  * - onNodeSelected(nodeData): chamado quando um nó é selecionado
  * - onEvent(evento): emite eventos padronizados do editor
- * - showToast?: função para exibir toast (message, type, duration)
  */
-export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onEvent, editorRef: externalEditorRef, selectedNodeId, onUpdateNodeConfig, showToast }) {
+// Componente interno (será memoizado no final)
+function FlowEditorComponent({ initialFlowJson, onFlowChanged, onNodeSelected, onEvent, editorRef: externalEditorRef, selectedNodeId, onUpdateNodeConfig, showToast }) {
   const { theme } = useTheme();
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const areaRef = useRef(null); // Armazena referência do AreaPlugin
   const reactRenderPluginRef = useRef(null); // Referência ao plugin ReactRenderPlugin
-  const [editorReady, setEditorReady] = useState(false); // Rastreia se o editor está pronto
+  const editorReadyRef = useRef(false); // Rastreia se o editor está pronto (usando ref para evitar re-renderizações)
   const lastLoadedJsonRef = useRef(null); // Rastreia o último JSON carregado para evitar loops
   const isLoadingJsonRef = useRef(false); // Flag para desabilitar notifyChange durante carregamento
   const selectedNodeIdRef = useRef(selectedNodeId);
@@ -958,6 +962,7 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
   const onFlowChangedRef = useRef(onFlowChanged);
   const onNodeSelectedRef = useRef(onNodeSelected);
   const onEventRef = useRef(onEvent);
+  const showToastRef = useRef(showToast);
   
   // Atualiza as refs globais para que o componente renderizado pelo ReactPlugin possa acessá-las
   // useTheme retorna { theme, themeName, toggleTheme, setTheme }, então precisamos pegar theme.theme
@@ -995,7 +1000,8 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
     onFlowChangedRef.current = onFlowChanged;
     onNodeSelectedRef.current = onNodeSelected;
     onEventRef.current = onEvent;
-  }, [onFlowChanged, onNodeSelected, onEvent]);
+    showToastRef.current = showToast;
+  }, [onFlowChanged, onNodeSelected, onEvent, showToast]);
   
   // Expõe o editor e funções auxiliares para uso externo
   useEffect(() => {
@@ -1229,6 +1235,8 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
     }
 
     let destroyed = false;
+    let dropHandler = null;
+    let dragOverHandler = null;
 
     async function init() {
       // Na v2.0, o NodeEditor não recebe container no construtor
@@ -1238,6 +1246,75 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
 
       const area = new AreaPlugin(containerRef.current);
       areaRef.current = area;
+      
+      // Adiciona listener direto no AreaPlugin para eventos de movimento
+      console.log('📝 Configurando listeners no AreaPlugin para eventos de movimento');
+      
+      // Tenta ouvir eventos do AreaPlugin diretamente
+      if (area && typeof area.addPipe === 'function') {
+        area.addPipe(context => {
+          if (context.type === 'nodetranslated' || context.type === 'nodetranslate') {
+            const nodeId = context.data?.id;
+            const nodeView = area.nodeViews?.get(nodeId);
+            const actualPosition = nodeView?.position;
+            
+            // Log apenas quando o movimento termina (nodetranslated) para não poluir
+            if (context.type === 'nodetranslated') {
+              const logData = {
+                type: context.type,
+                nodeId: nodeId,
+                positionFromEvent: context.data?.position,
+                actualPosition: actualPosition ? { x: actualPosition.x, y: actualPosition.y } : null,
+                positionArray: actualPosition ? [actualPosition.x, actualPosition.y] : null
+              };
+              
+              console.log('📍 Nó movido - posição final (AreaPlugin pipe)', logData);
+              logger.info('📍 Nó movido - posição final (AreaPlugin pipe)', logData);
+              
+              // Chama notifyChange para salvar a posição
+              // Usa setTimeout para garantir que a posição foi atualizada no nodeView
+              setTimeout(() => {
+                if (notifyChangeRef.current) {
+                  notifyChangeRef.current();
+                }
+              }, 50);
+            }
+          }
+          return context;
+        });
+      }
+      
+      // Também tenta ouvir eventos via eventos DOM se disponível
+      if (area && area.container) {
+        // Observa mudanças no DOM dos nós
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+              const target = mutation.target;
+              if (target.hasAttribute('data-node-id')) {
+                const nodeId = target.getAttribute('data-node-id');
+                const nodeView = area.nodeViews?.get(nodeId);
+                if (nodeView?.position) {
+                  const pos = nodeView.position;
+                  console.log('📍 Posição do nó detectada via MutationObserver', {
+                    nodeId: nodeId,
+                    position: { x: pos.x, y: pos.y },
+                    positionArray: [pos.x, pos.y]
+                  });
+                }
+              }
+            }
+          });
+        });
+        
+        observer.observe(area.container, {
+          attributes: true,
+          attributeFilter: ['style'],
+          subtree: true
+        });
+        
+        console.log('✅ MutationObserver configurado para detectar mudanças de posição');
+      }
       globalAreaRef.current = area;
       const connection = new ConnectionPlugin();
       globalConnectionRef.current = connection;
@@ -1255,9 +1332,19 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       // O preset classic gerencia a renderização de conexões automaticamente
       connection.addPreset(ConnectionPresets.classic.setup());
       
-      // Configura o preset classic do ReactPlugin - sem customizações, seguindo padrão do reference
-      // No projeto reference/default.ts, usa apenas ReactPresets.classic.setup() sem parâmetros
-      reactRender.addPreset(ReactPresets.classic.setup());
+      // Configura o preset classic do ReactPlugin com componentes customizados
+      reactRender.addPreset(ReactPresets.classic.setup({
+        customize: {
+          node(context) {
+            // Usa o componente customizado FlowNodeComponentWrapper
+            // O context contém informações sobre o nó, mas o componente recebe props do preset automaticamente
+            return FlowNodeComponentWrapper;
+          },
+          connection() {
+            return SelectableConnection;
+          },
+        },
+      }));
       
       // 3. Depois, os outros plugins são usados através do AreaPlugin
       // IMPORTANTE: ConnectionPlugin deve ser usado ANTES do ReactPlugin
@@ -1288,6 +1375,23 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       // 3.3. Auto Arrange Plugin - Organização automática de nós
       const arrange = new AutoArrangePlugin();
       arrange.addPreset(ArrangePresets.classic.setup());
+      
+      // Envolve o layout em um handler de erro para evitar crashes
+      const originalLayout = arrange.layout.bind(arrange);
+      arrange.layout = async function(...args) {
+        try {
+          return await originalLayout(...args);
+        } catch (err) {
+          // Log do erro mas não propaga - evita que o plugin quebre o editor
+          logger.warn('Erro no AutoArrangePlugin.layout (suprimido)', {
+            error: err?.message || String(err),
+            stack: err?.stack
+          });
+          // Retorna uma promise resolvida para não quebrar o fluxo
+          return Promise.resolve();
+        }
+      };
+      
       area.use(arrange);
       if (externalEditorRef) {
         externalEditorRef.current = externalEditorRef.current || {};
@@ -1311,13 +1415,294 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       // NOTA: O ConnectionPlugin do Rete.js gerencia automaticamente a renderização
       // e atualização de conexões quando nós são movidos. Não precisamos de código manual.
 
+      // Ref para armazenar conexão selecionada (declarada antes do pipe para estar disponível)
+      const selectedConnectionRef = { current: null };
+      
+      // Função para lidar com clique em conexão (será chamada pelo componente SelectableConnection)
+      const handleConnectionClick = (connection) => {
+        if (!connection) return;
+        
+        selectedConnectionRef.current = connection;
+        globalSelectedNodeIdRef.current = null;
+        if (typeof onNodeSelectedRef.current === 'function') {
+          onNodeSelectedRef.current(null);
+        }
+        
+        // Marca a conexão como selecionada
+        connection.selected = true;
+        
+        // Remove seleção de outras conexões
+        const allConnections = editor.getConnections();
+        allConnections.forEach(conn => {
+          if (conn.id !== connection.id) {
+            conn.selected = false;
+          }
+        });
+        
+        // Dispara evento customizado para notificar componentes sobre mudança de seleção
+        // Isso força o ReactPlugin a re-renderizar as conexões
+        try {
+          // Dispara evento customizado no window para os componentes ouvirem
+          const event = new CustomEvent('connectionselectionchanged', {
+            detail: {
+              selectedConnection: connection,
+              allConnections: allConnections
+            }
+          });
+          window.dispatchEvent(event);
+          
+          // Também tenta atualizar via ReactPlugin se disponível
+          if (reactRenderPluginRef.current) {
+            // Força atualização de todas as conexões
+            allConnections.forEach(conn => {
+              try {
+                // Tenta diferentes métodos de atualização
+                if (reactRenderPluginRef.current.update) {
+                  reactRenderPluginRef.current.update('connection', conn.id);
+                } else if (reactRenderPluginRef.current.render) {
+                  reactRenderPluginRef.current.render('connection', conn.id);
+                }
+              } catch (err) {
+                // Ignora erros individuais
+              }
+            });
+          }
+        } catch (err) {
+          logger.warn('Erro ao atualizar conexões no ReactPlugin', { error: err.message });
+        }
+        
+        logger.info('✅ Conexão selecionada - Pressione Delete/Backspace para deletar', {
+          connectionId: connection.id,
+          source: connection.source,
+          target: connection.target
+        });
+      };
+      
+      // Expõe a função globalmente para o componente SelectableConnection usar
+      window.__reteConnectionClickHandler = handleConnectionClick;
+      
+      // Flag para rastrear se está arrastando um nó
+      let isDraggingNode = false;
+      let dragStartTime = 0;
+      let dragTimeout = null;
+      
+      // Listener para detectar quando nós são movidos
+      // O Rete.js v2.0 pode não disparar 'nodetranslated' automaticamente,
+      // então usamos um listener no container para detectar quando o drag termina
+      if (containerRef.current) {
+        const handleMouseDown = (e) => {
+          // Verifica se o clique foi em um nó (não em conexão)
+          const target = e.target;
+          const isNode = target.closest('[data-node-id]') || target.closest('.rete-node');
+          const isConnection = target.tagName === 'path' && target.closest('svg');
+          
+          if (isNode && !isConnection) {
+            const nodeElement = target.closest('[data-node-id]') || target.closest('.rete-node');
+            const nodeId = nodeElement?.getAttribute('data-node-id') || 'unknown';
+            console.log('🖱️ MouseDown em nó - iniciando drag', { nodeId, target: target.tagName });
+            isDraggingNode = true;
+            dragStartTime = Date.now();
+          }
+        };
+        
+        const handleMouseUp = (e) => {
+          const target = e.target;
+          const isConnection = target.tagName === 'path' && target.closest('svg');
+          
+          // Se foi clique em conexão, não atualiza posição de nó
+          if (isConnection) {
+            isDraggingNode = false;
+            if (dragTimeout) {
+              clearTimeout(dragTimeout);
+              dragTimeout = null;
+            }
+            return;
+          }
+          
+          // Só atualiza se realmente estava arrastando um nó
+          if (isDraggingNode) {
+            const dragDuration = Date.now() - dragStartTime;
+            // Só atualiza se o drag durou mais de 50ms (evita cliques simples)
+            if (dragDuration > 50) {
+              if (dragTimeout) {
+                clearTimeout(dragTimeout);
+              }
+              dragTimeout = setTimeout(() => {
+                if (notifyChangeRef.current) {
+                  // Obtém a posição atual do nó que foi movido
+                  const area = areaRef.current;
+                  if (area) {
+                    const allNodes = editor.getNodes();
+                    allNodes.forEach(node => {
+                      const nodeView = area.nodeViews?.get(node.id);
+                      if (nodeView?.position) {
+                        const pos = nodeView.position;
+                        const logData = {
+                          nodeId: node.id,
+                          position: { x: pos.x, y: pos.y },
+                          positionArray: [pos.x, pos.y]
+                        };
+                        // Log em ambos os sistemas para garantir que apareça
+                        console.log('📍 Posição do nó após movimento (mouseup)', logData);
+                        logger.info('📍 Posição do nó após movimento (mouseup)', logData);
+                      }
+                    });
+                  }
+                  logger.debug('Atualizando editorJson após movimento de nó');
+                  notifyChangeRef.current();
+                }
+                isDraggingNode = false;
+              }, 100); // Delay para garantir que a posição foi atualizada no AreaPlugin
+            } else {
+              isDraggingNode = false;
+            }
+          }
+        };
+        
+        const handleMouseLeave = () => {
+          // Se o mouse sair do container durante o drag, atualiza
+          if (isDraggingNode) {
+            if (dragTimeout) {
+              clearTimeout(dragTimeout);
+            }
+            dragTimeout = setTimeout(() => {
+              if (notifyChangeRef.current) {
+                // Obtém a posição atual do nó que foi movido
+                const area = areaRef.current;
+                if (area) {
+                  const allNodes = editor.getNodes();
+                  allNodes.forEach(node => {
+                    const nodeView = area.nodeViews?.get(node.id);
+                    if (nodeView?.position) {
+                      const pos = nodeView.position;
+                      const logData = {
+                        nodeId: node.id,
+                        position: { x: pos.x, y: pos.y },
+                        positionArray: [pos.x, pos.y]
+                      };
+                      // Log em ambos os sistemas para garantir que apareça
+                      console.log('📍 Posição do nó após movimento (mouseleave)', logData);
+                      logger.info('📍 Posição do nó após movimento (mouseleave)', logData);
+                    }
+                  });
+                }
+                logger.debug('Atualizando editorJson após movimento de nó (mouse saiu)');
+                notifyChangeRef.current();
+              }
+              isDraggingNode = false;
+            }, 100);
+          }
+        };
+        
+        console.log('📝 Registrando listeners de mouse para detecção de movimento de nós', {
+          hasContainer: !!containerRef.current,
+          containerTag: containerRef.current?.tagName
+        });
+        
+        containerRef.current.addEventListener('mousedown', handleMouseDown);
+        containerRef.current.addEventListener('mouseup', handleMouseUp);
+        containerRef.current.addEventListener('mouseleave', handleMouseLeave);
+        
+        // Adiciona também listener de mousemove para detectar movimento em tempo real
+        const handleMouseMove = (e) => {
+          if (isDraggingNode) {
+            // Log apenas ocasionalmente para não poluir o console
+            if (Math.random() < 0.1) { // 10% das vezes
+              console.log('🔄 MouseMove durante drag', {
+                isDragging: isDraggingNode,
+                dragDuration: Date.now() - dragStartTime
+              });
+            }
+          }
+        };
+        
+        containerRef.current.addEventListener('mousemove', handleMouseMove);
+        
+        console.log('✅ Listeners de mouse registrados com sucesso');
+        
+        // Limpa o listener quando o componente é desmontado
+        // (será limpo pelo useEffect cleanup)
+      } else {
+        console.warn('⚠️ containerRef.current não está disponível para registrar listeners de mouse');
+      }
+
       // Configura seleção de nós via AreaPlugin
       // Usa AreaExtensions.selectableNodes que já foi configurado acima
       // O selector gerencia a seleção automaticamente, mas precisamos ouvir os eventos
       area.addPipe((context) => {
+        // Log de todos os eventos relacionados a conexões para debug
+        if (context.type && context.type.includes('connection')) {
+          logger.debug('Evento de conexão detectado no area pipe', {
+            type: context.type,
+            data: context.data,
+            hasConnection: !!(context.data?.connection || context.data?.id)
+          });
+        }
+        
+        // Detecta clique/seleção de conexões
+        // IMPORTANTE: No Rete.js v2.0, os eventos de conexão podem ter nomes diferentes
+        if (context.type === 'connectionpick' || 
+            context.type === 'connectionclick' || 
+            context.type === 'connectionselected' ||
+            context.type === 'connectionpicked' ||
+            context.type === 'clickconnection' ||
+            (context.type === 'click' && (context.data?.connection || context.data?.id))) {
+          const connection = context.data?.connection || context.data;
+          if (connection && connection.id) {
+            selectedConnectionRef.current = connection;
+            // Deseleciona nó quando uma conexão é selecionada
+            globalSelectedNodeIdRef.current = null;
+            if (typeof onNodeSelectedRef.current === 'function') {
+              onNodeSelectedRef.current(null);
+            }
+            logger.info('✅ Conexão selecionada - Pressione Delete/Backspace para deletar', {
+              connectionId: connection.id,
+              source: connection.source,
+              target: connection.target,
+              eventType: context.type,
+              connectionData: connection
+            });
+          } else {
+            logger.debug('Evento de conexão detectado mas sem dados válidos', {
+              type: context.type,
+              data: context.data
+            });
+          }
+          return context;
+        }
+        
+        // Também tenta detectar clique duplo em conexões para deletar
+        if (context.type === 'connectiondblclick' || 
+            (context.type === 'dblclick' && (context.data?.connection || context.data?.id))) {
+          const connection = context.data?.connection || context.data;
+          if (connection && connection.id && editor) {
+            logger.info('Conexão clicada duas vezes - deletando', {
+              connectionId: connection.id,
+              source: connection.source,
+              target: connection.target
+            });
+            try {
+              editor.removeConnection(connection.id);
+              selectedConnectionRef.current = null;
+              if (notifyChangeRef.current) {
+                notifyChangeRef.current();
+              }
+            } catch (err) {
+              logger.warn('Erro ao deletar conexão via duplo clique', {
+                connectionId: connection.id,
+                error: err.message
+              });
+            }
+          }
+          return context;
+        }
+        
         // Detecta seleção de nós via AreaExtensions
         // O selector emite eventos quando nós são selecionados/deselecionados
         if (context.type === 'nodepicked' || context.type === 'nodeclick' || context.type === 'nodeselected') {
+          // Deseleciona conexão quando um nó é selecionado
+          selectedConnectionRef.current = null;
+          
           const nodeFromEvent = context.data?.node || context.data || context.data?.id;
           if (nodeFromEvent && typeof onNodeSelectedRef.current === 'function') {
             // IMPORTANTE: O Rete.js v2.0 pode retornar apenas o ID no evento
@@ -1348,11 +1733,14 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         }
         // Detecta deseleção de nós
         if (context.type === 'nodedeselected' || context.type === 'click') {
-          // Se o clique foi no background (não em um nó), deseleciona
-          const isBackgroundClick = !context.data?.node && !context.data?.id;
-          if (isBackgroundClick && typeof onNodeSelectedRef.current === 'function') {
-            logger.debug('Deselecionando nó (clique no background)');
-            onNodeSelectedRef.current(null);
+          // Se o clique foi no background (não em um nó ou conexão), deseleciona tudo
+          const isBackgroundClick = !context.data?.node && !context.data?.id && !context.data?.connection;
+          if (isBackgroundClick) {
+            selectedConnectionRef.current = null;
+            if (typeof onNodeSelectedRef.current === 'function') {
+              logger.debug('Deselecionando nó (clique no background)');
+              onNodeSelectedRef.current(null);
+            }
           }
         }
         return context;
@@ -1361,7 +1749,7 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       // NOTA: A seleção de nós é gerenciada automaticamente pelo AreaExtensions.selectableNodes
       // Apenas precisamos ouvir os eventos de seleção para atualizar o estado
       
-      // Handler para deletar nós com Delete/Backspace
+      // Handler para deletar nós ou conexões com Delete/Backspace
       const handleKeyDown = (e) => {
         // Verifica se é Delete ou Backspace
         if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -1371,11 +1759,65 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
                                 e.target.isContentEditable;
           
           if (isInputElement) {
-            // Se está digitando, não deleta o nó
+            // Se está digitando, não deleta
             return;
           }
           
-          // Verifica se há um nó selecionado
+          // Primeiro verifica se há uma conexão selecionada
+          if (selectedConnectionRef.current && editor) {
+            try {
+              const connection = selectedConnectionRef.current;
+              logger.debug('Deletando conexão via teclado', {
+                connectionId: connection.id,
+                source: connection.source,
+                target: connection.target,
+                key: e.key,
+                hasConnection: !!connection,
+                connectionIdValid: !!connection.id
+              });
+              
+              // Verifica se a conexão ainda existe no editor
+              const allConnections = editor.getConnections();
+              const connectionExists = allConnections.some(c => c.id === connection.id);
+              
+              if (!connectionExists) {
+                logger.warn('Conexão não encontrada no editor', {
+                  connectionId: connection.id
+                });
+                selectedConnectionRef.current = null;
+                return;
+              }
+              
+              editor.removeConnection(connection.id);
+              selectedConnectionRef.current = null;
+              
+              // Atualiza o editorJson após deletar
+              if (notifyChangeRef.current) {
+                notifyChangeRef.current();
+              }
+              
+              // Previne comportamento padrão
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            } catch (err) {
+              logger.warn('Erro ao deletar conexão via teclado', {
+                connectionId: selectedConnectionRef.current?.id,
+                error: err.message,
+                stack: err.stack
+              });
+            }
+          }
+          
+          // Log para debug - verifica se há conexão selecionada mas não foi deletada
+          if (!selectedConnectionRef.current) {
+            logger.debug('Tentativa de deletar conexão, mas nenhuma conexão está selecionada', {
+              selectedNodeId: globalSelectedNodeIdRef.current,
+              key: e.key
+            });
+          }
+          
+          // Se não há conexão selecionada, verifica se há um nó selecionado
           const selectedNodeId = globalSelectedNodeIdRef.current;
           if (selectedNodeId && editor) {
             try {
@@ -1442,13 +1884,11 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       document.addEventListener('keydown', handleKeyDown, true);
       logger.debug('Listener de teclado adicionado');
       
-      // Marca o editor como pronto
+      // Marca o editor como pronto (usando ref para evitar re-renderização)
       logger.debug('Marcando editor como pronto');
       lastLoadedJsonRef.current = null; // Reset para permitir carregamento inicial
-      setEditorReady(true);
-      logger.debug('Editor marcado como pronto', { 
-        editorReady: true
-      });
+      editorReadyRef.current = true;
+      logger.debug('Editor marcado como pronto');
 
       // Eventos padronizados
       const emit = (type, payload) => {
@@ -1506,8 +1946,17 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
             }, {})
           };
           
+          // Log das posições coletadas
+          const positionsLog = nodes.reduce((acc, node) => {
+            const nodeView = area?.nodeViews?.get(node.id);
+            const position = nodeView?.position ? [nodeView.position.x, nodeView.position.y] : [0, 0];
+            acc[node.id] = position;
+            return acc;
+          }, {});
+          
           logger.debug('Editor JSON atualizado', { 
-            nodeCount: nodes.length 
+            nodeCount: nodes.length,
+            positions: positionsLog
           });
           onFlowChangedRef.current(data);
         }
@@ -1517,7 +1966,27 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       notifyChangeRef.current = notifyChange;
 
       // Na v2.0, os eventos são tratados via pipes (signals)
+      // IMPORTANTE: Este pipe deve retornar o context para não bloquear outros pipes
+      console.log('📝 Configurando pipe do editor para capturar eventos');
       editor.addPipe((context) => {
+        // Log TODOS os eventos para debug (temporário)
+        if (context.type && (context.type.includes('node') || context.type.includes('translate') || context.type.includes('drag') || context.type.includes('move'))) {
+          console.log('🔔 Evento no pipe do editor (filtrado)', {
+            type: context.type,
+            hasData: !!context.data,
+            dataKeys: context.data ? Object.keys(context.data) : [],
+            data: context.data
+          });
+        }
+        // Log de depuração para eventos de conexão
+        if (context.type === 'connectioncreated' || context.type === 'connectionremoved' || 
+            context.type === 'connectionpick' || context.type === 'connectionclick') {
+          logger.debug('Evento de conexão detectado no editor pipe', {
+            type: context.type,
+            data: context.data
+          });
+        }
+        
         if (context.type === 'nodecreated') {
           emit('NODE_CREATED', serializeNode(context.data));
           notifyChange();
@@ -1561,8 +2030,8 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
             });
             
             // Mostra toast com o motivo da rejeição
-            if (showToast && validationResult.reason) {
-              showToast(validationResult.reason, 'error', 5000);
+            if (showToastRef.current && validationResult.reason) {
+              showToastRef.current(validationResult.reason, 'error', 5000);
             }
             
             editor.removeConnection(context.data.id);
@@ -1587,6 +2056,39 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
           });
           emit('CONNECTION_REMOVED', serializeConnection(context.data));
           notifyChange();
+        } else if (context.type === 'nodetranslated' || context.type === 'nodetranslate') {
+          // Quando um nó é movido, atualiza o editorJson com a nova posição
+          const nodeId = context.data?.id;
+          const area = areaRef.current;
+          const nodeView = area?.nodeViews?.get(nodeId);
+          const actualPosition = nodeView?.position;
+          
+          const logData = {
+            nodeId: nodeId,
+            type: context.type,
+            positionFromEvent: context.data?.position,
+            actualPosition: actualPosition ? { x: actualPosition.x, y: actualPosition.y } : null,
+            positionArray: actualPosition ? [actualPosition.x, actualPosition.y] : null
+          };
+          
+          // Log apenas quando o movimento termina (nodetranslated) para não poluir
+          if (context.type === 'nodetranslated') {
+            console.log('📍 Nó movido (nodetranslated) - pipe do editor', logData);
+            logger.info('📍 Nó movido (nodetranslated) - pipe do editor', logData);
+            notifyChange();
+          }
+        }
+        
+        // Log de todos os eventos para debug (pode ser removido depois)
+        if (context.type && (context.type.includes('node') || context.type.includes('translate') || context.type.includes('drag'))) {
+          console.log('🔔 Evento relacionado a nó detectado', {
+            type: context.type,
+            data: context.data
+          });
+          logger.debug('Evento relacionado a nó detectado', {
+            type: context.type,
+            data: context.data
+          });
         }
         return context;
       });
@@ -1690,44 +2192,91 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
       }
 
       // Suporte para drag and drop de nós
+      // Flag para evitar processamento duplicado do drop (usando ref para persistir entre renders)
+      const isProcessingDropRef = { current: false };
+      const lastDropTimeRef = { current: 0 };
+      
       const handleDrop = async (e) => {
+        // CRÍTICO: Para o evento imediatamente para evitar processamento múltiplo
         e.preventDefault();
         e.stopPropagation();
-
-        const nodeType = e.dataTransfer.getData('application/node-type') || e.dataTransfer.getData('text/plain');
-        if (!nodeType) return;
-
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        // Converter coordenadas da viewport para coordenadas do editor
-        const area = areaRef.current;
-        if (!area) return;
+        e.stopImmediatePropagation(); // Impede que outros listeners processem o evento
         
-        const transform = area.area.transform;
-        const zoom = transform.k || 1;
-        const panX = transform.x || 0;
-        const panY = transform.y || 0;
-
-        const editorX = (x - panX) / zoom;
-        const editorY = (y - panY) / zoom;
-
-        // Criar novo nó usando a função factory
-        const node = createFlowNode({
-          type: nodeType,
-          config: getDefaultConfig(nodeType),
-        });
-
-        // Na v2.0, a posição é definida via translate
-        await editor.addNode(node);
-        
-        // Traduz o nó para a posição correta
-        if (areaRef.current) {
-          await areaRef.current.translate(node.id, { x: editorX, y: editorY });
+        // Evita processamento duplicado - verifica se já está processando ou se foi processado recentemente
+        const now = Date.now();
+        if (isProcessingDropRef.current || (now - lastDropTimeRef.current < 300)) {
+          logger.debug('Drop já está sendo processado ou foi processado recentemente, ignorando', {
+            isProcessing: isProcessingDropRef.current,
+            timeSinceLastDrop: now - lastDropTimeRef.current
+          });
+          return;
         }
         
-        notifyChange();
+        isProcessingDropRef.current = true;
+        lastDropTimeRef.current = now;
+
+        try {
+          const nodeType = e.dataTransfer.getData('application/node-type') || e.dataTransfer.getData('text/plain');
+          if (!nodeType) {
+            isProcessingDropRef.current = false;
+            return;
+          }
+
+          // Verifica se o drop foi no container correto
+          if (!containerRef.current || !containerRef.current.contains(e.target)) {
+            logger.debug('Drop não foi no container do editor, ignorando');
+            isProcessingDropRef.current = false;
+            return;
+          }
+
+          const rect = containerRef.current.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+
+          // Converter coordenadas da viewport para coordenadas do editor
+          const area = areaRef.current;
+          if (!area) {
+            isProcessingDropRef.current = false;
+            return;
+          }
+          
+          const transform = area.area.transform;
+          const zoom = transform.k || 1;
+          const panX = transform.x || 0;
+          const panY = transform.y || 0;
+
+          const editorX = (x - panX) / zoom;
+          const editorY = (y - panY) / zoom;
+
+          logger.debug('Criando nó via drag and drop', {
+            nodeType,
+            position: { x: editorX, y: editorY },
+            mousePosition: { x, y }
+          });
+
+          // Criar novo nó usando a função factory
+          const node = createFlowNode({
+            type: nodeType,
+            config: getDefaultConfig(nodeType),
+          });
+
+          // Na v2.0, a posição é definida via translate
+          await editor.addNode(node);
+          
+          // Traduz o nó para a posição correta
+          if (areaRef.current) {
+            await areaRef.current.translate(node.id, { x: editorX, y: editorY });
+          }
+          
+          notifyChange();
+        } catch (err) {
+          logger.error('Erro ao processar drop', err);
+        } finally {
+          // Libera a flag após um pequeno delay para evitar processamento duplicado
+          setTimeout(() => {
+            isProcessingDropRef.current = false;
+          }, 200);
+        }
       };
 
       const handleDragOver = (e) => {
@@ -1736,9 +2285,24 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         e.dataTransfer.dropEffect = 'copy';
       };
 
-      if (containerRef.current) {
-        containerRef.current.addEventListener('drop', handleDrop);
-        containerRef.current.addEventListener('dragover', handleDragOver);
+      const container = containerRef.current;
+      if (container) {
+        // Remove listeners antigos se existirem (caso o useEffect seja executado múltiplas vezes)
+        if (dropHandler) {
+          container.removeEventListener('drop', dropHandler);
+        }
+        if (dragOverHandler) {
+          container.removeEventListener('dragover', dragOverHandler);
+        }
+        
+        // Armazena referências dos handlers para cleanup
+        dropHandler = handleDrop;
+        dragOverHandler = handleDragOver;
+        
+        // Adiciona listeners com capture: false e once: false
+        // Usa capture: false para evitar captura em múltiplos níveis
+        container.addEventListener('drop', dropHandler, false);
+        container.addEventListener('dragover', dragOverHandler, false);
       }
 
       // Garante que o container está visível antes de fazer resize
@@ -1768,7 +2332,7 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
 
     return () => {
       destroyed = true;
-      setEditorReady(false); // Reset quando o editor é destruído
+      editorReadyRef.current = false; // Reset quando o editor é destruído (usando ref para evitar re-renderização)
       lastLoadedJsonRef.current = null; // Reset para permitir recarregamento
       
       // Na v2.0, não há método destroy()
@@ -1804,6 +2368,15 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         keyDownHandlerRef.current = null;
       }
       
+      // Remove listeners de drag and drop
+      const container = containerRef.current;
+      if (container && dropHandler && dragOverHandler) {
+        container.removeEventListener('drop', dropHandler, false);
+        container.removeEventListener('dragover', dragOverHandler, false);
+        dropHandler = null;
+        dragOverHandler = null;
+      }
+      
       // Limpa referências dos plugins
       reactRenderPluginRef.current = null;
       areaRef.current = null;
@@ -1827,7 +2400,7 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
 
   // Carrega o JSON quando initialFlowJson mudar e editor estiver pronto
   useEffect(() => {
-    if (!editorReady || !editorRef.current || !initialFlowJson) {
+    if (!editorReadyRef.current || !editorRef.current || !initialFlowJson) {
       // Aguardando inicialização do editor
       return;
     }
@@ -1887,15 +2460,32 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         }
       }
 
-      // Verifica se já carregamos este JSON recentemente (evita loops)
-      // Mas permite carregar se o editor estiver vazio ou se o ID do fluxo mudou
+      // Verifica se já carregamos este JSON recentemente (evita loops e re-renderizações)
+      // Compara apenas o ID do fluxo e a estrutura básica, não o JSON completo
       const currentNodes = editor.getNodes();
       const flowId = initialFlowJson.id || JSON.stringify(initialFlowJson);
       const jsonString = JSON.stringify(initialFlowJson);
+      const nodeCount = initialFlowJson.nodes ? Object.keys(initialFlowJson.nodes).length : 0;
       
-      // Se o editor está vazio, sempre carrega
+      // Se já carregamos este JSON exato, não recarrega (evita loops)
       if (lastLoadedJsonRef.current === jsonString) {
         return;
+      }
+      
+      // Se o editor já tem nós e o JSON tem a mesma quantidade, pode ser apenas uma atualização
+      // Nesse caso, não recarrega tudo, apenas atualiza se necessário
+      if (currentNodes.length > 0 && currentNodes.length === nodeCount) {
+        // Verifica se é realmente o mesmo fluxo comparando IDs dos nós
+        const editorNodeIds = new Set(currentNodes.map(n => String(n.id)));
+        const jsonNodeIds = new Set(Object.keys(initialFlowJson.nodes || {}).map(id => String(id)));
+        
+        // Se os IDs são os mesmos, provavelmente é apenas uma atualização de estado, não precisa recarregar
+        if (editorNodeIds.size === jsonNodeIds.size && 
+            [...editorNodeIds].every(id => jsonNodeIds.has(id))) {
+          // É o mesmo fluxo, apenas atualiza o estado sem recarregar
+          lastLoadedJsonRef.current = jsonString;
+          return;
+        }
       }
       
       try {
@@ -2000,8 +2590,25 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
           
           if (area && position && position.length === 2) {
             try {
-              await new Promise(resolve => setTimeout(resolve, 50));
+              // Aguarda um pouco para garantir que o nó foi renderizado
+              await new Promise(resolve => setTimeout(resolve, 100));
+              
+              // Aplica a posição usando translate
               await area.translate(node.id, { x: position[0], y: position[1] });
+              
+              // Verifica se a posição foi aplicada corretamente
+              await new Promise(resolve => setTimeout(resolve, 50));
+              const nodeView = area.nodeViews?.get(node.id);
+              const actualPosition = nodeView?.position;
+              
+              logger.debug('Posição aplicada ao nó', {
+                nodeId: node.id,
+                expectedPosition: position,
+                actualPosition: actualPosition ? [actualPosition.x, actualPosition.y] : null,
+                match: actualPosition && 
+                       Math.abs(actualPosition.x - position[0]) < 1 && 
+                       Math.abs(actualPosition.y - position[1]) < 1
+              });
             } catch (err) {
               logger.warn('Erro ao traduzir nó para posição', { 
                 nodeId: node.id, 
@@ -2018,6 +2625,52 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         
         // Aguarda um pouco para que os nós sejam renderizados antes de criar conexões
         await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Reaplica as posições após os nós serem totalmente renderizados
+        // Isso garante que as posições salvas sejam mantidas mesmo após renderização
+        for (const node of nodesToAdd) {
+          const nodeData = initialFlowJson.nodes[node.id];
+          const position = nodeData?.position || [0, 0];
+          
+          if (area && position && position.length === 2) {
+            try {
+              const nodeView = area.nodeViews?.get(node.id);
+              if (nodeView) {
+                await area.translate(node.id, { x: position[0], y: position[1] });
+                logger.debug('Posição reaplicada após renderização', {
+                  nodeId: node.id,
+                  position
+                });
+              }
+            } catch (err) {
+              logger.warn('Erro ao reaplicar posição do nó', { 
+                nodeId: node.id, 
+                position,
+                error: err.message 
+              });
+            }
+          }
+        }
+        
+        // Aguarda um pouco mais antes de criar conexões
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Faz zoom APÓS aplicar as posições para não alterá-las
+        // IMPORTANTE: zoomAt deve ser chamado DEPOIS de aplicar as posições
+        if (area) {
+          try {
+            area.resize();
+            const loadedNodes = editor.getNodes();
+            if (loadedNodes.length > 0) {
+              AreaExtensions.zoomAt(area, loadedNodes);
+            }
+          } catch (err) {
+            logger.warn('Erro ao fazer resize/zoom da área', { error: err.message });
+          }
+        }
+        
+        // Aguarda um pouco após o zoom antes de criar conexões
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Restaura as conexões
         let connectionsCreated = 0;
@@ -2083,18 +2736,7 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
         }
         
         // NOTA: O ConnectionPlugin renderiza conexões automaticamente
-        
-        if (area) {
-          try {
-            area.resize();
-            const loadedNodes = editor.getNodes();
-            if (loadedNodes.length > 0) {
-              AreaExtensions.zoomAt(area, loadedNodes);
-            }
-          } catch (err) {
-            logger.warn('Erro ao fazer resize/zoom da área', { error: err.message });
-          }
-        }
+        // O zoomAt já foi chamado anteriormente após aplicar as posições
         
         await new Promise(resolve => setTimeout(resolve, 300));
         
@@ -2114,11 +2756,22 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
     }
 
     loadJson();
-  }, [initialFlowJson, editorReady]);
+  }, [initialFlowJson]); // Removido editorReady das dependências - usando ref ao invés de state
 
-  // Canvas: fundo neutro conforme diretrizes (#F6F7F9 ou similar), grid sutil
-  const canvasBgColor = theme.name === 'light' ? '#F6F7F9' : '#1a1a1a';
-  const gridColor = theme.name === 'light' ? '#E8EAED' : '#2a2a2a'; // Grid sutil e discreto
+  // Aplica estilos do tema no container (usando useEffect para evitar re-renderizações)
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const canvasBgColor = theme.name === 'light' ? '#F6F7F9' : '#1a1a1a';
+    const gridColor = theme.name === 'light' ? '#E8EAED' : '#2a2a2a';
+    
+    containerRef.current.style.background = canvasBgColor;
+    containerRef.current.style.backgroundImage = `
+      linear-gradient(${gridColor} 1px, transparent 1px),
+      linear-gradient(90deg, ${gridColor} 1px, transparent 1px)
+    `;
+    containerRef.current.style.backgroundSize = '24px 24px';
+  }, [theme]);
 
   return (
     <NodeSelectionContext.Provider value={selectedNodeId}>
@@ -2129,12 +2782,6 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
           minWidth: 200,
           minHeight: 0,
           position: 'relative',
-          background: canvasBgColor, // Fundo neutro conforme diretrizes
-          backgroundImage: `
-            linear-gradient(${gridColor} 1px, transparent 1px),
-            linear-gradient(90deg, ${gridColor} 1px, transparent 1px)
-          `,
-          backgroundSize: '24px 24px', // Grid mais espaçado e sutil
           overflow: 'hidden',
         }}
       />
@@ -2151,6 +2798,37 @@ export function FlowEditor({ initialFlowJson, onFlowChanged, onNodeSelected, onE
  * Mantidas como funções puras ou quase-puras para facilitar uso
  * fora do React se necessário.
  */
+
+// Exporta o componente memoizado para evitar re-renderizações desnecessárias
+// Comparação customizada: só re-renderiza se props realmente importantes mudaram
+export const FlowEditor = React.memo(FlowEditorComponent, (prevProps, nextProps) => {
+  // Se o selectedNodeId mudou, precisa re-renderizar
+  if (prevProps.selectedNodeId !== nextProps.selectedNodeId) {
+    return false; // Re-renderizar
+  }
+  
+  // Se o initialFlowJson mudou (comparando IDs e estrutura básica)
+  const prevFlowId = prevProps.initialFlowJson?.id;
+  const nextFlowId = nextProps.initialFlowJson?.id;
+  if (prevFlowId !== nextFlowId) {
+    return false; // Re-renderizar
+  }
+  
+  // Se o número de nós mudou, precisa re-renderizar
+  const prevNodeCount = prevProps.initialFlowJson?.nodes ? Object.keys(prevProps.initialFlowJson.nodes).length : 0;
+  const nextNodeCount = nextProps.initialFlowJson?.nodes ? Object.keys(nextProps.initialFlowJson.nodes).length : 0;
+  if (prevNodeCount !== nextNodeCount) {
+    return false; // Re-renderizar
+  }
+  
+  // Se as referências dos callbacks mudaram, não precisa re-renderizar
+  // (os callbacks são armazenados em refs internamente e atualizados via useEffect)
+  
+  // Se o editorRef mudou, não precisa re-renderizar (é uma ref)
+  
+  // Por padrão, não re-renderiza (retorna true = props são iguais)
+  return true;
+});
 
 
 

@@ -55,33 +55,79 @@ export function reteJsonToEngineFlow(reteJson, meta) {
 
   const byId = new Map(engineNodes.map((n) => [n.id, n]));
 
-  // Segundo passo: mapeamos "next" a partir da primeira conexão de saída
+  // Segundo passo: mapeamos "next" a partir de todas as conexões de saída
+  // Suportamos múltiplas conexões armazenando como array quando há mais de uma
+  // Também coletamos as posições dos nós para preservar o layout
+  const positions = {};
+  
   Object.values(nodesObj).forEach((node) => {
     if (!node || typeof node.id === 'undefined') return;
     const fromId = String(node.id);
     const engineNode = byId.get(fromId);
-    if (!engineNode || !node.outputs) return;
+    if (!engineNode) return;
+
+    // Salva a posição do nó se existir
+    if (node.position && Array.isArray(node.position) && node.position.length >= 2) {
+      positions[fromId] = [node.position[0], node.position[1]];
+      logger.debug('Posição coletada para nó', {
+        nodeId: fromId,
+        position: positions[fromId]
+      });
+    } else {
+      logger.debug('Nó sem posição válida', {
+        nodeId: fromId,
+        hasPosition: !!node.position,
+        positionType: typeof node.position,
+        positionValue: node.position
+      });
+    }
+
+    if (!node.outputs) return;
 
     const outputs = node.outputs || {};
+    const allConnections = [];
+    
     for (const output of Object.values(outputs)) {
       if (!output || !Array.isArray(output.connections)) continue;
-      const first = output.connections[0];
-      if (first && typeof first.node !== 'undefined') {
-        const targetId = String(first.node);
-        engineNode.next = targetId;
-        break;
+      for (const connection of output.connections) {
+        if (connection && typeof connection.node !== 'undefined') {
+          const targetId = String(connection.node);
+          allConnections.push(targetId);
+        }
       }
+    }
+    
+    // Se há conexões, armazenamos todas elas
+    if (allConnections.length > 0) {
+      // Para compatibilidade: se há apenas uma conexão, usamos string
+      // Se há múltiplas, usamos array
+      engineNode.next = allConnections.length === 1 ? allConnections[0] : allConnections;
+      logger.debug('Conexões mapeadas para nó', {
+        nodeId: fromId,
+        connectionCount: allConnections.length,
+        connections: allConnections
+      });
     }
   });
 
-  return {
+  const result = {
     tenantId: (meta && meta.tenantId) || 'demo-tenant',
     id: (meta && meta.id) || 'demo-flow',
     name: (meta && meta.name) || 'Fluxo sem nome',
     version: (meta && typeof meta.version === 'number' ? meta.version : 1),
     nodes: engineNodes,
-    metadata: {},
+    metadata: {
+      positions: positions,
+    },
   };
+
+  logger.debug('Posições coletadas para salvamento', {
+    positionsCount: Object.keys(positions).length,
+    positions: positions,
+    nodeCount: engineNodes.length
+  });
+
+  return result;
 }
 
 /**
@@ -124,17 +170,84 @@ export function engineFlowToReteJson(flow) {
   /** @type {Record<string, any>} */
   const nodes = {};
 
-  // Criamos nós com posições básicas em grade
+  // Recupera posições salvas do metadata, se existirem
+  const savedPositions = (flow.metadata && flow.metadata.positions) || {};
+  logger.debug('Posições salvas encontradas no fluxo', {
+    hasMetadata: !!flow.metadata,
+    hasPositions: !!(flow.metadata && flow.metadata.positions),
+    positionsCount: Object.keys(savedPositions).length,
+    positions: savedPositions,
+    savedPositionKeys: Object.keys(savedPositions),
+    engineNodeIds: flow.nodes.map(n => String(n.id))
+  });
+
+  // Criamos nós com posições preservadas ou calculadas em grade
   // Primeiro, criamos um mapa do ID original do engine para o ID numérico do Rete
   const engineIdToNumeric = new Map();
   
   flow.nodes.forEach((node, index) => {
     const numericId = Number.isNaN(Number(node.id)) ? index + 1 : Number(node.id);
-    const x = (index % 5) * 250;
-    const y = Math.floor(index / 5) * 160;
+    
+    // Usa posição salva se existir, caso contrário calcula em grade
+    let position;
+    const nodeId = String(node.id);
+    
+    // Tenta buscar posição usando o ID do engine primeiro
+    // Se não encontrar, tenta com o numericId (ID do Rete)
+    // Também tenta todas as variações possíveis de ID
+    let savedPosition = savedPositions[nodeId];
+    if (!savedPosition) {
+      // Tenta com numericId
+      savedPosition = savedPositions[String(numericId)];
+      if (savedPosition) {
+        logger.debug('Posição encontrada usando numericId', { 
+          nodeId, 
+          numericId, 
+          position: savedPosition 
+        });
+      }
+    }
+    
+    // Se ainda não encontrou, tenta buscar por todas as chaves disponíveis
+    // Isso ajuda a lidar com casos onde o ID mudou
+    if (!savedPosition && Object.keys(savedPositions).length > 0) {
+      // Tenta encontrar por índice (última tentativa)
+      const positionKeys = Object.keys(savedPositions);
+      if (positionKeys.length > index) {
+        // Se houver posições suficientes, usa por ordem
+        const keyByIndex = positionKeys[index];
+        savedPosition = savedPositions[keyByIndex];
+        if (savedPosition) {
+          logger.debug('Posição encontrada usando índice', { 
+            nodeId, 
+            numericId, 
+            index,
+            keyUsed: keyByIndex,
+            position: savedPosition 
+          });
+        }
+      }
+    }
+    
+    if (savedPosition && Array.isArray(savedPosition) && savedPosition.length >= 2) {
+      position = [savedPosition[0], savedPosition[1]];
+      logger.debug('Usando posição salva para nó', { nodeId, numericId, position });
+    } else {
+      // Posição padrão em grade se não houver posição salva
+      const x = (index % 5) * 250;
+      const y = Math.floor(index / 5) * 160;
+      position = [x, y];
+      logger.debug('Usando posição calculada para nó (posição salva não encontrada)', { 
+        nodeId, 
+        numericId, 
+        position,
+        triedKeys: [nodeId, String(numericId)],
+        availableKeys: Object.keys(savedPositions)
+      });
+    }
 
     // Mapeia o ID original do engine para o ID numérico do Rete
-    engineIdToNumeric.set(String(node.id), numericId);
+    engineIdToNumeric.set(nodeId, numericId);
 
     // Cria estrutura do nó baseada no tipo
     const nodeData = {
@@ -143,7 +256,7 @@ export function engineFlowToReteJson(flow) {
         type: node.type,
         config: node.config || {},
       },
-      position: [x, y],
+      position: position,
       name: 'FlowNode',
     };
     
@@ -169,47 +282,56 @@ export function engineFlowToReteJson(flow) {
   });
 
   // Preenchemos conexões de saída a partir do campo "next"
+  // Suportamos tanto string (conexão única) quanto array (múltiplas conexões)
   flow.nodes.forEach((node) => {
     if (!node.next) return;
     
     const fromNumeric = engineIdToNumeric.get(String(node.id));
-    const toNumeric = engineIdToNumeric.get(String(node.next));
-    
-    if (!fromNumeric || !toNumeric) {
-      logger.warn('Não foi possível mapear conexão', {
+    if (!fromNumeric) {
+      logger.warn('Não foi possível mapear nó de origem', {
         fromId: node.id,
-        toId: node.next,
-        fromNumeric,
-        toNumeric,
         availableIds: Array.from(engineIdToNumeric.keys())
       });
       return;
     }
 
     const fromNode = nodes[fromNumeric];
-    if (
-      fromNode &&
-      fromNode.outputs &&
-      fromNode.outputs.out &&
-      Array.isArray(fromNode.outputs.out.connections)
-    ) {
-      fromNode.outputs.out.connections.push({
-        node: toNumeric,
-        input: 'in',
-      });
-      logger.debug('Conexão adicionada ao JSON', {
-        fromId: node.id,
-        toId: node.next,
-        fromNumeric,
-        toNumeric
-      });
-    } else {
+    if (!fromNode || !fromNode.outputs || !fromNode.outputs.out || !Array.isArray(fromNode.outputs.out.connections)) {
       logger.warn('Nó de origem não tem output válido', {
         fromId: node.id,
         fromNumeric,
         hasOutputs: !!(fromNode && fromNode.outputs),
         hasOutOutput: !!(fromNode && fromNode.outputs && fromNode.outputs.out),
         nodeType: fromNode?.data?.type
+      });
+      return;
+    }
+
+    // Suporta tanto string (conexão única) quanto array (múltiplas conexões)
+    const nextConnections = Array.isArray(node.next) ? node.next : [node.next];
+    
+    for (const nextId of nextConnections) {
+      const toNumeric = engineIdToNumeric.get(String(nextId));
+      
+      if (!toNumeric) {
+        logger.warn('Não foi possível mapear nó de destino', {
+          fromId: node.id,
+          toId: nextId,
+          fromNumeric,
+          availableIds: Array.from(engineIdToNumeric.keys())
+        });
+        continue;
+      }
+
+      fromNode.outputs.out.connections.push({
+        node: toNumeric,
+        input: 'in',
+      });
+      logger.debug('Conexão adicionada ao JSON', {
+        fromId: node.id,
+        toId: nextId,
+        fromNumeric,
+        toNumeric
       });
     }
   });

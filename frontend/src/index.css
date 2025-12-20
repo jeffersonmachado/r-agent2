@@ -221,6 +221,21 @@
     visibility: visible !important;
     opacity: 1 !important;
   }
+
+  /* Permite que conexões sejam visíveis mesmo em coordenadas negativas */
+  /* Container do AreaPlugin - permite overflow para conexões */
+  [data-rete-area],
+  .rete-area,
+  div[style*="overflow: hidden"]:has(svg[data-testid="connection"]) {
+    overflow: visible !important;
+  }
+
+  /* Fallback: força overflow visible em containers que contêm SVGs de conexão */
+  svg[data-testid="connection"] {
+    overflow: visible !important;
+    clip-path: none !important;
+    clip: auto !important;
+  }
   
   /* Sockets devem ser visíveis e clicáveis */
   .socket {

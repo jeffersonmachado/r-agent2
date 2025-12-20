@@ -14,7 +14,7 @@
  *   com estados de sessão diferentes.
  */
 
-const { findNode, createEngineEvent } = require('./utils');
+const { findNode, createEngineEvent, normalizeNext } = require('./utils');
 
 /**
  * @typedef {import('./flowTypes').FlowDefinition} FlowDefinition
@@ -168,7 +168,7 @@ async function runStep(flow, state, registry, input) {
       // caso contrário, aplicamos fallback (se configurado).
       if (attempt === maxAttempts) {
         // Falha definitiva do nó.
-        const fallbackNextNodeId = fallbackNodeId != null ? fallbackNodeId : node.next || null;
+        const fallbackNextNodeId = fallbackNodeId != null ? fallbackNodeId : normalizeNext(node.next);
 
         const fallbackState = {
           ...state,
@@ -211,9 +211,9 @@ async function runStep(flow, state, registry, input) {
     // usamos heurísticas em cima do output e do campo next padrão.
     const output = handlerOutput.output || {};
     if (output && typeof output === 'object' && output.type === 'router') {
-      nextNodeId = output.chosenNext || node.next || null;
+      nextNodeId = output.chosenNext || normalizeNext(node.next);
     } else {
-      nextNodeId = node.next || null;
+      nextNodeId = normalizeNext(node.next);
     }
   }
 

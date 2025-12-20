@@ -54,10 +54,41 @@ function findNode(flow, nodeId) {
   return node || null;
 }
 
+/**
+ * Normaliza o campo "next" de um nó.
+ * Suporta tanto string (conexão única) quanto array (múltiplas conexões).
+ * Para execução, retorna a primeira conexão quando há múltiplas.
+ *
+ * @param {string|string[]|null|undefined} next
+ * @returns {string|null}
+ */
+function normalizeNext(next) {
+  if (!next) return null;
+  if (typeof next === 'string') return next;
+  if (Array.isArray(next) && next.length > 0) return next[0];
+  return null;
+}
+
+/**
+ * Extrai todas as conexões do campo "next" de um nó.
+ * Suporta tanto string (conexão única) quanto array (múltiplas conexões).
+ *
+ * @param {string|string[]|null|undefined} next
+ * @returns {string[]}
+ */
+function getAllNextConnections(next) {
+  if (!next) return [];
+  if (typeof next === 'string') return [next];
+  if (Array.isArray(next)) return next.filter((id) => typeof id === 'string');
+  return [];
+}
+
 module.exports = {
   nowIso,
   createEngineEvent,
   findNode,
+  normalizeNext,
+  getAllNextConnections,
 };
 
 

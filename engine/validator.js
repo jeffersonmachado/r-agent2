@@ -68,7 +68,7 @@ function buildNodeMap(flow) {
 
 /**
  * Constrói a lista de arestas (conexões lógicas) do fluxo.
- * - Para nós simples, usamos o campo "next".
+ * - Para nós simples, usamos o campo "next" (suporta string ou array).
  * - Para routers, consideramos todos os "rules[].next" e também "next" padrão.
  *
  * @param {FlowDefinition} flow
@@ -80,9 +80,17 @@ function buildEdges(flow) {
   for (const node of flow.nodes || []) {
     if (!node || !node.id) continue;
 
-    // Conexão padrão via "next"
+    // Conexão padrão via "next" - suporta múltiplas conexões
     if (node.next) {
-      edges.push({ from: node.id, to: node.next });
+      if (typeof node.next === 'string') {
+        edges.push({ from: node.id, to: node.next });
+      } else if (Array.isArray(node.next)) {
+        for (const nextId of node.next) {
+          if (typeof nextId === 'string') {
+            edges.push({ from: node.id, to: nextId });
+          }
+        }
+      }
     }
 
     // Conexões específicas de router

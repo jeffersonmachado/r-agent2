@@ -263,6 +263,21 @@ export function FlowEditorPage() {
         return;
       }
       
+      // Verifica se todos os nós têm posições válidas antes de organizar
+      const nodesWithValidPositions = nodes.filter(node => {
+        try {
+          const nodeView = area.nodeViews?.get(node.id);
+          return nodeView && nodeView.position;
+        } catch {
+          return false;
+        }
+      });
+      
+      if (nodesWithValidPositions.length === 0) {
+        showToast('Nenhum nó válido para organizar', 'warning', 2000);
+        return;
+      }
+      
       // Anima a organização de forma suave
       showToast('Organizando nós...', 'info', 1000);
       
@@ -273,8 +288,12 @@ export function FlowEditorPage() {
             await arrange.layout();
             resolve();
           } catch (err) {
+            logger.warn('Erro ao calcular layout do AutoArrangePlugin', { 
+              error: err?.message || String(err),
+              nodeCount: nodes.length
+            });
             resolve();
-            throw err;
+            // Não propaga o erro - apenas loga como warning
           }
         });
       });
@@ -284,13 +303,17 @@ export function FlowEditorPage() {
       
       // Zoom automático após organizar com animação suave
       if (nodes.length > 0) {
-        AreaExtensions.zoomAt(area, nodes);
+        try {
+          AreaExtensions.zoomAt(area, nodes);
+        } catch (err) {
+          logger.warn('Erro ao fazer zoom após organizar', { error: err?.message });
+        }
       }
       
       showToast('Nós organizados automaticamente', 'success', 2000);
     } catch (err) {
       logger.error('Erro ao organizar nós', { error: err });
-      showToast('Erro ao organizar nós', 'error', 3000);
+      showToast('Erro ao organizar nós. Tente novamente.', 'error', 3000);
     }
   };
 

@@ -8,7 +8,7 @@
  * @property {string} id
  * @property {string} type
  * @property {Object<string, any>} [config]
- * @property {string|null} [next]
+ * @property {string|string[]|null} [next] - Próximo nó (string para conexão única, array para múltiplas conexões)
  */
 
 /**

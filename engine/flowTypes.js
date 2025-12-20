@@ -13,7 +13,7 @@
  * @property {string} id            - Identificador único do nó dentro do fluxo
  * @property {string} type          - Tipo do nó (ex: "message", "user_input", "router", "handoff", "ai", "end")
  * @property {Object<string, any>} [config] - Configuração específica do nó (schema varia conforme o type)
- * @property {string|null} [next]   - Próximo nó padrão, se aplicável
+ * @property {string|string[]|null} [next]   - Próximo nó padrão (string para conexão única, array para múltiplas conexões)
  */
 
 /**
