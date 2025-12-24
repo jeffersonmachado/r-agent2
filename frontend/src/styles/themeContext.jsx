@@ -134,6 +134,28 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-accent-hover', theme.colors.accent.hover);
     root.style.setProperty('--color-accent-pressed', theme.colors.accent.pressed);
     root.style.setProperty('--color-accent-light', theme.colors.accent.light);
+    
+    // Canvas background colors
+    if (themeName === 'dark') {
+      root.style.setProperty('--canvas-bg-color', '#0b0b0b');
+      root.style.setProperty('--canvas-grid-image', 'linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)');
+    } else {
+      root.style.setProperty('--canvas-bg-color', '#f8fafc');
+      root.style.setProperty('--canvas-grid-image', 'linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)');
+    }
+    
+    // Toolbar button colors
+    if (themeName === 'dark') {
+      root.style.setProperty('--tb-btn-border-color', '#2a2a2a');
+      root.style.setProperty('--tb-btn-hover-bg', 'rgba(255, 255, 255, 0.05)');
+      root.style.setProperty('--tb-btn-hover-border', '#3a3a3a');
+      root.style.setProperty('--tb-btn-active-bg', 'rgba(255, 255, 255, 0.1)');
+    } else {
+      root.style.setProperty('--tb-btn-border-color', '#ccc');
+      root.style.setProperty('--tb-btn-hover-bg', 'rgba(0, 0, 0, 0.05)');
+      root.style.setProperty('--tb-btn-hover-border', '#999');
+      root.style.setProperty('--tb-btn-active-bg', 'rgba(0, 0, 0, 0.1)');
+    }
   }, [themeName, theme]);
 
   const toggleTheme = () => {

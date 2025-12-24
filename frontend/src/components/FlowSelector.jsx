@@ -110,10 +110,10 @@ export function FlowSelector({ onFlowSelected, currentFlowId, refreshTrigger }) 
               loadFlows();
             }
           }}
-          className="px-3 py-1.5 bg-bg-tertiary border border-border-default rounded-md cursor-pointer text-sm text-text-primary transition-all duration-fast font-medium hover:bg-bg-hover hover:border-border-hover hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+          className="tb-btn"
           title={currentFlow ? `Fluxo atual: ${currentFlow.name || currentFlow.id}` : 'Abrir fluxo salvo'}
         >
-          📂 Abrir
+          📂<span className="hidden md:inline">Abrir</span>
         </button>
       </div>
 

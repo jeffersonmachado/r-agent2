@@ -179,6 +179,38 @@ function badRequest(res, msg) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Valida a estrutura básica de um FlowDefinition antes de processar.
+ *
+ * @param {any} rawFlow
+ * @returns {{ valid: boolean, error?: string, flow?: any }}
+ */
+function validateFlowStructure(rawFlow) {
+  if (!rawFlow || typeof rawFlow !== 'object') {
+    return { valid: false, error: 'Flow deve ser um objeto' };
+  }
+
+  if (!Array.isArray(rawFlow.nodes)) {
+    return { valid: false, error: 'Flow deve ter um campo "nodes" do tipo array' };
+  }
+
+  if (rawFlow.nodes.length === 0) {
+    return { valid: false, error: 'Flow deve ter pelo menos um nó' };
+  }
+
+  if (rawFlow.nodes.length > 1000) {
+    return { valid: false, error: 'Flow excede o limite máximo de 1000 nós' };
+  }
+
+  // Validação de tamanho do JSON (limite de 10MB)
+  const jsonString = JSON.stringify(rawFlow);
+  if (jsonString.length > 10 * 1024 * 1024) {
+    return { valid: false, error: 'Flow excede o tamanho máximo de 10MB' };
+  }
+
+  return { valid: true, flow: rawFlow };
+}
+
+/**
  * Garante metadados mínimos de FlowDefinition.
  *
  * - tenantId: sempre presente (cai no DEFAULT_TENANT_ID se não vier)
@@ -192,21 +224,42 @@ function badRequest(res, msg) {
 function ensureFlowHasMeta(rawFlow) {
   const flow = rawFlow && typeof rawFlow === 'object' ? { ...rawFlow } : {};
 
-  if (!flow.tenantId || typeof flow.tenantId !== 'string') {
+  if (!flow.tenantId || typeof flow.tenantId !== 'string' || flow.tenantId.trim() === '') {
     flow.tenantId = defaultTenantId;
+  } else {
+    // Sanitiza tenantId
+    flow.tenantId = flow.tenantId.trim();
+    if (flow.tenantId.length > 100) {
+      flow.tenantId = flow.tenantId.substring(0, 100);
+    }
   }
 
-  if (!flow.id || typeof flow.id !== 'string') {
+  if (!flow.id || typeof flow.id !== 'string' || flow.id.trim() === '') {
     const baseName = flow.name && typeof flow.name === 'string' ? flow.name : 'flow';
-    flow.id = `${baseName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    flow.id = `${baseName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}-${Date.now()}`;
+  } else {
+    // Sanitiza id
+    flow.id = flow.id.trim();
+    if (flow.id.length > 200) {
+      flow.id = flow.id.substring(0, 200);
+    }
   }
 
-  if (!flow.name || typeof flow.name !== 'string') {
+  if (!flow.name || typeof flow.name !== 'string' || flow.name.trim() === '') {
     flow.name = 'Fluxo sem nome';
+  } else {
+    // Sanitiza name
+    flow.name = flow.name.trim();
+    if (flow.name.length > 500) {
+      flow.name = flow.name.substring(0, 500);
+    }
   }
 
-  if (typeof flow.version !== 'number' || Number.isNaN(flow.version)) {
+  if (typeof flow.version !== 'number' || Number.isNaN(flow.version) || flow.version < 1 || !Number.isInteger(flow.version)) {
     flow.version = 1;
+  } else if (flow.version > 999999) {
+    // Limite razoável de versão
+    flow.version = 999999;
   }
 
   return flow;
@@ -279,12 +332,47 @@ async function requestHandler(req, res) {
   if (method === 'POST' && pathname === '/flows') {
     try {
       const body = await parseJsonBody(req);
+
+      // Validação estrutural básica
+      const structureValidation = validateFlowStructure(body);
+      if (!structureValidation.valid) {
+        badRequest(res, structureValidation.error || 'Estrutura do fluxo inválida');
+        return;
+      }
+
+      // Validação completa usando o validador da engine
+      const validationResult = validateFlow(body);
+      if (!validationResult.valid && validationResult.errors.length > 0) {
+        sendJson(res, 400, {
+          error: 'validation_failed',
+          message: 'O fluxo não passou na validação',
+          errors: validationResult.errors,
+        });
+        return;
+      }
+
       const flow = ensureFlowHasMeta(body);
+
+      // Verifica se já existe um fluxo com o mesmo id
+      if (flows.has(flow.id)) {
+        sendJson(res, 409, {
+          error: 'flow_already_exists',
+          message: `Já existe um fluxo com o id "${flow.id}". Use PUT para atualizar.`,
+        });
+        return;
+      }
+
       flows.set(flow.id, flow);
       saveFlowsToFile(); // Salva no arquivo após criar
-      sendJson(res, 200, flow);
+      sendJson(res, 201, flow);
     } catch (err) {
-      badRequest(res, 'JSON inválido no corpo da requisição');
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao criar fluxo:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
+      }
     }
     return;
   }
@@ -293,19 +381,59 @@ async function requestHandler(req, res) {
   // IMPORTANTE: Verificar se não é um endpoint especial antes de processar
   if (method === 'PUT' && pathname.startsWith('/flows/') && pathname !== '/flows/validate' && pathname !== '/flows/simulate') {
     const id = decodeURIComponent(pathname.slice('/flows/'.length));
+
+    // Validação básica do ID
+    if (!id || id.trim() === '') {
+      badRequest(res, 'ID do fluxo é obrigatório');
+      return;
+    }
+
     try {
       const body = await parseJsonBody(req);
+
+      // Verifica se o fluxo existe
+      const existingFlow = flows.get(id);
+      if (!existingFlow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${id}" não encontrado` });
+        return;
+      }
+
       const merged = {
-        ...(flows.get(id) || {}),
+        ...existingFlow,
         ...(body && typeof body === 'object' ? body : {}),
-        id,
+        id, // Garante que o ID não seja alterado
       };
+
+      // Validação estrutural básica
+      const structureValidation = validateFlowStructure(merged);
+      if (!structureValidation.valid) {
+        badRequest(res, structureValidation.error || 'Estrutura do fluxo inválida');
+        return;
+      }
+
+      // Validação completa usando o validador da engine
+      const validationResult = validateFlow(merged);
+      if (!validationResult.valid && validationResult.errors.length > 0) {
+        sendJson(res, 400, {
+          error: 'validation_failed',
+          message: 'O fluxo não passou na validação',
+          errors: validationResult.errors,
+        });
+        return;
+      }
+
       const flow = ensureFlowHasMeta(merged);
       flows.set(id, flow);
       saveFlowsToFile(); // Salva no arquivo após atualizar
       sendJson(res, 200, flow);
     } catch (err) {
-      badRequest(res, 'JSON inválido no corpo da requisição');
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao atualizar fluxo:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
+      }
     }
     return;
   }
@@ -342,13 +470,36 @@ async function requestHandler(req, res) {
         badRequest(res, 'Body deve ser um objeto FlowDefinition');
         return;
       }
+
+      // Validação estrutural básica primeiro
+      const structureValidation = validateFlowStructure(body);
+      if (!structureValidation.valid) {
+        sendJson(res, 200, {
+          valid: false,
+          errors: [
+            {
+              code: 'INVALID_FLOW_STRUCTURE',
+              message: structureValidation.error || 'Estrutura do fluxo inválida',
+              nodeIds: [],
+            },
+          ],
+        });
+        return;
+      }
+
       const result = validateFlow(body);
       sendJson(res, 200, {
         valid: Boolean(result && result.valid),
         errors: Array.isArray(result && result.errors) ? result.errors : [],
       });
     } catch (err) {
-      badRequest(res, 'Body inválido para validação de fluxo');
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao validar fluxo:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao validar fluxo' });
+      }
     }
     return;
   }
@@ -363,14 +514,33 @@ async function requestHandler(req, res) {
       const body = await parseJsonBody(req);
       const { flowId, ...options } = body || {};
 
-      if (!flowId || typeof flowId !== 'string') {
-        badRequest(res, 'Campo "flowId" é obrigatório');
+      if (!flowId || typeof flowId !== 'string' || flowId.trim() === '') {
+        badRequest(res, 'Campo "flowId" é obrigatório e deve ser uma string não vazia');
         return;
       }
 
-      const flow = flows.get(flowId);
+      // Validação de opções
+      if (options.maxSteps !== undefined) {
+        if (typeof options.maxSteps !== 'number' || !Number.isInteger(options.maxSteps) || options.maxSteps < 1 || options.maxSteps > 1000) {
+          badRequest(res, 'Campo "maxSteps" deve ser um número inteiro entre 1 e 1000');
+          return;
+        }
+      }
+
+      const flow = flows.get(flowId.trim());
       if (!flow) {
-        sendJson(res, 404, { error: 'flow_not_found' });
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${flowId}" não encontrado` });
+        return;
+      }
+
+      // Valida o fluxo antes de simular
+      const validationResult = validateFlow(flow);
+      if (!validationResult.valid && validationResult.errors.length > 0) {
+        sendJson(res, 400, {
+          error: 'flow_invalid',
+          message: 'O fluxo não passou na validação e não pode ser simulado',
+          errors: validationResult.errors,
+        });
         return;
       }
 
@@ -391,7 +561,16 @@ async function requestHandler(req, res) {
       // Retorna resultado completo da simulação (SimulationResultUi)
       sendJson(res, 200, result);
     } catch (err) {
-      badRequest(res, 'Erro ao simular fluxo');
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao simular fluxo:', err);
+        sendJson(res, 500, {
+          error: 'simulation_error',
+          message: err && err.message ? err.message : 'Erro interno ao simular fluxo',
+        });
+      }
     }
     return;
   }
@@ -455,9 +634,11 @@ module.exports = {
     notFound,
     badRequest,
     ensureFlowHasMeta,
+    validateFlowStructure,
     flows,
     sessionEvents,
     defaultTenantId,
   },
 };
+
 

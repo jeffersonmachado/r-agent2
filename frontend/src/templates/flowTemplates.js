@@ -1,5 +1,11 @@
 /**
  * Modelos de fluxo pré-definidos para facilitar a criação de novos fluxos
+ * 
+ * IMPORTANTE:
+ * - Os templates devem seguir a estrutura do schema centralizado (nodeSchemas.js)
+ * - Router rules devem usar: { op: 'equals'|'contains'|'always', var: 'variable_name', value: 'value' }
+ * - Use condition: { op: 'always' } para fallback em routers
+ * - Todos os nós devem ter IDs únicos dentro do template
  */
 
 export const flowTemplates = [
@@ -60,14 +66,6 @@ export const flowTemplates = [
           type: 'message',
           config: {
             text: 'Olá! Vamos começar coletando algumas informações.',
-          },
-          next: 'ask-name',
-        },
-        {
-          id: 'ask-name',
-          type: 'message',
-          config: {
-            text: 'Por favor, digite seu nome:',
           },
           next: 'collect-name',
         },
@@ -136,15 +134,18 @@ export const flowTemplates = [
           config: {
             rules: [
               {
-                condition: { variable: 'user_option', operator: 'equals', value: '1' },
+                condition: { op: 'equals', var: 'user_option', value: '1' },
                 next: 'option-a',
               },
               {
-                condition: { variable: 'user_option', operator: 'equals', value: '2' },
+                condition: { op: 'equals', var: 'user_option', value: '2' },
                 next: 'option-b',
               },
+              {
+                condition: { op: 'always' },
+                next: 'default-response',
+              },
             ],
-            defaultNext: 'default-response',
           },
           next: null,
         },
@@ -289,11 +290,14 @@ export const flowTemplates = [
           config: {
             rules: [
               {
-                condition: { variable: 'needs_transfer', operator: 'equals', value: 'sim' },
+                condition: { op: 'equals', var: 'needs_transfer', value: 'sim' },
                 next: 'transfer',
               },
+              {
+                condition: { op: 'always' },
+                next: 'continue-chat',
+              },
             ],
-            defaultNext: 'continue-chat',
           },
           next: null,
         },

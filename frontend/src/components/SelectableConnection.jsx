@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Presets } from "rete-react-plugin";
+import logger from "../utils/logger";
 
 const { useConnection } = Presets.classic;
 
@@ -58,6 +59,15 @@ export function SelectableConnection(props) {
   const [isSelectedLocal, setIsSelectedLocal] = React.useState(() => props.data?.selected || false);
   const connectionId = props.data?.id;
 
+  React.useEffect(() => {
+    logger.debug('SelectableConnection renderizado', {
+      hasProps: !!props,
+      hasData: !!props.data,
+      propsKeys: props ? Object.keys(props) : [],
+      connectionId,
+    });
+  }, [props, connectionId]);
+
   // Atualiza o estado local quando props.data.selected mudar
   React.useEffect(() => {
     setIsSelectedLocal(props.data?.selected || false);
@@ -100,6 +110,10 @@ export function SelectableConnection(props) {
     
     // Chama o handler global se disponível
     if (window.__reteConnectionClickHandler && props.data) {
+      logger.debug('SelectableConnection handleClick', {
+        dataId: props.data?.id,
+        newSelected,
+      });
       // Atualiza a propriedade selected no objeto de conexão
       if (props.data) {
         props.data.selected = newSelected;

@@ -8,6 +8,7 @@
  */
 
 import logger from '../utils/logger';
+import { getNodeSchema, DEFAULT_SOCKET_NAME } from '../editor/nodeSchemas';
 
 /**
  * Converte o JSON do editor (Rete) em um FlowDefinition da engine.
@@ -249,6 +250,9 @@ export function engineFlowToReteJson(flow) {
     // Mapeia o ID original do engine para o ID numérico do Rete
     engineIdToNumeric.set(nodeId, numericId);
 
+    // Obtém schema do nó para informações de sockets
+    const nodeSchema = getNodeSchema(node.type);
+
     // Cria estrutura do nó baseada no tipo
     const nodeData = {
       id: numericId,
@@ -260,22 +264,28 @@ export function engineFlowToReteJson(flow) {
       name: 'FlowNode',
     };
     
-    // Nó start não tem input
-    if (node.type !== 'start') {
-      nodeData.inputs = {
-        in: {
+    // Adiciona inputs com sockets baseado no schema
+    if (nodeSchema && nodeSchema.inputs && nodeSchema.inputs.length > 0) {
+      nodeData.inputs = {};
+      nodeSchema.inputs.forEach(inputDef => {
+        nodeData.inputs[inputDef.key] = {
+          socket: { name: inputDef.socketName || DEFAULT_SOCKET_NAME },
+          label: inputDef.label,
           connections: [],
-        },
-      };
+        };
+      });
     }
     
-    // Nó end não tem output
-    if (node.type !== 'end') {
-      nodeData.outputs = {
-        out: {
+    // Adiciona outputs com sockets baseado no schema
+    if (nodeSchema && nodeSchema.outputs && nodeSchema.outputs.length > 0) {
+      nodeData.outputs = {};
+      nodeSchema.outputs.forEach(outputDef => {
+        nodeData.outputs[outputDef.key] = {
+          socket: { name: outputDef.socketName || DEFAULT_SOCKET_NAME },
+          label: outputDef.label,
           connections: [],
-        },
-      };
+        };
+      });
     }
     
     nodes[numericId] = nodeData;

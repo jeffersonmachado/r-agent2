@@ -6,6 +6,7 @@ import { useEditor } from '../state/editorStore';
 import { getReplay } from '../api/flows';
 import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
+import logger from '../utils/logger';
 
 /**
  * Página focada em debug/replay de sessão real.
@@ -30,8 +31,7 @@ export function SimulationDebuggerPage() {
       const result = await getReplay(sessionId);
       setReplay(result);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao carregar replay', err);
+      logger.error('Erro ao carregar replay', err);
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);

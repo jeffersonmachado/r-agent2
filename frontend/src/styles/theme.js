@@ -112,7 +112,6 @@ export const globalStyles = {
   },
   body: {
     margin: 0,
-    padding: 0,
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: theme.typography.fontSize.base,
     lineHeight: theme.typography.lineHeight.normal,

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Flow Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { darkMode: 'class' }
+</script>
+
+<style>
+.vertical {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.no-x-scroll {
+  overflow-x: hidden;
+}
+</style>
+</head>
+
+<body class="h-screen bg-gray-100 dark:bg-black text-gray-800 dark:text-[#e8eaed]">
+
+<div class="h-screen grid grid-rows-[auto_auto_1fr]">
+
+<!-- TOOLBAR -->
+<div class="h-12 flex items-center px-2 border-b
+            bg-white dark:bg-[#1a1a1a] dark:border-[#2a2a2a]">
+  <div class="flex items-center gap-2 overflow-hidden">
+    <button class="tb-btn">➕<span class="hidden md:inline">Novo</span></button>
+    <button class="tb-btn">📂<span class="hidden md:inline">Abrir</span></button>
+    <button class="tb-btn">🗑<span class="hidden md:inline">Remover</span></button>
+  </div>
+  <div class="flex-1"></div>
+  <div class="flex items-center gap-2">
+    <button class="tb-btn hidden md:flex">📋<span>Logs</span></button>
+    <button class="tb-btn" onclick="toggleTheme()">🌙</button>
+  </div>
+</div>
+
+<!-- FLUXO ATUAL -->
+<div class="h-8 px-4 flex items-center border-b
+            bg-gray-50 dark:bg-black dark:border-[#2a2a2a] text-sm">
+  Fluxo atual: <strong class="ml-1">exemplo-fluxo</strong>
+</div>
+
+<!-- MAIN -->
+<div class="flex min-h-0">
+
+  <!-- PALETA -->
+  <div id="palette"
+       class="w-56 min-w-[48px]
+              bg-white dark:bg-[#1a1a1a]
+              border-r dark:border-[#2a2a2a]
+              flex flex-col transition-all duration-200">
+
+    <div class="h-10 px-2 flex items-center justify-between
+                border-b dark:border-[#2a2a2a]">
+      <span class="palette-title">Paleta</span>
+      <button class="collapse-btn" onclick="togglePalette()">◀</button>
+    </div>
+
+    <div class="flex-1 p-2 text-sm space-y-2">
+      <div class="flex items-center gap-2"><span>🔵</span><span class="palette-label">Entrada</span></div>
+      <div class="flex items-center gap-2"><span>💬</span><span class="palette-label">Mensagem</span></div>
+      <div class="flex items-center gap-2"><span>🔀</span><span class="palette-label">Condição</span></div>
+      <div class="flex items-center gap-2"><span>🌐</span><span class="palette-label">API</span></div>
+    </div>
+  </div>
+
+  <!-- DIVIDER PALETA -->
+  <div class="w-1 cursor-col-resize hover:bg-blue-400/30"
+       onmousedown="startResize(event,'palette','horizontal-left')"></div>
+
+  <!-- CANVAS -->
+  <div class="flex-1 relative overflow-hidden bg-[#f8fafc] dark:bg-[#0b0b0b]">
+    <div class="absolute inset-0
+      bg-[linear-gradient(to_right,rgba(0,0,0,0.05)_1px,transparent_1px),
+          linear-gradient(to_bottom,rgba(0,0,0,0.05)_1px,transparent_1px)]
+      bg-[size:20px_20px]
+      dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),
+               linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)]
+      dark:bg-[size:20px_20px]">
+    </div>
+    <div class="relative h-full flex items-center justify-center text-gray-400">
+      Canvas (Rete.js)
+    </div>
+  </div>
+
+  <!-- DIVIDER DIREITA -->
+  <div class="w-1 cursor-col-resize hover:bg-blue-400/30"
+       onmousedown="startResize(event,'rightPanel','horizontal-right')"></div>
+
+  <!-- PAINEL DIREITO -->
+  <div id="rightPanel"
+       class="w-72 min-w-[48px]
+              bg-white dark:bg-[#1a1a1a]
+              border-l dark:border-[#2a2a2a]
+              flex flex-col transition-all duration-200">
+
+    <!-- HEADER -->
+    <div class="h-10 px-2 flex items-center justify-end
+                border-b dark:border-[#2a2a2a]">
+      <button class="collapse-btn" onclick="toggleRightPanel()">▶</button>
+    </div>
+
+    <!-- CONTEÚDO -->
+    <div id="rightContent" class="flex-1 flex flex-col no-x-scroll">
+
+      <div class="flex-1 p-2 border-b dark:border-[#2a2a2a] right-label">
+        Propriedades
+      </div>
+
+      <div class="flex-1 p-2 border-b dark:border-[#2a2a2a] right-label">
+        Validação
+      </div>
+
+      <div class="flex-1 p-2 right-label">
+        Simulação
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- JS -->
+<script>
+let startX, startSize, target, direction;
+
+function startResize(e, id, dir) {
+  target = document.getElementById(id);
+  direction = dir;
+  startX = e.clientX;
+  startSize = target.offsetWidth;
+  document.addEventListener('mousemove', resize);
+  document.addEventListener('mouseup', stopResize);
+}
+
+function resize(e) {
+  if (!target) return;
+  if (direction === 'horizontal-left') {
+    target.style.width = startSize + (e.clientX - startX) + 'px';
+  }
+  if (direction === 'horizontal-right') {
+    target.style.width = startSize - (e.clientX - startX) + 'px';
+  }
+}
+
+function stopResize() {
+  document.removeEventListener('mousemove', resize);
+  document.removeEventListener('mouseup', stopResize);
+}
+
+/* PALETA */
+function togglePalette() {
+  const p = document.getElementById('palette');
+  const btn = p.querySelector('.collapse-btn');
+  const collapsed = p.classList.toggle('collapsed');
+
+  p.style.width = collapsed ? '48px' : '';
+  btn.textContent = collapsed ? '▶' : '◀';
+
+  document.querySelectorAll('.palette-label, .palette-title')
+    .forEach(el => el.style.display = collapsed ? 'none' : 'inline');
+}
+
+/* PAINEL DIREITO */
+function toggleRightPanel() {
+  const p = document.getElementById('rightPanel');
+  const btn = p.querySelector('.collapse-btn');
+  const content = document.getElementById('rightContent');
+  const labels = document.querySelectorAll('.right-label');
+
+  const collapsed = p.classList.toggle('collapsed');
+
+  p.style.width = collapsed ? '48px' : '';
+  btn.textContent = collapsed ? '◀' : '▶';
+
+  content.style.flexDirection = collapsed ? 'column' : 'column';
+
+  labels.forEach(l => {
+    l.classList.toggle('vertical', collapsed);
+    l.style.display = 'flex';
+    l.style.alignItems = 'center';
+    l.style.justifyContent = 'center';
+  });
+}
+
+/* TEMA */
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+}
+</script>
+
+<!-- CSS -->
+<style>
+.tb-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.dark .tb-btn {
+  border-color: #2a2a2a;
+}
+.collapse-btn {
+  font-size: 12px;
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.dark .collapse-btn {
+  border-color: #2a2a2a;
+}
+</style>
+
+</body>
+</html>

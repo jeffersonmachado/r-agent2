@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @theme {
   /* Cores customizadas - Backgrounds */
@@ -68,11 +71,15 @@
 
 @layer base {
   * {
-    @apply box-border;
+    box-sizing: border-box;
   }
   
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+  }
+
   body {
-    @apply m-0 p-0;
     font-family: var(--font-family-sans);
     font-size: var(--font-size-base);
     line-height: 1.5;
@@ -80,6 +87,75 @@
     background-color: var(--color-bg-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Classes EXATAMENTE como no modelo.html */
+  .vertical {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  
+  .no-x-scroll {
+    overflow-x: hidden;
+  }
+  
+  .tb-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: 1px solid var(--tb-btn-border-color, #ccc);
+    border-radius: 6px;
+    background-color: transparent;
+    cursor: pointer;
+    transition: all 150ms ease;
+    color: inherit;
+  }
+  
+  .tb-btn:hover {
+    background-color: var(--tb-btn-hover-bg, rgba(0, 0, 0, 0.05));
+    border-color: var(--tb-btn-hover-border, #999);
+  }
+  
+  .tb-btn:active {
+    background-color: var(--tb-btn-active-bg, rgba(0, 0, 0, 0.1));
+    transform: scale(0.98);
+  }
+  
+  .collapse-btn {
+    font-size: 12px;
+    padding: 2px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+  }
+  
+  .dark .collapse-btn {
+    border-color: #2a2a2a;
+  }
+  
+  .collapse-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  .dark .collapse-btn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .palette-title {
+    display: inline;
+  }
+  
+  .palette-label {
+    display: inline;
+  }
+  
+  .right-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -264,5 +340,1102 @@
     transform: scale(1.2);
     transition: transform 0.15s ease;
   }
+
+  /* Estilos dos nós do fluxo */
+  .flow-node {
+    width: 220px;
+    min-height: auto;
+    border-radius: 12px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: var(--color-border-default);
+    background-color: var(--color-bg-elevated);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.7);
+    transition: all var(--transition-normal) ease-out;
+    cursor: pointer; /* Indica que o nó é interativo/selecionável */
+  }
+
+  .flow-node--selected {
+    border-width: 3px;
+    box-shadow: 0 8px 24px rgba(94, 106, 210, 0.3), 0 4px 8px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(94, 106, 210, 0.2);
+    transform: translateY(-2px) scale(1.01);
+    outline: 2px solid rgba(94, 106, 210, 0.25);
+    outline-offset: 1px;
+    z-index: 1000;
+  }
+
+  .flow-node--error {
+    border-width: 3px;
+    border-color: var(--color-status-error);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2), 0 4px 12px rgba(239, 68, 68, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
+    z-index: 999;
+    animation: errorPulse 2s ease-in-out infinite;
+    background-color: rgba(127, 29, 29, 0.45);
+  }
+
+  /* Cores por tipo de nó */
+  .flow-node--type-start {
+    --flow-node-color: var(--color-node-start);
+  }
+
+  .flow-node--type-message {
+    --flow-node-color: var(--color-node-message);
+  }
+
+  .flow-node--type-user_input {
+    --flow-node-color: var(--color-node-user-input);
+  }
+
+  .flow-node--type-router {
+    --flow-node-color: var(--color-node-router);
+  }
+
+  .flow-node--type-set_variable {
+    --flow-node-color: var(--color-node-set-variable);
+  }
+
+  .flow-node--type-handoff {
+    --flow-node-color: var(--color-node-handoff);
+  }
+
+  .flow-node--type-ai {
+    --flow-node-color: var(--color-node-ai);
+  }
+
+  .flow-node--type-end {
+    --flow-node-color: var(--color-node-end);
+  }
+
+  /* Quando o nó está em erro, deixa o header explicitamente vermelho */
+  .flow-node--error .flow-node__header {
+    background: linear-gradient(
+      135deg,
+      rgba(248, 113, 113, 0.9) 0%,
+      rgba(127, 29, 29, 0.98) 100%
+    );
+    border-bottom-color: rgba(248, 113, 113, 0.9);
+  }
+
+  /* Partes internas do nó */
+  .flow-node__header {
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+    background: linear-gradient(135deg, var(--flow-node-color, #4b5563) 0%, rgba(15, 23, 42, 0.95) 100%);
+    cursor: pointer; /* Cursor de clique também no header */
+  }
+
+  .flow-node__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+  }
+
+  .flow-node__title {
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+
+  .flow-node__error-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    background-color: var(--color-status-error);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    cursor: help;
+    z-index: 10;
+  }
+
+  .flow-node__id-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    font-size: 10px;
+    font-family: var(--font-family-mono);
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .flow-node__id-badge--with-error {
+    right: 32px;
+  }
+
+  .flow-node__content {
+    padding: 18px;
+    cursor: pointer; /* Cursor de clique no corpo do nó */
+  }
+
+  .flow-node__preview {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border-default);
+    background-color: var(--color-bg-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 400;
+  }
+
+  .flow-node__preview--light {
+    background-color: #f9fafb;
+    border-color: #e1e4e8;
+  }
+
+  .flow-node__preview-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+    margin-right: 4px;
+  }
+
+  .flow-node__preview-value {
+    font-weight: 600;
+    color: var(--flow-node-color, var(--color-accent-primary));
+  }
+
+  .flow-node__router-icon,
+  .flow-node__setvar-icon {
+    font-size: 16px;
+    line-height: 1;
+    margin-right: 6px;
+  }
+
+  .flow-node__inputs {
+    margin-top: 0;
+  }
+
+  .flow-node__inputs--with-preview {
+    margin-top: 4px;
+  }
+
+  .flow-node__io-row {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    padding: 4px 0;
+    min-height: 24px;
+  }
+
+  /* Inputs: socket à esquerda, label à direita */
+  .flow-node__inputs .flow-node__io-row {
+    justify-content: flex-start;
+    padding-left: 28px; /* Espaço suficiente para o socket à esquerda (16px + 3px border + 9px gap) */
+  }
+
+  /* Outputs: label à esquerda, socket à direita */
+  .flow-node__outputs .flow-node__io-row {
+    justify-content: flex-end;
+    padding-right: 28px; /* Espaço suficiente para o socket à direita (16px + 3px border + 9px gap) */
+  }
+
+  .flow-node__io-label {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: relative;
+    z-index: 1; /* Garante que o texto fique acima do socket */
+  }
+
+  .flow-node__outputs {
+    margin-top: 10px;
+  }
+
+  /* Sockets dentro do nó (fallback quando plugins não aplicam estilo próprio) */
+  .flow-node__socket-input,
+  .flow-node__socket-output {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+  }
+
+  .flow-node__socket-input {
+    background-color: var(--color-accent-primary);
+    border: 3px solid var(--color-bg-elevated);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  }
+
+  .flow-node__socket-output {
+    background-color: var(--color-status-success);
+    border: 3px solid var(--color-bg-elevated);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+  }
+
+  .flow-node__socket-input:hover,
+  .flow-node__socket-output:hover {
+    transform: scale(1.25);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+  }
+
+  /* Estilos para sockets customizados */
+  .flow-node__socket {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+    border: 3px solid var(--color-bg-elevated, #1a1a1a);
+    flex-shrink: 0;
+  }
+
+  /* Container do socket - posicionamento nas extremidades */
+  .input-socket,
+  .output-socket {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5; /* Abaixo do texto mas acima do fundo */
+  }
+
+  /* Socket de input (azul) - posicionado à esquerda */
+  .input-socket {
+    left: 0;
+  }
+
+  /* Socket de input: cor azul */
+  .input-socket .flow-node__socket,
+  .flow-node__inputs .input-socket .flow-node__socket,
+  .flow-node__inputs .flow-node__socket {
+    background-color: var(--color-accent-primary, #3b82f6) !important;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4) !important;
+  }
+
+  /* Socket de output (verde) - posicionado à direita */
+  .output-socket {
+    right: 0;
+  }
+
+  /* Socket de output: cor verde */
+  .output-socket .flow-node__socket,
+  .flow-node__outputs .output-socket .flow-node__socket,
+  .flow-node__outputs .flow-node__socket {
+    background-color: var(--color-status-success, #10b981) !important;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4) !important;
+  }
+
+  .flow-node__socket:hover {
+    transform: scale(1.25);
+  }
+
+  .input-socket:hover,
+  .output-socket:hover {
+    transform: translateY(-50%) scale(1.05);
+  }
+
+  .flow-node__inputs .flow-node__socket:hover {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+  }
+
+  .flow-node__outputs .flow-node__socket:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
+  }
+
+  /* Container do editor */
+  .flow-editor-container {
+    position: relative;
+    min-height: 400px;
+    height: 100%;
+    width: 100%;
+    background-color: transparent;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+/* Toolbar - EXATAMENTE como no modelo: h-12 px-2 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px; /* px-2 = 8px - EXATAMENTE como no modelo */
+  height: 48px; /* h-12 = 48px - EXATAMENTE como no modelo */
+  border-bottom: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-secondary); /* bg-white dark:bg-[#1a1a1a] */
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.toolbar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.toolbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toolbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 2px;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar-group-primary {
+  flex-shrink: 0;
+}
+
+.toolbar-group-main {
+  padding: 4px 8px;
+  background-color: var(--color-bg-elevated);
+  border-radius: 6px;
+  border: 1px solid var(--color-border-default);
+}
+
+.toolbar-group-zoom,
+.toolbar-group-edit {
+  padding: 4px 6px;
+  background-color: var(--color-bg-elevated);
+  border-radius: 6px;
+  border: 1px solid var(--color-border-default);
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 32px;
+  background-color: var(--color-border-default);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.toolbar-spacer {
+  flex: 1;
+  min-width: 20px;
+}
+
+.toolbar-search-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-search-input {
+  padding: 4px 8px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 4px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  min-width: 150px;
+}
+
+.toolbar-more-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.toolbar-more-button {
+  border: 1px solid var(--color-border-default);
+}
+
+.toolbar-more-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 149;
+  background: transparent;
+}
+
+.toolbar-more-menu {
+  position: fixed;
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 400px;
+  background: linear-gradient(to bottom, var(--color-bg-elevated), var(--color-bg-tertiary));
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 150;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  top: 48px;
+  right: 16px;
+  animation: slideDown 200ms ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toolbar-more-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.toolbar-more-close {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 150ms ease;
+}
+
+.toolbar-more-close:hover {
+  background-color: var(--color-bg-tertiary);
+}
+
+.toolbar-more-content {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+.toolbar-more-item {
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 150ms ease;
+}
+
+.toolbar-more-item:hover {
+  background-color: var(--color-bg-hover);
+}
+
+/* Node Palette - Versão Simplificada */
+.node-palette {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--color-bg-secondary), var(--color-bg-tertiary));
+  border-right: 1px solid var(--color-border-default);
+  overflow: hidden;
+}
+
+.node-palette-title {
+  padding: 12px 16px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.node-palette-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.node-palette-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.node-palette-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.node-palette-grid::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 3px;
+}
+
+.node-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: grab;
+  transition: all 200ms ease;
+  border: 1px solid var(--color-border-default);
+  background-color: rgba(var(--color-bg-tertiary-rgb, 26, 26, 26), 0.3);
+}
+
+.node-palette-item:active {
+  cursor: grabbing;
+}
+
+.node-palette-item:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background-color: rgba(var(--color-bg-tertiary-rgb, 26, 26, 26), 0.5);
+  border-color: var(--color-border-hover);
+}
+
+.node-palette-item--dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  background-color: var(--color-bg-tertiary);
+  border-width: 2px;
+  border-color: var(--node-color, var(--color-border-default));
+}
+
+.node-palette-item-icon {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  backdrop-filter: blur(4px);
+  transition: transform 200ms ease;
+  background-color: color-mix(in srgb, var(--node-color, #4b5563) 15%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--node-color, #4b5563) 19%, transparent);
+}
+
+.node-palette-item-icon > * {
+  font-size: 18px !important;
+  line-height: 1;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  text-align: center;
+}
+
+.node-palette-item:hover .node-palette-item-icon {
+  transform: scale(1.1);
+}
+
+.node-palette-item-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-palette-collapsed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 4px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  align-items: center;
+}
+
+.node-palette-item-collapsed {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 4px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background-color: transparent;
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
+  transition: all 200ms ease;
+  flex-shrink: 0;
+}
+
+.node-palette-item-collapsed > * {
+  font-size: 16px !important;
+  line-height: 1;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  text-align: center;
+}
+
+.node-palette-item-collapsed:active {
+  cursor: grabbing;
+}
+
+.node-palette-item-collapsed:hover {
+  transform: scale(1.1);
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--node-color, var(--color-border-default));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.node-palette-item-collapsed.node-palette-item--dragging {
+  opacity: 0.5;
+  transform: scale(0.9);
+}
+
+/* Toolbar - Responsividade */
+@media (max-width: 1024px) {
+  .toolbar-group-main,
+  .toolbar-group-zoom,
+  .toolbar-group-edit {
+    padding: 2px 4px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 6px 8px;
+    gap: 6px;
+    min-height: 44px;
+  }
+  
+  .toolbar-group-main {
+    display: none;
+  }
+  
+  .toolbar-group-zoom,
+  .toolbar-group-edit {
+    display: none;
+  }
+  
+  .toolbar-separator {
+    display: none;
+  }
+}
+
+/* Node Palette - Responsividade */
+@media (max-width: 768px) {
+  .node-palette-grid {
+    gap: 6px;
+    padding: 6px;
+  }
+  
+  .node-palette-item {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  
+  .node-palette-item-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  
+  .node-palette-item-label {
+    font-size: 12px;
+  }
+}
+
+
+  /* Node Palette Collapsed */
+  .node-palette-item--collapsed {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .node-palette-item--collapsed:not(.node-palette-item--dragging) {
+    background-color: transparent;
+    border: 1px solid var(--color-border-default);
+  }
+
+  /* Wrapper da paleta de nós deve ficar acima das conexões do editor */
+  .flow-node-palette-wrapper {
+    position: relative;
+    z-index: 5;
+    display: flex;
+  }
+
+  /* Caixa "Fluxo atual" deve ficar acima do editor */
+  .flow-current-display {
+    position: relative;
+    z-index: 1;
+  }
+
+  .node-palette-item--collapsed:hover:not(.node-palette-item--dragging) {
+    transform: scale(1.1);
+    background-color: var(--color-bg-tertiary);
+    border-opacity: 0.5;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .node-palette-item--collapsed.node-palette-item--dragging {
+    opacity: 0.5;
+    transform: scale(0.9);
+    background-color: var(--color-bg-tertiary);
+    border-width: 2px;
+  }
+
+/* Painel de propriedades: estabiliza largura e evita empurrar o editor */
+.sidebar-properties-root {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-properties-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Theme Selector - Estado :hover tratado apenas com CSS */
+.theme-selector-btn:hover {
+  background-color: var(--color-bg-hover) !important;
+  border-color: var(--color-border-hover) !important;
+}
+
+/* ResizablePanel - Botão de colapsar - Estado :hover tratado apenas com CSS */
+.resizable-panel-collapse-btn:hover {
+  background-color: var(--color-bg-hover) !important;
+  border-color: var(--color-accent-primary) !important;
+}
+
+/* Inputs - Estados :focus e :hover tratados apenas com CSS */
+.input-base {
+  border-color: var(--color-border-default);
+}
+
+.input-base:hover:not(:disabled) {
+  border-color: var(--color-border-hover);
+}
+
+.input-base:focus:not(:disabled) {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px var(--color-accent-light);
+  outline: none;
+}
+
+.input-base:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botões - Estados :hover e :active tratados apenas com CSS */
+.btn-primary {
+  background-color: var(--color-accent-primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: var(--color-accent-pressed);
+}
+
+.btn-danger {
+  background-color: var(--color-status-error);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #dc2626; /* red-600 */
+}
+
+.btn-danger:active:not(:disabled) {
+  background-color: #b91c1c; /* red-700 */
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.btn-default {
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+}
+
+.btn-default:hover:not(:disabled) {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+.btn-default:active:not(:disabled) {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-default);
+}
+
+/* Estilização do handle de resize nativo (CSS resize) - Versão Híbrida */
+/* O handle nativo aparece no canto inferior direito/esquerdo */
+.resizable-panel-hybrid {
+  /* Melhora a aparência do handle nativo */
+  scrollbar-width: none; /* Firefox - esconde scrollbar mas mantém resize */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.resizable-panel-hybrid::-webkit-scrollbar {
+  display: none; /* Chrome/Safari - esconde scrollbar mas mantém resize */
+}
+
+/* Adiciona indicador visual sutil no canto do resize handle (apenas quando não está colapsado) */
+.resizable-panel-hybrid:not([style*="width: 40px"]):not([style*="height: 40px"])::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(
+    -45deg,
+    transparent 0%,
+    transparent 40%,
+    var(--color-border-default, #333) 40%,
+    var(--color-border-default, #333) 45%,
+    transparent 45%,
+    transparent 55%,
+    var(--color-border-default, #333) 55%,
+    var(--color-border-default, #333) 60%,
+    transparent 60%
+  );
+  pointer-events: none;
+  opacity: 0.3;
+  z-index: 1;
+  transition: opacity 150ms ease;
+}
+
+.resizable-panel-hybrid:hover::after {
+  opacity: 0.6;
+}
+
+/* ============================================
+   NOVA ESTRUTURA SIMPLIFICADA
+   ============================================ */
+
+/* Página principal do editor */
+.flow-editor-page {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+/* CSS removido - agora usando classes Tailwind diretamente como no modelo */
+
+.validation-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  font-size: 12px;
+}
+
+.validation-empty {
+  color: var(--color-text-tertiary);
+}
+
+.validation-status {
+  margin-bottom: 12px;
+  color: var(--color-text-secondary);
+}
+
+.validation-valid {
+  color: var(--color-status-success);
+  font-weight: 600;
+}
+
+.validation-invalid {
+  color: var(--color-status-error);
+  font-weight: 600;
+}
+
+.validation-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.validation-error-group {
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: var(--color-bg-tertiary);
+}
+
+.validation-error-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.validation-error-dot {
+  color: var(--color-status-error);
+}
+
+.validation-error-list {
+  padding-left: 20px;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-text-secondary);
+}
+
+.validation-error-list li {
+  font-size: 11px;
+}
+
+.validation-error-code {
+  color: var(--color-status-error);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* Indicadores de loading e erro */
+.loading-indicator {
+  position: absolute;
+  top: 64px;
+  right: 16px;
+  padding: 8px 12px;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  z-index: 1000;
+}
+
+.error-banner {
+  position: absolute;
+  top: 64px;
+  left: 16px;
+  padding: 8px 12px;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-status-error);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-status-error);
+  z-index: 1000;
+}
+
+/* Toolbar - melhorias */
+.toolbar-primary-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* CSS removido - agora usando classes Tailwind diretamente como no modelo */
+
+@keyframes errorPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2), 0 4px 12px rgba(239, 68, 68, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3), 0 6px 16px rgba(239, 68, 68, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Canvas container - fundo do editor */
+.canvas-container {
+  background-color: var(--canvas-bg-color, #f8fafc);
+}
+
+/* Canvas grid - padrão de grade */
+.canvas-grid {
+  background-image: var(--canvas-grid-image, linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px));
+  background-size: 20px 20px;
+  z-index: -1;
+}
+
+/* Background do canvas do editor Rete.js - EXATAMENTE como no modelo */
+.rete-background {
+  position: absolute;
+  top: -320000px;
+  left: -320000px;
+  width: 640000px;
+  height: 640000px;
+  background-color: var(--canvas-bg-color, #f8fafc);
+  background-image: var(--canvas-grid-image, linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px));
+  background-size: 20px 20px;
+  z-index: -1;
+  pointer-events: none;
+}
 }
 

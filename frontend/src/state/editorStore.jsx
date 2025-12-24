@@ -31,21 +31,11 @@ const EditorContext = createContext(null);
 
 export function EditorProvider({ children }) {
   const [currentFlow, setCurrentFlow] = useState(null);
-  const [editorJson, setEditorJson] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [validation, setValidation] = useState(null);
   const [simulation, setSimulation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  /**
-   * Atualiza JSON do editor (Rete).
-   *
-   * @param {any} reteJson
-   */
-  const updateEditorJson = useCallback((reteJson) => {
-    setEditorJson(reteJson);
-  }, []);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -69,25 +59,18 @@ export function EditorProvider({ children }) {
       const flow = await flowsApi.getFlow(flowId);
       logger.info('Fluxo carregado da API', { flowId: flow?.id, flowName: flow?.name });
       
-      logger.debug('Convertendo fluxo para formato Rete', { flowId });
-      const reteJson = engineFlowToReteJson(flow);
-      const nodeCount = reteJson?.nodes ? Object.keys(reteJson.nodes).length : 0;
-      logger.debug('Fluxo convertido', { 
-        nodeCount,
-        flowNodes: flow?.nodes?.length || 0,
-        reteNodes: Object.keys(reteJson?.nodes || {}).length,
-        reteJsonKeys: Object.keys(reteJson || {})
-      });
-      
       setCurrentFlow(flow);
-      setEditorJson(reteJson);
       setValidation(null);
       setSimulation(null);
       
       logger.info('Fluxo carregado no editor com sucesso', { flowId });
+      
+      // Retorna o flow para conversão imediata se necessário
+      return flow;
     } catch (err) {
       logger.error('Erro ao carregar fluxo', err);
       setError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setLoading(false);
     }
@@ -96,12 +79,13 @@ export function EditorProvider({ children }) {
   /**
    * Salva o fluxo atual (create ou update) usando o backend.
    *
+   * @param {Object} reteJson - JSON do editor no formato Rete.js
    * @param {{ tenantId?: string, id?: string, name?: string }} [metaOverrides]
    */
   const saveFlow = useCallback(
-    async (metaOverrides) => {
-      if (!editorJson) {
-        logger.warn('saveFlow chamado sem editorJson');
+    async (reteJson, metaOverrides) => {
+      if (!reteJson) {
+        logger.warn('saveFlow chamado sem reteJson');
         return null;
       }
 
@@ -130,13 +114,13 @@ export function EditorProvider({ children }) {
         };
 
         logger.debug('Metadados do fluxo', baseMeta);
-        const editorNodeCount = editorJson?.nodes ? Object.keys(editorJson.nodes).length : 0;
-        logger.debug('Convertendo editorJson para formato engine', { 
+        const editorNodeCount = reteJson?.nodes ? Object.keys(reteJson.nodes).length : 0;
+        logger.debug('Convertendo reteJson para formato engine', { 
           nodeCount: editorNodeCount,
-          editorJsonKeys: Object.keys(editorJson || {})
+          reteJsonKeys: Object.keys(reteJson || {})
         });
 
-        const flowDefinition = reteJsonToEngineFlow(editorJson, baseMeta);
+        const flowDefinition = reteJsonToEngineFlow(reteJson, baseMeta);
         logger.debug('Fluxo convertido para formato engine', { 
           nodeCount: flowDefinition?.nodes?.length || 0 
         });
@@ -155,43 +139,80 @@ export function EditorProvider({ children }) {
         return saved;
       } catch (err) {
         logger.error('Erro ao salvar fluxo', err);
+
+        // Se o backend retornar erro de validação, atualiza o painel de validação
+        // com os mesmos erros retornados pelo backend (sem o usuário precisar clicar em "Validar").
+        if (err && typeof err === 'object' && err.body && err.body.error === 'validation_failed') {
+          const rawErrors = Array.isArray(err.body.errors) ? err.body.errors : [];
+          const uiErrors = mapValidationErrorsToUi(rawErrors);
+          const validationResult = {
+            valid: false,
+            errors: rawErrors,
+            uiErrors,
+          };
+
+          logger.info('Atualizando painel de validação após erro ao salvar fluxo', {
+            errorCount: uiErrors.length,
+            errors: uiErrors.map((e) => ({
+              code: e.code,
+              message: e.message,
+              nodeIds: e.nodeIds,
+            })),
+          });
+
+          setValidation(validationResult);
+        }
+
         setError(err instanceof Error ? err.message : String(err));
         return null;
       } finally {
         setLoading(false);
       }
     },
-    [currentFlow, editorJson],
+    [currentFlow],
   );
 
   /**
    * Valida o fluxo atual no backend.
+   * 
+   * @param {Object} reteJson - JSON do editor no formato Rete.js
    */
-  const validateCurrentFlow = useCallback(async () => {
-    if (!editorJson) return null;
+  const validateCurrentFlow = useCallback(async (reteJson) => {
+    if (!reteJson) return null;
 
     setLoading(true);
     setError(null);
 
     try {
-      const flowDefinition = reteJsonToEngineFlow(editorJson, currentFlow || undefined);
+      const flowDefinition = reteJsonToEngineFlow(reteJson, currentFlow || undefined);
       const result = await flowsApi.validateFlow(flowDefinition);
       const uiErrors = mapValidationErrorsToUi(result.errors || []);
       const validationResult = {
         ...result,
         uiErrors,
       };
+      
+      // Debug: log dos erros mapeados
+      logger.debug('Validação concluída', {
+        valid: validationResult.valid,
+        errorCount: uiErrors.length,
+        errors: uiErrors.map(e => ({
+          code: e.code,
+          message: e.message,
+          nodeIds: e.nodeIds,
+        })),
+      });
+      
       setValidation(validationResult);
       return validationResult;
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao validar fluxo', err);
+      logger.error('Erro ao validar fluxo', err);
       setError(err instanceof Error ? err.message : String(err));
       return null;
     } finally {
       setLoading(false);
     }
-  }, [currentFlow, editorJson]);
+  }, [currentFlow]);
 
   /**
    * Simula o fluxo atual usando o backend.
@@ -214,8 +235,7 @@ export function EditorProvider({ children }) {
         setSimulation(result);
         return result;
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Erro ao simular fluxo', err);
+        logger.error('Erro ao simular fluxo', err);
         setError(err instanceof Error ? err.message : String(err));
         return null;
       } finally {
@@ -247,7 +267,6 @@ export function EditorProvider({ children }) {
         // Se o fluxo removido é o atual, limpa o estado
         if (currentFlow && currentFlow.id === flowId) {
           setCurrentFlow(null);
-          setEditorJson(null);
           setSelectedNode(null);
           setValidation(null);
           setSimulation(null);
@@ -266,7 +285,6 @@ export function EditorProvider({ children }) {
   const value = useMemo(
     () => ({
       currentFlow,
-      editorJson,
       selectedNode,
       validation,
       simulation,
@@ -274,7 +292,6 @@ export function EditorProvider({ children }) {
       error,
 
       setSelectedNode,
-      updateEditorJson,
       setValidation,
       setSimulation,
       clearError,
@@ -288,13 +305,11 @@ export function EditorProvider({ children }) {
     [
       clearError,
       currentFlow,
-      editorJson,
       error,
       loadFlow,
       loading,
       selectedNode,
       simulation,
-      updateEditorJson,
       validateCurrentFlow,
       validation,
       saveFlow,

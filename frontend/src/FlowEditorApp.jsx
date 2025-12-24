@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { FlowEditor } from './FlowEditor';
 import { SidebarProperties } from './SidebarProperties';
 import { Toolbar } from './Toolbar';
+import logger from './utils/logger';
 
 /**
  * Componente de alto nível que integra:
@@ -62,7 +63,7 @@ export function FlowEditorApp({ onSimulateFlow }) {
         const json = JSON.parse(reader.result);
         setFlowJson(json);
       } catch (err) {
-        console.error('JSON inválido', err);
+        logger.error('JSON inválido', err);
       }
     };
     reader.readAsText(file);
@@ -73,7 +74,7 @@ export function FlowEditorApp({ onSimulateFlow }) {
       onSimulateFlow(flowJson);
     } else {
       // Fallback simples: apenas loga o JSON atual.
-      console.log('Simulação de fluxo (JSON atual):', flowJson);
+      logger.debug('Simulação de fluxo (JSON atual):', { flowJson });
     }
   };
 

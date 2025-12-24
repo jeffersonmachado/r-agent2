@@ -2,8 +2,9 @@ import React from 'react';
 
 /**
  * Botão moderno estilo Linear/Stripe com Tailwind CSS
+ * Usa apenas CSS para estados :hover e :active (sem JavaScript)
  */
-export function Button({
+export const Button = React.forwardRef(function Button({
   children,
   variant = 'default',
   size = 'md',
@@ -12,10 +13,7 @@ export function Button({
   type = 'button',
   className = '',
   ...props
-}) {
-  const [hovered, setHovered] = React.useState(false);
-  const [pressed, setPressed] = React.useState(false);
-
+}, ref) {
   const baseClasses = 'font-medium leading-none border-none outline-none inline-flex items-center justify-center gap-1.5 transition-all duration-fast';
   
   const sizeClasses = {
@@ -24,25 +22,12 @@ export function Button({
     lg: 'px-5 py-2.5 text-base',
   };
 
+  // Classes baseadas em variantes - estados :hover e :active são tratados no CSS
   const variantClasses = {
-    primary: pressed && !disabled
-      ? 'bg-accent-pressed text-white'
-      : hovered && !disabled
-      ? 'bg-accent-hover text-white'
-      : 'bg-accent-primary text-white',
-    danger: pressed && !disabled
-      ? 'bg-red-700 text-white'
-      : hovered && !disabled
-      ? 'bg-red-600 text-white'
-      : 'bg-status-error text-white',
-    ghost: hovered && !disabled
-      ? 'bg-bg-tertiary text-text-primary'
-      : 'bg-transparent text-text-secondary',
-    default: pressed && !disabled
-      ? 'bg-bg-tertiary text-text-primary border border-border-default'
-      : hovered && !disabled
-      ? 'bg-bg-hover text-text-primary border border-border-hover'
-      : 'bg-bg-elevated text-text-primary border border-border-default',
+    primary: 'btn-primary',
+    danger: 'btn-danger',
+    ghost: 'btn-ghost',
+    default: 'btn-default',
   };
 
   const cursorClass = disabled ? 'cursor-not-allowed' : 'cursor-pointer';
@@ -50,22 +35,30 @@ export function Button({
 
   const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${cursorClass} ${opacityClass} ${className}`.trim();
 
+  const handleClick = (e) => {
+    if (disabled) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (onClick) {
+      onClick(e);
+    }
+  };
+
+  // Remove onClick de props para evitar conflito
+  const { onClick: _, ...restProps } = props;
+
   return (
     <button
+      ref={ref}
       type={type}
-      onClick={disabled ? undefined : onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => {
-        setHovered(false);
-        setPressed(false);
-      }}
-      onMouseDown={() => !disabled && setPressed(true)}
-      onMouseUp={() => setPressed(false)}
+      onClick={handleClick}
+      disabled={disabled}
       className={classes}
-      {...props}
+      {...restProps}
     >
       {children}
     </button>
   );
-}
-
+});
