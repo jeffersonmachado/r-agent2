@@ -47,6 +47,11 @@ export function FlowEditorPage() {
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   
+  // Estados para colapso vertical dos painéis do painel direito
+  const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
+  const [validationCollapsed, setValidationCollapsed] = useState(false);
+  const [simulationCollapsed, setSimulationCollapsed] = useState(false);
+  
   const [paletteWidth, setPaletteWidth] = useState(() => {
     const saved = localStorage.getItem('paletteWidth');
     return saved ? parseInt(saved) : 224; // w-56 = 224px
@@ -601,108 +606,152 @@ export function FlowEditorPage() {
           </div>
 
           {/* CONTEÚDO - EXATAMENTE como no modelo */}
-          <div id="rightContent" className="flex-1 flex flex-col no-x-scroll">
-            {/* Propriedades */}
-            <div 
-              className={`flex-1 min-h-0 p-2 border-b right-label ${rightPanelCollapsed ? 'vertical' : ''}`}
-              style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
-            >
-              {rightPanelCollapsed ? (
-                'Propriedades'
-              ) : (
-                <div className="h-full w-full overflow-y-auto">
-                  <SidebarProperties
-                    selectedNode={selectedNode}
-                    onChangeConfig={(newConfig) => {
-                      if (selectedNode?.id) {
-                        handleUpdateNodeConfig(selectedNode.id, newConfig);
-                      }
-                    }}
-                  />
+          <div id="rightContent" className="flex-1 flex flex-col min-h-0 overflow-x-hidden">
+            {rightPanelCollapsed ? (
+              <>
+                {/* Modo colapsado - textos verticais */}
+                <div className={`flex-1 p-2 border-b right-label vertical`} style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}>
+                  Propriedades
                 </div>
-              )}
-            </div>
-
-            {/* Validação */}
-            <div 
-              className={`flex-1 p-2 border-b right-label ${rightPanelCollapsed ? 'vertical' : ''}`}
-              style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
-            >
-              {rightPanelCollapsed ? (
-                'Validação'
-              ) : (
-                <div className="h-full overflow-y-auto p-2">
-                  {!validation && (
-                    <div className="text-sm" style={{ color: themeName === 'dark' ? '#9ca3af' : '#6b7280' }}>
-                      Nenhuma validação executada.
+                <div className={`flex-1 p-2 border-b right-label vertical`} style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}>
+                  Validação
+                </div>
+                <div className={`flex-1 p-2 right-label vertical`}>
+                  Simulação
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Propriedades - com colapso vertical */}
+                <div className={`flex flex-col ${propertiesCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'}`} style={{ borderBottom: `1px solid ${themeName === 'dark' ? '#2a2a2a' : '#e5e7eb'}` }}>
+                  <div 
+                    className="h-8 px-2 flex items-center justify-between border-b flex-shrink-0"
+                    style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
+                  >
+                    <span className="text-sm font-medium">Propriedades</span>
+                    <button
+                      className="collapse-btn"
+                      onClick={() => setPropertiesCollapsed(!propertiesCollapsed)}
+                      title={propertiesCollapsed ? 'Expandir' : 'Recolher'}
+                    >
+                      {propertiesCollapsed ? '▼' : '▲'}
+                    </button>
+                  </div>
+                  {!propertiesCollapsed && (
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      <SidebarProperties
+                        selectedNode={selectedNode}
+                        onChangeConfig={(newConfig) => {
+                          if (selectedNode?.id) {
+                            handleUpdateNodeConfig(selectedNode.id, newConfig);
+                          }
+                        }}
+                      />
                     </div>
                   )}
-                  {validation && (
-                    <>
-                      <div className="text-sm mb-2">
-                        <span>Resultado: </span>
-                        <span style={{ 
-                          color: validation.valid 
-                            ? (themeName === 'dark' ? '#34d399' : '#059669')
-                            : (themeName === 'dark' ? '#f87171' : '#dc2626')
-                        }}>
-                          {validation.valid ? 'Válido' : 'Inválido'}
-                        </span>
-                      </div>
-                      {validation.uiErrors && validation.uiErrors.length > 0 && (
-                        <div className="text-xs space-y-2">
-                          {(() => {
-                            const errorsByNode = new Map();
-                            validation.uiErrors.forEach((err) => {
-                              if (err.nodeIds && err.nodeIds.length > 0) {
-                                err.nodeIds.forEach((nodeId) => {
-                                  if (!errorsByNode.has(nodeId)) {
-                                    errorsByNode.set(nodeId, []);
-                                  }
-                                  errorsByNode.get(nodeId).push(err);
-                                });
-                              } else {
-                                if (!errorsByNode.has('_global')) {
-                                  errorsByNode.set('_global', []);
-                                }
-                                errorsByNode.get('_global').push(err);
-                              }
-                            });
+                </div>
 
-                            return Array.from(errorsByNode.entries()).map(([nodeId, errors]) => (
-                              <div key={nodeId} className="mb-3">
-                                <div className="font-semibold mb-1">
-                                  {nodeId !== '_global' ? `Nó: ${nodeId}` : 'Erros Gerais'}
-                                </div>
-                                <ul className="list-disc list-inside space-y-1">
-                                  {errors.map((err, idx) => (
-                                    <li key={`${err.code}-${idx}`}>
-                                      <span style={{ color: themeName === 'dark' ? '#9ca3af' : '#4b5563' }}>[{err.code}]</span>
-                                      <span> {err.message}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ));
-                          })()}
+                {/* Validação - com colapso vertical */}
+                <div className={`flex flex-col ${validationCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'}`} style={{ borderBottom: `1px solid ${themeName === 'dark' ? '#2a2a2a' : '#e5e7eb'}` }}>
+                  <div 
+                    className="h-8 px-2 flex items-center justify-between border-b flex-shrink-0"
+                    style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
+                  >
+                    <span className="text-sm font-medium">Validação</span>
+                    <button
+                      className="collapse-btn"
+                      onClick={() => setValidationCollapsed(!validationCollapsed)}
+                      title={validationCollapsed ? 'Expandir' : 'Recolher'}
+                    >
+                      {validationCollapsed ? '▼' : '▲'}
+                    </button>
+                  </div>
+                  {!validationCollapsed && (
+                    <div className="flex-1 min-h-0 overflow-y-auto p-2">
+                      {!validation && (
+                        <div className="text-sm" style={{ color: themeName === 'dark' ? '#9ca3af' : '#6b7280' }}>
+                          Nenhuma validação executada.
                         </div>
                       )}
-                    </>
+                      {validation && (
+                        <>
+                          <div className="text-sm mb-2">
+                            <span>Resultado: </span>
+                            <span style={{ 
+                              color: validation.valid 
+                                ? (themeName === 'dark' ? '#34d399' : '#059669')
+                                : (themeName === 'dark' ? '#f87171' : '#dc2626')
+                            }}>
+                              {validation.valid ? 'Válido' : 'Inválido'}
+                            </span>
+                          </div>
+                          {validation.uiErrors && validation.uiErrors.length > 0 && (
+                            <div className="text-xs space-y-2">
+                              {(() => {
+                                const errorsByNode = new Map();
+                                validation.uiErrors.forEach((err) => {
+                                  if (err.nodeIds && err.nodeIds.length > 0) {
+                                    err.nodeIds.forEach((nodeId) => {
+                                      if (!errorsByNode.has(nodeId)) {
+                                        errorsByNode.set(nodeId, []);
+                                      }
+                                      errorsByNode.get(nodeId).push(err);
+                                    });
+                                  } else {
+                                    if (!errorsByNode.has('_global')) {
+                                      errorsByNode.set('_global', []);
+                                    }
+                                    errorsByNode.get('_global').push(err);
+                                  }
+                                });
+
+                                return Array.from(errorsByNode.entries()).map(([nodeId, errors]) => (
+                                  <div key={nodeId} className="mb-3">
+                                    <div className="font-semibold mb-1">
+                                      {nodeId !== '_global' ? `Nó: ${nodeId}` : 'Erros Gerais'}
+                                    </div>
+                                    <ul className="list-disc list-inside space-y-1">
+                                      {errors.map((err, idx) => (
+                                        <li key={`${err.code}-${idx}`}>
+                                          <span style={{ color: themeName === 'dark' ? '#9ca3af' : '#4b5563' }}>[{err.code}]</span>
+                                          <span> {err.message}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ));
+                              })()}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Simulação */}
-            <div className={`flex-1 p-2 right-label ${rightPanelCollapsed ? 'vertical' : ''}`}>
-              {rightPanelCollapsed ? (
-                'Simulação'
-              ) : (
-                <div className="h-full overflow-y-auto">
-                  <SimulationPanel simulation={simulation} />
+                {/* Simulação - com colapso vertical */}
+                <div className={`flex flex-col ${simulationCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'}`}>
+                  <div 
+                    className="h-8 px-2 flex items-center justify-between border-b flex-shrink-0"
+                    style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
+                  >
+                    <span className="text-sm font-medium">Simulação</span>
+                    <button
+                      className="collapse-btn"
+                      onClick={() => setSimulationCollapsed(!simulationCollapsed)}
+                      title={simulationCollapsed ? 'Expandir' : 'Recolher'}
+                    >
+                      {simulationCollapsed ? '▼' : '▲'}
+                    </button>
+                  </div>
+                  {!simulationCollapsed && (
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      <SimulationPanel simulation={simulation} />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>
