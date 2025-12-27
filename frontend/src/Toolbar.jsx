@@ -35,12 +35,13 @@ export function Toolbar({
   
   // Estado para controlar quais grupos estão visíveis na toolbar
   const [visibleItems, setVisibleItems] = useState({
-    main: true,      // Abrir, Salvar, Validar, Simular
+    file: true,       // Novo, Abrir, Salvar
+    main: true,      // Validar, Simular
     zoom: true,      // Zoom controls
     edit: true,      // Undo, Redo, Copy, Paste, Duplicar, Organizar
-    search: true,    // Buscar
-    extra: true,     // Importar, Exportar, Template
-    tools: true,     // Logs, Tema (menor prioridade)
+    search: true,     // Buscar
+    extra: true,      // Importar, Exportar, Template
+    tools: true,      // Logs, Tema (menor prioridade)
   });
   
   const toolbarRef = useRef(null);
@@ -102,15 +103,11 @@ export function Toolbar({
       rafId = requestAnimationFrame(() => {
         try {
           // Elementos fixos que sempre estão presentes
-          const childrenContainer = toolbar.querySelector('.flex.items-center.gap-2');
           const separators = toolbar.querySelectorAll('.toolbar-separator');
           
           // Calcula largura dos elementos fixos
           // NOTA: spacer NÃO é incluído porque é flex: 1 (ocupa espaço restante dinamicamente)
           let fixedWidth = TAILWIND_PX_2 * 2; // padding da toolbar (px-2 = 8px * 2)
-          if (childrenContainer && childrenContainer.offsetParent !== null) {
-            fixedWidth += childrenContainer.offsetWidth + TAILWIND_PX_2; // gap-2
-          }
           // Spacer é flex: 1, não deve ser incluído no cálculo fixo
           separators.forEach(sep => {
             if (sep.offsetParent !== null) {
@@ -129,6 +126,7 @@ export function Toolbar({
           const availableForGroups = availableWidth - fixedWidth - TAILWIND_GAP_8;
           
           // Busca os grupos (mesmo que ocultos, para calcular tamanho)
+          const fileGroup = toolbar.querySelector('.toolbar-group-file');
           const mainGroup = toolbar.querySelector('.toolbar-group-main');
           const zoomGroup = toolbar.querySelector('.toolbar-group-zoom');
           const editGroup = toolbar.querySelector('.toolbar-group-edit');
@@ -136,12 +134,12 @@ export function Toolbar({
           const extraGroup = toolbar.querySelector('.toolbar-group-extra');
           const toolsGroup = toolbar.querySelector('.toolbar-group-utils');
           
-          // Ordem de prioridade: main > search > zoom > edit > extra > tools (tools tem menor prioridade)
+          // Ordem de prioridade: file > main > search > zoom > edit > extra > tools (tools tem menor prioridade)
           let usedWidth = 0;
-          const newVisible = { main: true, zoom: true, edit: true, search: true, extra: true, tools: true };
+          const newVisible = { file: true, main: true, zoom: true, edit: true, search: true, extra: true, tools: true };
           
           // Temporariamente mostra todos os grupos para medir
-          const groups = [mainGroup, searchGroup, zoomGroup, editGroup, extraGroup, toolsGroup].filter(Boolean);
+          const groups = [fileGroup, mainGroup, searchGroup, zoomGroup, editGroup, extraGroup, toolsGroup].filter(Boolean);
           const originalDisplays = groups.map(g => {
             const computed = window.getComputedStyle(g).display;
             return computed === 'none' ? '' : g.style.display;
@@ -155,8 +153,18 @@ export function Toolbar({
           // Força reflow para garantir que as medidas estão atualizadas
           void toolbar.offsetHeight;
           
-          // Main group (prioridade máxima)
-          if (mainGroup) {
+          // File group (prioridade máxima - Novo, Abrir, Salvar)
+          if (fileGroup) {
+            const width = fileGroup.offsetWidth + TAILWIND_PX_2; // gap-2
+            if (usedWidth + width <= availableForGroups) {
+              usedWidth += width;
+            } else {
+              newVisible.file = false;
+            }
+          }
+          
+          // Main group (Validar, Simular)
+          if (mainGroup && newVisible.file) {
             const width = mainGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
               usedWidth += width;
@@ -166,7 +174,7 @@ export function Toolbar({
           }
           
           // Search group
-          if (searchGroup && newVisible.main) {
+          if (searchGroup && newVisible.file) {
             const width = searchGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
               usedWidth += width;
@@ -176,7 +184,7 @@ export function Toolbar({
           }
           
           // Zoom group
-          if (zoomGroup && newVisible.main) {
+          if (zoomGroup && newVisible.file) {
             const width = zoomGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
               usedWidth += width;
@@ -186,7 +194,7 @@ export function Toolbar({
           }
           
           // Edit group - com histerese para evitar alternância
-          if (editGroup && newVisible.main) {
+          if (editGroup && newVisible.file) {
             const width = editGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             const isCurrentlyVisible = visibleItems.edit;
             // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
@@ -200,7 +208,7 @@ export function Toolbar({
           }
           
           // Extra group (Importar, Exportar, Template) - com histerese para evitar alternância
-          if (extraGroup && newVisible.main) {
+          if (extraGroup && newVisible.file) {
             const width = extraGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             const isCurrentlyVisible = visibleItems.extra;
             // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
@@ -214,7 +222,7 @@ export function Toolbar({
           }
           
           // Tools group (Logs, Tema) - menor prioridade, com histerese para evitar alternância
-          if (toolsGroup && newVisible.main) {
+          if (toolsGroup && newVisible.file) {
             const width = toolsGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             const isCurrentlyVisible = visibleItems.tools;
             // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
@@ -239,6 +247,7 @@ export function Toolbar({
           // Só atualiza o estado se realmente mudou
           setVisibleItems(prev => {
             const hasChanged = 
+              prev.file !== newVisible.file ||
               prev.main !== newVisible.main ||
               prev.zoom !== newVisible.zoom ||
               prev.edit !== newVisible.edit ||
@@ -301,85 +310,143 @@ export function Toolbar({
     };
   }, [onSave, onValidate, onSimulate, onOpen, onArrange, onZoomOut, onZoomIn, onZoomFit, onResetZoom, onUndo, onRedo, onCopy, onPaste, onSearchNode, onImportJson, onExportJson, onImportTemplate, onDuplicate]);
 
-  // Função para determinar quais itens vão para o menu "Mais"
-  const getMoreMenuItems = () => {
-    const items = [];
-    
-    // Itens que vão para "Mais" quando não cabem na toolbar
-    if (!visibleItems.extra) {
-      if (onImportJson) {
-        items.push({ key: 'import', label: '📥 Importar', action: onImportJson });
-      }
-      if (onExportJson) {
-        items.push({ key: 'export', label: '📤 Exportar', action: onExportJson });
-      }
-      if (onImportTemplate) {
-        items.push({ key: 'template', label: '📋 Template', action: onImportTemplate });
-      }
-    }
-    
-    // Itens que vão para "Mais" quando não cabem na toolbar
-    if (!visibleItems.main) {
-      if (onOpen) items.push({ key: 'open', label: '📂 Abrir', action: onOpen });
-      if (onSave) items.push({ key: 'save', label: '💾 Salvar', action: onSave });
-      if (onValidate) items.push({ key: 'validate', label: '✓ Validar', action: onValidate });
-      if (onSimulate) items.push({ key: 'simulate', label: '▶️ Simular', action: onSimulate });
-    }
-    
-    if (!visibleItems.zoom) {
-      if (onZoomOut) items.push({ key: 'zoomOut', label: '➖ Diminuir zoom', action: onZoomOut });
-      if (onResetZoom) items.push({ key: 'resetZoom', label: '100% Zoom', action: onResetZoom });
-      if (onZoomIn) items.push({ key: 'zoomIn', label: '➕ Aumentar zoom', action: onZoomIn });
-      if (onZoomFit) items.push({ key: 'zoomFit', label: '🔍 Fit', action: onZoomFit });
-    }
-    
-    if (!visibleItems.edit) {
-      if (onUndo) items.push({ key: 'undo', label: '↶ Desfazer', action: onUndo });
-      if (onRedo) items.push({ key: 'redo', label: '↷ Refazer', action: onRedo });
-      if (onCopy) items.push({ key: 'copy', label: '📋 Copiar', action: onCopy });
-      if (onPaste) items.push({ key: 'paste', label: '📄 Colar', action: onPaste });
-      if (onDuplicate) items.push({ key: 'duplicate', label: '📑 Duplicar', action: onDuplicate });
-      if (onArrange) items.push({ key: 'arrange', label: '⚙️ Organizar', action: onArrange });
-    }
-    
-    if (!visibleItems.search && onSearchNode) {
-      items.push({ key: 'search', label: '🔍 Buscar', action: () => setShowSearch(true) });
-    }
-    
-    return items;
+  // Função helper para obter ícone e texto baseado na key
+  const getIconAndText = (key) => {
+    const iconMap = {
+      'import': { icon: 'icon-import', text: 'Importar' },
+      'export': { icon: 'icon-export', text: 'Exportar' },
+      'template': { icon: 'icon-template', text: 'Template' },
+      'open': { icon: 'icon-folder-open', text: 'Abrir' },
+      'save': { icon: 'icon-save', text: 'Salvar' },
+      'validate': { icon: 'icon-check', text: 'Validar' },
+      'simulate': { icon: 'icon-play', text: 'Simular' },
+      'zoomOut': { icon: 'icon-minus', text: 'Diminuir zoom' },
+      'resetZoom': { icon: null, text: '100% Zoom' },
+      'zoomIn': { icon: 'icon-plus', text: 'Aumentar zoom' },
+      'zoomFit': { icon: 'icon-search', text: 'Fit' },
+      'undo': { icon: 'icon-undo', text: 'Desfazer' },
+      'redo': { icon: 'icon-redo', text: 'Refazer' },
+      'copy': { icon: 'icon-copy', text: 'Copiar' },
+      'paste': { icon: 'icon-paste', text: 'Colar' },
+      'duplicate': { icon: 'icon-duplicate', text: 'Duplicar' },
+      'arrange': { icon: 'icon-settings', text: 'Organizar' },
+      'search': { icon: 'icon-search', text: 'Buscar' },
+    };
+    return iconMap[key] || { icon: null, text: key };
   };
 
-  const moreMenuItems = getMoreMenuItems();
-  const hasMoreItems = moreMenuItems.length > 0;
+  // Função para determinar quais itens vão para o menu "Mais" (agrupados por grupo)
+  const getMoreMenuItems = () => {
+    const groups = {
+      file: [],
+      main: [],
+      extra: [],
+      zoom: [],
+      edit: [],
+      search: []
+    };
+    
+    // Itens do grupo file (Novo, Abrir, Salvar) - prioridade máxima
+    if (!visibleItems.file) {
+      // Novo está em children[0], não precisa adicionar aqui
+      if (onOpen) groups.file.push({ key: 'open', action: onOpen });
+      if (onSave) groups.file.push({ key: 'save', action: onSave });
+    }
+    
+    // Itens do grupo main (Validar, Simular)
+    if (!visibleItems.main) {
+      if (onValidate) groups.main.push({ key: 'validate', action: onValidate });
+      if (onSimulate) groups.main.push({ key: 'simulate', action: onSimulate });
+    }
+    
+    // Itens do grupo extra (Importar, Exportar, Template)
+    if (!visibleItems.extra) {
+      if (onImportJson) groups.extra.push({ key: 'import', action: onImportJson });
+      if (onExportJson) groups.extra.push({ key: 'export', action: onExportJson });
+      if (onImportTemplate) groups.extra.push({ key: 'template', action: onImportTemplate });
+    }
+    
+    // Itens do grupo zoom
+    if (!visibleItems.zoom) {
+      if (onZoomOut) groups.zoom.push({ key: 'zoomOut', action: onZoomOut });
+      if (onResetZoom) groups.zoom.push({ key: 'resetZoom', action: onResetZoom });
+      if (onZoomIn) groups.zoom.push({ key: 'zoomIn', action: onZoomIn });
+      if (onZoomFit) groups.zoom.push({ key: 'zoomFit', action: onZoomFit });
+    }
+    
+    // Itens do grupo edit
+    if (!visibleItems.edit) {
+      if (onUndo) groups.edit.push({ key: 'undo', action: onUndo });
+      if (onRedo) groups.edit.push({ key: 'redo', action: onRedo });
+      if (onCopy) groups.edit.push({ key: 'copy', action: onCopy });
+      if (onPaste) groups.edit.push({ key: 'paste', action: onPaste });
+      if (onDuplicate) groups.edit.push({ key: 'duplicate', action: onDuplicate });
+      if (onArrange) groups.edit.push({ key: 'arrange', action: onArrange });
+    }
+    
+    // Itens do grupo search
+    if (!visibleItems.search && onSearchNode) {
+      groups.search.push({ key: 'search', action: () => setShowSearch(true) });
+    }
+    
+    // Retorna grupos na ordem de prioridade: file > main > extra > zoom > edit > search
+    return {
+      file: groups.file,
+      main: groups.main,
+      extra: groups.extra,
+      zoom: groups.zoom,
+      edit: groups.edit,
+      search: groups.search
+    };
+  };
+
+  const moreMenuGroups = getMoreMenuItems();
+  const hasMoreItems = Object.values(moreMenuGroups).some(group => group.length > 0);
+  
+  // Nomes dos grupos para exibição
+  const groupNames = {
+    file: 'Arquivo',
+    main: 'Fluxo',
+    extra: 'Importar/Exportar',
+    zoom: 'Zoom',
+    edit: 'Editar',
+    search: 'Buscar'
+  };
   
   return (
     <div ref={toolbarRef} className="toolbar">
-      <div className="flex items-center gap-2">
-        {children && React.Children.toArray(children)[0]}
-      </div>
+      {visibleItems.file && (
+        <div className="toolbar-group toolbar-group-file">
+          {children && React.Children.toArray(children)[0]}
+          {onOpen && (
+            <button className="btn-base" onClick={onOpen} title="Abrir fluxo">
+              <span className="icon icon-folder-open"></span>
+              <span>Abrir</span>
+            </button>
+          )}
+          {onSave && (
+            <button className="btn-base" onClick={onSave} title="Salvar fluxo">
+              <span className="icon icon-save"></span>
+              <span>Salvar</span>
+            </button>
+          )}
+        </div>
+      )}
 
-      <div className="toolbar-separator"></div>
+      {visibleItems.file && (visibleItems.main || visibleItems.zoom || visibleItems.edit || visibleItems.search || visibleItems.extra || hasMoreItems) && <div className="toolbar-separator"></div>}
 
       {visibleItems.main && (
         <div className="toolbar-group toolbar-group-main">
-        {onOpen && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onOpen} title="Abrir fluxo">
-            📂 Abrir
-          </button>
-        )}
-        {onSave && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onSave} title="Salvar fluxo">
-            💾 Salvar
-          </button>
-        )}
         {onValidate && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onValidate} title="Validar fluxo">
-            ✓ Validar
+          <button className="btn-base" onClick={onValidate} title="Validar fluxo">
+            <span className="icon icon-check"></span>
+            <span>Validar</span>
           </button>
         )}
         {onSimulate && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onSimulate} title="Simular fluxo">
-            ▶️ Simular
+          <button className="btn-base" onClick={onSimulate} title="Simular fluxo">
+            <span className="icon icon-play"></span>
+            <span>Simular</span>
           </button>
         )}
         </div>
@@ -390,23 +457,24 @@ export function Toolbar({
       {visibleItems.zoom && (
         <div className="toolbar-group toolbar-group-zoom">
         {onZoomOut && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onZoomOut} title="Diminuir zoom">
-            ➖
+          <button className="btn-base" onClick={onZoomOut} title="Diminuir zoom">
+            <span className="icon icon-minus"></span>
           </button>
         )}
         {onResetZoom && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onResetZoom} title="Zoom 100%">
-            100%
+          <button className="btn-base" onClick={onResetZoom} title="Zoom 100%">
+            <span>100%</span>
           </button>
         )}
         {onZoomIn && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onZoomIn} title="Aumentar zoom">
-            ➕
+          <button className="btn-base" onClick={onZoomIn} title="Aumentar zoom">
+            <span className="icon icon-plus"></span>
           </button>
         )}
         {onZoomFit && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onZoomFit} title="Ajustar zoom">
-            🔍 Fit
+          <button className="btn-base" onClick={onZoomFit} title="Ajustar zoom">
+            <span className="icon icon-search"></span>
+            <span>Fit</span>
           </button>
       )}
         </div>
@@ -417,33 +485,35 @@ export function Toolbar({
       {visibleItems.edit && (
         <div className="toolbar-group toolbar-group-edit">
         {onUndo && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onUndo} title="Desfazer">
-            ↶
+          <button className="btn-base" onClick={onUndo} title="Desfazer">
+            <span className="icon icon-undo"></span>
           </button>
         )}
         {onRedo && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onRedo} title="Refazer">
-            ↷
+          <button className="btn-base" onClick={onRedo} title="Refazer">
+            <span className="icon icon-redo"></span>
           </button>
         )}
         {onCopy && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onCopy} title="Copiar">
-            📋
+          <button className="btn-base" onClick={onCopy} title="Copiar">
+            <span className="icon icon-copy"></span>
           </button>
         )}
         {onPaste && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onPaste} title="Colar">
-            📄
+          <button className="btn-base" onClick={onPaste} title="Colar">
+            <span className="icon icon-paste"></span>
           </button>
         )}
         {onDuplicate && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onDuplicate} title="Duplicar">
-            📑 Duplicar
+          <button className="btn-base" onClick={onDuplicate} title="Duplicar">
+            <span className="icon icon-duplicate"></span>
+            <span>Duplicar</span>
           </button>
         )}
         {onArrange && (
-          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onArrange} title="Organizar nós">
-            ⚙️ Organizar
+          <button className="btn-base" onClick={onArrange} title="Organizar nós">
+            <span className="icon icon-settings"></span>
+            <span>Organizar</span>
           </button>
         )}
         </div>
@@ -462,13 +532,14 @@ export function Toolbar({
                 autoFocus
                 onBlur={() => setTimeout(() => setShowSearch(false), 200)}
               />
-              <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" type="submit" title="Buscar">
-                🔍
+              <button className="btn-base" type="submit" title="Buscar">
+                <span className="icon icon-search"></span>
               </button>
             </form>
           ) : (
-            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={() => setShowSearch(true)} title="Buscar nó">
-              🔍 Buscar
+            <button className="btn-base" onClick={() => setShowSearch(true)} title="Buscar nó">
+              <span className="icon icon-search"></span>
+              <span>Buscar</span>
             </button>
       )}
         </div>
@@ -479,18 +550,21 @@ export function Toolbar({
       {visibleItems.extra && (
         <div className="toolbar-group toolbar-group-extra">
           {onImportJson && (
-            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onImportJson} title="Importar JSON">
-              📥 Importar
+            <button className="btn-base" onClick={onImportJson} title="Importar JSON">
+              <span className="icon icon-import"></span>
+              <span>Importar</span>
             </button>
           )}
           {onExportJson && (
-            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onExportJson} title="Exportar JSON">
-              📤 Exportar
+            <button className="btn-base" onClick={onExportJson} title="Exportar JSON">
+              <span className="icon icon-export"></span>
+              <span>Exportar</span>
             </button>
           )}
           {onImportTemplate && (
-            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={onImportTemplate} title="Importar Template">
-              📋 Template
+            <button className="btn-base" onClick={onImportTemplate} title="Importar Template">
+              <span className="icon icon-template"></span>
+              <span>Template</span>
             </button>
           )}
         </div>
@@ -511,11 +585,12 @@ export function Toolbar({
       {hasMoreItems && (
         <div className="toolbar-group toolbar-group-more toolbar-more-container">
           <button
-            className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]"
+            className="btn-base"
             onClick={() => setShowMoreMenu(!showMoreMenu)}
             title="Mais opções"
           >
-            ⋯ Mais
+            <span>⋯</span>
+            <span>Mais</span>
           </button>
           
           {showMoreMenu && typeof document !== 'undefined' && createPortal(
@@ -532,23 +607,38 @@ export function Toolbar({
                     onClick={() => setShowMoreMenu(false)}
                     className="toolbar-more-close"
                   >
-                    ✕
-                    </button>
+                    <span>✕</span>
+                  </button>
                 </div>
                 <div className="toolbar-more-content">
-                  {moreMenuItems.map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => {
-                        item.action();
-                        setShowMoreMenu(false);
-                      }}
-                      className="toolbar-more-item"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
+                  {Object.entries(moreMenuGroups).map(([groupKey, items]) => {
+                    if (items.length === 0) return null;
+                    
+                    return (
+                      <div key={groupKey} className="toolbar-more-group">
+                        <div className="toolbar-more-group-header">
+                          {groupNames[groupKey]}
+                        </div>
+                        {items.map((item) => {
+                          const { icon, text } = getIconAndText(item.key);
+                          return (
+                            <button
+                              key={item.key}
+                              type="button"
+                              onClick={() => {
+                                item.action();
+                                setShowMoreMenu(false);
+                              }}
+                              className="toolbar-more-item"
+                            >
+                              {icon && <span className={`icon ${icon}`}></span>}
+                              <span>{text}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
                 </div>
             </div>
           </>,

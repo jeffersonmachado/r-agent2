@@ -21,9 +21,7 @@ export function CollapsibleSection({
         aria-expanded={!isCollapsed}
       >
         <span className="collapsible-section-title">{title}</span>
-        <span className="collapsible-section-icon">
-          {isCollapsed ? '▶' : '◀'}
-        </span>
+        <span className={`collapsible-section-icon collapse-btn-horizontal ${isCollapsed ? 'collapsed' : ''}`}></span>
       </button>
       {!isCollapsed && (
         <div className={`collapsible-section-content ${contentClassName}`}>

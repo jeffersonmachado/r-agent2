@@ -311,10 +311,7 @@ export function ResizablePanel({
             style={collapseButtonStyle}
             title={isCollapsed ? 'Expandir' : 'Recolher'}
           >
-            {isCollapsed 
-              ? (collapseDirection === 'right' ? '◀' : '▶')
-              : (collapseDirection === 'right' ? '▶' : '◀')
-            }
+            <span className={`collapse-btn-horizontal ${isCollapsed ? 'collapsed' : ''}`}></span>
           </button>
         </div>
       )}

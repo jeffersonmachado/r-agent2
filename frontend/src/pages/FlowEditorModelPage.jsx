@@ -111,14 +111,17 @@ export function FlowEditorModelPage() {
         {/* TOOLBAR */}
         <div className="h-12 flex items-center px-2 border-b bg-white dark:bg-[#1a1a1a] dark:border-[#2a2a2a]">
           <div className="flex items-center gap-2 overflow-hidden">
-            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]">
-              ➕<span className="hidden md:inline">Novo</span>
+            <button className="btn-base">
+              <span className="icon icon-plus"></span>
+              <span className="hidden md:inline">Novo</span>
             </button>
-            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]">
-              📂<span className="hidden md:inline">Abrir</span>
+            <button className="btn-base">
+              <span className="icon icon-folder-open"></span>
+              <span className="hidden md:inline">Abrir</span>
             </button>
-            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]">
-              🗑<span className="hidden md:inline">Remover</span>
+            <button className="btn-base">
+              <span className="icon icon-delete"></span>
+              <span className="hidden md:inline">Remover</span>
             </button>
           </div>
           <div className="flex-1"></div>

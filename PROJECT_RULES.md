@@ -413,9 +413,8 @@ O layout do Flow Editor segue uma hierarquia específica:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                    TOOLBAR (h-12)                                                         │
-│  [Novo] [FlowSelector] [Remover] │ [Abrir] [Salvar] [Validar] [Simular] │ [Buscar] │ [➖] [100%] [➕] [Fit] │
-│                                  │ [↶] [↷] [📋] [📄] [Duplicar] [Organizar] │ [Importar] [Exportar] [Template] │
-│                                  │ [Logs] [Tema] │ ←SPACER→ │ [⋯ Mais]                                    │
+│  [Novo] [Abrir] [Salvar] │ [Validar] [Simular] │ [Buscar] │ [➖] [100%] [➕] [Fit] │ [↶] [↷] [📋] [📄] [Duplicar] [Organizar] │
+│  [Importar] [Exportar] [Template] │ [FlowSelector] [Remover] [Logs] [Tema] │ ←SPACER→ │ [⋯ Mais]                    │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────┐
 │              BARRA "FLUXO ATUAL"                        │
@@ -451,25 +450,25 @@ O layout do Flow Editor segue uma hierarquia específica:
 - **Sistema de Prioridades**: Grupos são escondidos automaticamente quando espaço é limitado
 - **Estrutura de Grupos** (da esquerda para direita):
   
-  **Children[0]** (sempre visível)
-  - Novo, FlowSelector, Remover
-  
-  **GRUPO MAIN** (Prioridade 1 - Máxima)
+  **GRUPO FILE** (Prioridade 1 - Máxima)
+  - ➕ Novo (via `children[0]`)
   - 📂 Abrir (`onOpen`)
   - 💾 Salvar (`onSave`)
+  
+  **GRUPO MAIN** (Prioridade 2)
   - ✓ Validar (`onValidate`)
   - ▶️ Simular (`onSimulate`)
   
-  **GRUPO SEARCH** (Prioridade 2)
+  **GRUPO SEARCH** (Prioridade 3)
   - 🔍 Buscar (`onSearchNode`)
   
-  **GRUPO ZOOM** (Prioridade 3)
+  **GRUPO ZOOM** (Prioridade 4)
   - ➖ Diminuir zoom (`onZoomOut`)
   - 100% (`onResetZoom`)
   - ➕ Aumentar zoom (`onZoomIn`)
   - 🔍 Fit (`onZoomFit`)
   
-  **GRUPO EDIT** (Prioridade 4)
+  **GRUPO EDIT** (Prioridade 5)
   - ↶ Desfazer (`onUndo`)
   - ↷ Refazer (`onRedo`)
   - 📋 Copiar (`onCopy`)
@@ -477,12 +476,14 @@ O layout do Flow Editor segue uma hierarquia específica:
   - 📑 Duplicar (`onDuplicate`)
   - ⚙️ Organizar (`onArrange`)
   
-  **GRUPO EXTRA** (Prioridade 5)
+  **GRUPO EXTRA** (Prioridade 6)
   - 📥 Importar (`onImportJson`)
   - 📤 Exportar (`onExportJson`)
   - 📋 Template (`onImportTemplate`)
   
-  **GRUPO TOOLS** (Prioridade 6 - Menor)
+  **GRUPO TOOLS** (Prioridade 7 - Menor)
+  - FlowSelector (via `children`)
+  - Remover (via `children`)
   - 📋 Logs (via `children`)
   - 🎨 Tema/ThemeSelector (via `children`)
   
@@ -494,12 +495,13 @@ O layout do Flow Editor segue uma hierarquia específica:
   - Contém itens que não cabem na toolbar
 
 - **Ordem de Prioridade** (quando espaço é limitado):
-  1. MAIN (maior prioridade - sempre tenta mostrar primeiro)
-  2. SEARCH
-  3. ZOOM
-  4. EDIT
-  5. EXTRA
-  6. TOOLS (menor prioridade - primeiro a ser escondido)
+  1. FILE (maior prioridade - sempre tenta mostrar primeiro)
+  2. MAIN
+  3. SEARCH
+  4. ZOOM
+  5. EDIT
+  6. EXTRA
+  7. TOOLS (menor prioridade - primeiro a ser escondido)
 
 - **Histerese**: Grupos visíveis só são escondidos se realmente não houver espaço (margem de 16px = gap-4)
 - **Cálculo de Espaço**: Usa constantes baseadas em classes Tailwind (px-2, gap-2, min-w-5, w-20, gap-12)
@@ -618,10 +620,11 @@ Quando colapsado horizontalmente, cada painel mostra:
 A Toolbar implementa um sistema inteligente de prioridades que esconde grupos automaticamente quando o espaço é limitado:
 
 1. **Cálculo de Espaço Disponível**:
-   - Usa `ResizeObserver` para detectar mudanças de tamanho
-   - Calcula espaço fixo (Children[0], separadores, spacer, botão "Mais")
+   - Usa `window.resize` para detectar mudanças de viewport (não ResizeObserver)
+   - Calcula espaço fixo (separadores, spacer, botão "Mais")
    - Reserva espaço estimado para botão "Mais" (w-20 = 80px)
    - Usa constantes baseadas em classes Tailwind (não valores fixos em pixels)
+   - Ignora mudanças menores que 5px para evitar recálculos desnecessários
 
 2. **Constantes Tailwind Usadas**:
    - `TAILWIND_PX_2 = 8` → `px-2`, `gap-2`
@@ -636,26 +639,47 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
    - Aplica-se aos grupos: EDIT, EXTRA, TOOLS
 
 4. **Debounce e Performance**:
-   - Debounce de 300ms no ResizeObserver
+   - Debounce de 500ms no `window.resize`
    - `requestAnimationFrame` para agrupar atualizações
-   - Verificação de mudança mínima (2px) antes de recalcular
+   - Verificação de mudança mínima de viewport (5px) antes de recalcular
    - Flag `isChecking` para evitar processamento simultâneo
+   - Toolbar só reage a mudanças de viewport, não a colapso de painéis internos
 
 5. **Menu "Mais"**:
    - Sempre aparece por último (após spacer)
    - Contém itens dos grupos que não cabem na toolbar
-   - Ordem no menu: EXTRA → MAIN → ZOOM → EDIT → SEARCH
+   - **Organização por grupos**: Itens são agrupados e separados visualmente
+   - **Nomes dos grupos**:
+     - **Arquivo**: Abrir, Salvar
+     - **Fluxo**: Validar, Simular
+     - **Importar/Exportar**: Importar, Exportar, Template
+     - **Zoom**: Diminuir zoom, 100%, Aumentar zoom, Fit
+     - **Editar**: Desfazer, Refazer, Copiar, Colar, Duplicar, Organizar
+     - **Buscar**: Buscar nó
+   - **Ordem de exibição**: FILE → MAIN → EXTRA → ZOOM → EDIT → SEARCH
+   - **Separadores visuais**: Cada grupo tem um cabeçalho e separador (borda superior)
+   - **Grupos vazios**: Não são renderizados
 
 #### Regras de Implementação da Toolbar
 
 1. ✅ **Usar classes Tailwind**, não valores fixos em pixels
-2. ✅ **Grupos são escondidos na ordem inversa de prioridade** (6 → 5 → 4 → 3 → 2 → 1)
-3. ✅ **Histerese aplicada** para evitar alternância
+2. ✅ **Grupos são escondidos na ordem inversa de prioridade** (7 → 6 → 5 → 4 → 3 → 2 → 1)
+3. ✅ **Histerese aplicada** para evitar alternância (grupos EDIT, EXTRA, TOOLS)
 4. ✅ **Menu "Mais" sempre por último** (após spacer)
 5. ✅ **Tools tem menor prioridade** (primeiro a ser escondido)
 6. ✅ **Spacer usa flex: 1** para preencher espaço restante
 7. ✅ **Separadores condicionais** (só aparecem se houver grupos após)
+8. ✅ **Grupo FILE tem prioridade máxima** (Novo, Abrir, Salvar sempre tentam aparecer primeiro)
+9. ✅ **Toolbar só reage a mudanças de viewport**, não a colapso de painéis internos
 
 ---
 
 **Última atualização:** 2025-12-25
+
+### Mudanças Recentes na Toolbar
+
+- **Novo grupo FILE criado**: "Novo", "Abrir" e "Salvar" agora estão em um grupo separado com prioridade máxima
+- **Grupo MAIN atualizado**: Agora contém apenas "Validar" e "Simular"
+- **Ordem de prioridade atualizada**: FILE > MAIN > SEARCH > ZOOM > EDIT > EXTRA > TOOLS
+- **Toolbar responsiva**: Só reage a mudanças de viewport (window.resize), não a colapso de painéis internos
+- **Menu "Mais" com separação por grupos**: Itens são organizados por grupos (Arquivo, Fluxo, Importar/Exportar, Zoom, Editar, Buscar) com cabeçalhos e separadores visuais

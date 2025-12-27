@@ -11,13 +11,15 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
 
   if (!selectedNode) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+      <div className="w-full h-full flex flex-col items-center justify-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
         <div className="text-center space-y-3 max-w-[240px]">
-          <div className="text-4xl mb-3 opacity-40">📋</div>
-          <div className="text-base font-semibold text-gray-600 dark:text-gray-300 mb-1">
+          <div className="mb-3 opacity-40">
+            <span className="icon icon-logs" style={{ fontSize: '48px', width: '48px', height: '48px' }}></span>
+          </div>
+          <div className="text-base font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
             Nenhum nó selecionado
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          <div className="text-xs leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
             Clique em um nó para ver e editar suas propriedades.
           </div>
         </div>
