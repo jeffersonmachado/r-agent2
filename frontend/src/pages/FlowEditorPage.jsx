@@ -34,7 +34,7 @@ export function FlowEditorPage() {
     loadFlow,
     deleteFlow,
   } = useEditor();
-  
+
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
@@ -70,9 +70,9 @@ export function FlowEditorPage() {
   }, [rightPanelWidth]);
 
   // Funções de toggle EXATAMENTE como no modelo
-  const togglePalette = () => {
-    setPaletteCollapsed(!paletteCollapsed);
-  };
+  const togglePalette = useCallback(() => {
+    setPaletteCollapsed(prev => !prev);
+  }, []);
 
   const toggleRightPanel = () => {
     setRightPanelCollapsed(!rightPanelCollapsed);
@@ -197,10 +197,27 @@ export function FlowEditorPage() {
     try {
       const reteJson = await editor.toJSON();
       const saved = await saveFlow(reteJson);
-      if (saved) {
-        setFlowListRefreshTrigger(prev => prev + 1);
-        showToast('Fluxo salvo com sucesso', 'success');
-      } else {
+    if (saved) {
+        // ✅ Remove flag de "não pertence ao fluxo" de todos os nós após salvar
+        const nodes = editor.getNodes();
+        let hasRemovedFlag = false;
+        for (const node of nodes) {
+          if (node.data && node.data._notInCurrentFlow) {
+            delete node.data._notInCurrentFlow;
+            hasRemovedFlag = true;
+            // Dispara evento nodechanged para atualizar visualização
+            editor.trigger('nodechanged', { node });
+          }
+        }
+        // Se removemos flags, roda validação para atualizar status dos nós
+        if (hasRemovedFlag) {
+          const { runFlowValidation } = await import('../editor/validation/runFlowValidation');
+          runFlowValidation(editor);
+        }
+        
+      setFlowListRefreshTrigger(prev => prev + 1);
+      showToast('Fluxo salvo com sucesso', 'success');
+    } else {
         showToast('Erro ao salvar fluxo', 'error');
       }
     } catch (err) {
@@ -237,6 +254,14 @@ export function FlowEditorPage() {
     if (!currentFlow || !currentFlow.id) return;
     try {
       await deleteFlow(currentFlow.id);
+      
+      // ✅ Limpa o editor visual quando o fluxo é removido
+      const editor = editorRef.current?.editor?.current;
+      if (editor && typeof editor.clear === 'function') {
+        editor.clear();
+        logger.debug('Editor limpo após remoção do fluxo');
+      }
+      
       showToast('Fluxo removido com sucesso', 'success');
       setFlowListRefreshTrigger(prev => prev + 1);
     } catch (err) {
@@ -279,7 +304,7 @@ export function FlowEditorPage() {
       
       if (nodes.length > 0) {
         try {
-          AreaExtensions.zoomAt(area, nodes);
+        AreaExtensions.zoomAt(area, nodes);
         } catch (err) {
           logger.warn('Erro ao fazer zoom após organizar', { error: err?.message });
         }
@@ -477,8 +502,8 @@ export function FlowEditorPage() {
         currentZoom={1}
       >
         <div className="toolbar-primary-actions">
-          <button className="tb-btn" onClick={() => setShowTemplateSelector(true)}>
-            ➕ Novo Fluxo
+          <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={() => setShowTemplateSelector(true)}>
+            ➕ Novo
           </button>
           <FlowSelector
             onFlowSelected={handleFlowSelected}
@@ -486,12 +511,12 @@ export function FlowEditorPage() {
             refreshTrigger={flowListRefreshTrigger}
           />
           {currentFlow?.id && (
-            <button className="tb-btn" onClick={handleDeleteClick}>
+            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={handleDeleteClick}>
               🗑️ Remover
             </button>
           )}
         </div>
-        <button className="tb-btn" onClick={() => setShowLogViewer(true)}>
+        <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={() => setShowLogViewer(true)}>
           📋 Logs
         </button>
         <ThemeSelector />
@@ -514,13 +539,7 @@ export function FlowEditorPage() {
       )}
 
       {/* Barra "Fluxo atual" - EXATAMENTE como no modelo */}
-      <div 
-        className="h-8 px-4 flex items-center border-b text-sm"
-        style={{
-          backgroundColor: themeName === 'dark' ? '#000000' : '#f9fafb',
-          borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb'
-        }}
-      >
+      <div className="flow-current-display">
         Fluxo atual: <strong className="ml-1">{displayedFlow ? (displayedFlow.name || displayedFlow.id) : 'não carregado'}</strong>
       </div>
 
@@ -536,21 +555,21 @@ export function FlowEditorPage() {
             borderRight: `1px solid ${themeName === 'dark' ? '#2a2a2a' : '#e5e7eb'}`
           }}
         >
-          <div 
-            className="h-10 px-2 flex items-center justify-between border-b"
-            style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
-          >
-            <span className="palette-title" style={{ display: paletteCollapsed ? 'none' : 'inline' }}>
+          <div className="h-10 px-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
+            <span className={paletteCollapsed ? 'hidden' : 'inline'}>
               Paleta
-            </span>
-            <button className="collapse-btn" onClick={togglePalette}>
-              {paletteCollapsed ? '▶' : '◀'}
+              </span>
+            <button 
+              className={`text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors collapse-btn ${paletteCollapsed ? 'collapsed' : ''}`}
+              onClick={togglePalette}
+              aria-label={paletteCollapsed ? 'Expandir paleta' : 'Recolher paleta'}
+            >
             </button>
-          </div>
+            </div>
 
           {!paletteCollapsed ? (
             <div className="flex-1 p-2 text-sm space-y-2">
-              <NodePalette />
+                <NodePalette />
             </div>
           ) : (
             <div className="flex-1 p-2 flex flex-col items-center gap-2 overflow-y-auto">
@@ -570,11 +589,12 @@ export function FlowEditorPage() {
         <div className="flex-1 relative overflow-hidden canvas-container">
           <div className="absolute inset-0 canvas-grid pointer-events-none"></div>
           <div className="relative h-full">
-            <FlowEditor
+              <FlowEditor
               ref={editorRef}
-              onFlowChanged={handleFlowChanged}
-              onNodeSelected={handleNodeSelected}
-            />
+                onFlowChanged={handleFlowChanged}
+                onNodeSelected={handleNodeSelected}
+                showToast={showToast}
+              />
           </div>
         </div>
 
@@ -596,11 +616,8 @@ export function FlowEditorPage() {
           }}
         >
           {/* HEADER */}
-          <div 
-            className="h-10 px-2 flex items-center justify-start border-b"
-            style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
-          >
-            <button className="collapse-btn" onClick={toggleRightPanel}>
+          <div className="h-10 px-2 flex items-center justify-start border-b border-gray-200 dark:border-gray-800">
+            <button className="text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={toggleRightPanel}>
               {rightPanelCollapsed ? '◀' : '▶'}
             </button>
           </div>
@@ -610,27 +627,24 @@ export function FlowEditorPage() {
             {rightPanelCollapsed ? (
               <>
                 {/* Modo colapsado - textos verticais */}
-                <div className={`flex-1 p-2 border-b right-label vertical`} style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}>
+                <div className="flex-1 p-2 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center vertical">
                   Propriedades
                 </div>
-                <div className={`flex-1 p-2 border-b right-label vertical`} style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}>
+                <div className="flex-1 p-2 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center vertical">
                   Validação
                 </div>
-                <div className={`flex-1 p-2 right-label vertical`}>
+                <div className="flex-1 p-2 flex items-center justify-center vertical">
                   Simulação
                 </div>
               </>
             ) : (
               <>
                 {/* Propriedades - com colapso vertical */}
-                <div className={`flex flex-col ${propertiesCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'}`} style={{ borderBottom: `1px solid ${themeName === 'dark' ? '#2a2a2a' : '#e5e7eb'}` }}>
-                  <div 
-                    className="h-8 px-2 flex items-center justify-between border-b flex-shrink-0"
-                    style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
-                  >
+                <div className={`flex flex-col ${propertiesCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'} border-b border-gray-200 dark:border-gray-800`}>
+                  <div className="h-8 px-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                     <span className="text-sm font-medium">Propriedades</span>
                     <button
-                      className="collapse-btn"
+                      className="text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                       onClick={() => setPropertiesCollapsed(!propertiesCollapsed)}
                       title={propertiesCollapsed ? 'Expandir' : 'Recolher'}
                     >
@@ -638,7 +652,7 @@ export function FlowEditorPage() {
                     </button>
                   </div>
                   {!propertiesCollapsed && (
-                    <div className="flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-2">
                       <SidebarProperties
                         selectedNode={selectedNode}
                         onChangeConfig={(newConfig) => {
@@ -652,14 +666,11 @@ export function FlowEditorPage() {
                 </div>
 
                 {/* Validação - com colapso vertical */}
-                <div className={`flex flex-col ${validationCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'}`} style={{ borderBottom: `1px solid ${themeName === 'dark' ? '#2a2a2a' : '#e5e7eb'}` }}>
-                  <div 
-                    className="h-8 px-2 flex items-center justify-between border-b flex-shrink-0"
-                    style={{ borderColor: themeName === 'dark' ? '#2a2a2a' : '#e5e7eb' }}
-                  >
+                <div className={`flex flex-col ${validationCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'} border-b border-gray-200 dark:border-gray-800`}>
+                  <div className="h-8 px-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                     <span className="text-sm font-medium">Validação</span>
                     <button
-                      className="collapse-btn"
+                      className="text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                       onClick={() => setValidationCollapsed(!validationCollapsed)}
                       title={validationCollapsed ? 'Expandir' : 'Recolher'}
                     >
@@ -668,20 +679,23 @@ export function FlowEditorPage() {
                   </div>
                   {!validationCollapsed && (
                     <div className="flex-1 min-h-0 overflow-y-auto p-2">
-                      {!validation && (
-                        <div className="text-sm" style={{ color: themeName === 'dark' ? '#9ca3af' : '#6b7280' }}>
-                          Nenhuma validação executada.
+                      {!validation ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-center space-y-3 max-w-[240px]">
+                            <div className="text-4xl mb-3 opacity-40">✓</div>
+                            <div className="text-base font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                              Nenhuma validação executada
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                              Execute a validação para ver os resultados.
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      {validation && (
+                      ) : (
                         <>
                           <div className="text-sm mb-2">
                             <span>Resultado: </span>
-                            <span style={{ 
-                              color: validation.valid 
-                                ? (themeName === 'dark' ? '#34d399' : '#059669')
-                                : (themeName === 'dark' ? '#f87171' : '#dc2626')
-                            }}>
+                            <span className={validation.valid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                               {validation.valid ? 'Válido' : 'Inválido'}
                             </span>
                           </div>
@@ -713,7 +727,7 @@ export function FlowEditorPage() {
                                     <ul className="list-disc list-inside space-y-1">
                                       {errors.map((err, idx) => (
                                         <li key={`${err.code}-${idx}`}>
-                                          <span style={{ color: themeName === 'dark' ? '#9ca3af' : '#4b5563' }}>[{err.code}]</span>
+                                          <span className="text-gray-600 dark:text-gray-400">[{err.code}]</span>
                                           <span> {err.message}</span>
                                         </li>
                                       ))}
@@ -737,7 +751,7 @@ export function FlowEditorPage() {
                   >
                     <span className="text-sm font-medium">Simulação</span>
                     <button
-                      className="collapse-btn"
+                      className="text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                       onClick={() => setSimulationCollapsed(!simulationCollapsed)}
                       title={simulationCollapsed ? 'Expandir' : 'Recolher'}
                     >
@@ -745,7 +759,7 @@ export function FlowEditorPage() {
                     </button>
                   </div>
                   {!simulationCollapsed && (
-                    <div className="flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-2">
                       <SimulationPanel simulation={simulation} />
                     </div>
                   )}

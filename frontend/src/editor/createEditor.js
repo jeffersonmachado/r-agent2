@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 
 import ReactRenderPlugin from '../ReteReactPluginShim';
 import { runFlowValidation } from './validation/runFlowValidation';
+import { canCreateNode, canCreateConnection } from './validation/preventiveValidation';
 import { createNode } from './nodeFactory';
 import logger from '../utils/logger';
 
@@ -19,7 +20,7 @@ import logger from '../utils/logger';
  * @returns {Promise<{ destroy: () => void, editor: NodeEditor, area: AreaPlugin }>}
  */
 export async function createEditor(container, options = {}) {
-  const { onFlowChanged, onNodeSelected } = options;
+  const { onFlowChanged, onNodeSelected, showToast } = options;
 
   // Verifica se o container tem dimensões
   const containerRect = container.getBoundingClientRect();
@@ -102,8 +103,29 @@ export async function createEditor(container, options = {}) {
     }
 
     try {
-      // Limpa o editor antes de carregar
-      editor.clear();
+      // ✅ Ao invés de limpar, marca nós existentes como inválidos
+      const existingNodes = editor.getNodes();
+      
+      logger.debug('loadFromJson - marcando nós existentes como inválidos', {
+        existingNodeCount: existingNodes.length,
+        existingNodeIds: existingNodes.map(n => n.id),
+      });
+      
+      // Marca todos os nós existentes como não pertencentes ao novo fluxo
+      // Usa uma flag especial que será preservada pela validação
+      for (const existingNode of existingNodes) {
+        if (!existingNode.data) {
+          existingNode.data = {};
+        }
+        // Marca o nó como não pertencente ao fluxo atual
+        existingNode.data._notInCurrentFlow = true;
+        
+        logger.debug('loadFromJson - nó existente marcado', {
+          nodeId: existingNode.id,
+          nodeType: existingNode.data?.type,
+          hasFlag: !!existingNode.data._notInCurrentFlow,
+        });
+      }
 
       /** @type {Record<string, any>} */
       const createdNodesByJsonId = {};
@@ -122,6 +144,12 @@ export async function createEditor(container, options = {}) {
         }
 
         const node = createNode(type, { config });
+        
+        // ✅ Garante que o novo nó não tenha a flag de "não pertence ao fluxo"
+        if (node.data) {
+          node.data._notInCurrentFlow = false;
+        }
+        
         await editor.addNode(node);
 
         // Aplica posição se existir
@@ -179,19 +207,120 @@ export async function createEditor(container, options = {}) {
       }
 
       // Após carregar, roda validação e notifica mudança de fluxo
+      logger.debug('loadFromJson - executando validação após carregar fluxo', {
+        totalNodes: editor.getNodes().length,
+        existingNodesCount: existingNodes.length,
+      });
+      
       runFlowValidation(editor);
+      
+      // Verifica se a validação foi aplicada corretamente
+      const nodesAfterValidation = editor.getNodes();
+      const invalidNodes = nodesAfterValidation.filter(n => 
+        n.data?.validation?.status === 'invalid' && 
+        n.data?._notInCurrentFlow === true
+      );
+      
+      logger.debug('loadFromJson - validação concluída', {
+        totalNodes: nodesAfterValidation.length,
+        invalidNodesCount: invalidNodes.length,
+        invalidNodeIds: invalidNodes.map(n => n.id),
+      });
+      
       onFlowChanged?.(editor);
 
       logger.debug('loadFromJson - fluxo carregado no editor', {
         nodeCount: Object.keys(createdNodesByJsonId).length,
       });
     } catch (err) {
-      logger.error('loadFromJson - erro ao carregar fluxo no editor', { error: err });
+      logger.error('loadFromJson - erro ao carregar fluxo no editor', { 
+        error: err,
+        errorMessage: err?.message,
+        errorStack: err?.stack,
+        errorName: err?.name,
+        errorString: String(err),
+        errorType: typeof err,
+      });
+      // Não re-lança o erro para não quebrar o fluxo de carregamento
     }
   }
 
   // =========================
+  // VALIDAÇÃO PREVENTIVA (seguindo documentação oficial do Rete.js)
+  // IMPORTANTE: Estes pipes devem vir ANTES dos pipes de validação pós-ação
+  // para bloquear ações inválidas antes de acontecerem
+  // Referência: https://retejs.org/docs/guides/validation/
+  // =========================
+
+  // Previne criação de nós inválidos
+  editor.addPipe(context => {
+    if (context.type === 'nodecreate') {
+      const nodeData = context.data;
+      // O nodeData pode ser um nó já instanciado (ClassicPreset.Node) ou dados brutos
+      // Se for uma instância de Node, o tipo está em nodeData.data.type
+      // Se for dados brutos, pode estar em nodeData.type
+      let nodeType = null;
+      
+      if (nodeData) {
+        // Verifica se é uma instância de Node (tem propriedade data)
+        if (nodeData.data && typeof nodeData.data === 'object') {
+          nodeType = nodeData.data.type;
+        } else if (nodeData.type) {
+          // Dados brutos com tipo
+          nodeType = nodeData.type;
+        } else if (nodeData.label) {
+          // Pode ser um label que precisa ser mapeado (não ideal, mas fallback)
+          // Não usamos label como tipo, apenas logamos para debug
+          logger.debug('nodecreate com label mas sem type', { label: nodeData.label });
+        }
+      }
+
+      if (nodeType) {
+        const validation = canCreateNode(editor, nodeType);
+        
+        if (!validation.allowed) {
+          // Mostra mensagem de erro
+          if (showToast) {
+            showToast(validation.message || 'Ação não permitida', 'error', 3000);
+          } else if (typeof window !== 'undefined') {
+            alert(validation.message || 'Ação não permitida');
+          }
+          
+          // Bloqueia a criação retornando sem valor (padrão da documentação)
+          return;
+        }
+      }
+    }
+    return context;
+  });
+
+  // Previne criação de conexões inválidas
+  editor.addPipe(context => {
+    if (context.type === 'connectioncreate') {
+      const connection = context.data;
+      
+      if (connection) {
+        const validation = canCreateConnection(editor, connection);
+        
+        if (!validation.allowed) {
+          // Mostra mensagem de erro
+          if (showToast) {
+            showToast(validation.message || 'Conexão não permitida', 'error', 3000);
+          } else if (typeof window !== 'undefined') {
+            alert(validation.message || 'Conexão não permitida');
+          }
+          
+          // Bloqueia a conexão retornando sem valor (padrão da documentação)
+          return;
+        }
+      }
+    }
+    return context;
+  });
+
+  // =========================
   // PIPE CANÔNICO DE VALIDAÇÃO (🔥 PRINCIPAL)
+  // Validação PÓS-AÇÃO para feedback visual
   // =========================
   editor.addPipe(ctx => {
     if (
@@ -491,13 +620,30 @@ export async function createEditor(container, options = {}) {
   // =========================
   // DEBUG: Monitora mudanças no tamanho do container
   // =========================
+  let lastLoggedWidth = 0;
+  let lastLoggedHeight = 0;
+  let logTimeout = null;
+  
   const resizeObserver = new ResizeObserver((entries) => {
     for (const entry of entries) {
-      logger.debug('Container resize detectado', {
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
-        timestamp: Date.now(),
-      });
+      const { width, height } = entry.contentRect;
+      
+      // Só loga se a mudança for significativa (> 2px) e após debounce
+      if (Math.abs(width - lastLoggedWidth) > 2 || Math.abs(height - lastLoggedHeight) > 2) {
+        if (logTimeout) {
+          clearTimeout(logTimeout);
+        }
+        
+        logTimeout = setTimeout(() => {
+          logger.debug('Container resize detectado', {
+            width,
+            height,
+            timestamp: Date.now(),
+          });
+          lastLoggedWidth = width;
+          lastLoggedHeight = height;
+        }, 500); // Debounce de 500ms para logs
+      }
     }
   });
   

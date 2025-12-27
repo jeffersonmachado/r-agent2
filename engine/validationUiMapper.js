@@ -119,6 +119,21 @@ function mapFlowErrorToUiError(err) {
       };
     }
 
+    case 'MULTIPLE_START_NODES': {
+      const count = nodeIds.length;
+      const message =
+        count === 2
+          ? 'O fluxo deve ter exatamente um nó do tipo "start". Existem 2 nós de início.'
+          : `O fluxo deve ter exatamente um nó do tipo "start". Existem ${count} nós de início.`;
+
+      return {
+        code: err.code,
+        message,
+        severity: 'error',
+        nodeIds,
+      };
+    }
+
     case 'MISSING_END_NODE': {
       return {
         code: err.code,

@@ -89,74 +89,21 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Classes EXATAMENTE como no modelo.html */
+  /* Classes utilitárias customizadas (mantidas apenas quando necessário) */
   .vertical {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
   }
   
-  .no-x-scroll {
-    overflow-x: hidden;
-  }
-  
-  .tb-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border: 1px solid var(--tb-btn-border-color, #ccc);
-    border-radius: 6px;
-    background-color: transparent;
-    cursor: pointer;
-    transition: all 150ms ease;
-    color: inherit;
-  }
-  
-  .tb-btn:hover {
-    background-color: var(--tb-btn-hover-bg, rgba(0, 0, 0, 0.05));
-    border-color: var(--tb-btn-hover-border, #999);
-  }
-  
-  .tb-btn:active {
-    background-color: var(--tb-btn-active-bg, rgba(0, 0, 0, 0.1));
-    transform: scale(0.98);
-  }
-  
-  .collapse-btn {
-    font-size: 12px;
-    padding: 2px 6px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background: transparent;
-    cursor: pointer;
-    color: inherit;
-  }
-  
-  .dark .collapse-btn {
-    border-color: #2a2a2a;
-  }
-  
-  .collapse-btn:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-  
-  .dark .collapse-btn:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  .palette-title {
-    display: inline;
-  }
-  
-  .palette-label {
-    display: inline;
-  }
-  
-  .right-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  /* Nota: .no-x-scroll, .palette-title, .palette-label, .right-label, .tb-btn, .collapse-btn
+     foram removidas - usar classes Tailwind diretamente:
+     - .no-x-scroll → overflow-x-hidden
+     - .palette-title → inline
+     - .palette-label → inline
+     - .right-label → flex items-center justify-center
+     - .tb-btn → flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]
+     - .collapse-btn → text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800
+  */
 }
 
 @layer utilities {
@@ -211,10 +158,7 @@
     }
   }
   
-  .animate-in {
-    animation: fade-in 0.2s ease-out;
-  }
-  
+  /* Animações - mantidas para compatibilidade, mas podem ser substituídas por classes Tailwind */
   .fade-in {
     animation: fade-in 0.2s ease-out;
   }
@@ -253,13 +197,7 @@
     animation: slide-in-from-right 0.3s ease-out;
   }
   
-  .duration-200 {
-    animation-duration: 200ms;
-  }
-  
-  .duration-300 {
-    animation-duration: 300ms;
-  }
+  /* Nota: duration-200 e duration-300 já existem no Tailwind - remover se não usado */
   
   /* Estilos para conexões do Rete.js */
   .rete-connection-svg {
@@ -735,7 +673,9 @@
 }
 
 .toolbar-group-zoom,
-.toolbar-group-edit {
+.toolbar-group-edit,
+.toolbar-group-search,
+.toolbar-group-more {
   padding: 4px 6px;
   background-color: var(--color-bg-elevated);
   border-radius: 6px;
@@ -1089,50 +1029,58 @@
     font-size: 12px;
   }
 }
+}
 
+/* Node Palette Collapsed */
+.node-palette-item--collapsed {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  justify-content: center;
+  font-size: 16px;
+}
 
-  /* Node Palette Collapsed */
-  .node-palette-item--collapsed {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border-radius: 6px;
-    margin-bottom: 8px;
-    justify-content: center;
-    font-size: 16px;
-  }
+.node-palette-item--collapsed:not(.node-palette-item--dragging) {
+  background-color: transparent;
+  border: 1px solid var(--color-border-default);
+}
 
-  .node-palette-item--collapsed:not(.node-palette-item--dragging) {
-    background-color: transparent;
-    border: 1px solid var(--color-border-default);
-  }
+/* Wrapper da paleta de nós deve ficar acima das conexões do editor */
+.flow-node-palette-wrapper {
+  position: relative;
+  z-index: 5;
+  display: flex;
+}
 
-  /* Wrapper da paleta de nós deve ficar acima das conexões do editor */
-  .flow-node-palette-wrapper {
-    position: relative;
-    z-index: 5;
-    display: flex;
-  }
+/* Caixa "Fluxo atual" deve ficar acima do editor */
+.flow-current-display {
+  position: relative;
+  z-index: 1;
+  height: 32px; /* h-8 = 32px */
+  padding: 0 16px; /* px-4 = 16px */
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border-default);
+  font-size: 14px; /* text-sm */
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
 
-  /* Caixa "Fluxo atual" deve ficar acima do editor */
-  .flow-current-display {
-    position: relative;
-    z-index: 1;
-  }
+.node-palette-item--collapsed:hover:not(.node-palette-item--dragging) {
+  transform: scale(1.1);
+  background-color: var(--color-bg-tertiary);
+  border-color: rgba(42, 42, 42, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
 
-  .node-palette-item--collapsed:hover:not(.node-palette-item--dragging) {
-    transform: scale(1.1);
-    background-color: var(--color-bg-tertiary);
-    border-opacity: 0.5;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  .node-palette-item--collapsed.node-palette-item--dragging {
-    opacity: 0.5;
-    transform: scale(0.9);
-    background-color: var(--color-bg-tertiary);
-    border-width: 2px;
-  }
+.node-palette-item--collapsed.node-palette-item--dragging {
+  opacity: 0.5;
+  transform: scale(0.9);
+  background-color: var(--color-bg-tertiary);
+  border-width: 2px;
+}
 
 /* Painel de propriedades: estabiliza largura e evita empurrar o editor */
 .sidebar-properties-root {
@@ -1437,5 +1385,53 @@
   z-index: -1;
   pointer-events: none;
 }
+
+/* Botão de colapso com setas via CSS (SVG inline) */
+.collapse-btn {
+  position: relative;
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  line-height: 0;
 }
 
+.collapse-btn {
+  color: inherit;
+  position: relative;
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-btn::before {
+  content: '';
+  display: block;
+  width: 12px;
+  height: 12px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M9 0 L3 6 L9 12 Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M9 0 L3 6 L9 12 Z'/%3E%3C/svg%3E");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.collapse-btn:hover::before {
+  opacity: 1;
+}
+
+/* Seta para direita quando colapsado */
+.collapse-btn.collapsed::before {
+  mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 0 L9 6 L3 12 Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 0 L9 6 L3 12 Z'/%3E%3C/svg%3E");
+}

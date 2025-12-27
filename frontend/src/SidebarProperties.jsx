@@ -11,13 +11,13 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
 
   if (!selectedNode) {
     return (
-      <div className="w-full h-full p-8 text-sm bg-gradient-to-br from-bg-secondary to-bg-tertiary flex flex-col items-center justify-center text-text-tertiary">
+      <div className="w-full h-full flex flex-col items-center justify-center text-sm text-gray-500 dark:text-gray-400">
         <div className="text-center space-y-3 max-w-[240px]">
           <div className="text-4xl mb-3 opacity-40">📋</div>
-          <div className="text-base font-semibold text-text-secondary mb-1">
+          <div className="text-base font-semibold text-gray-600 dark:text-gray-300 mb-1">
             Nenhum nó selecionado
           </div>
-          <div className="text-xs text-text-tertiary leading-relaxed">
+          <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
             Clique em um nó para ver e editar suas propriedades.
           </div>
         </div>

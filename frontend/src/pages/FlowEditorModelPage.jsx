@@ -111,22 +111,22 @@ export function FlowEditorModelPage() {
         {/* TOOLBAR */}
         <div className="h-12 flex items-center px-2 border-b bg-white dark:bg-[#1a1a1a] dark:border-[#2a2a2a]">
           <div className="flex items-center gap-2 overflow-hidden">
-            <button className="tb-btn">
+            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]">
               ➕<span className="hidden md:inline">Novo</span>
             </button>
-            <button className="tb-btn">
+            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]">
               📂<span className="hidden md:inline">Abrir</span>
             </button>
-            <button className="tb-btn">
+            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]">
               🗑<span className="hidden md:inline">Remover</span>
             </button>
           </div>
           <div className="flex-1"></div>
           <div className="flex items-center gap-2">
-            <button className="tb-btn hidden md:flex">
+            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98] hidden md:flex">
               📋<span>Logs</span>
             </button>
-            <button className="tb-btn" onClick={toggleTheme}>
+            <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-transparent cursor-pointer transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]" onClick={toggleTheme}>
               🌙
             </button>
           </div>
@@ -146,13 +146,10 @@ export function FlowEditorModelPage() {
             style={!isPaletteCollapsed ? { width: `${paletteWidth}px` } : {}}
           >
             <div className="h-10 px-2 flex items-center justify-between border-b dark:border-[#2a2a2a]">
-              <span
-                className="palette-title"
-                style={{ display: isPaletteCollapsed ? 'none' : 'inline' }}
-              >
+              <span className={isPaletteCollapsed ? 'hidden' : 'inline'}>
                 Paleta
               </span>
-              <button className="collapse-btn" onClick={togglePalette}>
+              <button className="text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={togglePalette}>
                 {isPaletteCollapsed ? '▶' : '◀'}
               </button>
             </div>
@@ -160,37 +157,25 @@ export function FlowEditorModelPage() {
             <div className="flex-1 p-2 text-sm space-y-2">
               <div className="flex items-center gap-2">
                 <span>🔵</span>
-                <span
-                  className="palette-label"
-                  style={{ display: isPaletteCollapsed ? 'none' : 'inline' }}
-                >
+                <span className={isPaletteCollapsed ? 'hidden' : 'inline'}>
                   Entrada
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span>💬</span>
-                <span
-                  className="palette-label"
-                  style={{ display: isPaletteCollapsed ? 'none' : 'inline' }}
-                >
+                <span className={isPaletteCollapsed ? 'hidden' : 'inline'}>
                   Mensagem
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span>🔀</span>
-                <span
-                  className="palette-label"
-                  style={{ display: isPaletteCollapsed ? 'none' : 'inline' }}
-                >
+                <span className={isPaletteCollapsed ? 'hidden' : 'inline'}>
                   Condição
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span>🌐</span>
-                <span
-                  className="palette-label"
-                  style={{ display: isPaletteCollapsed ? 'none' : 'inline' }}
-                >
+                <span className={isPaletteCollapsed ? 'hidden' : 'inline'}>
                   API
                 </span>
               </div>
@@ -231,7 +216,7 @@ export function FlowEditorModelPage() {
           >
             {/* HEADER */}
             <div className="h-10 px-2 flex items-center justify-end border-b dark:border-[#2a2a2a]">
-              <button className="collapse-btn" onClick={toggleRightPanel}>
+              <button className="text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-700 rounded bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={toggleRightPanel}>
                 {isRightPanelCollapsed ? '◀' : '▶'}
               </button>
             </div>
@@ -239,56 +224,28 @@ export function FlowEditorModelPage() {
             {/* CONTEÚDO */}
             <div
               ref={rightContentRef}
-              className="flex-1 flex flex-col no-x-scroll"
-              style={{ flexDirection: 'column' }}
+              className="flex-1 flex flex-col overflow-x-hidden"
             >
               <div
-                className={`flex-1 p-2 border-b dark:border-[#2a2a2a] right-label ${
+                className={`flex-1 p-2 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center ${
                   isRightPanelCollapsed ? 'vertical' : ''
                 }`}
-                style={
-                  isRightPanelCollapsed
-                    ? {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }
-                    : {}
-                }
               >
                 Propriedades
               </div>
 
               <div
-                className={`flex-1 p-2 border-b dark:border-[#2a2a2a] right-label ${
+                className={`flex-1 p-2 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center ${
                   isRightPanelCollapsed ? 'vertical' : ''
                 }`}
-                style={
-                  isRightPanelCollapsed
-                    ? {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }
-                    : {}
-                }
               >
                 Validação
               </div>
 
               <div
-                className={`flex-1 p-2 right-label ${
+                className={`flex-1 p-2 flex items-center justify-center ${
                   isRightPanelCollapsed ? 'vertical' : ''
                 }`}
-                style={
-                  isRightPanelCollapsed
-                    ? {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }
-                    : {}
-                }
               >
                 Simulação
               </div>
@@ -297,35 +254,13 @@ export function FlowEditorModelPage() {
         </div>
       </div>
 
-      {/* CSS inline - EXATAMENTE como no modelo */}
+      {/* CSS inline - mantido apenas .vertical que é necessário */}
       <style>{`
         .vertical {
           writing-mode: vertical-rl;
           transform: rotate(180deg);
         }
-        .no-x-scroll {
-          overflow-x: hidden;
-        }
-        .tb-btn {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 8px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-        }
-        .dark .tb-btn {
-          border-color: #2a2a2a;
-        }
-        .collapse-btn {
-          font-size: 12px;
-          padding: 2px 6px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-        }
-        .dark .collapse-btn {
-          border-color: #2a2a2a;
-        }
+        /* Nota: .no-x-scroll, .tb-btn, .collapse-btn removidos - usar classes Tailwind diretamente */
       `}</style>
     </div>
   );

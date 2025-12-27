@@ -94,7 +94,7 @@ export function NodePalette({ onNodeDragStart, onNodeDragEnd }) {
           title={nodeType.label}
         >
           <span className="node-palette-item-icon">{nodeType.icon}</span>
-          <span className="palette-label">{nodeType.label}</span>
+          <span className="inline">{nodeType.label}</span>
         </div>
       ))}
     </>

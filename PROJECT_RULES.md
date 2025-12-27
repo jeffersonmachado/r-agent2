@@ -404,4 +404,258 @@ Antes de fazer alterações, verificar:
 
 ---
 
-**Última atualização:** 2025-12-22
+## 🎨 Regras de Layout e UI
+
+### Estrutura do Flow Editor
+
+O layout do Flow Editor segue uma hierarquia específica:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    TOOLBAR (h-12)                                                         │
+│  [Novo] [FlowSelector] [Remover] │ [Abrir] [Salvar] [Validar] [Simular] │ [Buscar] │ [➖] [100%] [➕] [Fit] │
+│                                  │ [↶] [↷] [📋] [📄] [Duplicar] [Organizar] │ [Importar] [Exportar] [Template] │
+│                                  │ [Logs] [Tema] │ ←SPACER→ │ [⋯ Mais]                                    │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│              BARRA "FLUXO ATUAL"                        │
+│  (FORA do ResizablePanel, z-index: 1)                  │
+│  Fluxo atual: nome-do-fluxo (id)                       │
+└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│              MAIN-PANEL-CONTAINER                      │
+│              (flex: 1, min-height: 0)                  │
+│                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │   PALETA     │  │    EDITOR    │  │ PROPRIEDADES │ │
+│  │ (colapsável) │  │ (flex: 1)    │  │ (colapsável) │ │
+│  │              │  │ (min: 400px) │  │              │ │
+│  │ NodePalette  │  │ FlowEditor   │  │ SidebarProps │ │
+│  │              │  │ (Rete.js)    │  │              │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │         VALIDAÇÃO/SIMULAÇÃO (colapsável)          │ │
+│  │  ValidationResults + SimulationPanel              │ │
+│  └───────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Componentes Principais
+
+#### 1. Toolbar
+- **Posição**: Topo da página
+- **Comportamento**: Fixo no topo, não redimensionável, responsiva
+- **Altura**: `h-12` (48px)
+- **Layout**: `flex`, `items-center`, `px-2`
+- **Sistema de Prioridades**: Grupos são escondidos automaticamente quando espaço é limitado
+- **Estrutura de Grupos** (da esquerda para direita):
+  
+  **Children[0]** (sempre visível)
+  - Novo, FlowSelector, Remover
+  
+  **GRUPO MAIN** (Prioridade 1 - Máxima)
+  - 📂 Abrir (`onOpen`)
+  - 💾 Salvar (`onSave`)
+  - ✓ Validar (`onValidate`)
+  - ▶️ Simular (`onSimulate`)
+  
+  **GRUPO SEARCH** (Prioridade 2)
+  - 🔍 Buscar (`onSearchNode`)
+  
+  **GRUPO ZOOM** (Prioridade 3)
+  - ➖ Diminuir zoom (`onZoomOut`)
+  - 100% (`onResetZoom`)
+  - ➕ Aumentar zoom (`onZoomIn`)
+  - 🔍 Fit (`onZoomFit`)
+  
+  **GRUPO EDIT** (Prioridade 4)
+  - ↶ Desfazer (`onUndo`)
+  - ↷ Refazer (`onRedo`)
+  - 📋 Copiar (`onCopy`)
+  - 📄 Colar (`onPaste`)
+  - 📑 Duplicar (`onDuplicate`)
+  - ⚙️ Organizar (`onArrange`)
+  
+  **GRUPO EXTRA** (Prioridade 5)
+  - 📥 Importar (`onImportJson`)
+  - 📤 Exportar (`onExportJson`)
+  - 📋 Template (`onImportTemplate`)
+  
+  **GRUPO TOOLS** (Prioridade 6 - Menor)
+  - 📋 Logs (via `children`)
+  - 🎨 Tema/ThemeSelector (via `children`)
+  
+  **SPACER** (flex: 1, min-w-5)
+  - Preenche espaço restante
+  
+  **GRUPO MAIS** (sempre último, se houver itens)
+  - ⋯ Mais (menu dropdown)
+  - Contém itens que não cabem na toolbar
+
+- **Ordem de Prioridade** (quando espaço é limitado):
+  1. MAIN (maior prioridade - sempre tenta mostrar primeiro)
+  2. SEARCH
+  3. ZOOM
+  4. EDIT
+  5. EXTRA
+  6. TOOLS (menor prioridade - primeiro a ser escondido)
+
+- **Histerese**: Grupos visíveis só são escondidos se realmente não houver espaço (margem de 16px = gap-4)
+- **Cálculo de Espaço**: Usa constantes baseadas em classes Tailwind (px-2, gap-2, min-w-5, w-20, gap-12)
+- **Menu "Mais"**: Aparece quando há itens que não cabem na toolbar, sempre por último
+
+#### 2. Barra "Fluxo Atual"
+- **Posição**: Abaixo da Toolbar, **FORA** do ResizablePanel
+- **CSS**: `.flow-current-display` com `z-index: 1`
+- **Comportamento**: Sempre visível, não desaparece
+- **Conteúdo**: Mostra nome e ID do fluxo atual
+
+#### 3. Main Panel Container
+- **CSS**: `.main-panel-container`
+- **Layout**: `flex: 1`, `min-height: 0`, `overflow: hidden`
+- **Função**: Container principal que ocupa todo espaço restante
+
+#### 4. Seção Paleta
+- **Componente**: `ResizablePanel` com `collapsible={true}`
+- **Largura padrão**: 200px
+- **Largura quando colapsado**: 48px
+- **Limites**: min: 48px, max: 800px
+- **Conteúdo**: `NodePalette` (lista de nós disponíveis)
+- **Quando colapsado**: Mostra apenas ícones na vertical
+
+#### 5. Seção Editor
+- **CSS**: `.editor-section`
+- **Layout**: `flex: 1` (ocupa todo espaço disponível)
+- **Tamanho mínimo**: 400px (`min-width: 400px`)
+- **Conteúdo**: `FlowEditor` (Rete.js canvas)
+- **Comportamento**: Sempre visível, se ajusta automaticamente
+- **NÃO colapsável**: O editor nunca pode ser colapsado
+
+#### 6. Seção Propriedades/Validação/Simulação
+- **Componente**: Painel direito único com colapso vertical
+- **Largura padrão**: 288px
+- **Largura quando colapsado**: 48px
+- **Limites**: min: 48px, max: 800px
+- **Conteúdo**: 
+  - `SidebarProperties` (formulário de propriedades)
+  - `ValidationResults` (resultados da validação)
+  - `SimulationPanel` (resultados da simulação)
+- **Colapso vertical**: Cada subseção pode ser colapsada verticalmente
+- **Quando colapsado horizontalmente**: Mostra títulos na vertical
+
+### Regras de Colapso
+
+#### Colapso Horizontal
+- **Paleta**: Pode ser colapsada horizontalmente (largura → 48px)
+- **Painel Direito**: Pode ser colapsado horizontalmente (largura → 48px)
+- **Editor**: NUNCA pode ser colapsado
+
+#### Colapso Vertical (Painel Direito)
+- **Propriedades**: Pode ser colapsada verticalmente (altura → header apenas)
+- **Validação**: Pode ser colapsada verticalmente (altura → header apenas)
+- **Simulação**: Pode ser colapsada verticalmente (altura → header apenas)
+- **Headers**: Sempre visíveis, mesmo quando colapsado
+
+### Responsividade
+
+#### Desktop (> 1024px)
+- Layout horizontal: Paleta | Editor | Propriedades/Validação/Simulação
+- Todos os painéis redimensionáveis horizontalmente
+- Colapso automático quando a tela fica pequena
+
+#### Tablet/Mobile (≤ 1024px)
+- Layout pode se adaptar verticalmente se necessário
+- Editor sempre mantém pelo menos 400px de largura
+- Painéis laterais podem ser colapsados automaticamente
+
+### Estados de Colapso
+
+Quando colapsado horizontalmente, cada painel mostra:
+- Largura de 48px
+- Título na vertical (rotacionado)
+- Botão de expandir/recolher no header
+- Ícones apenas (no caso da paleta)
+
+### Regras de Redimensionamento
+
+1. **ResizableDivider**: Usado para redimensionamento manual
+2. **Limites**: Cada painel tem limites min/max definidos
+3. **Editor**: Sempre mantém `flex: 1` e `min-width: 400px`
+4. **Persistência**: Larguras são salvas no localStorage
+
+### CSS e Classes
+
+- **`.flow-editor-page`**: Container principal (grid layout)
+- **`.toolbar`**: Barra de ferramentas no topo
+- **`.flow-current-display`**: Barra de fluxo atual
+- **`.main-panel-container`**: Container dos painéis principais
+- **`.flow-editor-container`**: Container do editor Rete.js
+- **`.rete-background`**: Background do canvas com grid
+- **`.tb-btn`**: Botões da toolbar
+- **`.collapse-btn`**: Botões de colapso
+- **`.vertical`**: Classe para texto vertical quando colapsado
+
+### Regras de Implementação
+
+1. ✅ **NÃO remover painéis do DOM** quando colapsados
+2. ✅ **NÃO usar `display: none`** no container do painel
+3. ✅ **Colapsar = reduzir ALTURA** (painéis verticais) ou **LARGURA** (painéis horizontais)
+4. ✅ **Header do painel deve SEMPRE permanecer visível**
+5. ✅ **Apenas o CONTEÚDO do painel deve ser ocultado**
+6. ✅ **Não alterar a largura do painel direito** quando colapsando verticalmente
+7. ✅ **Não gerar scroll horizontal**
+8. ✅ **Não quebrar redimensionamento existente**
+9. ✅ **Usar classes Tailwind**, não CSS-in-JS ou inline styles
+10. ✅ **Manter suporte a dark/light theme**
+
+---
+
+### Toolbar - Detalhes Técnicos
+
+#### Sistema de Prioridades e Responsividade
+
+A Toolbar implementa um sistema inteligente de prioridades que esconde grupos automaticamente quando o espaço é limitado:
+
+1. **Cálculo de Espaço Disponível**:
+   - Usa `ResizeObserver` para detectar mudanças de tamanho
+   - Calcula espaço fixo (Children[0], separadores, spacer, botão "Mais")
+   - Reserva espaço estimado para botão "Mais" (w-20 = 80px)
+   - Usa constantes baseadas em classes Tailwind (não valores fixos em pixels)
+
+2. **Constantes Tailwind Usadas**:
+   - `TAILWIND_PX_2 = 8` → `px-2`, `gap-2`
+   - `TAILWIND_PX_4 = 16` → `gap-4` (histerese)
+   - `TAILWIND_MIN_W_5 = 20` → `min-w-5` (spacer mínimo)
+   - `TAILWIND_W_20 = 80` → `w-20` (botão "Mais")
+   - `TAILWIND_GAP_12 = 48` → `gap-12` (margem de segurança)
+
+3. **Histerese (15px → 16px = gap-4)**:
+   - Evita alternância quando espaço está no limite
+   - Se um grupo já está visível, precisa de menos espaço para continuar
+   - Aplica-se aos grupos: EDIT, EXTRA, TOOLS
+
+4. **Debounce e Performance**:
+   - Debounce de 300ms no ResizeObserver
+   - `requestAnimationFrame` para agrupar atualizações
+   - Verificação de mudança mínima (2px) antes de recalcular
+   - Flag `isChecking` para evitar processamento simultâneo
+
+5. **Menu "Mais"**:
+   - Sempre aparece por último (após spacer)
+   - Contém itens dos grupos que não cabem na toolbar
+   - Ordem no menu: EXTRA → MAIN → ZOOM → EDIT → SEARCH
+
+#### Regras de Implementação da Toolbar
+
+1. ✅ **Usar classes Tailwind**, não valores fixos em pixels
+2. ✅ **Grupos são escondidos na ordem inversa de prioridade** (6 → 5 → 4 → 3 → 2 → 1)
+3. ✅ **Histerese aplicada** para evitar alternância
+4. ✅ **Menu "Mais" sempre por último** (após spacer)
+5. ✅ **Tools tem menor prioridade** (primeiro a ser escondido)
+6. ✅ **Spacer usa flex: 1** para preencher espaço restante
+7. ✅ **Separadores condicionais** (só aparecem se houver grupos após)
+
+---
+
+**Última atualização:** 2025-12-25

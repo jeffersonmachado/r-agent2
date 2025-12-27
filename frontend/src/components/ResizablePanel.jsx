@@ -94,41 +94,85 @@ export function ResizablePanel({
   useEffect(() => {
     if (!panelRef.current || !onResize || isCollapsed) return;
 
+    let lastSize = null;
+    let rafId = null;
+    let timeoutId = null;
+    let isProcessing = false;
+
     resizeObserverRef.current = new ResizeObserver((entries) => {
+      // Evita processar múltiplas entradas simultaneamente
+      if (isProcessing) return;
+      
       for (const entry of entries) {
         const newSize = isHorizontal 
           ? entry.contentRect.width 
           : entry.contentRect.height;
         
-        // Valida limites
-        if (minWidth && newSize < minWidth) {
-          const element = entry.target;
-          if (isHorizontal) {
-            element.style.width = `${minWidth}px`;
-          } else {
-            element.style.height = `${minWidth}px`;
-          }
+        // Ignora mudanças muito pequenas (< 1px) para evitar loops
+        if (lastSize !== null && Math.abs(newSize - lastSize) < 1) {
           return;
         }
         
-        if (maxWidth && newSize > maxWidth) {
-          const element = entry.target;
-          if (isHorizontal) {
-            element.style.width = `${maxWidth}px`;
-          } else {
-            element.style.height = `${maxWidth}px`;
-          }
-          return;
+        // Cancela callbacks anteriores pendentes
+        if (rafId) {
+          cancelAnimationFrame(rafId);
         }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        
+        // Usa requestAnimationFrame + debounce para evitar múltiplas chamadas
+        isProcessing = true;
+        rafId = requestAnimationFrame(() => {
+          timeoutId = setTimeout(() => {
+            try {
+              // Valida limites
+              if (minWidth && newSize < minWidth) {
+                const element = entry.target;
+                if (isHorizontal) {
+                  element.style.width = `${minWidth}px`;
+                } else {
+                  element.style.height = `${minWidth}px`;
+                }
+                lastSize = minWidth;
+                isProcessing = false;
+                return;
+              }
+              
+              if (maxWidth && newSize > maxWidth) {
+                const element = entry.target;
+                if (isHorizontal) {
+                  element.style.width = `${maxWidth}px`;
+                } else {
+                  element.style.height = `${maxWidth}px`;
+                }
+                lastSize = maxWidth;
+                isProcessing = false;
+                return;
+              }
 
-        // Chama callback
-        onResize(newSize);
+              // Atualiza lastSize antes de chamar callback
+              lastSize = newSize;
+              
+              // Chama callback
+              onResize(newSize);
+            } finally {
+              isProcessing = false;
+            }
+          }, 150); // Debounce de 150ms
+        });
       }
     });
 
     resizeObserverRef.current.observe(panelRef.current);
 
     return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }

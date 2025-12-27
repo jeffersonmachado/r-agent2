@@ -371,6 +371,7 @@ function validateDuplicateNodeIds(flow) {
 
 /**
  * Valida se o fluxo tem pelo menos um nó de início e um nó de fim.
+ * Também valida que não há múltiplos nós de início.
  *
  * @param {FlowDefinition} flow
  * @returns {FlowValidationError[]}
@@ -378,7 +379,8 @@ function validateDuplicateNodeIds(flow) {
 function validateRequiredNodes(flow) {
   const errors = [];
   const nodes = flow.nodes || [];
-  const hasStart = nodes.some((n) => n && n.type === 'start');
+  const startNodes = nodes.filter((n) => n && n.type === 'start');
+  const hasStart = startNodes.length > 0;
   const hasEnd = nodes.some((n) => n && n.type === 'end');
 
   if (!hasStart) {
@@ -386,6 +388,16 @@ function validateRequiredNodes(flow) {
       code: 'MISSING_START_NODE',
       message: 'O fluxo deve ter pelo menos um nó do tipo "start".',
       nodeIds: [],
+    });
+  } else if (startNodes.length > 1) {
+    errors.push({
+      code: 'MULTIPLE_START_NODES',
+      message: 'O fluxo deve ter exatamente um nó do tipo "start".',
+      nodeIds: startNodes.map((n) => n.id),
+      details: {
+        startNodeCount: startNodes.length,
+        startNodeIds: startNodes.map((n) => n.id),
+      },
     });
   }
 

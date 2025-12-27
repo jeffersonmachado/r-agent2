@@ -46,11 +46,11 @@ export function Dialog({
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm fade-in" />
       
       {/* Dialog */}
       <div
-        className={`relative bg-gradient-to-br from-bg-elevated to-bg-tertiary border border-border-default rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-top-4 duration-300`}
+        className={`relative bg-gradient-to-br from-bg-elevated to-bg-tertiary border border-border-default rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col slide-in-from-top-4`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

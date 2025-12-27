@@ -30,6 +30,43 @@ const flowsFile = path.join(dataDir, 'flows.json');
 const flows = new Map();
 const sessionEvents = new Map();
 
+// Limpeza periódica de sessionEvents para evitar memory leak
+// Remove sessões mais antigas que 24 horas
+const SESSION_CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hora
+const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 horas
+
+/**
+ * Limpa sessões antigas do cache de eventos.
+ */
+function cleanupOldSessions() {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [sessionId, events] of sessionEvents.entries()) {
+    if (Array.isArray(events) && events.length > 0) {
+      // Pega o timestamp do primeiro evento (mais antigo)
+      const firstEvent = events[0];
+      if (firstEvent && firstEvent.timestamp) {
+        // Converte timestamp ISO string para número
+        const eventTimestamp = new Date(firstEvent.timestamp).getTime();
+        if (!Number.isNaN(eventTimestamp)) {
+          const sessionAge = now - eventTimestamp;
+          if (sessionAge > SESSION_MAX_AGE) {
+            sessionEvents.delete(sessionId);
+            cleaned++;
+          }
+        }
+      }
+    }
+  }
+  if (cleaned > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`Limpeza de sessões: ${cleaned} sessão(ões) antiga(s) removida(s)`);
+  }
+}
+
+// Inicia limpeza periódica
+setInterval(cleanupOldSessions, SESSION_CLEANUP_INTERVAL);
+
 // ---------------------------------------------------------------------------
 // Persistência em arquivo JSON
 // ---------------------------------------------------------------------------
@@ -99,15 +136,24 @@ loadFlowsFromFile();
 
 /**
  * Faz o parse do body JSON da requisição.
+ * Inclui limite de tamanho para prevenir DoS.
  *
  * @param {http.IncomingMessage} req
+ * @param {number} [maxSize=10*1024*1024] - Tamanho máximo em bytes (padrão: 10MB)
  * @returns {Promise<any>}
  */
-function parseJsonBody(req) {
+function parseJsonBody(req, maxSize = 10 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let data = '';
+    let totalSize = 0;
 
     req.on('data', (chunk) => {
+      totalSize += chunk.length;
+      if (totalSize > maxSize) {
+        req.destroy();
+        reject(new Error(`Body excede o tamanho máximo de ${maxSize} bytes`));
+        return;
+      }
       data += chunk;
     });
 
@@ -270,6 +316,17 @@ function ensureFlowHasMeta(rawFlow) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Valida se o Content-Type é application/json para requisições com body.
+ *
+ * @param {http.IncomingMessage} req
+ * @returns {boolean}
+ */
+function hasJsonContentType(req) {
+  const contentType = req.headers['content-type'] || '';
+  return contentType.toLowerCase().includes('application/json');
+}
+
+/**
  * Handler principal da API.
  *
  * @param {http.IncomingMessage} req
@@ -330,6 +387,12 @@ async function requestHandler(req, res) {
 
   // POST /flows
   if (method === 'POST' && pathname === '/flows') {
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
     try {
       const body = await parseJsonBody(req);
 
@@ -368,6 +431,8 @@ async function requestHandler(req, res) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err.message && err.message.includes('excede o tamanho máximo')) {
+        badRequest(res, err.message);
       } else {
         // eslint-disable-next-line no-console
         console.error('Erro ao criar fluxo:', err);
@@ -388,6 +453,12 @@ async function requestHandler(req, res) {
       return;
     }
 
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
     try {
       const body = await parseJsonBody(req);
 
@@ -395,6 +466,12 @@ async function requestHandler(req, res) {
       const existingFlow = flows.get(id);
       if (!existingFlow) {
         sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${id}" não encontrado` });
+        return;
+      }
+
+      // Valida consistência: se body.id existe, deve corresponder ao id da URL
+      if (body && typeof body === 'object' && body.id && body.id !== id) {
+        badRequest(res, `O ID do fluxo no body ("${body.id}") não corresponde ao ID da URL ("${id}")`);
         return;
       }
 
@@ -429,6 +506,8 @@ async function requestHandler(req, res) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err.message && err.message.includes('excede o tamanho máximo')) {
+        badRequest(res, err.message);
       } else {
         // eslint-disable-next-line no-console
         console.error('Erro ao atualizar fluxo:', err);
@@ -464,6 +543,12 @@ async function requestHandler(req, res) {
 
   // POST /flows/validate
   if (method === 'POST' && pathname === '/flows/validate') {
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
     try {
       const body = await parseJsonBody(req);
       if (!body || typeof body !== 'object') {
@@ -495,6 +580,8 @@ async function requestHandler(req, res) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err.message && err.message.includes('excede o tamanho máximo')) {
+        badRequest(res, err.message);
       } else {
         // eslint-disable-next-line no-console
         console.error('Erro ao validar fluxo:', err);
@@ -510,6 +597,12 @@ async function requestHandler(req, res) {
 
   // POST /flows/simulate
   if (method === 'POST' && pathname === '/flows/simulate') {
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
     try {
       const body = await parseJsonBody(req);
       const { flowId, ...options } = body || {};
@@ -563,6 +656,8 @@ async function requestHandler(req, res) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err.message && err.message.includes('excede o tamanho máximo')) {
+        badRequest(res, err.message);
       } else {
         // eslint-disable-next-line no-console
         console.error('Erro ao simular fluxo:', err);

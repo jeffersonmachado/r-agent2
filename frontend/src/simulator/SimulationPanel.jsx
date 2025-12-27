@@ -18,25 +18,15 @@ export function SimulationPanel({ simulation, onSelectStep }) {
 
   if (!simulation) {
     return (
-      <div
-        style={{
-          flex: 1,
-          borderTop: `1px solid ${theme.colors.border.default}`,
-          padding: '24px',
-          fontSize: '13px',
-          backgroundColor: theme.colors.bg.secondary,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.text.tertiary,
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '14px', fontWeight: 500, color: theme.colors.text.secondary, marginBottom: '8px' }}>
-            Simulação
+      <div className="w-full h-full flex flex-col items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-center space-y-3 max-w-[240px]">
+          <div className="text-4xl mb-3 opacity-40">▶️</div>
+          <div className="text-base font-semibold text-gray-600 dark:text-gray-300 mb-1">
+            Nenhuma simulação executada
           </div>
-          <div style={{ fontSize: '12px' }}>Nenhuma simulação executada ainda.</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+            Execute a simulação para ver os resultados.
+          </div>
         </div>
       </div>
     );
