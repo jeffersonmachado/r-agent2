@@ -118,14 +118,25 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
             </span>
           </div>
           <ul className="space-y-1.5 m-0 p-0 list-none text-[11px] text-text-secondary">
-            {validationErrors.map((err, idx) => (
-              <li key={`${err.code}-${idx}`} className="flex flex-col">
-                <span className="font-mono text-status-error font-semibold">
-                  [{err.code}]
-                </span>
-                <span className="leading-snug">{err.message}</span>
-              </li>
-            ))}
+            {validationErrors.map((err, idx) => {
+              // ✅ Garante que o erro está no formato correto
+              const errorCode = (typeof err === 'object' && err.code) ? err.code : 'VALIDATION_ERROR';
+              // ✅ Frontend decide: usa messageUi (amigável) se disponível, senão usa message (técnica)
+              const errorMessage = (typeof err === 'object' && err.messageUi) 
+                ? err.messageUi 
+                : ((typeof err === 'object' && err.message) 
+                  ? err.message 
+                  : (typeof err === 'string' ? err : 'Erro de validação'));
+              
+              return (
+                <li key={`${errorCode}-${idx}`} className="flex flex-col">
+                  <span className="font-mono text-status-error font-semibold">
+                    [{errorCode}]
+                  </span>
+                  <span className="leading-snug">{errorMessage}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

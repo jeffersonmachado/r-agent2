@@ -82,8 +82,14 @@ export const FlowEditor = forwardRef(function FlowEditor({
   useImperativeHandle(ref, () => {
     if (!editorInstance) return null;
     
+    // ✅ Garante que o editor tenha o método toJSON
+    const editor = editorInstance.editor;
+    if (editor && !editor.toJSON && editorInstance.toJSON) {
+      editor.toJSON = editorInstance.toJSON;
+    }
+    
     return {
-      editor: { current: editorInstance.editor },
+      editor: { current: editor },
       area: editorInstance.area,
       arrange: editorInstance.arrange,
       // Métodos auxiliares para compatibilidade

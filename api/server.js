@@ -11,7 +11,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { validateFlow } = require('../engine/validator');
+const { validateFlow, addUiMessage } = require('../engine/validator');
 const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
 
@@ -406,10 +406,11 @@ async function requestHandler(req, res) {
       // Validação completa usando o validador da engine
       const validationResult = validateFlow(body);
       if (!validationResult.valid && validationResult.errors.length > 0) {
+        // ✅ Mapeia erros técnicos para mensagens amigáveis
         sendJson(res, 400, {
           error: 'validation_failed',
           message: 'O fluxo não passou na validação',
-          errors: validationResult.errors,
+          errors: validationResult.errors, // ✅ Já vem com messageUi do validator
         });
         return;
       }
@@ -491,10 +492,11 @@ async function requestHandler(req, res) {
       // Validação completa usando o validador da engine
       const validationResult = validateFlow(merged);
       if (!validationResult.valid && validationResult.errors.length > 0) {
+        // ✅ Mapeia erros técnicos para mensagens amigáveis
         sendJson(res, 400, {
           error: 'validation_failed',
           message: 'O fluxo não passou na validação',
-          errors: validationResult.errors,
+          errors: validationResult.errors, // ✅ Já vem com messageUi do validator
         });
         return;
       }
@@ -559,23 +561,24 @@ async function requestHandler(req, res) {
       // Validação estrutural básica primeiro
       const structureValidation = validateFlowStructure(body);
       if (!structureValidation.valid) {
+        // ✅ Mapeia erro estrutural também
+        const structureError = addUiMessage({
+          code: 'INVALID_FLOW_STRUCTURE',
+          message: structureValidation.error || 'Estrutura do fluxo inválida',
+          nodeIds: [],
+        });
         sendJson(res, 200, {
           valid: false,
-          errors: [
-            {
-              code: 'INVALID_FLOW_STRUCTURE',
-              message: structureValidation.error || 'Estrutura do fluxo inválida',
-              nodeIds: [],
-            },
-          ],
+          errors: [structureError], // ✅ Já vem com messageUi do validator
         });
         return;
       }
 
       const result = validateFlow(body);
+      
       sendJson(res, 200, {
         valid: Boolean(result && result.valid),
-        errors: Array.isArray(result && result.errors) ? result.errors : [],
+        errors: result.errors || [], // ✅ Já vem com messageUi do validator
       });
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -629,10 +632,12 @@ async function requestHandler(req, res) {
       // Valida o fluxo antes de simular
       const validationResult = validateFlow(flow);
       if (!validationResult.valid && validationResult.errors.length > 0) {
+        // ✅ Mapeia erros técnicos para mensagens amigáveis
+        const mappedErrors = mapFlowValidationErrorsToUi(validationResult.errors);
         sendJson(res, 400, {
           error: 'flow_invalid',
           message: 'O fluxo não passou na validação e não pode ser simulado',
-          errors: validationResult.errors,
+          errors: mappedErrors, // ✅ Já vem mapeado e amigável
         });
         return;
       }

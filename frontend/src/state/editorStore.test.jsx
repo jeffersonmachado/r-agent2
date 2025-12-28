@@ -15,7 +15,6 @@ vi.mock('../api/flows', () => ({
 vi.mock('../engine-mapper/engineMapper', () => ({
   engineFlowToReteJson: vi.fn(),
   reteJsonToEngineFlow: vi.fn(),
-  mapValidationErrorsToUi: vi.fn(),
 }));
 
 // eslint-disable-next-line import/first
@@ -93,7 +92,6 @@ describe('state/editorStore', () => {
     mapper.reteJsonToEngineFlow.mockReturnValue(flow);
     const validationResponse = { valid: true, errors: [] };
     flowsApi.validateFlow.mockResolvedValue(validationResponse);
-    mapper.mapValidationErrorsToUi.mockReturnValue([]);
 
     render(
       <EditorProvider>

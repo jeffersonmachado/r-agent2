@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import logger from '../utils/logger';
 
 /**
  * Sistema de Toast/Notification usando Tailwind CSS puro
@@ -144,6 +145,17 @@ export function useToast() {
     // ✅ Combina timestamp com contador para garantir unicidade
     const id = `toast-${Date.now()}-${++idCounterRef.current}`;
     setToasts((prev) => [...prev, { id, message, type, duration }]);
+    
+    // ✅ Registra a mensagem do toast no sistema de logs
+    const logLevel = {
+      success: 'info',
+      error: 'error',
+      warning: 'warn',
+      info: 'info',
+    }[type] || 'info';
+    
+    logger[logLevel](`Toast [${type}]: ${message}`, { type, duration });
+    
     return id;
   };
 

@@ -9,7 +9,6 @@ import * as flowsApi from '../api/flows';
 import {
   engineFlowToReteJson,
   reteJsonToEngineFlow,
-  mapValidationErrorsToUi,
 } from '../engine-mapper/engineMapper';
 import logger from '../utils/logger';
 
@@ -144,11 +143,11 @@ export function EditorProvider({ children }) {
         // com os mesmos erros retornados pelo backend (sem o usuário precisar clicar em "Validar").
         if (err && typeof err === 'object' && err.body && err.body.error === 'validation_failed') {
           const rawErrors = Array.isArray(err.body.errors) ? err.body.errors : [];
-          const uiErrors = mapValidationErrorsToUi(rawErrors);
+          // ✅ Erros já vêm mapeados e amigáveis do backend
           const validationResult = {
             valid: false,
             errors: rawErrors,
-            uiErrors,
+            uiErrors: rawErrors, // ✅ Usa diretamente (já são amigáveis)
           };
 
           logger.info('Atualizando painel de validação após erro ao salvar fluxo', {
@@ -186,17 +185,18 @@ export function EditorProvider({ children }) {
     try {
       const flowDefinition = reteJsonToEngineFlow(reteJson, currentFlow || undefined);
       const result = await flowsApi.validateFlow(flowDefinition);
-      const uiErrors = mapValidationErrorsToUi(result.errors || []);
+      
+      // ✅ Remove mapeamento duplicado - erros já vêm mapeados e amigáveis do backend
       const validationResult = {
         ...result,
-        uiErrors,
+        uiErrors: result.errors || [], // ✅ Usa diretamente (já são amigáveis)
       };
       
-      // Debug: log dos erros mapeados
+      // Debug: log dos erros (já mapeados)
       logger.debug('Validação concluída', {
         valid: validationResult.valid,
-        errorCount: uiErrors.length,
-        errors: uiErrors.map(e => ({
+        errorCount: validationResult.uiErrors.length,
+        errors: validationResult.uiErrors.map(e => ({
           code: e.code,
           message: e.message,
           nodeIds: e.nodeIds,

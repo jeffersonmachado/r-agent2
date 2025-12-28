@@ -22,6 +22,9 @@ import logger from '../utils/logger';
 export async function createEditor(container, options = {}) {
   const { onFlowChanged, onNodeSelected, showToast } = options;
 
+  // ✅ Flag para desabilitar validações preventivas durante carregamento de fluxo
+  let isLoadingFromJson = false;
+
   // Verifica se o container tem dimensões
   const containerRect = container.getBoundingClientRect();
   logger.debug('Container do editor', {
@@ -94,6 +97,96 @@ export async function createEditor(container, options = {}) {
   AreaExtensions.simpleNodesOrder(area);
 
   // =========================
+  // EXPORTAÇÃO DO EDITOR PARA JSON
+  // =========================
+  async function toJSON() {
+    const nodes = editor.getNodes();
+    
+    const reteJson = {
+      id: 'chatbot-flow@0.1.0',
+      nodes: {},
+    };
+
+    // ✅ ETAPA 1: Cria mapeamento completo de todos os nós primeiro
+    const nodeIdMap = new Map();
+    nodes.forEach((node, index) => {
+      const jsonId = String(index + 1);
+      nodeIdMap.set(node.id, jsonId);
+    });
+
+    // ✅ ETAPA 2: Processa cada nó e suas conexões usando o mapeamento completo
+    nodes.forEach((node, index) => {
+      const jsonId = String(index + 1);
+      
+      // Obtém posição do nó usando area.nodeViews
+      let position = [0, 0];
+      try {
+        const nodeView = area.nodeViews.get(node.id);
+        if (nodeView && nodeView.position) {
+          position = [nodeView.position.x || 0, nodeView.position.y || 0];
+        }
+      } catch (err) {
+        logger.debug('toJSON - erro ao obter posição do nó', { nodeId: node.id, error: err });
+      }
+      
+      // Constrói outputs com conexões
+      const outputs = {};
+      if (node.outputs) {
+        Object.entries(node.outputs).forEach(([outKey, output]) => {
+          const connections = [];
+          
+          // Obtém todas as conexões do editor
+          if (typeof editor.getConnections === 'function') {
+            const connectionsList = editor.getConnections();
+            
+            connectionsList.forEach((conn) => {
+              if (conn && conn.source === node.id && conn.sourceOutput === outKey) {
+                const targetJsonId = nodeIdMap.get(conn.target);
+                if (targetJsonId) {
+                  connections.push({
+                    node: targetJsonId,
+                    input: conn.targetInput,
+                  });
+                } else {
+                  // ✅ Log para debug: conexão ignorada porque nó de destino não está no fluxo atual
+                  logger.warn('toJSON - conexão ignorada: nó de destino não encontrado no mapeamento', {
+                    sourceId: node.id,
+                    sourceType: node.data?.type,
+                    targetId: conn.target,
+                    sourceOutput: outKey,
+                    targetInput: conn.targetInput,
+                    availableNodeIds: Array.from(nodeIdMap.keys()),
+                    totalNodesInEditor: nodes.length,
+                  });
+                }
+              }
+            });
+          }
+          
+          // Só adiciona output se houver conexões ou se o nó tiver outputs definidos
+          if (connections.length > 0) {
+            outputs[outKey] = {
+              connections,
+            };
+          }
+        });
+      }
+      
+      reteJson.nodes[jsonId] = {
+        id: parseInt(jsonId, 10),
+        data: {
+          type: node.data?.type || 'unknown',
+          config: node.data?.config || {},
+        },
+        position,
+        ...(Object.keys(outputs).length > 0 && { outputs }),
+      };
+    });
+
+    return reteJson;
+  }
+
+  // =========================
   // CARREGAMENTO INICIAL A PARTIR DE JSON (fluxo existente)
   // =========================
   async function loadFromJson(reteJson) {
@@ -103,28 +196,33 @@ export async function createEditor(container, options = {}) {
     }
 
     try {
-      // ✅ Ao invés de limpar, marca nós existentes como inválidos
+      // ✅ Desabilita validações preventivas durante carregamento
+      isLoadingFromJson = true;
+      
+      // ✅ Limpa completamente o editor antes de carregar novo fluxo
       const existingNodes = editor.getNodes();
       
-      logger.debug('loadFromJson - marcando nós existentes como inválidos', {
+      logger.debug('loadFromJson - limpando nós existentes', {
         existingNodeCount: existingNodes.length,
         existingNodeIds: existingNodes.map(n => n.id),
       });
       
-      // Marca todos os nós existentes como não pertencentes ao novo fluxo
-      // Usa uma flag especial que será preservada pela validação
+      // Remove todos os nós existentes do editor
       for (const existingNode of existingNodes) {
-        if (!existingNode.data) {
-          existingNode.data = {};
+        try {
+          editor.removeNode(existingNode.id);
+        } catch (removeErr) {
+          logger.warn('loadFromJson - erro ao remover nó existente', {
+            nodeId: existingNode.id,
+            error: removeErr,
+          });
         }
-        // Marca o nó como não pertencente ao fluxo atual
-        existingNode.data._notInCurrentFlow = true;
-        
-        logger.debug('loadFromJson - nó existente marcado', {
-          nodeId: existingNode.id,
-          nodeType: existingNode.data?.type,
-          hasFlag: !!existingNode.data._notInCurrentFlow,
-        });
+      }
+      
+      // ✅ Limpa o painel direito (deseleciona nó) ao carregar novo fluxo
+      if (onNodeSelected) {
+        onNodeSelected(null);
+        logger.debug('loadFromJson - painel direito limpo (nó deselecionado)');
       }
 
       /** @type {Record<string, any>} */
@@ -144,11 +242,6 @@ export async function createEditor(container, options = {}) {
         }
 
         const node = createNode(type, { config });
-        
-        // ✅ Garante que o novo nó não tenha a flag de "não pertence ao fluxo"
-        if (node.data) {
-          node.data._notInCurrentFlow = false;
-        }
         
         await editor.addNode(node);
 
@@ -212,15 +305,11 @@ export async function createEditor(container, options = {}) {
         existingNodesCount: existingNodes.length,
       });
       
-      runFlowValidation(editor);
+      runFlowValidation(editor, area);
       
       // Verifica se a validação foi aplicada corretamente
       const nodesAfterValidation = editor.getNodes();
-      const invalidNodes = nodesAfterValidation.filter(n => 
-        n.data?.validation?.status === 'invalid' && 
-        n.data?._notInCurrentFlow === true
-      );
-      
+      const invalidNodes = nodesAfterValidation.filter(n => n.data?.validation?.status === 'invalid');
       logger.debug('loadFromJson - validação concluída', {
         totalNodes: nodesAfterValidation.length,
         invalidNodesCount: invalidNodes.length,
@@ -232,7 +321,13 @@ export async function createEditor(container, options = {}) {
       logger.debug('loadFromJson - fluxo carregado no editor', {
         nodeCount: Object.keys(createdNodesByJsonId).length,
       });
+      
+      // ✅ Reabilita validações preventivas após carregamento
+      isLoadingFromJson = false;
     } catch (err) {
+      // ✅ Reabilita validações preventivas mesmo em caso de erro
+      isLoadingFromJson = false;
+      
       logger.error('loadFromJson - erro ao carregar fluxo no editor', { 
         error: err,
         errorMessage: err?.message,
@@ -255,6 +350,11 @@ export async function createEditor(container, options = {}) {
   // Previne criação de nós inválidos
   editor.addPipe(context => {
     if (context.type === 'nodecreate') {
+      // ✅ Pula validação durante carregamento de fluxo
+      if (isLoadingFromJson) {
+        return context;
+      }
+      
       const nodeData = context.data;
       // O nodeData pode ser um nó já instanciado (ClassicPreset.Node) ou dados brutos
       // Se for uma instância de Node, o tipo está em nodeData.data.type
@@ -297,6 +397,11 @@ export async function createEditor(container, options = {}) {
   // Previne criação de conexões inválidas
   editor.addPipe(context => {
     if (context.type === 'connectioncreate') {
+      // ✅ Pula validação durante carregamento de fluxo
+      if (isLoadingFromJson) {
+        return context;
+      }
+      
       const connection = context.data;
       
       if (connection) {
@@ -330,7 +435,7 @@ export async function createEditor(container, options = {}) {
       ctx.type === 'connectionremoved' ||
       ctx.type === 'imported'
     ) {
-      runFlowValidation(editor);
+      runFlowValidation(editor, area);
     }
     return ctx;
   });
@@ -340,7 +445,7 @@ export async function createEditor(container, options = {}) {
   // =========================
   editor.addPipe(ctx => {
     if (ctx.type === 'nodechanged') {
-      runFlowValidation(editor);
+      runFlowValidation(editor, area);
     }
     return ctx;
   });
@@ -656,22 +761,29 @@ export async function createEditor(container, options = {}) {
   // Atalho global de teclado (Delete / Backspace) para remoção de nós/conexões
   window.addEventListener('keydown', handleKeyDown);
 
+  // Adiciona método toJSON ao editor para compatibilidade
+  editor.toJSON = toJSON;
+
   // Retorna objeto com destroy e referências (seguindo padrão do reference)
+  // Referência: https://github.com/retejs/reference/blob/main/src/rete/default.ts#L210
+  // O reference apenas chama area.destroy(), que já faz toda a limpeza necessária
   return {
     destroy: () => {
       resizeObserver.disconnect();
       // Remove event listeners
       container.removeEventListener('dragover', handleDragOver);
       container.removeEventListener('drop', handleDrop);
-       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
       
+      // ✅ Seguindo padrão do reference: apenas area.destroy()
+      // O area.destroy() já faz toda a limpeza de nós, conexões e plugins
       area.destroy();
-      editor.clear();
     },
     editor,
     area,
     arrange,
     loadFromJson,
+    toJSON,
   };
 }
 

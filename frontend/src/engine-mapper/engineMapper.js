@@ -87,15 +87,35 @@ export function reteJsonToEngineFlow(reteJson, meta) {
 
     const outputs = node.outputs || {};
     const allConnections = [];
+    const invalidConnections = [];
     
     for (const output of Object.values(outputs)) {
       if (!output || !Array.isArray(output.connections)) continue;
       for (const connection of output.connections) {
         if (connection && typeof connection.node !== 'undefined') {
           const targetId = String(connection.node);
-          allConnections.push(targetId);
+          // Verifica se o nó de destino existe no mapa
+          if (byId.has(targetId)) {
+            allConnections.push(targetId);
+          } else {
+            // ✅ Log para debug: conexão aponta para nó inexistente
+            invalidConnections.push({
+              targetId,
+              input: connection.input,
+            });
+          }
         }
       }
+    }
+    
+    // Log de conexões inválidas
+    if (invalidConnections.length > 0) {
+      logger.warn('reteJsonToEngineFlow - conexões apontam para nós inexistentes', {
+        nodeId: fromId,
+        nodeType: engineNode.type,
+        invalidConnections,
+        availableNodeIds: Array.from(byId.keys()),
+      });
     }
     
     // Se há conexões, armazenamos todas elas
@@ -106,7 +126,8 @@ export function reteJsonToEngineFlow(reteJson, meta) {
       logger.debug('Conexões mapeadas para nó', {
         nodeId: fromId,
         connectionCount: allConnections.length,
-        connections: allConnections
+        connections: allConnections,
+        invalidConnectionsCount: invalidConnections.length,
       });
     }
   });
@@ -382,32 +403,5 @@ export function engineFlowToReteJson(flow) {
   return result;
 }
 
-/**
- * Mapeia erros de validação vindos do backend para uma estrutura
- * simples de UI.
- *
- * @param {Array<{ code: string, message: string, nodeIds?: string[], details?: any }>} errors
- * @returns {import('../api/types').ValidationErrorUi[]}
- */
-export function mapValidationErrorsToUi(errors) {
-  if (!Array.isArray(errors)) return [];
-
-  return errors.map((err) => {
-    /** @type {'info'|'warning'|'error'} */
-    let severity = 'error';
-
-    if (err.code === 'NODE_DISCONNECTED') {
-      severity = 'warning';
-    }
-
-    return {
-      code: err.code,
-      message: err.message,
-      severity,
-      nodeIds: err.nodeIds || [],
-      details: err.details || {},
-    };
-  });
-}
 
 

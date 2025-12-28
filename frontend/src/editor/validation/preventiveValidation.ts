@@ -5,6 +5,11 @@
  * Referência: https://retejs.org/docs/guides/validation/
  */
 
+// Importa regras de compatibilidade compartilhadas
+// NOTA: Este arquivo é uma cópia sincronizada de engine/typeCompatibility.js
+// Mantenha ambos os arquivos sincronizados quando modificar as regras
+import { TYPE_COMPATIBILITY } from '../../shared/typeCompatibility';
+
 /**
  * Verifica se pode criar um nó do tipo especificado
  * 
@@ -61,8 +66,8 @@ export function canCreateConnection(editor: any, connection: any): { allowed: bo
   // Tenta obter os nós de diferentes formas:
   // 1. Se connection.source/target são objetos Node diretamente (caso do loadFromJson)
   // 2. Se são IDs, busca usando editor.getNode()
-  let sourceNode = null;
-  let targetNode = null;
+  let sourceNode: any = null;
+  let targetNode: any = null;
 
   // Verifica se source/target são objetos Node (têm propriedade 'id' e 'data')
   if (connection.source && typeof connection.source === 'object' && connection.source.id) {
@@ -84,20 +89,11 @@ export function canCreateConnection(editor: any, connection: any): { allowed: bo
     };
   }
 
-  // Regras de compatibilidade de tipos (mesmas da engine)
-  const TYPE_COMPATIBILITY: Record<string, string[]> = {
-    start: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'ai', 'end'],
-    message: ['user_input', 'router', 'set_variable', 'handoff', 'ai', 'end'],
-    user_input: ['router', 'message', 'set_variable', 'handoff', 'ai', 'end'],
-    router: ['message', 'user_input', 'set_variable', 'handoff', 'ai', 'end'],
-    set_variable: ['message', 'user_input', 'router', 'handoff', 'ai', 'end'],
-    ai: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'end'],
-    handoff: ['end'],
-    end: [],
-  };
+  // Regras de compatibilidade de tipos importadas de módulo compartilhado
+  // Isso garante consistência entre validação preventiva (frontend) e validação (backend)
 
-  const sourceType = sourceNode.type || 'unknown';
-  const targetType = targetNode.type || 'unknown';
+  const sourceType = (sourceNode as any).type || 'unknown';
+  const targetType = (targetNode as any).type || 'unknown';
 
   // Se o tipo não está no mapa, permite (genérico)
   if (!TYPE_COMPATIBILITY[sourceType]) {

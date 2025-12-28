@@ -72,6 +72,156 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
 
 ---
 
+## 🎯 Princípio de Centralização
+
+### Objetivo: Simplificar Manutenção
+
+**Regra Fundamental:** ✅ **Centralizar o máximo possível para simplificar a manutenção**
+
+### Princípios de Centralização
+
+1. **Single Source of Truth (Fonte Única da Verdade)**
+   - Cada regra de negócio deve existir em **um único lugar**
+   - Evitar duplicação de lógica entre camadas
+   - Quando necessário compartilhar código, usar módulos compartilhados
+
+2. **Centralização de Lógica de Negócio**
+   - ✅ **Toda lógica de negócio na Engine**
+   - ✅ **Mensagens de erro centralizadas no backend** (engine/validator.js)
+   - ✅ **Regras de compatibilidade centralizadas** (engine/typeCompatibility.js)
+   - ❌ **NUNCA duplicar lógica de validação no frontend**
+
+3. **Centralização de Mensagens**
+   - ✅ **Backend envia mensagens técnicas e amigáveis**
+   - ✅ **Frontend apenas exibe o que recebe do backend**
+   - ❌ **NUNCA mapear ou transformar mensagens no frontend**
+   - ❌ **NUNCA criar mensagens de erro no frontend**
+
+4. **Centralização de Regras**
+   - ✅ **Regras de compatibilidade de tipos em módulo compartilhado**
+   - ✅ **Validações de estrutura na Engine**
+   - ✅ **Mensagens de erro com código, mensagem técnica e mensagem amigável no backend**
+   - ❌ **NUNCA duplicar regras de compatibilidade no frontend**
+
+5. **Módulos Compartilhados**
+   - Quando duplicação é necessária (ex: compatibilidade de tipos), usar módulos compartilhados
+   - Backend: `engine/typeCompatibility.js` (CommonJS)
+   - Frontend: `frontend/src/shared/typeCompatibility.ts` (TypeScript/ES module)
+   - **Manter sincronizados manualmente** ou via script de build
+
+### Exemplos de Centralização
+
+#### ✅ CORRETO: Mensagens Centralizadas no Backend
+
+```javascript
+// engine/validator.js
+function addUiMessage(error) {
+  return {
+    ...error,
+    messageUi: getUiMessage(error.code, error.nodeIds?.length),
+    severity: 'error'
+  };
+}
+```
+
+```javascript
+// api/server.js
+const result = validateFlow(flow);
+// Envia erros já com messageUi do backend
+res.json({ valid: result.valid, errors: result.errors });
+```
+
+```jsx
+// frontend/src/SidebarProperties.jsx
+// Apenas exibe o que recebe do backend
+{err.messageUi || err.message}
+```
+
+#### ❌ INCORRETO: Mensagens Duplicadas
+
+```javascript
+// ❌ NÃO fazer: Mapeamento no frontend
+function mapValidationErrorsToUi(errors) {
+  return errors.map(err => ({
+    ...err,
+    messageUi: getFriendlyMessage(err.code) // Duplicação!
+  }));
+}
+```
+
+#### ✅ CORRETO: Regras Compartilhadas
+
+```javascript
+// engine/typeCompatibility.js (CommonJS)
+module.exports = {
+  TYPE_COMPATIBILITY: { /* regras */ }
+};
+```
+
+```typescript
+// frontend/src/shared/typeCompatibility.ts (TypeScript)
+export const TYPE_COMPATIBILITY = { /* mesma regra */ };
+```
+
+#### ❌ INCORRETO: Regras Duplicadas
+
+```javascript
+// ❌ NÃO fazer: Regras duplicadas em cada arquivo
+// engine/validator.js
+const COMPATIBILITY = { /* regras */ };
+
+// frontend/src/editor/validation/preventiveValidation.ts
+const COMPATIBILITY = { /* mesmas regras duplicadas */ };
+```
+
+### Benefícios da Centralização
+
+1. **Manutenção Simplificada**
+   - Mudanças em um único lugar
+   - Menos risco de inconsistências
+   - Facilita refatoração
+
+2. **Consistência**
+   - Mesmas regras em todo o sistema
+   - Mensagens uniformes
+   - Comportamento previsível
+
+3. **Testabilidade**
+   - Testes focados em um único ponto
+   - Menos casos de teste duplicados
+   - Mais fácil garantir cobertura
+
+4. **Redução de Bugs**
+   - Menos pontos de falha
+   - Menos chance de divergência entre camadas
+   - Mais fácil rastrear problemas
+
+### Regras de Centralização
+
+1. ✅ **Backend é a fonte única de verdade para:**
+   - Validações de negócio
+   - Mensagens de erro (técnicas e amigáveis)
+   - Regras de compatibilidade
+   - Lógica de execução
+
+2. ✅ **Frontend apenas:**
+   - Exibe mensagens recebidas do backend
+   - Transforma formatos (Rete JSON ↔ Engine Flow)
+   - Fornece feedback visual (UX)
+
+3. ✅ **Quando duplicação é necessária:**
+   - Usar módulos compartilhados
+   - Manter sincronização explícita
+   - Documentar dependências
+
+4. ❌ **NUNCA:**
+   - Duplicar lógica de validação
+   - Criar mensagens de erro no frontend
+   - Mapear mensagens no frontend
+   - Duplicar regras de compatibilidade
+
+---
+
 ## 🔒 Regras de Validação
 
 ### Validação da Engine (Obrigatória)
@@ -374,6 +524,9 @@ Antes de fazer alterações, verificar:
 - [ ] Não move lógica de negócio para UI?
 - [ ] Não adiciona efeitos colaterais no core?
 - [ ] Não simplifica removendo regras?
+- [ ] **Centraliza lógica de negócio na Engine?**
+- [ ] **Evita duplicação de mensagens e regras?**
+- [ ] **Usa módulos compartilhados quando necessário?**
 - [ ] Segue estrutura de diretórios?
 - [ ] Usa convenções de código?
 - [ ] Atualiza documentação se necessário?
@@ -413,8 +566,8 @@ O layout do Flow Editor segue uma hierarquia específica:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                    TOOLBAR (h-12)                                                         │
-│  [Novo] [Abrir] [Salvar] │ [Validar] [Simular] │ [Buscar] │ [➖] [100%] [➕] [Fit] │ [↶] [↷] [📋] [📄] [Duplicar] [Organizar] │
-│  [Importar] [Exportar] [Template] │ [FlowSelector] [Remover] [Logs] [Tema] │ ←SPACER→ │ [⋯ Mais]                    │
+│  [Novo] [Abrir] [Remover] [Salvar] │ [Validar] [Simular] │ [Buscar] │ [➖] [100%] [➕] [Fit] │ [↶] [↷] [📋] [📄] [Duplicar] [Organizar] │
+│  [Importar] [Exportar] [Template] │ [Logs] [Tema] │ ←SPACER→ │ [⋯ Mais]                    │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────┐
 │              BARRA "FLUXO ATUAL"                        │
@@ -452,7 +605,8 @@ O layout do Flow Editor segue uma hierarquia específica:
   
   **GRUPO FILE** (Prioridade 1 - Máxima)
   - ➕ Novo (via `children[0]`)
-  - 📂 Abrir (`onOpen`)
+  - 📂 Abrir (via `children[1]` - FlowSelector)
+  - 🗑️ Remover (via `children[2]`)
   - 💾 Salvar (`onSave`)
   
   **GRUPO MAIN** (Prioridade 2)
@@ -482,10 +636,8 @@ O layout do Flow Editor segue uma hierarquia específica:
   - 📋 Template (`onImportTemplate`)
   
   **GRUPO TOOLS** (Prioridade 7 - Menor)
-  - FlowSelector (via `children`)
-  - Remover (via `children`)
-  - 📋 Logs (via `children`)
-  - 🎨 Tema/ThemeSelector (via `children`)
+  - 📋 Logs (via `children[3]`)
+  - 🎨 Tema/ThemeSelector (via `children[4]`)
   
   **SPACER** (flex: 1, min-w-5)
   - Preenche espaço restante
@@ -650,7 +802,7 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
    - Contém itens dos grupos que não cabem na toolbar
    - **Organização por grupos**: Itens são agrupados e separados visualmente
    - **Nomes dos grupos**:
-     - **Arquivo**: Abrir, Salvar
+     - **Arquivo**: Abrir (FlowSelector), Remover, Salvar
      - **Fluxo**: Validar, Simular
      - **Importar/Exportar**: Importar, Exportar, Template
      - **Zoom**: Diminuir zoom, 100%, Aumentar zoom, Fit
@@ -669,7 +821,7 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
 5. ✅ **Tools tem menor prioridade** (primeiro a ser escondido)
 6. ✅ **Spacer usa flex: 1** para preencher espaço restante
 7. ✅ **Separadores condicionais** (só aparecem se houver grupos após)
-8. ✅ **Grupo FILE tem prioridade máxima** (Novo, Abrir, Salvar sempre tentam aparecer primeiro)
+8. ✅ **Grupo FILE tem prioridade máxima** (Novo, Abrir, Remover, Salvar sempre tentam aparecer primeiro)
 9. ✅ **Toolbar só reage a mudanças de viewport**, não a colapso de painéis internos
 
 ---
@@ -678,7 +830,7 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
 
 ### Mudanças Recentes na Toolbar
 
-- **Novo grupo FILE criado**: "Novo", "Abrir" e "Salvar" agora estão em um grupo separado com prioridade máxima
+- **Novo grupo FILE criado**: "Novo", "Abrir" (FlowSelector), "Remover" e "Salvar" agora estão em um grupo separado com prioridade máxima
 - **Grupo MAIN atualizado**: Agora contém apenas "Validar" e "Simular"
 - **Ordem de prioridade atualizada**: FILE > MAIN > SEARCH > ZOOM > EDIT > EXTRA > TOOLS
 - **Toolbar responsiva**: Só reage a mudanças de viewport (window.resize), não a colapso de painéis internos

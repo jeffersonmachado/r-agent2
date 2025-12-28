@@ -35,13 +35,13 @@ export function Toolbar({
   
   // Estado para controlar quais grupos estão visíveis na toolbar
   const [visibleItems, setVisibleItems] = useState({
-    file: true,       // Novo, Abrir (FlowSelector), Salvar
+    file: true,       // Novo, Abrir (FlowSelector), Remover, Salvar
     main: true,      // Validar, Simular
     zoom: true,      // Zoom controls
     edit: true,      // Undo, Redo, Copy, Paste, Duplicar, Organizar
     search: true,     // Buscar
     extra: true,      // Importar, Exportar, Template
-    tools: true,      // Remover, Logs, Tema (menor prioridade)
+    tools: true,      // Logs, Tema (menor prioridade)
   });
   
   const toolbarRef = useRef(null);
@@ -153,7 +153,7 @@ export function Toolbar({
           // Força reflow para garantir que as medidas estão atualizadas
           void toolbar.offsetHeight;
           
-          // File group (prioridade máxima - Novo, Abrir, Salvar)
+          // File group (prioridade máxima - Novo, Abrir, Remover, Salvar)
           if (fileGroup) {
             const width = fileGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
@@ -221,7 +221,7 @@ export function Toolbar({
             }
           }
           
-          // Tools group (Remover, Logs, Tema) - menor prioridade, com histerese para evitar alternância
+          // Tools group (Logs, Tema) - menor prioridade, com histerese para evitar alternância
           if (toolsGroup && newVisible.file) {
             const width = toolsGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             const isCurrentlyVisible = visibleItems.tools;
@@ -346,7 +346,7 @@ export function Toolbar({
       search: []
     };
     
-    // Itens do grupo file (Novo, Abrir via FlowSelector, Salvar)
+    // Itens do grupo file (Novo, Abrir via FlowSelector, Remover, Salvar)
     if (!visibleItems.file) {
       // Novo está em children[0], não precisa adicionar aqui
       // Abrir está no FlowSelector (children[1]), não precisa adicionar aqui
@@ -419,6 +419,7 @@ export function Toolbar({
         <div className="toolbar-group toolbar-group-file">
           {children && React.Children.toArray(children)[0]} {/* Novo */}
           {children && React.Children.toArray(children)[1]} {/* FlowSelector (Abrir) */}
+          {children && React.Children.toArray(children)[2]} {/* Remover */}
           {onSave && (
             <button className="btn-base" onClick={onSave} title="Salvar fluxo">
               <span className="icon icon-save"></span>
@@ -569,7 +570,7 @@ export function Toolbar({
 
       {visibleItems.tools && (
         <div className="toolbar-group toolbar-group-utils">
-          {children && React.Children.toArray(children).slice(2)} {/* Remover, Logs, Tema */}
+          {children && React.Children.toArray(children).slice(3)} {/* Logs, Tema */}
         </div>
       )}
 
