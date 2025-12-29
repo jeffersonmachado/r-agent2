@@ -9,14 +9,19 @@ import { NodePalette, NodePaletteCollapsed } from '../components/NodePalette';
 import { ThemeSelector } from '../components/ThemeSelector';
 import { FlowSelector } from '../components/FlowSelector';
 import { FlowTemplateSelector } from '../components/FlowTemplateSelector';
+import { SaveAsTemplateDialog } from '../components/SaveAsTemplateDialog';
 import { Button } from '../styles/Button';
-import { createFlow } from '../api/flows';
+import { createFlow, saveTemplate } from '../api/flows';
 import logger from '../utils/logger';
 import { LogViewer } from '../components/LogViewer';
 import { ResizableDivider } from '../components/ResizableDivider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { useTheme } from '../styles/themeContext';
+import { Dialog } from '../components/Dialog';
+import { FlowTestChat } from '../components/FlowTestChat';
+import { reteJsonToEngineFlow } from '../engine-mapper/engineMapper';
+import { NavigationLink } from '../components/NavigationLink';
 
 export function FlowEditorPage() {
   const { themeName } = useTheme();
@@ -33,15 +38,42 @@ export function FlowEditorPage() {
     simulateCurrentFlow,
     loadFlow,
     deleteFlow,
+    clearCurrentFlow,
   } = useEditor();
 
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false);
   const [showLogViewer, setShowLogViewer] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showTestChat, setShowTestChat] = useState(false);
+  const [testFlowDefinition, setTestFlowDefinition] = useState(null);
+  const [testChatSize, setTestChatSize] = useState(null);
+  const [testKey, setTestKey] = useState(0);
   const [flowListRefreshTrigger, setFlowListRefreshTrigger] = useState(0);
+  const [templateListRefreshTrigger, setTemplateListRefreshTrigger] = useState(0);
   const { showToast, ToastContainer } = useToast();
+
+  // Monitora erros do editorStore e exibe via Toast
+  useEffect(() => {
+    if (error && !error.includes('"validation_failed"')) {
+      // Extrai mensagem amigável do erro
+      let errorMessage = error;
+      if (error.includes('Erro HTTP')) {
+        try {
+          const match = error.match(/\{.*\}/);
+          if (match) {
+            const errorObj = JSON.parse(match[0]);
+            errorMessage = errorObj.message || errorObj.error || error;
+          }
+        } catch (e) {
+          // Se não conseguir parsear, usa o erro original
+        }
+      }
+      showToast(errorMessage, 'error', 5000);
+    }
+  }, [error, showToast]);
   
   // Estados para colapso e larguras (EXATAMENTE como no modelo)
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
@@ -83,6 +115,8 @@ export function FlowEditorPage() {
   useEffect(() => {
     if (currentFlow && currentFlow.id) {
       setDisplayedFlow(currentFlow);
+    } else {
+      setDisplayedFlow(null);
     }
   }, [currentFlow]);
 
@@ -274,6 +308,35 @@ export function FlowEditorPage() {
     }
   };
 
+  const handleSaveAsTemplate = async (templateData) => {
+    const editor = editorRef.current?.editor?.current;
+    if (!editor) {
+      showToast('Editor não está pronto', 'warning', 2000);
+      return;
+    }
+
+    try {
+      const reteJson = await editor.toJSON();
+      const flowDefinition = reteJsonToEngineFlow(reteJson, currentFlow || undefined);
+
+      // Prepara o template com o fluxo atual
+      const template = {
+        ...templateData,
+        flow: flowDefinition,
+      };
+
+      await saveTemplate(template);
+      showToast(`Template "${templateData.name}" salvo com sucesso!`, 'success', 3000);
+      setShowSaveAsTemplate(false);
+      // Atualiza a lista de templates para incluir o novo template
+      setTemplateListRefreshTrigger(prev => prev + 1);
+    } catch (err) {
+      logger.error('Erro ao salvar template', err);
+      const errorMessage = err?.body?.message || err?.message || 'Erro ao salvar template';
+      showToast(errorMessage, 'error', 5000);
+    }
+  };
+
   const handleValidate = async () => {
     const editor = editorRef.current?.editor?.current;
     const area = editorRef.current?.area;
@@ -298,8 +361,43 @@ export function FlowEditorPage() {
     }
   };
 
+  const handleClearEditor = async () => {
+    const editorInstance = editorRef.current;
+    if (!editorInstance || !editorInstance.clearEditor) {
+      showToast('Editor não está pronto', 'warning', 2000);
+      return;
+    }
+    try {
+      await editorInstance.clearEditor();
+      clearCurrentFlow();
+      setSelectedNode(null);
+      showToast('Editor limpo com sucesso', 'success');
+    } catch (err) {
+      logger.error('Erro ao limpar editor', err);
+      showToast('Erro ao limpar editor', 'error');
+    }
+  };
+
   const handleSimulate = async () => {
     await simulateCurrentFlow();
+  };
+
+  const handleTest = async () => {
+    const editor = editorRef.current?.editor?.current;
+    if (!editor) {
+      showToast('Editor não está pronto', 'warning', 2000);
+      return;
+    }
+    try {
+      const reteJson = await editor.toJSON();
+      const flowDefinition = reteJsonToEngineFlow(reteJson, currentFlow || undefined);
+      setTestFlowDefinition(flowDefinition);
+      setTestKey(prev => prev + 1); // Incrementa a key para forçar remontagem e limpar log
+      setShowTestChat(true);
+    } catch (err) {
+      logger.error('Erro ao obter JSON do editor', err);
+      showToast('Erro ao preparar teste do fluxo', 'error');
+    }
   };
 
   const handleDeleteClick = () => {
@@ -375,29 +473,31 @@ export function FlowEditorPage() {
   };
 
   // Handlers simplificados para zoom
-  const handleZoomIn = () => {
+  const handleZoomIn = async () => {
     const area = editorRef.current?.area;
-    if (!area) return;
+    if (!area || !area.area) return;
     try {
-      const currentZoom = area.zoom?.x || 1;
+      const currentZoom = area.area.transform?.k || 1;
       const newZoom = Math.min(currentZoom * 1.2, 3);
-      area.zoom(newZoom, newZoom);
+      await area.area.zoom(newZoom);
       showToast(`Zoom: ${Math.round(newZoom * 100)}%`, 'info', 1000);
     } catch (err) {
-      logger.warn('Erro ao fazer zoom in', { error: err });
+      logger.warn('Erro ao fazer zoom in', { error: err?.message || String(err) });
+      showToast('Erro ao aumentar zoom', 'error', 2000);
     }
   };
 
-  const handleZoomOut = () => {
+  const handleZoomOut = async () => {
     const area = editorRef.current?.area;
-    if (!area) return;
+    if (!area || !area.area) return;
     try {
-      const currentZoom = area.zoom?.x || 1;
+      const currentZoom = area.area.transform?.k || 1;
       const newZoom = Math.max(currentZoom / 1.2, 0.1);
-      area.zoom(newZoom, newZoom);
+      await area.area.zoom(newZoom);
       showToast(`Zoom: ${Math.round(newZoom * 100)}%`, 'info', 1000);
     } catch (err) {
-      logger.warn('Erro ao fazer zoom out', { error: err });
+      logger.warn('Erro ao fazer zoom out', { error: err?.message || String(err) });
+      showToast('Erro ao diminuir zoom', 'error', 2000);
     }
   };
 
@@ -418,14 +518,15 @@ export function FlowEditorPage() {
     }
   };
 
-  const handleResetZoom = () => {
+  const handleResetZoom = async () => {
     const area = editorRef.current?.area;
-    if (!area) return;
+    if (!area || !area.area) return;
     try {
-      area.zoom(1, 1);
+      await area.area.zoom(1);
       showToast('Zoom resetado para 100%', 'success', 1000);
     } catch (err) {
-      logger.warn('Erro ao resetar zoom', { error: err });
+      logger.warn('Erro ao resetar zoom', { error: err?.message || String(err) });
+      showToast('Erro ao resetar zoom', 'error', 2000);
     }
   };
 
@@ -527,7 +628,9 @@ export function FlowEditorPage() {
         onImportJson={handleImportJson}
         onExportJson={handleExportJson}
         onSimulate={handleSimulate}
+        onTest={handleTest}
         onSave={handleSave}
+        onSaveAsTemplate={() => setShowSaveAsTemplate(true)}
         onValidate={handleValidate}
         onArrange={handleArrange}
         onZoomIn={handleZoomIn}
@@ -544,6 +647,7 @@ export function FlowEditorPage() {
         onGoToNode={handleGoToNode}
         onNextNode={handleNextNode}
         onPreviousNode={handlePreviousNode}
+        onClearEditor={handleClearEditor}
         onExportPNG={handleExportPNG}
         onExportSVG={handleExportSVG}
         onExportPDF={handleExportPDF}
@@ -578,23 +682,40 @@ export function FlowEditorPage() {
           <span>Logs</span>
         </button>
         <ThemeSelector />
+        <NavigationLink to="/support" className="btn-base">
+          <span className="icon">👤</span>
+          <span>Atendimento</span>
+        </NavigationLink>
+        <NavigationLink to="/maintenance" className="btn-base">
+          <span className="icon">🔧</span>
+          <span>Manutenção</span>
+        </NavigationLink>
+        <NavigationLink to="/config" className="btn-base">
+          <span className="icon">⚙️</span>
+          <span>Configuração</span>
+        </NavigationLink>
       </Toolbar>
 
       {showTemplateSelector && (
         <FlowTemplateSelector
           onTemplateSelected={handleTemplateSelected}
           onCancel={() => setShowTemplateSelector(false)}
+          refreshTrigger={templateListRefreshTrigger}
         />
       )}
+
+      <SaveAsTemplateDialog
+        isOpen={showSaveAsTemplate}
+        onClose={() => setShowSaveAsTemplate(false)}
+        onSave={handleSaveAsTemplate}
+        flowName={currentFlow?.name || 'Fluxo sem nome'}
+      />
 
       {showLogViewer && (
         <LogViewer onClose={() => setShowLogViewer(false)} />
       )}
 
       {loading && <div className="loading-indicator">Carregando...</div>}
-      {error && !error.includes('"validation_failed"') && (
-        <div className="error-banner">Erro: {error}</div>
-      )}
 
       {/* Barra "Fluxo atual" - EXATAMENTE como no modelo */}
       <div className="flow-current-display">
@@ -828,6 +949,45 @@ export function FlowEditorPage() {
           icon="🗑️"
         />
       )}
+
+      <Dialog
+        isOpen={showTestChat}
+        onClose={() => {
+          // Limpa estados visuais antes de fechar
+          if (typeof window !== 'undefined') {
+            try {
+              window.dispatchEvent(
+                new CustomEvent('flow-runner-cleanup', {
+                  detail: {
+                    clearAll: true,
+                  },
+                }),
+              );
+            } catch (err) {
+              logger.debug('FlowEditorPage - erro ao emitir evento de limpeza', err);
+            }
+          }
+          
+          setShowTestChat(false);
+          setTestFlowDefinition(null);
+          setTestChatSize(null);
+        }}
+        title="Chat de Teste"
+        size="xl"
+        draggable={true}
+        resizable={true}
+        dynamicSize={testChatSize}
+      >
+        {testFlowDefinition && (
+          <div className="h-[600px] min-h-[400px]">
+            <FlowTestChat 
+              key={testKey} // Key muda quando clica em Testar, forçando remontagem completa e limpeza do log
+              flow={testFlowDefinition} 
+              onSizeChange={setTestChatSize}
+            />
+          </div>
+        )}
+      </Dialog>
 
       <ToastContainer />
       
