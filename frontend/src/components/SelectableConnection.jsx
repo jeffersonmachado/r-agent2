@@ -4,27 +4,21 @@ import logger from "../utils/logger";
 
 const { useConnection } = Presets.classic;
 
-const Svg = ({ children, onClick, onPointerDown, ...props }) => (
-  <svg
-    {...props}
-    style={{
-      overflow: 'visible !important',
-      position: 'absolute',
-      pointerEvents: 'none',
-      width: '9999px',
-      height: '9999px',
-      clipPath: 'none',
-      clip: 'auto',
-      willChange: 'transform',
-      isolation: 'isolate',
-      ...props.style
-    }}
-    onPointerDown={onPointerDown}
-    onClick={onClick}
-  >
-    {children}
-  </svg>
-);
+const Svg = ({ children, onClick, onPointerDown, data, ...props }) => {
+  // ✅ Remove 'data' das props antes de passar para o SVG (SVG não aceita atributo 'data')
+  // ✅ Seguindo o padrão do exemplo de referência: estilos via CSS, não inline
+  // O ReactPlugin gerencia o posicionamento via wrapper/container
+  return (
+    <svg
+      {...props}
+      className="rete-connection-svg"
+      onPointerDown={onPointerDown}
+      onClick={onClick}
+    >
+      {children}
+    </svg>
+  );
+};
 
 const Path = ({ selected, styles, d, ...props }) => (
   <path
@@ -32,11 +26,7 @@ const Path = ({ selected, styles, d, ...props }) => (
     fill="none"
     strokeWidth={selected ? 10 : 8}
     stroke={selected ? "rgb(255, 217, 44)" : "steelblue"}
-    style={{
-      pointerEvents: 'auto',
-      ...(styles && styles({ selected })),
-      ...props.style
-    }}
+    className={selected ? "rete-connection-path-selected" : "rete-connection-path"}
     d={d}
   />
 );
@@ -47,10 +37,9 @@ const HoverPath = ({ d, ...props }) => (
     {...props}
     fill="none"
     strokeWidth={20}
-    pointerEvents="auto"
     stroke="transparent"
+    className="rete-connection-hover-path"
     d={d}
-    style={{ cursor: 'pointer' }}
   />
 );
 
@@ -65,6 +54,7 @@ export function SelectableConnection(props) {
       hasData: !!props.data,
       propsKeys: props ? Object.keys(props) : [],
       connectionId,
+      allProps: props,
     });
   }, [props, connectionId]);
 
@@ -97,6 +87,21 @@ export function SelectableConnection(props) {
       window.removeEventListener('connectionselectionchanged', handleSelectionChange);
     };
   }, [connectionId]);
+
+  // Log do path para debug do deslocamento (ANTES do return early)
+  React.useEffect(() => {
+    if (path) {
+      // Extrai coordenadas do path para debug
+      const pathMatch = path.match(/M\s*([\d.]+)\s*([\d.]+)/);
+      logger.debug('SelectableConnection path calculado', {
+        connectionId,
+        path,
+        pathLength: path.length,
+        startX: pathMatch ? pathMatch[1] : null,
+        startY: pathMatch ? pathMatch[2] : null,
+      });
+    }
+  }, [path, connectionId]);
 
   if (!path) return null;
 
@@ -134,55 +139,25 @@ export function SelectableConnection(props) {
 
   const isSelected = isSelectedLocal || props.data?.selected || false;
 
-  // Preserva TODAS as props do ReactPlugin (incluindo transform, className, etc.)
-  // Apenas sobrescreve onClick e onPointerDown para nossa funcionalidade
-  const { onClick: _onClick, onPointerDown: _onPointerDown, style: reactPluginStyle, ...restProps } = props;
-
-  // Extrai transform do style se existir para aplicar no wrapper
-  const transform = reactPluginStyle?.transform || '';
+  // ✅ Extrai 'data' das props para não passar para o SVG (SVG não aceita atributo 'data')
+  // ✅ Preserva TODAS as outras props do ReactPlugin (incluindo style se existir)
+  const { onClick: _onClick, onPointerDown: _onPointerDown, data, ...restProps } = props;
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        overflow: 'visible',
-        pointerEvents: 'none',
-        width: '100%',
-        height: '100%',
-        transform: transform,
-        ...(reactPluginStyle && { 
-          left: reactPluginStyle.left,
-          top: reactPluginStyle.top,
-        })
-      }}
+    <Svg
+      {...restProps}
+      // ✅ NÃO passa 'data' - apenas passa outras props do ReactPlugin (incluindo style)
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
+      data-testid="connection"
     >
-      <Svg
-        {...restProps}
-        style={{
-          overflow: 'visible !important',
-          position: 'absolute',
-          pointerEvents: 'none',
-          width: '9999px',
-          height: '9999px',
-          clipPath: 'none',
-          clip: 'auto',
-          willChange: 'transform',
-          isolation: 'isolate',
-          left: 0,
-          top: 0,
-        }}
-        onPointerDown={handlePointerDown}
-        onClick={handleClick}
-        data-testid="connection"
-      >
-        <HoverPath d={path} />
-        <Path 
-          selected={isSelected} 
-          styles={props.styles} 
-          d={path} 
-        />
-      </Svg>
-    </div>
+      <HoverPath d={path} />
+      <Path 
+        selected={isSelected} 
+        styles={props.styles} 
+        d={path} 
+      />
+    </Svg>
   );
 }
 

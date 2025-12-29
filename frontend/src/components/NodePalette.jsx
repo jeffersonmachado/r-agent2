@@ -51,23 +51,9 @@ export function NodePalette({ onNodeDragStart, onNodeDragEnd }) {
     e.dataTransfer.setData('application/node-type', nodeType.type);
     e.dataTransfer.setData('text/plain', nodeType.type);
     
-    const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-tertiary') || '#1a1a1a';
-    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary') || '#ffffff';
     const dragImage = document.createElement('div');
     dragImage.className = 'node-palette-drag-image';
-    dragImage.style.cssText = `
-      position: absolute;
-      top: -1000px;
-      padding: 10px 14px;
-      background: ${bgColor.trim() || '#1a1a1a'};
-      border: 1px solid ${nodeType.color}60;
-      border-radius: 8px;
-      color: ${textColor.trim() || '#ffffff'};
-      font-size: 13px;
-      font-weight: 600;
-      pointer-events: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    `;
+    dragImage.style.setProperty('--node-color', nodeType.color);
     dragImage.textContent = nodeType.label;
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, 0, 0);

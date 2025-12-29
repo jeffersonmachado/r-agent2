@@ -275,33 +275,18 @@ export function ResizablePanel({
     <div ref={panelRef} className="resizable-panel-hybrid" style={style}>
       {collapsible && title && (
         <div
-          style={{
-            padding: '8px 12px',
-            paddingRight: collapseDirection === 'right' ? '12px' : '40px',
-            paddingLeft: collapseDirection === 'right' ? '40px' : '12px',
-            borderBottom: `1px solid ${theme.colors.border.default}`,
-            fontSize: '12px',
-            fontWeight: 500,
-            color: theme.colors.text.primary,
-            backgroundColor: theme.colors.bg.secondary,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            position: 'relative',
-            minHeight: '32px',
-            overflow: 'hidden',
-            width: '100%',
-          }}
+          className={`resizable-panel-header ${
+            collapseDirection === 'right' 
+              ? 'resizable-panel-header--collapse-right' 
+              : 'resizable-panel-header--collapse-left'
+          }`}
         >
           <span 
-            style={{ 
-              flex: 1, 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
-              minWidth: 0,
-              marginRight: collapseDirection === 'right' ? '8px' : '0',
-            }}
+            className={`resizable-panel-header-title ${
+              collapseDirection === 'right' 
+                ? 'resizable-panel-header-title--collapse-right' 
+                : ''
+            }`}
           >
             {title}
           </span>
@@ -317,26 +302,10 @@ export function ResizablePanel({
       )}
       {!isCollapsed && children}
       {isCollapsed && collapsible && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            padding: '8px 4px',
-            height: '100%',
-            overflowY: 'auto',
-          }}
-        >
+        <div className="resizable-panel-collapsed-content">
           {collapsedContent || (
-            <div
+            <div className="resizable-panel-collapsed-text"
               style={{
-                writingMode: 'vertical-rl',
-                textOrientation: 'mixed',
-                padding: '8px',
-                fontSize: '11px',
-                color: theme.colors.text.tertiary,
-                textAlign: 'center',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

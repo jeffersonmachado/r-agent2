@@ -18,15 +18,15 @@ export function SimulationPanel({ simulation, onSelectStep }) {
 
   if (!simulation) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+      <div className="w-full h-full flex flex-col items-center justify-center text-sm sidebar-properties-empty">
         <div className="text-center space-y-3 max-w-[240px]">
           <div className="mb-3 opacity-40">
-            <span className="icon icon-play" style={{ fontSize: '48px', width: '48px', height: '48px' }}></span>
+            <span className="icon icon-play sidebar-properties-empty-icon"></span>
           </div>
-          <div className="text-base font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+          <div className="text-base font-semibold mb-1 sidebar-properties-empty-title">
             Nenhuma simulação executada
           </div>
-          <div className="text-xs leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
+          <div className="text-xs leading-relaxed sidebar-properties-empty-description">
             Execute a simulação para ver os resultados.
           </div>
         </div>
@@ -37,40 +37,19 @@ export function SimulationPanel({ simulation, onSelectStep }) {
   const { compiledFlowInfo, steps } = simulation;
 
   return (
-    <div
-      style={{
-        flex: 1,
-        borderTop: `1px solid ${theme.colors.border.default}`,
-        padding: '16px',
-        fontSize: '13px',
-        backgroundColor: theme.colors.bg.secondary,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        minHeight: 0,
-      }}
-    >
+    <div className="simulation-panel">
       <div>
-        <div style={{ fontWeight: 500, color: theme.colors.text.primary, marginBottom: '4px' }}>Simulação</div>
+        <div className="simulation-panel-header">Simulação</div>
         {compiledFlowInfo && (
-          <div style={{ fontSize: '11px', color: theme.colors.text.tertiary, fontFamily: 'monospace' }}>
+          <div className="simulation-panel-info">
             {compiledFlowInfo.id} v{compiledFlowInfo.version}
           </div>
         )}
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          border: `1px solid ${theme.colors.border.default}`,
-          borderRadius: '6px',
-          backgroundColor: theme.colors.bg.primary,
-        }}
-      >
+      <div className="simulation-panel-steps">
         {(!steps || steps.length === 0) && (
-          <div style={{ padding: '16px', fontSize: '12px', color: theme.colors.text.tertiary, textAlign: 'center' }}>
+          <div className="simulation-panel-empty">
             Nenhum passo executado.
           </div>
         )}
@@ -79,48 +58,20 @@ export function SimulationPanel({ simulation, onSelectStep }) {
             <div
               key={step.index}
               onClick={() => onSelectStep && onSelectStep(step)}
-              style={{
-                padding: '12px',
-                borderBottom: idx < steps.length - 1 ? `1px solid ${theme.colors.border.default}` : 'none',
-                cursor: onSelectStep ? 'pointer' : 'default',
-                transition: 'background-color 150ms ease',
-              }}
-              onMouseEnter={(e) => {
-                if (onSelectStep) {
-                  e.currentTarget.style.backgroundColor = theme.colors.bg.tertiary;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
+              className={`simulation-panel-step ${onSelectStep ? '' : 'simulation-panel-step--no-pointer'}`}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '8px',
-                }}
-              >
-                <span style={{ fontWeight: 500, color: theme.colors.text.primary, fontSize: '12px' }}>
+              <div className="simulation-panel-step-header">
+                <span className="simulation-panel-step-title">
                   Passo {step.index}
                 </span>
-                <span style={{ fontSize: '11px', color: theme.colors.text.tertiary, fontFamily: 'monospace' }}>
+                <span className="simulation-panel-step-node">
                   {step.stateAfter && step.stateAfter.currentNodeId}
                 </span>
               </div>
               {step.output && (
-                <div style={{ fontSize: '11px', color: theme.colors.text.secondary }}>
-                  <span style={{ color: theme.colors.text.tertiary }}>Output: </span>
-                  <code
-                    style={{
-                      fontFamily: 'monospace',
-                      backgroundColor: theme.colors.bg.tertiary,
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                    }}
-                  >
+                <div className="simulation-panel-step-output">
+                  <span className="simulation-panel-step-output-label">Output: </span>
+                  <code className="simulation-panel-step-code">
                     {JSON.stringify(step.output).slice(0, 100)}
                     {JSON.stringify(step.output).length > 100 ? '…' : ''}
                   </code>

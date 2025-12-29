@@ -86,10 +86,10 @@ export function FlowEditorApp({ onSimulateFlow }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="flow-editor-app">
       <Toolbar onImportJson={handleImportJson} onExportJson={handleExportJson} onSimulate={handleSimulate} />
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className="flow-editor-app-content">
         <FlowEditor
           initialFlowJson={flowJson}
           onFlowChanged={handleFlowChanged}
@@ -103,7 +103,7 @@ export function FlowEditorApp({ onSimulateFlow }) {
         type="file"
         accept="application/json"
         ref={fileInputRef}
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={handleFileChange}
       />
     </div>

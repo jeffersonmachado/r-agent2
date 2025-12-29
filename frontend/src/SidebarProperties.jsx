@@ -11,15 +11,15 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
 
   if (!selectedNode) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+      <div className="w-full h-full flex flex-col items-center justify-center text-sm sidebar-properties-empty">
         <div className="text-center space-y-3 max-w-[240px]">
           <div className="mb-3 opacity-40">
-            <span className="icon icon-logs" style={{ fontSize: '48px', width: '48px', height: '48px' }}></span>
+            <span className="icon icon-logs sidebar-properties-empty-icon"></span>
           </div>
-          <div className="text-base font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+          <div className="text-base font-semibold mb-1 sidebar-properties-empty-title">
             Nenhum nó selecionado
           </div>
-          <div className="text-xs leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
+          <div className="text-xs leading-relaxed sidebar-properties-empty-description">
             Clique em um nó para ver e editar suas propriedades.
           </div>
         </div>
@@ -57,31 +57,22 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
     }
   };
 
+  // ✅ Variável CSS dinâmica para a cor do nó
+  const nodeColorStyle = { '--node-color': color };
+
   return (
     <div className="w-full h-full p-5 text-sm bg-gradient-to-b from-bg-secondary to-bg-tertiary flex flex-col gap-5 overflow-y-auto scrollbar-thin scrollbar-thumb-border-default scrollbar-track-transparent">
       {/* Cabeçalho com ícone, tipo e descrição */}
       <div
-        className="p-5 rounded-xl border backdrop-blur-sm shadow-lg transition-all duration-300"
-        style={{
-          background: `linear-gradient(135deg, ${color}18 0%, ${color}10 100%)`,
-          borderColor: `${color}35`,
-        }}
+        className="p-5 rounded-xl border backdrop-blur-sm shadow-lg transition-all duration-300 sidebar-properties-header"
+        style={nodeColorStyle}
       >
         <div className="flex items-center gap-3.5 mb-3">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-lg backdrop-blur-sm transition-transform duration-200"
-            style={{
-              backgroundColor: `${color}25`,
-              boxShadow: `0 4px 12px ${color}30`,
-            }}
-          >
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-lg backdrop-blur-sm transition-transform duration-200 sidebar-properties-icon">
             {icon}
           </div>
           <div className="flex-1 min-w-0">
-            <div
-              className="text-lg font-semibold mb-1 truncate"
-              style={{ color }}
-            >
+            <div className="text-lg font-semibold mb-1 truncate sidebar-properties-title">
               {label}
             </div>
             <div className="text-[11px] text-text-tertiary uppercase tracking-wider font-mono opacity-80">
@@ -89,12 +80,7 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
             </div>
           </div>
         </div>
-        <div
-          className="text-xs text-text-secondary leading-relaxed pt-3 border-t"
-          style={{
-            borderTopColor: `${color}25`,
-          }}
-        >
+        <div className="text-xs text-text-secondary leading-relaxed pt-3 border-t sidebar-properties-description">
           {description}
         </div>
       </div>

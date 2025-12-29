@@ -120,49 +120,14 @@ export function LogViewer({ onClose }) {
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 3000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: theme.colors.bg.elevated,
-          border: `1px solid ${theme.colors.border.default}`,
-          borderRadius: '8px',
-          width: '90%',
-          maxWidth: '900px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="log-viewer-overlay" onClick={onClose}>
+      <div className="log-viewer-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div
-          style={{
-            padding: '16px 20px',
-            borderBottom: `1px solid ${theme.colors.border.default}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ fontSize: '18px', fontWeight: 600, color: theme.colors.text.primary }}>
+        <div className="log-viewer-header">
+          <div className="log-viewer-title">
             Logs do Sistema
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="log-viewer-header-actions">
             <Button variant="ghost" size="sm" onClick={handleCopyAll} title="Copiar todos os logs" data-copy-all>
               📋 Copiar
             </Button>
@@ -182,25 +147,10 @@ export function LogViewer({ onClose }) {
         </div>
 
         {/* Controls */}
-        <div
-          style={{
-            padding: '12px 20px',
-            borderBottom: `1px solid ${theme.colors.border.default}`,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
+        <div className="log-viewer-controls">
           {/* Nível atual */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ fontSize: '12px', color: theme.colors.text.secondary }}>
+          <div className="log-viewer-control-row">
+            <div className="log-viewer-control-label">
               Nível atual:
             </div>
             {[0, 1, 2, 3].map((level) => (
@@ -216,15 +166,8 @@ export function LogViewer({ onClose }) {
           </div>
 
           {/* Filtrar */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ fontSize: '12px', color: theme.colors.text.secondary }}>
+          <div className="log-viewer-control-row">
+            <div className="log-viewer-control-label">
               Filtrar:
             </div>
             <Button
@@ -245,17 +188,7 @@ export function LogViewer({ onClose }) {
               </Button>
             ))}
 
-            <label
-              style={{
-                marginLeft: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '12px',
-                color: theme.colors.text.secondary,
-                cursor: 'pointer',
-              }}
-            >
+            <label className="log-viewer-control-checkbox">
               <input
                 type="checkbox"
                 checked={autoScroll}
@@ -267,30 +200,17 @@ export function LogViewer({ onClose }) {
         </div>
 
         {/* Logs */}
-        <div
-          ref={logContainerRef}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '12px',
-            fontFamily: 'monospace',
-            fontSize: '11px',
-            lineHeight: 1.5,
-            backgroundColor: theme.colors.bg.primary,
-          }}
-        >
+        <div ref={logContainerRef} className="log-viewer-content">
           {filteredLogs.length === 0 ? (
-            <div style={{ color: theme.colors.text.tertiary, textAlign: 'center', padding: '20px' }}>
+            <div className="log-viewer-empty">
               Nenhum log disponível
             </div>
           ) : (
             filteredLogs.map((log, index) => (
               <div
                 key={index}
+                className="log-viewer-entry"
                 style={{
-                  marginBottom: '4px',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
                   backgroundColor: log.level >= 2 ? `${getLevelColor(log.level)}20` : 'transparent',
                   position: 'relative',
                   paddingRight: '60px',
@@ -298,52 +218,25 @@ export function LogViewer({ onClose }) {
               >
                 <button
                   onClick={() => handleCopyLog(log)}
-                  style={{
-                    position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    padding: '2px 6px',
-                    fontSize: '10px',
-                    backgroundColor: theme.colors.bg.tertiary,
-                    border: `1px solid ${theme.colors.border.default}`,
-                    borderRadius: '4px',
-                    color: theme.colors.text.secondary,
-                    cursor: 'pointer',
-                    opacity: 0.7,
-                    transition: 'opacity 150ms ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                    e.currentTarget.style.backgroundColor = theme.colors.bg.hover;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0.7';
-                    e.currentTarget.style.backgroundColor = theme.colors.bg.tertiary;
-                  }}
+                  className="log-viewer-entry-copy"
                   title="Copiar este log"
                 >
                   📋
                 </button>
-                <span style={{ color: theme.colors.text.tertiary }}>
-                  {new Date(log.timestamp).toLocaleTimeString()}
-                </span>
-                {' '}
-                <span style={{ color: getLevelColor(log.level), fontWeight: 600 }}>
-                  [{getLevelName(log.level)}]
-                </span>
-                {' '}
-                <span style={{ color: theme.colors.text.primary }}>{log.message}</span>
-                {log.data && (
-                  <pre
-                    style={{
-                      marginTop: '4px',
-                      marginLeft: '20px',
-                      color: theme.colors.text.secondary,
-                      fontSize: '10px',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
+                <div className="log-viewer-entry-header">
+                  <span className="log-viewer-entry-time">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </span>
+                  <span 
+                    className="log-viewer-entry-level"
+                    style={{ color: getLevelColor(log.level) }}
                   >
+                    [{getLevelName(log.level)}]
+                  </span>
+                </div>
+                <div className="log-viewer-entry-message">{log.message}</div>
+                {log.data && (
+                  <pre className="log-viewer-entry-data">
                     {JSON.stringify(log.data, null, 2)}
                   </pre>
                 )}
@@ -353,16 +246,7 @@ export function LogViewer({ onClose }) {
         </div>
 
         {/* Footer */}
-        <div
-          style={{
-            padding: '8px 20px',
-            borderTop: `1px solid ${theme.colors.border.default}`,
-            fontSize: '11px',
-            color: theme.colors.text.tertiary,
-            display: 'flex',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div className="log-viewer-footer">
           <span>Total: {filteredLogs.length} logs</span>
           <span>Nível: {getLevelName(currentLevel)}</span>
         </div>

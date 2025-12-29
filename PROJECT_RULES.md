@@ -103,7 +103,14 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
    - ✅ **Mensagens de erro com código, mensagem técnica e mensagem amigável no backend**
    - ❌ **NUNCA duplicar regras de compatibilidade no frontend**
 
-5. **Módulos Compartilhados**
+5. **Centralização de Estilos CSS**
+   - ✅ **Todos os estilos estáticos em `index.css`**
+   - ✅ **Usar classes CSS para estilos reutilizáveis**
+   - ✅ **Estilos inline apenas para valores dinâmicos calculados em runtime**
+   - ❌ **NUNCA usar estilos inline para estilos estáticos**
+   - ❌ **NUNCA duplicar estilos em múltiplos componentes**
+
+6. **Módulos Compartilhados**
    - Quando duplicação é necessária (ex: compatibilidade de tipos), usar módulos compartilhados
    - Backend: `engine/typeCompatibility.js` (CommonJS)
    - Frontend: `frontend/src/shared/typeCompatibility.ts` (TypeScript/ES module)
@@ -174,6 +181,51 @@ const COMPATIBILITY = { /* regras */ };
 const COMPATIBILITY = { /* mesmas regras duplicadas */ };
 ```
 
+#### ✅ CORRETO: Estilos Centralizados no CSS
+
+```css
+/* index.css */
+.sidebar-properties-empty {
+  color: var(--color-text-tertiary);
+}
+
+.sidebar-properties-empty-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+```
+
+```jsx
+// Componente - apenas usa classes CSS
+<div className="sidebar-properties-empty">
+  <span className="sidebar-properties-empty-icon">...</span>
+</div>
+```
+
+#### ❌ INCORRETO: Estilos Inline Estáticos
+
+```jsx
+// ❌ NÃO fazer: estilos estáticos inline
+<div style={{ color: 'var(--color-text-tertiary)', fontSize: '48px' }}>
+  <span style={{ width: '48px', height: '48px' }}>...</span>
+</div>
+```
+
+#### ✅ CORRETO: Estilos Inline Apenas para Valores Dinâmicos
+
+```jsx
+// ✅ Permitido: largura calculada dinamicamente
+<div 
+  className="flow-editor-palette"
+  style={!paletteCollapsed ? { width: `${paletteWidth}px` } : {}}
+>
+
+// ✅ Permitido: variável CSS dinâmica
+const nodeColorStyle = { '--node-color': color };
+<div className="sidebar-properties-header" style={nodeColorStyle}>
+```
+
 ### Benefícios da Centralização
 
 1. **Manutenção Simplificada**
@@ -219,6 +271,8 @@ const COMPATIBILITY = { /* mesmas regras duplicadas */ };
    - Criar mensagens de erro no frontend
    - Mapear mensagens no frontend
    - Duplicar regras de compatibilidade
+   - Usar estilos inline para estilos estáticos
+   - Duplicar estilos em múltiplos componentes
 
 ---
 
@@ -527,6 +581,8 @@ Antes de fazer alterações, verificar:
 - [ ] **Centraliza lógica de negócio na Engine?**
 - [ ] **Evita duplicação de mensagens e regras?**
 - [ ] **Usa módulos compartilhados quando necessário?**
+- [ ] **Estilos estáticos estão no CSS, não inline?**
+- [ ] **Estilos inline apenas para valores dinâmicos necessários?**
 - [ ] Segue estrutura de diretórios?
 - [ ] Usa convenções de código?
 - [ ] Atualiza documentação se necessário?
@@ -558,6 +614,103 @@ Antes de fazer alterações, verificar:
 ---
 
 ## 🎨 Regras de Layout e UI
+
+### Estilos CSS e Centralização
+
+**Regra Fundamental:** ✅ **Todos os estilos devem estar no CSS, não inline**
+
+#### Princípios de Estilização
+
+1. **Estilos no CSS (Obrigatório)**
+   - ✅ **Todos os estilos estáticos devem estar em `index.css`**
+   - ✅ **Usar classes CSS para estilos reutilizáveis**
+   - ✅ **Manter consistência visual através de classes CSS**
+   - ❌ **NUNCA usar estilos inline para estilos estáticos**
+
+2. **Estilos Inline (Apenas quando necessário)**
+   - ✅ **Permitido apenas para valores dinâmicos calculados em runtime**
+   - ✅ **Exemplos permitidos:**
+     - Larguras calculadas: `style={{ width: `${paletteWidth}px` }}`
+     - Posições calculadas: `style={{ top: `${dropdownPosition.top}px` }}`
+     - Variáveis CSS dinâmicas: `style={{ '--node-color': color }}`
+   - ❌ **NUNCA usar inline para:**
+     - Cores estáticas
+     - Espaçamentos fixos
+     - Tamanhos fixos
+     - Bordas, sombras, transições
+
+3. **Organização de Classes CSS**
+   - ✅ **Agrupar classes por componente/seção**
+   - ✅ **Usar prefixos consistentes** (ex: `.sidebar-properties-*`, `.flow-editor-*`)
+   - ✅ **Comentar seções no CSS** para facilitar manutenção
+   - ✅ **Usar variáveis CSS** para cores e valores reutilizáveis
+
+4. **Exemplos de Centralização de Estilos**
+
+#### ✅ CORRETO: Estilos no CSS
+
+```css
+/* index.css */
+.sidebar-properties-empty {
+  color: var(--color-text-tertiary);
+}
+
+.sidebar-properties-empty-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+```
+
+```jsx
+// Componente
+<div className="sidebar-properties-empty">
+  <span className="sidebar-properties-empty-icon">...</span>
+</div>
+```
+
+#### ✅ CORRETO: Estilos Dinâmicos Inline (quando necessário)
+
+```jsx
+// ✅ Permitido: largura calculada dinamicamente
+<div 
+  className="flow-editor-palette"
+  style={!paletteCollapsed ? { width: `${paletteWidth}px` } : {}}
+>
+
+// ✅ Permitido: variável CSS dinâmica
+const nodeColorStyle = { '--node-color': color };
+<div className="sidebar-properties-header" style={nodeColorStyle}>
+```
+
+#### ❌ INCORRETO: Estilos Estáticos Inline
+
+```jsx
+// ❌ NÃO fazer: estilos estáticos inline
+<div style={{ color: 'var(--color-text-tertiary)', fontSize: '48px' }}>
+```
+
+#### Benefícios da Centralização de Estilos
+
+1. **Manutenção Simplificada**
+   - Mudanças de estilo em um único lugar
+   - Fácil de encontrar e atualizar
+   - Consistência visual garantida
+
+2. **Performance**
+   - CSS é otimizado pelo navegador
+   - Menos re-renderizações
+   - Cache de estilos mais eficiente
+
+3. **Reutilização**
+   - Classes podem ser reutilizadas
+   - Menos duplicação de código
+   - Facilita temas e customizações
+
+4. **Testabilidade**
+   - Estilos podem ser testados separadamente
+   - Fácil de verificar consistência visual
+   - Menos acoplamento entre lógica e apresentação
 
 ### Estrutura do Flow Editor
 
@@ -760,8 +913,9 @@ Quando colapsado horizontalmente, cada painel mostra:
 6. ✅ **Não alterar a largura do painel direito** quando colapsando verticalmente
 7. ✅ **Não gerar scroll horizontal**
 8. ✅ **Não quebrar redimensionamento existente**
-9. ✅ **Usar classes Tailwind**, não CSS-in-JS ou inline styles
+9. ✅ **Usar classes Tailwind e CSS**, não CSS-in-JS ou inline styles (exceto valores dinâmicos)
 10. ✅ **Manter suporte a dark/light theme**
+11. ✅ **Estilos estáticos sempre no CSS**, não inline
 
 ---
 
@@ -826,7 +980,7 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
 
 ---
 
-**Última atualização:** 2025-12-25
+**Última atualização:** 2025-12-28
 
 ### Mudanças Recentes na Toolbar
 
@@ -835,3 +989,10 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
 - **Ordem de prioridade atualizada**: FILE > MAIN > SEARCH > ZOOM > EDIT > EXTRA > TOOLS
 - **Toolbar responsiva**: Só reage a mudanças de viewport (window.resize), não a colapso de painéis internos
 - **Menu "Mais" com separação por grupos**: Itens são organizados por grupos (Arquivo, Fluxo, Importar/Exportar, Zoom, Editar, Buscar) com cabeçalhos e separadores visuais
+
+### Mudanças Recentes - Centralização de Estilos (2025-12-28)
+
+- **Estilos inline removidos**: Todos os estilos estáticos foram movidos para `index.css`
+- **Classes CSS organizadas**: Estilos agrupados por componente/seção com prefixos consistentes
+- **Estilos dinâmicos mantidos**: Apenas valores calculados em runtime permanecem inline (larguras, posições, variáveis CSS dinâmicas)
+- **Benefícios**: Manutenção simplificada, melhor performance, reutilização de classes, consistência visual

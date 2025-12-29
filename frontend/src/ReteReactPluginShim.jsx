@@ -113,7 +113,6 @@ function DefaultNodeComponent(props) {
               key={key} 
               className="flow-node__io-row"
             >
-              <div className="flow-node__io-label">{label}</div>
               {input?.socket && (
                 <RefSocket
                   name="input-socket"
@@ -124,6 +123,7 @@ function DefaultNodeComponent(props) {
                   payload={input.socket}
                 />
               )}
+              <div className="flow-node__io-label">{label}</div>
             </div>
           );
         })}

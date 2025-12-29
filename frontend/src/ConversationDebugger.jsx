@@ -84,19 +84,10 @@ export function ConversationDebugger({ replay, steps, onSeekNode }) {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', fontFamily: 'system-ui, sans-serif', fontSize: '13px' }}>
+    <div className="conversation-debugger">
       {/* Timeline */}
-      <div
-        style={{
-          flex: 2,
-          borderRight: '1px solid #ddd',
-          padding: '8px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="conversation-debugger-timeline">
+        <div className="conversation-debugger-timeline-header">
           <strong>Timeline</strong>
           <button onClick={() => setIsPlaying((p) => !p)} disabled={timeline.length === 0}>
             {isPlaying ? 'Pausar' : 'Reproduzir'}
@@ -113,7 +104,7 @@ export function ConversationDebugger({ replay, steps, onSeekNode }) {
           >
             ▶
           </button>
-          <label style={{ marginLeft: 'auto', fontSize: '11px' }}>
+          <label className="conversation-debugger-timeline-label">
             Velocidade (ms)
             <input
               type="number"
@@ -122,85 +113,59 @@ export function ConversationDebugger({ replay, steps, onSeekNode }) {
               step={100}
               value={playIntervalMs}
               onChange={(e) => setPlayIntervalMs(Number(e.target.value) || 800)}
-              style={{ width: '70px', marginLeft: '4px' }}
+              className="conversation-debugger-timeline-input"
             />
           </label>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid #eee', paddingTop: '4px' }}>
+        <div className="conversation-debugger-timeline-list">
           {timeline.length === 0 && <div>Nenhum evento de conversa disponível.</div>}
           {timeline.map((item) => (
             <div
               key={item.idx}
               onClick={() => handleSelectIndex(item.idx)}
-              style={{
-                padding: '6px 8px',
-                marginBottom: '4px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                backgroundColor: item.idx === currentIndex ? '#e6f0ff' : '#f8f9fa',
-                border: item.idx === currentIndex ? '1px solid #2f6feb' : '1px solid #ddd',
-              }}
+              className={`conversation-debugger-timeline-item ${
+                item.idx === currentIndex ? 'conversation-debugger-timeline-item--selected' : ''
+              }`}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                <span style={{ fontWeight: 'bold' }}>
+              <div className="conversation-debugger-timeline-item-header">
+                <span className="conversation-debugger-timeline-item-from">
                   {item.from === 'user' ? 'Usuário' : 'Bot'}
                 </span>
-                <span style={{ fontSize: '11px', color: '#666' }}>{new Date(item.at).toLocaleTimeString()}</span>
+                <span className="conversation-debugger-timeline-item-time">{new Date(item.at).toLocaleTimeString()}</span>
               </div>
-              <div style={{ fontSize: '13px', marginBottom: '2px' }}>{item.text}</div>
-              <div style={{ fontSize: '11px', color: '#999' }}>Nó: {item.nodeId || 'desconhecido'}</div>
+              <div className="conversation-debugger-timeline-item-text">{item.text}</div>
+              <div className="conversation-debugger-timeline-item-node">Nó: {item.nodeId || 'desconhecido'}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Painel direito: detalhes do passo atual */}
-      <div
-        style={{
-          flex: 1,
-          padding: '8px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}
-      >
+      <div className="conversation-debugger-details">
         <div>
           <strong>Passo atual</strong>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div className="conversation-debugger-details-section-title" style={{ color: 'var(--color-text-tertiary)' }}>
             Índice: {currentIndex} / {maxIndex}
           </div>
           {currentItem && (
-            <>
-              <div style={{ marginTop: '4px', fontSize: '12px' }}>
-                <div>Origem: {currentItem.from === 'user' ? 'Usuário' : 'Bot'}</div>
-                <div>Horário: {new Date(currentItem.at).toLocaleString()}</div>
-                <div>Nó: {currentItem.nodeId || 'desconhecido'}</div>
-              </div>
-            </>
+            <div className="conversation-debugger-details-section" style={{ marginTop: '4px', fontSize: '12px' }}>
+              <div>Origem: {currentItem.from === 'user' ? 'Usuário' : 'Bot'}</div>
+              <div>Horário: {new Date(currentItem.at).toLocaleString()}</div>
+              <div>Nó: {currentItem.nodeId || 'desconhecido'}</div>
+            </div>
           )}
         </div>
 
-        <div style={{ flex: 1, minHeight: 0 }}>
-          <div style={{ marginBottom: '4px' }}>
+        <div className="conversation-debugger-details-variables">
+          <div className="conversation-debugger-details-variables-title">
             <strong>Variáveis (snapshot)</strong>
           </div>
-          <div
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              padding: '4px',
-              overflow: 'auto',
-              maxHeight: '100%',
-              backgroundColor: '#fafafa',
-              fontFamily: 'monospace',
-              fontSize: '11px',
-            }}
-          >
+          <div className="conversation-debugger-details-variables-content">
             {Object.keys(currentVariables).length === 0 ? (
               <span>Nenhuma variável registrada neste passo.</span>
             ) : (
-              <pre style={{ margin: 0 }}>{JSON.stringify(currentVariables, null, 2)}</pre>
+              <pre className="conversation-debugger-details-pre">{JSON.stringify(currentVariables, null, 2)}</pre>
             )}
           </div>
         </div>

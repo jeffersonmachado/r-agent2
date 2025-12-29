@@ -606,12 +606,8 @@ export function FlowEditorPage() {
         {/* PALETA - EXATAMENTE como no modelo */}
         <div
           id="palette"
-          className={`${paletteCollapsed ? 'w-12' : ''} min-w-[48px] flex flex-col transition-all duration-200`}
-          style={{
-            ...(!paletteCollapsed ? { width: `${paletteWidth}px` } : {}),
-            backgroundColor: 'var(--color-bg-secondary)',
-            borderRight: '1px solid var(--color-border-default)'
-          }}
+          className={`${paletteCollapsed ? 'w-12' : ''} min-w-[48px] flex flex-col transition-all duration-200 flow-editor-palette`}
+          style={!paletteCollapsed ? { width: `${paletteWidth}px` } : {}}
         >
           <div className="section-header">
             <span className={paletteCollapsed ? 'hidden' : 'inline'}>
@@ -666,12 +662,8 @@ export function FlowEditorPage() {
         {/* PAINEL DIREITO - EXATAMENTE como no modelo */}
         <div
           id="rightPanel"
-          className={`${rightPanelCollapsed ? 'w-12' : ''} min-w-[48px] flex flex-col transition-all duration-200`}
-          style={{
-            ...(!rightPanelCollapsed ? { width: `${rightPanelWidth}px` } : {}),
-            backgroundColor: 'var(--color-bg-secondary)',
-            borderLeft: '1px solid var(--color-border-default)'
-          }}
+          className={`${rightPanelCollapsed ? 'w-12' : ''} min-w-[48px] flex flex-col transition-all duration-200 flow-editor-right-panel`}
+          style={!rightPanelCollapsed ? { width: `${rightPanelWidth}px` } : {}}
         >
           {/* HEADER */}
           <div className="section-header">
@@ -735,15 +727,15 @@ export function FlowEditorPage() {
                   {!validationCollapsed && (
                     <div className="section-content">
                       {!validation ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+                        <div className="w-full h-full flex flex-col items-center justify-center text-sm sidebar-properties-empty">
                           <div className="text-center space-y-3 max-w-[240px]">
                             <div className="text-4xl mb-3 opacity-40">
-                              <span className="icon icon-check" style={{ fontSize: '48px', width: '48px', height: '48px' }}></span>
+                              <span className="icon icon-check sidebar-properties-empty-icon"></span>
                             </div>
-                            <div className="text-base font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                            <div className="text-base font-semibold mb-1 sidebar-properties-empty-title">
                               Nenhuma validação executada
                             </div>
-                            <div className="text-xs leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
+                            <div className="text-xs leading-relaxed sidebar-properties-empty-description">
                               Execute a validação para ver os resultados.
                             </div>
                           </div>
@@ -843,7 +835,7 @@ export function FlowEditorPage() {
         type="file"
         accept="application/json"
         ref={fileInputRef}
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={handleFileChange}
       />
     </div>

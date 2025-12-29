@@ -36,34 +36,14 @@ export function ConversationTimeline({ replay, onSeekNode }) {
   const currentItem = timeline[currentIndex] || null;
 
   return (
-    <div
-      style={{
-        flex: 1,
-        borderTop: `1px solid ${theme.colors.border.default}`,
-        padding: '16px',
-        fontSize: '13px',
-        backgroundColor: theme.colors.bg.secondary,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-      }}
-    >
+    <div className="conversation-timeline">
       <div>
-        <div style={{ fontWeight: 500, color: theme.colors.text.primary, fontSize: '14px' }}>Timeline da conversa</div>
+        <div className="conversation-timeline-header">Timeline da conversa</div>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          border: `1px solid ${theme.colors.border.default}`,
-          borderRadius: '6px',
-          backgroundColor: theme.colors.bg.primary,
-        }}
-      >
+      <div className="conversation-timeline-list">
         {timeline.length === 0 && (
-          <div style={{ padding: '24px', fontSize: '12px', color: theme.colors.text.tertiary, textAlign: 'center' }}>
+          <div className="conversation-timeline-empty">
             Nenhuma mensagem para exibir.
           </div>
         )}
@@ -71,49 +51,28 @@ export function ConversationTimeline({ replay, onSeekNode }) {
           <div
             key={item.idx}
             onClick={() => handleSelectIndex(item.idx)}
-            style={{
-              padding: '12px',
-              borderBottom: idx < timeline.length - 1 ? `1px solid ${theme.colors.border.default}` : 'none',
-              cursor: 'pointer',
-              backgroundColor: item.idx === currentIndex ? theme.colors.bg.tertiary : 'transparent',
-              transition: 'background-color 150ms ease',
-            }}
-            onMouseEnter={(e) => {
-              if (item.idx !== currentIndex) {
-                e.currentTarget.style.backgroundColor = theme.colors.bg.hover;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (item.idx !== currentIndex) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
+            className={`conversation-timeline-item ${
+              item.idx === currentIndex ? 'conversation-timeline-item--selected' : ''
+            }`}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '8px',
-              }}
-            >
+            <div className="conversation-timeline-item-header">
               <span
-                style={{
-                  fontWeight: 500,
-                  color: item.from === 'user' ? theme.colors.accent.primary : theme.colors.status.success,
-                  fontSize: '12px',
-                }}
+                className={`conversation-timeline-item-from ${
+                  item.from === 'user' 
+                    ? 'conversation-timeline-item-from--user' 
+                    : 'conversation-timeline-item-from--bot'
+                }`}
               >
                 {item.from === 'user' ? 'Usuário' : 'Bot'}
               </span>
-              <span style={{ fontSize: '11px', color: theme.colors.text.tertiary, fontFamily: 'monospace' }}>
+              <span className="conversation-timeline-item-time">
                 {item.at ? new Date(item.at).toLocaleTimeString() : ''}
               </span>
             </div>
-            <div style={{ fontSize: '13px', marginBottom: '6px', color: theme.colors.text.primary, lineHeight: 1.5 }}>
+            <div className="conversation-timeline-item-text">
               {item.text}
             </div>
-            <div style={{ fontSize: '11px', color: theme.colors.text.tertiary, fontFamily: 'monospace' }}>
+            <div className="conversation-timeline-item-node">
               {item.nodeId || 'desconhecido'}
             </div>
           </div>
@@ -121,27 +80,19 @@ export function ConversationTimeline({ replay, onSeekNode }) {
       </div>
 
       {currentItem && (
-        <div
-          style={{
-            padding: '12px',
-            borderRadius: '6px',
-            backgroundColor: theme.colors.bg.tertiary,
-            border: `1px solid ${theme.colors.border.default}`,
-            fontSize: '12px',
-          }}
-        >
-          <div style={{ fontWeight: 500, marginBottom: '8px', color: theme.colors.text.primary }}>Mensagem selecionada</div>
-          <div style={{ marginBottom: '4px', color: theme.colors.text.secondary }}>
-            <span style={{ color: theme.colors.text.tertiary }}>Origem: </span>
+        <div className="conversation-timeline-detail">
+          <div className="conversation-timeline-detail-title">Mensagem selecionada</div>
+          <div className="conversation-timeline-detail-row">
+            <span className="conversation-timeline-detail-label">Origem: </span>
             {currentItem.from === 'user' ? 'Usuário' : 'Bot'}
           </div>
-          <div style={{ marginBottom: '4px', color: theme.colors.text.secondary }}>
-            <span style={{ color: theme.colors.text.tertiary }}>Horário: </span>
+          <div className="conversation-timeline-detail-row">
+            <span className="conversation-timeline-detail-label">Horário: </span>
             {currentItem.at ? new Date(currentItem.at).toLocaleString() : ''}
           </div>
-          <div style={{ color: theme.colors.text.secondary, fontFamily: 'monospace' }}>
-            <span style={{ color: theme.colors.text.tertiary }}>Nó: </span>
-            {currentItem.nodeId || 'desconhecido'}
+          <div className="conversation-timeline-detail-row">
+            <span className="conversation-timeline-detail-label">Nó: </span>
+            <span className="conversation-timeline-detail-value">{currentItem.nodeId || 'desconhecido'}</span>
           </div>
         </div>
       )}

@@ -198,12 +198,11 @@ export function FlowSelector({ onFlowSelected, currentFlowId, refreshTrigger }) 
                         key={flow.id}
                         onClick={(e) => handleFlowClick(e, flow)}
                         onMouseDown={(e) => e.stopPropagation()}
-                        className={`p-2.5 mx-1 my-1 rounded cursor-pointer transition-all duration-fast ${
+                        className={`p-2.5 mx-1 my-1 rounded cursor-pointer transition-all duration-fast flow-selector-item ${
                           currentFlowId === flow.id
                             ? 'bg-accent-light border border-accent-primary shadow-md'
                             : 'bg-transparent border border-transparent hover:bg-bg-tertiary hover:border-border-default'
                         }`}
-                        style={{ pointerEvents: 'auto' }}
                       >
                         <div className="font-medium text-text-primary text-sm mb-1 truncate">
                           {flow.name || flow.id}
