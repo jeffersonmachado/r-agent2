@@ -1,7 +1,7 @@
 {
   "id": "template-completo",
   "name": "Template Completo - Todas as Funcionalidades",
-  "description": "Template demonstrando todas as funcionalidades disponíveis no sistema: mensagens, inputs, roteamento, variáveis, IA, handoff, persistência e mais",
+  "description": "Template demonstrando todas as funcionalidades disponíveis no sistema: mensagens, inputs, roteamento, variáveis, IA, handoff, persistência, fallback e mais",
   "icon": "🎯",
   "flow": {
     "tenantId": "tenant-demo",
@@ -443,9 +443,28 @@
         "id": "final-message",
         "type": "message",
         "config": {
-          "text": "🎉 Obrigado por testar o template completo!\n\n✅ Funcionalidades demonstradas:\n• Mensagens com templates\n• Captura de entrada do usuário\n• Roteamento condicional (equals, contains, always)\n• Definição e atualização de variáveis\n• Processamento com IA\n• Verificação de status de fila\n• Obtenção de informações de fluxos\n• Listagem de fluxos\n• Leitura de valores de configuração\n• Transferência para atendimento humano\n\nAté logo! 👋"
+          "text": "🎉 Obrigado por testar o template completo!\n\n✅ Funcionalidades demonstradas:\n• Mensagens com templates\n• Captura de entrada do usuário\n• Roteamento condicional (equals, contains, always)\n• Definição e atualização de variáveis\n• Processamento com IA\n• Verificação de status de fila\n• Obtenção de informações de fluxos\n• Listagem de fluxos\n• Leitura de valores de configuração\n• Transferência para atendimento humano\n• Sistema de fallback integrado\n\nAté logo! 👋"
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "message-features",
+          "options": "message-features",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

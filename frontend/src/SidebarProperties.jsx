@@ -1,5 +1,5 @@
 import React from 'react';
-import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField } from './components/PropertyField';
+import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, ScheduleRouterField } from './components/PropertyField';
 import { getNodeSchema, getNodeProperties } from './editor/nodeSchemas';
 
 /**
@@ -7,7 +7,7 @@ import { getNodeSchema, getNodeProperties } from './editor/nodeSchemas';
  * 
  * Usa schema centralizado (nodeSchemas.js) para obter metadados e propriedades
  */
-export function SidebarProperties({ selectedNode, onChangeConfig }) {
+export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes = [] }) {
 
   if (!selectedNode) {
     return (
@@ -282,6 +282,20 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
                   value={value}
                   onChange={(newValue) => updateConfigField(prop.key, newValue)}
                   allowedIntents={allowedIntents}
+                  required={prop.required}
+                />
+              );
+            }
+
+            if (prop.type === 'schedule_router') {
+              return (
+                <ScheduleRouterField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={value}
+                  onChange={(newValue) => updateConfigField(prop.key, newValue)}
+                  availableNodes={availableNodes}
                   required={prop.required}
                 />
               );

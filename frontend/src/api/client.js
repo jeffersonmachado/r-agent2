@@ -100,7 +100,15 @@ export async function fetchJson(path, init) {
         }
       }
 
-      logger.error(`HTTP Error ${response.status}`, { url, status: response.status, errorBody });
+      // Não loga erros 404 para tickets não encontrados (são esperados quando ticket foi removido)
+      const isTicketNotFound = response.status === 404 && 
+        errorBody && 
+        (errorBody.error === 'ticket_not_found' || 
+         (typeof errorBody === 'string' && errorBody.includes('ticket_not_found')));
+      
+      if (!isTicketNotFound) {
+        logger.error(`HTTP Error ${response.status}`, { url, status: response.status, errorBody });
+      }
 
       const error = new Error(
         `Erro HTTP ${response.status} ao chamar ${url}${
@@ -128,6 +136,17 @@ export async function fetchJson(path, init) {
     if (err instanceof Error && err.name === 'AbortError') {
       logger.error('Request timeout', { url, timeout: DEFAULT_TIMEOUT_MS });
     } else if (err instanceof Error) {
+      // Não loga erros 404 de ticket_not_found (são esperados quando ticket foi removido)
+      const isTicketNotFound = err.status === 404 && 
+        err.body && 
+        (err.body.error === 'ticket_not_found' || 
+         (typeof err.body === 'string' && err.body.includes('ticket_not_found')));
+      
+      if (isTicketNotFound) {
+        // Não loga, apenas relança o erro silenciosamente
+        throw err;
+      }
+      
       // "Failed to fetch" geralmente significa que a API não está acessível
       if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
         logger.error('API não acessível - verifique se o servidor está rodando', { 

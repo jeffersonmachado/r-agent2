@@ -255,6 +255,30 @@ const logger = {
   },
   
   /**
+   * Log de evento estruturado (para fallback, analytics, etc.)
+   * 
+   * @param {string} eventType - Tipo do evento (ex: 'fallback_triggered')
+   * @param {Object} payload - Dados do evento
+   */
+  event(eventType, payload = {}) {
+    const level = getLogLevel();
+    // Eventos são sempre logados (equivalente a INFO)
+    if (level <= LOG_LEVELS.INFO) {
+      const eventData = {
+        type: 'event',
+        eventType,
+        ...payload,
+        timestamp: new Date().toISOString(),
+      };
+      
+      const formatted = formatMessage(LOG_LEVELS.INFO, `[EVENT] ${eventType}`, eventData);
+      // eslint-disable-next-line no-console
+      console.info(formatted);
+      addToHistory(LOG_LEVELS.INFO, `[EVENT] ${eventType}`, eventData);
+    }
+  },
+  
+  /**
    * Níveis de log disponíveis
    */
   LEVELS: LOG_LEVELS,

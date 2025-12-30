@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { listAllTickets, listQueues, getQueueMetrics, createQueue, deleteQueue, getQueueInfo } from '../api/tickets';
 import { useToast } from '../components/Toast';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
@@ -10,6 +11,7 @@ import logger from '../utils/logger';
  */
 export function TicketMaintenancePage() {
   const { showToast, ToastContainer } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [metrics, setMetrics] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [queues, setQueues] = useState([]);
@@ -43,10 +45,25 @@ export function TicketMaintenancePage() {
   const loadMetrics = useCallback(async () => {
     try {
       const data = await getQueueMetrics();
+      logger.info('Métricas carregadas', { 
+        totalTickets: data?.totalTickets,
+        ticketsByStatus: data?.ticketsByStatus,
+        ticketsByQueue: data?.ticketsByQueue,
+        hasData: !!data,
+        fullData: data
+      });
       setMetrics(data);
     } catch (error) {
       logger.error('Erro ao carregar métricas', error);
       showToastRef.current('Erro ao carregar métricas', 'error');
+      // Define métricas vazias em caso de erro para evitar valores undefined
+      setMetrics({
+        totalTickets: 0,
+        ticketsByStatus: { waiting: 0, in_progress: 0, closed: 0 },
+        ticketsByQueue: {},
+        oldClosedTickets: { olderThan7Days: 0, olderThan30Days: 0 },
+        memoryUsage: { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 },
+      });
     }
   }, []); // Sem dependências - usa ref
 
@@ -70,17 +87,28 @@ export function TicketMaintenancePage() {
   const loadTickets = useCallback(async () => {
     setLoading(true);
     try {
+      // Se há filtro de busca, busca todos os tickets primeiro (sem paginação)
+      // para poder aplicar o filtro corretamente e calcular o total
+      const needsFullList = !!filters.search;
+      
       const options = {
-        limit: pagination.limit,
-        offset: (pagination.page - 1) * pagination.limit,
+        limit: needsFullList ? 10000 : pagination.limit, // Máximo permitido pelo backend
+        offset: needsFullList ? 0 : (pagination.page - 1) * pagination.limit,
       };
       if (filters.status) options.status = filters.status;
       if (filters.queue) options.queue = filters.queue;
 
       const result = await listAllTickets(options);
 
+      logger.info('Tickets carregados', {
+        total: result.total,
+        ticketsCount: result.tickets?.length || 0,
+        limit: result.limit,
+        offset: result.offset,
+        firstTicket: result.tickets?.[0],
+      });
+
       // Aplica filtro de busca (por ID, telefone ou mensagem) no lado do cliente
-      // Nota: Para melhor performance com muitos tickets, considere mover a busca para o servidor
       let filteredTickets = result.tickets || [];
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
@@ -93,8 +121,21 @@ export function TicketMaintenancePage() {
         );
       }
 
-      setTickets(filteredTickets);
-      setTotalTickets(result.total || 0);
+      // Se há filtro de busca, aplica paginação no frontend após filtrar
+      let finalTickets = filteredTickets;
+      let finalTotal = filteredTickets.length;
+      
+      if (filters.search) {
+        const startIndex = (pagination.page - 1) * pagination.limit;
+        const endIndex = startIndex + pagination.limit;
+        finalTickets = filteredTickets.slice(startIndex, endIndex);
+        finalTotal = filteredTickets.length; // Total após filtro de busca
+      } else {
+        finalTotal = result.total || 0; // Total do backend (já paginado)
+      }
+
+      setTickets(finalTickets);
+      setTotalTickets(finalTotal);
     } catch (error) {
       logger.error('Erro ao carregar tickets', error);
       showToastRef.current('Erro ao carregar tickets', 'error');
@@ -213,12 +254,30 @@ export function TicketMaintenancePage() {
   };
 
   const handleDeleteQueue = async (queueName, force = false) => {
-    if (!force && !confirm(`Deseja realmente excluir a fila "${queueName}"?\n\nA fila só pode ser excluída se não tiver tickets ativos.`)) {
-      return;
-    }
+    if (!force) {
+      const confirmed = await confirm({
+        title: 'Excluir Fila',
+        message: `Deseja realmente excluir a fila "${queueName}"?\n\nA fila só pode ser excluída se não tiver tickets ativos.`,
+        confirmLabel: 'Excluir',
+        cancelLabel: 'Cancelar',
+        variant: 'warning',
+      });
 
-    if (force && !confirm(`ATENÇÃO: A fila "${queueName}" possui tickets ativos.\n\nDeseja realmente excluir a fila? Todos os tickets ativos serão fechados.`)) {
-      return;
+      if (!confirmed) {
+        return;
+      }
+    } else {
+      const confirmed = await confirm({
+        title: '⚠️ ATENÇÃO: Excluir Fila com Tickets',
+        message: `A fila "${queueName}" possui tickets ativos.\n\nDeseja realmente excluir a fila? Todos os tickets ativos serão fechados.`,
+        confirmLabel: 'Excluir Mesmo Assim',
+        cancelLabel: 'Cancelar',
+        variant: 'danger',
+      });
+
+      if (!confirmed) {
+        return;
+      }
     }
 
     try {
@@ -288,37 +347,53 @@ export function TicketMaintenancePage() {
         </div>
       </div>
 
-      {/* Painel de Métricas */}
-      {metrics && (
-        <div className="maintenance-metrics">
-          <h2>📊 Estatísticas do Sistema</h2>
+      {/* Container principal com layout flexível */}
+      <div className="maintenance-content-wrapper">
+        {/* Painel de Métricas */}
+        {metrics && (
+          <div className="maintenance-metrics">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h2>📊 Estatísticas do Sistema</h2>
+            {(filters.status || filters.queue || filters.search) && (
+              <span style={{ 
+                fontSize: '0.85em', 
+                color: '#666', 
+                fontStyle: 'italic',
+                padding: '4px 8px',
+                backgroundColor: '#f0f0f0',
+                borderRadius: '4px'
+              }}>
+                ℹ️ Métricas mostram todos os tickets (filtros não aplicados)
+              </span>
+            )}
+          </div>
           <div className="metrics-grid">
             <div className="metric-card">
               <div className="metric-label">Total de Tickets</div>
-              <div className="metric-value">{metrics.totalTickets}</div>
+              <div className="metric-value">{metrics.totalTickets ?? 0}</div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Aguardando</div>
-              <div className="metric-value waiting">{metrics.ticketsByStatus.waiting}</div>
+              <div className="metric-value waiting">{metrics.ticketsByStatus?.waiting ?? 0}</div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Em Atendimento</div>
-              <div className="metric-value in_progress">{metrics.ticketsByStatus.in_progress}</div>
+              <div className="metric-value in_progress">{metrics.ticketsByStatus?.in_progress ?? 0}</div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Fechados</div>
-              <div className="metric-value closed">{metrics.ticketsByStatus.closed}</div>
+              <div className="metric-value closed">{metrics.ticketsByStatus?.closed ?? 0}</div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Fechados &gt; 7 dias</div>
               <div className="metric-value warning">
-                {metrics.oldClosedTickets.olderThan7Days}
+                {metrics.oldClosedTickets?.olderThan7Days ?? 0}
               </div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Fechados &gt; 30 dias</div>
               <div className="metric-value danger">
-                {metrics.oldClosedTickets.olderThan30Days}
+                {metrics.oldClosedTickets?.olderThan30Days ?? 0}
               </div>
             </div>
           </div>
@@ -345,15 +420,31 @@ export function TicketMaintenancePage() {
                 </Button>
               </div>
               <div className="queue-stats">
-                {Object.entries(metrics.ticketsByQueue)
+                {Object.entries(metrics.ticketsByQueue || {})
                   .sort((a, b) => b[1] - a[1])
-                  .map(([queue, count]) => (
-                    <div key={queue} className="queue-stat-item">
-                      <span className="queue-name">{queue}</span>
-                      <span className="queue-count">{count}</span>
-                    </div>
-                  ))}
-                {Object.keys(metrics.ticketsByQueue).length === 0 && (
+                  .map(([queue, count]) => {
+                    const info = queueInfo[queue] || {};
+                    const activeCount = info.activeTickets || 0;
+                    return (
+                      <div key={queue} className="queue-stat-item" title={`${activeCount} ativo(s), ${info.closedTickets || 0} fechado(s)`}>
+                        <span className="queue-name">{queue}</span>
+                        <span className="queue-count">
+                          {count}
+                          {activeCount > 0 && (
+                            <span style={{ 
+                              marginLeft: '5px', 
+                              fontSize: '0.85em', 
+                              color: '#e74c3c',
+                              fontWeight: 'bold'
+                            }}>
+                              ({activeCount} ativo{activeCount > 1 ? 's' : ''})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                {(!metrics.ticketsByQueue || Object.keys(metrics.ticketsByQueue).length === 0) && (
                   <p className="empty-message">Nenhuma fila encontrada</p>
                 )}
               </div>
@@ -362,6 +453,22 @@ export function TicketMaintenancePage() {
               {showQueueManager && (
                 <div className="queue-manager">
                   <h4>Gerenciar Filas</h4>
+                  
+                  <div style={{ 
+                    padding: '10px', 
+                    marginBottom: '15px', 
+                    backgroundColor: '#f0f8ff', 
+                    borderRadius: '4px',
+                    fontSize: '0.9em',
+                    border: '1px solid #b3d9ff'
+                  }}>
+                    <strong>ℹ️ Sobre Filas e Fallback:</strong>
+                    <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                      <li>Filas são usadas pelo modo <strong>Ticket</strong> (assíncrono)</li>
+                      <li>Modo <strong>Human</strong> (síncrono) não usa filas</li>
+                      <li>Configure FallbackNodes com <code>escalationMode: "ticket"</code> e <code>queue</code> apropriada</li>
+                    </ul>
+                  </div>
                   
                   {/* Criar Nova Fila */}
                   <div className="queue-manager-form">
@@ -372,7 +479,7 @@ export function TicketMaintenancePage() {
                         className="queue-manager-input"
                         value={newQueueName}
                         onChange={(e) => setNewQueueName(e.target.value)}
-                        placeholder="Nome da fila (ex: suporte, vendas)"
+                        placeholder="Nome da fila (ex: suporte_n1, vendas, financeiro)"
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
                             handleCreateQueue();
@@ -384,7 +491,7 @@ export function TicketMaintenancePage() {
                       </Button>
                     </div>
                     <small className="queue-manager-hint">
-                      Use apenas letras, números, hífens e underscores
+                      Use apenas letras, números, hífens e underscores. Exemplos: suporte_n1, vendas, financeiro, urgente
                     </small>
                   </div>
 
@@ -458,19 +565,19 @@ export function TicketMaintenancePage() {
               <div className="memory-stats">
                 <div className="memory-item">
                   <span>RSS:</span>
-                  <span>{formatBytes(metrics.memoryUsage.rss)}</span>
+                  <span>{formatBytes(metrics.memoryUsage?.rss ?? 0)}</span>
                 </div>
                 <div className="memory-item">
                   <span>Heap Total:</span>
-                  <span>{formatBytes(metrics.memoryUsage.heapTotal)}</span>
+                  <span>{formatBytes(metrics.memoryUsage?.heapTotal ?? 0)}</span>
                 </div>
                 <div className="memory-item">
                   <span>Heap Usado:</span>
-                  <span>{formatBytes(metrics.memoryUsage.heapUsed)}</span>
+                  <span>{formatBytes(metrics.memoryUsage?.heapUsed ?? 0)}</span>
                 </div>
                 <div className="memory-item">
                   <span>External:</span>
-                  <span>{formatBytes(metrics.memoryUsage.external)}</span>
+                  <span>{formatBytes(metrics.memoryUsage?.external ?? 0)}</span>
                 </div>
               </div>
             </div>
@@ -479,18 +586,18 @@ export function TicketMaintenancePage() {
               <div className="metrics-section">
                 <h3>Ticket Mais Antigo</h3>
                 <div className="ticket-info">
-                  <div>ID: {metrics.oldestTicket.id.slice(0, 20)}...</div>
-                  <div>Idade: {metrics.oldestTicket.ageDays} dias</div>
+                  <div>ID: {metrics.oldestTicket.id?.slice(0, 20) ?? 'N/A'}...</div>
+                  <div>Idade: {metrics.oldestTicket.ageDays ?? 0} dias</div>
                   <div>Criado: {formatDate(metrics.oldestTicket.createdAt)}</div>
                 </div>
               </div>
             )}
           </div>
         </div>
-      )}
+        )}
 
-      {/* Filtros e Lista de Tickets */}
-      <div className="maintenance-tickets">
+        {/* Filtros e Lista de Tickets */}
+        <div className="maintenance-tickets">
         <h2>📋 Lista de Tickets</h2>
 
         <div className="maintenance-filters">
@@ -666,8 +773,10 @@ export function TicketMaintenancePage() {
           </div>
         )}
       </div>
+      </div>
 
       <ToastContainer />
+      <ConfirmDialog />
     </div>
   );
 }

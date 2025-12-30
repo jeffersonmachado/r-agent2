@@ -1,7 +1,7 @@
 {
   "id": "saudao-simples-cpia",
   "name": "Saudação Simples (cópia)",
-  "description": "Template baseado em Saudação Simples (cópia)",
+  "description": "Template baseado em Saudação Simples (cópia) com fallback integrado",
   "icon": "📋",
   "flow": {
     "tenantId": "tenant-demo",
@@ -21,7 +21,26 @@
         "config": {
           "text": "Olá! Bem-vindo ao nosso chatbot. Como posso ajudá-lo hoje?"
         },
-        "next": "3"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "2"
+        },
+        "next": {
+          "retry": "2",
+          "options": "2",
+          "human": "3",
+          "end": "3"
+        }
       },
       {
         "id": "3",

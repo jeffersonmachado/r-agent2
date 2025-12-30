@@ -1,0 +1,136 @@
+{
+  "id": "teste-whatsapp-atendimento",
+  "name": "Teste WhatsApp - Atendimento Humano",
+  "description": "Template simples para testar atendimento humano via WhatsApp usando sistema de tickets",
+  "icon": "📱",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "teste-whatsapp-atendimento",
+    "name": "Teste WhatsApp - Atendimento Humano",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "boas_vindas"
+      },
+      {
+        "id": "boas_vindas",
+        "type": "message",
+        "config": {
+          "text": "Olá! 👋\n\nComo posso ajudá-lo hoje?\n\nSe precisar falar com um atendente humano, é só me avisar!"
+        },
+        "next": "coletar_mensagem"
+      },
+      {
+        "id": "coletar_mensagem",
+        "type": "user_input",
+        "config": {
+          "variable": "mensagem_usuario"
+        },
+        "next": "verificar_atendimento"
+      },
+      {
+        "id": "verificar_atendimento",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "mensagem_usuario",
+                "value": "atendente"
+              },
+              "next": "escalar_humano"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "mensagem_usuario",
+                "value": "humano"
+              },
+              "next": "escalar_humano"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "mensagem_usuario",
+                "value": "pessoa"
+              },
+              "next": "escalar_humano"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "resposta_bot"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "resposta_bot",
+        "type": "message",
+        "config": {
+          "text": "Entendi! Estou processando sua solicitação. Se precisar de ajuda adicional, digite 'atendente' para falar com um humano."
+        },
+        "next": "fallback"
+      },
+      {
+        "id": "escalar_humano",
+        "type": "handoff",
+        "config": {
+          "queue": "suporte"
+        },
+        "next": "end"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 2,
+          "confidenceThreshold": 0.7,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "queue": "suporte",
+          "allowReturnToBot": true,
+          "safeReturnNode": "boas_vindas"
+        },
+        "next": {
+          "retry": "tentar_novamente",
+          "options": "opcoes",
+          "human": "escalar_humano",
+          "end": "end"
+        }
+      },
+      {
+        "id": "tentar_novamente",
+        "type": "message",
+        "config": {
+          "text": "Desculpe, não entendi bem. Pode repetir de outra forma?\n\nOu digite 'atendente' para falar com um humano."
+        },
+        "next": "coletar_mensagem"
+      },
+      {
+        "id": "opcoes",
+        "type": "message",
+        "config": {
+          "text": "Não consegui entender completamente. O que você prefere?\n\n1️⃣ Digite 'atendente' para falar com um humano\n2️⃣ Tente reformular sua pergunta"
+        },
+        "next": "coletar_mensagem"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template simples para testar integração WhatsApp com atendimento humano via sistema de tickets"
+    }
+  }
+}
+

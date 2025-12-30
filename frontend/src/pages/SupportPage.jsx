@@ -5,10 +5,15 @@ import {
   assignTicket,
   closeTicket,
   sendTicketMessage,
+  getTicketMessages,
+  markTicketAsRead,
 } from '../api/tickets';
 import { useToast } from '../components/Toast';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
+import { QueueModal } from '../components/QueueModal';
+import { TicketModal } from '../components/TicketModal';
 import logger from '../utils/logger';
 
 /**
@@ -17,14 +22,18 @@ import logger from '../utils/logger';
  */
 export function SupportPage() {
   const { showToast, ToastContainer } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [queues, setQueues] = useState([]);
   const [selectedQueue, setSelectedQueue] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketMessages, setTicketMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [modalQueue, setModalQueue] = useState(null);
+  const [modalTicket, setModalTicket] = useState(null);
 
   // Usa useRef para manter referências estáveis
   const showToastRef = React.useRef(showToast);
@@ -69,13 +78,27 @@ export function SupportPage() {
     try {
       const ticketsList = await listQueueTickets(queue, { status: 'waiting' });
       setTickets(ticketsList);
+      
+      // Verifica se o ticket selecionado ainda existe na nova lista
+      // Se não existir mais, limpa a seleção e as mensagens
+      setSelectedTicket(prevSelected => {
+        if (!prevSelected) return null;
+        const updatedTicket = ticketsList.find(t => t.id === prevSelected.id);
+        // Se não encontrou na lista, o ticket foi removido ou mudou de status
+        if (!updatedTicket) {
+          setTicketMessages([]);
+          return null;
+        }
+        // Atualiza com os dados mais recentes do ticket
+        return updatedTicket;
+      });
     } catch (error) {
       logger.error('Erro ao carregar tickets', error);
       showToastRef.current('Erro ao carregar tickets', 'error');
     } finally {
       setLoading(false);
     }
-  }, []); // Sem dependências - usa ref
+  }, []); // Sem dependências - usa refs e state setters funcionais
 
   // Atualiza ref quando loadTickets muda
   React.useEffect(() => {
@@ -95,7 +118,72 @@ export function SupportPage() {
     }
   }, [selectedQueue, loadTickets]);
 
+  // Carrega mensagens do ticket selecionado
+  const loadTicketMessages = useCallback(async (ticketId) => {
+    if (!ticketId) {
+      setTicketMessages([]);
+      return;
+    }
+
+    try {
+      const result = await getTicketMessages(ticketId);
+      setTicketMessages(result.messages || []);
+      
+      // Marca como lidas se ticket está atribuído e em progresso
+      setTickets(prevTickets => {
+        const ticket = prevTickets.find(t => t.id === ticketId);
+        if (ticket && ticket.status === 'in_progress' && ticket.unreadCount > 0) {
+          markTicketAsRead(ticketId).catch(err => {
+            logger.error('Erro ao marcar ticket como lido', err);
+          });
+          // Atualiza ticket na lista
+          const updatedTickets = prevTickets.map(t => 
+            t.id === ticketId ? { ...t, unreadCount: 0 } : t
+          );
+          // Atualiza ticket selecionado se for o mesmo
+          setSelectedTicket(prevSelected => 
+            prevSelected?.id === ticketId ? { ...prevSelected, unreadCount: 0 } : prevSelected
+          );
+          return updatedTickets;
+        }
+        return prevTickets;
+      });
+    } catch (error) {
+      // Se for 404, o ticket não existe mais no backend - limpa seleção e remove da lista
+      if (error.status === 404 || (error.body && error.body.error === 'ticket_not_found')) {
+        // Remove o ticket da lista local também
+        setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketId));
+        setSelectedTicket(null);
+        setTicketMessages([]);
+        return;
+      }
+      // Para outros erros, loga normalmente
+      logger.error('Erro ao carregar mensagens', error);
+    }
+  }, []); // Sem dependências - usa state setters funcionais
+
+  // Carrega mensagens quando ticket é selecionado
+  useEffect(() => {
+    if (selectedTicket) {
+      loadTicketMessages(selectedTicket.id);
+    } else {
+      setTicketMessages([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTicket?.id]); // Apenas quando o ID do ticket muda
+
   // Auto-refresh a cada 5 segundos - usa refs para evitar recriação do intervalo
+  const selectedTicketIdRef = React.useRef(null);
+  
+  React.useEffect(() => {
+    selectedTicketIdRef.current = selectedTicket?.id || null;
+  }, [selectedTicket?.id]);
+
+  const loadTicketMessagesRef = React.useRef();
+  React.useEffect(() => {
+    loadTicketMessagesRef.current = loadTicketMessages;
+  }, [loadTicketMessages]);
+
   useEffect(() => {
     if (!autoRefresh) return;
 
@@ -103,6 +191,12 @@ export function SupportPage() {
       // Usa ref para evitar dependências que mudam constantemente
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
+      }
+      
+      // Atualiza mensagens do ticket selecionado
+      const ticketId = selectedTicketIdRef.current;
+      if (ticketId && loadTicketMessagesRef.current) {
+        loadTicketMessagesRef.current(ticketId);
       }
     }, 5000);
 
@@ -132,7 +226,15 @@ export function SupportPage() {
 
   // Fecha ticket
   const handleClose = async (ticketId) => {
-    if (!confirm('Deseja realmente fechar este ticket?')) {
+    const confirmed = await confirm({
+      title: 'Fechar Ticket',
+      message: 'Deseja realmente fechar este ticket?',
+      confirmLabel: 'Fechar',
+      cancelLabel: 'Cancelar',
+      variant: 'warning',
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -162,6 +264,10 @@ export function SupportPage() {
       await sendTicketMessage(selectedTicket.id, messageText.trim());
       showToastRef.current('Mensagem enviada com sucesso', 'success');
       setMessageText('');
+      
+      // Recarrega mensagens para mostrar a nova mensagem
+      await loadTicketMessages(selectedTicket.id);
+      
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
       }
@@ -248,7 +354,10 @@ export function SupportPage() {
               {queues.map((queue) => (
                 <button
                   key={queue}
-                  onClick={() => setSelectedQueue(queue)}
+                  onClick={() => {
+                    setSelectedQueue(queue);
+                    setModalQueue(queue);
+                  }}
                   className={`support-queue-button ${selectedQueue === queue ? 'active' : ''}`}
                 >
                   {queue}
@@ -270,7 +379,10 @@ export function SupportPage() {
               {tickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  onClick={() => setSelectedTicket(ticket)}
+                  onClick={() => {
+                    setSelectedTicket(ticket);
+                    setModalTicket(ticket);
+                  }}
                   className={`support-ticket-card ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
                 >
                   <div className="support-ticket-header">
@@ -299,6 +411,25 @@ export function SupportPage() {
                       Atendente: {ticket.assignedTo}
                     </div>
                   )}
+                  {ticket.unreadCount > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      background: '#e74c3c',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}>
+                      {ticket.unreadCount}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -309,8 +440,23 @@ export function SupportPage() {
         <div className="support-details-panel">
           {selectedTicket ? (
             <>
-              <div>
-                <h3 className="support-details-title">Ticket #{selectedTicket.id.slice(0, 12)}</h3>
+              <div style={{ flexShrink: 0 }}>
+                <h3 className="support-details-title">
+                  Ticket #{selectedTicket.id.slice(0, 12)}
+                  {selectedTicket.unreadCount > 0 && (
+                    <span style={{
+                      marginLeft: '10px',
+                      background: '#e74c3c',
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'normal'
+                    }}>
+                      {selectedTicket.unreadCount} nova(s)
+                    </span>
+                  )}
+                </h3>
                 <div className="support-details-info">
                   <div>Fila: <strong>{selectedTicket.queue}</strong></div>
                   <div>Telefone: <strong>{formatPhoneNumber(selectedTicket.phoneNumber)}</strong></div>
@@ -319,44 +465,106 @@ export function SupportPage() {
                 </div>
               </div>
 
-              {selectedTicket.status === 'waiting' && (
-                <div className="support-form-group">
-                  <label className="support-form-label">Atribuir para:</label>
-                  <input
-                    type="text"
-                    value={assignedTo}
-                    onChange={(e) => setAssignedTo(e.target.value)}
-                    placeholder="Nome do atendente"
-                    className="support-form-input"
-                  />
-                  <Button onClick={handleAssign} className="support-button-full">
-                    Atribuir Ticket
-                  </Button>
-                </div>
-              )}
-
+              {/* Histórico de Mensagens */}
               {selectedTicket.status === 'in_progress' && (
-                <div className="support-form-group">
-                  <label className="support-form-label">Enviar mensagem:</label>
-                  <textarea
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    rows={4}
-                    className="support-form-textarea"
-                  />
-                  <Button onClick={handleSendMessage} className="support-button-full">
-                    Enviar Mensagem
-                  </Button>
+                <div style={{
+                  marginTop: '20px',
+                  marginBottom: '20px',
+                  borderTop: '1px solid #ddd',
+                  paddingTop: '20px',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0
+                }}>
+                  <h4 style={{ marginBottom: '10px', fontSize: '14px', fontWeight: 'bold', flexShrink: 0 }}>
+                    Histórico de Mensagens
+                  </h4>
+                  <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    padding: '10px',
+                    backgroundColor: '#f9f9f9',
+                    minHeight: 0
+                  }}>
+                    {ticketMessages.length === 0 ? (
+                      <p style={{ color: '#999', fontSize: '12px', textAlign: 'center' }}>
+                        Nenhuma mensagem ainda
+                      </p>
+                    ) : (
+                      ticketMessages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          style={{
+                            marginBottom: '12px',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            backgroundColor: msg.sender === 'user' ? '#dcf8c6' : '#ffffff',
+                            border: msg.sender === 'user' ? 'none' : '1px solid #ddd',
+                            textAlign: msg.sender === 'user' ? 'right' : 'left',
+                          }}
+                        >
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#666',
+                            marginBottom: '4px'
+                          }}>
+                            {msg.sender === 'user' ? '👤 Usuário' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'}
+                            {' • '}
+                            {formatDate(msg.timestamp)}
+                          </div>
+                          <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
+                            {msg.text}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
 
-              <Button
-                onClick={() => handleClose(selectedTicket.id)}
-                className="support-button-danger"
-              >
-                Fechar Ticket
-              </Button>
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {selectedTicket.status === 'waiting' && (
+                  <div className="support-form-group">
+                    <label className="support-form-label">Atribuir para:</label>
+                    <input
+                      type="text"
+                      value={assignedTo}
+                      onChange={(e) => setAssignedTo(e.target.value)}
+                      placeholder="Nome do atendente"
+                      className="support-form-input"
+                    />
+                    <Button onClick={handleAssign} className="support-button-full">
+                      Atribuir Ticket
+                    </Button>
+                  </div>
+                )}
+
+                {selectedTicket.status === 'in_progress' && (
+                  <div className="support-form-group">
+                    <label className="support-form-label">Enviar mensagem:</label>
+                    <textarea
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      placeholder="Digite sua mensagem..."
+                      rows={4}
+                      className="support-form-textarea"
+                    />
+                    <Button onClick={handleSendMessage} className="support-button-full">
+                      Enviar Mensagem
+                    </Button>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => handleClose(selectedTicket.id)}
+                  className="support-button-danger"
+                >
+                  Fechar Ticket
+                </Button>
+              </div>
             </>
           ) : (
             <div className="support-details-empty">
@@ -367,6 +575,46 @@ export function SupportPage() {
       </div>
 
       <ToastContainer />
+      <ConfirmDialog />
+      <QueueModal
+        isOpen={modalQueue !== null}
+        onClose={() => setModalQueue(null)}
+        queueName={modalQueue}
+        queues={queues}
+      />
+      <TicketModal
+        isOpen={modalTicket !== null}
+        onClose={() => setModalTicket(null)}
+        ticket={modalTicket}
+        onTicketUpdate={(updatedTicket) => {
+          // Se updatedTicket é null, remove o ticket da lista
+          if (!updatedTicket) {
+            if (modalTicket) {
+              const ticketIdToRemove = modalTicket.id;
+              setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketIdToRemove));
+              // Limpa seleção se for o mesmo ticket
+              if (selectedTicket?.id === ticketIdToRemove) {
+                setSelectedTicket(null);
+                setTicketMessages([]);
+              }
+              // Fecha o modal
+              setModalTicket(null);
+            }
+            return;
+          }
+          
+          // Atualiza ticket na lista local
+          setTickets(prevTickets => 
+            prevTickets.map(t => t.id === updatedTicket.id ? updatedTicket : t)
+          );
+          // Atualiza ticket selecionado se for o mesmo
+          if (selectedTicket?.id === updatedTicket.id) {
+            setSelectedTicket(updatedTicket);
+          }
+          // Atualiza ticket no modal
+          setModalTicket(updatedTicket);
+        }}
+      />
     </div>
   );
 }

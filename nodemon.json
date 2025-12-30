@@ -1,0 +1,23 @@
+{
+  "watch": [
+    "api",
+    "engine"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "frontend",
+    "logs",
+    "*.test.js",
+    "*.spec.js",
+    "api/data/*.json"
+  ],
+  "exec": "node api/server.js",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": 1000,
+  "verbose": true,
+  "restartable": "rs"
+}
+

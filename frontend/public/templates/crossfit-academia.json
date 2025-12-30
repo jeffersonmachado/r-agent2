@@ -1,7 +1,7 @@
 {
   "id": "crossfit-academia",
   "name": "Atendimento Academia CrossFit",
-  "description": "Template completo para atendimento de uma academia de CrossFit com informações sobre planos, horários, agendamento e suporte",
+  "description": "Template completo para atendimento de uma academia de CrossFit com informações sobre planos, horários, agendamento, suporte e fallback integrado",
   "icon": "💪",
   "flow": {
     "tenantId": "tenant-demo",
@@ -434,6 +434,25 @@
           "text": "💪 Foi um prazer ajudá-lo!\n\nEsperamos vê-lo em breve na CrossFit Elite!\n\nQualquer dúvida, estamos à disposição.\n\nBons treinos! 🔥"
         },
         "next": "end"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "collect-intent",
+          "options": "collect-intent",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

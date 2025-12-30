@@ -661,3 +661,193 @@ Gere palavras-chave novas que não estejam na lista acima.`;
   );
 }
 
+/**
+ * Campo para configurar horários do roteador por horário
+ */
+export function ScheduleRouterField({
+  label,
+  description,
+  value,
+  onChange,
+  availableNodes = [],
+  required = false,
+  error,
+}) {
+  const schedules = Array.isArray(value) ? value : [];
+  
+  const daysOfWeek = [
+    { value: 0, label: 'Domingo' },
+    { value: 1, label: 'Segunda-feira' },
+    { value: 2, label: 'Terça-feira' },
+    { value: 3, label: 'Quarta-feira' },
+    { value: 4, label: 'Quinta-feira' },
+    { value: 5, label: 'Sexta-feira' },
+    { value: 6, label: 'Sábado' },
+  ];
+
+  const addSchedule = () => {
+    const newSchedule = {
+      days: [],
+      startTime: '09:00',
+      endTime: '18:00',
+      next: '',
+      label: '',
+    };
+    onChange([...schedules, newSchedule]);
+  };
+
+  const updateSchedule = (index, field, newValue) => {
+    const updated = [...schedules];
+    updated[index] = {
+      ...updated[index],
+      [field]: newValue,
+    };
+    onChange(updated);
+  };
+
+  const removeSchedule = (index) => {
+    const updated = schedules.filter((_, i) => i !== index);
+    onChange(updated);
+  };
+
+  const toggleDay = (scheduleIndex, dayValue) => {
+    const schedule = schedules[scheduleIndex];
+    const currentDays = Array.isArray(schedule.days) ? schedule.days : [];
+    const newDays = currentDays.includes(dayValue)
+      ? currentDays.filter(d => d !== dayValue)
+      : [...currentDays, dayValue].sort((a, b) => a - b);
+    updateSchedule(scheduleIndex, 'days', newDays);
+  };
+
+  return (
+    <PropertyField label={label} description={description} required={required} error={error}>
+      <div className="space-y-4">
+        {/* Botão para adicionar novo horário */}
+        <button
+          type="button"
+          onClick={addSchedule}
+          className="w-full px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+        >
+          <span>+</span>
+          <span>Adicionar Horário</span>
+        </button>
+
+        {/* Lista de horários configurados */}
+        {schedules.length > 0 ? (
+          <div className="space-y-4">
+            {schedules.map((schedule, index) => (
+              <div
+                key={index}
+                className="p-4 bg-bg-secondary border border-border-default rounded-lg space-y-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-text-primary">
+                    Horário {index + 1}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => removeSchedule(index)}
+                    className="px-2 py-1 text-xs text-status-error hover:bg-status-error/10 rounded transition-colors"
+                    title="Remover horário"
+                  >
+                    ✕ Remover
+                  </button>
+                </div>
+
+                {/* Label do horário */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    Nome do horário (opcional)
+                  </label>
+                  <Input
+                    type="text"
+                    value={schedule.label || ''}
+                    onChange={(e) => updateSchedule(index, 'label', e.target.value)}
+                    placeholder="Ex: Horário Comercial"
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Dias da semana */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    Dias da semana *
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {daysOfWeek.map((day) => {
+                      const isSelected = Array.isArray(schedule.days) && schedule.days.includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => toggleDay(index, day.value)}
+                          className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                            isSelected
+                              ? 'bg-primary text-white border border-primary'
+                              : 'bg-bg-tertiary text-text-secondary border border-border-default hover:bg-bg-hover'
+                          }`}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Horário de início e fim */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                      Horário de início *
+                    </label>
+                    <Input
+                      type="time"
+                      value={schedule.startTime || '09:00'}
+                      onChange={(e) => updateSchedule(index, 'startTime', e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                      Horário de fim *
+                    </label>
+                    <Input
+                      type="time"
+                      value={schedule.endTime || '18:00'}
+                      onChange={(e) => updateSchedule(index, 'endTime', e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Próximo nó (combobox) */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    Próximo nó *
+                  </label>
+                  <select
+                    value={schedule.next || ''}
+                    onChange={(e) => updateSchedule(index, 'next', e.target.value)}
+                    className="w-full px-4 py-3 text-[14px] font-inherit text-text-primary bg-bg-secondary rounded-lg outline-none transition-all duration-fast border input-base"
+                  >
+                    <option value="">Selecione um nó...</option>
+                    {availableNodes.map((node) => (
+                      <option key={node.id} value={node.id}>
+                        {node.label || node.type} ({node.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-text-tertiary italic text-center py-4">
+            Nenhum horário configurado ainda. Clique em "Adicionar Horário" para começar.
+          </p>
+        )}
+      </div>
+    </PropertyField>
+  );
+}
+

@@ -183,9 +183,27 @@ async function runStep(flow, state, registry, input, deps = null) {
         // Falha definitiva do nó.
         const fallbackNextNodeId = fallbackNodeId != null ? fallbackNodeId : normalizeNext(node.next);
 
+        // Determina tipo de erro para fallback
+        let errorType = 'system';
+        if (lastError && lastError.code === 'NODE_TIMEOUT') {
+          errorType = 'timeout';
+        } else if (lastError && lastError.type) {
+          errorType = lastError.type;
+        }
+
+        // Armazena informações de erro no estado para que o FallbackNode possa acessá-las
         const fallbackState = {
           ...state,
           currentNodeId: fallbackNextNodeId,
+          metadata: {
+            ...(state.metadata || {}),
+            lastError: {
+              type: errorType,
+              message: lastError && lastError.message ? lastError.message : String(lastError),
+              nodeId: node.id,
+              timestamp: new Date().toISOString(),
+            },
+          },
         };
 
         handlerOutput = {
@@ -195,6 +213,7 @@ async function runStep(flow, state, registry, input, deps = null) {
             type: 'node_error_fallback',
             message: 'Node handler failed after maximum retries',
             errorMessage: lastError && lastError.message ? lastError.message : String(lastError),
+            errorType,
           },
         };
       }

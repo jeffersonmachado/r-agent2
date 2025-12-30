@@ -48,6 +48,8 @@ import { SUPPORTED_TASKS } from '@shared/aiTaskExecutor';
  * @property {SocketDefinition[]} outputs - Definição dos outputs (sockets)
  * @property {NodeProperty[]} properties - Propriedades do nó (campos de config)
  * @property {Function} validate - Função de validação do nó
+ * @property {boolean} [errorPorts] - Se o nó suporta portas de erro (opcional)
+ * @property {boolean} [supportsTimeout] - Se o nó suporta timeout (opcional)
  */
 
 /**
@@ -124,10 +126,10 @@ export const NODE_SCHEMAS = {
       {
         key: 'text',
         type: 'textarea',
-        label: 'Texto da mensagem',
-        description: 'Mensagem que será enviada ao usuário. Use {{nome_variavel}} para interpolar variáveis. Ex.: "Olá {{nome}}! Como posso ajudar?"',
+        label: 'O que você quer dizer ao usuário?',
+        description: 'Digite a mensagem que o bot vai enviar. Você pode usar variáveis como {{nome}} para personalizar. Exemplo: "Olá {{nome}}! Como posso ajudar?"',
         required: true,
-        placeholder: 'Ex.: Olá {{nome}}! Como posso ajudá-lo hoje?',
+        placeholder: 'Olá! Como posso ajudá-lo hoje?',
         rows: 4,
       },
     ],
@@ -139,24 +141,28 @@ export const NODE_SCHEMAS = {
         errors.push({
           code: 'MESSAGE_MISSING_CONFIG',
           message: `Nó de mensagem "${nodeId}" deve ter um campo "config" com o texto da mensagem.`,
+          messageUi: `Você precisa preencher o campo "O que você quer dizer ao usuário?" com uma mensagem.`,
           nodeIds: [nodeId],
         });
       } else if (!node.config.text || typeof node.config.text !== 'string') {
         errors.push({
           code: 'MESSAGE_MISSING_TEXT',
           message: `Nó de mensagem "${nodeId}" deve ter "config.text" (string não vazia).`,
+          messageUi: `Preencha o campo "O que você quer dizer ao usuário?" com uma mensagem.`,
           nodeIds: [nodeId],
         });
       } else if (node.config.text.trim().length === 0) {
         errors.push({
           code: 'MESSAGE_EMPTY_TEXT',
           message: `Nó de mensagem "${nodeId}" não pode ter texto vazio.`,
+          messageUi: `A mensagem não pode estar vazia. Digite algo para o usuário.`,
           nodeIds: [nodeId],
         });
       } else if (node.config.text.length > 10000) {
         errors.push({
           code: 'MESSAGE_TEXT_TOO_LONG',
           message: `Nó de mensagem "${nodeId}" excede o limite de 10000 caracteres.`,
+          messageUi: `A mensagem é muito longa (${node.config.text.length} caracteres). Use no máximo 10000 caracteres.`,
           nodeIds: [nodeId],
           details: {
             length: node.config.text.length,
@@ -175,6 +181,8 @@ export const NODE_SCHEMAS = {
     icon: '⌨️',
     color: '#52C9A2',
     description: 'Captura entrada do usuário e armazena em uma variável.',
+    errorPorts: true, // Suporta portas de erro para fallback (no_match)
+    supportsTimeout: false,
     inputs: [
       {
         key: 'in',
@@ -193,11 +201,11 @@ export const NODE_SCHEMAS = {
       {
         key: 'variable',
         type: 'text',
-        label: 'Variável de destino',
-        description: 'Nome da variável onde o input do usuário será armazenado. Use apenas letras, números e underscore.',
+        label: 'Onde guardar a resposta do usuário?',
+        description: 'Digite um nome para a variável que vai guardar o que o usuário digitar. Use apenas letras, números e underscore. Exemplo: resposta_usuario ou mensagem',
         required: false,
         defaultValue: 'user_input',
-        placeholder: 'Ex.: user_message',
+        placeholder: 'resposta_usuario',
         validate: (value) => {
           if (!value) return null; // Opcional
           return validateVariableName(value);
@@ -246,8 +254,8 @@ export const NODE_SCHEMAS = {
       {
         key: 'rules',
         type: 'json',
-        label: 'Regras de Roteamento',
-        description: 'Array de regras que determinam o próximo nó. Cada regra tem uma condição e um next. As regras são avaliadas em ordem da primeira para a última.',
+        label: 'Quais são as regras para decidir o caminho?',
+        description: 'Configure as regras que determinam para onde o fluxo vai. Cada regra verifica uma condição e, se for verdadeira, direciona para um nó específico. As regras são verificadas na ordem que você colocar. Use "always" na última regra para um caminho padrão.',
         required: true,
         placeholder: `[
   {
@@ -540,13 +548,13 @@ export const NODE_SCHEMAS = {
       {
         key: 'assignments',
         type: 'json',
-        label: 'Atribuições de Variáveis',
-        description: 'Objeto JSON onde cada chave é o nome de uma variável e o valor será atribuído a ela. Valores podem ser strings, números, booleanos ou objetos.',
+        label: 'Quais variáveis você quer criar ou atualizar?',
+        description: 'Digite um objeto JSON onde cada nome é uma variável e o valor é o que você quer guardar nela. Exemplo: {"nome_usuario": "João", "contador": 5}. Você pode usar texto, números ou objetos.',
         required: true,
         placeholder: `{
-  "intent": "greeting",
-  "user_name": "João",
-  "count": 0
+  "nome_usuario": "João",
+  "contador": 0,
+  "status": "ativo"
 }`,
         rows: 8,
         expectedType: 'object',
@@ -560,12 +568,14 @@ export const NODE_SCHEMAS = {
         errors.push({
           code: 'SET_VARIABLE_MISSING_CONFIG',
           message: `Nó de variável "${nodeId}" deve ter um campo "config" com "assignments".`,
+          messageUi: `Preencha o campo "Quais variáveis você quer criar ou atualizar?" com um objeto JSON.`,
           nodeIds: [nodeId],
         });
       } else if (!node.config.assignments || typeof node.config.assignments !== 'object') {
         errors.push({
           code: 'SET_VARIABLE_MISSING_ASSIGNMENTS',
           message: `Nó de variável "${nodeId}" deve ter "config.assignments" (objeto com pares chave-valor).`,
+          messageUi: `O campo precisa ser um objeto JSON válido. Exemplo: {"nome": "valor"}`,
           nodeIds: [nodeId],
         });
       } else {
@@ -577,6 +587,7 @@ export const NODE_SCHEMAS = {
               ...validationError,
               code: 'SET_VARIABLE_INVALID_NAME',
               message: `Nó de variável "${nodeId}" tem nome de variável inválido: "${varName}".`,
+              messageUi: `O nome da variável "${varName}" é inválido. Use apenas letras, números e underscore. Exemplo: "nome_usuario" ou "contador1"`,
               nodeIds: [nodeId],
               details: { variable: varName },
             });
@@ -642,6 +653,8 @@ export const NODE_SCHEMAS = {
     icon: '🤖',
     color: '#16A085',
     description: 'Processa a entrada usando IA e gera uma resposta contextual.',
+    errorPorts: true, // Suporta portas de erro para fallback
+    supportsTimeout: true, // Suporta timeout
     inputs: [
       {
         key: 'in',
@@ -1055,6 +1068,171 @@ export const NODE_SCHEMAS = {
     },
   },
 
+  api: {
+    type: 'api',
+    label: 'API',
+    icon: '🌐',
+    color: '#E74C3C',
+    description: 'Faz chamadas HTTP para APIs externas. Suporta GET, POST, PUT, DELETE e PATCH.',
+    errorPorts: true, // Suporta portas de erro
+    supportsTimeout: true, // Suporta timeout
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'url',
+        type: 'text',
+        label: 'Qual é o endereço da API?',
+        description: 'Digite a URL completa da API que você quer chamar. Você pode usar variáveis como {{user_id}} para personalizar. Exemplo: https://api.exemplo.com/users/{{user_id}}',
+        required: true,
+        placeholder: 'https://api.exemplo.com/data',
+      },
+      {
+        key: 'method',
+        type: 'select',
+        label: 'Qual método você quer usar?',
+        description: 'Escolha o tipo de requisição. GET para buscar dados, POST para criar, PUT para atualizar, DELETE para deletar e PATCH para atualizar parcialmente.',
+        required: false,
+        defaultValue: 'GET',
+        options: [
+          { value: 'GET', label: 'GET - Buscar dados' },
+          { value: 'POST', label: 'POST - Criar novo' },
+          { value: 'PUT', label: 'PUT - Atualizar completo' },
+          { value: 'DELETE', label: 'DELETE - Deletar' },
+          { value: 'PATCH', label: 'PATCH - Atualizar parcial' },
+        ],
+      },
+      {
+        key: 'headers',
+        type: 'json',
+        label: 'Headers adicionais (opcional)',
+        description: 'Se a API precisar de autenticação ou headers especiais, adicione aqui. Use {{variavel}} para usar valores dinâmicos. Exemplo: {"Authorization": "Bearer {{token}}"}',
+        required: false,
+        placeholder: `{
+  "Authorization": "Bearer {{token}}",
+  "Content-Type": "application/json"
+}`,
+        rows: 6,
+        expectedType: 'object',
+      },
+      {
+        key: 'body',
+        type: 'json',
+        label: 'Dados para enviar (opcional)',
+        description: 'Se você está usando POST, PUT ou PATCH, adicione aqui os dados que quer enviar. Use {{variavel}} para valores dinâmicos. Exemplo: {"nome": "{{user_name}}", "email": "{{user_email}}"}',
+        required: false,
+        placeholder: `{
+  "nome": "{{user_name}}",
+  "email": "{{user_email}}"
+}`,
+        rows: 8,
+        expectedType: 'object',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Onde guardar a resposta?',
+        description: 'Digite o nome da variável onde a resposta da API será guardada. A resposta terá: success (se funcionou), status (código HTTP), data (dados retornados) e headers.',
+        required: false,
+        defaultValue: 'api_response',
+        placeholder: 'resposta_api',
+      },
+      {
+        key: 'timeout',
+        type: 'number',
+        label: 'Quanto tempo esperar? (opcional)',
+        description: 'Tempo máximo em milissegundos que o bot vai esperar pela resposta. 10000 = 10 segundos. Se não preencher, usa 10 segundos.',
+        required: false,
+        defaultValue: 10000,
+        placeholder: '10000',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'API_MISSING_CONFIG',
+          message: `Nó de API "${nodeId}" deve ter um campo "config" com "url".`,
+          nodeIds: [nodeId],
+        });
+      } else if (!node.config.url || typeof node.config.url !== 'string') {
+        errors.push({
+          code: 'API_MISSING_URL',
+          message: `Nó de API "${nodeId}" deve ter "config.url" (string não vazia).`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        // Valida se a URL parece válida
+        try {
+          new URL(node.config.url);
+        } catch (err) {
+          // Se falhar, pode ser porque tem variáveis {{variavel}}
+          // Nesse caso, valida se tem pelo menos http:// ou https://
+          if (!node.config.url.includes('http://') && !node.config.url.includes('https://')) {
+            errors.push({
+              code: 'API_INVALID_URL',
+              message: `Nó de API "${nodeId}" tem URL inválida. Deve começar com http:// ou https://`,
+              nodeIds: [nodeId],
+            });
+          }
+        }
+      }
+
+      // Valida método HTTP
+      if (node.config && node.config.method) {
+        const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+        if (!validMethods.includes(node.config.method.toUpperCase())) {
+          errors.push({
+            code: 'API_INVALID_METHOD',
+            message: `Nó de API "${nodeId}" tem método HTTP inválido. Use: ${validMethods.join(', ')}`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+
+      // Valida timeout
+      if (node.config && node.config.timeout !== undefined) {
+        const timeout = Number(node.config.timeout);
+        if (isNaN(timeout) || timeout < 0 || timeout > 300000) {
+          errors.push({
+            code: 'API_INVALID_TIMEOUT',
+            message: `Nó de API "${nodeId}" tem timeout inválido (deve ser entre 0 e 300000ms).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+
+      // Valida outputVariable
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'API_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de API "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
   end: {
     type: 'end',
     label: 'Fim',
@@ -1072,6 +1250,752 @@ export const NODE_SCHEMAS = {
     properties: [],
     validate(node) {
       const errors = [];
+      return errors;
+    },
+  },
+
+  schedule_router: {
+    type: 'schedule_router',
+    label: 'Roteador por Horário',
+    icon: '🕐',
+    color: '#F5A623',
+    description: 'Roteia o fluxo baseado no dia da semana e horário atual. Útil para horários comerciais, atendimento diferenciado por período, etc.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'default',
+        label: 'Padrão',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'schedules',
+        type: 'schedule_router',
+        label: 'Quais horários você quer configurar?',
+        description: 'Configure os horários e para onde o fluxo deve ir em cada um. Cada horário precisa ter: dias da semana, horário de início, horário de fim e o nó de destino.',
+        required: true,
+      },
+      {
+        key: 'defaultNext',
+        type: 'text',
+        label: 'Para onde ir quando estiver fora do horário? (opcional)',
+        description: 'Digite o ID do nó que será usado quando nenhum horário configurado corresponder. Se não preencher, usa a saída "Padrão"',
+        required: false,
+        placeholder: 'node-fora-horario',
+      },
+      {
+        key: 'timezone',
+        type: 'text',
+        label: 'Qual fuso horário usar? (opcional)',
+        description: 'Se você quer usar um fuso horário específico, digite aqui. Exemplo: "America/Sao_Paulo" para horário de Brasília. Se não preencher, usa UTC.',
+        required: false,
+        placeholder: 'America/Sao_Paulo',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'SCHEDULE_ROUTER_MISSING_CONFIG',
+          message: `Nó de roteador por horário "${nodeId}" deve ter um campo "config" com "schedules".`,
+          nodeIds: [nodeId],
+        });
+      } else if (!Array.isArray(node.config.schedules)) {
+        errors.push({
+          code: 'SCHEDULE_ROUTER_MISSING_SCHEDULES',
+          message: `Nó de roteador por horário "${nodeId}" deve ter "config.schedules" (array de horários).`,
+          nodeIds: [nodeId],
+        });
+      } else if (node.config.schedules.length === 0) {
+        errors.push({
+          code: 'SCHEDULE_ROUTER_EMPTY_SCHEDULES',
+          message: `Nó de roteador por horário "${nodeId}" deve ter pelo menos um horário em "config.schedules".`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        // Valida cada horário
+        const validDays = [0, 1, 2, 3, 4, 5, 6]; // 0 = domingo, 6 = sábado
+        const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/; // HH:MM formato
+        
+        for (let i = 0; i < node.config.schedules.length; i += 1) {
+          const schedule = node.config.schedules[i];
+          if (!schedule || typeof schedule !== 'object') {
+            errors.push({
+              code: 'SCHEDULE_ROUTER_INVALID_SCHEDULE',
+              message: `Horário ${i + 1} do roteador por horário "${nodeId}" não é um objeto válido.`,
+              nodeIds: [nodeId],
+              details: { scheduleIndex: i },
+            });
+            continue;
+          }
+
+          // Valida dias
+          if (!Array.isArray(schedule.days) || schedule.days.length === 0) {
+            errors.push({
+              code: 'SCHEDULE_ROUTER_INVALID_DAYS',
+              message: `Horário ${i + 1} do roteador por horário "${nodeId}" deve ter "days" como array não vazio.`,
+              nodeIds: [nodeId],
+              details: { scheduleIndex: i },
+            });
+          } else {
+            const invalidDays = schedule.days.filter(d => !validDays.includes(d));
+            if (invalidDays.length > 0) {
+              errors.push({
+                code: 'SCHEDULE_ROUTER_INVALID_DAY_VALUES',
+                message: `Horário ${i + 1} do roteador por horário "${nodeId}" tem dias inválidos. Use valores de 0 (domingo) a 6 (sábado).`,
+                nodeIds: [nodeId],
+                details: { scheduleIndex: i, invalidDays },
+              });
+            }
+          }
+
+          // Valida horários
+          if (!schedule.startTime || typeof schedule.startTime !== 'string' || !timeRegex.test(schedule.startTime)) {
+            errors.push({
+              code: 'SCHEDULE_ROUTER_INVALID_START_TIME',
+              message: `Horário ${i + 1} do roteador por horário "${nodeId}" deve ter "startTime" no formato HH:MM (ex: "09:00").`,
+              nodeIds: [nodeId],
+              details: { scheduleIndex: i },
+            });
+          }
+
+          if (!schedule.endTime || typeof schedule.endTime !== 'string' || !timeRegex.test(schedule.endTime)) {
+            errors.push({
+              code: 'SCHEDULE_ROUTER_INVALID_END_TIME',
+              message: `Horário ${i + 1} do roteador por horário "${nodeId}" deve ter "endTime" no formato HH:MM (ex: "18:00").`,
+              nodeIds: [nodeId],
+              details: { scheduleIndex: i },
+            });
+          }
+
+          // Valida que startTime < endTime
+          if (schedule.startTime && schedule.endTime && timeRegex.test(schedule.startTime) && timeRegex.test(schedule.endTime)) {
+            const [startH, startM] = schedule.startTime.split(':').map(Number);
+            const [endH, endM] = schedule.endTime.split(':').map(Number);
+            const startMinutes = startH * 60 + startM;
+            const endMinutes = endH * 60 + endM;
+            
+            if (startMinutes >= endMinutes) {
+              errors.push({
+                code: 'SCHEDULE_ROUTER_INVALID_TIME_RANGE',
+                message: `Horário ${i + 1} do roteador por horário "${nodeId}" deve ter "startTime" anterior a "endTime".`,
+                nodeIds: [nodeId],
+                details: { scheduleIndex: i },
+              });
+            }
+          }
+
+          // Valida próximo nó
+          if (!schedule.next || typeof schedule.next !== 'string' || schedule.next.trim() === '') {
+            errors.push({
+              code: 'SCHEDULE_ROUTER_MISSING_NEXT',
+              message: `Horário ${i + 1} do roteador por horário "${nodeId}" deve ter um campo "next" (id do próximo nó).`,
+              nodeIds: [nodeId],
+              details: { scheduleIndex: i },
+            });
+          }
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  fallback: {
+    type: 'fallback',
+    label: 'Fallback',
+    icon: '🔄',
+    color: '#E74C3C',
+    description: 'Nó de fallback centralizado. Gerencia erros, tentativas e escalada para humano.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+      {
+        key: 'error',
+        label: 'Erro',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+      {
+        key: 'timeout',
+        label: 'Timeout',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+      {
+        key: 'no_match',
+        label: 'Sem Correspondência',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'retry',
+        label: 'Tentar Novamente',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+      {
+        key: 'options',
+        label: 'Opções',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+      {
+        key: 'human',
+        label: 'Atendimento Humano',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+      {
+        key: 'end',
+        label: 'Encerrar',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'maxAttempts',
+        type: 'number',
+        label: 'Máximo de Tentativas',
+        description: 'Número máximo de tentativas antes de escalar para humano (padrão: 3)',
+        required: false,
+        defaultValue: 3,
+        placeholder: '3',
+      },
+      {
+        key: 'confidenceThreshold',
+        type: 'number',
+        label: 'Threshold de Confiança',
+        description: 'Nível mínimo de confiança para considerar resposta válida (0.0 a 1.0, padrão: 0.75)',
+        required: false,
+        defaultValue: 0.75,
+        placeholder: '0.75',
+      },
+      {
+        key: 'enableEmotionCheck',
+        type: 'boolean',
+        label: 'Detectar Frustração',
+        description: 'Habilitar detecção automática de frustração do usuário',
+        required: false,
+        defaultValue: true,
+      },
+      {
+        key: 'safeReturnNode',
+        type: 'text',
+        label: 'Nó de Retorno Seguro',
+        description: 'ID do nó para retornar após escalada humana (opcional)',
+        required: false,
+        placeholder: 'Ex.: node_123',
+      },
+      {
+        key: 'escalationMode',
+        type: 'select',
+        label: 'Modo de Escalada',
+        description: 'Como escalar para atendimento humano: ticket (assíncrono) ou human (síncrono)',
+        required: false,
+        defaultValue: 'ticket',
+        options: [
+          { value: 'ticket', label: 'Ticket (Assíncrono)' },
+          { value: 'human', label: 'Humano em Tempo Real (Síncrono)' },
+        ],
+      },
+      {
+        key: 'allowReturnToBot',
+        type: 'boolean',
+        label: 'Permitir Retorno ao Bot',
+        description: 'Permitir que o atendente retorne a conversa ao bot após atendimento',
+        required: false,
+        defaultValue: true,
+      },
+      {
+        key: 'queue',
+        type: 'text',
+        label: 'Fila de Atendimento',
+        description: 'Nome da fila para escalada via ticket (apenas para modo ticket)',
+        required: false,
+        placeholder: 'default',
+        showWhen: (node) => {
+          // Mostra apenas quando escalationMode é 'ticket'
+          return node.config?.escalationMode === 'ticket' || !node.config?.escalationMode;
+        },
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (node.config) {
+        // Valida maxAttempts
+        if (node.config.maxAttempts !== undefined) {
+          const maxAttempts = Number(node.config.maxAttempts);
+          if (isNaN(maxAttempts) || maxAttempts < 1 || maxAttempts > 10) {
+            errors.push({
+              code: 'FALLBACK_INVALID_MAX_ATTEMPTS',
+              message: `Nó de fallback "${nodeId}" tem "maxAttempts" inválido (deve ser entre 1 e 10).`,
+              nodeIds: [nodeId],
+            });
+          }
+        }
+        
+        // Valida confidenceThreshold
+        if (node.config.confidenceThreshold !== undefined) {
+          const threshold = Number(node.config.confidenceThreshold);
+          if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+            errors.push({
+              code: 'FALLBACK_INVALID_THRESHOLD',
+              message: `Nó de fallback "${nodeId}" tem "confidenceThreshold" inválido (deve ser entre 0.0 e 1.0).`,
+              nodeIds: [nodeId],
+            });
+          }
+        }
+        
+        // Valida escalationMode
+        if (node.config.escalationMode !== undefined) {
+          const validModes = ['ticket', 'human'];
+          if (!validModes.includes(node.config.escalationMode)) {
+            errors.push({
+              code: 'FALLBACK_INVALID_ESCALATION_MODE',
+              message: `Nó de fallback "${nodeId}" tem "escalationMode" inválido (deve ser "ticket" ou "human").`,
+              nodeIds: [nodeId],
+            });
+          }
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  get_current_time: {
+    type: 'get_current_time',
+    label: 'Data/Hora Atual',
+    icon: '🕐',
+    color: '#8E44AD',
+    description: 'Obtém a data e hora atual do sistema em diferentes formatos.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'format',
+        type: 'text',
+        label: 'Em que formato você quer a data/hora?',
+        description: 'Digite o formato desejado. Use "ISO" para formato padrão, "timestamp" para número, ou um formato customizado como "YYYY-MM-DD HH:mm:ss"',
+        required: false,
+        defaultValue: 'ISO',
+        placeholder: 'ISO',
+      },
+      {
+        key: 'timezone',
+        type: 'text',
+        label: 'Qual fuso horário? (opcional)',
+        description: 'Se você quer um fuso horário específico, digite aqui. Exemplo: "America/Sao_Paulo" para horário de Brasília. Deixe vazio para usar UTC.',
+        required: false,
+        placeholder: 'America/Sao_Paulo',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Onde guardar a data/hora?',
+        description: 'Digite o nome da variável onde a data/hora será guardada. Se não preencher, usa "current_time"',
+        required: false,
+        defaultValue: 'current_time',
+        placeholder: 'data_hora',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'GET_CURRENT_TIME_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de data/hora atual "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  generate_uuid: {
+    type: 'generate_uuid',
+    label: 'Gerar UUID',
+    icon: '🆔',
+    color: '#8E44AD',
+    description: 'Gera um identificador único universal (UUID).',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Onde guardar o ID único?',
+        description: 'Digite o nome da variável onde o ID único será guardado. Se não preencher, usa "uuid"',
+        required: false,
+        defaultValue: 'uuid',
+        placeholder: 'id_unico',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'GENERATE_UUID_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de gerar UUID "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  delay: {
+    type: 'delay',
+    label: 'Aguardar',
+    icon: '⏱️',
+    color: '#8E44AD',
+    description: 'Aguarda um tempo específico antes de continuar o fluxo.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'duration',
+        type: 'number',
+        label: 'Quanto tempo aguardar?',
+        description: 'Digite o tempo de espera em milissegundos. 1000 = 1 segundo, 5000 = 5 segundos. Máximo: 60000 (60 segundos)',
+        required: true,
+        defaultValue: 1000,
+        placeholder: '1000',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'DELAY_MISSING_CONFIG',
+          message: `Nó de aguardar "${nodeId}" deve ter um campo "config" com "duration".`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        const duration = Number(node.config.duration);
+        if (isNaN(duration) || duration < 0) {
+          errors.push({
+            code: 'DELAY_INVALID_DURATION',
+            message: `Nó de aguardar "${nodeId}" deve ter "config.duration" como número positivo.`,
+            nodeIds: [nodeId],
+          });
+        }
+        if (duration > 60000) {
+          errors.push({
+            code: 'DELAY_DURATION_TOO_LONG',
+            message: `Nó de aguardar "${nodeId}" não pode ter duração maior que 60000ms (60 segundos).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  format_date: {
+    type: 'format_date',
+    label: 'Formatar Data',
+    icon: '📅',
+    color: '#8E44AD',
+    description: 'Formata uma data/hora em um formato específico.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'inputVariable',
+        type: 'text',
+        label: 'Qual variável tem a data?',
+        description: 'Digite o nome da variável que contém a data que você quer formatar',
+        required: true,
+        placeholder: 'data_entrada',
+      },
+      {
+        key: 'format',
+        type: 'text',
+        label: 'Como você quer formatar?',
+        description: 'Digite o formato desejado. Exemplo: "YYYY-MM-DD" para 2024-01-15, "DD/MM/YYYY" para 15/01/2024, "HH:mm:ss" para 14:30:00',
+        required: true,
+        placeholder: 'YYYY-MM-DD HH:mm:ss',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Onde guardar a data formatada?',
+        description: 'Digite o nome da variável onde a data formatada será guardada. Se não preencher, usa "formatted_date"',
+        required: false,
+        defaultValue: 'formatted_date',
+        placeholder: 'data_formatada',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'FORMAT_DATE_MISSING_CONFIG',
+          message: `Nó de formatar data "${nodeId}" deve ter um campo "config" com "inputVariable" e "format".`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        if (!node.config.inputVariable || typeof node.config.inputVariable !== 'string') {
+          errors.push({
+            code: 'FORMAT_DATE_MISSING_INPUT_VARIABLE',
+            message: `Nó de formatar data "${nodeId}" deve ter "config.inputVariable" (string não vazia).`,
+            nodeIds: [nodeId],
+          });
+        }
+        if (!node.config.format || typeof node.config.format !== 'string') {
+          errors.push({
+            code: 'FORMAT_DATE_MISSING_FORMAT',
+            message: `Nó de formatar data "${nodeId}" deve ter "config.format" (string não vazia).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'FORMAT_DATE_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de formatar data "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  random_number: {
+    type: 'random_number',
+    label: 'Número Aleatório',
+    icon: '🎲',
+    color: '#8E44AD',
+    description: 'Gera um número aleatório dentro de um intervalo especificado.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'min',
+        type: 'number',
+        label: 'Número mínimo (opcional)',
+        description: 'Digite o menor número que pode ser gerado. Se não preencher, começa do 0',
+        required: false,
+        defaultValue: 0,
+        placeholder: '0',
+      },
+      {
+        key: 'max',
+        type: 'number',
+        label: 'Número máximo',
+        description: 'Digite o maior número que pode ser gerado. O número gerado será entre o mínimo e este valor',
+        required: true,
+        defaultValue: 100,
+        placeholder: '100',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Onde guardar o número?',
+        description: 'Digite o nome da variável onde o número aleatório será guardado. Se não preencher, usa "random_number"',
+        required: false,
+        defaultValue: 'random_number',
+        placeholder: 'numero_aleatorio',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'RANDOM_NUMBER_MISSING_CONFIG',
+          message: `Nó de número aleatório "${nodeId}" deve ter um campo "config" com "max".`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        const min = node.config.min !== undefined ? Number(node.config.min) : 0;
+        const max = Number(node.config.max);
+        
+        if (isNaN(max)) {
+          errors.push({
+            code: 'RANDOM_NUMBER_INVALID_MAX',
+            message: `Nó de número aleatório "${nodeId}" deve ter "config.max" como número válido.`,
+            nodeIds: [nodeId],
+          });
+        }
+        if (!isNaN(min) && !isNaN(max) && min >= max) {
+          errors.push({
+            code: 'RANDOM_NUMBER_INVALID_RANGE',
+            message: `Nó de número aleatório "${nodeId}" deve ter "config.min" menor que "config.max".`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'RANDOM_NUMBER_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de número aleatório "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  get_user_info: {
+    type: 'get_user_info',
+    label: 'Info do Usuário',
+    icon: '👤',
+    color: '#8E44AD',
+    description: 'Obtém informações do usuário atual da conversa.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'fields',
+        type: 'text',
+        label: 'Quais informações você quer? (opcional)',
+        description: 'Digite os campos que você quer obter, separados por vírgula. Exemplo: "name,phone,email". Se deixar vazio, pega todas as informações disponíveis.',
+        required: false,
+        placeholder: 'name,phone,email',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Onde guardar as informações?',
+        description: 'Digite o nome da variável onde as informações do usuário serão guardadas. Se não preencher, usa "user_info"',
+        required: false,
+        defaultValue: 'user_info',
+        placeholder: 'info_usuario',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'GET_USER_INFO_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de info do usuário "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
       return errors;
     },
   },

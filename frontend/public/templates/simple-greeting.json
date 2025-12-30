@@ -1,7 +1,7 @@
 {
   "id": "simple-greeting",
   "name": "Saudação Simples",
-  "description": "Fluxo básico com uma mensagem de boas-vindas",
+  "description": "Fluxo básico com uma mensagem de boas-vindas e fallback integrado",
   "icon": "👋",
   "flow": {
     "tenantId": "tenant-demo",
@@ -21,7 +21,26 @@
         "config": {
           "text": "Olá! Bem-vindo ao nosso chatbot. Como posso ajudá-lo hoje?"
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "greeting"
+        },
+        "next": {
+          "retry": "greeting",
+          "options": "greeting",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",
@@ -30,7 +49,9 @@
         "next": null
       }
     ],
-    "metadata": {}
+    "metadata": {
+      "description": "Template básico com fallback para garantir resiliência"
+    }
   }
 }
 

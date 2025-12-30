@@ -1,7 +1,7 @@
 {
   "id": "router-basic",
   "name": "Router Básico",
-  "description": "Fluxo com roteamento baseado em condições",
+  "description": "Fluxo com roteamento baseado em condições e fallback integrado",
   "icon": "🔀",
   "flow": {
     "tenantId": "tenant-demo",
@@ -84,7 +84,26 @@
         "config": {
           "text": "Opção não reconhecida. Tente novamente."
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "ask-option"
+        },
+        "next": {
+          "retry": "ask-option",
+          "options": "ask-option",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

@@ -47,6 +47,10 @@
   "features": {
     "aiTasksEnabled": true,
     "useRealAiApi": false
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "json"
   }
 }
 

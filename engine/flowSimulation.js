@@ -19,6 +19,7 @@ const {
   messageNodeHandler,
   userInputNodeHandler,
   routerNodeHandler,
+  scheduleRouterNodeHandler,
   setVariableNodeHandler,
   handoffNodeHandler,
   endNodeHandler,
@@ -99,6 +100,7 @@ function createSimulationRegistry() {
   registry.register('message', messageNodeHandler);
   registry.register('user_input', userInputNodeHandler);
   registry.register('router', routerNodeHandler);
+  registry.register('schedule_router', scheduleRouterNodeHandler);
   registry.register('set_variable', setVariableNodeHandler);
   registry.register('handoff', handoffNodeHandler);
   registry.register('end', endNodeHandler);
@@ -115,6 +117,27 @@ function createSimulationRegistry() {
   registry.register('get_queue_status', getQueueStatusNodeHandler);
   registry.register('get_config_value', getConfigValueNodeHandler);
   registry.register('list_flows', listFlowsNodeHandler);
+  // Nós de sistema
+  const {
+    getCurrentTimeNodeHandler,
+    generateUuidNodeHandler,
+    delayNodeHandler,
+    formatDateNodeHandler,
+    randomNumberNodeHandler,
+    getUserInfoNodeHandler,
+  } = require('./nodes/systemNodes');
+  registry.register('get_current_time', getCurrentTimeNodeHandler);
+  registry.register('generate_uuid', generateUuidNodeHandler);
+  registry.register('delay', delayNodeHandler);
+  registry.register('format_date', formatDateNodeHandler);
+  registry.register('random_number', randomNumberNodeHandler);
+  registry.register('get_user_info', getUserInfoNodeHandler);
+  // Nó de API
+  const { apiNodeHandler } = require('./nodes/apiNode');
+  registry.register('api', apiNodeHandler);
+  // Nó de fallback
+  const { fallbackNodeHandler } = require('./nodes/fallbackNode');
+  registry.register('fallback', fallbackNodeHandler);
   return registry;
 }
 

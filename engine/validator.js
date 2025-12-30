@@ -153,6 +153,16 @@ function addUiMessage(error) {
       case 'HANDOFF_INVALID_QUEUE':
         return 'O nó de handoff não tem uma fila válida configurada. Defina o nome da fila para onde a conversa será transferida.';
       
+      // Nó Fallback
+      case 'FALLBACK_INVALID_ESCALATION_MODE':
+        return 'O nó de fallback tem modo de escalada inválido. Use "ticket" para escalada assíncrona ou "human" para atendimento em tempo real.';
+      case 'FALLBACK_INVALID_QUEUE':
+        return 'O nó de fallback tem fila inválida. Defina um nome de fila válido para escalada via ticket.';
+      case 'FALLBACK_INVALID_MAX_ATTEMPTS':
+        return 'O nó de fallback tem número máximo de tentativas inválido. Deve ser um número entre 1 e 10.';
+      case 'FALLBACK_INVALID_THRESHOLD':
+        return 'O nó de fallback tem threshold de confiança inválido. Deve ser um número entre 0.0 e 1.0.';
+      
       // Nó AI
       case 'AI_MISSING_CONFIG':
         return 'O nó de IA não tem configuração. Adicione o template de prompt na configuração do nó.';
@@ -665,6 +675,7 @@ function validateNodeStructures(flow) {
     'handoff',
     'ai',
     'ai_task',
+    'fallback',
     'end',
   ];
 
@@ -1056,6 +1067,71 @@ function validateNodeConfig(node) {
           message: `Nó ai_task "${nodeId}" deve ter um caminho de fallback definido (campo "next")`,
           nodeIds: [nodeId],
         }));
+      }
+      break;
+    }
+
+    case 'fallback': {
+      if (node.config) {
+        // Valida escalationMode
+        if (node.config.escalationMode !== undefined) {
+          const validModes = ['ticket', 'human'];
+          if (!validModes.includes(node.config.escalationMode)) {
+            errors.push(addUiMessage({
+              code: 'FALLBACK_INVALID_ESCALATION_MODE',
+              message: `Nó de fallback "${nodeId}" tem "escalationMode" inválido (deve ser "ticket" ou "human").`,
+              nodeIds: [nodeId],
+              details: {
+                escalationMode: node.config.escalationMode,
+                validModes,
+              },
+            }));
+          }
+        }
+        
+        // Valida queue quando escalationMode é 'ticket'
+        if (node.config.escalationMode === 'ticket' || !node.config.escalationMode) {
+          // Queue é opcional, mas se fornecido deve ser válido
+          if (node.config.queue !== undefined) {
+            if (typeof node.config.queue !== 'string' || node.config.queue.trim() === '') {
+              errors.push(addUiMessage({
+                code: 'FALLBACK_INVALID_QUEUE',
+                message: `Nó de fallback "${nodeId}" tem "queue" inválido (deve ser string não vazia).`,
+                nodeIds: [nodeId],
+              }));
+            }
+          }
+        }
+        
+        // Valida maxAttempts
+        if (node.config.maxAttempts !== undefined) {
+          const maxAttempts = Number(node.config.maxAttempts);
+          if (Number.isNaN(maxAttempts) || maxAttempts < 1 || maxAttempts > 10) {
+            errors.push(addUiMessage({
+              code: 'FALLBACK_INVALID_MAX_ATTEMPTS',
+              message: `Nó de fallback "${nodeId}" tem "maxAttempts" inválido (deve ser entre 1 e 10).`,
+              nodeIds: [nodeId],
+              details: {
+                maxAttempts: node.config.maxAttempts,
+              },
+            }));
+          }
+        }
+        
+        // Valida confidenceThreshold
+        if (node.config.confidenceThreshold !== undefined) {
+          const threshold = Number(node.config.confidenceThreshold);
+          if (Number.isNaN(threshold) || threshold < 0 || threshold > 1) {
+            errors.push(addUiMessage({
+              code: 'FALLBACK_INVALID_THRESHOLD',
+              message: `Nó de fallback "${nodeId}" tem "confidenceThreshold" inválido (deve ser entre 0.0 e 1.0).`,
+              nodeIds: [nodeId],
+              details: {
+                confidenceThreshold: node.config.confidenceThreshold,
+              },
+            }));
+          }
+        }
       }
       break;
     }

@@ -8,11 +8,51 @@
 
 const https = require('https');
 const config = require('../utils/config');
+const logger = require('../utils/logger');
 
 const WHATSAPP_API_URL = config.get('whatsapp.apiUrl', 'https://graph.facebook.com/v18.0');
 const WHATSAPP_PHONE_NUMBER_ID = config.get('whatsapp.phoneNumberId');
 const WHATSAPP_ACCESS_TOKEN = config.get('whatsapp.accessToken');
 const WHATSAPP_VERIFY_TOKEN = config.get('whatsapp.verifyToken');
+
+/**
+ * Valida se as credenciais do WhatsApp são válidas (não são placeholders).
+ *
+ * @returns {boolean}
+ */
+function areCredentialsValid() {
+  // Verifica se phoneNumberId não é um placeholder
+  const phoneNumberId = WHATSAPP_PHONE_NUMBER_ID;
+  if (!phoneNumberId || typeof phoneNumberId !== 'string') {
+    return false;
+  }
+  
+  // Detecta placeholders comuns
+  const placeholderPatterns = [
+    /^\+?\s*1\s*555\s*059\s*7005/i, // "+1 555 059 7005"
+    /SEU_/i,
+    /YOUR_/i,
+    /PLACEHOLDER/i,
+    /EXAMPLE/i,
+    /TESTE/i,
+    /^ID_DO_/i,
+  ];
+  
+  if (placeholderPatterns.some(pattern => pattern.test(phoneNumberId))) {
+    return false;
+  }
+  
+  // Verifica se accessToken existe e não é placeholder
+  if (!WHATSAPP_ACCESS_TOKEN || typeof WHATSAPP_ACCESS_TOKEN !== 'string') {
+    return false;
+  }
+  
+  if (WHATSAPP_ACCESS_TOKEN.length < 20) {
+    return false; // Token muito curto, provavelmente inválido
+  }
+  
+  return true;
+}
 
 /**
  * Envia mensagem de texto via WhatsApp Cloud API.
@@ -24,6 +64,12 @@ const WHATSAPP_VERIFY_TOKEN = config.get('whatsapp.verifyToken');
 async function sendTextMessage(to, text) {
   if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
     throw new Error('WhatsApp credentials não configuradas');
+  }
+  
+  // Valida se as credenciais não são placeholders
+  if (!areCredentialsValid()) {
+    logger.warn('[WhatsApp] Credenciais inválidas ou são placeholders. Não será possível enviar mensagens.');
+    throw new Error('WhatsApp credentials são inválidas ou são placeholders. Configure credenciais reais em config.json');
   }
 
   const url = `${WHATSAPP_API_URL}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;

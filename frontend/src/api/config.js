@@ -61,3 +61,48 @@ export async function reloadConfig() {
   }
 }
 
+/**
+ * Reinicia o servidor da API.
+ * 
+ * ⚠️ ATENÇÃO: Isso encerrará o processo do servidor.
+ * Se estiver usando PM2, nodemon ou similar, o servidor será reiniciado automaticamente.
+ * 
+ * @returns {Promise<{success: boolean, message: string, processManager?: string, hasProcessManager?: boolean, note?: string}>}
+ */
+export async function restartServer() {
+  try {
+    return await fetchJson('/server/restart', {
+      method: 'POST',
+    });
+  } catch (error) {
+    // O erro é esperado pois o servidor será encerrado
+    logger.info('Servidor sendo reiniciado...', error);
+    return { 
+      success: true, 
+      message: 'Servidor sendo reiniciado...',
+      hasProcessManager: false,
+      processManager: 'unknown'
+    };
+  }
+}
+
+/**
+ * Verifica qual gerenciador de processo está sendo usado.
+ * 
+ * @returns {Promise<{success: boolean, processManager: string, hasProcessManager: boolean, details?: object}>}
+ */
+export async function getProcessManager() {
+  try {
+    return await fetchJson('/server/process-manager', {
+      method: 'GET',
+    });
+  } catch (error) {
+    logger.error('Erro ao verificar gerenciador de processo', error);
+    return {
+      success: false,
+      processManager: 'unknown',
+      hasProcessManager: false,
+    };
+  }
+}
+

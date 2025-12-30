@@ -18,6 +18,7 @@ const { buildConversationReplay } = require('../engine/replay');
 const { verifyWebhook, sendTextMessage } = require('./services/whatsappService');
 const { processWhatsAppMessage } = require('./services/messageProcessor');
 const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
+const logger = require('./utils/logger');
 const {
   listQueue,
   listQueues,
@@ -31,6 +32,10 @@ const {
   listAllTickets,
   startAutoCleanup,
   getMetrics,
+  addAgentMessage,
+  markMessagesAsRead,
+  getTicketMessages,
+  loadQueuesFromFile,
 } = require('./services/queueService');
 
 const port = Number(config.get('api.port', 3000));
@@ -40,6 +45,86 @@ const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
 const dataDir = path.join(__dirname, 'data');
 const flowsFile = path.join(dataDir, 'flows.json');
 const configFile = path.join(dataDir, 'config.json');
+
+/**
+ * Detecta qual gerenciador de processo está sendo usado (PM2, nodemon, ou nenhum).
+ * @returns {{name: string, hasProcessManager: boolean, details: object}}
+ */
+function detectProcessManager() {
+  // Detecta PM2
+  if (process.env.PM2_HOME || process.env.PM2_INSTANCE_ID !== undefined) {
+    return {
+      name: 'PM2',
+      hasProcessManager: true,
+      details: {
+        pm2Home: process.env.PM2_HOME,
+        instanceId: process.env.PM2_INSTANCE_ID,
+        method: 'environment_variables',
+      },
+    };
+  }
+
+  // Detecta nodemon (verifica se o processo pai é nodemon)
+  const parentProcess = process.env.nodemon || '';
+  if (parentProcess || process.argv.some(arg => arg.includes('nodemon'))) {
+    return {
+      name: 'nodemon',
+      hasProcessManager: true,
+      details: {
+        method: 'process_detection',
+      },
+    };
+  }
+
+  // Verifica processo pai (pode ser PM2 ou nodemon)
+  try {
+    const ppid = process.ppid;
+    if (ppid) {
+      // Tenta ler o nome do processo pai (limitado, mas útil)
+      // Em sistemas Unix, podemos verificar via /proc
+      if (process.platform !== 'win32') {
+        try {
+          const execSync = require('child_process').execSync;
+          const parentCmd = execSync(`ps -p ${ppid} -o comm=`, { encoding: 'utf8', timeout: 1000 }).trim();
+          if (parentCmd.includes('pm2') || parentCmd.includes('PM2')) {
+            return {
+              name: 'PM2',
+              hasProcessManager: true,
+              details: {
+                parentProcess: parentCmd,
+                method: 'parent_process_detection',
+              },
+            };
+          }
+          if (parentCmd.includes('nodemon')) {
+            return {
+              name: 'nodemon',
+              hasProcessManager: true,
+              details: {
+                parentProcess: parentCmd,
+                method: 'parent_process_detection',
+              },
+            };
+          }
+        } catch (err) {
+          // Ignora erros ao detectar processo pai
+        }
+      }
+    }
+  } catch (err) {
+    // Ignora erros
+  }
+
+  // Nenhum gerenciador detectado
+  return {
+    name: 'none',
+    hasProcessManager: false,
+    details: {
+      method: 'none_detected',
+      note: 'Servidor rodando diretamente com node',
+    },
+  };
+}
 
 /**
  * Storage em memória com persistência em arquivo JSON.
@@ -78,8 +163,7 @@ function cleanupOldSessions() {
     }
   }
   if (cleaned > 0) {
-    // eslint-disable-next-line no-console
-    console.log(`Limpeza de sessões: ${cleaned} sessão(ões) antiga(s) removida(s)`);
+    logger.debug(`Limpeza de sessões: ${cleaned} sessão(ões) antiga(s) removida(s)`);
   }
 }
 
@@ -124,16 +208,13 @@ function loadFlowsFromFile() {
             flows.set(flow.id, flow);
           }
         }
-        // eslint-disable-next-line no-console
-        console.log(`Carregados ${flows.size} fluxo(s) do arquivo ${flowsFile}`);
+        logger.info(`Carregados ${flows.size} fluxo(s) do arquivo ${flowsFile}`);
       }
     } else {
-      // eslint-disable-next-line no-console
-      console.log(`Arquivo de fluxos não encontrado: ${flowsFile}. Criando novo arquivo.`);
+      logger.info(`Arquivo de fluxos não encontrado: ${flowsFile}. Criando novo arquivo.`);
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Erro ao carregar fluxos do arquivo:', err.message);
+    logger.error('Erro ao carregar fluxos do arquivo:', err);
     // Continua com Map vazio se houver erro
   }
 }
@@ -147,11 +228,9 @@ function saveFlowsToFile() {
     const flowsArray = Array.from(flows.values());
     const data = JSON.stringify(flowsArray, null, 2);
     fs.writeFileSync(flowsFile, data, 'utf8');
-    // eslint-disable-next-line no-console
-    console.log(`Fluxos salvos no arquivo ${flowsFile} (${flows.size} fluxo(s))`);
+    logger.debug(`Fluxos salvos no arquivo ${flowsFile} (${flows.size} fluxo(s))`);
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Erro ao salvar fluxos no arquivo:', err.message);
+    logger.error('Erro ao salvar fluxos no arquivo:', err);
   }
 }
 
@@ -375,6 +454,12 @@ async function requestHandler(req, res) {
   const url = new URL(req.url || '/', 'http://localhost');
   const { pathname } = url;
 
+  // Log de debug para todas as requisições GET a /metrics
+  if (method === 'GET' && pathname.startsWith('/metrics')) {
+    // eslint-disable-next-line no-console
+    console.log(`[Server] Requisição GET recebida: ${pathname}`);
+  }
+
   // Healthcheck básico
   if (method === 'GET' && pathname === '/health') {
     sendJson(res, 200, { status: 'ok' });
@@ -431,19 +516,13 @@ async function requestHandler(req, res) {
         return;
       }
 
-      // Validação completa usando o validador da engine
-      const validationResult = validateFlow(body);
-      if (!validationResult.valid && validationResult.errors.length > 0) {
-        // ✅ Mapeia erros técnicos para mensagens amigáveis
-        sendJson(res, 400, {
-          error: 'validation_failed',
-          message: 'O fluxo não passou na validação',
-          errors: validationResult.errors, // ✅ Já vem com messageUi do validator
-        });
-        return;
-      }
-
       const flow = ensureFlowHasMeta(body);
+
+      // Validação completa usando o validador da engine
+      // ✅ NOTA: A validação é executada mas não bloqueia a criação do fluxo
+      // O fluxo pode ser criado mesmo com erros de validação para permitir que o usuário corrija depois
+      const validationResult = validateFlow(flow);
+      const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
 
       // Verifica se já existe um fluxo com o mesmo id
       if (flows.has(flow.id)) {
@@ -456,7 +535,18 @@ async function requestHandler(req, res) {
 
       flows.set(flow.id, flow);
       saveFlowsToFile(); // Salva no arquivo após criar
-      sendJson(res, 201, flow);
+      
+      // ✅ Retorna o fluxo criado, incluindo erros de validação se houver
+      // Isso permite que o frontend exiba os erros mas não bloqueia a criação
+      const response = { ...flow };
+      if (hasValidationErrors) {
+        response.validationWarnings = {
+          valid: false,
+          errors: validationResult.errors, // ✅ Já vem com messageUi do validator
+        };
+      }
+      
+      sendJson(res, 201, response);
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
@@ -539,8 +629,7 @@ async function requestHandler(req, res) {
       } else if (err.message && err.message.includes('excede o tamanho máximo')) {
         badRequest(res, err.message);
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Erro ao atualizar fluxo:', err);
+        logger.error('Erro ao atualizar fluxo:', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
       }
     }
@@ -614,8 +703,7 @@ async function requestHandler(req, res) {
       } else if (err.message && err.message.includes('excede o tamanho máximo')) {
         badRequest(res, err.message);
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Erro ao validar fluxo:', err);
+        logger.error('Erro ao validar fluxo:', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao validar fluxo' });
       }
     }
@@ -824,23 +912,20 @@ async function requestHandler(req, res) {
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
     });
+    
+    // Log para debug
+    logger.info('Tickets retornados', {
+      total: result.total,
+      ticketsCount: result.tickets?.length || 0,
+      limit: result.limit,
+      offset: result.offset,
+    });
+    
     sendJson(res, 200, result);
     return;
   }
 
-  // GET /tickets/:id - Obtém um ticket específico
-  if (method === 'GET' && pathname.startsWith('/tickets/')) {
-    const id = decodeURIComponent(pathname.slice('/tickets/'.length));
-    const ticket = getTicket(id);
-    if (!ticket) {
-      sendJson(res, 404, { error: 'ticket_not_found' });
-      return;
-    }
-    sendJson(res, 200, ticket);
-    return;
-  }
-
-  // GET /tickets/session/:sessionId - Obtém ticket ativo de uma sessão
+  // GET /tickets/session/:sessionId - Obtém ticket ativo de uma sessão (verificar antes de /tickets/:id)
   if (method === 'GET' && pathname.startsWith('/tickets/session/')) {
     const sessionId = decodeURIComponent(pathname.slice('/tickets/session/'.length));
     const ticket = getTicketBySession(sessionId);
@@ -849,6 +934,21 @@ async function requestHandler(req, res) {
       return;
     }
     sendJson(res, 200, ticket);
+    return;
+  }
+
+  // GET /tickets/:id/messages - Obtém histórico de mensagens de um ticket (verificar antes de /tickets/:id)
+  if (method === 'GET' && pathname.startsWith('/tickets/') && pathname.endsWith('/messages')) {
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/messages'.length));
+    const ticket = getTicket(id);
+    
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    const messages = getTicketMessages(id);
+    sendJson(res, 200, { ticketId: id, messages });
     return;
   }
 
@@ -898,10 +998,133 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // POST /queues/reload - Recarrega tickets e filas do arquivo JSON
+  if (method === 'POST' && pathname === '/queues/reload') {
+    try {
+      logger.info('Recarregando dados de filas e tickets do arquivo...');
+      
+      // Obtém estado atual antes de recarregar
+      const allTicketsBefore = listAllTickets();
+      const queuesBefore = listQueues();
+      const ticketsBefore = allTicketsBefore.tickets.length;
+      const queuesCountBefore = queuesBefore.length;
+      
+      // Recarrega dados do arquivo
+      loadQueuesFromFile();
+      
+      // Obtém estado após recarregar
+      const allTicketsAfter = listAllTickets();
+      const queuesAfter = listQueues();
+      const ticketsAfter = allTicketsAfter.tickets.length;
+      const queuesCountAfter = queuesAfter.length;
+      
+      logger.info('Dados recarregados com sucesso', {
+        ticketsAntes: ticketsBefore,
+        ticketsDepois: ticketsAfter,
+        filasAntes: queuesCountBefore,
+        filasDepois: queuesCountAfter,
+      });
+      
+      sendJson(res, 200, {
+        success: true,
+        message: 'Dados recarregados com sucesso',
+        before: {
+          tickets: ticketsBefore,
+          queues: queuesCountBefore,
+        },
+        after: {
+          tickets: ticketsAfter,
+          queues: queuesCountAfter,
+        },
+      });
+      return;
+    } catch (error) {
+      logger.error('Erro ao recarregar dados', error);
+      sendJson(res, 500, {
+        success: false,
+        error: 'Erro ao recarregar dados',
+        message: error.message,
+      });
+      return;
+    }
+  }
+
   // GET /metrics/queues - Obtém métricas do sistema de filas
   if (method === 'GET' && pathname === '/metrics/queues') {
-    const metrics = getMetrics();
-    sendJson(res, 200, metrics);
+    // eslint-disable-next-line no-console
+    console.log('========================================');
+    // eslint-disable-next-line no-console
+    console.log('[Server] ⚡ Endpoint /metrics/queues CHAMADO!');
+    // eslint-disable-next-line no-console
+    console.log('========================================');
+    logger.info('Endpoint /metrics/queues chamado');
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[Server] Chamando getMetrics()...');
+      logger.info('Chamando getMetrics()...');
+      const metrics = getMetrics();
+      // Log para debug
+      // eslint-disable-next-line no-console
+      console.log('[Server] ✅ Métricas retornadas:', JSON.stringify({
+        totalTickets: metrics.totalTickets,
+        ticketsByStatus: metrics.ticketsByStatus,
+        ticketsByQueue: metrics.ticketsByQueue,
+      }, null, 2));
+      logger.info('Métricas retornadas', {
+        totalTickets: metrics.totalTickets,
+        ticketsByStatus: metrics.ticketsByStatus,
+        ticketsByQueue: Object.keys(metrics.ticketsByQueue).length,
+        queueDetails: metrics.ticketsByQueue,
+      });
+      
+      // Adiciona timestamp para evitar cache
+      const responseData = {
+        ...metrics,
+        _timestamp: Date.now(),
+      };
+      
+      // eslint-disable-next-line no-console
+      console.log('[Server] 📤 Enviando resposta:', JSON.stringify(responseData, null, 2));
+      
+      sendJson(res, 200, responseData);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[Server] ❌ Erro ao obter métricas:', error);
+      logger.error('Erro ao obter métricas', error);
+      sendJson(res, 500, { error: 'Erro ao obter métricas', message: error.message });
+    }
+    return;
+  }
+
+  // GET /tickets/:id - Obtém um ticket específico (verificar por último, após todas as rotas específicas)
+  if (method === 'GET' && pathname.startsWith('/tickets/') && 
+      !pathname.endsWith('/messages') && 
+      !pathname.endsWith('/assign') && 
+      !pathname.endsWith('/close') && 
+      !pathname.endsWith('/mark-read') && 
+      !pathname.endsWith('/message') &&
+      !pathname.startsWith('/tickets/session/')) {
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+    sendJson(res, 200, ticket);
+    return;
+  }
+
+  // POST /tickets/:id/mark-read - Marca mensagens como lidas
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/mark-read')) {
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/mark-read'.length));
+    const ticket = markMessagesAsRead(id);
+    
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { success: true, ticketId: id });
     return;
   }
 
@@ -934,14 +1157,55 @@ async function requestHandler(req, res) {
         return;
       }
 
-      // Envia mensagem via WhatsApp
-      const phoneNumber = ticket.phoneNumber;
-      if (!phoneNumber) {
-        badRequest(res, 'Número de telefone não encontrado no ticket');
+      // Adiciona mensagem ao histórico do ticket primeiro
+      const agentId = body.agentId || ticket.assignedTo || 'unknown';
+      try {
+        const updatedTicket = addAgentMessage(id, message, agentId);
+        if (!updatedTicket) {
+          logger.warn('[Ticket] Não foi possível adicionar mensagem ao histórico (ticket não encontrado)', { ticketId: id });
+          sendJson(res, 404, { error: 'ticket_not_found' });
+          return;
+        }
+      } catch (addMessageError) {
+        logger.error('[Ticket] Erro ao adicionar mensagem ao histórico', {
+          ticketId: id,
+          error: addMessageError.message,
+          stack: addMessageError.stack,
+        });
+        sendJson(res, 500, {
+          error: 'internal_error',
+          message: 'Erro ao salvar mensagem no histórico do ticket',
+        });
         return;
       }
 
-      await sendTextMessage(phoneNumber, message);
+      // Tenta enviar mensagem via WhatsApp
+      const phoneNumber = ticket.phoneNumber;
+      if (!phoneNumber) {
+        logger.warn('[Ticket] Número de telefone não encontrado no ticket, mensagem salva apenas no histórico', { ticketId: id });
+      } else {
+        try {
+          await sendTextMessage(phoneNumber, message);
+          logger.info('[Ticket] Mensagem enviada via WhatsApp com sucesso', { ticketId: id, phoneNumber });
+        } catch (whatsappError) {
+          // Se o erro for de credenciais inválidas, apenas loga um aviso e continua
+          // Isso permite que o sistema funcione em modo de desenvolvimento/teste
+          if (whatsappError.message && whatsappError.message.includes('credentials')) {
+            logger.warn('[Ticket] Mensagem salva no histórico, mas não foi enviada via WhatsApp (credenciais inválidas)', {
+              ticketId: id,
+              phoneNumber,
+              error: whatsappError.message,
+            });
+          } else {
+            // Para outros erros do WhatsApp, também loga mas continua
+            logger.warn('[Ticket] Mensagem salva no histórico, mas falha ao enviar via WhatsApp', {
+              ticketId: id,
+              phoneNumber,
+              error: whatsappError.message,
+            });
+          }
+        }
+      }
 
       sendJson(res, 200, {
         success: true,
@@ -1107,9 +1371,11 @@ async function requestHandler(req, res) {
 
       sendJson(res, 200, { success: true });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro no webhook WhatsApp:', err);
-      sendJson(res, 500, { error: 'internal_error' });
+      logger.error('Erro no webhook WhatsApp:', err);
+      sendJson(res, 500, { 
+        error: 'internal_error',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Erro interno ao processar webhook'
+      });
     }
     return;
   }
@@ -1159,6 +1425,46 @@ async function requestHandler(req, res) {
       // eslint-disable-next-line no-console
       console.error('Erro ao listar templates:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar templates' });
+    }
+    return;
+  }
+
+  // GET /templates/:id - Obtém um template específico completo
+  if (method === 'GET' && pathname.startsWith('/templates/') && pathname !== '/templates') {
+    try {
+      const templateId = decodeURIComponent(pathname.replace('/templates/', '').replace(/\.json$/, ''));
+      
+      if (!templateId || templateId.trim() === '') {
+        badRequest(res, 'ID do template é obrigatório');
+        return;
+      }
+
+      const templatesDir = path.join(__dirname, '..', 'frontend', 'public', 'templates');
+      const templateFile = path.join(templatesDir, `${templateId}.json`);
+
+      if (!fs.existsSync(templateFile)) {
+        sendJson(res, 404, { error: 'not_found', message: `Template "${templateId}" não encontrado` });
+        return;
+      }
+
+      const content = fs.readFileSync(templateFile, 'utf8');
+      const template = JSON.parse(content);
+
+      // Valida estrutura básica
+      if (!template || !template.id || !template.name || !template.flow) {
+        sendJson(res, 500, { error: 'invalid_template', message: 'Template corrompido ou inválido' });
+        return;
+      }
+
+      sendJson(res, 200, template);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        sendJson(res, 500, { error: 'parse_error', message: 'Erro ao parsear template JSON' });
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao obter template:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter template' });
+      }
     }
     return;
   }
@@ -1305,11 +1611,29 @@ async function requestHandler(req, res) {
   if (method === 'GET' && pathname === '/config') {
     try {
       const configData = config.getAll();
+      
+      // Valida que configData é um objeto válido
+      if (!configData || typeof configData !== 'object' || Array.isArray(configData)) {
+        throw new Error('Configuração retornada não é um objeto válido');
+      }
+      
       sendJson(res, 200, configData);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao ler configuração:', err);
-      sendJson(res, 500, { error: 'Erro ao ler configuração' });
+      // Usa console.error como fallback caso logger falhe
+      try {
+        logger.error('Erro ao ler configuração:', err);
+      } catch (logErr) {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao ler configuração:', err);
+        // eslint-disable-next-line no-console
+        console.error('Erro ao logar erro:', logErr);
+      }
+      
+      sendJson(res, 500, { 
+        error: 'Erro ao ler configuração',
+        message: err.message || 'Erro desconhecido',
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
     }
     return;
   }
@@ -1347,6 +1671,51 @@ async function requestHandler(req, res) {
       console.error('Erro ao atualizar configuração:', err);
       sendJson(res, 500, { error: 'Erro ao atualizar configuração', message: err.message });
     }
+    return;
+  }
+
+  // GET /server/process-manager - Verifica qual gerenciador de processo está sendo usado
+  if (method === 'GET' && pathname === '/server/process-manager') {
+    const processManager = detectProcessManager();
+    sendJson(res, 200, {
+      success: true,
+      processManager: processManager.name,
+      hasProcessManager: processManager.hasProcessManager,
+      details: processManager.details,
+    });
+    return;
+  }
+
+  // POST /server/restart - Reinicia o servidor
+  if (method === 'POST' && pathname === '/server/restart') {
+    logger.info('Reinício do servidor solicitado via API');
+    
+    const processManager = detectProcessManager();
+    
+    // Responde imediatamente antes de encerrar
+    sendJson(res, 200, { 
+      success: true, 
+      message: processManager.hasProcessManager 
+        ? 'Servidor será reiniciado automaticamente em breve'
+        : 'Servidor será encerrado. Reinicie manualmente.',
+      processManager: processManager.name,
+      hasProcessManager: processManager.hasProcessManager,
+      note: processManager.hasProcessManager
+        ? `Gerenciador detectado: ${processManager.name}. O servidor será reiniciado automaticamente.`
+        : 'Nenhum gerenciador de processo detectado. Você precisará reiniciar o servidor manualmente usando "npm start" ou "node api/server.js".'
+    });
+    
+    // Encerra o processo após um pequeno delay para permitir que a resposta seja enviada
+    setTimeout(() => {
+      logger.info('Encerrando servidor para reinício...');
+      if (processManager.hasProcessManager) {
+        logger.info(`Gerenciador ${processManager.name} irá reiniciar o servidor automaticamente`);
+      } else {
+        logger.warn('Nenhum gerenciador detectado. Servidor não será reiniciado automaticamente.');
+      }
+      process.exit(0); // Código 0 para reinício limpo
+    }, 500);
+    
     return;
   }
 

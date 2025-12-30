@@ -1,0 +1,88 @@
+{
+  "id": "fallback-human-live",
+  "name": "Fallback com Atendimento Humano Síncrono",
+  "description": "Template demonstrando fallback com escalada para atendimento humano em tempo real (modo síncrono)",
+  "icon": "💬",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "fallback-human-live",
+    "name": "Fallback com Atendimento Humano Síncrono",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "Olá! Estou aqui para ajudá-lo. Se precisar de ajuda adicional, posso conectar você diretamente com um atendente humano em tempo real."
+        },
+        "next": "collect-input"
+      },
+      {
+        "id": "collect-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 2,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "human",
+          "allowReturnToBot": true,
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "retry_message",
+          "options": "options_message",
+          "human": "human_handoff",
+          "end": "end"
+        }
+      },
+      {
+        "id": "retry_message",
+        "type": "message",
+        "config": {
+          "text": "Desculpe, não entendi. Pode repetir de outra forma?"
+        },
+        "next": "collect-input"
+      },
+      {
+        "id": "options_message",
+        "type": "message",
+        "config": {
+          "text": "Não entendi completamente. Escolha uma opção:\n1. Preciso de ajuda urgente\n2. Quero falar com um humano\n3. Tentar novamente"
+        },
+        "next": "collect-input"
+      },
+      {
+        "id": "human_handoff",
+        "type": "message",
+        "config": {
+          "text": "Conectando você com um atendente humano em tempo real. Aguarde um momento..."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando fallback com modo human (atendimento síncrono em tempo real)"
+    }
+  }
+}
+

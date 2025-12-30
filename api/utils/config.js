@@ -120,10 +120,38 @@ function get(path, defaultValue = undefined) {
 /**
  * Obtém toda a configuração.
  * 
- * @returns {Object} Configuração completa
+ * @returns {Object} Configuração completa (cópia profunda para evitar mutações)
  */
 function getAll() {
-  return loadConfig();
+  try {
+    const config = loadConfig();
+    
+    // Garante que config é um objeto válido
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      console.warn('[Config] Configuração inválida, retornando objeto vazio');
+      return {};
+    }
+    
+    // Retorna uma cópia profunda para evitar mutações acidentais
+    try {
+      const serialized = JSON.stringify(config);
+      return JSON.parse(serialized);
+    } catch (err) {
+      // Se houver erro na serialização (ex: referências circulares), retorna cópia simples
+      console.error('[Config] Erro ao serializar configuração:', err.message);
+      // Tenta fazer uma cópia superficial
+      try {
+        return { ...config };
+      } catch (copyErr) {
+        console.error('[Config] Erro ao copiar configuração:', copyErr.message);
+        return {};
+      }
+    }
+  } catch (err) {
+    // Erro geral ao obter configuração
+    console.error('[Config] Erro ao obter configuração:', err.message, err.stack);
+    return {};
+  }
 }
 
 /**

@@ -68,6 +68,16 @@ export function EditorProvider({ children }) {
       return flow;
     } catch (err) {
       logger.error('Erro ao carregar fluxo', err);
+      
+      // Se for um erro 404 (fluxo não encontrado), limpa o currentFlow
+      // para evitar estados inconsistentes
+      if (err && typeof err === 'object' && (err.status === 404 || (err.body && err.body.error === 'flow_not_found'))) {
+        logger.warn('Fluxo não encontrado, limpando estado', { flowId });
+        setCurrentFlow(null);
+        setValidation(null);
+        setSimulation(null);
+      }
+      
       setError(err instanceof Error ? err.message : String(err));
       return null;
     } finally {

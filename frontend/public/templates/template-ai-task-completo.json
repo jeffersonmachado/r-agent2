@@ -172,7 +172,7 @@
         "config": {
           "text": "✅ Intenção identificada: COMPRAR\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "intent-result-suporte",
@@ -180,7 +180,7 @@
         "config": {
           "text": "✅ Intenção identificada: SUPORTE\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "intent-result-financeiro",
@@ -188,7 +188,7 @@
         "config": {
           "text": "✅ Intenção identificada: FINANCEIRO\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "intent-result-cancelar",
@@ -196,7 +196,7 @@
         "config": {
           "text": "✅ Intenção identificada: CANCELAR\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "intent-result-desconhecido",
@@ -204,7 +204,7 @@
         "config": {
           "text": "❓ Intenção não identificada claramente\n\n• Intenção detectada: {{ai.classify-intent-demo.value}}\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Mensagem original: {{user_message_intent}}\n\nA confiança pode estar abaixo do threshold (0.75) ou a mensagem não corresponde a nenhuma intenção configurada."
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "demo-entity-extraction",
@@ -236,7 +236,7 @@
         "config": {
           "text": "🔍 Entidades Extraídas:\n\n• Mensagem original: {{user_message_entity}}\n• Entidades encontradas: {{ai.extract-entities-demo.entities.length}}\n\nAs entidades foram armazenadas em 'ai.extract-entities-demo.entities'.\n\nCada entidade contém:\n• type: tipo da entidade (email, phone, number, etc.)\n• value: valor extraído\n• confidence: nível de confiança"
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "demo-text-normalization",
@@ -268,7 +268,7 @@
         "config": {
           "text": "📝 Texto Normalizado:\n\n• Texto original: {{user_message_normalize}}\n• Texto normalizado: {{ai.normalize-text-demo.normalized}}\n• Confiança: {{ai.normalize-text-demo.confidence}}\n\nO texto foi normalizado:\n• Convertido para minúsculas\n• Acentos removidos\n• Espaços extras removidos\n• Trim aplicado"
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "demo-assisted-response",
@@ -300,7 +300,7 @@
         "config": {
           "text": "💬 Resposta Assistida Gerada:\n\n• Pergunta original: {{user_message_assisted}}\n• Resposta: {{ai.generate-assisted-response.response}}\n• Confiança: {{ai.generate-assisted-response.confidence}}\n\nEsta resposta foi gerada usando IA baseada no contexto da conversa."
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "invalid-option",
@@ -308,7 +308,7 @@
         "config": {
           "text": "❌ Opção inválida. Por favor, escolha um número de 0 a 4."
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "final-message",
@@ -316,7 +316,26 @@
         "config": {
           "text": "🎉 Obrigado por testar o template de tarefas de IA!\n\n✅ Todas as 4 tarefas do ai_task foram demonstradas:\n\n1. 🎯 Classificação de Intenção (intent_classification)\n   - Identifica a intenção do usuário\n   - Usa palavras-chave configuráveis\n   - Retorna: {value, confidence}\n\n2. 🔍 Extração de Entidades (entity_extraction)\n   - Extrai informações estruturadas\n   - Identifica emails, telefones, números\n   - Retorna: {entities: [{type, value, confidence}]}\n\n3. 📝 Normalização de Texto (text_normalization)\n   - Normaliza texto (remove acentos, espaços extras)\n   - Converte para minúsculas\n   - Retorna: {normalized, confidence}\n\n4. 💬 Resposta Assistida (assisted_response)\n   - Gera respostas baseadas no contexto\n   - Usa IA para criar respostas relevantes\n   - Retorna: {response, confidence}\n\nAté logo! 👋"
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "welcome",
+          "options": "welcome",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

@@ -112,9 +112,15 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
 
 6. **Módulos Compartilhados**
    - Quando duplicação é necessária (ex: compatibilidade de tipos), usar módulos compartilhados
-   - Backend: `engine/typeCompatibility.js` (CommonJS)
-   - Frontend: `frontend/src/shared/typeCompatibility.ts` (TypeScript/ES module)
-   - **Manter sincronizados manualmente** ou via script de build
+   - **Backend**: Módulos em `engine/utils/` usando CommonJS (`module.exports`)
+   - **Frontend**: Wrappers ES module em `frontend/src/shared/` que importam do backend
+   - **Estrutura**:
+     - `engine/utils/aiTaskExecutor.js` → `frontend/src/shared/aiTaskExecutor.js`
+     - `engine/utils/typeCompatibility.js` → `frontend/src/shared/typeCompatibility.js`
+     - `engine/utils/templateRenderer.js` → `frontend/src/shared/templateRenderer.js`
+     - `engine/utils/jsonSchemaValidator.js` → `frontend/src/shared/jsonSchemaValidator.js`
+   - **Vite Plugin**: `frontend/vite-plugin-commonjs.js` transforma CommonJS para ES modules em desenvolvimento
+   - **Regra**: Backend é a fonte única da verdade; frontend apenas re-exporta
 
 ### Exemplos de Centralização
 
@@ -389,10 +395,23 @@ frontend/src/
 ├── engine-mapper/
 ├── state/
 ├── api/
+├── shared/
+│   ├── aiTaskExecutor.js
+│   ├── typeCompatibility.js
+│   ├── templateRenderer.js
+│   └── jsonSchemaValidator.js
+├── hooks/
+│   ├── useFlowRunner.js
+│   └── useRouter.js
 └── utils/
 ```
 
 **Regra:** Frontend não contém lógica de negócio
+
+**Módulos Compartilhados:**
+- Wrappers ES module em `frontend/src/shared/` importam módulos CommonJS do backend
+- Vite plugin customizado (`vite-plugin-commonjs.js`) transforma CommonJS para ES modules
+- Aliases configurados em `vite.config.mjs` para `@shared/*`
 
 ---
 
@@ -406,11 +425,23 @@ engine/
 ├── runner.js
 ├── nodes/
 │   ├── basicNodes.js
-│   └── aiNode.js
+│   ├── aiNode.js
+│   ├── aiTaskNode.js
+│   └── persistenceNodes.js
+├── utils/
+│   ├── aiTaskExecutor.js
+│   ├── typeCompatibility.js
+│   ├── templateRenderer.js
+│   └── jsonSchemaValidator.js
 └── utils.js
 ```
 
 **Regra:** Engine não depende de UI ou API
+
+**Módulos Compartilhados:**
+- Módulos em `engine/utils/` são compartilhados com o frontend via wrappers ES module
+- Usam CommonJS (`module.exports`) para compatibilidade com Node.js
+- Frontend importa via aliases Vite configurados em `vite.config.mjs`
 
 ---
 
@@ -581,6 +612,8 @@ Antes de fazer alterações, verificar:
 - [ ] **Centraliza lógica de negócio na Engine?**
 - [ ] **Evita duplicação de mensagens e regras?**
 - [ ] **Usa módulos compartilhados quando necessário?**
+- [ ] **Módulos compartilhados estão em `engine/utils/` (CommonJS)?**
+- [ ] **Wrappers ES module estão em `frontend/src/shared/`?**
 - [ ] **Estilos estáticos estão no CSS, não inline?**
 - [ ] **Estilos inline apenas para valores dinâmicos necessários?**
 - [ ] Segue estrutura de diretórios?
@@ -980,7 +1013,227 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
 
 ---
 
-**Última atualização:** 2025-12-28
+**Última atualização:** 2025-12-30
+
+---
+
+## 🔄 Sistema de Fallback (Obrigatório)
+
+### Regras Absolutas de Fallback
+
+1. ✅ **Nenhum fluxo é válido sem FallbackNode**
+   - Todo fluxo DEVE conter pelo menos 1 FallbackNode
+   - Validação estrutural obrigatória em `frontend/src/editor/flowValidator.js`
+   - Validação executada antes da validação do backend
+
+2. ✅ **Todo erro passa pelo FallbackController**
+   - Módulo centralizado: `frontend/src/core/FallbackController.js`
+   - Único ponto de decisão de fallback
+   - Stateless por chamada (estado via contexto)
+
+3. ✅ **Máximo de 3 tentativas por sessão**
+   - Configurável via `maxAttempts` no FallbackNode (padrão: 3)
+   - Após 3 tentativas, escalada automática para humano
+
+4. ✅ **Nenhum erro técnico visível ao usuário final**
+   - Erros técnicos são logados, não exibidos
+   - Mensagens amigáveis sempre apresentadas ao usuário
+   - Logs estruturados via `logger.event()`
+
+5. ✅ **Escalada humana preserva contexto**
+   - Contexto da conversa mantido durante escalada
+   - Nó de retorno seguro configurável (`safeReturnNode`)
+   - Atendimento humano permite retorno ao bot
+
+6. ✅ **Detecção automática de loops e frustração**
+   - Loops simples detectados automaticamente
+   - Frustração detectada por palavras-chave
+   - Escalada imediata para humano quando detectado
+
+### Componentes do Sistema de Fallback
+
+#### 1. FallbackController (`frontend/src/core/FallbackController.js`)
+
+**Responsabilidades:**
+- Receber eventos de erro (intent, flow, data, system, timeout, no_match)
+- Controlar número de tentativas por sessão/contexto
+- Detectar loops simples (mesmo nó acionando fallback repetidamente)
+- Decidir próxima ação: retry, options, human, end
+- Detectar frustração básica por palavras-chave
+- Emitir logs estruturados de fallback
+
+**Tipos de Fallback:**
+- `INTENT`: Intenção não reconhecida
+- `FLOW`: Erro no fluxo (nó desconectado, etc)
+- `DATA`: Erro de dados (validação, formato)
+- `SYSTEM`: Erro de sistema (API, timeout, etc)
+- `TIMEOUT`: Timeout específico
+- `NO_MATCH`: Sem correspondência (NLU)
+
+**Ações de Fallback:**
+- `RETRY`: Tentar novamente
+- `OPTIONS`: Oferecer opções ao usuário
+- `HUMAN`: Escalar para humano
+- `END`: Encerrar conversa
+
+#### 2. FallbackNode (`frontend/src/editor/nodeSchemas.js`)
+
+**Entradas:**
+- `in`: Entrada normal
+- `error`: Entrada de erro
+- `timeout`: Entrada de timeout
+- `no_match`: Entrada de sem correspondência
+
+**Saídas:**
+- `retry`: Tentar novamente
+- `options`: Opções
+- `human`: Atendimento humano
+- `end`: Encerrar
+
+**Configurações:**
+- `maxAttempts` (default: 3): Máximo de tentativas
+- `confidenceThreshold` (default: 0.75): Threshold de confiança
+- `enableEmotionCheck` (default: true): Detectar frustração
+- `safeReturnNode` (opcional): Nó de retorno após escalada humana
+
+**Regras:**
+- Nó NÃO contém lógica de negócio complexa
+- Delega decisões ao FallbackController
+- Visualmente identificado como "Fallback" (ícone: 🔄, cor: #E74C3C)
+- Deve impedir loop direto com ele mesmo
+
+#### 3. flowValidator (`frontend/src/editor/flowValidator.js`)
+
+**Validações obrigatórias:**
+- Todo fluxo deve conter pelo menos 1 FallbackNode
+- Nenhum nó pode ficar órfão
+- Todo caminho deve terminar em FallbackNode ou nó de término explícito
+- Detectar loops estruturais simples
+- Retornar erros claros para o botão "Validar"
+
+**Integração:**
+- Validação executada antes da validação do backend
+- Erros aplicados visualmente aos nós do editor
+- Integrado no `handleValidate` do FlowEditorPage
+
+#### 4. Extensão de nodeSchemas
+
+**Suporte opcional:**
+- `errorPorts: true`: Nó suporta portas de erro para fallback
+- `supportsTimeout: true`: Nó suporta timeout
+
+**Exemplo:**
+```javascript
+ai: {
+  type: 'ai',
+  errorPorts: true,      // Suporta portas de erro
+  supportsTimeout: true, // Suporta timeout
+  // ... resto do schema
+}
+```
+
+**Nenhum schema existente deve quebrar** - propriedades são opcionais.
+
+#### 5. Logs Estruturados
+
+**Padrão:**
+```javascript
+logger.event('fallback_triggered', {
+  fallbackType: 'intent',
+  attempt: 1,
+  nodeId: 'node-123',
+  sessionId: 'session-456',
+  action: 'retry',
+  timestamp: '2025-12-30T12:00:00.000Z',
+  hasLoop: false,
+  hasFrustration: false,
+});
+```
+
+**Eventos de fallback:**
+- `fallback_triggered`: Fallback acionado
+- `fallback_loop_detected`: Loop detectado
+- `fallback_frustration_detected`: Frustração detectada
+- `fallback_max_attempts_reached`: Máximo de tentativas atingido
+
+**Regra:** Não logar dados sensíveis.
+
+### Regras de Implementação
+
+1. ✅ **Não reescrever nodeFactory existente**
+   - FallbackNode criado automaticamente via nodeFactory
+   - Schema em nodeSchemas.js é suficiente
+
+2. ✅ **Não remover ou alterar comportamento atual dos nós existentes**
+   - Extensões são opcionais (errorPorts, supportsTimeout)
+   - Nenhum nó existente quebra
+
+3. ✅ **Não introduzir dependência de framework externo**
+   - Apenas dependências já existentes no projeto
+
+4. ✅ **Alterações devem ser extensões claras e isoladas**
+   - FallbackController é módulo isolado
+   - flowValidator é módulo isolado
+   - Extensões em nodeSchemas são opcionais
+
+5. ✅ **Máximo de 3 tentativas de fallback por sessão**
+   - Configurável, mas padrão é 3
+   - Após 3 tentativas, escalada para humano
+
+6. ✅ **Nenhum erro técnico pode ser exibido ao usuário final**
+   - Erros técnicos apenas em logs
+   - Mensagens amigáveis sempre apresentadas
+
+7. ✅ **Todo fluxo DEVE conter fallback para ser considerado válido**
+   - Validação estrutural obrigatória
+   - Erro claro se não houver FallbackNode
+
+### Testes Obrigatórios
+
+**Arquivo:** `frontend/src/__tests__/fallback.spec.js`
+
+**Cenários obrigatórios:**
+1. Texto sem intenção reconhecida
+2. Confiança abaixo do threshold
+3. Nó desconectado
+4. Erro simulado de API
+5. 3 falhas consecutivas → escalada humana
+6. Loop detectado
+7. Log de fallback gerado corretamente
+
+**Regra:** Testes devem ser determinísticos e não depender de IA real.
+
+---
+
+**Última atualização:** 2025-12-30
+
+### Mudanças Recentes - Módulos Compartilhados (2025-12-30)
+
+- **Sistema de módulos compartilhados implementado**: Lógica de negócio compartilhada entre backend e frontend
+- **Módulos compartilhados**:
+  - `aiTaskExecutor.js`: Execução de tarefas de IA (intent_classification, entity_extraction, text_normalization, assisted_response)
+  - `typeCompatibility.js`: Regras de compatibilidade de tipos de nós
+  - `templateRenderer.js`: Renderização de templates com variáveis
+  - `jsonSchemaValidator.js`: Validação de esquemas JSON
+- **Wrappers ES module**: Frontend usa wrappers que importam módulos CommonJS do backend
+- **Vite Plugin**: Plugin customizado (`vite-plugin-commonjs.js`) transforma CommonJS para ES modules em desenvolvimento
+- **Benefícios**: Eliminação de duplicação, fonte única da verdade, manutenção simplificada
+
+### Mudanças Recentes - API Real de IA (2025-12-30)
+
+- **Configuração `useRealAiApi`**: Feature flag para usar chamadas HTTP reais à API de IA
+- **Implementação**: Quando habilitado, faz requisições para `/api/ai/generate` ao invés de usar implementação mock local
+- **Configuração**: Disponível na página de Configuração (aba Features) e via `config.json`
+- **Fallback**: Se API real falhar, usa implementação mock como fallback
+- **Benefícios**: Permite ver requisições na aba Network do DevTools, útil para debug e desenvolvimento
+
+### Mudanças Recentes - Sistema de Classificação de Intenções (2025-12-30)
+
+- **Matching melhorado**: Lógica de classificação de intenções aprimorada com detecção de palavras completas
+- **Tratamento de fallback**: Quando não há match, retorna `_noMatch: true` ao invés de retornar fallback diretamente
+- **Exibição no log**: Resposta da IA sempre exibida no log, mesmo quando fallback é usado
+- **Feedback visual**: Mensagem "Copiado!" ao copiar log de execução
+- **Benefícios**: Melhor rastreabilidade, debug facilitado, transparência no processo de classificação
 
 ### Mudanças Recentes na Toolbar
 

@@ -101,7 +101,7 @@
         "config": {
           "text": "🛒 Intenção identificada: COMPRAR\n\n• Confiança: {{ai.classify-intent.confidence}}\n• Valor: {{ai.classify-intent.value}}\n• Mensagem original: {{user_message}}\n\nComo posso ajudá-lo com sua compra?"
         },
-        "next": "end"
+        "next": "fallback"
       },
       {
         "id": "intent-suporte",
@@ -133,7 +133,26 @@
         "config": {
           "text": "❓ Intenção não identificada claramente\n\n• Intenção detectada: {{ai.classify-intent.value}}\n• Confiança: {{ai.classify-intent.confidence}}\n• Mensagem original: {{user_message}}\n\nA confiança pode estar abaixo do threshold (0.75) ou a mensagem não corresponde a nenhuma intenção configurada.\n\nPor favor, tente reformular sua mensagem."
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "collect-user-input",
+          "options": "collect-user-input",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

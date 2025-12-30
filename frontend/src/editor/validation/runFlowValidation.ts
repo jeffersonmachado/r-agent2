@@ -12,17 +12,26 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
   // Cria mapa de engineId -> nodeId do editor
   // Os nodeIds do backend são os IDs numéricos do JSON Rete (ex: "1", "2", "3")
   // Precisamos mapear para os IDs reais dos nós no editor
-  // Usa a mesma lógica de toJSON() para garantir consistência
+  // ✅ CORREÇÃO: Garante que usamos a mesma ordem que o toJSON() usa
+  // O toJSON() itera sobre editor.getNodes() usando forEach com índice
+  // Precisamos garantir que usamos Array.from() para manter ordem consistente
   const engineIdToEditorNode = new Map();
   
-  // Obtém o JSON atual do editor para mapear IDs
-  const nodes = editor.getNodes();
+  // Obtém nós do editor e converte para array para garantir ordem consistente
+  // Isso garante que a ordem seja a mesma que o toJSON() usa
+  const nodes = Array.from(editor.getNodes());
   
   // Cria mapeamento: para cada nó, calcula qual seria seu ID no JSON Rete
-  // Segue a mesma lógica de toJSON() em createEditor.js
+  // Segue a mesma lógica de toJSON() em createEditor.js (linha 112-115)
   nodes.forEach((node, index) => {
     const jsonId = String(index + 1); // ID no JSON Rete (1, 2, 3...)
     engineIdToEditorNode.set(jsonId, node);
+  });
+  
+  logger.debug('applyBackendValidationErrors - mapeamento criado', {
+    totalNodes: nodes.length,
+    mappedIds: Array.from(engineIdToEditorNode.keys()),
+    nodeIds: nodes.map(n => n.id),
   });
   
   // ✅ Se backendErrors está vazio, limpa todos os erros do backend dos nós
@@ -46,7 +55,7 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
           try {
             area.update('node', node.id);
           } catch (err) {
-            logger.debug('Erro ao atualizar nó via area.update', { nodeId: node.id, error: err });
+            logger.warn('Erro ao atualizar nó via area.update', { nodeId: node.id, error: err });
           }
         }
       }
@@ -71,9 +80,18 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
   
   // ✅ Aplica novos erros do backend
   const nodesWithErrors = new Set();
+  const globalErrors = []; // Erros globais (sem nodeIds ou com nodeIds vazio)
   
   backendErrors.forEach((error) => {
-    if (!error.nodeIds || !Array.isArray(error.nodeIds)) return;
+    // Verifica se é erro global (sem nodeIds ou com array vazio)
+    if (!error.nodeIds || !Array.isArray(error.nodeIds) || error.nodeIds.length === 0) {
+      globalErrors.push(error);
+      logger.debug('applyBackendValidationErrors - erro global detectado', {
+        code: error.code,
+        message: error.message || error.messageUi,
+      });
+      return; // Erros globais não são aplicados a nós específicos, apenas exibidos no painel
+    }
     
     error.nodeIds.forEach((engineId) => {
       const editorNode = engineIdToEditorNode.get(String(engineId));
@@ -114,7 +132,7 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
           errorMessage,
         });
       } else {
-        logger.debug('applyBackendValidationErrors - nó não encontrado para engineId', {
+        logger.warn('applyBackendValidationErrors - nó não encontrado para engineId', {
           engineId,
           availableIds: Array.from(engineIdToEditorNode.keys()),
         });
@@ -128,15 +146,18 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
       try {
         area.update('node', nodeId);
       } catch (err) {
-        logger.debug('Erro ao atualizar nó via area.update', { nodeId, error: err });
+        logger.warn('Erro ao atualizar nó via area.update', { nodeId, error: err });
       }
     }
   });
   
   logger.debug('applyBackendValidationErrors - erros aplicados', {
     errorCount: backendErrors.length,
+    globalErrorsCount: globalErrors.length,
+    nodeSpecificErrorsCount: backendErrors.length - globalErrors.length,
     nodesAffected: nodesWithErrors.size,
     nodeIds: Array.from(nodesWithErrors),
+    globalErrorCodes: globalErrors.map(e => e.code),
   });
 }
 
@@ -166,7 +187,7 @@ export function runFlowValidation(editor, area?: any) {
         try {
           area.update('node', node.id);
         } catch (err) {
-          logger.debug('Erro ao atualizar nó via area.update', { nodeId: node.id, error: err });
+          logger.warn('Erro ao atualizar nó via area.update', { nodeId: node.id, error: err });
         }
       }
       

@@ -2,6 +2,40 @@ import React, { useState } from 'react';
 import { NODE_TYPES } from '../editor/nodeSchemas';
 
 /**
+ * Tipos de nós de sistema
+ */
+const SYSTEM_NODE_TYPES = [
+  'get_config_value',
+  'get_flow_info',
+  'get_queue_status',
+  'list_flows',
+  'get_current_time',
+  'generate_uuid',
+  'delay',
+  'format_date',
+  'random_number',
+  'get_user_info',
+];
+
+/**
+ * Separa nós de sistema dos outros nós
+ */
+function categorizeNodes() {
+  const systemNodes = [];
+  const otherNodes = [];
+
+  NODE_TYPES.forEach(nodeType => {
+    if (SYSTEM_NODE_TYPES.includes(nodeType.type)) {
+      systemNodes.push(nodeType);
+    } else {
+      otherNodes.push(nodeType);
+    }
+  });
+
+  return { systemNodes, otherNodes };
+}
+
+/**
  * Paleta de nós arrastáveis - versão simplificada e responsiva
  */
 export function NodePaletteCollapsed({ onNodeDragStart, onNodeDragEnd }) {
@@ -20,9 +54,11 @@ export function NodePaletteCollapsed({ onNodeDragStart, onNodeDragEnd }) {
     if (onNodeDragEnd) onNodeDragEnd();
   };
 
+  const { systemNodes, otherNodes } = categorizeNodes();
+
   return (
     <div className="node-palette-collapsed">
-      {NODE_TYPES.map((nodeType) => (
+      {otherNodes.map((nodeType) => (
         <button
           key={nodeType.type}
           draggable
@@ -38,12 +74,23 @@ export function NodePaletteCollapsed({ onNodeDragStart, onNodeDragEnd }) {
           {nodeType.icon}
         </button>
       ))}
+      {/* Botão Sistema na versão colapsada */}
+      {systemNodes.length > 0 && (
+        <button
+          draggable={false}
+          className="node-palette-item-collapsed"
+          title="Sistema"
+        >
+          ⚙️
+        </button>
+      )}
     </div>
   );
 }
 
 export function NodePalette({ onNodeDragStart, onNodeDragEnd }) {
   const [draggedType, setDraggedType] = useState(null);
+  const [isSystemExpanded, setIsSystemExpanded] = useState(false);
 
   const handleDragStart = (e, nodeType) => {
     setDraggedType(nodeType.type);
@@ -67,9 +114,11 @@ export function NodePalette({ onNodeDragStart, onNodeDragEnd }) {
     if (onNodeDragEnd) onNodeDragEnd();
   };
 
+  const { systemNodes, otherNodes } = categorizeNodes();
+
   return (
     <>
-      {NODE_TYPES.map((nodeType) => (
+      {otherNodes.map((nodeType) => (
         <div
           key={nodeType.type}
           draggable
@@ -83,6 +132,37 @@ export function NodePalette({ onNodeDragStart, onNodeDragEnd }) {
           <span className="inline">{nodeType.label}</span>
         </div>
       ))}
+      
+      {/* Item Sistema com subitens */}
+      {systemNodes.length > 0 && (
+        <div className="node-palette-category">
+          <div
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 select-none"
+            onClick={() => setIsSystemExpanded(!isSystemExpanded)}
+          >
+            <span className="node-palette-item-icon">{isSystemExpanded ? '▼' : '▶'}</span>
+            <span className="inline font-medium">Sistema</span>
+          </div>
+          {isSystemExpanded && (
+            <div className="ml-4 mt-1 space-y-1">
+              {systemNodes.map((nodeType) => (
+                <div
+                  key={nodeType.type}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, nodeType)}
+                  onDragEnd={handleDragEnd}
+                  className="flex items-center gap-2 cursor-move hover:opacity-80 pl-2"
+                  data-node-type={nodeType.type}
+                  title={nodeType.label}
+                >
+                  <span className="node-palette-item-icon">{nodeType.icon}</span>
+                  <span className="inline">{nodeType.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }

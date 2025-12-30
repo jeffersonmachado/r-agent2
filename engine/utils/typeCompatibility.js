@@ -20,19 +20,39 @@
  * 
  * @type {Record<string, string[]>}
  */
+const SYSTEM_NODES = [
+  'get_flow_info',
+  'get_queue_status',
+  'get_config_value',
+  'list_flows',
+  'get_current_time',
+  'generate_uuid',
+  'delay',
+  'format_date',
+  'random_number',
+  'get_user_info',
+];
+
 const TYPE_COMPATIBILITY = {
-  start: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', 'get_flow_info', 'get_queue_status', 'get_config_value', 'list_flows'],
-  message: ['user_input', 'router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', 'get_flow_info', 'get_queue_status', 'get_config_value', 'list_flows'],
-  user_input: ['router', 'message', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', 'get_flow_info', 'get_queue_status', 'get_config_value', 'list_flows'],
-  router: ['message', 'user_input', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', 'get_flow_info', 'get_queue_status', 'get_config_value', 'list_flows'],
-  set_variable: ['message', 'user_input', 'router', 'handoff', 'ai', 'ai_task', 'end', 'get_flow_info', 'get_queue_status', 'get_config_value', 'list_flows'],
-  ai: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'end', 'get_flow_info', 'get_queue_status', 'get_config_value', 'list_flows'],
-  ai_task: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'end', 'get_flow_info', 'get_queue_status', 'get_config_value', 'list_flows'],
+  start: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
+  message: ['user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
+  user_input: ['router', 'schedule_router', 'message', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
+  router: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
+  schedule_router: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
+  set_variable: ['message', 'user_input', 'router', 'schedule_router', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
+  ai: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'end', ...SYSTEM_NODES],
+  ai_task: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'end', ...SYSTEM_NODES],
   handoff: ['end'],
-  get_flow_info: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
-  get_queue_status: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
-  get_config_value: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
-  list_flows: ['message', 'user_input', 'router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  get_flow_info: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  get_queue_status: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  get_config_value: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  list_flows: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  get_current_time: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  generate_uuid: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  delay: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  format_date: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  random_number: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
+  get_user_info: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
   end: [],
 };
 

@@ -1,0 +1,91 @@
+{
+  "id": "simple-greeting-with-fallback",
+  "name": "Saudação Simples com Fallback",
+  "description": "Template básico de saudação com sistema de fallback integrado. Demonstra como proteger um fluxo simples contra erros.",
+  "icon": "🔄",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "simple-greeting-with-fallback",
+    "name": "Saudação Simples com Fallback",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "greeting"
+      },
+      {
+        "id": "greeting",
+        "type": "message",
+        "config": {
+          "text": "Olá! Como posso ajudá-lo hoje?"
+        },
+        "next": "user_input"
+      },
+      {
+        "id": "user_input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "greeting"
+        },
+        "next": {
+          "retry": "retry_message",
+          "options": "options_message",
+          "human": "human_message",
+          "end": "end"
+        }
+      },
+      {
+        "id": "retry_message",
+        "type": "message",
+        "config": {
+          "text": "Desculpe, não entendi. Pode repetir?"
+        },
+        "next": "user_input"
+      },
+      {
+        "id": "options_message",
+        "type": "message",
+        "config": {
+          "text": "Não entendi. Escolha uma opção:\n1. Informações\n2. Suporte\n3. Outro"
+        },
+        "next": "user_input"
+      },
+      {
+        "id": "human_message",
+        "type": "message",
+        "config": {
+          "text": "Vou transferir você para um atendente humano. Aguarde um momento."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template com fallback integrado para demonstrar resiliência"
+    }
+  }
+}

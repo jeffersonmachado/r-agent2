@@ -2,6 +2,41 @@
 
 Este guia mostra como realizar manutenção no sistema de filas usando a interface web e ferramentas de linha de comando.
 
+## 🔄 Integração com Sistema de Fallback
+
+O sistema de filas está integrado com o sistema de fallback humano. Existem **dois modos de escalada**:
+
+### Modo Ticket (Assíncrono) - Usa Filas
+
+- **Escalada via filas**: Quando um FallbackNode está configurado com `escalationMode: "ticket"`, ele cria tickets na fila especificada
+- **Fila configurável**: Cada FallbackNode pode especificar uma fila via propriedade `queue`
+- **Fila padrão**: Se não especificada, usa a fila `"default"`
+- **Atendimento assíncrono**: Usuário aguarda em fila, atendente responde quando disponível
+
+### Modo Human (Síncrono) - Não Usa Filas
+
+- **Escalada direta**: Quando um FallbackNode está configurado com `escalationMode: "human"`, não cria tickets
+- **Atendimento em tempo real**: Humano assume conversa imediatamente via WebSocket/API
+- **Sem filas**: Este modo não utiliza o sistema de filas
+
+### Boas Práticas
+
+1. **Crie filas específicas por tipo de atendimento**:
+   - `suporte_n1`: Suporte técnico nível 1
+   - `vendas`: Atendimento comercial
+   - `financeiro`: Questões financeiras
+   - `urgente`: Atendimento prioritário
+
+2. **Configure FallbackNodes adequadamente**:
+   - Use `escalationMode: "ticket"` para atendimento assíncrono (recomendado)
+   - Especifique `queue` apropriada para cada contexto
+   - Use `escalationMode: "human"` apenas quando necessário atendimento síncrono
+
+3. **Monitore distribuição de tickets**:
+   - Verifique quais filas recebem mais tickets
+   - Ajuste recursos de atendimento conforme necessário
+   - Use métricas para otimizar distribuição
+
 ## 🖥️ Interface Web - Página de Manutenção
 
 ### Acessar a Página

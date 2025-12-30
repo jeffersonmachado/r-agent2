@@ -1,7 +1,7 @@
 {
   "id": "template-ai-task-text-normalization",
   "name": "Template - Normalização de Texto",
-  "description": "Template demonstrando a tarefa de Normalização de Texto (text_normalization) do nó ai_task",
+  "description": "Template demonstrando a tarefa de Normalização de Texto (text_normalization) do nó ai_task com fallback integrado",
   "icon": "📝",
   "flow": {
     "tenantId": "tenant-demo",
@@ -45,7 +45,26 @@
         "config": {
           "text": "📝 Texto Normalizado:\n\n• Texto original: {{user_message}}\n• Texto normalizado: {{ai.normalize-text.normalized}}\n• Confiança: {{ai.normalize-text.confidence}}\n\nO texto foi normalizado:\n• Convertido para minúsculas\n• Acentos removidos\n• Espaços extras removidos\n• Trim aplicado\n\nUse o texto normalizado para comparações e buscas mais precisas."
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "collect-user-input",
+          "options": "collect-user-input",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",
@@ -55,7 +74,7 @@
       }
     ],
     "metadata": {
-      "description": "Template demonstrando a tarefa de Normalização de Texto (text_normalization) do nó ai_task",
+      "description": "Template demonstrando a tarefa de Normalização de Texto (text_normalization) do nó ai_task com fallback integrado",
       "author": "Sistema R-Agent2",
       "version": "1.0.0"
     }

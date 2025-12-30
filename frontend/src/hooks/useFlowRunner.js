@@ -454,6 +454,77 @@ export function useFlowRunner(flow) {
           break;
         }
 
+        case 'schedule_router': {
+          const schedules = node.config?.schedules || [];
+          const defaultNext = node.config?.defaultNext || null;
+          const timezone = node.config?.timezone || 'UTC';
+          let chosenNext = null;
+          let matchedSchedule = null;
+
+          try {
+            // Obtém data/hora atual considerando timezone
+            const now = new Date();
+            let currentDate;
+            
+            if (timezone !== 'UTC') {
+              const dateStr = now.toLocaleString('en-US', { timeZone: timezone });
+              currentDate = new Date(dateStr);
+            } else {
+              currentDate = new Date();
+            }
+
+            const currentDay = currentDate.getDay();
+            const currentHours = String(currentDate.getHours()).padStart(2, '0');
+            const currentMinutes = String(currentDate.getMinutes()).padStart(2, '0');
+            const currentTime = `${currentHours}:${currentMinutes}`;
+            const [currentH, currentM] = currentTime.split(':').map(Number);
+            const currentTimeMinutes = currentH * 60 + currentM;
+
+            // Verifica cada horário configurado
+            for (const schedule of schedules) {
+              if (!schedule.days || !Array.isArray(schedule.days) || !schedule.days.includes(currentDay)) {
+                continue;
+              }
+
+              const [startH, startM] = schedule.startTime.split(':').map(Number);
+              const [endH, endM] = schedule.endTime.split(':').map(Number);
+              const startTimeMinutes = startH * 60 + startM;
+              const endTimeMinutes = endH * 60 + endM;
+
+              if (currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes) {
+                chosenNext = schedule.next || null;
+                matchedSchedule = schedule;
+                break;
+              }
+            }
+
+            if (!chosenNext) {
+              chosenNext = defaultNext;
+            }
+          } catch (err) {
+            chosenNext = defaultNext;
+          }
+
+          nextNodeId = chosenNext || normalizeNext(node.next) || normalizeNext(node.outputs?.default);
+          output = {
+            type: 'schedule_router',
+            chosenNext: nextNodeId,
+            matchedSchedule: matchedSchedule ? matchedSchedule.label : null,
+          };
+
+          if (nextNodeId) {
+            addLogEvent(LOG_EVENTS.ROUTE_SELECTED, {
+              nodeId: node.id,
+              nodeType: node.type,
+              action: 'schedule_route_selected',
+              sourceNodeId: node.id,
+              targetNodeId: nextNodeId,
+              matchedSchedule: matchedSchedule ? matchedSchedule.label : null,
+            });
+          }
+          break;
+        }
+
         case 'ai_task': {
           // Verifica se já temos resultado em replay (não reexecuta IA durante replay)
           const replayResult = newState.context?.ai?.[node.id];

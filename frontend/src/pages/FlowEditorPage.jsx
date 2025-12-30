@@ -20,8 +20,10 @@ import { useToast } from '../components/Toast';
 import { useTheme } from '../styles/themeContext';
 import { Dialog } from '../components/Dialog';
 import { FlowTestChat } from '../components/FlowTestChat';
-import { reteJsonToEngineFlow } from '../engine-mapper/engineMapper';
+import { reteJsonToEngineFlow, engineFlowToReteJson } from '../engine-mapper/engineMapper';
 import { NavigationLink } from '../components/NavigationLink';
+import { FallbackEventsViewer } from '../components/FallbackEventsViewer';
+import { getNodeSchema } from '../editor/nodeSchemas';
 
 export function FlowEditorPage() {
   const { themeName } = useTheme();
@@ -33,6 +35,7 @@ export function FlowEditorPage() {
     loading,
     error,
     setSelectedNode,
+    setValidation,
     validateCurrentFlow,
     saveFlow,
     simulateCurrentFlow,
@@ -54,25 +57,44 @@ export function FlowEditorPage() {
   const [flowListRefreshTrigger, setFlowListRefreshTrigger] = useState(0);
   const [templateListRefreshTrigger, setTemplateListRefreshTrigger] = useState(0);
   const { showToast, ToastContainer } = useToast();
+  const lastErrorRef = useRef(null);
 
   // Monitora erros do editorStore e exibe via Toast
   useEffect(() => {
-    if (error && !error.includes('"validation_failed"')) {
-      // Extrai mensagem amigável do erro
-      let errorMessage = error;
-      if (error.includes('Erro HTTP')) {
-        try {
-          const match = error.match(/\{.*\}/);
-          if (match) {
-            const errorObj = JSON.parse(match[0]);
-            errorMessage = errorObj.message || errorObj.error || error;
-          }
-        } catch (e) {
-          // Se não conseguir parsear, usa o erro original
-        }
-      }
-      showToast(errorMessage, 'error', 5000);
+    // Ignora erros de validação e flow_not_found (já tratados em outros lugares)
+    if (!error || error.includes('"validation_failed"') || error.includes('flow_not_found')) {
+      return;
     }
+    
+    // Evita exibir o mesmo erro múltiplas vezes
+    if (lastErrorRef.current === error) {
+      return;
+    }
+    
+    lastErrorRef.current = error;
+    
+    // Extrai mensagem amigável do erro
+    let errorMessage = error;
+    if (error.includes('Erro HTTP')) {
+      try {
+        const match = error.match(/\{.*\}/);
+        if (match) {
+          const errorObj = JSON.parse(match[0]);
+          errorMessage = errorObj.message || errorObj.error || error;
+        }
+      } catch (e) {
+        // Se não conseguir parsear, usa o erro original
+      }
+    }
+    
+    showToast(errorMessage, 'error', 5000);
+    
+    // Limpa a referência após um tempo para permitir que o mesmo erro seja exibido novamente se necessário
+    setTimeout(() => {
+      if (lastErrorRef.current === error) {
+        lastErrorRef.current = null;
+      }
+    }, 6000);
   }, [error, showToast]);
   
   // Estados para colapso e larguras (EXATAMENTE como no modelo)
@@ -120,6 +142,17 @@ export function FlowEditorPage() {
     }
   }, [currentFlow]);
 
+  // ✅ Expande automaticamente o painel de validação quando há erros
+  useEffect(() => {
+    if (validation && !validation.valid && validation.uiErrors && validation.uiErrors.length > 0) {
+      logger.info('Painel de validação expandido automaticamente devido a erros', {
+        errorCount: validation.uiErrors.length,
+        hasGlobalErrors: validation.uiErrors.some(e => !e.nodeIds || e.nodeIds.length === 0),
+      });
+      setValidationCollapsed(false);
+    }
+  }, [validation]);
+
   const handleFlowSelected = async (flow) => {
     if (flow && flow.id) {
       await loadFlow(flow.id);
@@ -131,20 +164,86 @@ export function FlowEditorPage() {
         if (editor && area) {
           try {
             const reteJson = await editor.toJSON();
+            logger.info('Executando validação automática após carregar fluxo', {
+              nodeCount: Object.keys(reteJson.nodes || {}).length,
+            });
+            
+            // ✅ Validação local de fallback (antes de chamar backend) - mesma lógica do handleValidate
+            const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
+            const localValidation = validateFlowLocal(reteJson);
+            
+            // Se validação local falhou, mostra erros e não chama backend
+            if (!localValidation.valid && localValidation.errors.length > 0) {
+              const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+              // Converte erros do validador local para formato esperado
+              const formattedErrors = localValidation.errors.map(err => ({
+                code: err.code,
+                message: err.message,
+                messageUi: err.messageUi || err.message,
+                severity: err.severity || 'error',
+                nodeIds: err.nodeIds || [],
+                details: err.details || {},
+              }));
+              applyBackendValidationErrors(editor, area, formattedErrors);
+              
+              // Atualiza estado de validação
+              const validationState = {
+                valid: false,
+                errors: formattedErrors,
+                uiErrors: formattedErrors,
+              };
+              setValidation(validationState);
+              
+              logger.info('Validação local de fallback falhou após carregar fluxo', {
+                errorCount: formattedErrors.length,
+                hasGlobalErrors: formattedErrors.some(e => !e.nodeIds || e.nodeIds.length === 0),
+              });
+              logger.debug('Detalhes da validação local', {
+                formattedErrors: formattedErrors.map(e => ({
+                  code: e.code,
+                  message: e.message,
+                  nodeIds: e.nodeIds,
+                })),
+              });
+              
+              // O useEffect vai expandir o painel automaticamente quando o estado mudar
+              return;
+            }
+            
+            // Se validação local passou, chama validação do backend
             const validationResult = await validateCurrentFlow(reteJson);
             
             // ✅ Sempre aplica (limpa erros antigos e aplica novos, ou limpa tudo se válido)
+            // O validateCurrentFlow já atualiza o estado validation internamente
             const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
-            if (validationResult && validationResult.errors) {
-              applyBackendValidationErrors(editor, area, validationResult.valid ? [] : validationResult.errors);
-              logger.debug('Validação do backend aplicada após carregar fluxo', {
+            if (validationResult) {
+              // Aplica erros aos nós do editor
+              applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+              
+              logger.info('Validação do backend concluída após carregar fluxo', {
                 valid: validationResult.valid,
-                errorCount: validationResult.errors.length,
+                errorCount: validationResult.errors?.length || 0,
               });
+              logger.debug('Detalhes da validação do backend', {
+                validationState: {
+                  valid: validationResult.valid,
+                  errorsCount: validationResult.errors?.length || 0,
+                  uiErrorsCount: validationResult.uiErrors?.length || 0,
+                },
+              });
+              
+              // O useEffect vai expandir o painel automaticamente quando o estado mudar
+            } else {
+              logger.warn('Validação retornou null após carregar fluxo');
             }
           } catch (validationErr) {
-            logger.debug('Erro ao validar fluxo após carregar (não crítico)', { error: validationErr });
+            logger.error('Erro ao validar fluxo após carregar', { error: validationErr });
           }
+        } else {
+          logger.warn('Editor ou area não disponível para validação automática', {
+            hasEditor: !!editor,
+            hasArea: !!area,
+          });
         }
       }, 500); // Aguarda 500ms para garantir que o editor foi atualizado
     }
@@ -153,47 +252,127 @@ export function FlowEditorPage() {
   const handleTemplateSelected = async (flow) => {
     logger.info('Template selecionado', { templateId: flow?.id, templateName: flow?.name });
     setShowTemplateSelector(false);
-    if (flow && flow.id) {
-      setDisplayedFlow(flow);
-    }
+    
+    // Limpa o estado antes de criar o novo fluxo
+    clearCurrentFlow();
     
     try {
       const savedFlow = await createFlow(flow);
       logger.info('Fluxo salvo no backend', { savedFlowId: savedFlow?.id });
       setFlowListRefreshTrigger(prev => prev + 1);
-      await loadFlow(savedFlow.id);
-      logger.info('Fluxo carregado no editor com sucesso');
       
-      // ✅ Executa validação do backend após criar novo fluxo
-      // Aguarda um pouco para garantir que o editor foi atualizado
-      setTimeout(async () => {
-        const editor = editorRef.current?.editor?.current;
-        const area = editorRef.current?.area;
-        if (editor && area) {
-          try {
-            const reteJson = await editor.toJSON();
-            const validationResult = await validateCurrentFlow(reteJson);
-            
-            // ✅ Aplica erros do backend (limpa se válido, aplica se inválido)
-            const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
-            if (validationResult && validationResult.errors) {
-              applyBackendValidationErrors(editor, area, validationResult.valid ? [] : validationResult.errors);
-              logger.debug('Validação do backend aplicada após criar novo fluxo', {
-                valid: validationResult.valid,
-                errorCount: validationResult.errors.length,
-              });
-            }
-          } catch (validationErr) {
-            logger.debug('Erro ao validar fluxo após criar (não crítico)', { error: validationErr });
-          }
+      // Só tenta carregar o fluxo se ele foi criado com sucesso
+      if (savedFlow && savedFlow.id) {
+        // ✅ Verifica se há avisos de validação na resposta
+        const hasValidationWarnings = savedFlow.validationWarnings && 
+                                      savedFlow.validationWarnings.errors && 
+                                      savedFlow.validationWarnings.errors.length > 0;
+        
+        if (hasValidationWarnings) {
+          const errorCount = savedFlow.validationWarnings.errors.length;
+          showToast(
+            `Fluxo criado com sucesso, mas possui ${errorCount} erro${errorCount > 1 ? 's' : ''} de validação. Verifique o painel de validação.`,
+            'warning',
+            5000
+          );
+        } else {
+          showToast('Fluxo criado com sucesso', 'success', 2000);
         }
-      }, 500); // Aguarda 500ms para garantir que o editor foi atualizado
+        
+        await loadFlow(savedFlow.id);
+        logger.info('Fluxo carregado no editor com sucesso');
+        
+        // ✅ Aplica erros de validação se houver avisos na resposta
+        // Aguarda um pouco para garantir que o editor foi atualizado
+        setTimeout(async () => {
+          const editor = editorRef.current?.editor?.current;
+          const area = editorRef.current?.area;
+          if (editor && area) {
+            try {
+              // Se a resposta já incluiu erros de validação, aplica-os diretamente
+              if (hasValidationWarnings) {
+                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+                applyBackendValidationErrors(editor, area, savedFlow.validationWarnings.errors);
+                
+                // ✅ Atualiza estado de validação e expande painel
+                setValidation({
+                  valid: false,
+                  errors: savedFlow.validationWarnings.errors,
+                  uiErrors: savedFlow.validationWarnings.errors,
+                });
+                setValidationCollapsed(false);
+                
+                logger.info('Erros de validação aplicados após criar fluxo', {
+                  errorCount: savedFlow.validationWarnings.errors.length,
+                });
+                logger.debug('Detalhes dos erros de validação', {
+                  errors: savedFlow.validationWarnings.errors.map(e => ({
+                    code: e.code,
+                    message: e.message,
+                    nodeIds: e.nodeIds,
+                  })),
+                });
+              } else {
+                // Caso contrário, executa validação completa
+                // O validateCurrentFlow já atualiza o estado validation internamente
+                const reteJson = await editor.toJSON();
+                const validationResult = await validateCurrentFlow(reteJson);
+                
+                // ✅ Aplica erros do backend (limpa se válido, aplica se inválido)
+                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+                if (validationResult) {
+                  applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+                  
+                  // ✅ Expande painel de validação se houver erros
+                  if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
+                    setValidationCollapsed(false);
+                  }
+                  
+                  logger.info('Validação do backend concluída após criar novo fluxo', {
+                    valid: validationResult.valid,
+                    errorCount: validationResult.errors?.length || 0,
+                  });
+                  logger.debug('Detalhes da validação do backend', {
+                    validationState: {
+                      valid: validationResult.valid,
+                      errorsCount: validationResult.errors?.length || 0,
+                      uiErrorsCount: validationResult.uiErrors?.length || 0,
+                    },
+                  });
+                }
+              }
+            } catch (validationErr) {
+              logger.error('Erro ao validar fluxo após criar', { error: validationErr });
+            }
+          }
+        }, 500); // Aguarda 500ms para garantir que o editor foi atualizado
+      } else {
+        logger.warn('Fluxo criado mas sem ID válido', { savedFlow });
+        showToast('Erro: fluxo criado mas sem ID válido', 'error', 5000);
+      }
     } catch (err) {
       logger.error('Erro ao criar fluxo do template', err);
-      if (displayedFlow) {
-        loadFlow(displayedFlow.id);
+      
+      // Extrai mensagem de erro mais amigável
+      let errorMessage = 'Erro ao criar fluxo do template. Verifique os logs.';
+      if (err && typeof err === 'object') {
+        if (err.body && typeof err.body === 'object') {
+          if (err.body.error === 'validation_failed' && err.body.errors && Array.isArray(err.body.errors)) {
+            const errorCount = err.body.errors.length;
+            errorMessage = `O fluxo não passou na validação (${errorCount} erro${errorCount > 1 ? 's' : ''} encontrado${errorCount > 1 ? 's' : ''}). Verifique os erros no painel de validação.`;
+          } else if (err.body.message) {
+            errorMessage = err.body.message;
+          } else if (err.body.error) {
+            errorMessage = `Erro: ${err.body.error}`;
+          }
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
       }
-      showToast('Erro ao criar fluxo do template. Verifique os logs.', 'error', 5000);
+      
+      showToast(errorMessage, 'error', 5000);
+      // Não tenta carregar o fluxo do template, pois ele não existe no backend
+      // O estado já foi limpo no início da função
     }
   };
 
@@ -242,7 +421,7 @@ export function FlowEditorPage() {
           nodeValidationErrors = validationErrors;
         }
       } catch (err) {
-        logger.debug('Erro ao obter erros de validação do nó', { nodeId: node.id, error: err });
+        logger.warn('Erro ao obter erros de validação do nó', { nodeId: node.id, error: err });
       }
       
       // ✅ Fallback: se não encontrou erros no editor, tenta buscar nos erros de validação do backend
@@ -346,16 +525,99 @@ export function FlowEditorPage() {
     }
     // Expande a seção de validação para mostrar os resultados
     setValidationCollapsed(false);
+    logger.info('Validação manual iniciada');
     try {
       const reteJson = await editor.toJSON();
+      logger.debug('JSON do editor obtido para validação', {
+        nodeCount: Object.keys(reteJson.nodes || {}).length,
+      });
+      
+      // ✅ Validação local de fallback (antes de chamar backend)
+      const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
+      const localValidation = validateFlowLocal(reteJson);
+      
+      // Se validação local falhou, mostra erros e não chama backend
+      if (!localValidation.valid && localValidation.errors.length > 0) {
+        const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+        // Converte erros do validador local para formato esperado
+        const formattedErrors = localValidation.errors.map(err => ({
+          code: err.code,
+          message: err.message,
+          messageUi: err.messageUi || err.message,
+          severity: err.severity || 'error',
+          nodeIds: err.nodeIds || [],
+          details: err.details || {},
+        }));
+        applyBackendValidationErrors(editor, area, formattedErrors);
+        
+        // Atualiza estado de validação
+        const validationState = {
+          valid: false,
+          errors: formattedErrors,
+          uiErrors: formattedErrors,
+        };
+        setValidation(validationState);
+        
+        const globalErrors = formattedErrors.filter(e => !e.nodeIds || e.nodeIds.length === 0);
+        const nodeSpecificErrors = formattedErrors.filter(e => e.nodeIds && e.nodeIds.length > 0);
+        
+        logger.info('Validação local de fallback falhou', {
+          errorCount: formattedErrors.length,
+          globalErrorsCount: globalErrors.length,
+          nodeSpecificErrorsCount: nodeSpecificErrors.length,
+          globalErrorCodes: globalErrors.map(e => e.code),
+          formattedErrors: formattedErrors.map(e => ({
+            code: e.code,
+            message: e.message,
+            messageUi: e.messageUi,
+            nodeIds: e.nodeIds,
+          })),
+          validationState: {
+            valid: validationState.valid,
+            errorsCount: validationState.errors.length,
+            uiErrorsCount: validationState.uiErrors.length,
+          },
+        });
+        
+        // ✅ Garante que o painel está expandido (já está na linha 443, mas garantimos novamente)
+        setValidationCollapsed(false);
+        
+        logger.debug('Estado de validação atualizado', {
+          validationCollapsed: false,
+          validationState: {
+            valid: validationState.valid,
+            errorsCount: validationState.errors.length,
+            uiErrorsCount: validationState.uiErrors.length,
+          },
+        });
+        
+        return;
+      }
+      
+      // Se validação local passou, chama validação do backend
+      // O validateCurrentFlow já atualiza o estado validation internamente
       const validationResult = await validateCurrentFlow(reteJson);
       
       // ✅ Aplica erros de validação do backend aos nós do editor
       // Se válido, passa array vazio (limpa erros do backend)
       // Se inválido, passa os erros recebidos do servidor
-      if (validationResult && validationResult.errors) {
+      if (validationResult) {
         const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
-        applyBackendValidationErrors(editor, area, validationResult.valid ? [] : validationResult.errors);
+        applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+        
+        logger.info('Validação do backend concluída', {
+          valid: validationResult.valid,
+          errorCount: validationResult.errors?.length || 0,
+        });
+        logger.debug('Detalhes da validação do backend', {
+          validationState: {
+            valid: validationResult.valid,
+            errorsCount: validationResult.errors?.length || 0,
+            uiErrorsCount: validationResult.uiErrors?.length || 0,
+          },
+        });
+      } else {
+        logger.warn('Validação do backend retornou null');
       }
     } catch (err) {
       logger.error('Erro ao obter JSON do editor', err);
@@ -609,17 +871,135 @@ export function FlowEditorPage() {
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    
     const reader = new FileReader();
     reader.onload = async () => {
       try {
         const json = JSON.parse(reader.result);
-        showToast('Importação de JSON não implementada completamente', 'warning', 2000);
+        
+        // Valida se o JSON tem a estrutura básica
+        if (!json || typeof json !== 'object') {
+          showToast('JSON inválido: formato incorreto', 'error', 3000);
+          return;
+        }
+        
+        let reteJson = null;
+        let flowData = json;
+        let metadata = null;
+        
+        // Detecta formato wrapper (template com metadados)
+        // Formato: { id, name, description, icon, flow: {...} }
+        if (json.flow && typeof json.flow === 'object' && !json.nodes) {
+          logger.debug('JSON detectado como formato wrapper (template), extraindo campo flow', {
+            hasMetadata: !!(json.id || json.name || json.description || json.icon),
+            jsonKeys: Object.keys(json),
+          });
+          flowData = json.flow;
+          // Preserva metadados para possível uso futuro
+          metadata = {
+            id: json.id,
+            name: json.name,
+            description: json.description,
+            icon: json.icon,
+          };
+        }
+        
+        // Detecta e converte formato da engine (nodes como array) para formato Rete
+        if (Array.isArray(flowData.nodes)) {
+          // Formato da engine: tem nodes como array
+          logger.debug('JSON detectado como formato da engine, convertendo para Rete', {
+            nodeCount: flowData.nodes.length,
+          });
+          try {
+            reteJson = engineFlowToReteJson(flowData);
+            if (!reteJson || !reteJson.nodes || Object.keys(reteJson.nodes).length === 0) {
+              showToast('JSON inválido: não foi possível converter o formato da engine', 'error', 3000);
+              return;
+            }
+            logger.debug('JSON convertido com sucesso', {
+              nodeCount: Object.keys(reteJson.nodes).length,
+            });
+          } catch (convertErr) {
+            logger.error('Erro ao converter JSON da engine para Rete', convertErr);
+            showToast('Erro ao converter formato do fluxo', 'error', 3000);
+            return;
+          }
+        } else if (flowData.nodes && typeof flowData.nodes === 'object') {
+          // Formato Rete: nodes como objeto
+          reteJson = flowData;
+        } else {
+          // Formato desconhecido
+          showToast('JSON inválido: formato não reconhecido. Esperado formato Rete ou Engine.', 'error', 3000);
+          logger.warn('JSON com formato desconhecido', {
+            hasNodes: !!flowData.nodes,
+            nodesType: typeof flowData.nodes,
+            nodesIsArray: Array.isArray(flowData.nodes),
+            jsonKeys: Object.keys(flowData),
+            hasWrapper: !!json.flow,
+          });
+          return;
+        }
+        
+        // Valida se o JSON convertido tem nós válidos
+        if (!reteJson.nodes || typeof reteJson.nodes !== 'object' || Object.keys(reteJson.nodes).length === 0) {
+          showToast('JSON inválido: nenhum nó válido encontrado', 'error', 3000);
+          return;
+        }
+        
+        // Carrega o JSON no editor
+        const editor = editorRef.current;
+        if (!editor || !editor.loadFromJson) {
+          showToast('Editor não está pronto', 'warning', 2000);
+          return;
+        }
+        
+        try {
+          await editor.loadFromJson(reteJson);
+          showToast('Fluxo importado com sucesso', 'success', 2000);
+          
+          // Limpa o fluxo atual do estado para permitir trabalhar com o importado
+          clearCurrentFlow();
+          setSelectedNode(null);
+          
+          // Opcional: valida o fluxo importado após um pequeno delay
+          // O validateCurrentFlow já atualiza o estado validation internamente
+          setTimeout(async () => {
+            try {
+              const reteJson = await editor.editor?.current?.toJSON();
+              if (reteJson) {
+                const validationResult = await validateCurrentFlow(reteJson);
+                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+                if (validationResult) {
+                  applyBackendValidationErrors(
+                    editor.editor?.current,
+                    editor.area,
+                    validationResult.valid ? [] : (validationResult.errors || [])
+                  );
+                  
+                  // ✅ Expande painel de validação se houver erros
+                  if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
+                    setValidationCollapsed(false);
+                  }
+                }
+              }
+            } catch (validationErr) {
+              logger.debug('Erro ao validar fluxo importado (não crítico)', { error: validationErr });
+            }
+          }, 500);
+        } catch (loadErr) {
+          logger.error('Erro ao carregar JSON no editor', loadErr);
+          showToast('Erro ao carregar fluxo no editor', 'error', 3000);
+        }
       } catch (err) {
         logger.error('Erro ao importar JSON', err);
-        showToast('Erro ao importar fluxo: JSON inválido', 'error', 3000);
+        if (err instanceof SyntaxError) {
+          showToast('Erro ao importar fluxo: JSON malformado', 'error', 3000);
+        } else {
+          showToast('Erro ao importar fluxo: JSON inválido', 'error', 3000);
+        }
       }
     };
     reader.readAsText(file);
@@ -747,7 +1127,7 @@ export function FlowEditorPage() {
           </div>
 
           {!paletteCollapsed ? (
-            <div className="flex-1 p-2 text-sm space-y-2">
+            <div className="flex-1 p-2 text-sm space-y-2 overflow-y-auto">
                 <NodePalette />
             </div>
           ) : (
@@ -833,6 +1213,26 @@ export function FlowEditorPage() {
                             handleUpdateNodeConfig(selectedNode.id, newConfig);
                           }
                         }}
+                        availableNodes={(() => {
+                          // Obtém lista de nós disponíveis do editor para o combobox
+                          try {
+                            if (editorRef.current?.editor?.current) {
+                              const editor = editorRef.current.editor.current;
+                              const nodes = editor.getNodes();
+                              return nodes.map(node => {
+                                const schema = getNodeSchema(node.data?.type);
+                                return {
+                                  id: String(node.id),
+                                  type: node.data?.type || 'unknown',
+                                  label: schema?.label || node.data?.type || 'unknown',
+                                };
+                              }).filter(node => node.id !== selectedNode?.id); // Exclui o nó atual
+                            }
+                          } catch (err) {
+                            logger.warn('Erro ao obter nós disponíveis', { error: err });
+                          }
+                          return [];
+                        })()}
                       />
                     </div>
                   )}
@@ -902,7 +1302,7 @@ export function FlowEditorPage() {
                                       {errors.map((err, idx) => (
                                         <li key={`${err.code}-${idx}`}>
                                           <span className="text-gray-600 dark:text-gray-400">[{err.code}]</span>
-                                          <span> {err.message}</span>
+                                          <span> {err.messageUi || err.message}</span>
                                         </li>
                                       ))}
                                     </ul>

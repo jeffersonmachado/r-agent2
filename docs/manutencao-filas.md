@@ -12,6 +12,42 @@ O sistema de filas gerencia tickets de atendimento humano criados quando uma con
 
 > **Nota**: Para produção, considere migrar para banco de dados (PostgreSQL, MongoDB, etc.)
 
+## 🔄 Integração com Sistema de Fallback
+
+O sistema de filas está **integrado com o sistema de fallback humano consolidado**:
+
+### Modo Ticket (Assíncrono) - Usa Filas
+
+- **Quando usar**: FallbackNodes configurados com `escalationMode: "ticket"`
+- **Como funciona**: Cria tickets na fila especificada via propriedade `queue`
+- **Fila padrão**: Se não especificada, usa `"default"`
+- **Fluxo**: Bot → FallbackNode → Cria Ticket → Atendente assume via painel
+
+### Modo Human (Síncrono) - Não Usa Filas
+
+- **Quando usar**: FallbackNodes configurados com `escalationMode: "human"`
+- **Como funciona**: Cria sessão de atendimento humano síncrono (não cria tickets)
+- **Fluxo**: Bot → FallbackNode → Sessão Humana → Atendimento em tempo real
+
+### Boas Práticas de Filas
+
+1. **Crie filas específicas por contexto**:
+   - `suporte_n1`: Suporte técnico nível 1
+   - `vendas`: Atendimento comercial
+   - `financeiro`: Questões financeiras
+   - `urgente`: Atendimento prioritário
+   - `default`: Fila padrão (fallback)
+
+2. **Configure FallbackNodes adequadamente**:
+   - Use `escalationMode: "ticket"` para atendimento assíncrono (recomendado)
+   - Especifique `queue` apropriada para cada contexto
+   - Use `escalationMode: "human"` apenas quando necessário atendimento síncrono
+
+3. **Monitore distribuição**:
+   - Verifique quais filas recebem mais tickets
+   - Ajuste recursos de atendimento conforme necessário
+   - Use métricas para otimizar distribuição
+
 ## Estrutura de Dados
 
 ### Ticket
@@ -163,7 +199,25 @@ curl http://localhost:3000/tickets | jq 'length'
 
 ### 2. Limpeza de Tickets Antigos
 
-⚠️ **IMPORTANTE**: O sistema atual não possui limpeza automática de tickets. Tickets fechados permanecem na memória indefinidamente.
+✅ **Limpeza Automática Já Implementada**: O sistema possui limpeza automática configurada que:
+- Remove tickets fechados com mais de 7 dias (configurável)
+- Executa a cada 1 hora (configurável)
+- É iniciada automaticamente ao iniciar o servidor
+
+**Configuração via Variáveis de Ambiente:**
+```bash
+# Alterar intervalo de limpeza (padrão: 1 hora)
+export TICKET_CLEANUP_INTERVAL_HOURS=2
+
+# Alterar idade máxima dos tickets (padrão: 7 dias)
+export TICKET_MAX_AGE_DAYS=14
+```
+
+**Verificar Limpeza:**
+```bash
+# Ver métricas de tickets antigos
+curl http://localhost:3000/metrics/queues | jq '.oldClosedTickets'
+```
 
 #### Opção 1: Adicionar Limpeza Automática
 
@@ -442,12 +496,14 @@ if (existingTicket && existingTicket.status !== 'closed') {
 
 ## Próximos Passos
 
-- [ ] Implementar limpeza automática de tickets
-- [ ] Adicionar persistência em arquivo JSON
+- [x] Implementar limpeza automática de tickets ✅
+- [x] Adicionar persistência em arquivo JSON ✅
+- [x] Adicionar endpoint de métricas ✅
+- [x] Integração com sistema de fallback consolidado ✅
 - [ ] Migrar para banco de dados
-- [ ] Adicionar endpoint de métricas
 - [ ] Implementar autenticação/autorização
 - [ ] Adicionar notificações de novos tickets
 - [ ] Implementar priorização de tickets
 - [ ] Adicionar SLA (tempo de resposta)
+- [ ] Dashboard de métricas em tempo real
 

@@ -356,11 +356,145 @@ async function endNodeHandler(node, state, input, deps = null) {
   return result;
 }
 
+/**
+ * Nó "schedule_router"
+ * - Roteia o fluxo baseado no dia da semana e horário atual.
+ *
+ * config:
+ * - schedules: Array<{ days: number[], startTime: string, endTime: string, next: string, label?: string }>
+ * - defaultNext: string (opcional, ID do nó padrão)
+ * - timezone: string (opcional, fuso horário)
+ */
+async function scheduleRouterNodeHandler(node, state, input, deps = null) {
+  const nextState = cloneState(state);
+  const schedules = (node.config && Array.isArray(node.config.schedules) ? node.config.schedules : []);
+  const defaultNext = node.config?.defaultNext || null;
+  const timezone = node.config?.timezone || 'UTC';
+
+  let chosenNext = null;
+  let matchedSchedule = null;
+
+  try {
+    // Obtém data/hora atual considerando timezone
+    const now = new Date();
+    let currentDate;
+    
+    if (timezone !== 'UTC') {
+      // Converte para o timezone especificado
+      const dateStr = now.toLocaleString('en-US', { timeZone: timezone });
+      currentDate = new Date(dateStr);
+    } else {
+      currentDate = new Date();
+    }
+
+    // Obtém dia da semana (0 = domingo, 6 = sábado)
+    const currentDay = currentDate.getDay();
+    
+    // Obtém horário atual (HH:MM)
+    const currentHours = String(currentDate.getHours()).padStart(2, '0');
+    const currentMinutes = String(currentDate.getMinutes()).padStart(2, '0');
+    const currentTime = `${currentHours}:${currentMinutes}`;
+    
+    // Converte horário atual para minutos desde meia-noite
+    const [currentH, currentM] = currentTime.split(':').map(Number);
+    const currentTimeMinutes = currentH * 60 + currentM;
+
+    // Verifica cada horário configurado
+    for (const schedule of schedules) {
+      // Verifica se o dia atual está na lista de dias do horário
+      if (!schedule.days || !Array.isArray(schedule.days) || !schedule.days.includes(currentDay)) {
+        continue;
+      }
+
+      // Converte horários de início e fim para minutos
+      const [startH, startM] = schedule.startTime.split(':').map(Number);
+      const [endH, endM] = schedule.endTime.split(':').map(Number);
+      const startTimeMinutes = startH * 60 + startM;
+      const endTimeMinutes = endH * 60 + endM;
+
+      // Verifica se o horário atual está dentro do intervalo
+      if (currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes) {
+        chosenNext = schedule.next || null;
+        matchedSchedule = schedule;
+        break;
+      }
+    }
+
+    // Se nenhum horário correspondeu, usa o padrão
+    if (!chosenNext) {
+      chosenNext = defaultNext;
+    }
+
+    /** @type {EngineStepOutput} */
+    const result = {
+      nextState,
+      events: [],
+      output: {
+        type: 'schedule_router',
+        chosenNext,
+        matchedSchedule: matchedSchedule ? {
+          label: matchedSchedule.label,
+          days: matchedSchedule.days,
+          startTime: matchedSchedule.startTime,
+          endTime: matchedSchedule.endTime,
+        } : null,
+        currentDay,
+        currentTime,
+        timezone,
+      },
+    };
+
+    result.events.push(
+      createEngineEvent({
+        sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        type: 'NODE_ROUTED',
+        payload: {
+          chosenNext,
+          scheduleType: 'schedule_router',
+          matchedSchedule: matchedSchedule ? matchedSchedule.label : null,
+          currentDay,
+          currentTime,
+          timezone,
+        },
+      }),
+    );
+
+    return result;
+  } catch (err) {
+    // Em caso de erro, usa o padrão
+    chosenNext = defaultNext;
+
+    const errorEvent = createEngineEvent({
+      sessionId: state.sessionId,
+      flowId: state.flowId,
+      nodeId: node.id,
+      type: 'ERROR',
+      payload: {
+        message: err.message || String(err),
+        operation: 'schedule_router',
+      },
+    });
+
+    return {
+      nextState,
+      events: [errorEvent],
+      output: {
+        type: 'schedule_router',
+        chosenNext,
+        error: err.message || String(err),
+      },
+    };
+  }
+}
+
 module.exports = {
   startNodeHandler,
   messageNodeHandler,
   userInputNodeHandler,
   routerNodeHandler,
+  scheduleRouterNodeHandler,
   setVariableNodeHandler,
   handoffNodeHandler,
   endNodeHandler,

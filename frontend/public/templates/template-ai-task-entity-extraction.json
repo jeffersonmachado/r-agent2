@@ -45,7 +45,26 @@
         "config": {
           "text": "🔍 Entidades Extraídas:\n\n• Mensagem original: {{user_message}}\n• Total de entidades encontradas: {{ai.extract-entities.entities.length}}\n\nAs entidades foram armazenadas na variável 'ai.extract-entities.entities'.\n\nCada entidade contém:\n• type: tipo da entidade (email, phone, number, etc.)\n• value: valor extraído\n• confidence: nível de confiança\n\nUse essas entidades para processar as informações do usuário de forma estruturada."
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "collect-user-input",
+          "options": "collect-user-input",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

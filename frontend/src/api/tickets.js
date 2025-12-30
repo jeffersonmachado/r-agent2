@@ -281,3 +281,35 @@ export function getQueueInfo(queueName) {
   });
 }
 
+/**
+ * Obtém histórico de mensagens de um ticket.
+ *
+ * @param {string} ticketId
+ * @returns {Promise<{ticketId: string, messages: any[]}>}
+ */
+export function getTicketMessages(ticketId) {
+  if (!ticketId) {
+    return Promise.reject(new Error('getTicketMessages: ticketId é obrigatório'));
+  }
+
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/messages`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Marca mensagens de um ticket como lidas.
+ *
+ * @param {string} ticketId
+ * @returns {Promise<{success: boolean, ticketId: string}>}
+ */
+export function markTicketAsRead(ticketId) {
+  if (!ticketId) {
+    return Promise.reject(new Error('markTicketAsRead: ticketId é obrigatório'));
+  }
+
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/mark-read`, {
+    method: 'POST',
+  });
+}
+

@@ -1,7 +1,7 @@
 {
   "id": "user-input",
   "name": "Coleta de Dados",
-  "description": "Fluxo que coleta informações do usuário",
+  "description": "Fluxo que coleta informações do usuário com fallback integrado",
   "icon": "📝",
   "flow": {
     "tenantId": "tenant-demo",
@@ -37,7 +37,26 @@
         "config": {
           "text": "Obrigado! Seu nome foi registrado."
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "collect-name",
+          "options": "collect-name",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

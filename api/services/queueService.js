@@ -19,6 +19,14 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * @typedef {Object} Message
+ * @property {string} id - ID único da mensagem
+ * @property {string} text - Texto da mensagem
+ * @property {string} sender - "user" | "agent" | "system"
+ * @property {string} timestamp - Data/hora (ISO string)
+ */
+
+/**
  * @typedef {Object} Ticket
  * @property {string} id - Identificador único do ticket
  * @property {string} sessionId - ID da sessão do bot (ex.: "whatsapp_5511999999999")
@@ -29,6 +37,16 @@ const path = require('path');
  * @property {string|null} lastUserMessage - Última mensagem do usuário antes do handoff
  * @property {string|null} assignedTo - ID/nome do atendente atribuído (opcional)
  * @property {string|null} phoneNumber - Número de telefone do usuário (extraído do sessionId)
+ * @property {Message[]} messages - Histórico de mensagens do atendimento
+ * @property {number} unreadCount - Contador de mensagens não lidas do usuário
+ * @property {Object} [context] - Contexto preservado do bot (histórico, variáveis, motivo da escalada, etc.)
+ * @property {string} [context.flowId] - ID do fluxo em execução
+ * @property {string} [context.escalationReason] - Motivo da escalada (fallbackType)
+ * @property {number} [context.escalationAttempt] - Número da tentativa quando escalou
+ * @property {Message[]} [context.botHistory] - Histórico de mensagens do bot antes da escalada
+ * @property {Object} [context.variables] - Variáveis de contexto da conversa
+ * @property {boolean} [context.allowReturnToBot] - Se permite retorno ao bot após atendimento
+ * @property {string|null} [context.safeReturnNode] - Nó para retornar após atendimento
  */
 
 // Armazenamento em memória
@@ -132,6 +150,20 @@ function loadQueuesFromFile() {
 // Carrega dados ao iniciar o módulo
 loadQueuesFromFile();
 
+// Teste de getMetrics após carregar dados (apenas em desenvolvimento)
+if (process.env.NODE_ENV !== 'production') {
+  // Aguarda um pouco para garantir que os dados foram carregados
+  setTimeout(() => {
+    const testMetrics = getMetrics();
+    // eslint-disable-next-line no-console
+    console.log('[QueueService] Teste de getMetrics após carregar dados:', {
+      totalTickets: testMetrics.totalTickets,
+      ticketsByStatus: testMetrics.ticketsByStatus,
+      ticketsByQueue: testMetrics.ticketsByQueue,
+    });
+  }, 100);
+}
+
 /**
  * Extrai número de telefone do sessionId (formato: "whatsapp_5511999999999")
  *
@@ -151,9 +183,10 @@ function extractPhoneNumber(sessionId) {
  * @param {string} params.sessionId - ID da sessão
  * @param {string} params.queue - Nome da fila
  * @param {string} [params.lastUserMessage] - Última mensagem do usuário
+ * @param {Object} [params.context] - Contexto adicional (histórico do bot, motivo da escalada, etc.)
  * @returns {Ticket}
  */
-function createTicket({ sessionId, queue, lastUserMessage }) {
+function createTicket({ sessionId, queue, lastUserMessage, context = {} }) {
   const id = `${queue}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const now = new Date().toISOString();
 
@@ -167,6 +200,24 @@ function createTicket({ sessionId, queue, lastUserMessage }) {
     lastUserMessage: lastUserMessage || null,
     assignedTo: null,
     phoneNumber: extractPhoneNumber(sessionId),
+    messages: lastUserMessage ? [{
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      text: lastUserMessage,
+      sender: 'user',
+      timestamp: now,
+    }] : [],
+    unreadCount: 0,
+    // Contexto preservado para o atendente
+    context: {
+      flowId: context.flowId || null,
+      escalationReason: context.escalationReason || null,
+      escalationAttempt: context.escalationAttempt || null,
+      botHistory: context.botHistory || [],
+      variables: context.variables || {},
+      allowReturnToBot: context.allowReturnToBot !== false, // Default: true
+      safeReturnNode: context.safeReturnNode || null,
+      ...(context.metadata || {}),
+    },
   };
 
   tickets.set(id, ticket);
@@ -472,7 +523,7 @@ function closeTicket(ticketId) {
 }
 
 /**
- * Atualiza a última mensagem do usuário em um ticket.
+ * Atualiza a última mensagem do usuário em um ticket e adiciona ao histórico.
  *
  * @param {string} ticketId
  * @param {string} message
@@ -485,10 +536,93 @@ function updateLastMessage(ticketId, message) {
   ticket.lastUserMessage = message;
   ticket.updatedAt = new Date().toISOString();
 
+  // Adiciona mensagem ao histórico
+  if (!ticket.messages) {
+    ticket.messages = [];
+  }
+  
+  const messageObj = {
+    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text: message,
+    sender: 'user',
+    timestamp: new Date().toISOString(),
+  };
+  
+  ticket.messages.push(messageObj);
+  
+  // Incrementa contador de não lidas se ticket está atribuído
+  if (ticket.status === 'in_progress' && ticket.assignedTo) {
+    ticket.unreadCount = (ticket.unreadCount || 0) + 1;
+  }
+
   // Salva automaticamente
   saveQueuesToFile();
 
   return ticket;
+}
+
+/**
+ * Adiciona mensagem do atendente ao histórico do ticket.
+ *
+ * @param {string} ticketId
+ * @param {string} message
+ * @param {string} [agentId] - ID do atendente (opcional)
+ * @returns {Ticket|null}
+ */
+function addAgentMessage(ticketId, message, agentId = null) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  if (!ticket.messages) {
+    ticket.messages = [];
+  }
+
+  const messageObj = {
+    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text: message,
+    sender: 'agent',
+    agentId: agentId || ticket.assignedTo || 'unknown',
+    timestamp: new Date().toISOString(),
+  };
+
+  ticket.messages.push(messageObj);
+  ticket.updatedAt = new Date().toISOString();
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  return ticket;
+}
+
+/**
+ * Marca mensagens do usuário como lidas.
+ *
+ * @param {string} ticketId
+ * @returns {Ticket|null}
+ */
+function markMessagesAsRead(ticketId) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  ticket.unreadCount = 0;
+  ticket.updatedAt = new Date().toISOString();
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  return ticket;
+}
+
+/**
+ * Obtém histórico de mensagens de um ticket.
+ *
+ * @param {string} ticketId
+ * @returns {Message[]}
+ */
+function getTicketMessages(ticketId) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket || !ticket.messages) return [];
+  return ticket.messages;
 }
 
 /**
@@ -503,6 +637,12 @@ function updateLastMessage(ticketId, message) {
  */
 function listAllTickets(options = {}) {
   let ticketList = Array.from(tickets.values());
+
+  // Log de debug para comparar com getMetrics
+  // eslint-disable-next-line no-console
+  console.log(`[QueueService] listAllTickets: Map tem ${tickets.size} ticket(s), Array tem ${ticketList.length} ticket(s)`, {
+    filters: { status: options.status, queue: options.queue },
+  });
 
   if (options.status) {
     ticketList = ticketList.filter((t) => t.status === options.status);
@@ -600,6 +740,10 @@ function getMetrics() {
   const maxAge7Days = 7 * 24 * 60 * 60 * 1000;
   const maxAge30Days = 30 * 24 * 60 * 60 * 1000;
 
+  // Log de debug para verificar o estado do Map
+  // eslint-disable-next-line no-console
+  console.log(`[QueueService] getMetrics: Map tem ${tickets.size} ticket(s), Array tem ${allTickets.length} ticket(s)`);
+
   const metrics = {
     totalTickets: allTickets.length,
     ticketsByStatus: {
@@ -626,13 +770,32 @@ function getMetrics() {
   let newestDate = 0;
 
   allTickets.forEach((ticket) => {
-    // Contagem por status
-    metrics.ticketsByStatus[ticket.status] =
-      (metrics.ticketsByStatus[ticket.status] || 0) + 1;
+    // Valida se o ticket é válido
+    if (!ticket || !ticket.id) {
+      // eslint-disable-next-line no-console
+      console.warn(`[QueueService] Ticket inválido encontrado no Map:`, ticket);
+      return;
+    }
 
-    // Contagem por fila
-    metrics.ticketsByQueue[ticket.queue] =
-      (metrics.ticketsByQueue[ticket.queue] || 0) + 1;
+    // Contagem por status (apenas status válidos)
+    if (ticket.status && (ticket.status === 'waiting' || ticket.status === 'in_progress' || ticket.status === 'closed')) {
+      metrics.ticketsByStatus[ticket.status] =
+        (metrics.ticketsByStatus[ticket.status] || 0) + 1;
+    } else if (ticket.status) {
+      // Log para debug: status inválido encontrado
+      // eslint-disable-next-line no-console
+      console.warn(`[QueueService] Ticket com status inválido: ${ticket.status}`, { ticketId: ticket.id });
+    } else {
+      // Log para debug: ticket sem status
+      // eslint-disable-next-line no-console
+      console.warn(`[QueueService] Ticket sem status:`, { ticketId: ticket.id, ticket });
+    }
+
+    // Contagem por fila (apenas se a fila existir)
+    if (ticket.queue) {
+      metrics.ticketsByQueue[ticket.queue] =
+        (metrics.ticketsByQueue[ticket.queue] || 0) + 1;
+    }
 
     // Tickets fechados antigos
     if (ticket.status === 'closed') {
@@ -665,6 +828,15 @@ function getMetrics() {
     }
   });
 
+  // Log de debug sempre (para identificar quando está vazio)
+  // eslint-disable-next-line no-console
+  console.log(`[QueueService] Métricas calculadas: ${allTickets.length} ticket(s)`, {
+    totalTickets: metrics.totalTickets,
+    byStatus: metrics.ticketsByStatus,
+    byQueue: Object.keys(metrics.ticketsByQueue).length,
+    queueDetails: metrics.ticketsByQueue,
+  });
+
   return metrics;
 }
 
@@ -680,6 +852,9 @@ module.exports = {
   assignTicket,
   closeTicket,
   updateLastMessage,
+  addAgentMessage,
+  markMessagesAsRead,
+  getTicketMessages,
   listAllTickets,
   cleanupOldTickets,
   startAutoCleanup,

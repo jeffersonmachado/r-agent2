@@ -45,7 +45,26 @@
         "config": {
           "text": "💬 Resposta Assistida Gerada:\n\n• Pergunta original: {{user_message}}\n• Resposta: {{ai.generate-response.response}}\n• Confiança: {{ai.generate-response.confidence}}\n\nEsta resposta foi gerada usando IA baseada no contexto da conversa. Use essa funcionalidade para criar respostas mais naturais e contextualizadas."
         },
-        "next": "end"
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "collect-user-input",
+          "options": "collect-user-input",
+          "human": "end",
+          "end": "end"
+        }
       },
       {
         "id": "end",

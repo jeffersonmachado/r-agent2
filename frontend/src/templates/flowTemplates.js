@@ -41,21 +41,29 @@ async function loadTemplates() {
 
       logger.debug('Lista de templates obtida do backend', { count: templateList.length });
 
-      // Agora carrega cada template completo
+      // Agora carrega cada template completo do backend
       const templates = [];
 
       for (const templateInfo of templateList) {
         try {
-          const response = await fetch(`/templates/${templateInfo.id}.json`);
-          if (response.ok) {
-            const template = await response.json();
+          // Busca o template completo via API do backend
+          const template = await fetchJson(`/templates/${encodeURIComponent(templateInfo.id)}`, {
+            method: 'GET',
+          });
+          
+          if (template && template.id && template.name && template.flow) {
             templates.push(template);
-            logger.debug('Template carregado', { templateId: templateInfo.id, name: template.name });
+            logger.debug('Template carregado', { templateId: template.id, name: template.name });
           } else {
-            logger.warn(`Template ${templateInfo.id}.json não encontrado, pulando...`);
+            logger.warn(`Template ${templateInfo.id} retornado sem estrutura válida, pulando...`);
           }
         } catch (err) {
-          logger.error(`Erro ao carregar template ${templateInfo.id}.json:`, err);
+          // Se o erro for 404, apenas loga como warning (template pode ter sido removido)
+          if (err && typeof err === 'object' && 'status' in err && err.status === 404) {
+            logger.warn(`Template ${templateInfo.id} não encontrado no backend, pulando...`);
+          } else {
+            logger.error(`Erro ao carregar template ${templateInfo.id}:`, err);
+          }
         }
       }
 
