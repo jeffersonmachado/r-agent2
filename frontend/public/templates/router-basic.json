@@ -1,0 +1,99 @@
+{
+  "id": "router-basic",
+  "name": "Router Básico",
+  "description": "Fluxo com roteamento baseado em condições",
+  "icon": "🔀",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "router-basic",
+    "name": "Router Básico",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "ask-option"
+      },
+      {
+        "id": "ask-option",
+        "type": "message",
+        "config": {
+          "text": "Escolha uma opção:\n1. Opção A\n2. Opção B"
+        },
+        "next": "collect-option"
+      },
+      {
+        "id": "collect-option",
+        "type": "user_input",
+        "config": {
+          "variable": "user_option"
+        },
+        "next": "route"
+      },
+      {
+        "id": "route",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "1"
+              },
+              "next": "option-a"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "2"
+              },
+              "next": "option-b"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "default-response"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "option-a",
+        "type": "message",
+        "config": {
+          "text": "Você escolheu a Opção A!"
+        },
+        "next": "end"
+      },
+      {
+        "id": "option-b",
+        "type": "message",
+        "config": {
+          "text": "Você escolheu a Opção B!"
+        },
+        "next": "end"
+      },
+      {
+        "id": "default-response",
+        "type": "message",
+        "config": {
+          "text": "Opção não reconhecida. Tente novamente."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

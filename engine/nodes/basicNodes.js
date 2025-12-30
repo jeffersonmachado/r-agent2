@@ -33,12 +33,14 @@ function cloneState(state) {
   };
 }
 
+const { renderTemplate } = require('../utils/templateRenderer');
+
 /**
  * Nó "start"
  * - Ponto lógico de entrada do fluxo.
  * - Não altera o estado; serve como âncora semântica.
  */
-async function startNodeHandler(node, state) {
+async function startNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
 
   /** @type {EngineStepOutput} */
@@ -65,12 +67,21 @@ async function startNodeHandler(node, state) {
 /**
  * Nó "message"
  * - Emite uma mensagem de saída para o usuário.
+ * - Suporta interpolação de variáveis usando sintaxe {{variavel}}.
  *
  * config:
- * - text: string
+ * - text: string (pode conter placeholders {{variavel}})
+ *
+ * Exemplo:
+ * - text: "Olá {{nome}}! Como posso ajudar?"
+ * - Se a variável "nome" contém "João", a mensagem será: "Olá João! Como posso ajudar?"
  */
-async function messageNodeHandler(node, state) {
+async function messageNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
+  
+  const textTemplate = node.config && node.config.text ? String(node.config.text) : '';
+  // Renderiza o template substituindo variáveis
+  const renderedText = renderTemplate(textTemplate, nextState.variables || {});
 
   /** @type {EngineStepOutput} */
   const result = {
@@ -78,7 +89,7 @@ async function messageNodeHandler(node, state) {
     events: [],
     output: {
       type: 'message',
-      text: node.config && node.config.text ? String(node.config.text) : '',
+      text: renderedText,
     },
   };
 
@@ -189,7 +200,7 @@ function evaluateCondition(condition, state) {
  * config:
  * - rules: Array<{ condition: object, next: string }>
  */
-async function routerNodeHandler(node, state) {
+async function routerNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   const rules = (node.config && Array.isArray(node.config.rules) ? node.config.rules : []);
 
@@ -238,7 +249,7 @@ async function routerNodeHandler(node, state) {
  * config:
  * - queue: string (nome/identificador da fila de atendimento)
  */
-async function handoffNodeHandler(node, state) {
+async function handoffNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   nextState.metadata = nextState.metadata || {};
   nextState.metadata.status = 'waiting_human';
@@ -277,7 +288,7 @@ async function handoffNodeHandler(node, state) {
  * config:
  * - assignments: Record<string, any>
  */
-async function setVariableNodeHandler(node, state) {
+async function setVariableNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   const assignments =
     node.config && typeof node.config === 'object' && node.config.assignments
@@ -320,7 +331,7 @@ async function setVariableNodeHandler(node, state) {
  * - Marca o fim do fluxo/conversa.
  * - currentNodeId passa a ser null.
  */
-async function endNodeHandler(node, state) {
+async function endNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   nextState.currentNodeId = null;
 

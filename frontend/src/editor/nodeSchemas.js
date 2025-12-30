@@ -14,6 +14,8 @@
  * - Documentação: docs-criar-fluxo.md
  */
 
+import { SUPPORTED_TASKS } from '@shared/aiTaskExecutor';
+
 /**
  * @typedef {Object} SocketDefinition
  * @property {string} key - Chave do socket (ex: 'in', 'out')
@@ -103,7 +105,7 @@ export const NODE_SCHEMAS = {
     label: 'Mensagem',
     icon: '💬',
     color: '#52C9A2',
-    description: 'Envia uma mensagem ao usuário. Pode conter texto formatado.',
+    description: 'Envia uma mensagem ao usuário. Suporta interpolação de variáveis usando {{variavel}}.',
     inputs: [
       {
         key: 'in',
@@ -123,9 +125,9 @@ export const NODE_SCHEMAS = {
         key: 'text',
         type: 'textarea',
         label: 'Texto da mensagem',
-        description: 'Mensagem que será enviada ao usuário. Pode conter texto simples ou formatado.',
+        description: 'Mensagem que será enviada ao usuário. Use {{nome_variavel}} para interpolar variáveis. Ex.: "Olá {{nome}}! Como posso ajudar?"',
         required: true,
-        placeholder: 'Ex.: Olá! Como posso ajudá-lo hoje?',
+        placeholder: 'Ex.: Olá {{nome}}! Como posso ajudá-lo hoje?',
         rows: 4,
       },
     ],
@@ -345,6 +347,169 @@ export const NODE_SCHEMAS = {
             });
           }
         }
+      }
+      
+      return errors;
+    },
+  },
+
+  ai_task: {
+    type: 'ai_task',
+    label: 'Intenção',
+    icon: '🤖',
+    color: '#16A085',
+    description: 'Identifica a intenção do usuário baseado nas palavras que ele digita. Por exemplo: se o usuário quer comprar algo, pedir ajuda ou resolver algo financeiro.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'task',
+        type: 'select',
+        label: 'O que este nó deve fazer?',
+        description: 'Selecione o tipo de tarefa que este nó deve executar. Para reconhecer a intenção do usuário, escolha "Intenção".',
+        required: true,
+        placeholder: 'Selecione uma opção...',
+        options: [
+          { value: 'intent_classification', label: 'Intenção' },
+          { value: 'entity_extraction', label: 'Extrair Entidades' },
+          { value: 'text_normalization', label: 'Normalizar Texto' },
+          { value: 'assisted_response', label: 'Resposta Assistida' },
+        ],
+      },
+      {
+        key: 'allowedOutputs',
+        type: 'intent_list',
+        label: 'Quais intenções você quer reconhecer?',
+        description: 'Adicione as intenções que o bot deve identificar. Clique em "Adicionar" para cada intenção. Exemplos: comprar, suporte, financeiro.',
+        required: false,
+      },
+      {
+        key: 'fallback',
+        type: 'text',
+        label: 'O que fazer quando não entender?',
+        description: 'Quando o bot não conseguir identificar nenhuma intenção, ele vai usar este valor. Exemplo: "desconhecido" ou "outro"',
+        required: false,
+        placeholder: 'desconhecido',
+      },
+      {
+        key: 'confidenceThreshold',
+        type: 'number',
+        label: 'Nível de certeza necessário (opcional)',
+        description: 'Quão certo o bot precisa estar para aceitar uma intenção? Use um número entre 0 e 1. 0.75 significa 75% de certeza. Deixe vazio para usar o padrão (75%).',
+        required: false,
+        placeholder: '0.75',
+      },
+      {
+        key: 'keywords',
+        type: 'keywords',
+        label: 'Palavras que indicam cada intenção (opcional)',
+        description: 'Configure quais palavras o bot deve procurar para identificar cada intenção. Selecione uma intenção e adicione palavras-chave. Se você não configurar, o bot usa palavras padrão. Dica: adicione variações e sinônimos para melhorar o reconhecimento.',
+        required: false,
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'AI_TASK_MISSING_CONFIG',
+          message: `O nó "Reconhecer Intenção" precisa ter configurações definidas.`,
+          messageUi: `O nó "Reconhecer Intenção" precisa ter configurações definidas.`,
+          nodeIds: [nodeId],
+        });
+        return errors;
+      }
+
+      const config = node.config;
+
+      // Validação: task deve estar definida
+      if (!config.task || typeof config.task !== 'string') {
+        errors.push({
+          code: 'AI_TASK_MISSING_TASK',
+          message: `O campo "O que este nó deve fazer?" precisa ser preenchido.`,
+          messageUi: `Preencha o campo "O que este nó deve fazer?" com: intent_classification`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        // Validação: task deve ser uma das tarefas suportadas
+        const supportedTasks = Object.values(SUPPORTED_TASKS);
+        if (!supportedTasks.includes(config.task)) {
+          errors.push({
+            code: 'AI_TASK_UNSUPPORTED_TASK',
+            message: `Tipo de tarefa não reconhecido. Use: intent_classification`,
+            messageUi: `Tipo de tarefa não reconhecido. Digite exatamente: intent_classification`,
+            nodeIds: [nodeId],
+            details: {
+              task: config.task,
+              supportedTasks,
+            },
+          });
+        }
+      }
+
+      // Validação específica para intent_classification
+      if (config.task === 'intent_classification') {
+        // allowedOutputs deve ser um array não vazio
+        if (!Array.isArray(config.allowedOutputs) || config.allowedOutputs.length === 0) {
+          errors.push({
+            code: 'AI_TASK_MISSING_ALLOWED_OUTPUTS',
+            message: `Você precisa definir quais intenções o bot deve reconhecer.`,
+            messageUi: `Preencha o campo "Quais intenções você quer reconhecer?" com uma lista, por exemplo: ["comprar", "suporte", "financeiro"]`,
+            nodeIds: [nodeId],
+          });
+        }
+
+        // fallback deve estar definido
+        if (config.fallback === undefined || config.fallback === null || config.fallback === '') {
+          errors.push({
+            code: 'AI_TASK_MISSING_FALLBACK',
+            message: `Você precisa definir o que fazer quando o bot não entender a intenção.`,
+            messageUi: `Preencha o campo "O que fazer quando não entender?" com um valor, por exemplo: "desconhecido"`,
+            nodeIds: [nodeId],
+          });
+        }
+
+        // confidenceThreshold deve ser um número válido entre 0 e 1
+        if (config.confidenceThreshold !== undefined) {
+          if (typeof config.confidenceThreshold !== 'number') {
+            errors.push({
+              code: 'AI_TASK_INVALID_CONFIDENCE_THRESHOLD',
+              message: `O nível de certeza deve ser um número.`,
+              messageUi: `O campo "Nível de certeza necessário" deve ser um número entre 0 e 1, por exemplo: 0.75`,
+              nodeIds: [nodeId],
+            });
+          } else if (config.confidenceThreshold < 0 || config.confidenceThreshold > 1) {
+            errors.push({
+              code: 'AI_TASK_INVALID_CONFIDENCE_RANGE',
+              message: `O nível de certeza deve estar entre 0 e 1.`,
+              messageUi: `O nível de certeza deve ser um número entre 0 e 1. Use valores como: 0.5 (50%), 0.75 (75%) ou 0.9 (90%)`,
+              nodeIds: [nodeId],
+            });
+          }
+        }
+      }
+
+      // Validação: o nó deve ter um "next" definido (caminho de fallback)
+      if (!node.next) {
+        errors.push({
+          code: 'AI_TASK_NO_FALLBACK_PATH',
+          message: `Este nó precisa estar conectado a outro nó.`,
+          messageUi: `Conecte este nó a outro nó do fluxo arrastando uma linha de conexão.`,
+          nodeIds: [nodeId],
+        });
       }
       
       return errors;
@@ -587,6 +752,300 @@ export const NODE_SCHEMAS = {
           errors.push({
             code: 'AI_INVALID_OUTPUT_SCHEMA',
             message: `Nó de IA "${nodeId}" tem "config.outputSchema" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  get_flow_info: {
+    type: 'get_flow_info',
+    label: 'Info do Fluxo',
+    icon: '📋',
+    color: '#3498DB',
+    description: 'Obtém informações de outro fluxo e salva em uma variável.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'flowId',
+        type: 'text',
+        label: 'ID do Fluxo',
+        description: 'ID do fluxo a ser buscado',
+        required: true,
+        placeholder: 'Ex.: flow-123',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Variável de Saída',
+        description: 'Nome da variável onde o resultado será salvo',
+        required: false,
+        defaultValue: 'flow_info',
+        placeholder: 'flow_info',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'GET_FLOW_INFO_MISSING_CONFIG',
+          message: `Nó de info do fluxo "${nodeId}" deve ter um campo "config" com "flowId".`,
+          nodeIds: [nodeId],
+        });
+      } else if (!node.config.flowId || typeof node.config.flowId !== 'string') {
+        errors.push({
+          code: 'GET_FLOW_INFO_MISSING_FLOW_ID',
+          message: `Nó de info do fluxo "${nodeId}" deve ter "config.flowId" (string não vazia).`,
+          nodeIds: [nodeId],
+        });
+      }
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'GET_FLOW_INFO_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de info do fluxo "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  get_queue_status: {
+    type: 'get_queue_status',
+    label: 'Status da Fila',
+    icon: '📊',
+    color: '#E67E22',
+    description: 'Obtém status de uma fila de atendimento.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'queueName',
+        type: 'text',
+        label: 'Nome da Fila',
+        description: 'Nome da fila de atendimento',
+        required: true,
+        placeholder: 'Ex.: suporte',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Variável de Saída',
+        description: 'Nome da variável onde o resultado será salvo',
+        required: false,
+        defaultValue: 'queue_status',
+        placeholder: 'queue_status',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'GET_QUEUE_STATUS_MISSING_CONFIG',
+          message: `Nó de status da fila "${nodeId}" deve ter um campo "config" com "queueName".`,
+          nodeIds: [nodeId],
+        });
+      } else if (!node.config.queueName || typeof node.config.queueName !== 'string') {
+        errors.push({
+          code: 'GET_QUEUE_STATUS_MISSING_QUEUE_NAME',
+          message: `Nó de status da fila "${nodeId}" deve ter "config.queueName" (string não vazia).`,
+          nodeIds: [nodeId],
+        });
+      }
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'GET_QUEUE_STATUS_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de status da fila "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  get_config_value: {
+    type: 'get_config_value',
+    label: 'Valor da Config',
+    icon: '⚙️',
+    color: '#8E44AD',
+    description: 'Obtém um valor da configuração do sistema.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'configPath',
+        type: 'text',
+        label: 'Caminho da Config',
+        description: 'Caminho do valor na config (ex: api.port)',
+        required: true,
+        placeholder: 'Ex.: api.port',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Variável de Saída',
+        description: 'Nome da variável onde o resultado será salvo',
+        required: false,
+        defaultValue: 'config_value',
+        placeholder: 'config_value',
+      },
+      {
+        key: 'defaultValue',
+        type: 'text',
+        label: 'Valor Padrão',
+        description: 'Valor padrão caso o caminho não exista',
+        required: false,
+        placeholder: 'Ex.: 3000',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'GET_CONFIG_VALUE_MISSING_CONFIG',
+          message: `Nó de valor da config "${nodeId}" deve ter um campo "config" com "configPath".`,
+          nodeIds: [nodeId],
+        });
+      } else if (!node.config.configPath || typeof node.config.configPath !== 'string') {
+        errors.push({
+          code: 'GET_CONFIG_VALUE_MISSING_CONFIG_PATH',
+          message: `Nó de valor da config "${nodeId}" deve ter "config.configPath" (string não vazia).`,
+          nodeIds: [nodeId],
+        });
+      }
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'GET_CONFIG_VALUE_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de valor da config "${nodeId}" tem "config.outputVariable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
+
+  list_flows: {
+    type: 'list_flows',
+    label: 'Listar Fluxos',
+    icon: '📑',
+    color: '#1ABC9C',
+    description: 'Lista fluxos disponíveis com filtros opcionais.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'tenantId',
+        type: 'text',
+        label: 'Tenant ID (Opcional)',
+        description: 'Filtrar fluxos por tenant',
+        required: false,
+        placeholder: 'Ex.: tenant-demo',
+      },
+      {
+        key: 'nameFilter',
+        type: 'text',
+        label: 'Filtro de Nome (Opcional)',
+        description: 'Filtrar fluxos por nome',
+        required: false,
+        placeholder: 'Ex.: suporte',
+      },
+      {
+        key: 'outputVariable',
+        type: 'text',
+        label: 'Variável de Saída',
+        description: 'Nome da variável onde a lista será salva',
+        required: false,
+        defaultValue: 'flows_list',
+        placeholder: 'flows_list',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (node.config && node.config.outputVariable) {
+        const validationError = validateVariableName(node.config.outputVariable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'LIST_FLOWS_INVALID_OUTPUT_VARIABLE',
+            message: `Nó de listar fluxos "${nodeId}" tem "config.outputVariable" inválido.`,
             nodeIds: [nodeId],
           });
         }

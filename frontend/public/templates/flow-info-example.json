@@ -1,0 +1,76 @@
+{
+  "id": "flow-info-example",
+  "name": "Info de Outro Fluxo",
+  "description": "Obtém informações de outro fluxo e usa em decisões",
+  "icon": "📋",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "flow-info-example",
+    "name": "Info de Outro Fluxo",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "get-flow-info"
+      },
+      {
+        "id": "get-flow-info",
+        "type": "get_flow_info",
+        "config": {
+          "flowId": "outro-fluxo-id",
+          "outputVariable": "flow_info"
+        },
+        "next": "router-flow-exists"
+      },
+      {
+        "id": "router-flow-exists",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "flow_info.found",
+                "value": true
+              },
+              "next": "message-found"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "message-not-found"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "message-found",
+        "type": "message",
+        "config": {
+          "text": "Fluxo encontrado: {{flow_info.name}} ({{flow_info.nodeCount}} nós)"
+        },
+        "next": "end"
+      },
+      {
+        "id": "message-not-found",
+        "type": "message",
+        "config": {
+          "text": "Fluxo não encontrado."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

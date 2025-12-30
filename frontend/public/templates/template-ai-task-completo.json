@@ -1,0 +1,335 @@
+{
+  "id": "template-ai-task-completo",
+  "name": "Template - Todas as Ações de ai_task",
+  "description": "Template completo demonstrando todas as 4 tarefas disponíveis no nó ai_task: Classificação de Intenção, Extração de Entidades, Normalização de Texto e Resposta Assistida",
+  "icon": "🤖",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "template-ai-task-completo",
+    "name": "Template - Todas as Ações de ai_task",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "🤖 Bem-vindo ao Template de Tarefas de IA!\n\nEste fluxo demonstra todas as 4 tarefas disponíveis no nó ai_task:\n\n1️⃣ - Classificação de Intenção (Intent Classification)\n2️⃣ - Extração de Entidades (Entity Extraction)\n3️⃣ - Normalização de Texto (Text Normalization)\n4️⃣ - Resposta Assistida (Assisted Response)\n\nEscolha uma opção (1-4) ou 0 para finalizar:"
+        },
+        "next": "collect-task-choice"
+      },
+      {
+        "id": "collect-task-choice",
+        "type": "user_input",
+        "config": {
+          "variable": "task_choice"
+        },
+        "next": "router-tasks"
+      },
+      {
+        "id": "router-tasks",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "task_choice",
+                "value": "1"
+              },
+              "next": "demo-intent-classification"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "task_choice",
+                "value": "2"
+              },
+              "next": "demo-entity-extraction"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "task_choice",
+                "value": "3"
+              },
+              "next": "demo-text-normalization"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "task_choice",
+                "value": "4"
+              },
+              "next": "demo-assisted-response"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "task_choice",
+                "value": "0"
+              },
+              "next": "final-message"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "invalid-option"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "demo-intent-classification",
+        "type": "message",
+        "config": {
+          "text": "🎯 Demonstração: CLASSIFICAÇÃO DE INTENÇÃO\n\nEsta tarefa identifica a intenção do usuário baseado nas palavras que ele digita.\n\nDigite uma mensagem e vou tentar identificar sua intenção:\n\nExemplos:\n• 'quero comprar um produto'\n• 'preciso de ajuda com algo'\n• 'tenho um problema financeiro'\n• 'quero cancelar minha conta'"
+        },
+        "next": "collect-intent-input"
+      },
+      {
+        "id": "collect-intent-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message_intent"
+        },
+        "next": "classify-intent-demo"
+      },
+      {
+        "id": "classify-intent-demo",
+        "type": "ai_task",
+        "config": {
+          "task": "intent_classification",
+          "allowedOutputs": ["comprar", "suporte", "financeiro", "cancelar"],
+          "fallback": "desconhecido",
+          "confidenceThreshold": 0.75,
+          "keywords": {
+            "comprar": ["comprar", "quero comprar", "adquirir", "vender", "produto"],
+            "suporte": ["ajuda", "problema", "erro", "não funciona", "dúvida", "suporte"],
+            "financeiro": ["pagamento", "boleto", "fatura", "conta", "dinheiro", "financeiro"],
+            "cancelar": ["cancelar", "cancelamento", "quero cancelar", "desistir"]
+          }
+        },
+        "next": "router-by-intent"
+      },
+      {
+        "id": "router-by-intent",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent-demo.value",
+                "value": "comprar"
+              },
+              "next": "intent-result-comprar"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent-demo.value",
+                "value": "suporte"
+              },
+              "next": "intent-result-suporte"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent-demo.value",
+                "value": "financeiro"
+              },
+              "next": "intent-result-financeiro"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent-demo.value",
+                "value": "cancelar"
+              },
+              "next": "intent-result-cancelar"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "intent-result-desconhecido"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "intent-result-comprar",
+        "type": "message",
+        "config": {
+          "text": "✅ Intenção identificada: COMPRAR\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-result-suporte",
+        "type": "message",
+        "config": {
+          "text": "✅ Intenção identificada: SUPORTE\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-result-financeiro",
+        "type": "message",
+        "config": {
+          "text": "✅ Intenção identificada: FINANCEIRO\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-result-cancelar",
+        "type": "message",
+        "config": {
+          "text": "✅ Intenção identificada: CANCELAR\n\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Valor: {{ai.classify-intent-demo.value}}\n• Mensagem original: {{user_message_intent}}\n\nEsta intenção foi identificada usando palavras-chave configuradas no nó ai_task."
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-result-desconhecido",
+        "type": "message",
+        "config": {
+          "text": "❓ Intenção não identificada claramente\n\n• Intenção detectada: {{ai.classify-intent-demo.value}}\n• Confiança: {{ai.classify-intent-demo.confidence}}\n• Mensagem original: {{user_message_intent}}\n\nA confiança pode estar abaixo do threshold (0.75) ou a mensagem não corresponde a nenhuma intenção configurada."
+        },
+        "next": "end"
+      },
+      {
+        "id": "demo-entity-extraction",
+        "type": "message",
+        "config": {
+          "text": "🔍 Demonstração: EXTRAÇÃO DE ENTIDADES\n\nEsta tarefa extrai informações estruturadas do texto, como emails, telefones, números, datas, etc.\n\nDigite uma mensagem contendo informações como:\n• Email: exemplo@email.com\n• Telefone: 11987654321\n• Números: 123, 456.78\n\nExemplo: 'Meu email é joao@exemplo.com e meu telefone é 11987654321'"
+        },
+        "next": "collect-entity-input"
+      },
+      {
+        "id": "collect-entity-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message_entity"
+        },
+        "next": "extract-entities-demo"
+      },
+      {
+        "id": "extract-entities-demo",
+        "type": "ai_task",
+        "config": {
+          "task": "entity_extraction"
+        },
+        "next": "show-entities"
+      },
+      {
+        "id": "show-entities",
+        "type": "message",
+        "config": {
+          "text": "🔍 Entidades Extraídas:\n\n• Mensagem original: {{user_message_entity}}\n• Entidades encontradas: {{ai.extract-entities-demo.entities.length}}\n\nAs entidades foram armazenadas em 'ai.extract-entities-demo.entities'.\n\nCada entidade contém:\n• type: tipo da entidade (email, phone, number, etc.)\n• value: valor extraído\n• confidence: nível de confiança"
+        },
+        "next": "end"
+      },
+      {
+        "id": "demo-text-normalization",
+        "type": "message",
+        "config": {
+          "text": "📝 Demonstração: NORMALIZAÇÃO DE TEXTO\n\nEsta tarefa normaliza o texto removendo acentos, convertendo para minúsculas, removendo espaços extras, etc.\n\nDigite um texto com acentos, maiúsculas e espaços extras:\n\nExemplo: 'Olá,  como   você   está?  Muito   BEM!'"
+        },
+        "next": "collect-normalization-input"
+      },
+      {
+        "id": "collect-normalization-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message_normalize"
+        },
+        "next": "normalize-text-demo"
+      },
+      {
+        "id": "normalize-text-demo",
+        "type": "ai_task",
+        "config": {
+          "task": "text_normalization"
+        },
+        "next": "show-normalized"
+      },
+      {
+        "id": "show-normalized",
+        "type": "message",
+        "config": {
+          "text": "📝 Texto Normalizado:\n\n• Texto original: {{user_message_normalize}}\n• Texto normalizado: {{ai.normalize-text-demo.normalized}}\n• Confiança: {{ai.normalize-text-demo.confidence}}\n\nO texto foi normalizado:\n• Convertido para minúsculas\n• Acentos removidos\n• Espaços extras removidos\n• Trim aplicado"
+        },
+        "next": "end"
+      },
+      {
+        "id": "demo-assisted-response",
+        "type": "message",
+        "config": {
+          "text": "💬 Demonstração: RESPOSTA ASSISTIDA\n\nEsta tarefa gera uma resposta assistida baseada no contexto da conversa.\n\nDigite uma pergunta ou mensagem e vou gerar uma resposta assistida:"
+        },
+        "next": "collect-assisted-input"
+      },
+      {
+        "id": "collect-assisted-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message_assisted"
+        },
+        "next": "generate-assisted-response"
+      },
+      {
+        "id": "generate-assisted-response",
+        "type": "ai_task",
+        "config": {
+          "task": "assisted_response"
+        },
+        "next": "show-assisted-response"
+      },
+      {
+        "id": "show-assisted-response",
+        "type": "message",
+        "config": {
+          "text": "💬 Resposta Assistida Gerada:\n\n• Pergunta original: {{user_message_assisted}}\n• Resposta: {{ai.generate-assisted-response.response}}\n• Confiança: {{ai.generate-assisted-response.confidence}}\n\nEsta resposta foi gerada usando IA baseada no contexto da conversa."
+        },
+        "next": "end"
+      },
+      {
+        "id": "invalid-option",
+        "type": "message",
+        "config": {
+          "text": "❌ Opção inválida. Por favor, escolha um número de 0 a 4."
+        },
+        "next": "end"
+      },
+      {
+        "id": "final-message",
+        "type": "message",
+        "config": {
+          "text": "🎉 Obrigado por testar o template de tarefas de IA!\n\n✅ Todas as 4 tarefas do ai_task foram demonstradas:\n\n1. 🎯 Classificação de Intenção (intent_classification)\n   - Identifica a intenção do usuário\n   - Usa palavras-chave configuráveis\n   - Retorna: {value, confidence}\n\n2. 🔍 Extração de Entidades (entity_extraction)\n   - Extrai informações estruturadas\n   - Identifica emails, telefones, números\n   - Retorna: {entities: [{type, value, confidence}]}\n\n3. 📝 Normalização de Texto (text_normalization)\n   - Normaliza texto (remove acentos, espaços extras)\n   - Converte para minúsculas\n   - Retorna: {normalized, confidence}\n\n4. 💬 Resposta Assistida (assisted_response)\n   - Gera respostas baseadas no contexto\n   - Usa IA para criar respostas relevantes\n   - Retorna: {response, confidence}\n\nAté logo! 👋"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template completo demonstrando todas as 4 tarefas disponíveis no nó ai_task: Classificação de Intenção, Extração de Entidades, Normalização de Texto e Resposta Assistida",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0"
+    }
+  }
+}
+

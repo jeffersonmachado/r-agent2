@@ -81,104 +81,11 @@ function cloneState(state) {
   };
 }
 
-/**
- * Renderiza um template simples substituindo {{chaves}} por valores
- * das variáveis do estado.
- *
- * Decisão importante:
- * - Evitamos qualquer forma de eval; a interpolação é puramente textual.
- *
- * @param {string} template
- * @param {Object<string, any>} variables
- */
-function renderPromptTemplate(template, variables) {
-  if (typeof template !== 'string') return '';
-  return template.replace(/{{\s*([^}]+)\s*}}/g, (match, varName) => {
-    const key = String(varName || '').trim();
-    const value = variables.hasOwnProperty(key) ? variables[key] : '';
-    return value != null ? String(value) : '';
-  });
-}
+const { renderTemplate } = require('../utils/templateRenderer');
+const { validateJsonSchema } = require('../utils/jsonSchemaValidator');
 
-/**
- * Validação muito enxuta de JSON Schema (subconjunto mínimo):
- * - Suporta:
- *   - type: "object" | "string" | "number" | "boolean" | "array"
- *   - properties: { [key]: schema }
- *   - required: string[]
- *   - items: schema (para arrays)
- *
- * Decisão importante:
- * - Não usamos bibliotecas externas (ex.: ajv) para manter o núcleo
- *   da engine leve e sem dependências extras.
- *
- * @param {any} schema
- * @param {any} data
- * @returns {{ valid: boolean, errors: string[] }}
- */
-function validateJsonSchema(schema, data) {
-  const errors = [];
-
-  if (!schema || typeof schema !== 'object') {
-    return { valid: true, errors }; // Sem schema = sem validação
-  }
-
-  function validate(schemaNode, value, path) {
-    const expectedType = schemaNode.type;
-
-    if (expectedType) {
-      if (expectedType === 'object') {
-        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-          errors.push(`${path}: esperado objeto`);
-          return;
-        }
-        const props = schemaNode.properties || {};
-        const required = schemaNode.required || [];
-
-        for (const reqKey of required) {
-          if (!Object.prototype.hasOwnProperty.call(value, reqKey)) {
-            errors.push(`${path}.${reqKey}: campo obrigatório ausente`);
-          }
-        }
-
-        for (const [key, subSchema] of Object.entries(props)) {
-          if (Object.prototype.hasOwnProperty.call(value, key)) {
-            validate(subSchema, value[key], `${path}.${key}`);
-          }
-        }
-      } else if (expectedType === 'array') {
-        if (!Array.isArray(value)) {
-          errors.push(`${path}: esperado array`);
-          return;
-        }
-        if (schemaNode.items) {
-          value.forEach((item, idx) => {
-            validate(schemaNode.items, item, `${path}[${idx}]`);
-          });
-        }
-      } else if (expectedType === 'string') {
-        if (typeof value !== 'string') {
-          errors.push(`${path}: esperado string`);
-        }
-      } else if (expectedType === 'number') {
-        if (typeof value !== 'number') {
-          errors.push(`${path}: esperado number`);
-        }
-      } else if (expectedType === 'boolean') {
-        if (typeof value !== 'boolean') {
-          errors.push(`${path}: esperado boolean`);
-        }
-      }
-    }
-  }
-
-  validate(schema, data, '$');
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
+// Alias para compatibilidade com código existente
+const renderPromptTemplate = renderTemplate;
 
 /**
  * Handler de nó "ai".
@@ -199,9 +106,10 @@ function validateJsonSchema(schema, data) {
  * @param {import('../flowTypes').FlowNode} node
  * @param {ConversationState} state
  * @param {{ aiProvider?: AiProvider }} [input]
+ * @param {import('../flowTypes').NodeDependencies} [deps] - Dependências opcionais
  * @returns {Promise<EngineStepOutput>}
  */
-async function aiNodeHandler(node, state, input) {
+async function aiNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
 
   /** @type {EngineEvent[]} */
@@ -442,10 +350,6 @@ async function aiNodeHandler(node, state, input) {
 
 module.exports = {
   aiNodeHandler,
-  _internal: {
-    renderPromptTemplate,
-    validateJsonSchema,
-  },
 };
 
 

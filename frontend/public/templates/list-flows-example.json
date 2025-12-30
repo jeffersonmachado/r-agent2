@@ -1,0 +1,85 @@
+{
+  "id": "list-flows-example",
+  "name": "Listar Fluxos",
+  "description": "Exemplo de uso do nó list_flows para listar fluxos disponíveis",
+  "icon": "📑",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "list-flows-example",
+    "name": "Listar Fluxos",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "message-intro"
+      },
+      {
+        "id": "message-intro",
+        "type": "message",
+        "config": {
+          "text": "Vou listar os fluxos disponíveis..."
+        },
+        "next": "list-flows"
+      },
+      {
+        "id": "list-flows",
+        "type": "list_flows",
+        "config": {
+          "tenantId": "tenant-demo",
+          "nameFilter": "",
+          "outputVariable": "flows_list"
+        },
+        "next": "router-check"
+      },
+      {
+        "id": "router-check",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "flows_list.length",
+                "value": 0
+              },
+              "next": "message-empty"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "message-found"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "message-empty",
+        "type": "message",
+        "config": {
+          "text": "Nenhum fluxo encontrado."
+        },
+        "next": "end"
+      },
+      {
+        "id": "message-found",
+        "type": "message",
+        "config": {
+          "text": "Encontrados {{flows_list.length}} fluxo(s) disponível(is)."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

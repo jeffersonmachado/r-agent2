@@ -83,17 +83,51 @@ export function reteJsonToEngineFlow(reteJson, meta) {
       });
     }
 
-    if (!node.outputs) return;
+    if (!node.outputs) {
+      logger.debug('reteJsonToEngineFlow - nó sem outputs', {
+        nodeId: fromId,
+        nodeType: engineNode.type,
+        hasOutputs: false,
+      });
+      return;
+    }
 
     const outputs = node.outputs || {};
     const allConnections = [];
     const invalidConnections = [];
     
+    logger.debug('reteJsonToEngineFlow - processando outputs do nó', {
+      nodeId: fromId,
+      nodeType: engineNode.type,
+      outputsKeys: Object.keys(outputs),
+      outputs: outputs,
+    });
+    
     for (const output of Object.values(outputs)) {
-      if (!output || !Array.isArray(output.connections)) continue;
+      if (!output || !Array.isArray(output.connections)) {
+        logger.debug('reteJsonToEngineFlow - output sem connections válidas', {
+          nodeId: fromId,
+          hasOutput: !!output,
+          connectionsIsArray: Array.isArray(output?.connections),
+          connections: output?.connections,
+        });
+        continue;
+      }
+      logger.debug('reteJsonToEngineFlow - processando connections do output', {
+        nodeId: fromId,
+        connectionsCount: output.connections.length,
+        connections: output.connections,
+      });
       for (const connection of output.connections) {
         if (connection && typeof connection.node !== 'undefined') {
           const targetId = String(connection.node);
+          logger.debug('reteJsonToEngineFlow - processando connection', {
+            nodeId: fromId,
+            targetId,
+            connection,
+            targetExists: byId.has(targetId),
+            availableIds: Array.from(byId.keys()),
+          });
           // Verifica se o nó de destino existe no mapa
           if (byId.has(targetId)) {
             allConnections.push(targetId);
@@ -129,7 +163,27 @@ export function reteJsonToEngineFlow(reteJson, meta) {
         connections: allConnections,
         invalidConnectionsCount: invalidConnections.length,
       });
+    } else {
+      // Debug: log quando um nó não tem conexões
+      logger.debug('Nó sem conexões de saída', {
+        nodeId: fromId,
+        nodeType: engineNode.type,
+        hasOutputs: !!node.outputs,
+        outputsKeys: node.outputs ? Object.keys(node.outputs) : [],
+      });
     }
+  });
+
+  // Debug: log final do fluxo convertido
+  logger.debug('reteJsonToEngineFlow - Fluxo convertido', {
+    totalNodes: engineNodes.length,
+    nodesWithNext: engineNodes.filter(n => n.next).length,
+    nodesWithoutNext: engineNodes.filter(n => !n.next).map(n => ({ id: n.id, type: n.type })),
+    allNodes: engineNodes.map(n => ({
+      id: n.id,
+      type: n.type,
+      next: n.next,
+    })),
   });
 
   const result = {
@@ -207,6 +261,14 @@ export function engineFlowToReteJson(flow) {
   // Primeiro, criamos um mapa do ID original do engine para o ID numérico do Rete
   const engineIdToNumeric = new Map();
   
+  // Primeira passada: cria todos os mapeamentos de ID
+  flow.nodes.forEach((node, index) => {
+    const numericId = Number.isNaN(Number(node.id)) ? index + 1 : Number(node.id);
+    const nodeId = String(node.id);
+    engineIdToNumeric.set(nodeId, numericId);
+  });
+  
+  // Segunda passada: cria os nós com configs atualizados
   flow.nodes.forEach((node, index) => {
     const numericId = Number.isNaN(Number(node.id)) ? index + 1 : Number(node.id);
     
@@ -268,18 +330,37 @@ export function engineFlowToReteJson(flow) {
       });
     }
 
-    // Mapeia o ID original do engine para o ID numérico do Rete
-    engineIdToNumeric.set(nodeId, numericId);
-
     // Obtém schema do nó para informações de sockets
     const nodeSchema = getNodeSchema(node.type);
+
+    // Prepara o config, atualizando IDs nas regras do router se necessário
+    let nodeConfig = node.config || {};
+    
+    // Se for um router, atualiza os IDs nas regras para usar IDs numéricos do Rete
+    if (node.type === 'router' && nodeConfig.rules && Array.isArray(nodeConfig.rules)) {
+      nodeConfig = {
+        ...nodeConfig,
+        rules: nodeConfig.rules.map(rule => {
+          if (rule && rule.next) {
+            const ruleNextNumeric = engineIdToNumeric.get(String(rule.next));
+            if (ruleNextNumeric !== undefined) {
+              return {
+                ...rule,
+                next: String(ruleNextNumeric),
+              };
+            }
+          }
+          return rule;
+        }),
+      };
+    }
 
     // Cria estrutura do nó baseada no tipo
     const nodeData = {
       id: numericId,
       data: {
         type: node.type,
-        config: node.config || {},
+        config: nodeConfig,
       },
       position: position,
       name: 'FlowNode',
@@ -314,9 +395,13 @@ export function engineFlowToReteJson(flow) {
 
   // Preenchemos conexões de saída a partir do campo "next"
   // Suportamos tanto string (conexão única) quanto array (múltiplas conexões)
+  // Para routers, também processamos as regras (config.rules[].next)
   flow.nodes.forEach((node) => {
-    if (!node.next) return;
-    
+    // Ignora nós do tipo "end" - eles não devem ter outputs nem conexões de saída
+    if (node.type === 'end') {
+      return;
+    }
+
     const fromNumeric = engineIdToNumeric.get(String(node.id));
     if (!fromNumeric) {
       logger.warn('Não foi possível mapear nó de origem', {
@@ -328,20 +413,22 @@ export function engineFlowToReteJson(flow) {
 
     const fromNode = nodes[fromNumeric];
     if (!fromNode || !fromNode.outputs || !fromNode.outputs.out || !Array.isArray(fromNode.outputs.out.connections)) {
-      logger.warn('Nó de origem não tem output válido', {
-        fromId: node.id,
-        fromNumeric,
-        hasOutputs: !!(fromNode && fromNode.outputs),
-        hasOutOutput: !!(fromNode && fromNode.outputs && fromNode.outputs.out),
-        nodeType: fromNode?.data?.type
-      });
+      // Não gera warning para nós que não devem ter outputs (como "end")
+      // Apenas loga em debug para casos inesperados
+      if (node.type !== 'end') {
+        logger.warn('Nó de origem não tem output válido', {
+          fromId: node.id,
+          fromNumeric,
+          hasOutputs: !!(fromNode && fromNode.outputs),
+          hasOutOutput: !!(fromNode && fromNode.outputs && fromNode.outputs.out),
+          nodeType: fromNode?.data?.type
+        });
+      }
       return;
     }
 
-    // Suporta tanto string (conexão única) quanto array (múltiplas conexões)
-    const nextConnections = Array.isArray(node.next) ? node.next : [node.next];
-    
-    for (const nextId of nextConnections) {
+    // Função auxiliar para adicionar conexão
+    const addConnection = (nextId) => {
       const toNumeric = engineIdToNumeric.get(String(nextId));
       
       if (!toNumeric) {
@@ -351,19 +438,43 @@ export function engineFlowToReteJson(flow) {
           fromNumeric,
           availableIds: Array.from(engineIdToNumeric.keys())
         });
-        continue;
+        return;
       }
 
-      fromNode.outputs.out.connections.push({
-        node: toNumeric,
-        input: 'in',
-      });
-      logger.debug('Conexão adicionada ao JSON', {
-        fromId: node.id,
-        toId: nextId,
-        fromNumeric,
-        toNumeric
-      });
+      // Verifica se a conexão já existe para evitar duplicatas
+      const existingConnection = fromNode.outputs.out.connections.find(
+        conn => conn.node === toNumeric && conn.input === 'in'
+      );
+      
+      if (!existingConnection) {
+        fromNode.outputs.out.connections.push({
+          node: toNumeric,
+          input: 'in',
+        });
+        logger.debug('Conexão adicionada ao JSON', {
+          fromId: node.id,
+          toId: nextId,
+          fromNumeric,
+          toNumeric
+        });
+      }
+    };
+
+    // Processa conexão padrão via "next"
+    if (node.next) {
+      const nextConnections = Array.isArray(node.next) ? node.next : [node.next];
+      for (const nextId of nextConnections) {
+        addConnection(nextId);
+      }
+    }
+
+    // Processa conexões específicas de router (config.rules[].next)
+    if (node.type === 'router' && node.config && Array.isArray(node.config.rules)) {
+      for (const rule of node.config.rules) {
+        if (rule && rule.next) {
+          addConnection(rule.next);
+        }
+      }
     }
   });
 

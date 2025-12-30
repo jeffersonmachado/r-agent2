@@ -1,0 +1,28 @@
+{
+  "id": "empty",
+  "name": "Fluxo Vazio",
+  "description": "Comece do zero com um fluxo em branco",
+  "icon": "📄",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "new-flow",
+    "name": "Novo Fluxo",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

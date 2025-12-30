@@ -44,6 +44,7 @@ const { recordMetricsForStep } = require('./metrics');
  * @typedef {Object} ExecuteStepOptions
  * @property {NodeRegistry} registry        - Registro de handlers de nós (obrigatório)
  * @property {Object<string, any>} [input]  - Input opcional para o nó atual (ex.: mensagem do usuário)
+ * @property {import('./flowTypes').NodeDependencies} [deps] - Dependências opcionais (serviços de persistência, etc.)
  */
 
 /**
@@ -70,6 +71,7 @@ async function executeStep(state, compiledFlow, options) {
 
   const registry = options.registry;
   const input = options.input;
+  const deps = options.deps;
 
   // Regras de multi-tenant:
   // - Todo fluxo pertence a um tenant (compiledFlow.tenantId).
@@ -101,6 +103,7 @@ async function executeStep(state, compiledFlow, options) {
     state,
     registry,
     input,
+    deps, // Passa dependências para o runner
   );
 
   // Métricas por nó / passo:

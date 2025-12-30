@@ -10,7 +10,9 @@ export function Toolbar({
   onImportJson,
   onExportJson,
   onSimulate,
+  onTest,
   onSave,
+  onSaveAsTemplate,
   onValidate,
   onArrange,
   onZoomIn,
@@ -26,6 +28,7 @@ export function Toolbar({
   onSearchNode,
   onImportTemplate,
   onOpen,
+  onClearEditor,
   children,
 }) {
   const { themeName } = useTheme();
@@ -41,7 +44,7 @@ export function Toolbar({
     edit: true,      // Undo, Redo, Copy, Paste, Duplicar, Organizar
     search: true,     // Buscar
     extra: true,      // Importar, Exportar, Template
-    tools: true,      // Logs, Tema (menor prioridade)
+    tools: true,      // Tema e outros (prioridade maior que extra)
   });
   
   const toolbarRef = useRef(null);
@@ -134,12 +137,12 @@ export function Toolbar({
           const extraGroup = toolbar.querySelector('.toolbar-group-extra');
           const toolsGroup = toolbar.querySelector('.toolbar-group-utils');
           
-          // Ordem de prioridade: file > main > search > zoom > edit > extra > tools (tools tem menor prioridade)
+          // Ordem de prioridade: file > main > search > zoom > edit > tools > extra (extra contém Logs)
           let usedWidth = 0;
           const newVisible = { file: true, main: true, zoom: true, edit: true, search: true, extra: true, tools: true };
           
           // Temporariamente mostra todos os grupos para medir
-          const groups = [fileGroup, mainGroup, searchGroup, zoomGroup, editGroup, extraGroup, toolsGroup].filter(Boolean);
+          const groups = [fileGroup, mainGroup, searchGroup, zoomGroup, editGroup, toolsGroup, extraGroup].filter(Boolean);
           const originalDisplays = groups.map(g => {
             const computed = window.getComputedStyle(g).display;
             return computed === 'none' ? '' : g.style.display;
@@ -207,21 +210,7 @@ export function Toolbar({
             }
           }
           
-          // Extra group (Importar, Exportar, Template) - com histerese para evitar alternância
-          if (extraGroup && newVisible.file) {
-            const width = extraGroup.offsetWidth + TAILWIND_PX_2; // gap-2
-            const isCurrentlyVisible = visibleItems.extra;
-            // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
-            // Isso evita alternância quando o espaço está no limite
-            const threshold = isCurrentlyVisible ? availableForGroups + TAILWIND_PX_4 : availableForGroups;
-            if (usedWidth + width <= threshold) {
-              usedWidth += width;
-            } else {
-              newVisible.extra = false;
-            }
-          }
-          
-          // Tools group (Logs, Tema) - menor prioridade, com histerese para evitar alternância
+          // Tools group (Tema e outros) - prioridade maior que extra
           if (toolsGroup && newVisible.file) {
             const width = toolsGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             const isCurrentlyVisible = visibleItems.tools;
@@ -232,6 +221,20 @@ export function Toolbar({
               usedWidth += width;
             } else {
               newVisible.tools = false;
+            }
+          }
+          
+          // Extra group (Importar, Exportar, Template, Logs) - menor prioridade, com histerese para evitar alternância
+          if (extraGroup && newVisible.file) {
+            const width = extraGroup.offsetWidth + TAILWIND_PX_2; // gap-2
+            const isCurrentlyVisible = visibleItems.extra;
+            // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
+            // Isso evita alternância quando o espaço está no limite
+            const threshold = isCurrentlyVisible ? availableForGroups + TAILWIND_PX_4 : availableForGroups;
+            if (usedWidth + width <= threshold) {
+              usedWidth += width;
+            } else {
+              newVisible.extra = false;
             }
           }
           
@@ -308,7 +311,7 @@ export function Toolbar({
       // Removido: resizeObserverInstance não é mais necessário
       window.removeEventListener('resize', handleWindowResize);
     };
-  }, [onSave, onValidate, onSimulate, onOpen, onArrange, onZoomOut, onZoomIn, onZoomFit, onResetZoom, onUndo, onRedo, onCopy, onPaste, onSearchNode, onImportJson, onExportJson, onImportTemplate, onDuplicate]);
+    }, [onSave, onSaveAsTemplate, onValidate, onSimulate, onTest, onOpen, onArrange, onZoomOut, onZoomIn, onZoomFit, onResetZoom, onUndo, onRedo, onCopy, onPaste, onSearchNode, onImportJson, onExportJson, onImportTemplate, onDuplicate]);
 
   // Função helper para obter ícone e texto baseado na key
   const getIconAndText = (key) => {
@@ -318,8 +321,10 @@ export function Toolbar({
       'template': { icon: 'icon-template', text: 'Template' },
       'open': { icon: 'icon-folder-open', text: 'Abrir' },
       'save': { icon: 'icon-save', text: 'Salvar' },
+      'saveAsTemplate': { icon: 'icon-save', text: 'Template' },
       'validate': { icon: 'icon-check', text: 'Validar' },
       'simulate': { icon: 'icon-play', text: 'Simular' },
+      'test': { icon: 'icon-chat', text: 'Testar' },
       'zoomOut': { icon: 'icon-minus', text: 'Diminuir zoom' },
       'resetZoom': { icon: null, text: '100% Zoom' },
       'zoomIn': { icon: 'icon-plus', text: 'Aumentar zoom' },
@@ -331,6 +336,7 @@ export function Toolbar({
       'duplicate': { icon: 'icon-duplicate', text: 'Duplicar' },
       'arrange': { icon: 'icon-settings', text: 'Organizar' },
       'search': { icon: 'icon-search', text: 'Buscar' },
+      'clear': { icon: 'icon-trash', text: 'Limpar' },
     };
     return iconMap[key] || { icon: null, text: key };
   };
@@ -346,17 +352,19 @@ export function Toolbar({
       search: []
     };
     
-    // Itens do grupo file (Novo, Abrir via FlowSelector, Remover, Salvar)
+    // Itens do grupo file (Novo, Abrir via FlowSelector, Remover, Salvar, Template)
     if (!visibleItems.file) {
       // Novo está em children[0], não precisa adicionar aqui
       // Abrir está no FlowSelector (children[1]), não precisa adicionar aqui
       if (onSave) groups.file.push({ key: 'save', action: onSave });
+      if (onSaveAsTemplate) groups.file.push({ key: 'saveAsTemplate', action: onSaveAsTemplate, text: 'Template' });
     }
     
-    // Itens do grupo main (Validar, Simular)
+    // Itens do grupo main (Validar, Simular, Testar)
     if (!visibleItems.main) {
       if (onValidate) groups.main.push({ key: 'validate', action: onValidate });
       if (onSimulate) groups.main.push({ key: 'simulate', action: onSimulate });
+      if (onTest) groups.main.push({ key: 'test', action: onTest });
     }
     
     // Itens do grupo extra (Importar, Exportar, Template)
@@ -382,6 +390,7 @@ export function Toolbar({
       if (onPaste) groups.edit.push({ key: 'paste', action: onPaste });
       if (onDuplicate) groups.edit.push({ key: 'duplicate', action: onDuplicate });
       if (onArrange) groups.edit.push({ key: 'arrange', action: onArrange });
+      if (onClearEditor) groups.edit.push({ key: 'clear', action: onClearEditor });
     }
     
     // Itens do grupo search
@@ -389,7 +398,7 @@ export function Toolbar({
       groups.search.push({ key: 'search', action: () => setShowSearch(true) });
     }
     
-    // Retorna grupos na ordem de prioridade: file > main > extra > zoom > edit > search
+    // Retorna grupos na ordem de prioridade: file > main > search > zoom > edit > tools > extra
     return {
       file: groups.file,
       main: groups.main,
@@ -413,17 +422,78 @@ export function Toolbar({
     search: 'Buscar'
   };
   
+  // Separa os children em grupos
+  const childrenArray = children ? React.Children.toArray(children) : [];
+  
+  // Identifica o botão de Logs (verifica se tem icon-logs ou texto "Logs")
+  const logsButton = childrenArray.find(child => {
+    if (!React.isValidElement(child)) return false;
+    
+    // Verifica se é um botão com icon-logs
+    const childChildren = React.Children.toArray(child.props?.children || []);
+    const hasLogsIcon = childChildren.some(c => 
+      React.isValidElement(c) && 
+      (c.props?.className?.includes('icon-logs') || 
+       (typeof c.props?.children === 'string' && c.props.children.includes('Logs')))
+    );
+    
+    // Verifica se o texto do botão contém "Logs"
+    const hasLogsText = childChildren.some(c => 
+      (typeof c === 'string' && c.includes('Logs')) ||
+      (React.isValidElement(c) && typeof c.props?.children === 'string' && c.props.children.includes('Logs'))
+    );
+    
+    return hasLogsIcon || hasLogsText;
+  });
+  
+  // Identifica os botões de navegação (Atendimento, Manutenção, Configuração)
+  const navigationButtons = childrenArray.filter(child => {
+    if (!React.isValidElement(child)) return false;
+    
+    // Verifica se é um NavigationLink ou botão com texto de navegação
+    const childChildren = React.Children.toArray(child.props?.children || []);
+    const navigationTexts = ['Atendimento', 'Manutenção', 'Configuração'];
+    
+    const hasNavigationText = childChildren.some(c => {
+      if (typeof c === 'string') {
+        return navigationTexts.some(text => c.includes(text));
+      }
+      if (React.isValidElement(c) && typeof c.props?.children === 'string') {
+        return navigationTexts.some(text => c.props.children.includes(text));
+      }
+      return false;
+    });
+    
+    // Verifica se é um NavigationLink com to="/support", "/maintenance" ou "/config"
+    const isNavigationLink = child.props?.to && 
+      (child.props.to === '/support' || child.props.to === '/maintenance' || child.props.to === '/config');
+    
+    return hasNavigationText || isNavigationLink;
+  });
+  
+  // Children do grupo file (apenas os primeiros 3, excluindo Logs explicitamente)
+  const fileGroupChildren = childrenArray.filter((child, index) => {
+    // Primeiros 3 children (Novo, FlowSelector, Remover) sempre vão para file, mas excluindo Logs
+    if (index < 3 && child !== logsButton) return true;
+    // Logs nunca vai para file
+    return false;
+  });
+
   return (
     <div ref={toolbarRef} className="toolbar">
       {visibleItems.file && (
         <div className="toolbar-group toolbar-group-file">
-          {children && React.Children.toArray(children)[0]} {/* Novo */}
-          {children && React.Children.toArray(children)[1]} {/* FlowSelector (Abrir) */}
-          {children && React.Children.toArray(children)[2]} {/* Remover */}
+          {fileGroupChildren}
           {onSave && (
             <button className="btn-base" onClick={onSave} title="Salvar fluxo">
               <span className="icon icon-save"></span>
               <span>Salvar</span>
+            </button>
+          )}
+          {onSaveAsTemplate && (
+            <button className="btn-base" onClick={onSaveAsTemplate} title="Salvar fluxo como template">
+              <span className="icon icon-save"></span>
+              <span>Template</span>
             </button>
           )}
         </div>
@@ -443,6 +513,12 @@ export function Toolbar({
           <button className="btn-base" onClick={onSimulate} title="Simular fluxo">
             <span className="icon icon-play"></span>
             <span>Simular</span>
+          </button>
+        )}
+        {onTest && (
+          <button className="btn-base" onClick={onTest} title="Testar fluxo no chat">
+            <span className="icon icon-chat"></span>
+            <span>Testar</span>
           </button>
         )}
         </div>
@@ -512,6 +588,12 @@ export function Toolbar({
             <span>Organizar</span>
           </button>
         )}
+        {onClearEditor && (
+          <button className="btn-base" onClick={onClearEditor} title="Limpar editor">
+            <span className="icon icon-trash"></span>
+            <span>Limpar</span>
+          </button>
+        )}
         </div>
       )}
 
@@ -541,7 +623,7 @@ export function Toolbar({
         </div>
       )}
 
-      {visibleItems.search && (visibleItems.extra || hasMoreItems) && <div className="toolbar-separator"></div>}
+      {visibleItems.search && (visibleItems.tools || visibleItems.extra || hasMoreItems) && <div className="toolbar-separator"></div>}
 
       {visibleItems.extra && (
         <div className="toolbar-group toolbar-group-extra">
@@ -563,18 +645,26 @@ export function Toolbar({
               <span>Template</span>
             </button>
           )}
+          {logsButton} {/* Logs */}
+          {navigationButtons} {/* Atendimento, Manutenção, Configuração */}
         </div>
       )}
 
-      {visibleItems.extra && (hasMoreItems || visibleItems.tools) && <div className="toolbar-separator"></div>}
+      {visibleItems.extra && (visibleItems.tools || hasMoreItems) && <div className="toolbar-separator"></div>}
 
       {visibleItems.tools && (
         <div className="toolbar-group toolbar-group-utils">
-          {children && React.Children.toArray(children).slice(3)} {/* Logs, Tema */}
+          {childrenArray.filter(child => 
+            child !== logsButton && 
+            !fileGroupChildren.includes(child) &&
+            !navigationButtons.includes(child)
+          )} {/* Tema e outros (excluindo Logs, file group e botões de navegação) */}
         </div>
       )}
 
       {visibleItems.tools && hasMoreItems && <div className="toolbar-separator"></div>}
+
+      {visibleItems.extra && hasMoreItems && <div className="toolbar-separator"></div>}
 
       <div className="toolbar-spacer"></div>
 

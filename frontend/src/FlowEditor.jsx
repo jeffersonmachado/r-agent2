@@ -54,7 +54,13 @@ export const FlowEditor = forwardRef(function FlowEditor({
   // ✅ useEffect separado para carregar fluxo quando currentFlow muda
   // Isso evita recriar o editor e previne loops infinitos
   useEffect(() => {
-    if (!editorInstance || !currentFlow) return;
+    if (!editorInstance) return;
+    
+    // Se currentFlow é null, reseta a referência do último fluxo carregado
+    if (!currentFlow) {
+      lastLoadedFlowIdRef.current = null;
+      return;
+    }
     
     // Evita recarregar o mesmo fluxo
     if (lastLoadedFlowIdRef.current === currentFlow.id) return;
@@ -92,6 +98,7 @@ export const FlowEditor = forwardRef(function FlowEditor({
       editor: { current: editor },
       area: editorInstance.area,
       arrange: editorInstance.arrange,
+      clearEditor: editorInstance.clearEditor,
       // Métodos auxiliares para compatibilidade
       zoomToFit: () => {
         if (editorInstance.area && editorInstance.editor) {

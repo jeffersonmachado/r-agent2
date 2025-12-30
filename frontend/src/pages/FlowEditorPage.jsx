@@ -81,8 +81,8 @@ export function FlowEditorPage() {
   
   // Estados para colapso vertical dos painéis do painel direito
   const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
-  const [validationCollapsed, setValidationCollapsed] = useState(false);
-  const [simulationCollapsed, setSimulationCollapsed] = useState(false);
+  const [validationCollapsed, setValidationCollapsed] = useState(true); // Inicia colapsada (tamanho mínimo)
+  const [simulationCollapsed, setSimulationCollapsed] = useState(true); // Inicia colapsada (tamanho mínimo)
   
   const [paletteWidth, setPaletteWidth] = useState(() => {
     const saved = localStorage.getItem('paletteWidth');
@@ -344,6 +344,8 @@ export function FlowEditorPage() {
       showToast('Editor não está pronto', 'warning', 2000);
       return;
     }
+    // Expande a seção de validação para mostrar os resultados
+    setValidationCollapsed(false);
     try {
       const reteJson = await editor.toJSON();
       const validationResult = await validateCurrentFlow(reteJson);
@@ -379,6 +381,8 @@ export function FlowEditorPage() {
   };
 
   const handleSimulate = async () => {
+    // Expande a seção de simulação para mostrar os resultados
+    setSimulationCollapsed(false);
     await simulateCurrentFlow();
   };
 
@@ -810,7 +814,7 @@ export function FlowEditorPage() {
             ) : (
               <>
                 {/* Propriedades - com colapso vertical */}
-                <div className={`flex flex-col ${propertiesCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'} section-container`}>
+                <div className={`flex flex-col ${propertiesCollapsed ? 'section-collapsed' : 'section-expanded-full'} section-container`}>
                   <div className="section-header">
                     <span className="section-header-title">Propriedades</span>
                     <button
@@ -835,7 +839,7 @@ export function FlowEditorPage() {
                 </div>
 
                 {/* Validação - com colapso vertical */}
-                <div className={`flex flex-col ${validationCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'} section-container`}>
+                <div className={`flex flex-col ${validationCollapsed ? 'section-collapsed' : 'section-expanded'} section-container`}>
                   <div className="section-header">
                     <span className="section-header-title">Validação</span>
                     <button
@@ -914,7 +918,7 @@ export function FlowEditorPage() {
                 </div>
 
                 {/* Simulação - com colapso vertical */}
-                <div className={`flex flex-col ${simulationCollapsed ? 'min-h-[32px]' : 'flex-1 min-h-0'}`}>
+                <div className={`flex flex-col ${simulationCollapsed ? 'section-collapsed' : 'section-expanded'} section-container`}>
                   <div className="section-header">
                     <span className="section-header-title">Simulação</span>
                     <button

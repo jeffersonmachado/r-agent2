@@ -1,0 +1,64 @@
+{
+  "id": "template-ai-task-entity-extraction",
+  "name": "Template - Extração de Entidades",
+  "description": "Template demonstrando a tarefa de Extração de Entidades (entity_extraction) do nó ai_task",
+  "icon": "🔍",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "template-ai-task-entity-extraction",
+    "name": "Template - Extração de Entidades",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "🔍 Bem-vindo ao Template de Extração de Entidades!\n\nEste fluxo demonstra como usar o nó ai_task para extrair informações estruturadas do texto, como emails, telefones, números, datas, etc.\n\nDigite uma mensagem contendo informações como:\n• Email: exemplo@email.com\n• Telefone: 11987654321\n• Números: 123, 456.78\n\nExemplo: 'Meu email é joao@exemplo.com e meu telefone é 11987654321'"
+        },
+        "next": "collect-user-input"
+      },
+      {
+        "id": "collect-user-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "extract-entities"
+      },
+      {
+        "id": "extract-entities",
+        "type": "ai_task",
+        "config": {
+          "task": "entity_extraction"
+        },
+        "next": "show-results"
+      },
+      {
+        "id": "show-results",
+        "type": "message",
+        "config": {
+          "text": "🔍 Entidades Extraídas:\n\n• Mensagem original: {{user_message}}\n• Total de entidades encontradas: {{ai.extract-entities.entities.length}}\n\nAs entidades foram armazenadas na variável 'ai.extract-entities.entities'.\n\nCada entidade contém:\n• type: tipo da entidade (email, phone, number, etc.)\n• value: valor extraído\n• confidence: nível de confiança\n\nUse essas entidades para processar as informações do usuário de forma estruturada."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando a tarefa de Extração de Entidades (entity_extraction) do nó ai_task",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0"
+    }
+  }
+}
+

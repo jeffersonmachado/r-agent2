@@ -132,45 +132,80 @@ export async function createEditor(container, options = {}) {
       // Constrói outputs com conexões
       const outputs = {};
       if (node.outputs) {
+        // Obtém todas as conexões do editor uma vez
+        let connectionsList = [];
+        if (typeof editor.getConnections === 'function') {
+          connectionsList = editor.getConnections();
+          logger.debug('toJSON - conexões obtidas do editor', {
+            nodeId: node.id,
+            nodeType: node.data?.type,
+            totalConnections: connectionsList.length,
+            connections: connectionsList.map(c => ({
+              source: c.source,
+              target: c.target,
+              sourceOutput: c.sourceOutput,
+              targetInput: c.targetInput,
+            })),
+          });
+        }
+        
         Object.entries(node.outputs).forEach(([outKey, output]) => {
           const connections = [];
           
-          // Obtém todas as conexões do editor
-          if (typeof editor.getConnections === 'function') {
-            const connectionsList = editor.getConnections();
-            
-            connectionsList.forEach((conn) => {
-              if (conn && conn.source === node.id && conn.sourceOutput === outKey) {
-                const targetJsonId = nodeIdMap.get(conn.target);
-                if (targetJsonId) {
-                  connections.push({
-                    node: targetJsonId,
-                    input: conn.targetInput,
-                  });
-                } else {
-                  // ✅ Log para debug: conexão ignorada porque nó de destino não está no fluxo atual
-                  logger.warn('toJSON - conexão ignorada: nó de destino não encontrado no mapeamento', {
-                    sourceId: node.id,
-                    sourceType: node.data?.type,
-                    targetId: conn.target,
-                    sourceOutput: outKey,
-                    targetInput: conn.targetInput,
-                    availableNodeIds: Array.from(nodeIdMap.keys()),
-                    totalNodesInEditor: nodes.length,
-                  });
-                }
+          // Filtra conexões que saem deste nó e deste output
+          connectionsList.forEach((conn) => {
+            if (conn && conn.source === node.id && conn.sourceOutput === outKey) {
+              const targetJsonId = nodeIdMap.get(conn.target);
+              if (targetJsonId) {
+                connections.push({
+                  node: targetJsonId,
+                  input: conn.targetInput,
+                });
+                logger.debug('toJSON - conexão adicionada ao output', {
+                  nodeId: node.id,
+                  outputKey: outKey,
+                  targetJsonId,
+                  targetId: conn.target,
+                });
+              } else {
+                // ✅ Log para debug: conexão ignorada porque nó de destino não está no fluxo atual
+                logger.warn('toJSON - conexão ignorada: nó de destino não encontrado no mapeamento', {
+                  sourceId: node.id,
+                  sourceType: node.data?.type,
+                  targetId: conn.target,
+                  sourceOutput: outKey,
+                  targetInput: conn.targetInput,
+                  availableNodeIds: Array.from(nodeIdMap.keys()),
+                  totalNodesInEditor: nodes.length,
+                });
               }
-            });
-          }
+            }
+          });
           
-          // Só adiciona output se houver conexões ou se o nó tiver outputs definidos
+          // Só adiciona output se houver conexões
           if (connections.length > 0) {
             outputs[outKey] = {
               connections,
             };
+            logger.debug('toJSON - output criado com conexões', {
+              nodeId: node.id,
+              outputKey: outKey,
+              connectionsCount: connections.length,
+            });
           }
         });
+      } else {
+        logger.debug('toJSON - nó sem outputs definidos', {
+          nodeId: node.id,
+          nodeType: node.data?.type,
+        });
       }
+      
+      logger.debug('toJSON - outputs finais do nó', {
+        nodeId: node.id,
+        outputsKeys: Object.keys(outputs),
+        outputs,
+      });
       
       reteJson.nodes[jsonId] = {
         id: parseInt(jsonId, 10),
@@ -187,6 +222,66 @@ export async function createEditor(container, options = {}) {
   }
 
   // =========================
+  // =========================
+  // FUNÇÃO PARA CALCULAR NÚMEROS SEQUENCIAIS DOS NÓS
+  // =========================
+  /**
+   * Calcula e atribui números sequenciais aos nós baseado na posição no canvas.
+   * Ordena os nós por posição Y (de cima para baixo) e depois por X (da esquerda para direita).
+   */
+  function updateNodeNumbers() {
+    try {
+      const nodes = editor.getNodes();
+      if (nodes.length === 0) return;
+
+      // Obtém posições dos nós e ordena
+      const nodesWithPositions = nodes.map(node => {
+        const nodeView = area.nodeViews.get(node.id);
+        const position = nodeView?.position || { x: 0, y: 0 };
+        return { node, position };
+      });
+
+      // Ordena por Y (vertical) primeiro, depois por X (horizontal)
+      nodesWithPositions.sort((a, b) => {
+        const yDiff = a.position.y - b.position.y;
+        if (Math.abs(yDiff) > 50) { // Se a diferença Y for significativa (>50px), ordena por Y
+          return yDiff;
+        }
+        // Se estão na mesma "linha" (diferença Y pequena), ordena por X
+        return a.position.x - b.position.x;
+      });
+
+      // Atribui números sequenciais
+      nodesWithPositions.forEach(({ node }, index) => {
+        if (!node.data) {
+          node.data = {};
+        }
+        node.data.nodeNumber = index + 1;
+      });
+
+      logger.debug('Números sequenciais atualizados', {
+        totalNodes: nodes.length,
+        nodeNumbers: nodesWithPositions.map(({ node }) => ({
+          nodeId: node.id,
+          number: node.data?.nodeNumber,
+        })),
+      });
+
+      // ✅ Força atualização da área para re-renderizar os nós com os novos números
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('node');
+        } catch (updateErr) {
+          logger.warn('Erro ao atualizar área após atualizar números sequenciais', {
+            error: updateErr,
+          });
+        }
+      }
+    } catch (err) {
+      logger.warn('Erro ao atualizar números sequenciais dos nós', { error: err });
+    }
+  }
+
   // CARREGAMENTO INICIAL A PARTIR DE JSON (fluxo existente)
   // =========================
   async function loadFromJson(reteJson) {
@@ -200,6 +295,24 @@ export async function createEditor(container, options = {}) {
       isLoadingFromJson = true;
       
       // ✅ Limpa completamente o editor antes de carregar novo fluxo
+      // Primeiro remove todas as conexões explicitamente
+      const existingConnections = editor.getConnections();
+      logger.debug('loadFromJson - limpando conexões existentes', {
+        existingConnectionCount: existingConnections.length,
+      });
+      
+      for (const conn of existingConnections) {
+        try {
+          editor.removeConnection(conn.id);
+        } catch (removeErr) {
+          logger.warn('loadFromJson - erro ao remover conexão existente', {
+            connectionId: conn.id,
+            error: removeErr,
+          });
+        }
+      }
+      
+      // Depois remove todos os nós existentes do editor
       const existingNodes = editor.getNodes();
       
       logger.debug('loadFromJson - limpando nós existentes', {
@@ -207,7 +320,6 @@ export async function createEditor(container, options = {}) {
         existingNodeIds: existingNodes.map(n => n.id),
       });
       
-      // Remove todos os nós existentes do editor
       for (const existingNode of existingNodes) {
         try {
           editor.removeNode(existingNode.id);
@@ -215,6 +327,18 @@ export async function createEditor(container, options = {}) {
           logger.warn('loadFromJson - erro ao remover nó existente', {
             nodeId: existingNode.id,
             error: removeErr,
+          });
+        }
+      }
+      
+      // ✅ Força atualização da área para garantir que tudo foi removido
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('node');
+          area.update('connection');
+        } catch (updateErr) {
+          logger.warn('loadFromJson - erro ao atualizar área após limpeza', {
+            error: updateErr,
           });
         }
       }
@@ -315,6 +439,9 @@ export async function createEditor(container, options = {}) {
         invalidNodesCount: invalidNodes.length,
         invalidNodeIds: invalidNodes.map(n => n.id),
       });
+      
+      // ✅ Atualiza números sequenciais dos nós após carregar
+      updateNodeNumbers();
       
       onFlowChanged?.(editor);
 
@@ -574,6 +701,9 @@ export async function createEditor(container, options = {}) {
         onNodeSelected(nodeData);
       }
 
+      // ✅ Atualiza números sequenciais após criar novo nó
+      updateNodeNumbers();
+
       // Notifica mudança no fluxo
       onFlowChanged?.(editor);
     } catch (err) {
@@ -619,6 +749,10 @@ export async function createEditor(container, options = {}) {
             removedNodes += 1;
           }
         });
+        // ✅ Atualiza números sequenciais após remover nós
+        if (removedNodes > 0) {
+          updateNodeNumbers();
+        }
       }
 
       // Remove conexões:
@@ -761,12 +895,275 @@ export async function createEditor(container, options = {}) {
   // Atalho global de teclado (Delete / Backspace) para remoção de nós/conexões
   window.addEventListener('keydown', handleKeyDown);
 
+  /**
+   * Destaca visualmente o nó ativo e marca nós executados.
+   *
+   * Importante:
+   * - Não acessa o DOM diretamente; apenas atualiza os dados dos nós
+   *   e usa area.update para re-renderização (padrão do Rete.js v2).
+   * - Somente um nó pode estar ativo por vez.
+   * - Se engineNodeId for null/undefined, remove qualquer highlight.
+   *
+   * @param {string|null|undefined} engineNodeId - ID do nó ativo
+   * @param {string[]} executedNodeIds - Array de IDs dos nós já executados
+   */
+  function setActiveEngineNode(engineNodeId, executedNodeIds = []) {
+    try {
+      const nodes = editor.getNodes();
+      
+      // Se ambos são null/vazios, limpa tudo
+      if (engineNodeId == null && (!executedNodeIds || executedNodeIds.length === 0)) {
+        nodes.forEach((node) => {
+          node.data = {
+            ...node.data,
+            ui: {
+              ...(node.data && node.data.ui ? node.data.ui : {}),
+              isActive: false,
+              isExecuted: false,
+            },
+          };
+
+          if (area && typeof area.update === 'function') {
+            try {
+              area.update('node', node.id);
+            } catch (err) {
+              logger.debug('setActiveEngineNode - erro ao limpar nó', {
+                nodeId: node.id,
+                error: err,
+              });
+            }
+          }
+        });
+        return;
+      }
+      
+      // Mapeia o ID do FlowDefinition para o ID real do nó no editor
+      // O FlowDefinition usa IDs sequenciais baseados na ordem do toJSON()
+      // Precisamos encontrar qual nó corresponde a esse índice
+      let targetNodeId = null;
+      
+      if (engineNodeId != null) {
+        // Converte o ID do FlowDefinition para índice (ex: "1" -> 0, "2" -> 1)
+        const engineIndex = parseInt(engineNodeId, 10) - 1;
+        
+        if (!isNaN(engineIndex) && engineIndex >= 0) {
+          // O toJSON() itera sobre editor.getNodes() na ordem natural
+          // Precisamos usar a mesma ordem aqui
+          // Converte para array para garantir ordem consistente
+          const nodesArray = Array.from(nodes);
+          
+          if (engineIndex < nodesArray.length) {
+            targetNodeId = nodesArray[engineIndex].id;
+            logger.debug('setActiveEngineNode - mapeamento de ID', {
+              engineNodeId,
+              engineIndex,
+              targetNodeId,
+              totalNodes: nodesArray.length,
+            });
+          } else {
+            logger.debug('setActiveEngineNode - índice fora do range', {
+              engineNodeId,
+              engineIndex,
+              totalNodes: nodesArray.length,
+            });
+          }
+        } else {
+          logger.debug('setActiveEngineNode - ID inválido', { engineNodeId });
+        }
+      }
+
+      // Mapeia IDs executados para IDs do editor
+      const executedEditorNodeIds = new Set();
+      if (Array.isArray(executedNodeIds) && executedNodeIds.length > 0) {
+        executedNodeIds.forEach((execEngineNodeId) => {
+          const engineIndex = parseInt(execEngineNodeId, 10) - 1;
+          if (!isNaN(engineIndex) && engineIndex >= 0) {
+            const nodesArray = Array.from(nodes);
+            if (engineIndex < nodesArray.length) {
+              executedEditorNodeIds.add(String(nodesArray[engineIndex].id));
+            }
+          }
+        });
+      }
+
+      // Aplica highlight nos nós
+      nodes.forEach((node) => {
+        const nodeIdStr = String(node.id);
+        const isActive = targetNodeId != null && nodeIdStr === String(targetNodeId);
+        const isExecuted = executedEditorNodeIds.has(nodeIdStr) && !isActive; // Executado mas não ativo
+
+        // Usa campos ui.isActive e ui.isExecuted
+        node.data = {
+          ...node.data,
+          ui: {
+            ...(node.data && node.data.ui ? node.data.ui : {}),
+            isActive,
+            isExecuted,
+          },
+        };
+
+        if (area && typeof area.update === 'function') {
+          try {
+            area.update('node', node.id);
+          } catch (err) {
+            logger.debug('setActiveEngineNode - erro ao atualizar nó', {
+              nodeId: node.id,
+              error: err,
+            });
+          }
+        }
+      });
+    } catch (err) {
+      logger.debug('setActiveEngineNode - erro ao processar nós para highlight', {
+        engineNodeId,
+        error: err,
+      });
+    }
+  }
+
+  /**
+   * Listener global para eventos de entrada em nó da engine.
+   * Disparado pelo hook useFlowRunner via window.dispatchEvent.
+   */
+  const handleFlowRunnerNodeEnter = (event) => {
+    const detail = (event && event.detail) || {};
+    const engineNodeId = detail.nodeId != null ? String(detail.nodeId) : null;
+    const executedNodeIds = detail.executedNodeIds || [];
+    setActiveEngineNode(engineNodeId, executedNodeIds);
+  };
+
+  /**
+   * Listener global para limpeza de estados visuais quando o modal de teste fecha.
+   */
+  const handleFlowRunnerCleanup = (event) => {
+    const detail = (event && event.detail) || {};
+    if (detail.clearAll) {
+      // Limpa todos os estados visuais (ativo e executados)
+      setActiveEngineNode(null, []);
+    }
+  };
+
+  /**
+   * Listener para atualização de configuração de nó via edição inline.
+   * Força atualização visual da área quando um nó é editado.
+   */
+  let lastUpdateTime = 0;
+  const UPDATE_THROTTLE_MS = 100; // Throttle de 100ms para evitar atualizações excessivas
+  
+  const handleFlowNodeConfigUpdated = (event) => {
+    const now = Date.now();
+    // Throttle para evitar atualizações excessivas
+    if (now - lastUpdateTime < UPDATE_THROTTLE_MS) {
+      return;
+    }
+    lastUpdateTime = now;
+    
+    const detail = (event && event.detail) || {};
+    const nodeId = detail.nodeId;
+    if (nodeId && area && typeof area.update === 'function') {
+      try {
+        // Verifica se o nó ainda existe antes de atualizar
+        const node = editor.getNode(nodeId);
+        if (!node) {
+          return;
+        }
+        
+        // Força atualização visual do nó
+        area.update('node', nodeId);
+        // Notifica mudança no fluxo (com debounce implícito via throttle)
+        onFlowChanged?.(editor);
+      } catch (err) {
+        logger.debug('Erro ao atualizar nó após edição inline', { nodeId, error: err });
+      }
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('flow-runner-node-enter', handleFlowRunnerNodeEnter);
+    window.addEventListener('flow-runner-cleanup', handleFlowRunnerCleanup);
+    window.addEventListener('flow-node-config-updated', handleFlowNodeConfigUpdated);
+  }
+
   // Adiciona método toJSON ao editor para compatibilidade
   editor.toJSON = toJSON;
 
   // Retorna objeto com destroy e referências (seguindo padrão do reference)
   // Referência: https://github.com/retejs/reference/blob/main/src/rete/default.ts#L210
   // O reference apenas chama area.destroy(), que já faz toda a limpeza necessária
+  // =========================
+  // FUNÇÃO PARA LIMPAR EDITOR COMPLETAMENTE
+  // =========================
+  async function clearEditor() {
+    try {
+      logger.debug('clearEditor - iniciando limpeza completa do editor');
+      
+      // 1. Remove todas as conexões
+      const existingConnections = editor.getConnections();
+      logger.debug('clearEditor - removendo conexões', {
+        connectionCount: existingConnections.length,
+      });
+      
+      for (const conn of existingConnections) {
+        try {
+          editor.removeConnection(conn.id);
+        } catch (removeErr) {
+          logger.warn('clearEditor - erro ao remover conexão', {
+            connectionId: conn.id,
+            error: removeErr,
+          });
+        }
+      }
+      
+      // 2. Remove todos os nós
+      const existingNodes = editor.getNodes();
+      logger.debug('clearEditor - removendo nós', {
+        nodeCount: existingNodes.length,
+      });
+      
+      for (const node of existingNodes) {
+        try {
+          editor.removeNode(node.id);
+        } catch (removeErr) {
+          logger.warn('clearEditor - erro ao remover nó', {
+            nodeId: node.id,
+            error: removeErr,
+          });
+        }
+      }
+      
+      // ✅ Atualiza números sequenciais após limpar editor (será vazio, mas garante consistência)
+      updateNodeNumbers();
+      
+      // 3. Limpa o painel direito (deseleciona nó)
+      if (onNodeSelected) {
+        onNodeSelected(null);
+        logger.debug('clearEditor - painel direito limpo');
+      }
+      
+      // 4. Força atualização da área
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('node');
+          area.update('connection');
+        } catch (updateErr) {
+          logger.warn('clearEditor - erro ao atualizar área', {
+            error: updateErr,
+          });
+        }
+      }
+      
+      // 5. Notifica mudança de fluxo (editor vazio)
+      onFlowChanged?.(editor);
+      
+      logger.debug('clearEditor - limpeza completa concluída');
+    } catch (err) {
+      logger.error('clearEditor - erro ao limpar editor', {
+        error: err,
+        errorMessage: err?.message,
+      });
+    }
+  }
+
   return {
     destroy: () => {
       resizeObserver.disconnect();
@@ -774,6 +1171,11 @@ export async function createEditor(container, options = {}) {
       container.removeEventListener('dragover', handleDragOver);
       container.removeEventListener('drop', handleDrop);
       window.removeEventListener('keydown', handleKeyDown);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('flow-runner-node-enter', handleFlowRunnerNodeEnter);
+        window.removeEventListener('flow-runner-cleanup', handleFlowRunnerCleanup);
+        window.removeEventListener('flow-node-config-updated', handleFlowNodeConfigUpdated);
+      }
       
       // ✅ Seguindo padrão do reference: apenas area.destroy()
       // O area.destroy() já faz toda a limpeza de nós, conexões e plugins
@@ -784,6 +1186,7 @@ export async function createEditor(container, options = {}) {
     arrange,
     loadFromJson,
     toJSON,
+    clearEditor,
   };
 }
 

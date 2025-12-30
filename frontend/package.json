@@ -22,17 +22,19 @@
     "rete-react-plugin": "^2.1.0"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^5.0.3",
     "autoprefixer": "^10.4.23",
+    "esbuild": "^0.27.2",
     "happy-dom": "^20.0.11",
     "jsdom": "^27.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
-    "vite": "^7.1.7",
+    "vite": "^7.3.0",
     "vitest": "^2.1.4"
   }
 }

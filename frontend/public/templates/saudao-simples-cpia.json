@@ -1,0 +1,50 @@
+{
+  "id": "saudao-simples-cpia",
+  "name": "Saudação Simples (cópia)",
+  "description": "Template baseado em Saudação Simples (cópia)",
+  "icon": "📋",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "simple-greeting-1766890136471-47p9",
+    "name": "Saudação Simples (cópia)",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "1",
+        "type": "start",
+        "config": {},
+        "next": "2"
+      },
+      {
+        "id": "2",
+        "type": "message",
+        "config": {
+          "text": "Olá! Bem-vindo ao nosso chatbot. Como posso ajudá-lo hoje?"
+        },
+        "next": "3"
+      },
+      {
+        "id": "3",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "positions": {
+        "1": [
+          61.34765625,
+          273.90234375
+        ],
+        "2": [
+          446.21875,
+          15.82421875
+        ],
+        "3": [
+          876.45703125,
+          339.3359375
+        ]
+      }
+    }
+  }
+}

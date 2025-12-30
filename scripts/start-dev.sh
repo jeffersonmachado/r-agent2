@@ -66,8 +66,23 @@ else
     fi
 fi
 
+# Lê porta do frontend (variável de ambiente tem precedência sobre config.json)
+FRONTEND_PORT=5173
+
+# Primeiro tenta ler da variável de ambiente
+if [ -n "$FRONTEND_PORT_ENV" ]; then
+    FRONTEND_PORT=$FRONTEND_PORT_ENV
+# Se não houver variável de ambiente, lê do config.json
+elif [ -f "api/data/config.json" ]; then
+    # Procura especificamente dentro da seção "frontend"
+    CONFIG_PORT=$(grep -A 5 '"frontend"' api/data/config.json | grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' | grep -o '[0-9]*' | head -1)
+    if [ -n "$CONFIG_PORT" ]; then
+        FRONTEND_PORT=$CONFIG_PORT
+    fi
+fi
+
 # Inicia o frontend
-echo -e "${GREEN}Iniciando Frontend na porta 5173...${NC}"
+echo -e "${GREEN}Iniciando Frontend na porta ${FRONTEND_PORT}...${NC}"
 cd frontend
 npm start &
 FRONTEND_PID=$!
@@ -75,7 +90,7 @@ cd ..
 
 echo -e "${BLUE}Servidores iniciados!${NC}"
 echo -e "${GREEN}API: http://localhost:3000${NC}"
-echo -e "${GREEN}Frontend: http://localhost:5173${NC}"
+echo -e "${GREEN}Frontend: http://localhost:${FRONTEND_PORT}${NC}"
 
 if [ "$USE_EXISTING_API" = true ]; then
     echo -e "${YELLOW}Aviso: API já estava rodando. Não será parada ao pressionar Ctrl+C${NC}"

@@ -1,5 +1,6 @@
 # Dados de desenvolvimento
 api/data/flows.json
+api/data/config.json
 
 # Node modules
 node_modules/

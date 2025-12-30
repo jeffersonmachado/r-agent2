@@ -11,16 +11,35 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const config = require('./utils/config');
 const { validateFlow, addUiMessage } = require('../engine/validator');
 const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
+const { verifyWebhook, sendTextMessage } = require('./services/whatsappService');
+const { processWhatsAppMessage } = require('./services/messageProcessor');
+const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
+const {
+  listQueue,
+  listQueues,
+  createQueue,
+  deleteQueue,
+  getQueueInfo,
+  getTicket,
+  getTicketBySession,
+  assignTicket,
+  closeTicket,
+  listAllTickets,
+  startAutoCleanup,
+  getMetrics,
+} = require('./services/queueService');
 
-const port = Number(process.env.API_PORT || 3000);
-const defaultTenantId = process.env.DEFAULT_TENANT_ID || 'tenant-demo';
+const port = Number(config.get('api.port', 3000));
+const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
 
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, 'data');
 const flowsFile = path.join(dataDir, 'flows.json');
+const configFile = path.join(dataDir, 'config.json');
 
 /**
  * Storage em memória com persistência em arquivo JSON.
@@ -64,8 +83,17 @@ function cleanupOldSessions() {
   }
 }
 
-// Inicia limpeza periódica
+// Inicia limpeza periódica de sessões
 setInterval(cleanupOldSessions, SESSION_CLEANUP_INTERVAL);
+
+// Inicia limpeza periódica de tickets fechados antigos
+// Remove tickets fechados com mais de 7 dias, a cada 1 hora
+const TICKET_CLEANUP_INTERVAL_HOURS = Number(config.get('api.ticketCleanup.intervalHours', 1));
+const TICKET_MAX_AGE_DAYS = Number(config.get('api.ticketCleanup.maxAgeDays', 7));
+startAutoCleanup(TICKET_CLEANUP_INTERVAL_HOURS, TICKET_MAX_AGE_DAYS);
+
+// Inicializa providers de IA
+initializeAiProviders();
 
 // ---------------------------------------------------------------------------
 // Persistência em arquivo JSON
@@ -357,7 +385,7 @@ async function requestHandler(req, res) {
   if (method === 'GET' && pathname === '/version') {
     sendJson(res, 200, {
       name: 'chatbot-engine-api',
-      env: process.env.NODE_ENV || 'development',
+      env: config.get('nodeEnv', 'development'),
     });
     return;
   }
@@ -632,12 +660,10 @@ async function requestHandler(req, res) {
       // Valida o fluxo antes de simular
       const validationResult = validateFlow(flow);
       if (!validationResult.valid && validationResult.errors.length > 0) {
-        // ✅ Mapeia erros técnicos para mensagens amigáveis
-        const mappedErrors = mapFlowValidationErrorsToUi(validationResult.errors);
         sendJson(res, 400, {
           error: 'flow_invalid',
           message: 'O fluxo não passou na validação e não pode ser simulado',
-          errors: mappedErrors, // ✅ Já vem mapeado e amigável
+          errors: validationResult.errors,
         });
         return;
       }
@@ -690,6 +716,637 @@ async function requestHandler(req, res) {
 
     const replay = buildConversationReplay(events);
     sendJson(res, 200, replay);
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Sistema de Filas e Tickets
+  // -----------------------------------------------------------------------
+
+  // GET /queues - Lista todas as filas disponíveis
+  if (method === 'GET' && pathname === '/queues') {
+    const queuesList = listQueues();
+    sendJson(res, 200, queuesList);
+    return;
+  }
+
+  // POST /queues - Cria uma nova fila
+  if (method === 'POST' && pathname === '/queues') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const queueName = body && body.name ? String(body.name) : null;
+
+      if (!queueName) {
+        badRequest(res, 'Campo "name" é obrigatório');
+        return;
+      }
+
+      const result = createQueue(queueName);
+      
+      if (result.success) {
+        sendJson(res, result.message === 'Fila já existe' ? 200 : 201, result);
+      } else {
+        badRequest(res, result.message);
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao criar fila:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
+      }
+    }
+    return;
+  }
+
+  // GET /queues/:name - Obtém informações sobre uma fila
+  if (method === 'GET' && pathname.startsWith('/queues/') && !pathname.endsWith('/tickets')) {
+    const queueName = decodeURIComponent(pathname.slice('/queues/'.length));
+    const info = getQueueInfo(queueName);
+    
+    if (info === null) {
+      badRequest(res, 'Nome da fila inválido');
+      return;
+    }
+    
+    sendJson(res, 200, info);
+    return;
+  }
+
+  // DELETE /queues/:name - Exclui uma fila
+  if (method === 'DELETE' && pathname.startsWith('/queues/') && !pathname.endsWith('/tickets')) {
+    const queueName = decodeURIComponent(pathname.slice('/queues/'.length));
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const force = urlObj.searchParams.get('force') === 'true';
+
+    const result = deleteQueue(queueName, force);
+    
+    if (result.success) {
+      sendJson(res, 200, result);
+    } else {
+      if (result.message.includes('não encontrada')) {
+        sendJson(res, 404, result);
+      } else {
+        sendJson(res, 400, result);
+      }
+    }
+    return;
+  }
+
+  // GET /queues/:queue/tickets - Lista tickets de uma fila
+  if (method === 'GET' && pathname.startsWith('/queues/') && pathname.endsWith('/tickets')) {
+    const queue = decodeURIComponent(pathname.slice('/queues/'.length, -'/tickets'.length));
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const status = urlObj.searchParams.get('status'); // opcional: ?status=waiting
+
+    const tickets = listQueue(queue, status ? { status } : {});
+    sendJson(res, 200, tickets);
+    return;
+  }
+
+  // GET /tickets - Lista todos os tickets (com filtros opcionais e paginação)
+  if (method === 'GET' && pathname === '/tickets') {
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const status = urlObj.searchParams.get('status');
+    const queue = urlObj.searchParams.get('queue');
+    const limit = urlObj.searchParams.get('limit');
+    const offset = urlObj.searchParams.get('offset');
+
+    const result = listAllTickets({ 
+      status, 
+      queue,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  // GET /tickets/:id - Obtém um ticket específico
+  if (method === 'GET' && pathname.startsWith('/tickets/')) {
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+    sendJson(res, 200, ticket);
+    return;
+  }
+
+  // GET /tickets/session/:sessionId - Obtém ticket ativo de uma sessão
+  if (method === 'GET' && pathname.startsWith('/tickets/session/')) {
+    const sessionId = decodeURIComponent(pathname.slice('/tickets/session/'.length));
+    const ticket = getTicketBySession(sessionId);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+    sendJson(res, 200, ticket);
+    return;
+  }
+
+  // POST /tickets/:id/assign - Atribui um ticket para um atendente
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/assign')) {
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/assign'.length));
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const assignedTo = body && body.assignedTo ? String(body.assignedTo) : 'unknown';
+
+      const ticket = assignTicket(id, assignedTo);
+      if (!ticket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      sendJson(res, 200, ticket);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao atribuir ticket:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /tickets/:id/close - Fecha um ticket
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/close')) {
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/close'.length));
+
+    const ticket = closeTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, ticket);
+    return;
+  }
+
+  // GET /metrics/queues - Obtém métricas do sistema de filas
+  if (method === 'GET' && pathname === '/metrics/queues') {
+    const metrics = getMetrics();
+    sendJson(res, 200, metrics);
+    return;
+  }
+
+  // POST /tickets/:id/message - Envia mensagem do atendente para o usuário
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/message')) {
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/message'.length));
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const message = body && body.message ? String(body.message) : null;
+
+      if (!message || message.trim() === '') {
+        badRequest(res, 'Campo "message" é obrigatório e não pode estar vazio');
+        return;
+      }
+
+      const ticket = getTicket(id);
+      if (!ticket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      if (ticket.status === 'closed') {
+        badRequest(res, 'Não é possível enviar mensagem para um ticket fechado');
+        return;
+      }
+
+      // Envia mensagem via WhatsApp
+      const phoneNumber = ticket.phoneNumber;
+      if (!phoneNumber) {
+        badRequest(res, 'Número de telefone não encontrado no ticket');
+        return;
+      }
+
+      await sendTextMessage(phoneNumber, message);
+
+      sendJson(res, 200, {
+        success: true,
+        ticketId: id,
+        message,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao enviar mensagem:', err);
+        sendJson(res, 500, {
+          error: 'internal_error',
+          message: err.message || 'Erro ao enviar mensagem via WhatsApp',
+        });
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // API de IA
+  // -----------------------------------------------------------------------
+
+  // POST /api/ai/generate - Gera resposta de IA
+  if (method === 'POST' && pathname === '/api/ai/generate') {
+    if (!hasJsonContentType(req)) {
+      // eslint-disable-next-line no-console
+      console.error('[ERROR] Requisição de IA sem Content-Type JSON');
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { prompt, sessionId, flowId, nodeId, tenantId } = body || {};
+
+      // eslint-disable-next-line no-console
+      console.log('[INFO] Requisição de IA recebida', {
+        promptLength: prompt?.length,
+        sessionId,
+        flowId,
+        nodeId,
+        tenantId,
+      });
+
+      if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+        // eslint-disable-next-line no-console
+        console.error('[ERROR] Prompt inválido na requisição de IA', { prompt, type: typeof prompt });
+        badRequest(res, 'Campo "prompt" é obrigatório e deve ser uma string não vazia');
+        return;
+      }
+
+      const effectiveTenantId = tenantId || defaultTenantId;
+      // eslint-disable-next-line no-console
+      console.log('[DEBUG] Usando tenant para IA', { effectiveTenantId, defaultTenantId });
+
+      try {
+        // eslint-disable-next-line no-console
+        console.log('[INFO] Gerando resposta de IA...', {
+          tenantId: effectiveTenantId,
+          promptPreview: prompt.substring(0, 100),
+        });
+        
+        const result = await generateAiResponse(prompt, effectiveTenantId, {
+          sessionId,
+          flowId,
+          nodeId,
+        });
+
+        // eslint-disable-next-line no-console
+        console.log('[INFO] Resposta de IA gerada com sucesso', {
+          hasText: !!result?.text,
+          textLength: result?.text?.length,
+          hasUsage: !!result?.usage,
+        });
+
+        sendJson(res, 200, {
+          text: typeof result === 'string' ? result : result.text,
+          usage: result.usage || null,
+        });
+      } catch (aiError) {
+        // eslint-disable-next-line no-console
+        console.error('[ERROR] Erro ao gerar resposta de IA:', {
+          message: aiError.message,
+          stack: aiError.stack,
+          tenantId: effectiveTenantId,
+          promptPreview: prompt.substring(0, 100),
+        });
+        sendJson(res, 500, {
+          error: 'ai_generation_failed',
+          message: aiError.message || 'Erro ao gerar resposta de IA',
+          details: process.env.NODE_ENV === 'development' ? aiError.stack : undefined,
+        });
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        // eslint-disable-next-line no-console
+        console.error('[ERROR] JSON inválido na requisição de IA:', err.message);
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('[ERROR] Erro ao processar requisição de IA:', {
+          message: err.message,
+          stack: err.stack,
+        });
+        sendJson(res, 500, {
+          error: 'internal_error',
+          message: err.message || 'Erro ao processar requisição',
+        });
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Webhook do WhatsApp
+  // -----------------------------------------------------------------------
+
+  // GET /webhooks/whatsapp - verificação do webhook (setup no painel Meta)
+  if (method === 'GET' && pathname === '/webhooks/whatsapp') {
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const mode = urlObj.searchParams.get('hub.mode');
+    const token = urlObj.searchParams.get('hub.verify_token');
+    const challenge = urlObj.searchParams.get('hub.challenge');
+
+    if (verifyWebhook(mode, token)) {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end(challenge || '');
+      return;
+    }
+
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+
+  // POST /webhooks/whatsapp - mensagens recebidas do WhatsApp
+  if (method === 'POST' && pathname === '/webhooks/whatsapp') {
+    try {
+      const body = await parseJsonBody(req);
+
+      if (body.object === 'whatsapp_business_account') {
+        const entries = body.entry || [];
+        for (const entry of entries) {
+          const changes = entry.changes || [];
+          for (const change of changes) {
+            if (change.field === 'messages') {
+              const value = change.value || {};
+              const messages = value.messages || [];
+              for (const msg of messages) {
+                // Processa cada mensagem
+                // eslint-disable-next-line no-await-in-loop
+                await processWhatsAppMessage(msg, value, {
+                  flows,
+                  sessionEvents,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      sendJson(res, 200, { success: true });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Erro no webhook WhatsApp:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Gerenciamento de Templates
+  // -----------------------------------------------------------------------
+
+  // GET /templates - Lista todos os templates disponíveis
+  if (method === 'GET' && pathname === '/templates') {
+    try {
+      const templatesDir = path.join(__dirname, '..', 'frontend', 'public', 'templates');
+      
+      if (!fs.existsSync(templatesDir)) {
+        sendJson(res, 200, []);
+        return;
+      }
+
+      const files = fs.readdirSync(templatesDir);
+      const templates = [];
+
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          try {
+            const filePath = path.join(templatesDir, file);
+            const content = fs.readFileSync(filePath, 'utf8');
+            const template = JSON.parse(content);
+            
+            // Valida estrutura básica do template
+            if (template && template.id && template.name && template.flow) {
+              templates.push({
+                id: template.id,
+                name: template.name,
+                description: template.description || '',
+                icon: template.icon || '📋',
+              });
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn(`Erro ao ler template ${file}:`, err.message);
+          }
+        }
+      }
+
+      sendJson(res, 200, templates);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Erro ao listar templates:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar templates' });
+    }
+    return;
+  }
+
+  // POST /templates - Salva um novo template
+  if (method === 'POST' && pathname === '/templates') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      
+      // Valida estrutura básica
+      if (!body || typeof body !== 'object') {
+        badRequest(res, 'Body deve ser um objeto');
+        return;
+      }
+
+      if (!body.id || typeof body.id !== 'string' || body.id.trim() === '') {
+        badRequest(res, 'Campo "id" é obrigatório e deve ser uma string não vazia');
+        return;
+      }
+
+      if (!body.name || typeof body.name !== 'string' || body.name.trim() === '') {
+        badRequest(res, 'Campo "name" é obrigatório e deve ser uma string não vazia');
+        return;
+      }
+
+      if (!body.flow || typeof body.flow !== 'object') {
+        badRequest(res, 'Campo "flow" é obrigatório e deve ser um objeto');
+        return;
+      }
+
+      // Valida o fluxo antes de salvar como template
+      const validationResult = validateFlow(body.flow);
+      if (!validationResult.valid && validationResult.errors.length > 0) {
+        sendJson(res, 400, {
+          error: 'validation_failed',
+          message: 'O fluxo não passou na validação',
+          errors: validationResult.errors,
+        });
+        return;
+      }
+
+      // Sanitiza o ID do template (usado como nome do arquivo)
+      const templateId = body.id.trim().replace(/[^a-z0-9-]/g, '-').toLowerCase();
+      const templatesDir = path.join(__dirname, '..', 'frontend', 'public', 'templates');
+      const templateFile = path.join(templatesDir, `${templateId}.json`);
+
+      // Garante que o diretório existe
+      if (!fs.existsSync(templatesDir)) {
+        fs.mkdirSync(templatesDir, { recursive: true });
+      }
+
+      // Prepara o template
+      const template = {
+        id: templateId,
+        name: body.name.trim(),
+        description: (body.description || '').trim() || `Template: ${body.name.trim()}`,
+        icon: (body.icon || '📋').trim().substring(0, 2),
+        flow: body.flow,
+      };
+
+      // Salva o arquivo JSON
+      fs.writeFileSync(templateFile, JSON.stringify(template, null, 2), 'utf8');
+
+      // eslint-disable-next-line no-console
+      console.log(`Template salvo: ${templateFile}`);
+
+      sendJson(res, 201, {
+        success: true,
+        template: template,
+        message: `Template "${template.name}" salvo com sucesso`,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Erro ao salvar template:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao salvar template' });
+      }
+    }
+    return;
+  }
+
+  // DELETE /templates/:id - Remove um template
+  if (method === 'DELETE' && pathname.startsWith('/templates/')) {
+    try {
+      let templateId = decodeURIComponent(pathname.slice('/templates/'.length));
+      // Remove .json se presente
+      if (templateId.endsWith('.json')) {
+        templateId = templateId.slice(0, -'.json'.length);
+      }
+      
+      if (!templateId || templateId.trim() === '') {
+        badRequest(res, 'ID do template é obrigatório');
+        return;
+      }
+
+      // Sanitiza o ID do template (mesmo processo usado no POST)
+      const sanitizedId = templateId.trim().replace(/[^a-z0-9-]/g, '-').toLowerCase();
+      const templatesDir = path.join(__dirname, '..', 'frontend', 'public', 'templates');
+      const templateFile = path.join(templatesDir, `${sanitizedId}.json`);
+
+      // Verifica se o arquivo existe
+      if (!fs.existsSync(templateFile)) {
+        sendJson(res, 404, {
+          error: 'not_found',
+          message: `Template "${sanitizedId}" não encontrado`,
+        });
+        return;
+      }
+
+      // Remove o arquivo
+      fs.unlinkSync(templateFile);
+
+      // eslint-disable-next-line no-console
+      console.log(`Template removido: ${templateFile}`);
+
+      sendJson(res, 200, {
+        success: true,
+        deletedId: sanitizedId,
+        message: `Template "${sanitizedId}" removido com sucesso`,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Erro ao remover template:', err);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: 'Erro interno ao remover template',
+      });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Gerenciamento de configuração
+  // -----------------------------------------------------------------------
+
+  // GET /config - Lê a configuração atual
+  if (method === 'GET' && pathname === '/config') {
+    try {
+      const configData = config.getAll();
+      sendJson(res, 200, configData);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Erro ao ler configuração:', err);
+      sendJson(res, 500, { error: 'Erro ao ler configuração' });
+    }
+    return;
+  }
+
+  // PUT /config - Atualiza a configuração
+  if (method === 'PUT' && pathname === '/config') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      
+      // Valida que é um objeto
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        badRequest(res, 'Configuração deve ser um objeto JSON válido');
+        return;
+      }
+
+      // Salva no arquivo
+      ensureDataDir();
+      const configData = JSON.stringify(body, null, 2);
+      fs.writeFileSync(configFile, configData, 'utf8');
+      
+      // Recarrega a configuração
+      config.reload();
+      
+      // eslint-disable-next-line no-console
+      console.log('Configuração atualizada via API');
+      
+      sendJson(res, 200, { success: true, message: 'Configuração atualizada com sucesso' });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Erro ao atualizar configuração:', err);
+      sendJson(res, 500, { error: 'Erro ao atualizar configuração', message: err.message });
+    }
     return;
   }
 

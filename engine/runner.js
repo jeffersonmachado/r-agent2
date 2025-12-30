@@ -15,6 +15,7 @@
  */
 
 const { findNode, createEngineEvent, normalizeNext } = require('./utils');
+const persistenceServices = require('./services/persistenceServices');
 
 /**
  * @typedef {import('./flowTypes').FlowDefinition} FlowDefinition
@@ -30,9 +31,10 @@ const { findNode, createEngineEvent, normalizeNext } = require('./utils');
  * @param {ConversationState} state
  * @param {NodeRegistry} registry
  * @param {Object<string, any>|undefined} input - Input opcional (ex: mensagem do usuário)
+ * @param {import('./flowTypes').NodeDependencies|undefined} deps - Dependências opcionais (serviços de persistência, etc.)
  * @returns {Promise<EngineStepOutput>}
  */
-async function runStep(flow, state, registry, input) {
+async function runStep(flow, state, registry, input, deps = null) {
   if (!state.currentNodeId) {
     // Se não há nó atual, consideramos a conversa encerrada.
     return {
@@ -82,6 +84,12 @@ async function runStep(flow, state, registry, input) {
 
   const handler = registry.get(node.type);
 
+  // Prepara dependências se não foram fornecidas
+  // Usa serviços de persistência padrão se deps não foi passado
+  const nodeDeps = deps || {
+    persistence: persistenceServices,
+  };
+
   // Log de entrada no nó
   const enterEvent = createEngineEvent({
     sessionId: state.sessionId,
@@ -112,14 +120,19 @@ async function runStep(flow, state, registry, input) {
 
   /**
    * Executa o handler com timeout opcional.
+   * Passa deps como quarto parâmetro (compatibilidade retroativa: handlers antigos podem ignorar).
    */
   async function callHandlerWithTimeout() {
+    // Chama handler com deps como quarto parâmetro
+    // Handlers antigos que não esperam deps continuarão funcionando
+    const handlerCall = handler(node, state, input, nodeDeps);
+    
     if (!timeoutMs) {
-      return handler(node, state, input);
+      return handlerCall;
     }
 
     return Promise.race([
-      handler(node, state, input),
+      handlerCall,
       new Promise((_, reject) => {
         setTimeout(() => {
           const err = new Error(`Node handler timed out after ${timeoutMs}ms`);

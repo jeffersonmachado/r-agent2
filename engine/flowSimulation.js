@@ -24,6 +24,7 @@ const {
   endNodeHandler,
 } = require('./nodes/basicNodes');
 const { aiNodeHandler } = require('./nodes/aiNode');
+const { aiTaskNodeHandler } = require('./nodes/aiTaskNode');
 const { getOrCompileFlow } = require('./compiledFlowCache');
 const { executeStep } = require('./executeStep');
 const { buildConversationReplay } = require('./replay');
@@ -102,6 +103,18 @@ function createSimulationRegistry() {
   registry.register('handoff', handoffNodeHandler);
   registry.register('end', endNodeHandler);
   registry.register('ai', aiNodeHandler);
+  registry.register('ai_task', aiTaskNodeHandler);
+  // Nós de persistência
+  const {
+    getFlowInfoNodeHandler,
+    getQueueStatusNodeHandler,
+    getConfigValueNodeHandler,
+    listFlowsNodeHandler,
+  } = require('./nodes/persistenceNodes');
+  registry.register('get_flow_info', getFlowInfoNodeHandler);
+  registry.register('get_queue_status', getQueueStatusNodeHandler);
+  registry.register('get_config_value', getConfigValueNodeHandler);
+  registry.register('list_flows', listFlowsNodeHandler);
   return registry;
 }
 

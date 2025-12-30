@@ -1,0 +1,64 @@
+{
+  "id": "template-ai-task-assisted-response",
+  "name": "Template - Resposta Assistida",
+  "description": "Template demonstrando a tarefa de Resposta Assistida (assisted_response) do nó ai_task",
+  "icon": "💬",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "template-ai-task-assisted-response",
+    "name": "Template - Resposta Assistida",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "💬 Bem-vindo ao Template de Resposta Assistida!\n\nEste fluxo demonstra como usar o nó ai_task para gerar respostas assistidas baseadas no contexto da conversa.\n\nDigite uma pergunta ou mensagem e vou gerar uma resposta assistida usando IA:"
+        },
+        "next": "collect-user-input"
+      },
+      {
+        "id": "collect-user-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "generate-response"
+      },
+      {
+        "id": "generate-response",
+        "type": "ai_task",
+        "config": {
+          "task": "assisted_response"
+        },
+        "next": "show-results"
+      },
+      {
+        "id": "show-results",
+        "type": "message",
+        "config": {
+          "text": "💬 Resposta Assistida Gerada:\n\n• Pergunta original: {{user_message}}\n• Resposta: {{ai.generate-response.response}}\n• Confiança: {{ai.generate-response.confidence}}\n\nEsta resposta foi gerada usando IA baseada no contexto da conversa. Use essa funcionalidade para criar respostas mais naturais e contextualizadas."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando a tarefa de Resposta Assistida (assisted_response) do nó ai_task",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0"
+    }
+  }
+}
+

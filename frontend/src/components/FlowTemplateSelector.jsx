@@ -1,17 +1,47 @@
-import React, { useState } from 'react';
-import { flowTemplates, createFlowFromTemplate } from '../templates/flowTemplates';
+import React, { useState, useEffect } from 'react';
+import { getFlowTemplates, createFlowFromTemplate, clearTemplatesCache, deleteTemplate } from '../templates/flowTemplates';
 import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
 import { Dialog } from './Dialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import logger from '../utils/logger';
 
 /**
  * Seletor de modelos de fluxo para criar novos fluxos
  */
-export function FlowTemplateSelector({ onTemplateSelected, onCancel }) {
+export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrigger = 0 }) {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [customName, setCustomName] = useState('');
   const [customId, setCustomId] = useState('');
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [filterText, setFilterText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Carrega templates ao montar o componente ou quando refreshTrigger mudar
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        setLoading(true);
+        setError(null);
+        // Sempre limpa o cache quando o trigger mudar (indica que um novo template foi salvo)
+        // Isso garante que a lista seja sempre atualizada
+        clearTemplatesCache();
+        const loadedTemplates = await getFlowTemplates();
+        setTemplates(loadedTemplates);
+        logger.info('Templates carregados no seletor', { count: loadedTemplates.length, refreshTrigger });
+      } catch (err) {
+        logger.error('Erro ao carregar templates', err);
+        setError('Erro ao carregar templates. Tente recarregar a página.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTemplates();
+  }, [refreshTrigger]);
 
   const handleSelectTemplate = (template) => {
     setSelectedTemplate(template);
@@ -63,6 +93,51 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel }) {
     setCustomId('');
     if (onCancel) {
       onCancel();
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      setError(null);
+      clearTemplatesCache();
+      const loadedTemplates = await getFlowTemplates();
+      setTemplates(loadedTemplates);
+      setFilterText(''); // Limpa o filtro ao atualizar
+      logger.info('Templates atualizados manualmente', { count: loadedTemplates.length });
+    } catch (err) {
+      logger.error('Erro ao atualizar templates', err);
+      setError('Erro ao atualizar templates. Tente novamente.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDeleteClick = (e, template) => {
+    e.stopPropagation(); // Previne que o clique no botão selecione o template
+    setTemplateToDelete(template);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!templateToDelete) return;
+
+    try {
+      setDeleting(true);
+      setError(null);
+      await deleteTemplate(templateToDelete.id);
+      
+      // Limpa o cache e recarrega a lista de templates
+      clearTemplatesCache();
+      const loadedTemplates = await getFlowTemplates();
+      setTemplates(loadedTemplates);
+      
+      logger.info('Template removido e lista atualizada', { templateId: templateToDelete.id });
+    } catch (err) {
+      logger.error('Erro ao remover template', err);
+      setError(`Erro ao remover template: ${err.message || 'Erro desconhecido'}`);
+    } finally {
+      setDeleting(false);
+      setTemplateToDelete(null);
     }
   };
 
@@ -118,6 +193,52 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel }) {
     );
   }
 
+  if (loading) {
+    return (
+      <Dialog
+        isOpen={true}
+        onClose={handleCancel}
+        title="Criar Novo Fluxo"
+        size="xl"
+      >
+        <div className="text-center p-8">
+          <div className="text-text-secondary">Carregando templates...</div>
+        </div>
+      </Dialog>
+    );
+  }
+
+  if (error) {
+    return (
+      <Dialog
+        isOpen={true}
+        onClose={handleCancel}
+        title="Criar Novo Fluxo"
+        size="xl"
+      >
+        <div className="text-center p-8">
+          <div className="text-red-500 mb-4">{error}</div>
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            Recarregar Página
+          </Button>
+        </div>
+      </Dialog>
+    );
+  }
+
+  // Filtra templates baseado no texto de busca
+  const filteredTemplates = templates.filter((template) => {
+    if (!filterText.trim()) {
+      return true;
+    }
+    const searchText = filterText.toLowerCase();
+    return (
+      template.name.toLowerCase().includes(searchText) ||
+      template.description.toLowerCase().includes(searchText) ||
+      (template.id && template.id.toLowerCase().includes(searchText))
+    );
+  });
+
   return (
     <Dialog
       isOpen={true}
@@ -126,27 +247,115 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel }) {
       size="xl"
     >
       <div className="space-y-6">
-        <p className="text-sm text-text-secondary">
-          Selecione um modelo para começar
-        </p>
-
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
-          {flowTemplates.map((template) => (
-            <div
-              key={template.id}
-              onClick={() => handleSelectTemplate(template)}
-              className="p-4 rounded-md border border-border-default bg-bg-tertiary cursor-pointer transition-all duration-fast hover:border-border-hover hover:bg-bg-hover hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent-light"
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text-secondary">
+              Selecione um modelo para começar
+            </p>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || loading}
+              className="px-3 py-1.5 text-xs bg-bg-tertiary hover:bg-bg-hover text-text-secondary rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Atualizar lista de templates"
             >
-              <div className="text-3xl mb-2 text-center">{template.icon}</div>
-              <div className="text-sm font-semibold text-text-primary mb-1 text-center">
-                {template.name}
-              </div>
-              <div className="text-[11px] text-text-tertiary text-center leading-snug">
-                {template.description}
-              </div>
+              {refreshing ? (
+                <>
+                  <span className="animate-spin">⏳</span> Atualizando...
+                </>
+              ) : (
+                <>
+                  🔄 Atualizar
+                </>
+              )}
+            </button>
+          </div>
+          
+          {/* Campo de filtro */}
+          <div className="relative">
+            <Input
+              type="text"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              placeholder="🔍 Buscar templates por nome, descrição ou ID..."
+              className="w-full"
+            />
+            {filterText && (
+              <button
+                onClick={() => setFilterText('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors text-lg leading-none w-6 h-6 flex items-center justify-center"
+                title="Limpar filtro"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          
+          {filterText && (
+            <div className="text-xs text-text-tertiary">
+              {filteredTemplates.length === 0 
+                ? 'Nenhum template encontrado' 
+                : `${filteredTemplates.length} template(s) encontrado(s)`}
             </div>
-          ))}
+          )}
         </div>
+
+        {error && (
+          <div className="p-3 rounded-md bg-status-error/10 border border-status-error/20 text-status-error text-sm">
+            {error}
+          </div>
+        )}
+
+        {templates.length === 0 ? (
+          <div className="text-center p-8 text-text-secondary">
+            Nenhum template disponível.
+          </div>
+        ) : filteredTemplates.length === 0 ? (
+          <div className="text-center p-8 text-text-secondary">
+            Nenhum template encontrado com "{filterText}".
+          </div>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+            {filteredTemplates.map((template) => (
+              <div
+                key={template.id}
+                className="relative p-4 rounded-md border border-border-default bg-bg-tertiary cursor-pointer transition-all duration-fast hover:border-border-hover hover:bg-bg-hover hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent-light group"
+              >
+                <div
+                  onClick={() => handleSelectTemplate(template)}
+                  className="w-full"
+                >
+                  <div className="text-3xl mb-2 text-center">{template.icon}</div>
+                  <div className="text-sm font-semibold text-text-primary mb-1 text-center">
+                    {template.name}
+                  </div>
+                  <div className="text-[11px] text-text-tertiary text-center leading-snug">
+                    {template.description}
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => handleDeleteClick(e, template)}
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-status-error/10 hover:bg-status-error/20 text-status-error opacity-0 group-hover:opacity-100 transition-opacity duration-fast flex items-center justify-center text-xs font-bold"
+                  title="Remover template"
+                  disabled={deleting}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <ConfirmDialog
+          isOpen={!!templateToDelete}
+          onClose={() => setTemplateToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          title="Remover Template"
+          message={`Tem certeza que deseja remover o template "${templateToDelete?.name}"?\n\nEsta ação não pode ser desfeita.`}
+          confirmText="Remover"
+          cancelText="Cancelar"
+          variant="danger"
+          icon="🗑️"
+        />
 
         <div className="flex justify-end pt-4">
           <Button variant="ghost" onClick={handleCancel}>

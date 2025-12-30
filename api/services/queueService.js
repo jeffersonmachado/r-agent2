@@ -1,0 +1,690 @@
+/**
+ * Serviço de gerenciamento de filas e tickets de atendimento.
+ *
+ * Responsabilidades:
+ * - Criar tickets quando uma conversa é transferida para atendimento humano
+ * - Listar tickets por fila
+ * - Atribuir tickets para atendentes
+ * - Fechar tickets
+ * - Obter informações de tickets e sessões
+ * - Persistir dados em arquivo JSON
+ *
+ * Persistência:
+ * - Tickets e filas são salvos em api/data/queues.json
+ * - Dados são carregados ao iniciar o servidor
+ * - Salvamento automático após operações de escrita
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * @typedef {Object} Ticket
+ * @property {string} id - Identificador único do ticket
+ * @property {string} sessionId - ID da sessão do bot (ex.: "whatsapp_5511999999999")
+ * @property {string} queue - Nome da fila de atendimento
+ * @property {string} status - Status do ticket: "waiting" | "in_progress" | "closed"
+ * @property {string} createdAt - Data de criação (ISO string)
+ * @property {string} updatedAt - Data da última atualização (ISO string)
+ * @property {string|null} lastUserMessage - Última mensagem do usuário antes do handoff
+ * @property {string|null} assignedTo - ID/nome do atendente atribuído (opcional)
+ * @property {string|null} phoneNumber - Número de telefone do usuário (extraído do sessionId)
+ */
+
+// Armazenamento em memória
+/** @type {Map<string, Ticket>} */
+const tickets = new Map();
+
+/** @type {Map<string, Set<string>>} */
+const queues = new Map(); // queueName -> Set<ticketId>
+
+// Caminho do arquivo de persistência
+const dataDir = path.join(__dirname, '..', 'data');
+const queuesFile = path.join(dataDir, 'queues.json');
+
+/**
+ * Garante que o diretório de dados existe.
+ */
+function ensureDataDir() {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+}
+
+/**
+ * Salva tickets e filas no arquivo JSON.
+ */
+function saveQueuesToFile() {
+  try {
+    ensureDataDir();
+    
+    // Converte Map de tickets para array
+    const ticketsArray = Array.from(tickets.values());
+    
+    // Converte Map de filas para objeto simples
+    const queuesObj = {};
+    for (const [queueName, ticketIds] of queues.entries()) {
+      queuesObj[queueName] = Array.from(ticketIds);
+    }
+    
+    const data = {
+      tickets: ticketsArray,
+      queues: queuesObj,
+      savedAt: new Date().toISOString(),
+    };
+    
+    const jsonData = JSON.stringify(data, null, 2);
+    fs.writeFileSync(queuesFile, jsonData, 'utf8');
+    
+    // eslint-disable-next-line no-console
+    console.log(`[QueueService] Dados salvos: ${ticketsArray.length} ticket(s), ${Object.keys(queuesObj).length} fila(s)`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[QueueService] Erro ao salvar dados no arquivo:', err.message);
+  }
+}
+
+/**
+ * Carrega tickets e filas do arquivo JSON.
+ */
+function loadQueuesFromFile() {
+  try {
+    ensureDataDir();
+    
+    if (!fs.existsSync(queuesFile)) {
+      // eslint-disable-next-line no-console
+      console.log(`[QueueService] Arquivo de dados não encontrado: ${queuesFile}. Iniciando com dados vazios.`);
+      return;
+    }
+    
+    const data = fs.readFileSync(queuesFile, 'utf8');
+    const parsed = JSON.parse(data);
+    
+    // Carrega tickets
+    if (Array.isArray(parsed.tickets)) {
+      tickets.clear();
+      for (const ticket of parsed.tickets) {
+        if (ticket && ticket.id) {
+          tickets.set(ticket.id, ticket);
+        }
+      }
+    }
+    
+    // Carrega filas
+    if (parsed.queues && typeof parsed.queues === 'object') {
+      queues.clear();
+      for (const [queueName, ticketIds] of Object.entries(parsed.queues)) {
+        if (Array.isArray(ticketIds)) {
+          queues.set(queueName, new Set(ticketIds));
+        }
+      }
+    }
+    
+    // eslint-disable-next-line no-console
+    console.log(`[QueueService] Dados carregados: ${tickets.size} ticket(s), ${queues.size} fila(s)`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[QueueService] Erro ao carregar dados do arquivo:', err.message);
+    // Continua com Map vazio se houver erro
+  }
+}
+
+// Carrega dados ao iniciar o módulo
+loadQueuesFromFile();
+
+/**
+ * Extrai número de telefone do sessionId (formato: "whatsapp_5511999999999")
+ *
+ * @param {string} sessionId
+ * @returns {string|null}
+ */
+function extractPhoneNumber(sessionId) {
+  if (!sessionId || typeof sessionId !== 'string') return null;
+  const match = sessionId.match(/^whatsapp_(.+)$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Cria um novo ticket de atendimento.
+ *
+ * @param {Object} params
+ * @param {string} params.sessionId - ID da sessão
+ * @param {string} params.queue - Nome da fila
+ * @param {string} [params.lastUserMessage] - Última mensagem do usuário
+ * @returns {Ticket}
+ */
+function createTicket({ sessionId, queue, lastUserMessage }) {
+  const id = `${queue}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const now = new Date().toISOString();
+
+  const ticket = {
+    id,
+    sessionId,
+    queue,
+    status: 'waiting',
+    createdAt: now,
+    updatedAt: now,
+    lastUserMessage: lastUserMessage || null,
+    assignedTo: null,
+    phoneNumber: extractPhoneNumber(sessionId),
+  };
+
+  tickets.set(id, ticket);
+
+  // Adiciona à fila
+  if (!queues.has(queue)) {
+    queues.set(queue, new Set());
+  }
+  queues.get(queue).add(id);
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  return ticket;
+}
+
+/**
+ * Lista todos os tickets de uma fila.
+ *
+ * @param {string} queue - Nome da fila
+ * @param {Object} [options]
+ * @param {string} [options.status] - Filtrar por status ("waiting", "in_progress", "closed")
+ * @returns {Ticket[]}
+ */
+function listQueue(queue, options = {}) {
+  const queueSet = queues.get(queue);
+  if (!queueSet) return [];
+
+  const ticketIds = Array.from(queueSet);
+  let ticketList = ticketIds.map((id) => tickets.get(id)).filter(Boolean);
+
+  // Filtra por status se especificado
+  if (options.status) {
+    ticketList = ticketList.filter((t) => t.status === options.status);
+  }
+
+  // Ordena por data de criação (mais antigos primeiro)
+  ticketList.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  return ticketList;
+}
+
+/**
+ * Lista todas as filas disponíveis.
+ *
+ * @returns {string[]}
+ */
+function listQueues() {
+  return Array.from(queues.keys());
+}
+
+/**
+ * Cria uma nova fila (vazia).
+ * Se a fila já existir, não faz nada.
+ *
+ * @param {string} queueName - Nome da fila
+ * @returns {{success: boolean, message: string, queueName: string}}
+ */
+function createQueue(queueName) {
+  if (!queueName || typeof queueName !== 'string' || queueName.trim() === '') {
+    return {
+      success: false,
+      message: 'Nome da fila é obrigatório',
+      queueName: null,
+    };
+  }
+
+  const normalizedName = queueName.trim();
+
+  // Validação: nome deve ter pelo menos 1 caractere e no máximo 100
+  if (normalizedName.length < 1 || normalizedName.length > 100) {
+    return {
+      success: false,
+      message: 'Nome da fila deve ter entre 1 e 100 caracteres',
+      queueName: null,
+    };
+  }
+
+  // Validação: nome deve conter apenas letras, números, hífens e underscores
+  if (!/^[a-zA-Z0-9_-]+$/.test(normalizedName)) {
+    return {
+      success: false,
+      message: 'Nome da fila deve conter apenas letras, números, hífens e underscores',
+      queueName: null,
+    };
+  }
+
+  // Se a fila já existe, retorna sucesso (idempotente)
+  if (queues.has(normalizedName)) {
+    return {
+      success: true,
+      message: 'Fila já existe',
+      queueName: normalizedName,
+    };
+  }
+
+  // Cria a fila vazia
+  queues.set(normalizedName, new Set());
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  // eslint-disable-next-line no-console
+  console.log(`[QueueService] Fila criada: ${normalizedName}`);
+
+  return {
+    success: true,
+    message: 'Fila criada com sucesso',
+    queueName: normalizedName,
+  };
+}
+
+/**
+ * Exclui uma fila.
+ * Só pode excluir filas vazias (sem tickets ativos).
+ *
+ * @param {string} queueName - Nome da fila
+ * @param {boolean} [force=false] - Se true, exclui mesmo com tickets (move tickets para outra fila ou fecha)
+ * @returns {{success: boolean, message: string, deletedTickets?: number}}
+ */
+function deleteQueue(queueName, force = false) {
+  if (!queueName || typeof queueName !== 'string' || queueName.trim() === '') {
+    return {
+      success: false,
+      message: 'Nome da fila é obrigatório',
+    };
+  }
+
+  const normalizedName = queueName.trim();
+
+  // Verifica se a fila existe
+  if (!queues.has(normalizedName)) {
+    return {
+      success: false,
+      message: 'Fila não encontrada',
+    };
+  }
+
+  const queueSet = queues.get(normalizedName);
+  const ticketIds = Array.from(queueSet);
+  
+  // Conta tickets ativos (não fechados)
+  const activeTickets = ticketIds.filter((id) => {
+    const ticket = tickets.get(id);
+    return ticket && ticket.status !== 'closed';
+  }).length;
+
+  // Se há tickets ativos e não é força, não permite excluir
+  if (activeTickets > 0 && !force) {
+    return {
+      success: false,
+      message: `Não é possível excluir a fila. Existem ${activeTickets} ticket(s) ativo(s). Use force=true para forçar exclusão.`,
+      activeTickets,
+    };
+  }
+
+  // Se force=true, fecha todos os tickets ativos
+  let deletedTickets = 0;
+  if (force && activeTickets > 0) {
+    ticketIds.forEach((ticketId) => {
+      const ticket = tickets.get(ticketId);
+      if (ticket && ticket.status !== 'closed') {
+        ticket.status = 'closed';
+        ticket.updatedAt = new Date().toISOString();
+        deletedTickets++;
+      }
+    });
+  }
+
+  // Remove a fila
+  queues.delete(normalizedName);
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  // eslint-disable-next-line no-console
+  console.log(`[QueueService] Fila excluída: ${normalizedName}${deletedTickets > 0 ? ` (${deletedTickets} ticket(s) fechado(s))` : ''}`);
+
+  return {
+    success: true,
+    message: deletedTickets > 0 
+      ? `Fila excluída. ${deletedTickets} ticket(s) foram fechado(s).`
+      : 'Fila excluída com sucesso',
+    deletedTickets: force ? deletedTickets : 0,
+  };
+}
+
+/**
+ * Obtém informações sobre uma fila específica.
+ *
+ * @param {string} queueName - Nome da fila
+ * @returns {{exists: boolean, ticketCount: number, activeTickets: number, closedTickets: number} | null}
+ */
+function getQueueInfo(queueName) {
+  if (!queueName || typeof queueName !== 'string') {
+    return null;
+  }
+
+  const normalizedName = queueName.trim();
+  const queueSet = queues.get(normalizedName);
+
+  if (!queueSet) {
+    return {
+      exists: false,
+      ticketCount: 0,
+      activeTickets: 0,
+      closedTickets: 0,
+    };
+  }
+
+  const ticketIds = Array.from(queueSet);
+  let activeTickets = 0;
+  let closedTickets = 0;
+
+  ticketIds.forEach((id) => {
+    const ticket = tickets.get(id);
+    if (ticket) {
+      if (ticket.status === 'closed') {
+        closedTickets++;
+      } else {
+        activeTickets++;
+      }
+    }
+  });
+
+  return {
+    exists: true,
+    ticketCount: ticketIds.length,
+    activeTickets,
+    closedTickets,
+  };
+}
+
+/**
+ * Obtém um ticket por ID.
+ *
+ * @param {string} ticketId
+ * @returns {Ticket|null}
+ */
+function getTicket(ticketId) {
+  return tickets.get(ticketId) || null;
+}
+
+/**
+ * Obtém ticket por sessionId (último ticket ativo da sessão).
+ *
+ * @param {string} sessionId
+ * @returns {Ticket|null}
+ */
+function getTicketBySession(sessionId) {
+  for (const ticket of tickets.values()) {
+    if (ticket.sessionId === sessionId && ticket.status !== 'closed') {
+      return ticket;
+    }
+  }
+  return null;
+}
+
+/**
+ * Atribui um ticket para um atendente.
+ *
+ * @param {string} ticketId
+ * @param {string} assignedTo - ID/nome do atendente
+ * @returns {Ticket|null}
+ */
+function assignTicket(ticketId, assignedTo) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  ticket.status = 'in_progress';
+  ticket.assignedTo = assignedTo;
+  ticket.updatedAt = new Date().toISOString();
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  return ticket;
+}
+
+/**
+ * Fecha um ticket.
+ *
+ * @param {string} ticketId
+ * @returns {Ticket|null}
+ */
+function closeTicket(ticketId) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  ticket.status = 'closed';
+  ticket.updatedAt = new Date().toISOString();
+
+  // Remove da fila (mas mantém no histórico)
+  const queueSet = queues.get(ticket.queue);
+  if (queueSet) {
+    queueSet.delete(ticketId);
+  }
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  return ticket;
+}
+
+/**
+ * Atualiza a última mensagem do usuário em um ticket.
+ *
+ * @param {string} ticketId
+ * @param {string} message
+ * @returns {Ticket|null}
+ */
+function updateLastMessage(ticketId, message) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  ticket.lastUserMessage = message;
+  ticket.updatedAt = new Date().toISOString();
+
+  // Salva automaticamente
+  saveQueuesToFile();
+
+  return ticket;
+}
+
+/**
+ * Lista todos os tickets (para administração).
+ *
+ * @param {Object} [options]
+ * @param {string} [options.status] - Filtrar por status
+ * @param {string} [options.queue] - Filtrar por fila
+ * @param {number} [options.limit] - Limite de resultados (padrão: 1000, máximo: 10000)
+ * @param {number} [options.offset] - Offset para paginação (padrão: 0)
+ * @returns {{tickets: Ticket[], total: number, limit: number, offset: number}}
+ */
+function listAllTickets(options = {}) {
+  let ticketList = Array.from(tickets.values());
+
+  if (options.status) {
+    ticketList = ticketList.filter((t) => t.status === options.status);
+  }
+
+  if (options.queue) {
+    ticketList = ticketList.filter((t) => t.queue === options.queue);
+  }
+
+  // Ordena por data de criação (mais recentes primeiro)
+  ticketList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const total = ticketList.length;
+  
+  // Aplica paginação
+  const limit = Math.min(
+    Math.max(1, parseInt(options.limit, 10) || 1000),
+    10000 // Máximo de 10000 tickets por requisição
+  );
+  const offset = Math.max(0, parseInt(options.offset, 10) || 0);
+  
+  const paginatedTickets = ticketList.slice(offset, offset + limit);
+
+  return {
+    tickets: paginatedTickets,
+    total,
+    limit,
+    offset,
+  };
+}
+
+/**
+ * Limpa tickets fechados antigos da memória.
+ * Remove tickets fechados com mais de X dias.
+ *
+ * @param {number} maxAgeDays - Idade máxima em dias (padrão: 7)
+ * @returns {number} Número de tickets removidos
+ */
+function cleanupOldTickets(maxAgeDays = 7) {
+  const now = Date.now();
+  const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
+  let cleaned = 0;
+
+  for (const [ticketId, ticket] of tickets.entries()) {
+    if (ticket.status === 'closed') {
+      const ticketAge = now - new Date(ticket.updatedAt).getTime();
+      if (ticketAge > maxAge) {
+        tickets.delete(ticketId);
+        cleaned++;
+      }
+    }
+  }
+
+  if (cleaned > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[QueueService] Limpeza de tickets: ${cleaned} ticket(s) fechado(s) antigo(s) removido(s)`);
+  }
+
+  return cleaned;
+}
+
+/**
+ * Inicia limpeza periódica automática de tickets.
+ * Executa a cada hora e remove tickets fechados com mais de 7 dias.
+ *
+ * @param {number} intervalHours - Intervalo em horas (padrão: 1)
+ * @param {number} maxAgeDays - Idade máxima em dias (padrão: 7)
+ * @returns {NodeJS.Timeout} ID do intervalo (para poder cancelar)
+ */
+function startAutoCleanup(intervalHours = 1, maxAgeDays = 7) {
+  const intervalMs = intervalHours * 60 * 60 * 1000;
+  
+  // Executa imediatamente na primeira vez
+  cleanupOldTickets(maxAgeDays);
+  
+  // Depois executa periodicamente
+  const intervalId = setInterval(() => {
+    cleanupOldTickets(maxAgeDays);
+  }, intervalMs);
+
+  // eslint-disable-next-line no-console
+  console.log(`[QueueService] Limpeza automática iniciada: a cada ${intervalHours}h, removendo tickets fechados com mais de ${maxAgeDays} dias`);
+
+  return intervalId;
+}
+
+/**
+ * Obtém métricas e estatísticas do sistema de filas.
+ *
+ * @returns {Object} Métricas do sistema
+ */
+function getMetrics() {
+  const allTickets = Array.from(tickets.values());
+  const now = Date.now();
+  const maxAge7Days = 7 * 24 * 60 * 60 * 1000;
+  const maxAge30Days = 30 * 24 * 60 * 60 * 1000;
+
+  const metrics = {
+    totalTickets: allTickets.length,
+    ticketsByStatus: {
+      waiting: 0,
+      in_progress: 0,
+      closed: 0,
+    },
+    ticketsByQueue: {},
+    oldClosedTickets: {
+      olderThan7Days: 0,
+      olderThan30Days: 0,
+    },
+    oldestTicket: null,
+    newestTicket: null,
+    memoryUsage: {
+      rss: process.memoryUsage().rss,
+      heapTotal: process.memoryUsage().heapTotal,
+      heapUsed: process.memoryUsage().heapUsed,
+      external: process.memoryUsage().external,
+    },
+  };
+
+  let oldestDate = Infinity;
+  let newestDate = 0;
+
+  allTickets.forEach((ticket) => {
+    // Contagem por status
+    metrics.ticketsByStatus[ticket.status] =
+      (metrics.ticketsByStatus[ticket.status] || 0) + 1;
+
+    // Contagem por fila
+    metrics.ticketsByQueue[ticket.queue] =
+      (metrics.ticketsByQueue[ticket.queue] || 0) + 1;
+
+    // Tickets fechados antigos
+    if (ticket.status === 'closed') {
+      const ticketAge = now - new Date(ticket.updatedAt).getTime();
+      if (ticketAge > maxAge7Days) {
+        metrics.oldClosedTickets.olderThan7Days++;
+      }
+      if (ticketAge > maxAge30Days) {
+        metrics.oldClosedTickets.olderThan30Days++;
+      }
+    }
+
+    // Encontrar ticket mais antigo e mais novo
+    const createdAt = new Date(ticket.createdAt).getTime();
+    if (createdAt < oldestDate) {
+      oldestDate = createdAt;
+      metrics.oldestTicket = {
+        id: ticket.id,
+        createdAt: ticket.createdAt,
+        ageDays: Math.floor((now - createdAt) / (24 * 60 * 60 * 1000)),
+      };
+    }
+    if (createdAt > newestDate) {
+      newestDate = createdAt;
+      metrics.newestTicket = {
+        id: ticket.id,
+        createdAt: ticket.createdAt,
+        ageDays: Math.floor((now - createdAt) / (24 * 60 * 60 * 1000)),
+      };
+    }
+  });
+
+  return metrics;
+}
+
+module.exports = {
+  createTicket,
+  listQueue,
+  listQueues,
+  createQueue,
+  deleteQueue,
+  getQueueInfo,
+  getTicket,
+  getTicketBySession,
+  assignTicket,
+  closeTicket,
+  updateLastMessage,
+  listAllTickets,
+  cleanupOldTickets,
+  startAutoCleanup,
+  getMetrics,
+  saveQueuesToFile,
+  loadQueuesFromFile,
+};
+

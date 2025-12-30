@@ -1,0 +1,83 @@
+{
+  "id": "handoff-support",
+  "name": "Transferência para Suporte",
+  "description": "Fluxo que transfere para atendimento humano",
+  "icon": "👤",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "handoff-support",
+    "name": "Transferência para Suporte",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "greeting"
+      },
+      {
+        "id": "greeting",
+        "type": "message",
+        "config": {
+          "text": "Olá! Estou aqui para ajudá-lo. Se precisar de ajuda adicional, posso transferir você para um atendente."
+        },
+        "next": "collect-transfer"
+      },
+      {
+        "id": "collect-transfer",
+        "type": "user_input",
+        "config": {
+          "variable": "needs_transfer"
+        },
+        "next": "check-transfer"
+      },
+      {
+        "id": "check-transfer",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "needs_transfer",
+                "value": "sim"
+              },
+              "next": "transfer"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "continue-chat"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "transfer",
+        "type": "handoff",
+        "config": {
+          "queue": "suporte_n1"
+        },
+        "next": "end"
+      },
+      {
+        "id": "continue-chat",
+        "type": "message",
+        "config": {
+          "text": "Continuando o atendimento..."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

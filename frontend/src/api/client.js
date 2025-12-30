@@ -12,28 +12,24 @@ import logger from '../utils/logger';
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /**
- * Constrói a URL absoluta a partir da base e do path relativo.
+ * Constrói a URL a partir da base e do path relativo.
+ * Se não houver base configurada, usa caminho relativo.
  *
  * @param {string} path
  * @returns {string}
  */
 function buildUrl(path) {
   const base = import.meta.env.VITE_API_BASE_URL || '';
-  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const url = `${normalizedBase}${normalizedPath}`;
   
-  // Avisa se a base URL não estiver configurada (em desenvolvimento)
-  if (!base && import.meta.env.DEV) {
-    logger.warn('VITE_API_BASE_URL não configurado - requisições podem falhar', { 
-      url,
-      hint: 'Crie um arquivo .env.local na pasta frontend com: VITE_API_BASE_URL=http://localhost:3000',
-      currentUrl: url,
-      expectedUrl: `http://localhost:3000${normalizedPath}`
-    });
+  // Se não há base configurada, usa caminho relativo
+  if (!base) {
+    return normalizedPath;
   }
   
-  return url;
+  // Se há base, constrói URL absoluta
+  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+  return `${normalizedBase}${normalizedPath}`;
 }
 
 /**
@@ -136,8 +132,7 @@ export async function fetchJson(path, init) {
       if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
         logger.error('API não acessível - verifique se o servidor está rodando', { 
           url,
-          hint: 'Certifique-se de que a API está rodando em http://localhost:3000',
-          checkCommand: 'curl http://localhost:3000/health'
+          hint: 'Verifique se a API está acessível no caminho configurado',
         });
       } else {
         logger.error('Request failed', { url, error: err.message });

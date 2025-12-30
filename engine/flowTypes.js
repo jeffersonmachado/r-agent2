@@ -117,6 +117,25 @@
  */
 
 /**
+ * Dependências disponíveis para handlers de nós.
+ * 
+ * Permite que nós acessem serviços externos (persistência, APIs, etc.)
+ * sem acoplar a engine diretamente a implementações específicas.
+ * 
+ * @typedef {Object} NodeDependencies
+ * @property {Object} persistence - Serviços de persistência
+ * @property {Function} persistence.getFlows - Obtém todos os fluxos (() => Promise<Array>)
+ * @property {Function} persistence.getFlow - Obtém um fluxo por ID ((flowId: string) => Promise<Object|null>)
+ * @property {Function} persistence.findFlows - Busca fluxos por critério ((criteria: Object) => Promise<Array>)
+ * @property {Function} persistence.getQueuesData - Obtém dados de filas (() => Promise<Object>)
+ * @property {Function} persistence.getQueueTickets - Obtém tickets de uma fila ((queueName: string, options?: Object) => Promise<Array>)
+ * @property {Function} persistence.getQueueInfo - Obtém informações de uma fila ((queueName: string) => Promise<Object>)
+ * @property {Function} persistence.listQueues - Lista todas as filas (() => Promise<Array<string>>)
+ * @property {Function} persistence.getConfig - Obtém configuração do sistema (() => Promise<Object>)
+ * @property {Function} persistence.getConfigValue - Obtém valor específico da config ((path: string, defaultValue?: any) => Promise<any>)
+ */
+
+/**
  * Representa um handler de nó.
  * Importante: handlers devem ser puros em termos de estado da conversa;
  * side-effects externos (chamadas a IA, integrações) podem existir,
@@ -124,11 +143,13 @@
  * - estado de entrada
  * - nó atual
  * - input opcional
+ * - dependências opcionais
  *
  * @callback NodeHandler
  * @param {FlowNode} node
  * @param {ConversationState} state
  * @param {Object<string, any>|undefined} input - Input opcional (ex: mensagem do usuário)
+ * @param {NodeDependencies|undefined} [deps] - Dependências opcionais (serviços de persistência, etc.)
  * @returns {Promise<EngineStepOutput>} Próximo estado + eventos
  */
 

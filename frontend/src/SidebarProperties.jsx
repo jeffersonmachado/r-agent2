@@ -1,5 +1,5 @@
 import React from 'react';
-import { PropertyField, TextField, TextAreaField, JsonField } from './components/PropertyField';
+import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField } from './components/PropertyField';
 import { getNodeSchema, getNodeProperties } from './editor/nodeSchemas';
 
 /**
@@ -37,7 +37,32 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
   const color = nodeSchema?.color || '#ffffff';
 
   // Obtém propriedades do schema
-  const properties = getNodeProperties(type);
+  let properties = getNodeProperties(type);
+  
+  // Para nós ai_task, filtra propriedades baseado na tarefa selecionada
+  if (type === 'ai_task') {
+    const selectedTask = config.task;
+    
+    // Propriedades que sempre aparecem
+    const alwaysVisible = ['task'];
+    
+    // Propriedades específicas por tarefa
+    const taskSpecificProps = {
+      intent_classification: ['allowedOutputs', 'fallback', 'confidenceThreshold', 'keywords'],
+      entity_extraction: [], // Adicionar campos específicos quando necessário
+      text_normalization: [], // Adicionar campos específicos quando necessário
+      assisted_response: [], // Adicionar campos específicos quando necessário
+    };
+    
+    // Filtra propriedades baseado na tarefa selecionada
+    if (selectedTask && taskSpecificProps[selectedTask]) {
+      const visibleProps = [...alwaysVisible, ...taskSpecificProps[selectedTask]];
+      properties = properties.filter((prop) => visibleProps.includes(prop.key));
+    } else {
+      // Se nenhuma tarefa selecionada, mostra apenas o campo task
+      properties = properties.filter((prop) => prop.key === 'task');
+    }
+  }
 
   const updateConfigField = (field, value) => {
     onChangeConfig({
@@ -171,6 +196,21 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
                 />
               );
             }
+
+            if (prop.type === 'select') {
+              return (
+                <SelectField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={value}
+                  onChange={(e) => updateConfigField(prop.key, e.target.value)}
+                  options={prop.options || []}
+                  placeholder={prop.placeholder}
+                  required={prop.required}
+                />
+              );
+            }
             
             if (prop.type === 'textarea') {
               return (
@@ -210,6 +250,39 @@ export function SidebarProperties({ selectedNode, onChangeConfig }) {
                   required={prop.required}
                   rows={prop.rows || 8}
                   expectedType={prop.expectedType || 'object'}
+                />
+              );
+            }
+
+            if (prop.type === 'intent_list') {
+              return (
+                <IntentListField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={value}
+                  onChange={(newValue) => updateConfigField(prop.key, newValue)}
+                  required={prop.required}
+                  error={validationErrors.find((err) => 
+                    err.code === 'AI_TASK_MISSING_ALLOWED_OUTPUTS' && 
+                    typeof err === 'object' && err.nodeIds?.includes(id)
+                  )?.messageUi}
+                />
+              );
+            }
+
+            if (prop.type === 'keywords') {
+              // Obtém as intenções permitidas do campo allowedOutputs
+              const allowedIntents = Array.isArray(config.allowedOutputs) ? config.allowedOutputs : [];
+              return (
+                <KeywordsField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={value}
+                  onChange={(newValue) => updateConfigField(prop.key, newValue)}
+                  allowedIntents={allowedIntents}
+                  required={prop.required}
                 />
               );
             }

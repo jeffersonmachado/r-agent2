@@ -1,0 +1,455 @@
+{
+  "id": "crossfit-academia",
+  "name": "Atendimento Academia CrossFit",
+  "description": "Template completo para atendimento de uma academia de CrossFit com informações sobre planos, horários, agendamento e suporte",
+  "icon": "💪",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "crossfit-academia",
+    "name": "Atendimento Academia CrossFit",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "💪 Olá! Bem-vindo à CrossFit Elite!\n\nEstou aqui para ajudar você com:\n\n📋 Informações sobre planos e preços\n⏰ Horários de aulas\n📅 Agendamento de aula experimental\nℹ️ Sobre nossa academia\n📞 Contato e localização\n❓ Perguntas frequentes\n\nComo posso ajudá-lo hoje?"
+        },
+        "next": "collect-intent"
+      },
+      {
+        "id": "collect-intent",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "router-intent"
+      },
+      {
+        "id": "router-intent",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "plano"
+              },
+              "next": "show-plans"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "preço"
+              },
+              "next": "show-plans"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "valor"
+              },
+              "next": "show-plans"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "horário"
+              },
+              "next": "show-schedule"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "aula"
+              },
+              "next": "show-schedule"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "agendar"
+              },
+              "next": "schedule-trial"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "experimental"
+              },
+              "next": "schedule-trial"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "sobre"
+              },
+              "next": "about-gym"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "contato"
+              },
+              "next": "contact-info"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "localização"
+              },
+              "next": "contact-info"
+              },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "endereço"
+              },
+              "next": "contact-info"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "suporte"
+              },
+              "next": "human-support"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "atendente"
+              },
+              "next": "human-support"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "humano"
+              },
+              "next": "human-support"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "default-response"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "show-plans",
+        "type": "message",
+        "config": {
+          "text": "💰 Nossos Planos:\n\n🏋️ PLANO MENSAL\n• Acesso ilimitado a todas as aulas\n• Treinos funcionais e WODs\n• Acompanhamento de evolução\n• Valor: R$ 199,90/mês\n\n🔥 PLANO TRIMESTRAL\n• Tudo do plano mensal\n• Desconto de 10%\n• Valor: R$ 539,70 (3x R$ 179,90)\n\n💎 PLANO ANUAL\n• Tudo do plano trimestral\n• Desconto de 20%\n• Valor: R$ 1.919,20 (12x R$ 159,90)\n\n🎁 AULA EXPERIMENTAL GRÁTIS\n• Venha conhecer nossa estrutura\n• Sem compromisso\n\nDeseja agendar uma aula experimental?"
+        },
+        "next": "ask-schedule-trial"
+      },
+      {
+        "id": "ask-schedule-trial",
+        "type": "user_input",
+        "config": {
+          "variable": "wants_trial"
+        },
+        "next": "router-trial"
+      },
+      {
+        "id": "router-trial",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "wants_trial",
+                "value": "sim"
+              },
+              "next": "schedule-trial"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "wants_trial",
+                "value": "quero"
+              },
+              "next": "schedule-trial"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "goodbye"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "show-schedule",
+        "type": "message",
+        "config": {
+          "text": "⏰ Horários de Aulas:\n\n🌅 MANHÃ\n• Segunda a Sexta: 6h, 7h, 8h, 9h\n• Sábado: 8h, 9h\n\n☀️ TARDE\n• Segunda a Sexta: 12h, 13h, 17h, 18h\n• Sábado: 14h, 15h\n\n🌙 NOITE\n• Segunda a Sexta: 19h, 20h, 21h\n• Sábado: 16h, 17h\n\n📅 Domingo: Fechado para manutenção\n\n💡 Dica: Nossas aulas têm duração de 60 minutos e são adaptadas para todos os níveis!\n\nDeseja agendar uma aula experimental?"
+        },
+        "next": "ask-schedule-trial"
+      },
+      {
+        "id": "schedule-trial",
+        "type": "message",
+        "config": {
+          "text": "📅 Agendamento de Aula Experimental\n\nPara agendar sua aula experimental gratuita, preciso de algumas informações:\n\n1️⃣ Qual seu nome?"
+        },
+        "next": "collect-name"
+      },
+      {
+        "id": "collect-name",
+        "type": "user_input",
+        "config": {
+          "variable": "client_name"
+        },
+        "next": "collect-phone"
+      },
+      {
+        "id": "collect-phone",
+        "type": "message",
+        "config": {
+          "text": "2️⃣ Qual seu telefone para contato? (com DDD)"
+        },
+        "next": "collect-phone-input"
+      },
+      {
+        "id": "collect-phone-input",
+        "type": "user_input",
+        "config": {
+          "variable": "client_phone"
+        },
+        "next": "collect-preferred-time"
+      },
+      {
+        "id": "collect-preferred-time",
+        "type": "message",
+        "config": {
+          "text": "3️⃣ Qual horário você prefere?\n\nDigite o número da opção:\n1 - Manhã (6h às 9h)\n2 - Tarde (12h às 18h)\n3 - Noite (19h às 21h)"
+        },
+        "next": "collect-time-choice"
+      },
+      {
+        "id": "collect-time-choice",
+        "type": "user_input",
+        "config": {
+          "variable": "time_preference"
+        },
+        "next": "router-time-preference"
+      },
+      {
+        "id": "router-time-preference",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "time_preference",
+                "value": "1"
+              },
+              "next": "set-morning-time"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "time_preference",
+                "value": "2"
+              },
+              "next": "set-afternoon-time"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "time_preference",
+                "value": "3"
+              },
+              "next": "set-evening-time"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "set-default-time"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "set-morning-time",
+        "type": "set_variable",
+        "config": {
+          "assignments": {
+            "scheduled_time": "Manhã (6h às 9h)"
+          }
+        },
+        "next": "confirm-schedule"
+      },
+      {
+        "id": "set-afternoon-time",
+        "type": "set_variable",
+        "config": {
+          "assignments": {
+            "scheduled_time": "Tarde (12h às 18h)"
+          }
+        },
+        "next": "confirm-schedule"
+      },
+      {
+        "id": "set-evening-time",
+        "type": "set_variable",
+        "config": {
+          "assignments": {
+            "scheduled_time": "Noite (19h às 21h)"
+          }
+        },
+        "next": "confirm-schedule"
+      },
+      {
+        "id": "set-default-time",
+        "type": "set_variable",
+        "config": {
+          "assignments": {
+            "scheduled_time": "A combinar"
+          }
+        },
+        "next": "confirm-schedule"
+      },
+      {
+        "id": "confirm-schedule",
+        "type": "message",
+        "config": {
+          "text": "✅ Agendamento Registrado!\n\n📋 Resumo:\n• Nome: {{client_name}}\n• Telefone: {{client_phone}}\n• Horário preferencial: {{scheduled_time}}\n\n📞 Nossa equipe entrará em contato em até 24h para confirmar o melhor horário disponível.\n\n💪 Estamos ansiosos para recebê-lo na CrossFit Elite!\n\nDeseja mais alguma informação?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "ask-more-info",
+        "type": "user_input",
+        "config": {
+          "variable": "more_info"
+        },
+        "next": "router-more-info"
+      },
+      {
+        "id": "router-more-info",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "more_info",
+                "value": "sim"
+              },
+              "next": "goodbye"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "more_info",
+                "value": "quero"
+              },
+              "next": "goodbye"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "goodbye"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "about-gym",
+        "type": "message",
+        "config": {
+          "text": "🏋️ Sobre a CrossFit Elite:\n\nSomos uma academia especializada em CrossFit com mais de 10 anos de experiência!\n\n✨ Nossos diferenciais:\n• Equipamentos de última geração\n• Instrutores certificados e experientes\n• Aulas para todos os níveis (iniciante ao avançado)\n• Ambiente acolhedor e motivador\n• Acompanhamento personalizado\n• Estacionamento gratuito\n• Vestuários completos\n\n🎯 Nossa missão é ajudar você a alcançar seus objetivos de forma segura e eficiente!\n\nDeseja saber mais sobre planos, horários ou agendar uma aula experimental?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "contact-info",
+        "type": "message",
+        "config": {
+          "text": "📞 Contato e Localização:\n\n📍 Endereço:\nRua dos Atletas, 123\nBairro Fitness - CEP 12345-678\n\n📱 Telefone:\n(11) 3456-7890\nWhatsApp: (11) 98765-4321\n\n📧 E-mail:\ncontato@crossfitelite.com.br\n\n🕐 Horário de Funcionamento:\nSegunda a Sexta: 6h às 22h\nSábado: 8h às 18h\nDomingo: Fechado\n\n🚗 Estacionamento gratuito disponível!\n\nComo posso ajudá-lo?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "human-support",
+        "type": "message",
+        "config": {
+          "text": "👤 Transferindo para atendimento humano...\n\nAguarde um momento enquanto conecto você com um de nossos atendentes."
+        },
+        "next": "do-handoff"
+      },
+      {
+        "id": "do-handoff",
+        "type": "handoff",
+        "config": {
+          "queue": "atendimento"
+        },
+        "next": "end"
+      },
+      {
+        "id": "default-response",
+        "type": "message",
+        "config": {
+          "text": "🤔 Não entendi completamente sua solicitação.\n\nPosso ajudar você com:\n• Planos e preços\n• Horários de aulas\n• Agendamento de aula experimental\n• Informações sobre a academia\n• Contato e localização\n\nO que você gostaria de saber?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "goodbye",
+        "type": "message",
+        "config": {
+          "text": "💪 Foi um prazer ajudá-lo!\n\nEsperamos vê-lo em breve na CrossFit Elite!\n\nQualquer dúvida, estamos à disposição.\n\nBons treinos! 🔥"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template completo para atendimento de academia de CrossFit com informações sobre planos, horários, agendamento e suporte",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0",
+      "category": "atendimento",
+      "tags": ["crossfit", "academia", "atendimento", "agendamento"]
+    }
+  }
+}
+
+

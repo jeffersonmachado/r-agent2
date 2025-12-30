@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Input, Textarea } from '../styles/Input';
+import { fetchJson } from '../api/client';
 
 /**
  * Campo de propriedade com label, ajuda e validação
@@ -90,6 +91,46 @@ export function TextAreaField({
         placeholder={placeholder}
         className={className}
       />
+    </PropertyField>
+  );
+}
+
+/**
+ * Campo de seleção (combo/dropdown)
+ */
+export function SelectField({
+  label,
+  description,
+  value,
+  onChange,
+  options = [],
+  placeholder,
+  required = false,
+  error,
+  className = '',
+}) {
+  return (
+    <PropertyField label={label} description={description} required={required} error={error}>
+      <select
+        value={value || ''}
+        onChange={onChange}
+        className={`w-full px-4 py-3 text-[14px] font-inherit text-text-primary bg-bg-secondary rounded-lg outline-none transition-all duration-fast border input-base ${className}`}
+      >
+        {placeholder && (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
+        {options.map((option) => {
+          const optionValue = typeof option === 'object' ? option.value : option;
+          const optionLabel = typeof option === 'object' ? option.label : option;
+          return (
+            <option key={optionValue} value={optionValue}>
+              {optionLabel}
+            </option>
+          );
+        })}
+      </select>
     </PropertyField>
   );
 }
@@ -186,6 +227,434 @@ export function JsonField({
           <div className="absolute top-2 right-2 text-[10px] text-text-tertiary">
             Validando...
           </div>
+        )}
+      </div>
+    </PropertyField>
+  );
+}
+
+/**
+ * Campo para gerenciar lista de intenções (array de strings)
+ */
+export function IntentListField({
+  label,
+  description,
+  value,
+  onChange,
+  required = false,
+  error,
+}) {
+  const intents = Array.isArray(value) ? value : [];
+  const [newIntent, setNewIntent] = useState('');
+
+  const handleAddIntent = () => {
+    const trimmed = newIntent.trim();
+    if (trimmed && !intents.includes(trimmed)) {
+      onChange([...intents, trimmed]);
+      setNewIntent('');
+    }
+  };
+
+  const handleRemoveIntent = (intentToRemove) => {
+    onChange(intents.filter((intent) => intent !== intentToRemove));
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddIntent();
+    }
+  };
+
+  return (
+    <PropertyField label={label} description={description} required={required} error={error}>
+      <div className="space-y-3">
+        {/* Input para adicionar nova intenção */}
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            value={newIntent}
+            onChange={(e) => setNewIntent(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Digite o nome da intenção (ex: comprar)"
+            className="flex-1"
+          />
+          <button
+            type="button"
+            onClick={handleAddIntent}
+            disabled={!newIntent.trim() || intents.includes(newIntent.trim())}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            + Adicionar
+          </button>
+        </div>
+
+        {/* Lista de intenções */}
+        {intents.length > 0 && (
+          <div className="space-y-2">
+            {intents.map((intent, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 p-2 bg-bg-secondary border border-border-default rounded-lg"
+              >
+                <span className="flex-1 text-sm text-text-primary">{intent}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveIntent(intent)}
+                  className="px-2 py-1 text-xs text-status-error hover:bg-status-error/10 rounded transition-colors"
+                  title="Remover intenção"
+                >
+                  ✕ Remover
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {intents.length === 0 && (
+          <p className="text-xs text-text-tertiary italic">
+            Nenhuma intenção adicionada ainda. Adicione pelo menos uma intenção.
+          </p>
+        )}
+      </div>
+    </PropertyField>
+  );
+}
+
+/**
+ * Palavras-chave sugeridas por tipo de intenção
+ */
+const SUGGESTED_KEYWORDS = {
+  comprar: ['comprar', 'quero comprar', 'desejo comprar', 'adquirir', 'vender', 'preciso de', 'quero', 'desejo'],
+  suporte: ['suporte', 'ajuda', 'problema', 'erro', 'não funciona', 'dúvida', 'preciso de ajuda', 'tenho problema', 'está com erro'],
+  financeiro: ['financeiro', 'pagamento', 'boleto', 'fatura', 'conta', 'dinheiro', 'pagamento atrasado', 'segunda via', 'extrato'],
+  cancelar: ['cancelar', 'cancelamento', 'quero cancelar', 'desistir', 'não quero mais'],
+  reclamar: ['reclamação', 'reclamar', 'insatisfeito', 'não gostei', 'problema com'],
+  elogiar: ['elogio', 'parabéns', 'gostei', 'muito bom', 'excelente'],
+  informacao: ['informação', 'informações', 'quero saber', 'dúvida sobre', 'como funciona'],
+};
+
+/**
+ * Campo para gerenciar palavras-chave por intenção
+ */
+export function KeywordsField({
+  label,
+  description,
+  value,
+  onChange,
+  allowedIntents = [],
+  required = false,
+  error,
+}) {
+  const keywords = value && typeof value === 'object' ? value : {};
+  const [newKeywords, setNewKeywords] = useState({});
+  const [aiSuggestions, setAiSuggestions] = useState({});
+  const [aiLoading, setAiLoading] = useState({});
+
+  const handleAddKeyword = (intent) => {
+    const trimmed = (newKeywords[intent] || '').trim().toLowerCase();
+    if (trimmed) {
+      const currentKeywords = Array.isArray(keywords[intent]) 
+        ? keywords[intent] 
+        : [];
+      
+      if (!currentKeywords.includes(trimmed)) {
+        onChange({
+          ...keywords,
+          [intent]: [...currentKeywords, trimmed],
+        });
+        setNewKeywords({ ...newKeywords, [intent]: '' });
+      }
+    }
+  };
+
+  const handleRemoveKeyword = (intent, keywordToRemove) => {
+    const currentKeywords = Array.isArray(keywords[intent]) ? keywords[intent] : [];
+    onChange({
+      ...keywords,
+      [intent]: currentKeywords.filter((kw) => kw !== keywordToRemove),
+    });
+  };
+
+  const handleKeyPress = (e, intent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddKeyword(intent);
+    }
+  };
+
+  const handleRemoveIntent = (intentToRemove) => {
+    const newKeywordsObj = { ...keywords };
+    delete newKeywordsObj[intentToRemove];
+    onChange(newKeywordsObj);
+  };
+
+  const handleAddSuggestedKeyword = (intent, suggestedKeyword) => {
+    const currentKeywords = Array.isArray(keywords[intent]) ? keywords[intent] : [];
+    const keywordLower = suggestedKeyword.toLowerCase();
+    
+    if (!currentKeywords.includes(keywordLower)) {
+      onChange({
+        ...keywords,
+        [intent]: [...currentKeywords, keywordLower],
+      });
+    }
+  };
+
+  const handleAddAllSuggested = (intent) => {
+    const suggested = SUGGESTED_KEYWORDS[intent] || [];
+    const currentKeywords = Array.isArray(keywords[intent]) ? keywords[intent] : [];
+    const newKeywordsList = [...currentKeywords];
+    
+    suggested.forEach((keyword) => {
+      const keywordLower = keyword.toLowerCase();
+      if (!newKeywordsList.includes(keywordLower)) {
+        newKeywordsList.push(keywordLower);
+      }
+    });
+    
+    onChange({
+      ...keywords,
+      [intent]: newKeywordsList,
+    });
+  };
+
+  const handleGenerateAiSuggestions = async (intent) => {
+    setAiLoading({ ...aiLoading, [intent]: true });
+    setAiSuggestions({ ...aiSuggestions, [intent]: [] });
+    
+    try {
+      const prompt = `Você é um especialista em classificação de intenções de usuários em chatbots. 
+
+Para a intenção "${intent}", gere uma lista de 10-15 palavras-chave ou frases curtas que os usuários podem usar para expressar essa intenção. 
+
+Considere:
+- Variações e sinônimos
+- Formas coloquiais e formais
+- Frases comuns que expressam essa intenção
+- Diferentes formas de escrever a mesma ideia
+
+Retorne APENAS um array JSON de strings, sem explicações adicionais. Exemplo: ["palavra1", "palavra2", "frase curta"]
+
+Intenção: ${intent}
+Palavras-chave já existentes: ${Array.isArray(keywords[intent]) ? keywords[intent].join(', ') : 'nenhuma'}
+
+Gere palavras-chave novas que não estejam na lista acima.`;
+
+      const response = await fetchJson('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          prompt,
+          tenantId: 'tenant-demo', // TODO: obter do contexto
+        }),
+      });
+
+      if (response?.text) {
+        try {
+          // Tenta extrair JSON da resposta
+          let jsonText = response.text.trim();
+          
+          // Remove markdown code blocks se existirem
+          jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+          
+          // Tenta encontrar array JSON na resposta
+          const jsonMatch = jsonText.match(/\[[\s\S]*?\]/);
+          if (jsonMatch) {
+            const suggestions = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(suggestions)) {
+              // Filtra palavras já existentes
+              const currentKeywords = Array.isArray(keywords[intent]) ? keywords[intent] : [];
+              const filtered = suggestions
+                .filter((kw) => kw && typeof kw === 'string')
+                .map((kw) => kw.toLowerCase().trim())
+                .filter((kw) => kw && !currentKeywords.includes(kw));
+              
+              setAiSuggestions({ ...aiSuggestions, [intent]: filtered });
+            }
+          }
+        } catch (parseError) {
+          console.error('Erro ao parsear sugestões da IA:', parseError);
+          setAiSuggestions({ ...aiSuggestions, [intent]: [] });
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao gerar sugestões da IA:', error);
+      setAiSuggestions({ ...aiSuggestions, [intent]: [] });
+    } finally {
+      setAiLoading({ ...aiLoading, [intent]: false });
+    }
+  };
+
+  const handleAddAiSuggestion = (intent, suggestion) => {
+    handleAddSuggestedKeyword(intent, suggestion);
+    // Remove da lista de sugestões
+    setAiSuggestions({
+      ...aiSuggestions,
+      [intent]: (aiSuggestions[intent] || []).filter((s) => s !== suggestion),
+    });
+  };
+
+  const handleAddAllAiSuggestions = (intent) => {
+    const suggestions = aiSuggestions[intent] || [];
+    const currentKeywords = Array.isArray(keywords[intent]) ? keywords[intent] : [];
+    const newKeywordsList = [...currentKeywords];
+    
+    suggestions.forEach((keyword) => {
+      const keywordLower = keyword.toLowerCase();
+      if (!newKeywordsList.includes(keywordLower)) {
+        newKeywordsList.push(keywordLower);
+      }
+    });
+    
+    onChange({
+      ...keywords,
+      [intent]: newKeywordsList,
+    });
+    
+    setAiSuggestions({ ...aiSuggestions, [intent]: [] });
+  };
+
+  return (
+    <PropertyField label={label} description={description} required={required} error={error}>
+      <div className="space-y-4">
+        {allowedIntents.length === 0 ? (
+          <p className="text-xs text-text-tertiary italic">
+            Configure primeiro as intenções permitidas acima para poder adicionar palavras-chave.
+          </p>
+        ) : (
+          <>
+            {/* Lista de intenções e suas palavras-chave */}
+            {allowedIntents.map((intent) => {
+              const intentKeywords = Array.isArray(keywords[intent]) ? keywords[intent] : [];
+              const currentNewKeyword = newKeywords[intent] || '';
+              
+              return (
+                <div
+                  key={intent}
+                  className="p-3 bg-bg-secondary border border-border-default rounded-lg space-y-2"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-text-primary">
+                      Intenção: <span className="text-primary">{intent}</span>
+                    </h4>
+                    {intentKeywords.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIntent(intent)}
+                        className="px-2 py-1 text-xs text-status-error hover:bg-status-error/10 rounded transition-colors"
+                        title="Remover todas as palavras-chave desta intenção"
+                      >
+                        ✕ Limpar
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Input para adicionar palavra-chave */}
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={currentNewKeyword}
+                      onChange={(e) => setNewKeywords({ ...newKeywords, [intent]: e.target.value })}
+                      onKeyPress={(e) => handleKeyPress(e, intent)}
+                      placeholder="Digite uma palavra-chave (ex: comprar)"
+                      className="flex-1 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddKeyword(intent)}
+                      disabled={!currentNewKeyword.trim() || intentKeywords.includes(currentNewKeyword.trim().toLowerCase())}
+                      className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+
+                  {/* Palavras-chave sugeridas pela IA */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateAiSuggestions(intent)}
+                        disabled={aiLoading[intent]}
+                        className="px-3 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-1"
+                        title="Gerar sugestões de palavras-chave usando IA"
+                      >
+                        {aiLoading[intent] ? (
+                          <>
+                            <span className="animate-spin">⏳</span> Gerando...
+                          </>
+                        ) : (
+                          <>
+                            Sugerir
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    
+                    {aiSuggestions[intent] && aiSuggestions[intent].length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-text-secondary font-medium">
+                            Sugestões de IA:
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleAddAllAiSuggestions(intent)}
+                            className="px-2 py-1 text-xs bg-bg-tertiary text-text-secondary rounded hover:bg-bg-hover transition-colors"
+                            title="Adicionar todas as sugestões da IA"
+                          >
+                            + Adicionar todas
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiSuggestions[intent].map((suggestion, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleAddAiSuggestion(intent, suggestion)}
+                              className="px-2 py-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded hover:bg-primary/20 transition-colors"
+                              title={`Adicionar "${suggestion}"`}
+                            >
+                              + {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+
+                  {/* Palavras-chave da intenção */}
+                  {intentKeywords.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {intentKeywords.map((keyword, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded border border-primary/20"
+                        >
+                          {keyword}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveKeyword(intent, keyword)}
+                            className="text-primary hover:text-status-error transition-colors ml-1"
+                            title="Remover palavra-chave"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {intentKeywords.length === 0 && (
+                    <p className="text-xs text-text-tertiary italic">
+                      Nenhuma palavra-chave adicionada ainda para esta intenção.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </>
         )}
       </div>
     </PropertyField>

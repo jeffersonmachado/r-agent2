@@ -1,0 +1,46 @@
+{
+  "id": "get-config-value-example",
+  "name": "Obter Valor da Config",
+  "description": "Exemplo de uso do nó get_config_value para ler valores da configuração",
+  "icon": "⚙️",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "get-config-value-example",
+    "name": "Obter Valor da Config",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "get-config"
+      },
+      {
+        "id": "get-config",
+        "type": "get_config_value",
+        "config": {
+          "configPath": "api.port",
+          "outputVariable": "api_port",
+          "defaultValue": "3000"
+        },
+        "next": "show-config"
+      },
+      {
+        "id": "show-config",
+        "type": "message",
+        "config": {
+          "text": "A porta da API configurada é: {{api_port}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

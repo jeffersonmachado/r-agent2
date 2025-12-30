@@ -1,0 +1,36 @@
+{
+  "id": "simple-greeting",
+  "name": "Saudação Simples",
+  "description": "Fluxo básico com uma mensagem de boas-vindas",
+  "icon": "👋",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "simple-greeting",
+    "name": "Saudação Simples",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "greeting"
+      },
+      {
+        "id": "greeting",
+        "type": "message",
+        "config": {
+          "text": "Olá! Bem-vindo ao nosso chatbot. Como posso ajudá-lo hoje?"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

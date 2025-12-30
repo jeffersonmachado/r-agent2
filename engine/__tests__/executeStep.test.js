@@ -88,6 +88,82 @@ describe('executeStep', () => {
     await expect(executeStep(initialState, flow, null)).rejects.toThrow();
     await expect(executeStep(initialState, flow, {})).rejects.toThrow();
   });
+
+  test('nó message interpola variáveis usando sintaxe {{variavel}}', async () => {
+    const registry = createRegistry();
+
+    const flowWithInterpolation = {
+      id: 'flow-interpolation',
+      name: 'Teste Interpolação',
+      version: 1,
+      nodes: [
+        {
+          id: 'msg1',
+          type: 'message',
+          config: { text: 'Olá {{nome}}! Bem-vindo ao {{sistema}}.' },
+          next: 'end',
+        },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    const initialState = {
+      sessionId: 's-interpolation',
+      flowId: flowWithInterpolation.id,
+      currentNodeId: 'msg1',
+      variables: {
+        nome: 'João',
+        sistema: 'Sistema de Atendimento',
+      },
+      history: [],
+      metadata: {},
+    };
+
+    const result = await executeStep(initialState, flowWithInterpolation, { registry });
+
+    expect(result.output).toEqual({
+      type: 'message',
+      text: 'Olá João! Bem-vindo ao Sistema de Atendimento.',
+    });
+  });
+
+  test('nó message substitui variáveis inexistentes por string vazia', async () => {
+    const registry = createRegistry();
+
+    const flowWithMissingVars = {
+      id: 'flow-missing',
+      name: 'Teste Variáveis Faltando',
+      version: 1,
+      nodes: [
+        {
+          id: 'msg1',
+          type: 'message',
+          config: { text: 'Olá {{nome}}! Você tem {{idade}} anos.' },
+          next: 'end',
+        },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    const initialState = {
+      sessionId: 's-missing',
+      flowId: flowWithMissingVars.id,
+      currentNodeId: 'msg1',
+      variables: {
+        nome: 'Maria',
+        // idade não existe
+      },
+      history: [],
+      metadata: {},
+    };
+
+    const result = await executeStep(initialState, flowWithMissingVars, { registry });
+
+    expect(result.output).toEqual({
+      type: 'message',
+      text: 'Olá Maria! Você tem  anos.',
+    });
+  });
 });
 
 

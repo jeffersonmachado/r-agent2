@@ -161,4 +161,27 @@ export function deleteFlow(flowId) {
   );
 }
 
+/**
+ * Salva um fluxo como template.
+ *
+ * @param {any} templateData - Dados do template { id, name, description, icon, flow }
+ * @returns {Promise<any>}
+ */
+export function saveTemplate(templateData) {
+  logger.info('Salvando template', { templateId: templateData?.id, templateName: templateData?.name });
+  return fetchJson('/templates', {
+    method: 'POST',
+    body: JSON.stringify(templateData || {}),
+  }).then(
+    (result) => {
+      logger.info('Template salvo com sucesso', { templateId: result?.id || result?.template?.id, templateName: result?.template?.name || result?.name });
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao salvar template', error);
+      throw error;
+    }
+  );
+}
+
 

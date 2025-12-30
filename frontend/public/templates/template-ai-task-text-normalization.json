@@ -1,0 +1,64 @@
+{
+  "id": "template-ai-task-text-normalization",
+  "name": "Template - Normalização de Texto",
+  "description": "Template demonstrando a tarefa de Normalização de Texto (text_normalization) do nó ai_task",
+  "icon": "📝",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "template-ai-task-text-normalization",
+    "name": "Template - Normalização de Texto",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "📝 Bem-vindo ao Template de Normalização de Texto!\n\nEste fluxo demonstra como usar o nó ai_task para normalizar texto, removendo acentos, convertendo para minúsculas, removendo espaços extras, etc.\n\nDigite um texto com acentos, maiúsculas e espaços extras:\n\nExemplo: 'Olá,  como   você   está?  Muito   BEM!'"
+        },
+        "next": "collect-user-input"
+      },
+      {
+        "id": "collect-user-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "normalize-text"
+      },
+      {
+        "id": "normalize-text",
+        "type": "ai_task",
+        "config": {
+          "task": "text_normalization"
+        },
+        "next": "show-results"
+      },
+      {
+        "id": "show-results",
+        "type": "message",
+        "config": {
+          "text": "📝 Texto Normalizado:\n\n• Texto original: {{user_message}}\n• Texto normalizado: {{ai.normalize-text.normalized}}\n• Confiança: {{ai.normalize-text.confidence}}\n\nO texto foi normalizado:\n• Convertido para minúsculas\n• Acentos removidos\n• Espaços extras removidos\n• Trim aplicado\n\nUse o texto normalizado para comparações e buscas mais precisas."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando a tarefa de Normalização de Texto (text_normalization) do nó ai_task",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0"
+    }
+  }
+}
+

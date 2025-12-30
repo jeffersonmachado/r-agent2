@@ -1,0 +1,57 @@
+{
+  "id": "set-variable-example",
+  "name": "Definir Variáveis",
+  "description": "Exemplo de uso do nó set_variable para definir e atualizar variáveis",
+  "icon": "📝",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "set-variable-example",
+    "name": "Definir Variáveis",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "Olá! Vou definir algumas variáveis de exemplo."
+        },
+        "next": "set-vars"
+      },
+      {
+        "id": "set-vars",
+        "type": "set_variable",
+        "config": {
+          "assignments": {
+            "user_name": "João",
+            "intent": "greeting",
+            "count": 0,
+            "is_active": true
+          }
+        },
+        "next": "show-vars"
+      },
+      {
+        "id": "show-vars",
+        "type": "message",
+        "config": {
+          "text": "Variáveis definidas:\n- Nome: {{user_name}}\n- Intent: {{intent}}\n- Contador: {{count}}\n- Ativo: {{is_active}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

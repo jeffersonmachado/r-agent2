@@ -1,0 +1,61 @@
+{
+  "id": "ai-assistant",
+  "name": "Assistente com AI",
+  "description": "Fluxo que usa AI para responder ao usuário",
+  "icon": "🤖",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "ai-assistant",
+    "name": "Assistente com AI",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "Olá! Sou um assistente virtual. Como posso ajudá-lo?"
+        },
+        "next": "collect-question"
+      },
+      {
+        "id": "collect-question",
+        "type": "user_input",
+        "config": {
+          "variable": "user_question"
+        },
+        "next": "ai-process"
+      },
+      {
+        "id": "ai-process",
+        "type": "ai",
+        "config": {
+          "promptTemplate": "O usuário perguntou: {{user_question}}. Responda de forma útil e amigável.",
+          "outputVariable": "ai_response"
+        },
+        "next": "show-response"
+      },
+      {
+        "id": "show-response",
+        "type": "message",
+        "config": {
+          "text": "{{ai_response}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

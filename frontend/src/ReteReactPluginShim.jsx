@@ -11,7 +11,7 @@
  */
 
 import { ReactPlugin, Presets as ReactPresets } from 'rete-react-plugin';
-import React from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import logger from './utils/logger';
 import { getNodeSchema } from './editor/nodeSchemas';
 import { SelectableConnection } from './components/SelectableConnection';
@@ -33,6 +33,92 @@ function getNodeLabel(type) {
 }
 
 /**
+ * Componente editável que só se torna editável com duplo clique
+ */
+function EditablePreviewValue({ value, onSave, className = '' }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  const onSaveRef = useRef(onSave);
+  const lastValueRef = useRef(value);
+
+  // Atualiza a referência da função onSave sem causar re-render
+  React.useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  // Atualiza o valor local quando o valor externo muda (apenas se não estiver editando)
+  React.useEffect(() => {
+    if (!isEditing && value !== lastValueRef.current) {
+      setEditValue(value);
+      lastValueRef.current = value;
+    }
+  }, [value, isEditing]);
+
+  const handleDoubleClick = () => {
+    setIsEditing(true);
+    setEditValue(value);
+  };
+
+  const handleBlur = useCallback(() => {
+    if (editValue !== lastValueRef.current) {
+      onSaveRef.current(editValue);
+      lastValueRef.current = editValue;
+    }
+    setIsEditing(false);
+  }, [editValue]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (editValue !== lastValueRef.current) {
+        onSaveRef.current(editValue);
+        lastValueRef.current = editValue;
+      }
+      setIsEditing(false);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditValue(lastValueRef.current);
+      setIsEditing(false);
+    }
+  }, [editValue]);
+
+  if (isEditing) {
+    return (
+      <input
+        type="text"
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className={className}
+        autoFocus
+        style={{
+          width: '100%',
+          background: 'transparent',
+          border: '1px solid var(--color-primary, #3b82f6)',
+          borderRadius: '4px',
+          padding: '2px 4px',
+          font: 'inherit',
+          fontWeight: 'inherit',
+          color: 'inherit',
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={className}
+      onDoubleClick={handleDoubleClick}
+      style={{ cursor: 'text' }}
+      title="Duplo clique para editar"
+    >
+      {value}
+    </div>
+  );
+}
+
+/**
  * Componente React padrão para renderizar nós quando não há componente customizado.
  * Este componente lê `node.data.type` e `node.data.validation` para renderizar o nó.
  * Usa RefSocket e RefControl dos presets do Rete.js v2.
@@ -40,18 +126,6 @@ function getNodeLabel(type) {
 function DefaultNodeComponent(props) {
   // O Rete.js v2 passa o nó como props.data, não props.node
   const { data: node, emit } = props;
-  
-  // Log para debug
-  logger.debug('DefaultNodeComponent renderizado', {
-    hasProps: !!props,
-    hasData: !!props.data,
-    hasNode: !!node,
-    nodeId: node?.id,
-    nodeType: node?.data?.type,
-    propsKeys: props ? Object.keys(props) : [],
-    hasInputs: !!node?.inputs,
-    hasOutputs: !!node?.outputs,
-  });
   
   // Verificação de segurança: se node não existe, retorna null
   if (!node) {
@@ -65,16 +139,34 @@ function DefaultNodeComponent(props) {
   
   const nodeType = node?.data?.type || 'unknown';
   const nodeId = String(node?.id || '');
+  const nodeNumber = node?.data?.nodeNumber || null;
   const config = node?.data?.config || {};
   const validation = node?.data?.validation || {};
   const hasErrors = validation.status === 'invalid';
   const errors = validation.errors || [];
+  const isActive = node?.data?.ui?.isActive;
+  const isExecuted = node?.data?.ui?.isExecuted;
+
+  // ✅ Formata mensagens de erro para o tooltip
+  const errorTooltip = hasErrors && errors.length > 0
+    ? errors.map((err, idx) => {
+        // ✅ Usa messageUi (amigável) se disponível, senão usa message (técnica)
+        const errorMessage = (typeof err === 'object' && err.messageUi) 
+          ? err.messageUi 
+          : ((typeof err === 'object' && err.message) 
+            ? err.message 
+            : (typeof err === 'string' ? err : 'Erro de validação'));
+        return `${idx + 1}. ${errorMessage}`;
+      }).join('\n')
+    : '';
 
   // Classes CSS baseadas no estado
   const nodeClasses = [
     'flow-node',
     `flow-node--type-${nodeType}`,
     hasErrors ? 'flow-node--error' : '',
+    isActive ? 'flow-node--active' : '',
+    isExecuted ? 'flow-node--executed' : '', // Adiciona classe para nós executados
   ].filter(Boolean).join(' ');
 
   // Verificações seguras para inputs e outputs
@@ -87,21 +179,68 @@ function DefaultNodeComponent(props) {
         <div className="flow-node__icon">{getNodeIcon(nodeType)}</div>
         <div className="flow-node__title">{getNodeLabel(nodeType)}</div>
         {hasErrors && (
-          <div className="flow-node__error-badge">{errors.length}</div>
+          <div 
+            className="flow-node__error-badge"
+            title={errorTooltip}
+          >
+            {errors.length}
+          </div>
         )}
-        <div className="flow-node__id-badge">#{nodeId}</div>
+        <div className="flow-node__id-badge">
+          {nodeNumber !== null ? `${nodeNumber}. ` : ''}#{nodeId}
+        </div>
       </div>
       <div className="flow-node__content">
         {nodeType === 'message' && config.text && (
           <div className="flow-node__preview">
             <div className="flow-node__preview-label">Texto:</div>
-            <div className="flow-node__preview-value">{config.text}</div>
+            <EditablePreviewValue
+              value={config.text}
+              onSave={(newValue) => {
+                // Só atualiza se o valor realmente mudou
+                if (node && node.data && newValue !== config.text) {
+                  node.data.config = { ...node.data.config, text: newValue };
+                  // Dispara evento customizado para notificar mudança e forçar atualização
+                  // Usa setTimeout para evitar atualizações síncronas que podem causar loops
+                  setTimeout(() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(
+                        new CustomEvent('flow-node-config-updated', {
+                          detail: { nodeId: node.id, config: { text: newValue } },
+                        }),
+                      );
+                    }
+                  }, 0);
+                }
+              }}
+              className="flow-node__preview-value"
+            />
           </div>
         )}
         {nodeType === 'user_input' && config.variable && (
           <div className="flow-node__preview">
             <div className="flow-node__preview-label">Variável:</div>
-            <div className="flow-node__preview-value">{config.variable}</div>
+            <EditablePreviewValue
+              value={config.variable}
+              onSave={(newValue) => {
+                // Só atualiza se o valor realmente mudou
+                if (node && node.data && newValue !== config.variable) {
+                  node.data.config = { ...node.data.config, variable: newValue };
+                  // Dispara evento customizado para notificar mudança e forçar atualização
+                  // Usa setTimeout para evitar atualizações síncronas que podem causar loops
+                  setTimeout(() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(
+                        new CustomEvent('flow-node-config-updated', {
+                          detail: { nodeId: node.id, config: { variable: newValue } },
+                        }),
+                      );
+                    }
+                  }, 0);
+                }
+              }}
+              className="flow-node__preview-value"
+            />
           </div>
         )}
       </div>

@@ -235,6 +235,19 @@ function buildEdges(flow) {
     }
   }
 
+  // Debug: log das arestas construídas
+  if (edges.length === 0 && (flow.nodes || []).length > 0) {
+    console.warn('[validator] buildEdges - Nenhuma aresta construída', {
+      nodeCount: (flow.nodes || []).length,
+      nodes: (flow.nodes || []).map(n => ({
+        id: n.id,
+        type: n.type,
+        next: n.next,
+        hasNext: !!n.next,
+      })),
+    });
+  }
+
   return edges;
 }
 
@@ -308,6 +321,21 @@ function validateDisconnectedNodes(flow, edges) {
   }
 
   if (disconnected.length === 0) return [];
+
+  // Debug: log detalhado quando há nós desconectados
+  console.warn('[validator] validateDisconnectedNodes - Nós desconectados detectados', {
+    disconnectedCount: disconnected.length,
+    disconnectedNodes: disconnected,
+    entryNodes: entries,
+    edgesCount: edges.length,
+    edges: edges,
+    totalNodes: (flow.nodes || []).length,
+    nodeIds: (flow.nodes || []).map(n => n.id),
+    adjacencyList: Array.from(adj.entries()).map(([id, neighbors]) => ({
+      nodeId: id,
+      neighbors,
+    })),
+  });
 
   return [
     addUiMessage({
@@ -636,6 +664,7 @@ function validateNodeStructures(flow) {
     'set_variable',
     'handoff',
     'ai',
+    'ai_task',
     'end',
   ];
 
@@ -939,6 +968,94 @@ function validateNodeConfig(node) {
             },
           }));
         }
+      }
+      break;
+    }
+
+    case 'ai_task': {
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push(addUiMessage({
+          code: 'AI_TASK_MISSING_CONFIG',
+          message: `Nó ai_task "${nodeId}" deve ter campo "config"`,
+          nodeIds: [nodeId],
+        }));
+        break;
+      }
+
+      const config = node.config;
+
+      // Validação: task deve estar definida
+      if (!config.task || typeof config.task !== 'string') {
+        errors.push(addUiMessage({
+          code: 'AI_TASK_MISSING_TASK',
+          message: `Nó ai_task "${nodeId}" deve ter "config.task" (string)`,
+          nodeIds: [nodeId],
+        }));
+      } else {
+        // Validação: task deve ser uma das tarefas suportadas
+        const { SUPPORTED_TASKS } = require('./utils/aiTaskExecutor');
+        const supportedTasks = Object.values(SUPPORTED_TASKS);
+        if (!supportedTasks.includes(config.task)) {
+          errors.push(addUiMessage({
+            code: 'AI_TASK_UNSUPPORTED_TASK',
+            message: `Nó ai_task "${nodeId}" tem tarefa não suportada: "${config.task}". Tarefas suportadas: ${supportedTasks.join(', ')}`,
+            nodeIds: [nodeId],
+            details: {
+              task: config.task,
+              supportedTasks,
+            },
+          }));
+        }
+      }
+
+      // Validação específica para intent_classification
+      if (config.task === 'intent_classification') {
+        // allowedOutputs deve ser um array não vazio
+        if (!Array.isArray(config.allowedOutputs) || config.allowedOutputs.length === 0) {
+          errors.push(addUiMessage({
+            code: 'AI_TASK_MISSING_ALLOWED_OUTPUTS',
+            message: `Nó ai_task "${nodeId}" (intent_classification) deve ter "config.allowedOutputs" (array não vazio)`,
+            nodeIds: [nodeId],
+          }));
+        }
+
+        // fallback deve estar definido
+        if (config.fallback === undefined || config.fallback === null || config.fallback === '') {
+          errors.push(addUiMessage({
+            code: 'AI_TASK_MISSING_FALLBACK',
+            message: `Nó ai_task "${nodeId}" (intent_classification) deve ter "config.fallback"`,
+            nodeIds: [nodeId],
+          }));
+        }
+
+        // confidenceThreshold deve ser um número válido entre 0 e 1
+        if (config.confidenceThreshold !== undefined) {
+          if (typeof config.confidenceThreshold !== 'number') {
+            errors.push(addUiMessage({
+              code: 'AI_TASK_INVALID_CONFIDENCE_THRESHOLD',
+              message: `Nó ai_task "${nodeId}" tem "config.confidenceThreshold" inválido (deve ser número)`,
+              nodeIds: [nodeId],
+            }));
+          } else if (config.confidenceThreshold < 0 || config.confidenceThreshold > 1) {
+            errors.push(addUiMessage({
+              code: 'AI_TASK_INVALID_CONFIDENCE_RANGE',
+              message: `Nó ai_task "${nodeId}" tem "config.confidenceThreshold" fora do intervalo [0, 1]`,
+              nodeIds: [nodeId],
+              details: {
+                confidenceThreshold: config.confidenceThreshold,
+              },
+            }));
+          }
+        }
+      }
+
+      // Validação: o nó deve ter um caminho de fallback (next)
+      if (!node.next) {
+        errors.push(addUiMessage({
+          code: 'AI_TASK_NO_FALLBACK_PATH',
+          message: `Nó ai_task "${nodeId}" deve ter um caminho de fallback definido (campo "next")`,
+          nodeIds: [nodeId],
+        }));
       }
       break;
     }

@@ -151,8 +151,8 @@ export function EditorProvider({ children }) {
           };
 
           logger.info('Atualizando painel de validação após erro ao salvar fluxo', {
-            errorCount: uiErrors.length,
-            errors: uiErrors.map((e) => ({
+            errorCount: validationResult.uiErrors.length, // ✅ Corrigido: usa validationResult.uiErrors
+            errors: validationResult.uiErrors.map((e) => ({ // ✅ Corrigido: usa validationResult.uiErrors
               code: e.code,
               message: e.message,
               nodeIds: e.nodeIds,
@@ -282,6 +282,18 @@ export function EditorProvider({ children }) {
     [currentFlow],
   );
 
+  /**
+   * Limpa o fluxo atual e todos os estados relacionados.
+   */
+  const clearCurrentFlow = useCallback(() => {
+    logger.info('Limpando fluxo atual');
+    setCurrentFlow(null);
+    setSelectedNode(null);
+    setValidation(null);
+    setSimulation(null);
+    setError(null);
+  }, []);
+
   const value = useMemo(
     () => ({
       currentFlow,
@@ -301,6 +313,7 @@ export function EditorProvider({ children }) {
       validateCurrentFlow,
       simulateCurrentFlow,
       deleteFlow,
+      clearCurrentFlow,
     }),
     [
       clearError,
@@ -315,6 +328,7 @@ export function EditorProvider({ children }) {
       saveFlow,
       simulateCurrentFlow,
       deleteFlow,
+      clearCurrentFlow,
     ],
   );
 

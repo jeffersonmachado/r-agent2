@@ -1,0 +1,92 @@
+{
+  "id": "queue-status-check",
+  "name": "Verificar Status da Fila",
+  "description": "Verifica status da fila antes de fazer handoff",
+  "icon": "📊",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "queue-status-check",
+    "name": "Verificar Status da Fila",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "message-check"
+      },
+      {
+        "id": "message-check",
+        "type": "message",
+        "config": {
+          "text": "Vou verificar a disponibilidade do atendimento..."
+        },
+        "next": "get-queue-status"
+      },
+      {
+        "id": "get-queue-status",
+        "type": "get_queue_status",
+        "config": {
+          "queueName": "suporte",
+          "outputVariable": "queue_status"
+        },
+        "next": "router-check"
+      },
+      {
+        "id": "router-check",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "queue_status.waitingTickets",
+                "value": 0
+              },
+              "next": "message-available"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "message-wait"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "message-available",
+        "type": "message",
+        "config": {
+          "text": "Atendimento disponível! Transferindo..."
+        },
+        "next": "handoff"
+      },
+      {
+        "id": "message-wait",
+        "type": "message",
+        "config": {
+          "text": "Há {{queue_status.waitingTickets}} ticket(s) aguardando. Você será atendido em breve."
+        },
+        "next": "handoff"
+      },
+      {
+        "id": "handoff",
+        "type": "handoff",
+        "config": {
+          "queue": "suporte"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

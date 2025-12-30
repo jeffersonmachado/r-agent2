@@ -85,28 +85,110 @@ function setTenantAiConfig(tenantId, config) {
  * @returns {AiProvider|null}
  */
 function getAiProviderForTenant(tenantId) {
+  // Logger simples para o engine
+  const log = {
+    debug: (msg, data) => {
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log(`[DEBUG] ${msg}`, data || '');
+      }
+    },
+    warn: (msg, data) => {
+      // eslint-disable-next-line no-console
+      console.warn(`[WARN] ${msg}`, data || '');
+    },
+    error: (msg, data) => {
+      // eslint-disable-next-line no-console
+      console.error(`[ERROR] ${msg}`, data || '');
+    },
+  };
+
+  log.debug('🔍 getAiProviderForTenant: Buscando provider', { tenantId });
+  
   const cfg = tenantConfig.get(tenantId);
-  if (!cfg) return null;
+  if (!cfg) {
+    log.warn('⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant', { tenantId });
+    log.debug('📋 Tenants configurados', { tenants: Array.from(tenantConfig.keys()) });
+    return null;
+  }
+
+  log.debug('✅ getAiProviderForTenant: Configuração encontrada', {
+    tenantId,
+    primary: cfg.primary,
+    fallback: cfg.fallback,
+  });
 
   const primary = providerRegistry.get(cfg.primary);
-  if (!primary) return null;
+  if (!primary) {
+    log.error('❌ getAiProviderForTenant: Provider primário não encontrado', {
+      tenantId,
+      primaryId: cfg.primary,
+      providersDisponiveis: Array.from(providerRegistry.keys()),
+    });
+    return null;
+  }
+
+  log.debug('✅ getAiProviderForTenant: Provider primário encontrado', {
+    tenantId,
+    primaryId: cfg.primary,
+    hasGenerate: typeof primary.generate === 'function',
+  });
 
   const fallback = cfg.fallback ? providerRegistry.get(cfg.fallback) : null;
 
   if (!fallback) {
+    log.debug('ℹ️ getAiProviderForTenant: Sem fallback configurado, retornando provider primário', {
+      tenantId,
+      primaryId: cfg.primary,
+    });
     return primary;
   }
+
+  log.debug('✅ getAiProviderForTenant: Provider composto (com fallback)', {
+    tenantId,
+    primaryId: cfg.primary,
+    fallbackId: cfg.fallback,
+  });
 
   /** @type {AiProvider} */
   const composite = {
     async generate(prompt, context) {
       try {
-        return await primary.generate(prompt, context);
+        log.debug('🔄 Provider composto: Tentando provider primário', {
+          tenantId,
+          primaryId: cfg.primary,
+        });
+        const result = await primary.generate(prompt, context);
+        log.debug('✅ Provider composto: Provider primário funcionou', {
+          tenantId,
+          primaryId: cfg.primary,
+          hasText: !!result?.text,
+        });
+        return result;
       } catch (err) {
+        log.warn('⚠️ Provider composto: Provider primário falhou, tentando fallback', {
+          tenantId,
+          primaryId: cfg.primary,
+          fallbackId: cfg.fallback,
+          error: err.message,
+          errorStack: err.stack,
+        });
         // Tentamos o fallback, mas sem mudar a semântica de fluxo:
         // qualquer erro ainda será tratado no nível do nó de IA.
-        if (!fallback) throw err;
-        return fallback.generate(prompt, context);
+        if (!fallback) {
+          log.error('❌ Provider composto: Fallback não disponível', {
+            tenantId,
+            fallbackId: cfg.fallback,
+          });
+          throw err;
+        }
+        const fallbackResult = await fallback.generate(prompt, context);
+        log.debug('✅ Provider composto: Fallback funcionou', {
+          tenantId,
+          fallbackId: cfg.fallback,
+          hasText: !!fallbackResult?.text,
+        });
+        return fallbackResult;
       }
     },
   };

@@ -1,0 +1,464 @@
+{
+  "id": "template-completo",
+  "name": "Template Completo - Todas as Funcionalidades",
+  "description": "Template demonstrando todas as funcionalidades disponíveis no sistema: mensagens, inputs, roteamento, variáveis, IA, handoff, persistência e mais",
+  "icon": "🎯",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "template-completo",
+    "name": "Template Completo - Todas as Funcionalidades",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "👋 Olá! Bem-vindo ao template completo de funcionalidades!\n\nEste fluxo demonstra todas as capacidades do sistema:\n• Mensagens e interação\n• Captura de entrada do usuário\n• Roteamento condicional\n• Variáveis e contexto\n• Processamento com IA\n• Transferência para humano\n• Acesso a dados de persistência\n\nVamos começar?"
+        },
+        "next": "set-initial-vars"
+      },
+      {
+        "id": "set-initial-vars",
+        "type": "set_variable",
+        "config": {
+          "assignments": {
+            "step": 1,
+            "user_satisfied": false,
+            "interaction_count": 0
+          }
+        },
+        "next": "get-config-example"
+      },
+      {
+        "id": "get-config-example",
+        "type": "get_config_value",
+        "config": {
+          "configPath": "api.port",
+          "outputVariable": "api_port",
+          "defaultValue": "3000"
+        },
+        "next": "list-flows-example"
+      },
+      {
+        "id": "list-flows-example",
+        "type": "list_flows",
+        "config": {
+          "tenantId": "tenant-demo",
+          "nameFilter": "",
+          "outputVariable": "available_flows"
+        },
+        "next": "message-features"
+      },
+      {
+        "id": "message-features",
+        "type": "message",
+        "config": {
+          "text": "📊 Informações do sistema:\n• Porta da API: {{api_port}}\n• Fluxos disponíveis: {{available_flows.length}}\n\nEscolha uma opção:\n1️⃣ - Testar roteamento condicional\n2️⃣ - Testar processamento com IA\n3️⃣ - Verificar status de fila\n4️⃣ - Obter informações de outro fluxo\n5️⃣ - Transferir para atendimento humano\n0️⃣ - Finalizar"
+        },
+        "next": "collect-option"
+      },
+      {
+        "id": "collect-option",
+        "type": "user_input",
+        "config": {
+          "variable": "user_option"
+        },
+        "next": "router-main"
+      },
+      {
+        "id": "router-main",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "1"
+              },
+              "next": "test-router"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "2"
+              },
+              "next": "test-ai"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "3"
+              },
+              "next": "check-queue"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "4"
+              },
+              "next": "get-flow-info"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "5"
+              },
+              "next": "handoff-example"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_option",
+                "value": "0"
+              },
+              "next": "final-message"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "invalid-option"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "test-router",
+        "type": "message",
+        "config": {
+          "text": "🔀 Testando roteamento condicional!\n\nDigite 'sim' ou 'não' para testar o roteamento:"
+        },
+        "next": "collect-router-input"
+      },
+      {
+        "id": "collect-router-input",
+        "type": "user_input",
+        "config": {
+          "variable": "router_test"
+        },
+        "next": "router-test"
+      },
+      {
+        "id": "router-test",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "router_test",
+                "value": "sim"
+              },
+              "next": "router-success"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "router_test",
+                "value": "não"
+              },
+              "next": "router-fail"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "router-default"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "router-success",
+        "type": "message",
+        "config": {
+          "text": "✅ Roteamento funcionou! Você escolheu 'sim'."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "router-fail",
+        "type": "message",
+        "config": {
+          "text": "❌ Roteamento funcionou! Você escolheu 'não'."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "router-default",
+        "type": "message",
+        "config": {
+          "text": "⚠️ Resposta não reconhecida, mas o roteamento funcionou com a regra padrão."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "test-ai",
+        "type": "message",
+        "config": {
+          "text": "🤖 Testando processamento com IA!\n\nDigite uma pergunta ou mensagem:"
+        },
+        "next": "collect-ai-input"
+      },
+      {
+        "id": "collect-ai-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_question"
+        },
+        "next": "process-ai"
+      },
+      {
+        "id": "process-ai",
+        "type": "ai",
+        "config": {
+          "promptTemplate": "O usuário perguntou: {{user_question}}. Responda de forma útil, amigável e concisa. Se a pergunta for sobre o sistema, mencione que é um template de demonstração.",
+          "outputVariable": "ai_response"
+        },
+        "next": "show-ai-response"
+      },
+      {
+        "id": "show-ai-response",
+        "type": "message",
+        "config": {
+          "text": "💬 Resposta da IA:\n\n{{ai_response}}"
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "check-queue",
+        "type": "message",
+        "config": {
+          "text": "📊 Verificando status da fila de atendimento..."
+        },
+        "next": "get-queue-status"
+      },
+      {
+        "id": "get-queue-status",
+        "type": "get_queue_status",
+        "config": {
+          "queueName": "suporte",
+          "outputVariable": "queue_status"
+        },
+        "next": "router-queue-status"
+      },
+      {
+        "id": "router-queue-status",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "queue_status.exists",
+                "value": false
+              },
+              "next": "queue-not-found"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "queue_status.waitingTickets",
+                "value": 0
+              },
+              "next": "queue-available"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "queue-busy"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "queue-not-found",
+        "type": "message",
+        "config": {
+          "text": "⚠️ Fila 'suporte' não encontrada no sistema."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "queue-available",
+        "type": "message",
+        "config": {
+          "text": "✅ Fila disponível! Não há tickets aguardando. Tempo estimado: imediato."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "queue-busy",
+        "type": "message",
+        "config": {
+          "text": "⏳ Fila ocupada. Há {{queue_status.waitingTickets}} ticket(s) aguardando atendimento."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "get-flow-info",
+        "type": "message",
+        "config": {
+          "text": "📋 Obtendo informações de outro fluxo..."
+        },
+        "next": "fetch-flow-info"
+      },
+      {
+        "id": "fetch-flow-info",
+        "type": "get_flow_info",
+        "config": {
+          "flowId": "ai-assistant",
+          "outputVariable": "flow_info"
+        },
+        "next": "router-flow-info"
+      },
+      {
+        "id": "router-flow-info",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "flow_info.found",
+                "value": true
+              },
+              "next": "flow-found"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "flow-not-found"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "flow-found",
+        "type": "message",
+        "config": {
+          "text": "✅ Fluxo encontrado!\n• Nome: {{flow_info.name}}\n• ID: {{flow_info.id}}\n• Versão: {{flow_info.version}}\n• Nós: {{flow_info.nodeCount}}"
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "flow-not-found",
+        "type": "message",
+        "config": {
+          "text": "❌ Fluxo 'ai-assistant' não encontrado no sistema."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "handoff-example",
+        "type": "message",
+        "config": {
+          "text": "👤 Transferindo você para atendimento humano na fila 'suporte'..."
+        },
+        "next": "do-handoff"
+      },
+      {
+        "id": "do-handoff",
+        "type": "handoff",
+        "config": {
+          "queue": "suporte"
+        },
+        "next": "end"
+      },
+      {
+        "id": "invalid-option",
+        "type": "message",
+        "config": {
+          "text": "❌ Opção inválida. Por favor, escolha uma opção de 0 a 5."
+        },
+        "next": "update-vars"
+      },
+      {
+        "id": "update-vars",
+        "type": "set_variable",
+        "config": {
+          "assignments": {
+            "last_option": "{{user_option}}"
+          }
+        },
+        "next": "continue-prompt"
+      },
+      {
+        "id": "continue-prompt",
+        "type": "message",
+        "config": {
+          "text": "🔄 Deseja testar outra funcionalidade?\n\nDigite 'sim' para continuar ou 'não' para finalizar."
+        },
+        "next": "collect-continue"
+      },
+      {
+        "id": "collect-continue",
+        "type": "user_input",
+        "config": {
+          "variable": "continue_choice"
+        },
+        "next": "router-continue"
+      },
+      {
+        "id": "router-continue",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "continue_choice",
+                "value": "sim"
+              },
+              "next": "message-features"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "final-message"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "final-message",
+        "type": "message",
+        "config": {
+          "text": "🎉 Obrigado por testar o template completo!\n\n✅ Funcionalidades demonstradas:\n• Mensagens com templates\n• Captura de entrada do usuário\n• Roteamento condicional (equals, contains, always)\n• Definição e atualização de variáveis\n• Processamento com IA\n• Verificação de status de fila\n• Obtenção de informações de fluxos\n• Listagem de fluxos\n• Leitura de valores de configuração\n• Transferência para atendimento humano\n\nAté logo! 👋"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template completo demonstrando todas as funcionalidades do sistema de fluxos de chatbot",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0"
+    }
+  }
+}
+

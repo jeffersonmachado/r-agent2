@@ -1,0 +1,152 @@
+{
+  "id": "template-ai-task-intent-classification",
+  "name": "Template - Classificação de Intenção",
+  "description": "Template demonstrando a tarefa de Classificação de Intenção (intent_classification) do nó ai_task",
+  "icon": "🎯",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "template-ai-task-intent-classification",
+    "name": "Template - Classificação de Intenção",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "🎯 Bem-vindo ao Template de Classificação de Intenção!\n\nEste fluxo demonstra como usar o nó ai_task para identificar a intenção do usuário baseado nas palavras que ele digita.\n\nDigite uma mensagem e vou tentar identificar sua intenção:\n\nExemplos:\n• 'quero comprar um produto'\n• 'preciso de ajuda com algo'\n• 'tenho um problema financeiro'\n• 'quero cancelar minha conta'"
+        },
+        "next": "collect-user-input"
+      },
+      {
+        "id": "collect-user-input",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "classify-intent"
+      },
+      {
+        "id": "classify-intent",
+        "type": "ai_task",
+        "config": {
+          "task": "intent_classification",
+          "allowedOutputs": ["comprar", "suporte", "financeiro", "cancelar"],
+          "fallback": "desconhecido",
+          "confidenceThreshold": 0.75,
+          "keywords": {
+            "comprar": ["comprar", "quero comprar", "adquirir", "vender", "produto", "desejo comprar"],
+            "suporte": ["ajuda", "problema", "erro", "não funciona", "dúvida", "suporte", "preciso de ajuda"],
+            "financeiro": ["pagamento", "boleto", "fatura", "conta", "dinheiro", "financeiro", "pagamento atrasado"],
+            "cancelar": ["cancelar", "cancelamento", "quero cancelar", "desistir", "não quero mais"]
+          }
+        },
+        "next": "router-by-intent"
+      },
+      {
+        "id": "router-by-intent",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent.value",
+                "value": "comprar"
+              },
+              "next": "intent-comprar"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent.value",
+                "value": "suporte"
+              },
+              "next": "intent-suporte"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent.value",
+                "value": "financeiro"
+              },
+              "next": "intent-financeiro"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "ai.classify-intent.value",
+                "value": "cancelar"
+              },
+              "next": "intent-cancelar"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "intent-desconhecido"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "intent-comprar",
+        "type": "message",
+        "config": {
+          "text": "🛒 Intenção identificada: COMPRAR\n\n• Confiança: {{ai.classify-intent.confidence}}\n• Valor: {{ai.classify-intent.value}}\n• Mensagem original: {{user_message}}\n\nComo posso ajudá-lo com sua compra?"
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-suporte",
+        "type": "message",
+        "config": {
+          "text": "🆘 Intenção identificada: SUPORTE\n\n• Confiança: {{ai.classify-intent.confidence}}\n• Valor: {{ai.classify-intent.value}}\n• Mensagem original: {{user_message}}\n\nComo posso ajudá-lo?"
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-financeiro",
+        "type": "message",
+        "config": {
+          "text": "💰 Intenção identificada: FINANCEIRO\n\n• Confiança: {{ai.classify-intent.confidence}}\n• Valor: {{ai.classify-intent.value}}\n• Mensagem original: {{user_message}}\n\nComo posso ajudá-lo com questões financeiras?"
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-cancelar",
+        "type": "message",
+        "config": {
+          "text": "🚫 Intenção identificada: CANCELAR\n\n• Confiança: {{ai.classify-intent.confidence}}\n• Valor: {{ai.classify-intent.value}}\n• Mensagem original: {{user_message}}\n\nComo posso ajudá-lo com o cancelamento?"
+        },
+        "next": "end"
+      },
+      {
+        "id": "intent-desconhecido",
+        "type": "message",
+        "config": {
+          "text": "❓ Intenção não identificada claramente\n\n• Intenção detectada: {{ai.classify-intent.value}}\n• Confiança: {{ai.classify-intent.confidence}}\n• Mensagem original: {{user_message}}\n\nA confiança pode estar abaixo do threshold (0.75) ou a mensagem não corresponde a nenhuma intenção configurada.\n\nPor favor, tente reformular sua mensagem."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando a tarefa de Classificação de Intenção (intent_classification) do nó ai_task",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0"
+    }
+  }
+}
+

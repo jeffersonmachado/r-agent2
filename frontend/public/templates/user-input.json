@@ -1,0 +1,52 @@
+{
+  "id": "user-input",
+  "name": "Coleta de Dados",
+  "description": "Fluxo que coleta informações do usuário",
+  "icon": "📝",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "user-input",
+    "name": "Coleta de Dados",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "Olá! Vamos começar coletando algumas informações."
+        },
+        "next": "collect-name"
+      },
+      {
+        "id": "collect-name",
+        "type": "user_input",
+        "config": {
+          "variable": "user_name"
+        },
+        "next": "confirm"
+      },
+      {
+        "id": "confirm",
+        "type": "message",
+        "config": {
+          "text": "Obrigado! Seu nome foi registrado."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {}
+  }
+}
+

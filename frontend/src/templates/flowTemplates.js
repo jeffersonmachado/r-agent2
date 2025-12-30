@@ -2,359 +2,102 @@
  * Modelos de fluxo pré-definidos para facilitar a criação de novos fluxos
  * 
  * IMPORTANTE:
+ * - Os templates são carregados de arquivos JSON em /public/templates/
  * - Os templates devem seguir a estrutura do schema centralizado (nodeSchemas.js)
  * - Router rules devem usar: { op: 'equals'|'contains'|'always', var: 'variable_name', value: 'value' }
  * - Use condition: { op: 'always' } para fallback em routers
  * - Todos os nós devem ter IDs únicos dentro do template
  */
 
-export const flowTemplates = [
-  {
-    id: 'simple-greeting',
-    name: 'Saudação Simples',
-    description: 'Fluxo básico com uma mensagem de boas-vindas',
-    icon: '👋',
-    flow: {
-      tenantId: 'tenant-demo',
-      id: 'simple-greeting',
-      name: 'Saudação Simples',
-      version: 1,
-      nodes: [
-        {
-          id: 'start',
-          type: 'start',
-          config: {},
-          next: 'greeting',
-        },
-        {
-          id: 'greeting',
-          type: 'message',
-          config: {
-            text: 'Olá! Bem-vindo ao nosso chatbot. Como posso ajudá-lo hoje?',
-          },
-          next: 'end',
-        },
-        {
-          id: 'end',
-          type: 'end',
-          config: {},
-          next: null,
-        },
-      ],
-      metadata: {},
-    },
-  },
-  {
-    id: 'user-input',
-    name: 'Coleta de Dados',
-    description: 'Fluxo que coleta informações do usuário',
-    icon: '📝',
-    flow: {
-      tenantId: 'tenant-demo',
-      id: 'user-input',
-      name: 'Coleta de Dados',
-      version: 1,
-      nodes: [
-        {
-          id: 'start',
-          type: 'start',
-          config: {},
-          next: 'welcome',
-        },
-        {
-          id: 'welcome',
-          type: 'message',
-          config: {
-            text: 'Olá! Vamos começar coletando algumas informações.',
-          },
-          next: 'collect-name',
-        },
-        {
-          id: 'collect-name',
-          type: 'user_input',
-          config: {
-            variable: 'user_name',
-          },
-          next: 'confirm',
-        },
-        {
-          id: 'confirm',
-          type: 'message',
-          config: {
-            text: 'Obrigado! Seu nome foi registrado.',
-          },
-          next: 'end',
-        },
-        {
-          id: 'end',
-          type: 'end',
-          config: {},
-          next: null,
-        },
-      ],
-      metadata: {},
-    },
-  },
-  {
-    id: 'router-basic',
-    name: 'Router Básico',
-    description: 'Fluxo com roteamento baseado em condições',
-    icon: '🔀',
-    flow: {
-      tenantId: 'tenant-demo',
-      id: 'router-basic',
-      name: 'Router Básico',
-      version: 1,
-      nodes: [
-        {
-          id: 'start',
-          type: 'start',
-          config: {},
-          next: 'ask-option',
-        },
-        {
-          id: 'ask-option',
-          type: 'message',
-          config: {
-            text: 'Escolha uma opção:\n1. Opção A\n2. Opção B',
-          },
-          next: 'collect-option',
-        },
-        {
-          id: 'collect-option',
-          type: 'user_input',
-          config: {
-            variable: 'user_option',
-          },
-          next: 'route',
-        },
-        {
-          id: 'route',
-          type: 'router',
-          config: {
-            rules: [
-              {
-                condition: { op: 'equals', var: 'user_option', value: '1' },
-                next: 'option-a',
-              },
-              {
-                condition: { op: 'equals', var: 'user_option', value: '2' },
-                next: 'option-b',
-              },
-              {
-                condition: { op: 'always' },
-                next: 'default-response',
-              },
-            ],
-          },
-          next: null,
-        },
-        {
-          id: 'option-a',
-          type: 'message',
-          config: {
-            text: 'Você escolheu a Opção A!',
-          },
-          next: 'end',
-        },
-        {
-          id: 'option-b',
-          type: 'message',
-          config: {
-            text: 'Você escolheu a Opção B!',
-          },
-          next: 'end',
-        },
-        {
-          id: 'default-response',
-          type: 'message',
-          config: {
-            text: 'Opção não reconhecida. Tente novamente.',
-          },
-          next: 'end',
-        },
-        {
-          id: 'end',
-          type: 'end',
-          config: {},
-          next: null,
-        },
-      ],
-      metadata: {},
-    },
-  },
-  {
-    id: 'ai-assistant',
-    name: 'Assistente com AI',
-    description: 'Fluxo que usa AI para responder ao usuário',
-    icon: '🤖',
-    flow: {
-      tenantId: 'tenant-demo',
-      id: 'ai-assistant',
-      name: 'Assistente com AI',
-      version: 1,
-      nodes: [
-        {
-          id: 'start',
-          type: 'start',
-          config: {},
-          next: 'welcome',
-        },
-        {
-          id: 'welcome',
-          type: 'message',
-          config: {
-            text: 'Olá! Sou um assistente virtual. Como posso ajudá-lo?',
-          },
-          next: 'collect-question',
-        },
-        {
-          id: 'collect-question',
-          type: 'user_input',
-          config: {
-            variable: 'user_question',
-          },
-          next: 'ai-process',
-        },
-        {
-          id: 'ai-process',
-          type: 'ai',
-          config: {
-            promptTemplate: 'O usuário perguntou: {{user_question}}. Responda de forma útil e amigável.',
-            outputVariable: 'ai_response',
-          },
-          next: 'show-response',
-        },
-        {
-          id: 'show-response',
-          type: 'message',
-          config: {
-            text: '{{ai_response}}',
-          },
-          next: 'end',
-        },
-        {
-          id: 'end',
-          type: 'end',
-          config: {},
-          next: null,
-        },
-      ],
-      metadata: {},
-    },
-  },
-  {
-    id: 'handoff-support',
-    name: 'Transferência para Suporte',
-    description: 'Fluxo que transfere para atendimento humano',
-    icon: '👤',
-    flow: {
-      tenantId: 'tenant-demo',
-      id: 'handoff-support',
-      name: 'Transferência para Suporte',
-      version: 1,
-      nodes: [
-        {
-          id: 'start',
-          type: 'start',
-          config: {},
-          next: 'greeting',
-        },
-        {
-          id: 'greeting',
-          type: 'message',
-          config: {
-            text: 'Olá! Estou aqui para ajudá-lo.',
-          },
-          next: 'ask-help',
-        },
-        {
-          id: 'ask-help',
-          type: 'message',
-          config: {
-            text: 'Se precisar de ajuda adicional, posso transferir você para um atendente.',
-          },
-          next: 'collect-transfer',
-        },
-        {
-          id: 'collect-transfer',
-          type: 'user_input',
-          config: {
-            variable: 'needs_transfer',
-          },
-          next: 'check-transfer',
-        },
-        {
-          id: 'check-transfer',
-          type: 'router',
-          config: {
-            rules: [
-              {
-                condition: { op: 'equals', var: 'needs_transfer', value: 'sim' },
-                next: 'transfer',
-              },
-              {
-                condition: { op: 'always' },
-                next: 'continue-chat',
-              },
-            ],
-          },
-          next: null,
-        },
-        {
-          id: 'transfer',
-          type: 'handoff',
-          config: {
-            queue: 'suporte_n1',
-          },
-          next: 'end',
-        },
-        {
-          id: 'continue-chat',
-          type: 'message',
-          config: {
-            text: 'Continuando o atendimento...',
-          },
-          next: 'end',
-        },
-        {
-          id: 'end',
-          type: 'end',
-          config: {},
-          next: null,
-        },
-      ],
-      metadata: {},
-    },
-  },
-  {
-    id: 'empty',
-    name: 'Fluxo Vazio',
-    description: 'Comece do zero com um fluxo em branco',
-    icon: '📄',
-    flow: {
-      tenantId: 'tenant-demo',
-      id: 'new-flow',
-      name: 'Novo Fluxo',
-      version: 1,
-      nodes: [
-        {
-          id: 'start',
-          type: 'start',
-          config: {},
-          next: 'end',
-        },
-        {
-          id: 'end',
-          type: 'end',
-          config: {},
-          next: null,
-        },
-      ],
-      metadata: {},
-    },
-  },
-];
+import logger from '../utils/logger';
+import { fetchJson } from '../api/client';
+
+// Cache de templates carregados
+let templatesCache = null;
+let loadPromise = null;
+
+/**
+ * Carrega todos os templates dos arquivos JSON
+ * Descobre automaticamente quais templates existem no diretório
+ * @returns {Promise<Array>} Array de templates
+ */
+async function loadTemplates() {
+  // Retorna cache se já foi carregado
+  if (templatesCache) {
+    return templatesCache;
+  }
+
+  // Se já há uma promise de carregamento em andamento, retorna ela
+  if (loadPromise) {
+    return loadPromise;
+  }
+
+  loadPromise = (async () => {
+    try {
+      // Primeiro, obtém a lista de templates disponíveis do backend
+      const templateList = await fetchJson('/templates', {
+        method: 'GET',
+      });
+
+      logger.debug('Lista de templates obtida do backend', { count: templateList.length });
+
+      // Agora carrega cada template completo
+      const templates = [];
+
+      for (const templateInfo of templateList) {
+        try {
+          const response = await fetch(`/templates/${templateInfo.id}.json`);
+          if (response.ok) {
+            const template = await response.json();
+            templates.push(template);
+            logger.debug('Template carregado', { templateId: templateInfo.id, name: template.name });
+          } else {
+            logger.warn(`Template ${templateInfo.id}.json não encontrado, pulando...`);
+          }
+        } catch (err) {
+          logger.error(`Erro ao carregar template ${templateInfo.id}.json:`, err);
+        }
+      }
+
+      templatesCache = templates;
+      logger.info('Templates carregados', { count: templates.length });
+      return templates;
+    } catch (err) {
+      logger.error('Erro ao carregar lista de templates:', err);
+      // Fallback: retorna array vazio em caso de erro
+      return [];
+    }
+  })();
+
+  return loadPromise;
+}
+
+/**
+ * Limpa o cache de templates, forçando recarregamento na próxima chamada
+ */
+export function clearTemplatesCache() {
+  templatesCache = null;
+  loadPromise = null;
+  logger.debug('Cache de templates limpo');
+}
+
+/**
+ * Obtém todos os templates disponíveis
+ * @returns {Promise<Array>} Array de templates
+ */
+export async function getFlowTemplates() {
+  return await loadTemplates();
+}
+
+/**
+ * Obtém um template específico por ID
+ * @param {string} templateId
+ * @returns {Promise<Object|null>} Template ou null se não encontrado
+ */
+export async function getFlowTemplate(templateId) {
+  const templates = await getFlowTemplates();
+  return templates.find(t => t.id === templateId) || null;
+}
 
 /**
  * Gera um ID único para um novo fluxo baseado em template
@@ -384,3 +127,30 @@ export function createFlowFromTemplate(template, customId = null, customName = n
   };
 }
 
+/**
+ * Remove um template
+ * @param {string} templateId - ID do template a ser removido
+ * @returns {Promise<{success: boolean, deletedId: string, message: string}>}
+ */
+export async function deleteTemplate(templateId) {
+  if (!templateId || typeof templateId !== 'string' || templateId.trim() === '') {
+    return Promise.reject(new Error('deleteTemplate: templateId é obrigatório'));
+  }
+
+  logger.info('Removendo template', { templateId });
+
+  try {
+    const result = await fetchJson(`/templates/${encodeURIComponent(templateId)}`, {
+      method: 'DELETE',
+    });
+
+    // Limpa o cache após remover
+    clearTemplatesCache();
+
+    logger.info('Template removido com sucesso', { templateId, result });
+    return result;
+  } catch (error) {
+    logger.error('Erro ao remover template', { templateId, error });
+    throw error;
+  }
+}
