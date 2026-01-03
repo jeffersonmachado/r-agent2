@@ -1,0 +1,106 @@
+{
+  "id": "schedule-router-example",
+  "name": "Roteador por Horário",
+  "description": "Exemplo de uso do nó schedule_router para rotear baseado em horário comercial",
+  "icon": "🕐",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "schedule-router-example",
+    "name": "Roteador por Horário",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "check-schedule"
+      },
+      {
+        "id": "check-schedule",
+        "type": "schedule_router",
+        "config": {
+          "schedules": [
+            {
+              "days": [1, 2, 3, 4, 5],
+              "startTime": "09:00",
+              "endTime": "18:00",
+              "next": "business-hours",
+              "label": "Horário Comercial"
+            },
+            {
+              "days": [0, 6],
+              "startTime": "00:00",
+              "endTime": "23:59",
+              "next": "weekend",
+              "label": "Fim de Semana"
+            }
+          ],
+          "defaultNext": "after-hours",
+          "timezone": "America/Sao_Paulo"
+        },
+        "next": null
+      },
+      {
+        "id": "business-hours",
+        "type": "message",
+        "config": {
+          "text": "Olá! Estamos em horário comercial (9h às 18h, segunda a sexta). Como posso ajudá-lo?"
+        },
+        "next": "collect-message"
+      },
+      {
+        "id": "weekend",
+        "type": "message",
+        "config": {
+          "text": "Olá! Estamos em fim de semana. Nossa equipe retornará na segunda-feira. Como posso ajudá-lo?"
+        },
+        "next": "collect-message"
+      },
+      {
+        "id": "after-hours",
+        "type": "message",
+        "config": {
+          "text": "Olá! Estamos fora do horário comercial. Nossa equipe retornará no próximo horário comercial. Como posso ajudá-lo?"
+        },
+        "next": "collect-message"
+      },
+      {
+        "id": "collect-message",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "check-schedule"
+        },
+        "next": {
+          "retry": "collect-message",
+          "options": "collect-message",
+          "human": "end",
+          "end": "end"
+        }
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando roteamento baseado em horário comercial usando schedule_router"
+    }
+  }
+}
+

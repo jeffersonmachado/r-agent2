@@ -11,12 +11,16 @@ function frontendRoutesPlugin() {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test'];
       
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0] || '';
         
         // Ignora rotas da API - deixa o proxy lidar com elas
+        // IMPORTANTE: 
+        // - /audit/logs e /audit/stats são rotas de API, mas /audit é rota de página
+        // - /web-scraping/scrape e /web-scraping/scrape-batch são rotas de API, mas /web-scraping é rota de página
+        // - /rpa/* são rotas de API (RPA recordings, execute, etc)
         const isApiRoute = url.startsWith('/tickets') || 
                           url.startsWith('/queues') || 
                           url.startsWith('/flows') || 
@@ -26,20 +30,26 @@ function frontendRoutesPlugin() {
                           url.startsWith('/templates') || 
                           url.startsWith('/server') || 
                           url.startsWith('/api') ||
-                          url.startsWith('/metrics');
+                          url.startsWith('/metrics') ||
+                          url.startsWith('/auth') ||
+                          (url.startsWith('/rpa/') && url !== '/rpa-test') || // /rpa/recordings é API, mas /rpa-test é página
+                          (url.startsWith('/web-scraping/') && url !== '/web-scraping') || // /web-scraping/scrape é API
+                          (url.startsWith('/audit/') && url !== '/audit'); // /audit/logs, /audit/stats são API
         
         if (isApiRoute) {
           // Deixa o proxy lidar com rotas da API
           return next();
         }
         
-        // Se for uma rota de página do frontend e for GET de navegação
-        if (req.method === 'GET' && frontendRoutes.includes(url)) {
+        // Se for uma rota de página do frontend e for GET
+        if (req.method === 'GET') {
           const acceptHeader = req.headers.accept || '';
-          const isNavigation = acceptHeader.includes('text/html') && 
+          const isNavigation = acceptHeader.includes('text/html') || 
                                !acceptHeader.includes('application/json');
           
-          if (isNavigation) {
+          // Se for navegação (não é API e não é arquivo estático)
+          // Serve index.html para todas as rotas do frontend (SPA routing)
+          if (!isApiRoute && !url.includes('.') && !url.startsWith('/@')) {
             // Serve o index.html para SPA routing
             req.url = '/index.html';
           }
@@ -140,6 +150,58 @@ const viteConfig = defineConfig({
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
+      },
+      '^/auth': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/rpa': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/web-scraping': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // Se for GET de navegação para /web-scraping (sem subcaminho), serve index.html
+          if (req.method === 'GET' && req.url === '/web-scraping') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') && 
+                                 !acceptHeader.includes('application/json');
+            
+            if (isNavigation) {
+              // Não faz proxy - o plugin frontend-routes já serviu o index.html
+              return false;
+            }
+          }
+          
+          // Para /web-scraping/scrape, /web-scraping/scrape-batch ou outros métodos, faz proxy para API
+          return undefined;
+        },
+      },
+      '^/audit': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // Se for GET de navegação para /audit (sem subcaminho), serve index.html
+          if (req.method === 'GET' && req.url === '/audit') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') && 
+                                 !acceptHeader.includes('application/json');
+            
+            if (isNavigation) {
+              // Não faz proxy - o plugin frontend-routes já serviu o index.html
+              return false;
+            }
+          }
+          
+          // Para /audit/logs, /audit/stats ou outros métodos, faz proxy para API
+          return undefined;
+        },
       },
       // Rota específica para /config da API
       // Faz proxy apenas para requisições de API (não navegação)

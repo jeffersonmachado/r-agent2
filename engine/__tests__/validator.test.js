@@ -23,7 +23,7 @@ describe('validator', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    test('fluxo sem nós retorna válido (caso extremo)', () => {
+    test('fluxo sem nós retorna inválido (caso extremo)', () => {
       const flow = {
         tenantId,
         id: 'flow-empty',
@@ -34,11 +34,15 @@ describe('validator', () => {
       };
 
       const result = validateFlow(flow);
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      // O validador exige pelo menos um nó, um start e um end
+      expect(result.valid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+      // Deve ter erro de fluxo vazio e falta de start/end
+      const errorCodes = result.errors.map(e => e.code);
+      expect(errorCodes).toContain('EMPTY_FLOW');
     });
 
-    test('fluxo com apenas um nó end é válido', () => {
+    test('fluxo com apenas um nó end é inválido (falta start)', () => {
       const flow = {
         tenantId,
         id: 'flow-single',
@@ -49,7 +53,10 @@ describe('validator', () => {
       };
 
       const result = validateFlow(flow);
-      expect(result.valid).toBe(true);
+      // O validador exige pelo menos um nó start
+      expect(result.valid).toBe(false);
+      const errorCodes = result.errors.map(e => e.code);
+      expect(errorCodes).toContain('MISSING_START_NODE');
     });
   });
 
@@ -261,8 +268,8 @@ describe('validator', () => {
             type: 'router',
             config: {
               rules: [
-                { condition: 'var1 === "a"', next: 'msg1' },
-                { condition: 'var1 === "b"', next: 'msg2' },
+                { condition: { op: 'equals', var: 'var1', value: 'a' }, next: 'msg1' },
+                { condition: { op: 'equals', var: 'var1', value: 'b' }, next: 'msg2' },
               ],
             },
             next: 'end',
@@ -305,6 +312,94 @@ describe('validator', () => {
       const missingError = result.errors.find((e) => e.code === 'NODE_TARGET_MISSING');
       expect(missingError).toBeDefined();
       expect(missingError.details.to).toBe('missing');
+    });
+
+    test('detecta router sem fallback explícito', () => {
+      const flow = {
+        tenantId,
+        id: 'flow-router-no-fallback',
+        name: 'Fluxo com router sem fallback',
+        version: 1,
+        nodes: [
+          { id: 'start', type: 'start', next: 'router' },
+          {
+            id: 'router',
+            type: 'router',
+            config: {
+              rules: [
+                { condition: { op: 'equals', var: 'var1', value: 'a' }, next: 'msg1' },
+                // Sem regra "always" e sem defaultNext
+              ],
+            },
+            // Sem campo next também
+          },
+          { id: 'msg1', type: 'message', config: { text: 'Mensagem 1' }, next: 'end' },
+          { id: 'end', type: 'end' },
+        ],
+        metadata: {},
+      };
+
+      const result = validateFlow(flow);
+      expect(result.valid).toBe(false);
+
+      const fallbackError = result.errors.find((e) => e.code === 'ROUTER_MISSING_FALLBACK');
+      expect(fallbackError).toBeDefined();
+    });
+
+    test('valida router com fallback via regra always', () => {
+      const flow = {
+        tenantId,
+        id: 'flow-router-always',
+        name: 'Fluxo com router com always',
+        version: 1,
+        nodes: [
+          { id: 'start', type: 'start', next: 'router' },
+          {
+            id: 'router',
+            type: 'router',
+            config: {
+              rules: [
+                { condition: { op: 'equals', var: 'var1', value: 'a' }, next: 'msg1' },
+                { condition: { op: 'always' }, next: 'end' },
+              ],
+            },
+          },
+          { id: 'msg1', type: 'message', config: { text: 'Mensagem 1' }, next: 'end' },
+          { id: 'end', type: 'end' },
+        ],
+        metadata: {},
+      };
+
+      const result = validateFlow(flow);
+      expect(result.valid).toBe(true);
+    });
+
+    test('valida router com fallback via defaultNext', () => {
+      const flow = {
+        tenantId,
+        id: 'flow-router-default',
+        name: 'Fluxo com router com defaultNext',
+        version: 1,
+        nodes: [
+          { id: 'start', type: 'start', next: 'router' },
+          {
+            id: 'router',
+            type: 'router',
+            config: {
+              rules: [
+                { condition: { op: 'equals', var: 'var1', value: 'a' }, next: 'msg1' },
+              ],
+            },
+            next: 'end', // Fallback via defaultNext
+          },
+          { id: 'msg1', type: 'message', config: { text: 'Mensagem 1' }, next: 'end' },
+          { id: 'end', type: 'end' },
+        ],
+        metadata: {},
+      };
+
+      const result = validateFlow(flow);
+      expect(result.valid).toBe(true);
     });
   });
 

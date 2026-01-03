@@ -1,0 +1,55 @@
+{
+  "id": "get-user-info-example",
+  "name": "Exemplo de Info do Usuário",
+  "description": "Exemplo de uso do nó get_user_info para obter informações do usuário",
+  "icon": "👤",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "get-user-info-example",
+    "name": "Exemplo de Info do Usuário",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "Olá! Vou obter suas informações de perfil."
+        },
+        "next": "get-user-info"
+      },
+      {
+        "id": "get-user-info",
+        "type": "get_user_info",
+        "config": {
+          "fields": "name,phone,email",
+          "outputVariable": "user_info"
+        },
+        "next": "show-info"
+      },
+      {
+        "id": "show-info",
+        "type": "message",
+        "config": {
+          "text": "Suas informações:\n• Nome: {{user_info.name}}\n• Telefone: {{user_info.phone}}\n• Email: {{user_info.email}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando uso do nó get_user_info para obter informações do usuário"
+    }
+  }
+}
+

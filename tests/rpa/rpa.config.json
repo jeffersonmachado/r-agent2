@@ -1,0 +1,66 @@
+{
+  "modes": {
+    "record": {
+      "headless": false,
+      "showCursor": true,
+      "typingSpeedMs": 50,
+      "actionDelayMs": 300,
+      "screenStabilizeMs": 500
+    },
+    "playback": {
+      "headless": false,
+      "showCursor": true,
+      "typingSpeedMs": 50,
+      "actionDelayMs": 300,
+      "screenStabilizeMs": 500,
+      "speedMultiplier": 1.0
+    },
+    "ci": {
+      "headless": true,
+      "showCursor": false,
+      "typingSpeedMs": 0,
+      "actionDelayMs": 0,
+      "screenStabilizeMs": 100,
+      "speedMultiplier": 10.0
+    }
+  },
+  "playwright": {
+    "headless": true,
+    "slowMo": 100,
+    "timeout": 30000,
+    "screenshot": {
+      "enabled": true,
+      "path": "./tests/rpa/screenshots",
+      "onFailure": true
+    }
+  },
+  "retry": {
+    "maxAttempts": 3,
+    "delay": 1000
+  },
+  "errorDetection": {
+    "enabled": true,
+    "screenshotOnError": true,
+    "logErrors": true
+  },
+  "dataPopulation": {
+    "seedPath": "./tests/seeds",
+    "validateBeforeUse": true
+  },
+  "urls": {
+    "base": "http://localhost:3000",
+    "frontend": "http://localhost:5173",
+    "api": "http://localhost:3000"
+  },
+  "credentials": {
+    "testUser": {
+      "email": "test@example.com",
+      "password": "test123"
+    },
+    "admin": {
+      "email": "admin@example.com",
+      "password": "admin123"
+    }
+  }
+}
+

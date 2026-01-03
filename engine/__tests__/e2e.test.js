@@ -2,6 +2,7 @@ const { validateFlow } = require('../validator');
 const { compileFlow } = require('../compileFlow');
 const { NodeRegistry } = require('../nodeRegistry');
 const {
+  startNodeHandler,
   messageNodeHandler,
   userInputNodeHandler,
   routerNodeHandler,
@@ -20,7 +21,8 @@ describe('Engine E2E - fluxos básicos', () => {
     name: 'Fluxo mínimo',
     version: 1,
     nodes: [
-      { id: 'start', type: 'message', config: { text: 'Olá mundo' }, next: 'end' },
+      { id: 'start', type: 'start', next: 'msg' },
+      { id: 'msg', type: 'message', config: { text: 'Olá mundo' }, next: 'end' },
       { id: 'end', type: 'end' },
     ],
     metadata: {},
@@ -41,6 +43,7 @@ describe('Engine E2E - fluxos básicos', () => {
 
   function createRegistry() {
     const registry = new NodeRegistry();
+    registry.register('start', startNodeHandler);
     registry.register('message', messageNodeHandler);
     registry.register('user_input', userInputNodeHandler);
     registry.register('router', routerNodeHandler);
@@ -71,17 +74,23 @@ describe('Engine E2E - fluxos básicos', () => {
 
     const allEvents = [];
 
-    // Passo 1: nó "start"
+    // Passo 1: nó "start" - apenas avança para o próximo nó
     const step1 = await executeStep(state, compiled, { registry });
     allEvents.push(...step1.events);
-    expect(step1.output).toEqual({ type: 'message', text: 'Olá mundo' });
-    expect(step1.state.currentNodeId).toBe('end');
+    expect(step1.output).toEqual({ type: 'start' });
+    expect(step1.state.currentNodeId).toBe('msg');
 
-    // Passo 2: nó "end"
+    // Passo 2: nó "message" - produz a mensagem
     const step2 = await executeStep(step1.state, compiled, { registry });
     allEvents.push(...step2.events);
-    expect(step2.output).toEqual({ type: 'end' });
-    expect(step2.state.currentNodeId).toBeNull();
+    expect(step2.output).toEqual({ type: 'message', text: 'Olá mundo' });
+    expect(step2.state.currentNodeId).toBe('end');
+
+    // Passo 3: nó "end"
+    const step3 = await executeStep(step2.state, compiled, { registry });
+    allEvents.push(...step3.events);
+    expect(step3.output).toEqual({ type: 'end' });
+    expect(step3.state.currentNodeId).toBeNull();
   });
 
   test('Fluxo com erro estrutural é reprovado pelo validador', () => {

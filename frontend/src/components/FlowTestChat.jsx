@@ -4,6 +4,7 @@ import { useFlowRunner } from '../hooks/useFlowRunner';
 import { ResizableDivider } from './ResizableDivider';
 import { getFeature, setFeature } from '../utils/featuresConfig';
 import { useTheme } from '../styles/themeContext';
+import { speak, stopSpeaking, isAvailable } from '../utils/textToSpeech';
 
 /**
  * Componente de Chat de Teste para validar e executar fluxos de chatbot.
@@ -35,10 +36,12 @@ export function FlowTestChat({ flow, onSizeChange }) {
   const [executionLogWidth, setExecutionLogWidth] = useState(400);
   const [aiTasksEnabled, setAiTasksEnabled] = useState(true);
   const [copiedMessage, setCopiedMessage] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const executionLogEndRef = useRef(null);
   const lastProcessedOutputsRef = useRef([]);
+  const ttsAvailable = isAvailable();
 
   // Scroll automático
   const scrollToBottom = () => {
@@ -77,6 +80,16 @@ export function FlowTestChat({ flow, onSizeChange }) {
           text: output.text,
           timestamp: new Date().toISOString(),
         });
+      } else if (output?.type === 'options') {
+        newMessages.push({
+          id: `msg-${Date.now()}-${Math.random()}`,
+          role: 'bot',
+          text: output.message || 'Escolha uma opção:',
+          options: output.options || [],
+          optionsType: output.optionsType || 'button',
+          allowMultiple: output.allowMultiple || false,
+          timestamp: new Date().toISOString(),
+        });
       } else if (output?.type === 'end' && output.message) {
         newMessages.push({
           id: `msg-${Date.now()}-${Math.random()}`,
@@ -89,10 +102,27 @@ export function FlowTestChat({ flow, onSizeChange }) {
 
     if (newMessages.length > 0) {
       setMessages((prev) => [...prev, ...newMessages]);
+      
+      // Fala as novas mensagens do bot se TTS estiver habilitado
+      if (ttsEnabled && ttsAvailable) {
+        newMessages.forEach((msg) => {
+          if (msg.role === 'bot' && msg.text) {
+            // Remove opções e formatação para falar apenas o texto
+            const textToSpeak = msg.text.replace(/\[.*?\]/g, '').trim();
+            if (textToSpeak) {
+              speak(textToSpeak, {
+                useQualitySettings: true, // Usa configurações de qualidade melhorada
+              }).catch((error) => {
+                logger.debug('Erro ao falar mensagem:', error);
+              });
+            }
+          }
+        });
+      }
     }
 
     lastProcessedOutputsRef.current = pendingOutputs;
-  }, [pendingOutputs]);
+  }, [pendingOutputs, ttsEnabled, ttsAvailable]);
 
   // Notifica mudança de tamanho quando o log é recolhido/expandido
   useEffect(() => {
@@ -161,6 +191,11 @@ export function FlowTestChat({ flow, onSizeChange }) {
   // Limpa estados visuais quando o componente é desmontado (modal fecha)
   useEffect(() => {
     return () => {
+      // Para qualquer fala em andamento
+      if (ttsAvailable) {
+        stopSpeaking();
+      }
+      
       // Emite evento para limpar todos os destaques quando o modal fecha
       if (typeof window !== 'undefined') {
         try {
@@ -176,7 +211,14 @@ export function FlowTestChat({ flow, onSizeChange }) {
         }
       }
     };
-  }, []);
+  }, [ttsAvailable]);
+
+  // Para fala quando TTS é desabilitado
+  useEffect(() => {
+    if (!ttsEnabled && ttsAvailable) {
+      stopSpeaking();
+    }
+  }, [ttsEnabled, ttsAvailable]);
 
 
   const handleSend = async () => {
@@ -400,6 +442,40 @@ export function FlowTestChat({ flow, onSizeChange }) {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary">Chat de Teste</h3>
           <div className="flex items-center gap-3">
+            {/* Toggle de TTS (Voz) */}
+            {ttsAvailable && (
+              <label className="flex items-center gap-2 cursor-pointer" title="Ativar/desativar narração de voz">
+                <span className="text-sm text-text-secondary">🔊 Voz</span>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={ttsEnabled}
+                    onChange={(e) => {
+                      setTtsEnabled(e.target.checked);
+                      if (!e.target.checked) {
+                        stopSpeaking();
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-11 h-6 rounded-full transition-colors border ${
+                      ttsEnabled 
+                        ? 'bg-primary border-primary' 
+                        : `${themeName === 'dark' ? 'bg-border-default border-border-hover' : 'bg-border-default border-border-hover'}`
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${
+                        ttsEnabled 
+                          ? `translate-x-5 ${themeName === 'dark' ? 'bg-white shadow-md' : 'bg-text-primary shadow-md'}`
+                          : `bg-bg-secondary translate-x-0 border-2 ${themeName === 'dark' ? 'border-border-hover shadow-sm' : 'border-border-default shadow-sm'}`
+                      }`}
+                    />
+                  </div>
+                </div>
+              </label>
+            )}
             {/* Toggle de IA */}
             <label className="flex items-center gap-2 cursor-pointer">
               <span className="text-sm text-text-secondary">IA Habilitada</span>
@@ -468,6 +544,95 @@ export function FlowTestChat({ flow, onSizeChange }) {
               }`}
             >
               <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+              
+              {/* Renderiza opções interativas */}
+              {msg.options && Array.isArray(msg.options) && msg.options.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {msg.optionsType === 'button' && (
+                    <div className="flex flex-wrap gap-2">
+                      {msg.options.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            if (sendMessage) {
+                              sendMessage(option.id);
+                            }
+                          }}
+                          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {msg.optionsType === 'checkbox' && (
+                    <div className="space-y-2">
+                      {msg.options.map((option) => (
+                        <label
+                          key={option.id}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 text-primary border-border-default rounded focus:ring-primary"
+                            onChange={(e) => {
+                              // Para checkboxes, precisamos coletar todas as seleções
+                              // Por enquanto, vamos enviar apenas quando clicar
+                              if (e.target.checked && sendMessage) {
+                                sendMessage(option.id);
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {msg.optionsType === 'radio' && (
+                    <div className="space-y-2">
+                      {msg.options.map((option) => (
+                        <label
+                          key={option.id}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name={`radio-${msg.id}`}
+                            className="w-4 h-4 text-primary border-border-default focus:ring-primary"
+                            onChange={(e) => {
+                              if (e.target.checked && sendMessage) {
+                                sendMessage(option.id);
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {msg.optionsType === 'list' && (
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value && sendMessage) {
+                          sendMessage(e.target.value);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-border-default rounded-lg bg-bg-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Selecione uma opção...</option>
+                      {msg.options.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+              
               <p
                 className={`text-xs mt-1 ${
                   msg.role === 'user' ? 'text-primary-100' : 'text-text-tertiary'

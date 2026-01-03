@@ -1,0 +1,35 @@
+{
+  "id": "bf42bd03-9445-44ca-8957-e3bc7388b2f9",
+  "name": "demo-exemplo",
+  "version": "1.0.0",
+  "createdAt": "2026-01-02T18:05:16.957Z",
+  "url": "https://example.com",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "https://example.com",
+      "waitFor": "h1",
+      "timeout": 10000,
+      "timestamp": "2026-01-02T18:05:16.957Z"
+    },
+    {
+      "type": "wait",
+      "condition": 2000,
+      "timeout": 30000,
+      "state": null,
+      "timestamp": "2026-01-02T18:05:16.957Z"
+    },
+    {
+      "type": "assert",
+      "title": "Example Domain",
+      "message": "Título da página deve ser \"Example Domain\"",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T18:05:16.957Z"
+    }
+  ],
+  "data": {
+    "testData": {
+      "message": "Este é um exemplo de gravação RPA"
+    }
+  }
+}

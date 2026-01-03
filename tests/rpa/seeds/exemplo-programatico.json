@@ -1,0 +1,44 @@
+{
+  "id": "7e0c547e-79f4-45c0-abc5-a19e24961504",
+  "name": "exemplo-programatico",
+  "version": "1.0.0",
+  "createdAt": "2026-01-02T21:15:39.385Z",
+  "url": "https://example.com",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "https://example.com",
+      "waitFor": "h1",
+      "timeout": 30000
+    },
+    {
+      "type": "wait",
+      "condition": 2000,
+      "timeout": 30000,
+      "state": null
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "contains": "example.com"
+        },
+        "title": {
+          "exact": "Example Domain"
+        },
+        "meta": null,
+        "landmarks": [
+          {
+            "selector": "h1",
+            "text": "Example Domain",
+            "exists": true
+          }
+        ]
+      },
+      "validationMode": "all",
+      "message": "Página validada com sucesso",
+      "timeout": 30000
+    }
+  ],
+  "data": {}
+}

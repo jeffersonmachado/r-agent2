@@ -3,10 +3,29 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import { EditorProvider } from './state/editorStore';
 import { ThemeProvider } from './styles/themeContext';
+import { AuthProvider, useAuth } from './context/authContext';
 import { FlowEditorPage } from './pages/FlowEditorPage';
 import { SupportPage } from './pages/SupportPage';
 import { TicketMaintenancePage } from './pages/TicketMaintenancePage';
 import { ConfigPage } from './pages/ConfigPage';
+import { AgentsPage } from './pages/AgentsPage';
+import { AuditPage } from './pages/AuditPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { QuickRepliesPage } from './pages/QuickRepliesPage';
+import { DepartmentsPage } from './pages/DepartmentsPage';
+import { BulkMessagingPage } from './pages/BulkMessagingPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { ExportPage } from './pages/ExportPage';
+import { AIToolsPage } from './pages/AIToolsPage';
+import { SegmentationPage } from './pages/SegmentationPage';
+import { WhatsAppTemplatesPage } from './pages/WhatsAppTemplatesPage';
+import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
+import { ProductDocsPage } from './pages/ProductDocsPage';
+import { RAGDocumentsPage } from './pages/RAGDocumentsPage';
+import { WebScrapingPage } from './pages/WebScrapingPage';
+import { RpaTestPage } from './pages/RpaTestPage';
+import { Login } from './components/Login';
+import { UserMenu } from './components/UserMenu';
 import { useRouter } from './hooks/useRouter';
 
 /**
@@ -75,32 +94,111 @@ console.warn = (...args) => {
  * Componente principal com roteamento baseado em URL.
  */
 function App() {
-  const { currentPath, navigate } = useRouter();
-
-  // Determina qual página renderizar baseado na URL
-  const isEditor = currentPath === '/' || currentPath === '/editor' || currentPath.startsWith('/editor');
-  const isSupport = currentPath === '/support' || currentPath.startsWith('/support');
-  const isMaintenance = currentPath === '/maintenance' || currentPath.startsWith('/maintenance');
-  const isConfig = currentPath === '/config' || currentPath.startsWith('/config');
-
-  // Se a rota não for reconhecida, redireciona para o editor
-  useEffect(() => {
-    if (!isEditor && !isSupport && !isMaintenance && !isConfig) {
-      navigate('/editor');
-    }
-  }, [isEditor, isSupport, isMaintenance, isConfig, navigate]);
-
   return (
     <ThemeProvider>
-      <AppContent isEditor={isEditor} isSupport={isSupport} isMaintenance={isMaintenance} isConfig={isConfig} />
+      <AuthProvider>
+        <AppWithAuth />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
 
-function AppContent({ isEditor, isSupport, isMaintenance, isConfig }) {
+function AppWithAuth() {
+  const { currentPath, navigate } = useRouter();
+  const { isAuthenticated, loading } = useAuth();
+
+  // Determina qual página renderizar baseado na URL
+  const isDashboard = currentPath === '/' || currentPath === '/dashboard';
+  const isEditor = currentPath === '/editor' || currentPath.startsWith('/editor');
+  const isSupport = currentPath === '/support' || currentPath.startsWith('/support');
+  const isMaintenance = currentPath === '/maintenance' || currentPath.startsWith('/maintenance');
+  const isConfig = currentPath === '/config' || currentPath.startsWith('/config');
+  const isAgents = currentPath === '/agents' || currentPath.startsWith('/agents');
+  const isAudit = currentPath === '/audit' || currentPath.startsWith('/audit');
+  const isQuickReplies = currentPath === '/quick-replies' || currentPath.startsWith('/quick-replies');
+  const isDepartments = currentPath === '/departments' || currentPath.startsWith('/departments');
+  const isBulkMessaging = currentPath === '/bulk-messaging' || currentPath.startsWith('/bulk-messaging');
+  const isAnalytics = currentPath === '/analytics' || currentPath.startsWith('/analytics');
+  const isExport = currentPath === '/export' || currentPath.startsWith('/export');
+  const isAITools = currentPath === '/ai-tools' || currentPath.startsWith('/ai-tools');
+  const isSegmentation = currentPath === '/segmentation' || currentPath.startsWith('/segmentation');
+  const isWhatsAppTemplates = currentPath === '/whatsapp-templates' || currentPath.startsWith('/whatsapp-templates');
+  const isKnowledgeBase = currentPath === '/knowledge-base' || currentPath.startsWith('/knowledge-base');
+  const isProductDocs = currentPath === '/product-docs' || currentPath.startsWith('/product-docs');
+  const isRAGDocuments = currentPath === '/rag-documents' || currentPath.startsWith('/rag-documents');
+  const isWebScraping = currentPath === '/web-scraping' || currentPath.startsWith('/web-scraping');
+  const isRpaTest = currentPath === '/rpa-test' || currentPath.startsWith('/rpa-test');
+  const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
+
+  // Todas as rotas requerem autenticação, exceto /login
+  const publicRoutes = []; // Nenhuma rota pública além de /login
+
+  // Se a rota não for reconhecida, redireciona para login se não autenticado, ou /dashboard se autenticado
+  useEffect(() => {
+    const allRoutes = [
+      isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
+      isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isLogin
+    ];
+    
+    if (!allRoutes.some(route => route)) {
+      if (isAuthenticated) {
+        navigate('/dashboard');
+      } else {
+        navigate('/login');
+      }
+    }
+  }, [
+    isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
+    isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isLogin, isAuthenticated, navigate
+  ]);
+
+  // Redireciona para /dashboard quando autenticado e está em rota de login
+  useEffect(() => {
+    if (isAuthenticated && (isLogin || currentPath === '/login')) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, isLogin, currentPath, navigate]);
+
+  // Mostra loading enquanto verifica autenticação
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+      }}>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  // Todas as rotas requerem autenticação, exceto /login
+  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/audit'];
+  const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
+  
+  // Verifica se é rota pública (apenas /login)
+  const isPublicRoute = publicRoutes.some(route => currentPath === route || currentPath.startsWith(route));
+
+  // Se está na rota de login explicitamente, mostra login
+  if (isLogin) {
+    return <Login />;
+  }
+
+  // Se não está autenticado, mostra login (todas as outras rotas requerem autenticação)
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Se chegou aqui, está autenticado OU é rota pública
   return (
     <div className="support-content-wrapper">
-      {isEditor ? (
+      <UserMenu />
+      {isDashboard ? (
+        <DashboardPage />
+      ) : isEditor ? (
         <EditorProvider>
           <FlowEditorPage />
         </EditorProvider>
@@ -110,6 +208,36 @@ function AppContent({ isEditor, isSupport, isMaintenance, isConfig }) {
         <TicketMaintenancePage />
       ) : isConfig ? (
         <ConfigPage />
+      ) : isAgents ? (
+        <AgentsPage />
+      ) : isAudit ? (
+        <AuditPage />
+      ) : isQuickReplies ? (
+        <QuickRepliesPage />
+      ) : isDepartments ? (
+        <DepartmentsPage />
+      ) : isBulkMessaging ? (
+        <BulkMessagingPage />
+      ) : isAnalytics ? (
+        <AnalyticsPage />
+      ) : isExport ? (
+        <ExportPage />
+      ) : isAITools ? (
+        <AIToolsPage />
+      ) : isSegmentation ? (
+        <SegmentationPage />
+      ) : isWhatsAppTemplates ? (
+        <WhatsAppTemplatesPage />
+      ) : isKnowledgeBase ? (
+        <KnowledgeBasePage />
+      ) : isProductDocs ? (
+        <ProductDocsPage />
+      ) : isRAGDocuments ? (
+        <RAGDocumentsPage />
+      ) : isWebScraping ? (
+        <WebScrapingPage />
+      ) : isRpaTest ? (
+        <RpaTestPage />
       ) : null}
     </div>
   );

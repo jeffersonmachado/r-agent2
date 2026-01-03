@@ -313,3 +313,46 @@ export function markTicketAsRead(ticketId) {
   });
 }
 
+/**
+ * Cria um novo ticket manualmente (para conversas iniciadas por agente).
+ *
+ * @param {Object} params
+ * @param {string} params.phoneNumber - Número de telefone do usuário (formato: +5511999999999 ou 5511999999999)
+ * @param {string} params.queue - Nome da fila
+ * @param {string} [params.initialMessage] - Mensagem inicial opcional
+ * @returns {Promise<any>}
+ */
+export function createTicket({ phoneNumber, queue, initialMessage }) {
+  if (!phoneNumber || phoneNumber.trim() === '') {
+    return Promise.reject(new Error('createTicket: phoneNumber é obrigatório'));
+  }
+  if (!queue || queue.trim() === '') {
+    return Promise.reject(new Error('createTicket: queue é obrigatório'));
+  }
+
+  logger.info('Criando ticket manualmente', { phoneNumber, queue, hasInitialMessage: !!initialMessage });
+
+  const body = {
+    phoneNumber: phoneNumber.trim(),
+    queue: queue.trim(),
+  };
+
+  if (initialMessage && initialMessage.trim() !== '') {
+    body.initialMessage = initialMessage.trim();
+  }
+
+  return fetchJson('/tickets', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }).then(
+    (ticket) => {
+      logger.info('Ticket criado com sucesso', { ticketId: ticket.id, phoneNumber, queue });
+      return ticket;
+    },
+    (error) => {
+      logger.error('Erro ao criar ticket', { phoneNumber, queue, error });
+      throw error;
+    }
+  );
+}
+

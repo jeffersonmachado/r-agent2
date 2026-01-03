@@ -140,11 +140,33 @@ export function Toast({ message, type = 'info', duration = 6000, onClose }) {
 export function useToast() {
   const [toasts, setToasts] = useState([]);
   const idCounterRef = useRef(0); // ✅ Contador para garantir IDs únicos
+  const MAX_TOASTS = 5; // Número máximo de toasts simultâneos
 
   const showToast = (message, type = 'info', duration = 6000) => {
-    // ✅ Combina timestamp com contador para garantir unicidade
-    const id = `toast-${Date.now()}-${++idCounterRef.current}`;
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
+    // Evita toasts duplicados com a mesma mensagem e tipo
+    setToasts((prev) => {
+      const isDuplicate = prev.some(
+        (toast) => toast.message === message && toast.type === type
+      );
+      
+      if (isDuplicate) {
+        // Se já existe um toast igual, não adiciona outro
+        return prev;
+      }
+      
+      // ✅ Combina timestamp com contador para garantir unicidade
+      const id = `toast-${Date.now()}-${++idCounterRef.current}`;
+      const newToast = { id, message, type, duration };
+      
+      // Limita o número de toasts - remove os mais antigos se necessário
+      const updatedToasts = [...prev, newToast];
+      if (updatedToasts.length > MAX_TOASTS) {
+        // Remove os toasts mais antigos (primeiros da lista)
+        return updatedToasts.slice(-MAX_TOASTS);
+      }
+      
+      return updatedToasts;
+    });
     
     // ✅ Registra a mensagem do toast no sistema de logs
     const logLevel = {
@@ -156,11 +178,17 @@ export function useToast() {
     
     logger[logLevel](`Toast [${type}]: ${message}`, { type, duration });
     
-    return id;
+    // Retorna um ID aproximado (pode não ser exato devido ao estado assíncrono)
+    return `toast-${Date.now()}-${idCounterRef.current}`;
   };
 
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+  
+  // Função para limpar todos os toasts
+  const clearAllToasts = () => {
+    setToasts([]);
   };
 
   const ToastContainer = () => (
@@ -184,6 +212,6 @@ export function useToast() {
     </div>
   );
 
-  return { showToast, removeToast, ToastContainer };
+  return { showToast, removeToast, clearAllToasts, ToastContainer };
 }
 

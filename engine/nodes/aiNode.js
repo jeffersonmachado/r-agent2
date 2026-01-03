@@ -87,6 +87,27 @@ const { validateJsonSchema } = require('../utils/jsonSchemaValidator');
 // Alias para compatibilidade com código existente
 const renderPromptTemplate = renderTemplate;
 
+// Importa serviços RAG (opcional, só se disponível)
+let ragService = null;
+let configService = null;
+let auditService = null;
+let logger = null;
+try {
+  ragService = require('../../api/services/ragService');
+  configService = require('../../api/utils/config');
+  auditService = require('../../api/services/auditService');
+  logger = require('../../api/utils/logger');
+} catch (err) {
+  // Serviços não disponíveis (ex: em testes)
+  // RAG será desabilitado
+  // Logger fallback
+  logger = {
+    error: (msg, data) => console.error(`[aiNode] ${msg}`, data || ''),
+    debug: (msg, data) => {},
+    info: (msg, data) => console.log(`[aiNode] ${msg}`, data || ''),
+  };
+}
+
 /**
  * Handler de nó "ai".
  *
@@ -126,58 +147,11 @@ async function aiNodeHandler(node, state, input, deps = null) {
   // Renderizamos o prompt final substituindo variáveis.
   const prompt = renderPromptTemplate(promptTemplate, nextState.variables || {});
 
-  if (!aiProvider || typeof aiProvider.generate !== 'function') {
-    // Sem provider de IA: não quebramos o fluxo, apenas registramos erro
-    // e retornamos saída de fallback.
-    events.push(
-      createEngineEvent({
-        sessionId: state.sessionId,
-        flowId: state.flowId,
-        nodeId: node.id,
-        type: 'AI_ERROR',
-        payload: {
-          reason: 'NO_PROVIDER',
-        },
-      }),
-    );
-
-    const historyItem = {
-      id: `${state.sessionId}-ai-${Date.now()}`,
-      role: 'bot',
-      type: 'message',
-      text: fallbackText,
-      timestamp: new Date().toISOString(),
-      nodeId: node.id,
-      payload: {
-        aiUnavailable: true,
-      },
-    };
-    nextState.history.push(historyItem);
-
-    /** @type {EngineStepOutput} */
-    const result = {
-      nextState,
-      events,
-      output: {
-        type: 'ai_unavailable',
-        text: fallbackText,
-      },
-    };
-    return result;
-  }
-
-  // Emitimos evento de requisição de IA (auditável).
-  events.push(
-    createEngineEvent({
-      sessionId: state.sessionId,
-      flowId: state.flowId,
-      nodeId: node.id,
-      type: 'AI_REQUESTED',
-      payload: {
-        prompt,
-      },
-    }),
-  );
+  // Verifica se RAG está habilitado e deve ser usado
+  const useRag = config.useRag !== false && ragService && configService;
+  const ragMinConfidence = config.ragMinConfidence || 0.6;
+  const ragFallbackToDirect = config.ragFallbackToDirect !== false;
+  const ragEnabled = configService && configService.get('rag.enabled', false);
 
   let rawResponse = '';
   let parsed = null;
@@ -186,47 +160,283 @@ async function aiNodeHandler(node, state, input, deps = null) {
   let aiErrorMessage = '';
   /** @type {AiUsage|null} */
   let aiUsage = null;
+  let ragUsed = false;
+  let ragConfidence = 0.0;
+  let ragSources = [];
 
-  try {
-    const providerResult = await aiProvider.generate(prompt, {
-      sessionId: state.sessionId,
-      flowId: state.flowId,
-      nodeId: node.id,
-      variables: nextState.variables,
-    });
-    if (providerResult && typeof providerResult === 'object' && Object.prototype.hasOwnProperty.call(providerResult, 'text')) {
-      rawResponse = providerResult.text != null ? String(providerResult.text) : '';
-      aiUsage = providerResult.usage || null;
-    } else {
-      rawResponse = providerResult != null ? String(providerResult) : '';
-    }
+  // Tenta usar RAG se habilitado
+  if (useRag && ragEnabled && !outputSchema) {
+    // RAG apenas para texto livre (não para JSON estruturado)
+    try {
+      const tenantId = state.tenantId || 'tenant-demo';
+      
+      // Prepara filtros (se disponíveis)
+      const filters = {
+        roles: state.metadata?.agentRoles || [],
+        agentId: state.metadata?.agentId || null,
+        productId: state.metadata?.productId || null,
+        clientId: state.metadata?.clientId || null,
+        topK: config.ragTopK || 5,
+        minScore: ragMinConfidence,
+        maxTokens: config.ragMaxTokens || 1000,
+      };
 
-    if (outputSchema) {
-      let json;
-      try {
-        json = JSON.parse(rawResponse);
-      } catch (err) {
-        aiFailed = true;
-        aiErrorMessage = 'Resposta de IA não é JSON válido';
-      }
+      // Registra evento de requisição RAG
+      events.push(
+        createEngineEvent({
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+          type: 'RAG_QUERY_REQUESTED',
+          payload: {
+            query: prompt.substring(0, 200), // Primeiros 200 chars para log
+          },
+        }),
+      );
 
-      if (!aiFailed) {
-        const validation = validateJsonSchema(outputSchema, json);
-        if (!validation.valid) {
-          aiFailed = true;
-          validationErrorMessages = validation.errors;
-          aiErrorMessage = 'Resposta de IA não atende ao JSON Schema definido';
+      // Consulta RAG
+      const ragResult = await ragService.queryRag(prompt, tenantId, {
+        sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        variables: nextState.variables,
+      }, filters);
+
+      if (ragResult.success && ragResult.confidence >= ragMinConfidence) {
+        // RAG bem-sucedido
+        rawResponse = ragResult.response || '';
+        ragUsed = true;
+        ragConfidence = ragResult.confidence || 0.0;
+        ragSources = ragResult.sources || [];
+
+        // Registra evento de sucesso RAG
+        events.push(
+          createEngineEvent({
+            sessionId: state.sessionId,
+            flowId: state.flowId,
+            nodeId: node.id,
+            type: 'RAG_QUERY_SUCCESS',
+            payload: {
+              confidence: ragConfidence,
+              chunksFound: ragResult.metadata?.chunksFound || 0,
+              sources: ragSources.map(s => s.documentId),
+            },
+          }),
+        );
+
+        // Auditoria (se disponível)
+        if (auditService) {
+          auditService.logAction({
+            agentId: 'system',
+            username: 'bot',
+            action: 'rag_query_success',
+            resource: 'rag',
+            resourceId: `${state.sessionId}-${node.id}`,
+            details: {
+              confidence: ragConfidence,
+              chunksFound: ragResult.metadata?.chunksFound || 0,
+              sources: ragSources.map(s => s.documentId),
+            },
+            ipAddress: 'system',
+            userAgent: 'bot',
+          });
+        }
+      } else {
+        // RAG falhou ou confidence baixa
+        if (ragFallbackToDirect) {
+          // Fallback para IA direta
+          events.push(
+            createEngineEvent({
+              sessionId: state.sessionId,
+              flowId: state.flowId,
+              nodeId: node.id,
+              type: 'RAG_FALLBACK_TO_DIRECT',
+              payload: {
+                reason: ragResult.success ? 'low_confidence' : 'rag_failed',
+                confidence: ragResult.confidence || 0.0,
+                error: ragResult.error || null,
+              },
+            }),
+          );
+
+          // Auditoria
+          if (auditService) {
+            auditService.logAction({
+              agentId: 'system',
+              username: 'bot',
+              action: 'rag_fallback_to_direct',
+              resource: 'rag',
+              resourceId: `${state.sessionId}-${node.id}`,
+              details: {
+                reason: ragResult.success ? 'low_confidence' : 'rag_failed',
+                confidence: ragResult.confidence || 0.0,
+              },
+              ipAddress: 'system',
+              userAgent: 'bot',
+            });
+          }
         } else {
-          parsed = json;
+          // Sem fallback: usa resposta do RAG mesmo com confidence baixa
+          rawResponse = ragResult.response || fallbackText;
+          ragUsed = true;
+          ragConfidence = ragResult.confidence || 0.0;
         }
       }
-    } else {
-      // Sem schema: consideramos a resposta como texto puro
-      parsed = rawResponse;
+    } catch (ragError) {
+      // Erro ao consultar RAG
+      logger.error('[aiNode] Erro ao consultar RAG', {
+        error: ragError.message,
+        sessionId: state.sessionId,
+      });
+
+      events.push(
+        createEngineEvent({
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+          type: 'RAG_QUERY_FAILED',
+          payload: {
+            error: ragError.message,
+          },
+        }),
+      );
+
+      // Auditoria
+      if (auditService) {
+        auditService.logAction({
+          agentId: 'system',
+          username: 'bot',
+          action: 'rag_query_failed',
+          resource: 'rag',
+          resourceId: `${state.sessionId}-${node.id}`,
+          details: {
+            error: ragError.message,
+          },
+          ipAddress: 'system',
+          userAgent: 'bot',
+        });
+      }
+
+      // Se fallback habilitado, continua para IA direta
+      if (!ragFallbackToDirect) {
+        // Sem fallback: retorna erro
+        aiFailed = true;
+        aiErrorMessage = 'RAG indisponível';
+      }
     }
-  } catch (err) {
-    aiFailed = true;
-    aiErrorMessage = err && err.message ? err.message : String(err);
+  }
+
+  // Se RAG não foi usado ou falhou com fallback, usa IA direta
+  if (!ragUsed && (!aiFailed || ragFallbackToDirect)) {
+    // Verifica se temos provider
+    if (!aiProvider || typeof aiProvider.generate !== 'function') {
+      // Sem provider de IA: não quebramos o fluxo, apenas registramos erro
+      // e retornamos saída de fallback.
+      events.push(
+        createEngineEvent({
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+          type: 'AI_ERROR',
+          payload: {
+            reason: 'NO_PROVIDER',
+          },
+        }),
+      );
+
+      const historyItem = {
+        id: `${state.sessionId}-ai-${Date.now()}`,
+        role: 'bot',
+        type: 'message',
+        text: fallbackText,
+        timestamp: new Date().toISOString(),
+        nodeId: node.id,
+        payload: {
+          aiUnavailable: true,
+        },
+      };
+      nextState.history.push(historyItem);
+
+      /** @type {EngineStepOutput} */
+      const result = {
+        nextState,
+        events,
+        output: {
+          type: 'ai_unavailable',
+          text: fallbackText,
+        },
+      };
+      return result;
+    }
+
+    // Emitimos evento de requisição de IA (auditável).
+    events.push(
+      createEngineEvent({
+        sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        type: 'AI_REQUESTED',
+        payload: {
+          prompt,
+        },
+      }),
+    );
+
+    try {
+    // Emitimos evento de requisição de IA (auditável).
+    events.push(
+      createEngineEvent({
+        sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        type: 'AI_REQUESTED',
+        payload: {
+          prompt,
+        },
+      }),
+    );
+
+      const providerResult = await aiProvider.generate(prompt, {
+        sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        variables: nextState.variables,
+      });
+      if (providerResult && typeof providerResult === 'object' && Object.prototype.hasOwnProperty.call(providerResult, 'text')) {
+        rawResponse = providerResult.text != null ? String(providerResult.text) : '';
+        aiUsage = providerResult.usage || null;
+      } else {
+        rawResponse = providerResult != null ? String(providerResult) : '';
+      }
+
+      // Processa resposta se não falhou
+      if (outputSchema) {
+        let json;
+        try {
+          json = JSON.parse(rawResponse);
+        } catch (err) {
+          aiFailed = true;
+          aiErrorMessage = 'Resposta de IA não é JSON válido';
+        }
+
+        if (!aiFailed) {
+          const validation = validateJsonSchema(outputSchema, json);
+          if (!validation.valid) {
+            aiFailed = true;
+            validationErrorMessages = validation.errors;
+            aiErrorMessage = 'Resposta de IA não atende ao JSON Schema definido';
+          } else {
+            parsed = json;
+          }
+        }
+      } else {
+        // Sem schema: consideramos a resposta como texto puro
+        parsed = rawResponse;
+      }
+    } catch (err) {
+      aiFailed = true;
+      aiErrorMessage = err && err.message ? err.message : String(err);
+    }
   }
 
   if (aiFailed) {

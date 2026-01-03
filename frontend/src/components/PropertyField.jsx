@@ -662,6 +662,143 @@ Gere palavras-chave novas que não estejam na lista acima.`;
 }
 
 /**
+ * Campo para configurar opções interativas (botões, checkboxes, etc.)
+ */
+export function OptionsField({
+  label,
+  description,
+  value,
+  onChange,
+  required = false,
+  error,
+}) {
+  const options = Array.isArray(value) ? value : [];
+
+  const addOption = () => {
+    const newOption = {
+      id: `op${options.length + 1}`,
+      label: '',
+      value: undefined,
+    };
+    onChange([...options, newOption]);
+  };
+
+  const updateOption = (index, field, newValue) => {
+    const updated = [...options];
+    updated[index] = {
+      ...updated[index],
+      [field]: newValue,
+    };
+    onChange(updated);
+  };
+
+  const removeOption = (index) => {
+    const updated = options.filter((_, i) => i !== index);
+    onChange(updated);
+  };
+
+  return (
+    <PropertyField label={label} description={description} required={required} error={error}>
+      <div className="space-y-4">
+        {/* Botão para adicionar nova opção */}
+        <button
+          type="button"
+          onClick={addOption}
+          className="w-full px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+        >
+          <span>+</span>
+          <span>Adicionar Opção</span>
+        </button>
+
+        {/* Lista de opções configuradas */}
+        {options.length > 0 ? (
+          <div className="space-y-4">
+            {options.map((option, index) => (
+              <div
+                key={index}
+                className="p-4 bg-bg-secondary border border-border-default rounded-lg space-y-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-text-primary">
+                    Opção {index + 1}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => removeOption(index)}
+                    className="px-2 py-1 text-xs text-status-error hover:bg-status-error/10 rounded transition-colors"
+                    title="Remover opção"
+                  >
+                    ✕ Remover
+                  </button>
+                </div>
+
+                {/* ID da opção */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    ID da opção *
+                  </label>
+                  <Input
+                    type="text"
+                    value={option.id || ''}
+                    onChange={(e) => updateOption(index, 'id', e.target.value)}
+                    placeholder="Ex: op1, opcao_sim, etc."
+                    className="w-full font-mono"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">
+                    Identificador único usado internamente. Use apenas letras, números e underscore.
+                  </p>
+                </div>
+
+                {/* Label da opção */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    Texto exibido *
+                  </label>
+                  <Input
+                    type="text"
+                    value={option.label || ''}
+                    onChange={(e) => updateOption(index, 'label', e.target.value)}
+                    placeholder="Ex: Sim, Não, Opção 1, etc."
+                    className="w-full"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">
+                    Texto que será exibido para o usuário. Você pode usar variáveis como {'{{nome}}'}.
+                  </p>
+                </div>
+
+                {/* Value da opção (opcional) */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    Valor armazenado (opcional)
+                  </label>
+                  <Input
+                    type="text"
+                    value={option.value !== undefined ? String(option.value) : ''}
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
+                      updateOption(index, 'value', val === '' ? undefined : val);
+                    }}
+                    placeholder="Deixe vazio para usar o ID como valor"
+                    className="w-full"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">
+                    Valor que será salvo na variável quando esta opção for selecionada. Se não preencher, usa o ID.
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-text-tertiary italic text-center py-4">
+            Nenhuma opção configurada ainda. Clique em "Adicionar Opção" para começar.
+          </p>
+        )}
+      </div>
+    </PropertyField>
+  );
+}
+
+/**
  * Campo para configurar horários do roteador por horário
  */
 export function ScheduleRouterField({

@@ -80,9 +80,6 @@
           "escalationMode": "ticket",
           "allowReturnToBot": true,
           "queue": "suporte_n1",
-          "escalationMode": "ticket",
-          "allowReturnToBot": true,
-          "queue": "default",
           "safeReturnNode": "greeting"
         },
         "next": {

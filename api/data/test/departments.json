@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "departments": [
+    {
+      "id": "test-dept-support",
+      "name": "Suporte - Teste",
+      "description": "Departamento de suporte para testes",
+      "agentIds": [
+        "test-agent-admin",
+        "test-agent-supervisor",
+        "test-agent-agent"
+      ],
+      "queueNames": [
+        "test-queue-support"
+      ],
+      "color": "#3B82F6",
+      "active": true,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "createdBy": "test-agent-admin",
+      "tenantId": "tenant-test"
+    }
+  ]
+}

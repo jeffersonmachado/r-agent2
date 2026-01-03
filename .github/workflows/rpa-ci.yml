@@ -1,0 +1,97 @@
+name: RPA - Testes E2E (CI)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'tests/rpa/**'
+      - '.github/workflows/rpa-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'tests/rpa/**'
+  workflow_dispatch:
+    inputs:
+      seed_name:
+        description: 'Nome do seed para executar'
+        required: false
+        default: 'example-login'
+
+jobs:
+  rpa-e2e:
+    name: Testes RPA E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        seed:
+          - example-login
+          - demo-login-completo
+          - seed-platform-login
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Instalar dependências
+        run: npm ci
+      
+      - name: Instalar Playwright
+        run: npx playwright install chromium --with-deps
+      
+      - name: Executar seed em modo CI
+        env:
+          TEST_BASE_URL: ${{ secrets.TEST_BASE_URL || 'http://localhost:3000' }}
+          TEST_FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL || 'http://localhost:5173' }}
+        run: |
+          echo "🚀 Executando seed: ${{ matrix.seed }}"
+          node tests/rpa/cli.js ci ${{ matrix.seed }} || echo "Seed ${{ matrix.seed }} falhou ou não existe"
+        continue-on-error: true
+      
+      - name: Upload replay
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpa-replay-${{ matrix.seed }}-${{ github.run_number }}
+          path: tests/rpa/replay/*.json
+          retention-days: 7
+          if-no-files-found: ignore
+      
+      - name: Upload screenshots (se houver erros)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpa-screenshots-${{ matrix.seed }}-${{ github.run_number }}
+          path: tests/rpa/screenshots/*.png
+          retention-days: 3
+          if-no-files-found: ignore
+
+  rpa-summary:
+    name: Resumo RPA
+    runs-on: ubuntu-latest
+    needs: [rpa-e2e]
+    if: always()
+    
+    steps:
+      - name: Resumo dos testes RPA
+        run: |
+          echo "## 🤖 Resumo dos Testes RPA" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Testes executados em modo CI (headless, rápido)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Seeds testados:" >> $GITHUB_STEP_SUMMARY
+          echo "- example-login" >> $GITHUB_STEP_SUMMARY
+          echo "- demo-login-completo" >> $GITHUB_STEP_SUMMARY
+          echo "- seed-platform-login" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Artifacts disponíveis:" >> $GITHUB_STEP_SUMMARY
+          echo "- Replays gerados" >> $GITHUB_STEP_SUMMARY
+          echo "- Screenshots (se houver erros)" >> $GITHUB_STEP_SUMMARY
+

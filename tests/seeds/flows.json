@@ -1,0 +1,162 @@
+{
+  "version": "1.0.0",
+  "flows": [
+    {
+      "id": "test-flow-welcome",
+      "name": "Fluxo de Boas-Vindas - Teste",
+      "description": "Fluxo simples de boas-vindas para testes",
+      "version": "1.0.0",
+      "nodes": [
+        {
+          "id": "start-1",
+          "type": "start",
+          "label": "Início",
+          "position": { "x": 100, "y": 100 },
+          "next": "message-1"
+        },
+        {
+          "id": "message-1",
+          "type": "message",
+          "label": "Mensagem de Boas-Vindas",
+          "position": { "x": 300, "y": 100 },
+          "config": {
+            "text": "Bem-vindo! Como posso ajudar?"
+          },
+          "next": "user-input-1"
+        },
+        {
+          "id": "user-input-1",
+          "type": "user_input",
+          "label": "Aguardar Resposta",
+          "position": { "x": 500, "y": 100 },
+          "config": {
+            "variable": "userResponse"
+          },
+          "next": "end-1"
+        },
+        {
+          "id": "end-1",
+          "type": "end",
+          "label": "Fim",
+          "position": { "x": 700, "y": 100 }
+        }
+      ],
+      "connections": [
+        {
+          "from": "start-1",
+          "to": "message-1"
+        },
+        {
+          "from": "message-1",
+          "to": "user-input-1"
+        },
+        {
+          "from": "user-input-1",
+          "to": "end-1"
+        }
+      ],
+      "metadata": {
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z",
+        "createdBy": "test-agent-admin"
+      },
+      "tenantId": "tenant-test"
+    },
+    {
+      "id": "test-flow-support",
+      "name": "Fluxo de Suporte - Teste",
+      "description": "Fluxo básico de suporte para testes",
+      "version": "1.0.0",
+      "nodes": [
+        {
+          "id": "start-1",
+          "type": "start",
+          "label": "Início",
+          "position": { "x": 100, "y": 100 },
+          "next": "message-1"
+        },
+        {
+          "id": "message-1",
+          "type": "message",
+          "label": "Mensagem Inicial",
+          "position": { "x": 300, "y": 100 },
+          "config": {
+            "text": "Olá! Em que posso ajudar?"
+          },
+          "next": "router-1"
+        },
+        {
+          "id": "router-1",
+          "type": "router",
+          "label": "Roteador",
+          "position": { "x": 500, "y": 100 },
+          "config": {
+            "rules": [
+              {
+                "condition": {
+                  "op": "equals",
+                  "var": "userResponse",
+                  "value": "ajuda"
+                },
+                "next": "message-help"
+              },
+              {
+                "condition": {
+                  "op": "always"
+                },
+                "next": "end-1"
+              }
+            ]
+          },
+          "next": "end-1"
+        },
+        {
+          "id": "message-help",
+          "type": "message",
+          "label": "Mensagem de Ajuda",
+          "position": { "x": 700, "y": 50 },
+          "config": {
+            "text": "Claro! Estou aqui para ajudar."
+          },
+          "next": "end-1"
+        },
+        {
+          "id": "end-1",
+          "type": "end",
+          "label": "Fim",
+          "position": { "x": 700, "y": 150 }
+        }
+      ],
+      "connections": [
+        {
+          "from": "start-1",
+          "to": "message-1"
+        },
+        {
+          "from": "message-1",
+          "to": "router-1"
+        },
+        {
+          "from": "router-1",
+          "to": "message-help",
+          "condition": "userResponse === 'ajuda'"
+        },
+        {
+          "from": "router-1",
+          "to": "end-1",
+          "condition": "default"
+        },
+        {
+          "from": "message-help",
+          "to": "end-1"
+        }
+      ],
+      "metadata": {
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z",
+        "createdBy": "test-agent-admin"
+      },
+      "tenantId": "tenant-test"
+    }
+  ]
+}

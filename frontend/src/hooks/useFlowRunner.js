@@ -939,7 +939,7 @@ export function useFlowRunner(flow) {
           if (!node) break;
 
           // Se é um nó que precisa de input, para aqui
-          if (node.type === 'user_input') {
+          if (node.type === 'user_input' || node.type === 'options') {
             break;
           }
 
@@ -1084,7 +1084,7 @@ export function useFlowRunner(flow) {
           if (!node) break;
 
           // Se é um nó que precisa de input, para aqui
-          if (node.type === 'user_input') {
+          if (node.type === 'user_input' || node.type === 'options') {
             break;
           }
 

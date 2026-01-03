@@ -29,4 +29,31 @@ services:
       - api
     restart: unless-stopped
 
+  rag-service:
+    build:
+      context: ./rag-service
+      dockerfile: ./Dockerfile
+    container_name: chatbot-rag-service
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DEBUG: ${RAG_DEBUG:-false}
+      EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      CHUNK_SIZE: ${RAG_CHUNK_SIZE:-500}
+      CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-50}
+      CHUNK_STRATEGY: ${RAG_CHUNK_STRATEGY:-sentence}
+      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-faiss}
+      VECTOR_STORE_PATH: /app/data/vector_store
+      LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
+      LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "${RAG_PORT:-8000}:8000"
+    volumes:
+      - rag-vector-store:/app/data/vector_store
+    restart: unless-stopped
+
+volumes:
+  rag-vector-store:
+
 

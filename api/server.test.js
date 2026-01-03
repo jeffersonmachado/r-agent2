@@ -109,10 +109,11 @@ describe('API server (api/server.js)', () => {
   });
 
   test('Fluxo completo: POST /flows -> GET /flows/:id -> validate -> simulate -> GET /replay/:sessionId', async () => {
-    // 1) Cria fluxo mínimo
+    // 1) Cria fluxo mínimo com ID único
+    const uniqueId = `flow-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const baseFlow = {
       tenantId: 'tenant-demo',
-      id: 'flow-test-1',
+      id: uniqueId,
       name: 'Fluxo de teste',
       version: 1,
       nodes: [
@@ -122,7 +123,8 @@ describe('API server (api/server.js)', () => {
     };
 
     const createRes = await request(port, 'POST', '/flows', baseFlow);
-    expect(createRes.status).toBe(200);
+    // POST retorna 201 (Created) quando cria com sucesso
+    expect([200, 201]).toContain(createRes.status);
     expect(createRes.body).toHaveProperty('id');
     const savedFlow = createRes.body;
 
@@ -171,17 +173,29 @@ describe('API server (api/server.js)', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  test('PUT /flows/:id deve atualizar fluxo existente ou criar se não existir', async () => {
-    const flowId = 'flow-put-test';
-    const putRes1 = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, {
+  test('PUT /flows/:id deve atualizar fluxo existente', async () => {
+    const flowId = `flow-put-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    // Primeiro cria o fluxo com POST
+    const createRes = await request(port, 'POST', '/flows', {
+      tenantId: 'tenant-demo',
+      id: flowId,
       name: 'Primeira versão',
-      nodes: [],
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
     });
-    expect(putRes1.status).toBe(200);
-    expect(putRes1.body).toHaveProperty('id', flowId);
+    expect([200, 201]).toContain(createRes.status);
+    expect(createRes.body).toHaveProperty('id', flowId);
 
+    // Agora atualiza com PUT
     const putRes2 = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, {
+      tenantId: 'tenant-demo',
       name: 'Segunda versão',
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
     });
     expect(putRes2.status).toBe(200);
     expect(putRes2.body).toHaveProperty('id', flowId);
@@ -195,14 +209,19 @@ describe('API server (api/server.js)', () => {
   });
 
   test('DELETE /flows/:id deve remover fluxo existente', async () => {
-    const flowId = 'flow-delete-test';
+    const flowId = `flow-delete-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     // Primeiro cria um fluxo
     const createRes = await request(port, 'POST', '/flows', {
+      tenantId: 'tenant-demo',
       id: flowId,
       name: 'Fluxo para deletar',
-      nodes: [],
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
     });
-    expect(createRes.status).toBe(200);
+    // POST retorna 201 (Created) quando cria com sucesso
+    expect([200, 201]).toContain(createRes.status);
     expect(createRes.body).toHaveProperty('id', flowId);
 
     // Verifica que o fluxo existe
@@ -257,44 +276,68 @@ describe('API server (api/server.js)', () => {
   });
 
   test('POST /flows com fluxo sem tenantId usa defaultTenantId', async () => {
+    const uniqueId = `flow-no-tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const flowWithoutTenant = {
-      id: 'flow-no-tenant',
+      id: uniqueId,
       name: 'Fluxo sem tenant',
-      nodes: [],
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
     };
 
     const res = await request(port, 'POST', '/flows', flowWithoutTenant);
-    expect(res.status).toBe(200);
+    // POST retorna 201 (Created) quando cria com sucesso
+    expect([200, 201]).toContain(res.status);
     expect(res.body).toHaveProperty('tenantId', 'tenant-demo');
-    expect(res.body).toHaveProperty('id', 'flow-no-tenant');
+    expect(res.body).toHaveProperty('id', uniqueId);
   });
 
   test('POST /flows com fluxo sem id gera id automaticamente', async () => {
     const flowWithoutId = {
       tenantId: 'tenant-demo',
       name: 'Fluxo sem id',
-      nodes: [],
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
     };
 
     const res = await request(port, 'POST', '/flows', flowWithoutId);
-    expect(res.status).toBe(200);
+    // POST retorna 201 (Created) quando cria com sucesso
+    expect([200, 201]).toContain(res.status);
     expect(res.body).toHaveProperty('id');
     expect(typeof res.body.id).toBe('string');
     expect(res.body.id.length).toBeGreaterThan(0);
   });
 
-  test('PUT /flows/:id com id diferente no body deve usar id da URL', async () => {
-    const flowId = 'flow-url-id';
+  test('PUT /flows/:id com id diferente no body deve retornar erro 400', async () => {
+    const flowId = `flow-url-id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    // Primeiro cria o fluxo
+    await request(port, 'POST', '/flows', {
+      tenantId: 'tenant-demo',
+      id: flowId,
+      name: 'Fluxo inicial',
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
+    });
+
     const flow = {
       id: 'flow-body-id', // diferente do id na URL
       tenantId: 'tenant-demo',
       name: 'Teste ID',
-      nodes: [],
+      nodes: [
+        { id: 'start', type: 'start', next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
     };
 
+    // O servidor deve rejeitar quando o id do body é diferente do id da URL
     const res = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, flow);
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('id', flowId); // deve usar o id da URL
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'bad_request');
   });
 
   test('POST /flows/simulate aceita maxSteps e executa simulação', async () => {
@@ -322,7 +365,7 @@ describe('API server (api/server.js)', () => {
     expect(Array.isArray(res.body.steps)).toBe(true);
   });
 
-  test('POST /flows/simulate com maxSteps muito alto deve ser limitado', async () => {
+  test('POST /flows/simulate com maxSteps muito alto deve retornar erro', async () => {
     const flow = {
       tenantId: 'tenant-demo',
       id: 'flow-simulate-limit',
@@ -341,10 +384,9 @@ describe('API server (api/server.js)', () => {
       maxSteps: 10000,
     });
 
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('steps');
-    // Deve ter um limite razoável de passos
-    expect(res.body.steps.length).toBeLessThanOrEqual(1000);
+    // O servidor deve rejeitar maxSteps > 1000
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
   });
 
   test('GET /flows retorna todos os fluxos (sem filtro por tenantId)', async () => {

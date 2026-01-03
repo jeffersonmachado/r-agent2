@@ -16,6 +16,7 @@
 
 const { findNode, createEngineEvent, normalizeNext } = require('./utils');
 const persistenceServices = require('./services/persistenceServices');
+const { classifyErrorType, getErrorDefinition } = require('./errorCodes');
 
 /**
  * @typedef {import('./flowTypes').FlowDefinition} FlowDefinition
@@ -35,6 +36,16 @@ const persistenceServices = require('./services/persistenceServices');
  * @returns {Promise<EngineStepOutput>}
  */
 async function runStep(flow, state, registry, input, deps = null) {
+  // Bloqueia execução se já foi finalizado (após nó end)
+  if (state.metadata && state.metadata.executionBlocked === true) {
+    const error = new Error('Tentativa de executar após nó end. Conversa já finalizada.');
+    // @ts-ignore
+    error.code = 'ENGINE_END_EXECUTED';
+    // @ts-ignore
+    error.type = 'flow';
+    throw error;
+  }
+  
   if (!state.currentNodeId) {
     // Se não há nó atual, consideramos a conversa encerrada.
     return {
@@ -163,6 +174,44 @@ async function runStep(flow, state, registry, input, deps = null) {
       break;
     } catch (err) {
       lastError = err;
+      
+      // Determina tipo de erro para classificação usando sistema centralizado
+      let errorType = 'system';
+      let errorCode = null;
+      let failureCategory = 'FALHA_ESTRUTURAL';
+      
+      if (lastError && lastError.code === 'NODE_TIMEOUT') {
+        errorType = 'timeout';
+        errorCode = 'NODE_TIMEOUT';
+        failureCategory = 'FALHA_ESTRUTURAL';
+      } else if (lastError && lastError.code) {
+        errorCode = lastError.code;
+        // Usa sistema centralizado de classificação
+        failureCategory = classifyErrorType(errorCode);
+        
+        // Mapeia categoria para errorType (compatibilidade)
+        if (lastError.type) {
+          errorType = lastError.type;
+        } else {
+          // Mapeia failureCategory para errorType
+          if (failureCategory === 'FALHA_DE_FLUXO') {
+            errorType = 'flow';
+          } else if (failureCategory === 'FALHA_DE_DADOS') {
+            errorType = 'data';
+          } else if (failureCategory === 'FALHA_E2E') {
+            errorType = 'e2e';
+          } else {
+            errorType = 'system';
+          }
+        }
+      } else if (lastError && lastError.type) {
+        errorType = lastError.type;
+        errorCode = lastError.code || null;
+      }
+      
+      // Obtém definição completa do erro se disponível
+      const errorDefinition = errorCode ? getErrorDefinition(errorCode) : null;
+      
       handlerEvents.push(
         createEngineEvent({
           sessionId: state.sessionId,
@@ -171,8 +220,16 @@ async function runStep(flow, state, registry, input, deps = null) {
           type: 'ERROR',
           payload: {
             message: err && err.message ? err.message : String(err),
+            code: errorCode,
+            errorType,
+            failureCategory, // Categoria padronizada: FALHA_ESTRUTURAL, FALHA_DE_DADOS, FALHA_DE_FLUXO, FALHA_E2E
+            category: errorDefinition ? errorDefinition.category : null,
+            description: errorDefinition ? errorDefinition.description : null,
             attempt,
             maxAttempts,
+            nodeId: node.id,
+            nodeType: node.type,
+            variablesSnapshot: err.variablesSnapshot || null, // Para router errors
           },
         }),
       );
@@ -183,14 +240,6 @@ async function runStep(flow, state, registry, input, deps = null) {
         // Falha definitiva do nó.
         const fallbackNextNodeId = fallbackNodeId != null ? fallbackNodeId : normalizeNext(node.next);
 
-        // Determina tipo de erro para fallback
-        let errorType = 'system';
-        if (lastError && lastError.code === 'NODE_TIMEOUT') {
-          errorType = 'timeout';
-        } else if (lastError && lastError.type) {
-          errorType = lastError.type;
-        }
-
         // Armazena informações de erro no estado para que o FallbackNode possa acessá-las
         const fallbackState = {
           ...state,
@@ -199,8 +248,10 @@ async function runStep(flow, state, registry, input, deps = null) {
             ...(state.metadata || {}),
             lastError: {
               type: errorType,
+              code: errorCode,
               message: lastError && lastError.message ? lastError.message : String(lastError),
               nodeId: node.id,
+              nodeType: node.type,
               timestamp: new Date().toISOString(),
             },
           },
@@ -214,6 +265,9 @@ async function runStep(flow, state, registry, input, deps = null) {
             message: 'Node handler failed after maximum retries',
             errorMessage: lastError && lastError.message ? lastError.message : String(lastError),
             errorType,
+            errorCode,
+            nodeId: node.id,
+            nodeType: node.type,
           },
         };
       }

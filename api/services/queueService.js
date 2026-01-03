@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const config = require('../utils/config');
 
 /**
  * @typedef {Object} Message
@@ -29,6 +30,7 @@ const path = require('path');
 /**
  * @typedef {Object} Ticket
  * @property {string} id - Identificador único do ticket
+ * @property {string} tenantId - ID do tenant (obrigatório)
  * @property {string} sessionId - ID da sessão do bot (ex.: "whatsapp_5511999999999")
  * @property {string} queue - Nome da fila de atendimento
  * @property {string} status - Status do ticket: "waiting" | "in_progress" | "closed"
@@ -104,6 +106,7 @@ function saveQueuesToFile() {
 
 /**
  * Carrega tickets e filas do arquivo JSON.
+ * Migra tickets existentes sem tenantId para o tenant padrão.
  */
 function loadQueuesFromFile() {
   try {
@@ -117,12 +120,19 @@ function loadQueuesFromFile() {
     
     const data = fs.readFileSync(queuesFile, 'utf8');
     const parsed = JSON.parse(data);
+    const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
+    let migratedTickets = 0;
     
     // Carrega tickets
     if (Array.isArray(parsed.tickets)) {
       tickets.clear();
       for (const ticket of parsed.tickets) {
         if (ticket && ticket.id) {
+          // Migração: adiciona tenantId se não existir
+          if (!ticket.tenantId || typeof ticket.tenantId !== 'string' || ticket.tenantId.trim() === '') {
+            ticket.tenantId = defaultTenantId;
+            migratedTickets++;
+          }
           tickets.set(ticket.id, ticket);
         }
       }
@@ -140,6 +150,11 @@ function loadQueuesFromFile() {
     
     // eslint-disable-next-line no-console
     console.log(`[QueueService] Dados carregados: ${tickets.size} ticket(s), ${queues.size} fila(s)`);
+    if (migratedTickets > 0) {
+      // eslint-disable-next-line no-console
+      console.log(`[QueueService] ${migratedTickets} ticket(s) migrado(s) para tenant padrão: ${defaultTenantId}`);
+      saveQueuesToFile(); // Salva com tenantId
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[QueueService] Erro ao carregar dados do arquivo:', err.message);
@@ -180,18 +195,27 @@ function extractPhoneNumber(sessionId) {
  * Cria um novo ticket de atendimento.
  *
  * @param {Object} params
+ * @param {string} params.tenantId - ID do tenant (obrigatório)
  * @param {string} params.sessionId - ID da sessão
  * @param {string} params.queue - Nome da fila
  * @param {string} [params.lastUserMessage] - Última mensagem do usuário
  * @param {Object} [params.context] - Contexto adicional (histórico do bot, motivo da escalada, etc.)
  * @returns {Ticket}
  */
-function createTicket({ sessionId, queue, lastUserMessage, context = {} }) {
+function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {}, tags = [], category = null }) {
+  // Valida tenantId ou usa padrão
+  const effectiveTenantId = tenantId || context.tenantId || config.get('api.defaultTenantId', 'tenant-demo');
+  
+  if (!effectiveTenantId || typeof effectiveTenantId !== 'string' || effectiveTenantId.trim() === '') {
+    throw new Error('tenantId é obrigatório para criar ticket');
+  }
+
   const id = `${queue}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const now = new Date().toISOString();
 
   const ticket = {
     id,
+    tenantId: effectiveTenantId.trim(),
     sessionId,
     queue,
     status: 'waiting',
@@ -207,6 +231,8 @@ function createTicket({ sessionId, queue, lastUserMessage, context = {} }) {
       timestamp: now,
     }] : [],
     unreadCount: 0,
+    tags: Array.isArray(tags) ? tags : [],
+    category: category || null,
     // Contexto preservado para o atendente
     context: {
       flowId: context.flowId || null,
@@ -239,6 +265,7 @@ function createTicket({ sessionId, queue, lastUserMessage, context = {} }) {
  *
  * @param {string} queue - Nome da fila
  * @param {Object} [options]
+ * @param {string} [options.tenantId] - Filtrar por tenant (obrigatório para isolamento)
  * @param {string} [options.status] - Filtrar por status ("waiting", "in_progress", "closed")
  * @returns {Ticket[]}
  */
@@ -248,6 +275,11 @@ function listQueue(queue, options = {}) {
 
   const ticketIds = Array.from(queueSet);
   let ticketList = ticketIds.map((id) => tickets.get(id)).filter(Boolean);
+
+  // Filtro por tenant (obrigatório para isolamento multi-tenant)
+  if (options.tenantId) {
+    ticketList = ticketList.filter((t) => t.tenantId === options.tenantId);
+  }
 
   // Filtra por status se especificado
   if (options.status) {
@@ -629,6 +661,7 @@ function getTicketMessages(ticketId) {
  * Lista todos os tickets (para administração).
  *
  * @param {Object} [options]
+ * @param {string} [options.tenantId] - Filtrar por tenant (obrigatório para isolamento)
  * @param {string} [options.status] - Filtrar por status
  * @param {string} [options.queue] - Filtrar por fila
  * @param {number} [options.limit] - Limite de resultados (padrão: 1000, máximo: 10000)
@@ -638,10 +671,15 @@ function getTicketMessages(ticketId) {
 function listAllTickets(options = {}) {
   let ticketList = Array.from(tickets.values());
 
+  // Filtro por tenant (obrigatório para isolamento multi-tenant)
+  if (options.tenantId) {
+    ticketList = ticketList.filter((t) => t.tenantId === options.tenantId);
+  }
+
   // Log de debug para comparar com getMetrics
   // eslint-disable-next-line no-console
   console.log(`[QueueService] listAllTickets: Map tem ${tickets.size} ticket(s), Array tem ${ticketList.length} ticket(s)`, {
-    filters: { status: options.status, queue: options.queue },
+    filters: { tenantId: options.tenantId, status: options.status, queue: options.queue },
   });
 
   if (options.status) {

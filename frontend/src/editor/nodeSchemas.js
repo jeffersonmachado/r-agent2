@@ -1999,6 +1999,191 @@ export const NODE_SCHEMAS = {
       return errors;
     },
   },
+
+  options: {
+    type: 'options',
+    label: 'Opções',
+    icon: '🔘',
+    color: '#9B59B6',
+    description: 'Exibe opções interativas para o usuário (botões, checkboxes, etc.) e captura a resposta.',
+    errorPorts: true, // Suporta portas de erro para fallback (no_match)
+    supportsTimeout: false,
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'message',
+        type: 'textarea',
+        label: 'Mensagem para o usuário',
+        description: 'Digite a mensagem que será exibida antes das opções. Você pode usar variáveis como {{nome}} para personalizar.',
+        required: false,
+        placeholder: 'Escolha uma opção:',
+        rows: 3,
+      },
+      {
+        key: 'optionsType',
+        type: 'select',
+        label: 'Tipo de opções',
+        description: 'Escolha o tipo de interação que você quer exibir para o usuário.',
+        required: true,
+        defaultValue: 'button',
+        options: [
+          { value: 'button', label: 'Botões' },
+          { value: 'checkbox', label: 'Checkboxes (múltipla escolha)' },
+          { value: 'radio', label: 'Radio (escolha única)' },
+          { value: 'list', label: 'Lista de seleção' },
+        ],
+      },
+      {
+        key: 'options',
+        type: 'options',
+        label: 'Lista de opções',
+        description: 'Configure as opções que o usuário pode escolher. Cada opção precisa ter um ID único e um texto para exibir. Você pode opcionalmente definir um valor diferente do ID para ser armazenado na variável.',
+        required: true,
+      },
+      {
+        key: 'variable',
+        type: 'text',
+        label: 'Onde guardar a resposta?',
+        description: 'Digite o nome da variável onde a escolha do usuário será guardada. Para checkboxes, será um array com os valores selecionados.',
+        required: false,
+        defaultValue: 'user_option',
+        placeholder: 'resposta_opcao',
+        validate: (value) => {
+          if (!value) return null; // Opcional
+          return validateVariableName(value);
+        },
+      },
+      {
+        key: 'allowMultiple',
+        type: 'boolean',
+        label: 'Permitir múltipla seleção',
+        description: 'Permite que o usuário selecione múltiplas opções (apenas para checkboxes e listas)',
+        required: false,
+        defaultValue: false,
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'OPTIONS_MISSING_CONFIG',
+          message: `Nó de opções "${nodeId}" deve ter um campo "config".`,
+          messageUi: `Configure as opções que o usuário pode escolher.`,
+          nodeIds: [nodeId],
+        });
+        return errors;
+      }
+
+      const config = node.config;
+
+      // Valida optionsType
+      if (!config.optionsType || typeof config.optionsType !== 'string') {
+        errors.push({
+          code: 'OPTIONS_MISSING_TYPE',
+          message: `Nó de opções "${nodeId}" deve ter "config.optionsType" definido.`,
+          messageUi: `Selecione o tipo de opções (botões, checkboxes, etc.).`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        const validTypes = ['button', 'checkbox', 'radio', 'list'];
+        if (!validTypes.includes(config.optionsType)) {
+          errors.push({
+            code: 'OPTIONS_INVALID_TYPE',
+            message: `Nó de opções "${nodeId}" tem tipo inválido. Use: ${validTypes.join(', ')}.`,
+            messageUi: `Tipo de opções inválido. Escolha entre: ${validTypes.join(', ')}.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+
+      // Valida options
+      if (!Array.isArray(config.options) || config.options.length === 0) {
+        errors.push({
+          code: 'OPTIONS_MISSING_OPTIONS',
+          message: `Nó de opções "${nodeId}" deve ter "config.options" como array não vazio.`,
+          messageUi: `Adicione pelo menos uma opção para o usuário escolher.`,
+          nodeIds: [nodeId],
+        });
+      } else {
+        // Valida cada opção
+        for (let i = 0; i < config.options.length; i += 1) {
+          const option = config.options[i];
+          if (!option || typeof option !== 'object') {
+            errors.push({
+              code: 'OPTIONS_INVALID_OPTION',
+              message: `Opção ${i + 1} do nó de opções "${nodeId}" não é um objeto válido.`,
+              messageUi: `A opção ${i + 1} está inválida. Cada opção deve ser um objeto com "id" e "label".`,
+              nodeIds: [nodeId],
+              details: { optionIndex: i },
+            });
+            continue;
+          }
+
+          if (!option.id || typeof option.id !== 'string' || option.id.trim() === '') {
+            errors.push({
+              code: 'OPTIONS_OPTION_MISSING_ID',
+              message: `Opção ${i + 1} do nó de opções "${nodeId}" deve ter "id" (string não vazia).`,
+              messageUi: `A opção ${i + 1} precisa ter um ID único.`,
+              nodeIds: [nodeId],
+              details: { optionIndex: i },
+            });
+          }
+
+          if (!option.label || typeof option.label !== 'string' || option.label.trim() === '') {
+            errors.push({
+              code: 'OPTIONS_OPTION_MISSING_LABEL',
+              message: `Opção ${i + 1} do nó de opções "${nodeId}" deve ter "label" (string não vazia).`,
+              messageUi: `A opção ${i + 1} precisa ter um texto (label) para exibir.`,
+              nodeIds: [nodeId],
+              details: { optionIndex: i },
+            });
+          }
+        }
+
+        // Valida IDs únicos
+        const ids = config.options.map(opt => opt && opt.id ? opt.id : '').filter(id => id !== '');
+        const uniqueIds = new Set(ids);
+        if (ids.length !== uniqueIds.size) {
+          errors.push({
+            code: 'OPTIONS_DUPLICATE_IDS',
+            message: `Nó de opções "${nodeId}" tem IDs duplicados. Cada opção deve ter um ID único.`,
+            messageUi: `Todas as opções devem ter IDs diferentes. Verifique se não há IDs duplicados.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+
+      // Valida variable
+      if (config.variable) {
+        const validationError = validateVariableName(config.variable, nodeId);
+        if (validationError) {
+          errors.push({
+            ...validationError,
+            code: 'OPTIONS_INVALID_VARIABLE',
+            message: `Nó de opções "${nodeId}" tem "config.variable" inválido.`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
+      return errors;
+    },
+  },
 };
 
 /**

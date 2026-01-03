@@ -1,0 +1,78 @@
+{
+  "id": "seed-platform-login",
+  "name": "Seed Plataforma - Login",
+  "version": "1.0.0",
+  "createdAt": "2026-01-02T00:00:00.000Z",
+  "url": "http://localhost:5173",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/login",
+      "waitFor": "input[type='text'], input[placeholder*='username'], input[placeholder*='usuário']",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T00:00:00.000Z"
+    },
+    {
+      "type": "wait",
+      "condition": 2000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T00:00:00.500Z"
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='text'], input[placeholder*='username'], input[placeholder*='usuário']",
+      "value": "{{admin.username}}",
+      "clear": true,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T00:00:01.000Z"
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='password']",
+      "value": "{{admin.password}}",
+      "clear": true,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T00:00:02.000Z"
+    },
+    {
+      "type": "wait",
+      "condition": 1000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T00:00:03.000Z"
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button:has-text('Entrar'), button:has-text('Login')",
+      "waitFor": ".support-page, .dashboard, [data-testid='dashboard'], [data-testid='support-page']",
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T00:00:04.000Z"
+    },
+    {
+      "type": "wait",
+      "condition": 3000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T00:00:05.000Z"
+    },
+    {
+      "type": "assert",
+      "selector": ".support-page, .dashboard, [data-testid='dashboard'], [data-testid='support-page']",
+      "exists": true,
+      "visible": true,
+      "message": "Login realizado com sucesso",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T00:00:06.000Z"
+    }
+  ],
+  "data": {
+    "admin": {
+      "username": "admin",
+      "email": "admin@example.com",
+      "password": "admin123"
+    },
+    "urls": {
+      "frontend": "http://localhost:5173"
+    }
+  }
+}
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, ScheduleRouterField } from './components/PropertyField';
+import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, OptionsField, ScheduleRouterField } from './components/PropertyField';
 import { getNodeSchema, getNodeProperties } from './editor/nodeSchemas';
 
 /**
@@ -283,6 +283,27 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
                   onChange={(newValue) => updateConfigField(prop.key, newValue)}
                   allowedIntents={allowedIntents}
                   required={prop.required}
+                />
+              );
+            }
+
+            if (prop.type === 'options') {
+              return (
+                <OptionsField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={value}
+                  onChange={(newValue) => updateConfigField(prop.key, newValue)}
+                  required={prop.required}
+                  error={validationErrors.find((err) => 
+                    (err.code === 'OPTIONS_MISSING_OPTIONS' || 
+                     err.code === 'OPTIONS_INVALID_OPTION' ||
+                     err.code === 'OPTIONS_OPTION_MISSING_ID' ||
+                     err.code === 'OPTIONS_OPTION_MISSING_LABEL' ||
+                     err.code === 'OPTIONS_DUPLICATE_IDS') && 
+                    typeof err === 'object' && err.nodeIds?.includes(id)
+                  )?.messageUi}
                 />
               );
             }

@@ -8,6 +8,7 @@
  */
 
 import logger from '../utils/logger';
+import { getAuthHeaders } from './auth';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -73,12 +74,27 @@ export async function fetchJson(path, init) {
   logger.debug('HTTP Request', { method: init?.method || 'GET', url, path });
 
   try {
+    // Inclui headers de autenticação se disponível
+    const authHeaders = getAuthHeaders();
+    
+    // Prepara os headers, garantindo que Content-Type seja sempre application/json
+    // quando há um body (para requisições POST, PUT, PATCH)
+    const hasBody = init && (init.body !== undefined && init.body !== null);
+    
+    // Merge dos headers: primeiro os headers customizados, depois auth, depois Content-Type (para garantir que seja sempre definido)
+    const mergedHeaders = {
+      ...(init && init.headers),
+      ...authHeaders,
+      // Garante que Content-Type seja application/json se houver body
+      ...(hasBody && { 'Content-Type': 'application/json' }),
+    };
+    
+    // Remove headers do init para evitar sobrescrita
+    const { headers: _, ...restInit } = init || {};
+    
     const response = await fetchWithTimeout(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init && init.headers),
-      },
-      ...init,
+      ...restInit,
+      headers: mergedHeaders,
     });
 
     const contentType = response.headers.get('Content-Type') || '';

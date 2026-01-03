@@ -23,6 +23,7 @@ const {
   setVariableNodeHandler,
   handoffNodeHandler,
   endNodeHandler,
+  optionsNodeHandler,
 } = require('./nodes/basicNodes');
 const { aiNodeHandler } = require('./nodes/aiNode');
 const { aiTaskNodeHandler } = require('./nodes/aiTaskNode');
@@ -99,6 +100,7 @@ function createSimulationRegistry() {
   registry.register('start', startNodeHandler);
   registry.register('message', messageNodeHandler);
   registry.register('user_input', userInputNodeHandler);
+  registry.register('options', optionsNodeHandler);
   registry.register('router', routerNodeHandler);
   registry.register('schedule_router', scheduleRouterNodeHandler);
   registry.register('set_variable', setVariableNodeHandler);
@@ -183,6 +185,7 @@ async function simulateFlow(flow, options) {
     history: [],
     metadata: {
       mode: 'simulation',
+      testMode: true, // Marca como modo teste para virtualizar DELAY e mockar APIs
     },
   };
 

@@ -1,0 +1,114 @@
+{
+  "id": "validacao-pagina-exemplo",
+  "name": "Exemplo de Validação de Página em Camadas",
+  "version": "1.0.0",
+  "createdAt": "2026-01-02T21:00:00.000Z",
+  "url": "http://localhost:5173",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/support",
+      "waitFor": ".support-page",
+      "timeout": 30000
+    },
+    {
+      "type": "wait",
+      "condition": 2000
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "contains": "/support"
+        },
+        "landmarks": [
+          {
+            "selector": ".support-page",
+            "exists": true,
+            "visible": true
+          }
+        ]
+      },
+      "validationMode": "all",
+      "message": "Página deve ser a de suporte",
+      "timeout": 30000
+    },
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/dashboard",
+      "waitFor": "[data-testid='dashboard']",
+      "timeout": 30000
+    },
+    {
+      "type": "wait",
+      "condition": 2000
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "pattern": "^.*/dashboard$"
+        },
+        "title": {
+          "contains": "Dashboard"
+        },
+        "landmarks": [
+          {
+            "selector": "[data-testid='dashboard']",
+            "exists": true
+          },
+          {
+            "selector": "h1",
+            "text": "Dashboard"
+          }
+        ]
+      },
+      "validationMode": "all",
+      "message": "Página deve ser o Dashboard",
+      "timeout": 30000
+    },
+    {
+      "type": "navigate",
+      "url": "https://example.com",
+      "waitFor": "h1",
+      "timeout": 30000
+    },
+    {
+      "type": "wait",
+      "condition": 2000
+    },
+    {
+      "type": "assert",
+      "title": "Example Domain",
+      "message": "Título da página deve ser 'Example Domain'",
+      "timeout": 30000
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "exact": "https://example.com/"
+        },
+        "title": {
+          "exact": "Example Domain"
+        },
+        "landmarks": [
+          {
+            "selector": "h1",
+            "text": "Example Domain",
+            "exists": true
+          }
+        ]
+      },
+      "validationMode": "any",
+      "message": "Página deve ser example.com (qualquer estratégia)",
+      "timeout": 30000
+    }
+  ],
+  "data": {
+    "urls": {
+      "frontend": "http://localhost:5173"
+    }
+  }
+}
+

@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+// Evento customizado para notificar mudanças de rota
+const ROUTE_CHANGE_EVENT = 'router:change';
 
 /**
  * Hook para roteamento baseado em URL (sem dependências externas).
@@ -13,20 +16,31 @@ export function useRouter() {
   });
 
   useEffect(() => {
-    // Escuta mudanças no histórico do navegador (botões voltar/avançar)
-    const handlePopState = () => {
+    // Função para atualizar o path baseado na URL atual
+    const updatePath = () => {
       setCurrentPath(window.location.pathname);
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    // Escuta mudanças no histórico do navegador (botões voltar/avançar)
+    window.addEventListener('popstate', updatePath);
+    
+    // Escuta mudanças de rota via evento customizado (quando navigate é chamado)
+    window.addEventListener(ROUTE_CHANGE_EVENT, updatePath);
+
+    return () => {
+      window.removeEventListener('popstate', updatePath);
+      window.removeEventListener(ROUTE_CHANGE_EVENT, updatePath);
+    };
   }, []);
 
-  const navigate = (path) => {
+  const navigate = useCallback((path) => {
     // Atualiza a URL sem recarregar a página
     window.history.pushState({}, '', path);
+    // Atualiza o estado local
     setCurrentPath(path);
-  };
+    // Dispara evento customizado para notificar outras instâncias do hook
+    window.dispatchEvent(new CustomEvent(ROUTE_CHANGE_EVENT));
+  }, []);
 
   return { currentPath, navigate };
 }

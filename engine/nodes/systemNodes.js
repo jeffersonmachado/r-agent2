@@ -194,76 +194,77 @@ async function generateUuidNodeHandler(node, state, input, deps = null) {
 
 /**
  * Nó "delay" - Aguarda um tempo específico
+ * 
+ * IMPORTANTE: Em modo teste, o delay é virtualizado (ignorado) para garantir testes determinísticos.
  */
 async function delayNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   const duration = Number(node.config?.duration) || 1000;
 
-  if (isNaN(duration) || duration < 0 || duration > 60000) {
-    const errorEvent = createEngineEvent({
-      sessionId: state.sessionId,
-      flowId: state.flowId,
-      nodeId: node.id,
-      type: 'ERROR',
-      payload: {
-        message: `Duração inválida: ${duration}ms (deve ser entre 0 e 60000)`,
-        operation: 'delay',
-      },
-    });
-
-    return {
-      nextState,
-      events: [errorEvent],
-      output: {
-        type: 'error',
-        message: 'Duração inválida',
-      },
-    };
+  // Valida que o valor deve ser positivo
+  if (isNaN(duration) || duration < 0) {
+    const error = new Error(`Delay node "${node.id}" tem duração inválida: ${duration}ms (deve ser um número positivo).`);
+    // @ts-ignore
+    error.code = 'ENGINE_DELAY_INVALID_DURATION';
+    // @ts-ignore
+    error.type = 'data';
+    // @ts-ignore
+    error.nodeId = node.id;
+    throw error;
   }
 
-  try {
-    await new Promise(resolve => setTimeout(resolve, duration));
-
-    const successEvent = createEngineEvent({
-      sessionId: state.sessionId,
-      flowId: state.flowId,
-      nodeId: node.id,
-      type: 'SYSTEM_OPERATION',
-      payload: {
-        operation: 'delay',
-        duration,
-      },
-    });
-
-    return {
-      nextState,
-      events: [successEvent],
-      output: {
-        type: 'delay_complete',
-        duration,
-      },
-    };
-  } catch (err) {
-    const errorEvent = createEngineEvent({
-      sessionId: state.sessionId,
-      flowId: state.flowId,
-      nodeId: node.id,
-      type: 'ERROR',
-      payload: {
-        message: err.message || String(err),
-        operation: 'delay',
-      },
-    });
-
-    return {
-      nextState,
-      events: [errorEvent],
-      output: {
-        type: 'error',
-        message: `Erro ao aguardar: ${err.message}`,
-      },
-    };
+  if (duration > 60000) {
+    const error = new Error(`Delay node "${node.id}" tem duração muito longa: ${duration}ms (máximo: 60000ms).`);
+    // @ts-ignore
+    error.code = 'ENGINE_DELAY_DURATION_TOO_LONG';
+    // @ts-ignore
+    error.type = 'data';
+    // @ts-ignore
+    error.nodeId = node.id;
+    throw error;
   }
+
+  // Em modo teste, virtualiza o delay (ignora o tempo real)
+  const isTestMode = state.metadata && (state.metadata.testMode === true || state.metadata.mode === 'test' || state.metadata.mode === 'simulation');
+  
+  if (!isTestMode) {
+    // Em produção, aguarda o tempo real
+    try {
+      await new Promise(resolve => setTimeout(resolve, duration));
+    } catch (err) {
+      const error = new Error(`Delay node "${node.id}" falhou ao aguardar: ${err.message}`);
+      // @ts-ignore
+      error.code = 'ENGINE_DELAY_EXECUTION_ERROR';
+      // @ts-ignore
+      error.type = 'system';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+  }
+  // Em modo teste, não aguarda nada (virtualizado)
+
+  const successEvent = createEngineEvent({
+    sessionId: state.sessionId,
+    flowId: state.flowId,
+    nodeId: node.id,
+    type: 'SYSTEM_OPERATION',
+    payload: {
+      operation: 'delay',
+      duration,
+      virtualized: isTestMode,
+    },
+  });
+
+  return {
+    nextState,
+    events: [successEvent],
+    output: {
+      type: 'delay_complete',
+      duration,
+      virtualized: isTestMode,
+    },
+  };
 }
 
 /**

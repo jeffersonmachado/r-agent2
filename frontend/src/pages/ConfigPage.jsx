@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager } from '../api/config';
 import { listFlows } from '../api/flows';
+import { useAuth } from '../context/authContext';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
 import { useTheme } from '../styles/themeContext';
+import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 
@@ -13,9 +15,30 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
  * Permite visualizar e editar o arquivo config.json.
  */
 export function ConfigPage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { themeName } = useTheme();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+
+  // Proteção: redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Será redirecionado pelo useEffect
+  }
   const [config, setConfig] = useState(null);
   const [editedConfig, setEditedConfig] = useState(null);
   const [jsonText, setJsonText] = useState('');
@@ -417,20 +440,6 @@ export function ConfigPage() {
               <h1 className="text-3xl font-bold text-text-primary mb-2">Configuração do Sistema</h1>
               <p className="text-text-secondary text-sm">Gerencie todas as configurações do sistema em um único lugar</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <NavigationLink to="/editor" className="btn-base">
-                <span className="icon">📝</span>
-                <span>Editor</span>
-              </NavigationLink>
-              <NavigationLink to="/support" className="btn-base">
-                <span className="icon">💬</span>
-                <span>Atendimento</span>
-              </NavigationLink>
-              <NavigationLink to="/maintenance" className="btn-base">
-                <span className="icon">🔧</span>
-                <span>Manutenção</span>
-              </NavigationLink>
-            </div>
           </div>
 
           {/* Toolbar */}
@@ -690,7 +699,9 @@ export function ConfigPage() {
                         editedConfig.ai?.openai?.model,
                         'text',
                         [
-                          { value: 'gpt-4o-2024-11-20', label: 'GPT-4o (Nov 2024) - Mais recente' },
+                          { value: 'gpt-5.2', label: 'GPT-5.2 (Mais recente - Recomendado)' },
+                          { value: 'gpt-5.1', label: 'GPT-5.1' },
+                          { value: 'gpt-4o-2024-11-20', label: 'GPT-4o (Nov 2024)' },
                           { value: 'gpt-4o', label: 'GPT-4o' },
                           { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Rápido e econômico)' },
                           { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },

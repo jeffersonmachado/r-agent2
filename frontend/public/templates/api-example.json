@@ -1,0 +1,91 @@
+{
+  "id": "api-example",
+  "name": "Exemplo de API",
+  "description": "Exemplo de uso do nó api para fazer chamadas HTTP a APIs externas",
+  "icon": "🌐",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "api-example",
+    "name": "Exemplo de API",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "Olá! Vou fazer uma chamada de API de exemplo para buscar dados."
+        },
+        "next": "call-api"
+      },
+      {
+        "id": "call-api",
+        "type": "api",
+        "config": {
+          "url": "https://jsonplaceholder.typicode.com/posts/1",
+          "method": "GET",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "outputVariable": "api_response",
+          "timeout": 10000
+        },
+        "next": "check-response"
+      },
+      {
+        "id": "check-response",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "api_response.success",
+                "value": true
+              },
+              "next": "show-success"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "show-error"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "show-success",
+        "type": "message",
+        "config": {
+          "text": "API chamada com sucesso!\n\nStatus: {{api_response.status}}\nTítulo: {{api_response.data.title}}\nCorpo: {{api_response.data.body}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "show-error",
+        "type": "message",
+        "config": {
+          "text": "Erro ao chamar a API. Status: {{api_response.status}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando uso do nó api para fazer chamadas HTTP a APIs externas"
+    }
+  }
+}
+

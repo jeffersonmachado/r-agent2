@@ -1,0 +1,147 @@
+{
+  "id": "options-example",
+  "name": "Exemplo de Opções",
+  "description": "Exemplo de uso do nó options para exibir opções interativas ao usuário",
+  "icon": "🔘",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "options-example",
+    "name": "Exemplo de Opções",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "show-options"
+      },
+      {
+        "id": "show-options",
+        "type": "options",
+        "config": {
+          "message": "Escolha uma opção:",
+          "optionsType": "button",
+          "options": [
+            {
+              "id": "opcao1",
+              "label": "Opção 1",
+              "value": "opcao_1"
+            },
+            {
+              "id": "opcao2",
+              "label": "Opção 2",
+              "value": "opcao_2"
+            },
+            {
+              "id": "opcao3",
+              "label": "Opção 3",
+              "value": "opcao_3"
+            }
+          ],
+          "variable": "user_choice"
+        },
+        "next": "router-choice"
+      },
+      {
+        "id": "router-choice",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_choice",
+                "value": "opcao_1"
+              },
+              "next": "response-1"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_choice",
+                "value": "opcao_2"
+              },
+              "next": "response-2"
+            },
+            {
+              "condition": {
+                "op": "equals",
+                "var": "user_choice",
+                "value": "opcao_3"
+              },
+              "next": "response-3"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "default-response"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "response-1",
+        "type": "message",
+        "config": {
+          "text": "Você escolheu a Opção 1!"
+        },
+        "next": "end"
+      },
+      {
+        "id": "response-2",
+        "type": "message",
+        "config": {
+          "text": "Você escolheu a Opção 2!"
+        },
+        "next": "end"
+      },
+      {
+        "id": "response-3",
+        "type": "message",
+        "config": {
+          "text": "Você escolheu a Opção 3!"
+        },
+        "next": "end"
+      },
+      {
+        "id": "default-response",
+        "type": "message",
+        "config": {
+          "text": "Opção não reconhecida."
+        },
+        "next": "fallback"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "show-options"
+        },
+        "next": {
+          "retry": "show-options",
+          "options": "show-options",
+          "human": "end",
+          "end": "end"
+        }
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando uso do nó options para exibir opções interativas"
+    }
+  }
+}
+

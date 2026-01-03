@@ -1,0 +1,85 @@
+{
+  "id": "08181724-cdfa-47b2-8f99-b0c8afa1dd8f",
+  "name": "demo-login-completo",
+  "version": "1.0.0",
+  "createdAt": "2026-01-02T17:27:23.143Z",
+  "url": "http://localhost:5173",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "http://localhost:5173/login",
+      "waitFor": "input[type='text'], input[type='email'], input[placeholder*='username'], input[placeholder*='usuário']",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.143Z"
+    },
+    {
+      "type": "wait",
+      "condition": 2000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='text'], input[type='email'], input[placeholder*='username'], input[placeholder*='usuário']",
+      "value": "admin",
+      "clear": true,
+      "validate": null,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='password']",
+      "value": "admin123",
+      "clear": true,
+      "validate": null,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    },
+    {
+      "type": "wait",
+      "condition": 1000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button:has-text('Entrar'), button:has-text('Login')",
+      "waitFor": ".support-page, .dashboard, [data-testid='dashboard'], [data-testid='support-page']",
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    },
+    {
+      "type": "wait",
+      "condition": 3000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    },
+    {
+      "type": "assert",
+      "selector": ".support-page, .dashboard, [data-testid='dashboard'], [data-testid='support-page']",
+      "exists": true,
+      "visible": true,
+      "text": null,
+      "value": null,
+      "count": null,
+      "message": "Login realizado com sucesso",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    },
+    {
+      "type": "wait",
+      "condition": 1000,
+      "timeout": 30000,
+      "state": null,
+      "timestamp": "2026-01-02T17:27:23.144Z"
+    }
+  ],
+  "data": {
+    "testUser": {
+      "email": "test@example.com",
+      "password": "test123"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "get-current-time-example",
+  "name": "Exemplo de Data/Hora Atual",
+  "description": "Exemplo de uso do nó get_current_time para obter data e hora atual",
+  "icon": "🕐",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "get-current-time-example",
+    "name": "Exemplo de Data/Hora Atual",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "get-time-iso"
+      },
+      {
+        "id": "get-time-iso",
+        "type": "get_current_time",
+        "config": {
+          "format": "ISO",
+          "timezone": "America/Sao_Paulo",
+          "outputVariable": "time_iso"
+        },
+        "next": "get-time-timestamp"
+      },
+      {
+        "id": "get-time-timestamp",
+        "type": "get_current_time",
+        "config": {
+          "format": "timestamp",
+          "outputVariable": "time_timestamp"
+        },
+        "next": "show-times"
+      },
+      {
+        "id": "show-times",
+        "type": "message",
+        "config": {
+          "text": "Data/hora atual:\n• Formato ISO: {{time_iso}}\n• Timestamp: {{time_timestamp}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando uso do nó get_current_time em diferentes formatos"
+    }
+  }
+}
+

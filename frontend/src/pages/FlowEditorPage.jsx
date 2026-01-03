@@ -9,9 +9,12 @@ import { NodePalette, NodePaletteCollapsed } from '../components/NodePalette';
 import { ThemeSelector } from '../components/ThemeSelector';
 import { FlowSelector } from '../components/FlowSelector';
 import { FlowTemplateSelector } from '../components/FlowTemplateSelector';
+import { FlowGeneratorDialog } from '../components/FlowGeneratorDialog';
 import { SaveAsTemplateDialog } from '../components/SaveAsTemplateDialog';
 import { Button } from '../styles/Button';
 import { createFlow, saveTemplate } from '../api/flows';
+import { useAuth } from '../context/authContext';
+import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
 import { LogViewer } from '../components/LogViewer';
 import { ResizableDivider } from '../components/ResizableDivider';
@@ -26,7 +29,28 @@ import { FallbackEventsViewer } from '../components/FallbackEventsViewer';
 import { getNodeSchema } from '../editor/nodeSchemas';
 
 export function FlowEditorPage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { navigate } = useRouter();
   const { themeName } = useTheme();
+
+  // Proteção: redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Será redirecionado pelo useEffect
+  }
   const {
     currentFlow,
     selectedNode,
@@ -47,6 +71,7 @@ export function FlowEditorPage() {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showFlowGenerator, setShowFlowGenerator] = useState(false);
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false);
   const [showLogViewer, setShowLogViewer] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -246,6 +271,84 @@ export function FlowEditorPage() {
           });
         }
       }, 500); // Aguarda 500ms para garantir que o editor foi atualizado
+    }
+  };
+
+  const handleFlowGenerated = async (flow) => {
+    logger.info('Fluxo gerado', { flowId: flow?.id, flowName: flow?.name });
+    setShowFlowGenerator(false);
+    
+    // Limpa o estado antes de criar o novo fluxo
+    clearCurrentFlow();
+    
+    try {
+      const savedFlow = await createFlow(flow);
+      logger.info('Fluxo gerado salvo no backend', { savedFlowId: savedFlow?.id });
+      setFlowListRefreshTrigger(prev => prev + 1);
+      
+      // Só tenta carregar o fluxo se ele foi criado com sucesso
+      if (savedFlow && savedFlow.id) {
+        // Verifica se há avisos de validação na resposta
+        const hasValidationWarnings = savedFlow.validationWarnings && 
+                                      savedFlow.validationWarnings.errors && 
+                                      savedFlow.validationWarnings.errors.length > 0;
+        
+        if (hasValidationWarnings) {
+          const errorCount = savedFlow.validationWarnings.errors.length;
+          showToast(
+            `Fluxo gerado com sucesso, mas possui ${errorCount} erro${errorCount > 1 ? 's' : ''} de validação. Verifique o painel de validação.`,
+            'warning',
+            5000
+          );
+        } else {
+          showToast('Fluxo gerado com sucesso', 'success', 2000);
+        }
+        
+        await loadFlow(savedFlow.id);
+        logger.info('Fluxo gerado carregado no editor com sucesso');
+        
+        // Aplica erros de validação se houver avisos na resposta
+        setTimeout(async () => {
+          const editor = editorRef.current?.editor?.current;
+          const area = editorRef.current?.area;
+          if (editor && area) {
+            try {
+              if (hasValidationWarnings) {
+                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+                applyBackendValidationErrors(editor, area, savedFlow.validationWarnings.errors);
+                
+                setValidation({
+                  valid: false,
+                  errors: savedFlow.validationWarnings.errors,
+                  uiErrors: savedFlow.validationWarnings.errors,
+                });
+                setValidationCollapsed(false);
+                
+                logger.info('Erros de validação aplicados após gerar fluxo', {
+                  errorCount: savedFlow.validationWarnings.errors.length,
+                });
+              } else {
+                const reteJson = await editor.toJSON();
+                const validationResult = await validateCurrentFlow(reteJson);
+                
+                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+                if (validationResult) {
+                  applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+                  
+                  if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
+                    setValidationCollapsed(false);
+                  }
+                }
+              }
+            } catch (validationErr) {
+              logger.error('Erro ao validar fluxo gerado', { error: validationErr });
+            }
+          }
+        }, 500);
+      }
+    } catch (err) {
+      logger.error('Erro ao salvar fluxo gerado', err);
+      showToast(`Erro ao salvar fluxo gerado: ${err.message || 'Erro desconhecido'}`, 'error', 5000);
     }
   };
 
@@ -1050,6 +1153,10 @@ export function FlowEditorPage() {
           <span className="icon icon-plus"></span>
           <span>Novo</span>
         </button>
+        <button className="btn-base" onClick={() => setShowFlowGenerator(true)} title="Gerar fluxo com IA">
+          <span className="icon icon-ai"></span>
+          <span>Gerar com IA</span>
+        </button>
         <FlowSelector
           onFlowSelected={handleFlowSelected}
           currentFlowId={currentFlow?.id}
@@ -1066,18 +1173,6 @@ export function FlowEditorPage() {
           <span>Logs</span>
         </button>
         <ThemeSelector />
-        <NavigationLink to="/support" className="btn-base">
-          <span className="icon">👤</span>
-          <span>Atendimento</span>
-        </NavigationLink>
-        <NavigationLink to="/maintenance" className="btn-base">
-          <span className="icon">🔧</span>
-          <span>Manutenção</span>
-        </NavigationLink>
-        <NavigationLink to="/config" className="btn-base">
-          <span className="icon">⚙️</span>
-          <span>Configuração</span>
-        </NavigationLink>
       </Toolbar>
 
       {showTemplateSelector && (
@@ -1085,6 +1180,13 @@ export function FlowEditorPage() {
           onTemplateSelected={handleTemplateSelected}
           onCancel={() => setShowTemplateSelector(false)}
           refreshTrigger={templateListRefreshTrigger}
+        />
+      )}
+
+      {showFlowGenerator && (
+        <FlowGeneratorDialog
+          onFlowGenerated={handleFlowGenerated}
+          onCancel={() => setShowFlowGenerator(false)}
         />
       )}
 

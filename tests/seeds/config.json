@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "config": {
+    "nodeEnv": "test",
+    "api": {
+      "port": 3000,
+      "defaultTenantId": "tenant-test",
+      "ticketCleanup": {
+        "intervalHours": 1,
+        "maxAgeDays": 7
+      }
+    },
+    "frontend": {
+      "port": 8080,
+      "apiBaseUrl": "http://localhost:3000"
+    },
+    "flows": {
+      "defaultFlowId": "test-flow-welcome"
+    },
+    "ai": {
+      "defaultProvider": "mock",
+      "defaultFallback": "mock",
+      "mock": {
+        "enabled": true
+      },
+      "tenants": {
+        "tenant-test": {
+          "primary": "mock",
+          "fallback": "mock"
+        }
+      }
+    },
+    "features": {
+      "aiTasksEnabled": false,
+      "useRealAiApi": false
+    },
+    "logging": {
+      "level": "INFO",
+      "format": "json"
+    }
+  }
+}
+
+
+
+
+
+

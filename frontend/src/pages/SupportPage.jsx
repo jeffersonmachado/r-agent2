@@ -1,30 +1,52 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   listQueues,
-  listQueueTickets,
+  listAllTickets,
   assignTicket,
   closeTicket,
   sendTicketMessage,
   getTicketMessages,
   markTicketAsRead,
+  createTicket,
 } from '../api/tickets';
+import { useAuth } from '../context/authContext';
+import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
-import { QueueModal } from '../components/QueueModal';
-import { TicketModal } from '../components/TicketModal';
 import logger from '../utils/logger';
 
 /**
- * Página de atendimento para gerenciar tickets e filas.
+ * Página de atendimento para gerenciar tickets.
+ * Mostra apenas tickets do usuário logado ou sem atribuição.
  * Estilo inspirado no WhatsApp.
  */
 export function SupportPage() {
+  const { agent, logout, isAuthenticated, loading: authLoading } = useAuth();
+  const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+
+  // Proteção: redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Será redirecionado pelo useEffect
+  }
   const [queues, setQueues] = useState([]);
-  const [selectedQueue, setSelectedQueue] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [ticketMessages, setTicketMessages] = useState([]);
@@ -32,58 +54,69 @@ export function SupportPage() {
   const [assignedTo, setAssignedTo] = useState('');
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [modalQueue, setModalQueue] = useState(null);
-  const [modalTicket, setModalTicket] = useState(null);
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [newConversationPhone, setNewConversationPhone] = useState('');
+  const [newConversationMessage, setNewConversationMessage] = useState('');
+  const [newConversationQueue, setNewConversationQueue] = useState('');
 
   // Usa useRef para manter referências estáveis
   const showToastRef = React.useRef(showToast);
-  const loadQueuesRef = React.useRef();
   const loadTicketsRef = React.useRef();
-  const selectedQueueRef = React.useRef(selectedQueue);
 
   React.useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
 
-  React.useEffect(() => {
-    selectedQueueRef.current = selectedQueue;
-  }, [selectedQueue]);
-
-  // Carrega filas disponíveis
+  // Carrega filas disponíveis (apenas para o modal de nova conversa)
   const loadQueues = useCallback(async () => {
     try {
       const queuesList = await listQueues();
       setQueues(queuesList);
-      // Só seleciona a primeira fila se não houver nenhuma selecionada
-      if (queuesList.length > 0 && !selectedQueueRef.current) {
-        setSelectedQueue(queuesList[0]);
-      }
     } catch (error) {
       logger.error('Erro ao carregar filas', error);
-      showToastRef.current('Erro ao carregar filas', 'error');
+      // Não mostra erro para o usuário, pois filas não são mais essenciais
     }
-  }, []); // Sem dependências - usa refs
+  }, []);
 
-  // Atualiza ref quando loadQueues muda
-  React.useEffect(() => {
-    loadQueuesRef.current = loadQueues;
-  }, [loadQueues]);
+  // Flag para evitar requisições duplicadas
+  const isLoadingTicketsRef = React.useRef(false);
+  // Timestamp do último erro mostrado para evitar spam de toasts
+  const lastErrorToastTimeRef = React.useRef(0);
+  const ERROR_TOAST_COOLDOWN = 30000; // 30 segundos entre erros
 
-  // Carrega tickets da fila selecionada
+  // Carrega tickets do usuário ou sem atribuição
   const loadTickets = useCallback(async () => {
-    const queue = selectedQueueRef.current;
-    if (!queue) return;
-
+    // Evita requisições duplicadas
+    if (isLoadingTicketsRef.current) {
+      return;
+    }
+    
+    isLoadingTicketsRef.current = true;
     setLoading(true);
     try {
-      const ticketsList = await listQueueTickets(queue, { status: 'waiting' });
-      setTickets(ticketsList);
+      // Carrega tickets waiting e in_progress
+      // A API já filtra automaticamente: agents só veem seus tickets ou sem atribuição
+      const [waitingResult, inProgressResult] = await Promise.all([
+        listAllTickets({ status: 'waiting', limit: 1000 }),
+        listAllTickets({ status: 'in_progress', limit: 1000 }),
+      ]);
+      
+      // Combina os tickets e remove duplicatas
+      const allTickets = [...(waitingResult.tickets || []), ...(inProgressResult.tickets || [])];
+      const uniqueTickets = Array.from(
+        new Map(allTickets.map(ticket => [ticket.id, ticket])).values()
+      );
+      
+      // Ordena por data de criação (mais recentes primeiro)
+      uniqueTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      setTickets(uniqueTickets);
       
       // Verifica se o ticket selecionado ainda existe na nova lista
       // Se não existir mais, limpa a seleção e as mensagens
       setSelectedTicket(prevSelected => {
         if (!prevSelected) return null;
-        const updatedTicket = ticketsList.find(t => t.id === prevSelected.id);
+        const updatedTicket = uniqueTickets.find(t => t.id === prevSelected.id);
         // Se não encontrou na lista, o ticket foi removido ou mudou de status
         if (!updatedTicket) {
           setTicketMessages([]);
@@ -92,11 +125,22 @@ export function SupportPage() {
         // Atualiza com os dados mais recentes do ticket
         return updatedTicket;
       });
+      
+      // Reseta o contador de erro em caso de sucesso
+      lastErrorToastTimeRef.current = 0;
     } catch (error) {
       logger.error('Erro ao carregar tickets', error);
-      showToastRef.current('Erro ao carregar tickets', 'error');
+      
+      // Só mostra toast se passou tempo suficiente desde o último erro
+      const now = Date.now();
+      if (now - lastErrorToastTimeRef.current > ERROR_TOAST_COOLDOWN) {
+        lastErrorToastTimeRef.current = now;
+        // Toast de erro com duração menor para não ficar muito tempo na tela
+        showToastRef.current('Erro ao carregar tickets', 'error', 5000);
+      }
     } finally {
       setLoading(false);
+      isLoadingTicketsRef.current = false;
     }
   }, []); // Sem dependências - usa refs e state setters funcionais
 
@@ -105,18 +149,21 @@ export function SupportPage() {
     loadTicketsRef.current = loadTickets;
   }, [loadTickets]);
 
+  // Flag para garantir que os dados iniciais sejam carregados apenas uma vez
+  const hasLoadedInitialDataRef = React.useRef(false);
+
   // Carrega dados iniciais - apenas uma vez no mount
   useEffect(() => {
+    // Evita carregar múltiplas vezes (especialmente com StrictMode)
+    if (hasLoadedInitialDataRef.current) {
+      return;
+    }
+    
+    hasLoadedInitialDataRef.current = true;
     loadQueues();
+    loadTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Apenas no mount inicial
-
-  // Carrega tickets quando a fila muda
-  useEffect(() => {
-    if (selectedQueue) {
-      loadTickets();
-    }
-  }, [selectedQueue, loadTickets]);
 
   // Carrega mensagens do ticket selecionado
   const loadTicketMessages = useCallback(async (ticketId) => {
@@ -166,8 +213,17 @@ export function SupportPage() {
   useEffect(() => {
     if (selectedTicket) {
       loadTicketMessages(selectedTicket.id);
+      
+      // Preenche automaticamente o campo de atribuição se o ticket estiver waiting
+      if (selectedTicket.status === 'waiting' && !assignedTo) {
+        const defaultAssignee = agent?.username || agent?.id || '';
+        if (defaultAssignee) {
+          setAssignedTo(defaultAssignee);
+        }
+      }
     } else {
       setTicketMessages([]);
+      setAssignedTo(''); // Limpa o campo quando nenhum ticket está selecionado
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket?.id]); // Apenas quando o ID do ticket muda
@@ -205,13 +261,21 @@ export function SupportPage() {
 
   // Atribui ticket para atendente
   const handleAssign = async () => {
-    if (!selectedTicket || !assignedTo.trim()) {
+    if (!selectedTicket) {
+      showToast('Selecione um ticket primeiro', 'warning');
+      return;
+    }
+
+    // Usa o valor do campo ou o valor padrão do agente
+    const assigneeName = assignedTo.trim() || agent?.username || agent?.id || '';
+    
+    if (!assigneeName) {
       showToast('Informe o nome do atendente', 'warning');
       return;
     }
 
     try {
-      await assignTicket(selectedTicket.id, assignedTo.trim());
+      await assignTicket(selectedTicket.id, assigneeName);
       showToastRef.current('Ticket atribuído com sucesso', 'success');
       setSelectedTicket(null);
       setAssignedTo('');
@@ -305,21 +369,7 @@ export function SupportPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Atendimento - Sistema de Filas</h1>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <NavigationLink to="/editor" className="btn-base">
-              <span className="icon">📝</span>
-              <span>Editor</span>
-            </NavigationLink>
-            <NavigationLink to="/maintenance" className="btn-base">
-              <span className="icon">🔧</span>
-              <span>Manutenção</span>
-            </NavigationLink>
-            <NavigationLink to="/config" className="btn-base">
-              <span className="icon">⚙️</span>
-              <span>Configuração</span>
-            </NavigationLink>
-          </div>
+          <h1>Atendimento</h1>
         </div>
         <div className="support-controls">
           <label>
@@ -340,40 +390,26 @@ export function SupportPage() {
           >
             {loading ? 'Carregando...' : 'Atualizar'}
           </Button>
+          <Button 
+            onClick={() => {
+              setNewConversationQueue(queues.length > 0 ? queues[0] : '');
+              setShowNewConversationModal(true);
+            }}
+            style={{ backgroundColor: '#25D366', color: 'white' }}
+          >
+            ➕ Iniciar Conversa
+          </Button>
         </div>
       </div>
 
       <div className="support-grid">
-        {/* Painel de Filas */}
-        <div className="support-queues-panel">
-          <h2>Filas</h2>
-          {queues.length === 0 ? (
-            <p className="support-queues-empty">Nenhuma fila disponível</p>
-          ) : (
-            <div className="support-queues-list">
-              {queues.map((queue) => (
-                <button
-                  key={queue}
-                  onClick={() => {
-                    setSelectedQueue(queue);
-                    setModalQueue(queue);
-                  }}
-                  className={`support-queue-button ${selectedQueue === queue ? 'active' : ''}`}
-                >
-                  {queue}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Lista de Tickets */}
         <div className="support-tickets-panel">
-          <h2>Tickets - {selectedQueue || 'Selecione uma fila'}</h2>
+          <h2>Meus Tickets</h2>
           {loading ? (
             <p>Carregando...</p>
           ) : tickets.length === 0 ? (
-            <p className="support-tickets-empty">Nenhum ticket aguardando</p>
+            <p className="support-tickets-empty">Nenhum ticket disponível</p>
           ) : (
             <div className="support-tickets-list">
               {tickets.map((ticket) => (
@@ -381,7 +417,6 @@ export function SupportPage() {
                   key={ticket.id}
                   onClick={() => {
                     setSelectedTicket(ticket);
-                    setModalTicket(ticket);
                   }}
                   className={`support-ticket-card ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
                 >
@@ -531,7 +566,7 @@ export function SupportPage() {
                     <label className="support-form-label">Atribuir para:</label>
                     <input
                       type="text"
-                      value={assignedTo}
+                      value={assignedTo || (agent?.username || agent?.id || '')}
                       onChange={(e) => setAssignedTo(e.target.value)}
                       placeholder="Nome do atendente"
                       className="support-form-input"
@@ -576,45 +611,154 @@ export function SupportPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-      <QueueModal
-        isOpen={modalQueue !== null}
-        onClose={() => setModalQueue(null)}
-        queueName={modalQueue}
-        queues={queues}
-      />
-      <TicketModal
-        isOpen={modalTicket !== null}
-        onClose={() => setModalTicket(null)}
-        ticket={modalTicket}
-        onTicketUpdate={(updatedTicket) => {
-          // Se updatedTicket é null, remove o ticket da lista
-          if (!updatedTicket) {
-            if (modalTicket) {
-              const ticketIdToRemove = modalTicket.id;
-              setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketIdToRemove));
-              // Limpa seleção se for o mesmo ticket
-              if (selectedTicket?.id === ticketIdToRemove) {
-                setSelectedTicket(null);
-                setTicketMessages([]);
-              }
-              // Fecha o modal
-              setModalTicket(null);
-            }
-            return;
-          }
-          
-          // Atualiza ticket na lista local
-          setTickets(prevTickets => 
-            prevTickets.map(t => t.id === updatedTicket.id ? updatedTicket : t)
-          );
-          // Atualiza ticket selecionado se for o mesmo
-          if (selectedTicket?.id === updatedTicket.id) {
-            setSelectedTicket(updatedTicket);
-          }
-          // Atualiza ticket no modal
-          setModalTicket(updatedTicket);
-        }}
-      />
+
+      {/* Modal para Iniciar Nova Conversa */}
+      {showNewConversationModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '24px',
+            borderRadius: '8px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+          }}>
+            <h2 style={{ marginTop: 0 }}>Iniciar Nova Conversa</h2>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Número de Telefone *
+              </label>
+              <input
+                type="text"
+                value={newConversationPhone}
+                onChange={(e) => setNewConversationPhone(e.target.value)}
+                placeholder="+5511999999999 ou 5511999999999"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              />
+              <small style={{ color: '#666', fontSize: '12px' }}>
+                Formato: +5511999999999 ou 5511999999999
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Fila *
+              </label>
+              <select
+                value={newConversationQueue}
+                onChange={(e) => setNewConversationQueue(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              >
+                <option value="">Selecione uma fila</option>
+                {queues.map((q) => (
+                  <option key={q} value={q}>{q}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Mensagem Inicial (opcional)
+              </label>
+              <textarea
+                value={newConversationMessage}
+                onChange={(e) => setNewConversationMessage(e.target.value)}
+                placeholder="Olá! Como posso ajudá-lo hoje?"
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setShowNewConversationModal(false);
+                  setNewConversationPhone('');
+                  setNewConversationMessage('');
+                  setNewConversationQueue('');
+                }}
+                style={{ backgroundColor: '#6c757d' }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!newConversationPhone.trim()) {
+                    showToast('Número de telefone é obrigatório', 'warning');
+                    return;
+                  }
+                  if (!newConversationQueue.trim()) {
+                    showToast('Fila é obrigatória', 'warning');
+                    return;
+                  }
+
+                  try {
+                    const ticket = await createTicket({
+                      phoneNumber: newConversationPhone.trim(),
+                      queue: newConversationQueue.trim(),
+                      initialMessage: newConversationMessage.trim() || undefined,
+                    });
+
+                    showToast('Conversa iniciada com sucesso!', 'success');
+                    setShowNewConversationModal(false);
+                    setNewConversationPhone('');
+                    setNewConversationMessage('');
+                    setNewConversationQueue('');
+
+                    // Recarrega tickets
+                    if (loadTicketsRef.current) {
+                      loadTicketsRef.current();
+                    }
+
+                    // Seleciona o ticket criado
+                    setSelectedTicket(ticket);
+                  } catch (error) {
+                    logger.error('Erro ao iniciar conversa', error);
+                    const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao iniciar conversa';
+                    showToast(errorMessage, 'error');
+                  }
+                }}
+                style={{ backgroundColor: '#25D366', color: 'white' }}
+              >
+                Iniciar Conversa
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

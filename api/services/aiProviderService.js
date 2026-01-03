@@ -43,7 +43,7 @@ function createOpenAIProvider() {
   return {
     async generate(prompt, context) {
       try {
-        const model = config.get('ai.openai.model', 'gpt-3.5-turbo');
+        const model = config.get('ai.openai.model', 'gpt-5.2');
         logger.debug('🤖 OpenAI: Iniciando geração', {
           model,
           promptLength: prompt.length,

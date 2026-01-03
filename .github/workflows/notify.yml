@@ -1,0 +1,73 @@
+name: Notificações CI/CD
+
+on:
+  workflow_run:
+    workflows: ["CI - Testes e Validação", "RPA - Testes E2E (CI)", "Deploy"]
+    types:
+      - completed
+
+jobs:
+  notify:
+    name: Enviar Notificações
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion != 'success' }}
+    
+    steps:
+      - name: Resumo da execução
+        run: |
+          echo "## 📢 Notificação de CI/CD" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow:** ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ github.event.workflow_run.conclusion }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.event.workflow_run.head_sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [Ver detalhes](${{ github.event.workflow_run.html_url }})" >> $GITHUB_STEP_SUMMARY
+      
+      # Notificação via Slack (se configurado)
+      - name: Notificar Slack
+        if: env.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ Workflow falhou: ${{ github.event.workflow_run.name }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Workflow:* ${{ github.event.workflow_run.name }}\n*Status:* ${{ github.event.workflow_run.conclusion }}\n*Branch:* ${{ github.event.workflow_run.head_branch }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Ver Detalhes"
+                      },
+                      "url": "${{ github.event.workflow_run.html_url }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+      
+      # Notificação via Email (placeholder)
+      - name: Notificar Email
+        if: env.EMAIL_ENABLED == 'true'
+        run: |
+          echo "📧 Notificação por email (configurar conforme necessário)"
+          echo "Workflow: ${{ github.event.workflow_run.name }}"
+          echo "Status: ${{ github.event.workflow_run.conclusion }}"
+        continue-on-error: true
+        env:
+          EMAIL_ENABLED: ${{ secrets.EMAIL_NOTIFICATIONS_ENABLED }}
+

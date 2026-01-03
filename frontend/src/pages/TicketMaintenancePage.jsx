@@ -1,17 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { listAllTickets, listQueues, getQueueMetrics, createQueue, deleteQueue, getQueueInfo } from '../api/tickets';
+import { useAuth } from '../context/authContext';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
+import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
 
 /**
  * Página de manutenção de tickets com estatísticas, filtros e ações de limpeza.
  */
 export function TicketMaintenancePage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+
+  // Proteção: redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Será redirecionado pelo useEffect
+  }
   const [metrics, setMetrics] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [queues, setQueues] = useState([]);
@@ -317,20 +340,6 @@ export function TicketMaintenancePage() {
       <div className="maintenance-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🔧 Manutenção de Tickets</h1>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <NavigationLink to="/support" className="btn-base">
-              <span className="icon">💬</span>
-              <span>Atendimento</span>
-            </NavigationLink>
-            <NavigationLink to="/editor" className="btn-base">
-              <span className="icon">📝</span>
-              <span>Editor</span>
-            </NavigationLink>
-            <NavigationLink to="/config" className="btn-base">
-              <span className="icon">⚙️</span>
-              <span>Configuração</span>
-            </NavigationLink>
-          </div>
         </div>
         <div className="maintenance-controls">
           <label>

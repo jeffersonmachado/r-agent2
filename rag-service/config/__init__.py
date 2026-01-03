@@ -1,0 +1,2 @@
+"""Configurações do serviço RAG."""
+

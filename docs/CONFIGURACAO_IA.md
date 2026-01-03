@@ -11,7 +11,7 @@ O sistema suporta múltiplos providers de IA e permite configurar diferentes pro
 ### 1. OpenAI
 - **ID**: `openai`
 - **Requer**: Chave de API OpenAI
-- **Modelos**: gpt-3.5-turbo, gpt-4, etc.
+- **Modelos**: gpt-5.2 (recomendado), gpt-5.1, gpt-4o, gpt-4, gpt-3.5-turbo, etc.
 
 ### 2. Anthropic (Claude)
 - **ID**: `anthropic`
@@ -35,7 +35,7 @@ Adicione a seção `ai` ao arquivo de configuração:
     "defaultFallback": "fallback",
     "openai": {
       "apiKey": "sk-sua-chave-api-openai-aqui",
-      "model": "gpt-3.5-turbo"
+      "model": "gpt-5.2"
     },
     "anthropic": {
       "apiKey": "sk-ant-sua-chave-api-anthropic-aqui",
@@ -60,7 +60,7 @@ Adicione a seção `ai` ao arquivo de configuração:
 - **`defaultProvider`**: Provider padrão usado quando nenhum tenant específico está configurado
 - **`defaultFallback`**: Provider de fallback padrão
 - **`openai.apiKey`**: Chave de API da OpenAI (obtenha em https://platform.openai.com/api-keys)
-- **`openai.model`**: Modelo OpenAI a ser usado (padrão: `gpt-3.5-turbo`)
+- **`openai.model`**: Modelo OpenAI a ser usado (padrão: `gpt-5.2`). Modelos disponíveis: gpt-5.2, gpt-5.1, gpt-4o, gpt-4, gpt-3.5-turbo
 - **`anthropic.apiKey`**: Chave de API da Anthropic (obtenha em https://console.anthropic.com/)
 - **`anthropic.model`**: Modelo Anthropic a ser usado (padrão: `claude-3-sonnet-20240229`)
 - **`tenants`**: Configuração específica por tenant

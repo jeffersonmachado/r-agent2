@@ -1,0 +1,34 @@
+{
+  "id": "script-support-flow",
+  "name": "Teste de Fluxo de Suporte",
+  "version": "1.0.0",
+  "requires": ["departments", "queues", "agents", "flows", "config"],
+  "requiresDetails": {
+    "queues": ["test-queue-support"],
+    "agents": ["test-agent-admin"],
+    "flows": ["test-flow-support"]
+  },
+  "steps": [
+    {
+      "type": "user_message",
+      "input": "Olá",
+      "expected": {
+        "node": "message-1",
+        "output": "Olá! Em que posso ajudar?"
+      }
+    },
+    {
+      "type": "user_message",
+      "input": "ajuda",
+      "expected": {
+        "node": "message-help",
+        "output": "Claro! Estou aqui para ajudar."
+      }
+    }
+  ],
+  "finalState": {
+    "completed": true,
+    "lastNode": "end-1"
+  }
+}
+

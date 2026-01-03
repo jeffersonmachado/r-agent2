@@ -1,0 +1,143 @@
+{
+  "id": "c39352af-0d14-4c6a-9891-5b08272d2dbc",
+  "name": "demo-fluxo-completo",
+  "version": "1.0.0",
+  "createdAt": "2026-01-02T17:27:23.155Z",
+  "url": "http://localhost:5173",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "http://localhost:5173/login",
+      "waitFor": "input[type='text'], input[type='email'], input[placeholder*='username'], input[placeholder*='usuário']",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "wait",
+      "condition": 2000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='text'], input[type='email'], input[placeholder*='username'], input[placeholder*='usuário']",
+      "value": "admin",
+      "clear": true,
+      "validate": null,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='password']",
+      "value": "admin123",
+      "clear": true,
+      "validate": null,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "wait",
+      "condition": 1000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button:has-text('Entrar'), button:has-text('Login')",
+      "waitFor": ".support-page, .dashboard, [data-testid='dashboard'], [data-testid='support-page']",
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "wait",
+      "condition": 3000,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "navigate",
+      "url": "http://localhost:5173/editor",
+      "waitFor": ".flow-editor, .flow-canvas, [data-testid='flow-editor'], [data-testid='flow-canvas'], .rete-editor, .rete-area",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "click",
+      "selector": "button:has-text(\"Novo Fluxo\")",
+      "waitFor": null,
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "fill",
+      "selector": "input[name=\"flowName\"]",
+      "value": "Fluxo de Teste RPA",
+      "clear": true,
+      "validate": null,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "click",
+      "selector": "button:has-text(\"Criar\")",
+      "waitFor": ".flow-canvas",
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "click",
+      "selector": ".add-node-button",
+      "waitFor": null,
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T17:27:23.155Z"
+    },
+    {
+      "type": "click",
+      "selector": ".node-type-message",
+      "waitFor": null,
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T17:27:23.156Z"
+    },
+    {
+      "type": "fill",
+      "selector": "textarea[name=\"messageText\"]",
+      "value": "Olá! Este é um teste RPA.",
+      "clear": true,
+      "validate": null,
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.156Z"
+    },
+    {
+      "type": "click",
+      "selector": "button:has-text(\"Salvar\")",
+      "waitFor": null,
+      "timeout": 30000,
+      "force": false,
+      "timestamp": "2026-01-02T17:27:23.156Z"
+    },
+    {
+      "type": "assert",
+      "selector": ".flow-node",
+      "exists": true,
+      "visible": true,
+      "text": null,
+      "value": null,
+      "count": 1,
+      "message": "Nó deve ter sido criado",
+      "timeout": 30000,
+      "timestamp": "2026-01-02T17:27:23.156Z"
+    }
+  ],
+  "data": {
+    "admin": {
+      "email": "admin@example.com",
+      "password": "admin123"
+    }
+  }
+}

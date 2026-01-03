@@ -113,37 +113,87 @@ async function apiNodeHandler(node, state, input, deps = null) {
       : JSON.stringify(renderedBody);
   }
 
+  // Em modo teste, usa mock obrigatoriamente (nenhuma dependência externa permitida)
+  const isTestMode = state.metadata && (state.metadata.testMode === true || state.metadata.mode === 'test' || state.metadata.mode === 'simulation');
+  
+  let response;
+  
   try {
-    // Cria um AbortController para timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    if (isTestMode) {
+      // Em modo teste, NUNCA faz chamada HTTP real
+      // Usa MockApiProvider se disponível via deps, senão cria resposta mock padrão
+      let mockProvider = null;
+      if (deps && deps.apiProvider) {
+        mockProvider = deps.apiProvider;
+      } else {
+        // Tenta carregar MockApiProvider do módulo de testes
+        try {
+          const { MockApiProvider } = require('../../../tests/engine/mockProviders');
+          mockProvider = new MockApiProvider();
+        } catch (err) {
+          // Se não conseguir carregar, cria mock inline
+          mockProvider = null;
+        }
+      }
+      
+      if (mockProvider && typeof mockProvider.fetch === 'function') {
+        // Usa mock provider
+        response = await mockProvider.fetch(renderedUrl, requestOptions);
+      } else {
+        // Mock padrão determinístico
+        response = {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          headers: new Map([['content-type', 'application/json']]),
+          json: async () => ({ success: true, mocked: true, url: renderedUrl }),
+          text: async () => JSON.stringify({ success: true, mocked: true, url: renderedUrl }),
+        };
+      }
+    } else {
+      // Em produção, faz chamada HTTP real
+      // Cria um AbortController para timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    // Faz a chamada HTTP
-    // Nota: fetch está disponível no Node.js 18+
-    const response = await fetch(renderedUrl, {
-      ...requestOptions,
-      signal: controller.signal,
-    });
+      // Faz a chamada HTTP
+      // Nota: fetch está disponível no Node.js 18+
+      response = await fetch(renderedUrl, {
+        ...requestOptions,
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
+    }
 
     // Lê a resposta
-    const contentType = response.headers.get('content-type');
+    const contentType = response.headers && typeof response.headers.get === 'function' 
+      ? response.headers.get('content-type')
+      : (response.headers?.['content-type'] || 'application/json');
     let responseData;
     
     if (contentType && contentType.includes('application/json')) {
-      responseData = await response.json();
+      responseData = typeof response.json === 'function' 
+        ? await response.json()
+        : (response.data || { success: true });
     } else {
-      responseData = await response.text();
+      responseData = typeof response.text === 'function'
+        ? await response.text()
+        : (response.data || 'OK');
     }
 
     // Salva a resposta na variável
+    const responseHeaders = response.headers && typeof response.headers.entries === 'function'
+      ? Object.fromEntries(response.headers.entries())
+      : (response.headers || {});
+    
     nextState.variables[outputVariable] = {
-      success: response.ok,
-      status: response.status,
-      statusText: response.statusText,
+      success: response.ok !== false,
+      status: response.status || 200,
+      statusText: response.statusText || 'OK',
       data: responseData,
-      headers: Object.fromEntries(response.headers.entries()),
+      headers: responseHeaders,
+      mocked: isTestMode,
     };
 
     const successEvent = createEngineEvent({
@@ -154,8 +204,9 @@ async function apiNodeHandler(node, state, input, deps = null) {
       payload: {
         url: renderedUrl,
         method,
-        status: response.status,
-        success: response.ok,
+        status: response.status || 200,
+        success: response.ok !== false,
+        mocked: isTestMode,
       },
     });
 

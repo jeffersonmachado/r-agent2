@@ -871,6 +871,29 @@
   padding: 4px;
   overflow-y: auto;
   gap: 4px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.toolbar-more-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.toolbar-more-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toolbar-more-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.toolbar-more-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .toolbar-more-group {
@@ -1035,6 +1058,29 @@
   height: 100%;
   overflow-y: auto;
   align-items: center;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.node-palette-item-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.node-palette-item-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.node-palette-item-list::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.node-palette-item-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .node-palette-item-collapsed {
@@ -1201,6 +1247,29 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.sidebar-properties-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sidebar-properties-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-properties-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.sidebar-properties-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 /* Theme Selector - Estado :hover tratado apenas com CSS */
@@ -1353,6 +1422,29 @@
   overflow-y: auto;
   padding: 16px;
   font-size: 12px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.validation-results::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.validation-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.validation-results::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.validation-results::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .validation-empty {
@@ -1834,6 +1926,23 @@
   flex-shrink: 0;
 }
 
+.icon-ai::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+  flex-shrink: 0;
+}
+
 /* Classes reutilizáveis para substituir Tailwind hardcoded */
 
 /* Botões padrão - usa variáveis CSS */
@@ -1890,6 +1999,29 @@
   min-height: 0;
   overflow-y: auto;
   padding: 8px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.section-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.section-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.section-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.section-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 /* Estados de colapso das seções */
@@ -1902,6 +2034,29 @@
   min-height: 50px;
   max-height: 50vh;
   overflow-y: auto;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.section-expanded::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.section-expanded::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.section-expanded::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.section-expanded::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .section-expanded-full {
@@ -2003,6 +2158,29 @@ div:has(svg[data-testid="connection"]) {
   padding: 8px 4px;
   height: 100%;
   overflow-y: auto;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.resizable-panel-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.resizable-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.resizable-panel-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.resizable-panel-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .resizable-panel-collapsed-text {
@@ -2097,6 +2275,29 @@ div:has(svg[data-testid="connection"]) {
   border: 1px solid var(--color-border-default);
   border-radius: 6px;
   background-color: var(--color-bg-primary);
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.simulation-panel-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.simulation-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.simulation-panel-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.simulation-panel-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .simulation-panel-empty {
@@ -2185,6 +2386,29 @@ div:has(svg[data-testid="connection"]) {
   border: 1px solid var(--color-border-default);
   border-radius: 6px;
   background-color: var(--color-bg-primary);
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.conversation-timeline-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.conversation-timeline-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-timeline-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.conversation-timeline-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .conversation-timeline-empty {
@@ -2400,6 +2624,29 @@ div:has(svg[data-testid="connection"]) {
   font-size: 11px;
   line-height: 1.5;
   background-color: var(--color-bg-primary);
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.log-viewer-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.log-viewer-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-viewer-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.log-viewer-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .log-viewer-empty {
@@ -2451,6 +2698,29 @@ div:has(svg[data-testid="connection"]) {
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.log-viewer-entry-text::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.log-viewer-entry-text::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-viewer-entry-text::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.log-viewer-entry-text::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .log-viewer-entry-copy {
@@ -2520,6 +2790,29 @@ div:has(svg[data-testid="connection"]) {
   overflow-y: auto;
   border-top: 1px solid var(--color-border-default);
   padding-top: 4px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.conversation-debugger-timeline-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.conversation-debugger-timeline-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-debugger-timeline-list::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.conversation-debugger-timeline-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .conversation-debugger-timeline-item {
@@ -2580,6 +2873,29 @@ div:has(svg[data-testid="connection"]) {
   overflow-y: auto;
   border-top: 1px solid var(--color-border-default);
   padding-top: 4px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.conversation-debugger-details-variables::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.conversation-debugger-details-variables::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-debugger-details-variables::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.conversation-debugger-details-variables::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .conversation-debugger-details-section {
@@ -2618,6 +2934,29 @@ div:has(svg[data-testid="connection"]) {
   background-color: var(--color-bg-secondary);
   font-family: var(--font-family-mono);
   font-size: 11px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.conversation-debugger-details-variables-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.conversation-debugger-details-variables-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-debugger-details-variables-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.conversation-debugger-details-variables-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 /* ============================================
@@ -2634,6 +2973,29 @@ div:has(svg[data-testid="connection"]) {
   color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.support-page::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.support-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.support-page::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.support-page::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .support-header {
@@ -2667,35 +3029,40 @@ div:has(svg[data-testid="connection"]) {
   cursor: pointer;
 }
 
-/* Grid de layout */
+/* Grid de layout - Proporções similares ao WhatsApp */
 .support-grid {
   display: grid;
-  grid-template-columns: 250px 1fr 400px;
-  gap: 20px;
+  /* Lista de tickets: ~30%, Detalhes: ~70% */
+  grid-template-columns: minmax(300px, 30%) 1fr;
+  gap: 0;
   flex: 1;
   min-height: 0;
   align-items: stretch;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 @media (min-width: 1600px) {
   .support-grid {
-    grid-template-columns: 280px 1fr 450px;
+    /* Em telas maiores, mantém proporção mas com limites */
+    grid-template-columns: minmax(350px, 30%) 1fr;
   }
 }
 
 @media (max-width: 1200px) {
   .support-grid {
-    grid-template-columns: 200px 1fr 350px;
+    /* Em telas médias, ajusta proporção para 35/65 */
+    grid-template-columns: minmax(280px, 35%) 1fr;
   }
 }
 
 @media (max-width: 900px) {
   .support-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
   }
   
-  .support-queues-panel,
   .support-tickets-panel,
   .support-details-panel {
     max-height: 400px;
@@ -2734,6 +3101,29 @@ div:has(svg[data-testid="connection"]) {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.support-queues-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.support-queues-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.support-queues-list::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.support-queues-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .support-queue-button {
@@ -2759,8 +3149,7 @@ div:has(svg[data-testid="connection"]) {
 
 /* Lista de Tickets */
 .support-tickets-panel {
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-lg);
+  border-right: 1px solid var(--color-border-default);
   padding: 15px;
   background-color: var(--color-bg-secondary);
   display: flex;
@@ -2789,6 +3178,29 @@ div:has(svg[data-testid="connection"]) {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.support-tickets-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.support-tickets-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.support-tickets-list::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.support-tickets-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 /* Ticket Card - Estilo WhatsApp */
@@ -2879,8 +3291,6 @@ div:has(svg[data-testid="connection"]) {
 
 /* Painel de Detalhes */
 .support-details-panel {
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-lg);
   padding: 15px;
   background-color: var(--color-bg-secondary);
   display: flex;
@@ -2888,6 +3298,29 @@ div:has(svg[data-testid="connection"]) {
   gap: 15px;
   min-height: 0;
   overflow-y: auto;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.support-details-panel::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.support-details-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.support-details-panel::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.support-details-panel::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .support-details-empty {
@@ -3062,6 +3495,29 @@ div:has(svg[data-testid="connection"]) {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.queue-modal-tickets-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.queue-modal-tickets-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.queue-modal-tickets-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.queue-modal-tickets-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .queue-modal-loading,
@@ -3235,6 +3691,29 @@ div:has(svg[data-testid="connection"]) {
   min-height: 0;
   padding: 16px;
   overflow-y: auto;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.queue-modal-messages-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.queue-modal-messages-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.queue-modal-messages-container::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.queue-modal-messages-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .queue-modal-messages-list {
@@ -3402,6 +3881,29 @@ div:has(svg[data-testid="connection"]) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.support-chat-messages::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.support-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.support-chat-messages::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.support-chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 /* ============================================
@@ -3520,6 +4022,29 @@ div:has(svg[data-testid="connection"]) {
   min-height: 0;
   padding: 16px;
   overflow-y: auto;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.ticket-modal-messages-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ticket-modal-messages-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ticket-modal-messages-container::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.ticket-modal-messages-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .ticket-modal-messages-list {
@@ -3761,6 +4286,29 @@ div:has(svg[data-testid="connection"]) {
   background-color: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.maintenance-page::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.maintenance-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.maintenance-page::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.maintenance-page::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .maintenance-content-wrapper {
@@ -3781,6 +4329,29 @@ div:has(svg[data-testid="connection"]) {
     flex: 0 0 500px;
     max-height: calc(100vh - 200px);
     overflow-y: auto;
+    /* Scrollbar discreta */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-default) transparent;
+  }
+  
+  .maintenance-metrics::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .maintenance-metrics::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .maintenance-metrics::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-default);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  
+  .maintenance-metrics::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-border-hover);
   }
   
   .maintenance-tickets {
@@ -4182,6 +4753,29 @@ div:has(svg[data-testid="connection"]) {
   border-radius: var(--radius-md);
   flex: 1;
   min-height: 0;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.tickets-table-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tickets-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tickets-table-container::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.tickets-table-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
 }
 
 .tickets-table {
@@ -4275,5 +4869,386 @@ div:has(svg[data-testid="connection"]) {
   font-family: var(--font-family-mono);
   font-size: 12px;
   white-space: nowrap;
+}
+
+/* UserMenu - Menu de usuário fixo no canto superior direito */
+.user-menu-container {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+}
+
+.user-menu-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.user-menu-button:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+.user-avatar-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--color-accent-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Badge de tickets ativos no avatar */
+.user-avatar-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg-elevated);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+/* Status do agente (indicador circular) */
+.user-avatar-status {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-bg-elevated);
+  z-index: 2;
+}
+
+.user-avatar-status-online {
+  background-color: #27ae60;
+  box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.3);
+}
+
+.user-avatar-status-busy {
+  background-color: #f39c12;
+  box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.3);
+  animation: pulse-busy 2s ease-in-out infinite;
+}
+
+.user-avatar-status-offline {
+  background-color: #95a5a6;
+  box-shadow: 0 0 0 2px rgba(149, 165, 166, 0.3);
+}
+
+@keyframes pulse-busy {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes pulse-paused {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+}
+
+.pulse-paused {
+  animation: pulse-paused 2s ease-in-out infinite;
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.user-menu-arrow {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.user-menu-arrow.open {
+  transform: rotate(180deg);
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 80vh;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: userMenuFadeIn 150ms ease-out;
+}
+
+@keyframes userMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.user-menu-header {
+  padding: 16px;
+  background-color: var(--color-bg-secondary);
+  flex-shrink: 0;
+}
+
+.user-menu-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar-large-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.user-avatar-large {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--color-accent-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Badge de tickets ativos no avatar grande (dropdown) */
+.user-avatar-badge-large {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg-secondary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+/* Status do agente no avatar grande (dropdown) */
+.user-avatar-status-large {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--color-bg-secondary);
+  z-index: 2;
+}
+
+.user-avatar-status-large.user-avatar-status-online {
+  background-color: #27ae60;
+  box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.3);
+}
+
+.user-avatar-status-large.user-avatar-status-busy {
+  background-color: #f39c12;
+  box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.3);
+  animation: pulse-busy 2s ease-in-out infinite;
+}
+
+.user-avatar-status-large.user-avatar-status-offline {
+  background-color: #95a5a6;
+  box-shadow: 0 0 0 2px rgba(149, 165, 166, 0.3);
+}
+
+.user-menu-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-menu-name {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-role-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-menu-role {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-transform: capitalize;
+}
+
+.user-menu-status {
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.user-menu-status-online {
+  background-color: rgba(39, 174, 96, 0.15);
+  color: #27ae60;
+}
+
+.user-menu-status-busy {
+  background-color: rgba(243, 156, 18, 0.15);
+  color: #f39c12;
+}
+
+.user-menu-status-offline {
+  background-color: rgba(149, 165, 166, 0.15);
+  color: #95a5a6;
+}
+
+.user-menu-divider {
+  height: 1px;
+  background-color: var(--color-border-default);
+  margin: 0;
+}
+
+.user-menu-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  /* Scrollbar discreta - só aparece quando necessário */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+/* Scrollbar só aparece quando há overflow */
+.user-menu-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.user-menu-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.user-menu-nav::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.user-menu-nav:hover::-webkit-scrollbar-thumb,
+.user-menu-nav:focus::-webkit-scrollbar-thumb {
+  opacity: 1;
+}
+
+.user-menu-nav::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
+}
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.user-menu-item:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.user-menu-item .icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Remove o pseudo-elemento ::before para ícones de emoji no UserMenu */
+.user-menu-item .icon::before {
+  display: none;
+}
+
+.user-menu-footer {
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.user-menu-logout {
+  width: 100%;
+  justify-content: center;
 }
 

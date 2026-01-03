@@ -1,0 +1,34 @@
+{
+  "id": "script-welcome-flow",
+  "name": "Teste de Fluxo de Boas-Vindas",
+  "version": "1.0.0",
+  "requires": ["departments", "queues", "agents", "flows", "config"],
+  "requiresDetails": {
+    "queues": ["test-queue-support"],
+    "agents": ["test-agent-admin"],
+    "flows": ["test-flow-welcome"]
+  },
+  "steps": [
+    {
+      "type": "user_message",
+      "input": "Olá",
+      "expected": {
+        "node": "message-1",
+        "output": "Bem-vindo! Como posso ajudar?"
+      }
+    },
+    {
+      "type": "user_message",
+      "input": "Preciso de ajuda",
+      "expected": {
+        "node": "user-input-1",
+        "output": null
+      }
+    }
+  ],
+  "finalState": {
+    "completed": true,
+    "lastNode": "end-1"
+  }
+}
+

@@ -1,0 +1,54 @@
+{
+  "id": "delay-example",
+  "name": "Exemplo de Aguardar",
+  "description": "Exemplo de uso do nó delay para aguardar antes de continuar o fluxo",
+  "icon": "⏱️",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "delay-example",
+    "name": "Exemplo de Aguardar",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "message-1"
+      },
+      {
+        "id": "message-1",
+        "type": "message",
+        "config": {
+          "text": "Olá! Vou processar sua solicitação..."
+        },
+        "next": "wait-processing"
+      },
+      {
+        "id": "wait-processing",
+        "type": "delay",
+        "config": {
+          "duration": 2000
+        },
+        "next": "message-2"
+      },
+      {
+        "id": "message-2",
+        "type": "message",
+        "config": {
+          "text": "Processamento concluído! Sua solicitação foi atendida."
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando uso do nó delay para aguardar 2 segundos entre mensagens"
+    }
+  }
+}
+

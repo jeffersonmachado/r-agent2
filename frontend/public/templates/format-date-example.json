@@ -1,0 +1,58 @@
+{
+  "id": "format-date-example",
+  "name": "Exemplo de Formatar Data",
+  "description": "Exemplo de uso do nó format_date para formatar datas",
+  "icon": "📅",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "format-date-example",
+    "name": "Exemplo de Formatar Data",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "get-time"
+      },
+      {
+        "id": "get-time",
+        "type": "get_current_time",
+        "config": {
+          "format": "ISO",
+          "timezone": "America/Sao_Paulo",
+          "outputVariable": "current_time"
+        },
+        "next": "format-date"
+      },
+      {
+        "id": "format-date",
+        "type": "format_date",
+        "config": {
+          "inputVariable": "current_time",
+          "format": "DD/MM/YYYY HH:mm:ss",
+          "outputVariable": "formatted_date"
+        },
+        "next": "show-date"
+      },
+      {
+        "id": "show-date",
+        "type": "message",
+        "config": {
+          "text": "Data e hora atual formatada: {{formatted_date}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando uso dos nós get_current_time e format_date para obter e formatar data/hora"
+    }
+  }
+}
+

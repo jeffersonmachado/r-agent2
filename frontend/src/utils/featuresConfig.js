@@ -12,6 +12,8 @@
  * - Permite atualização via API que persiste em localStorage
  */
 
+import { fetchJson } from '../api/client';
+
 const CONFIG_ENDPOINT = '/config';
 const STORAGE_KEY = 'app_features_config';
 
@@ -78,80 +80,28 @@ async function loadFeaturesConfig() {
       const timeSinceLastFetch = Date.now() - lastFetchTime;
       if (timeSinceLastFetch >= FETCH_COOLDOWN) {
         try {
-          const response = await fetch(CONFIG_ENDPOINT);
-          if (response.ok) {
-            // Verifica se a resposta é JSON antes de fazer parse
-            const contentType = response.headers.get('Content-Type') || '';
-            const isJson = contentType.includes('application/json');
-            
-            if (!isJson) {
-              // Se não for JSON, descarta a resposta silenciosamente
-              // (não precisa ler o body, apenas ignora)
-              if (import.meta.env.DEV) {
-                // Em dev, podemos ler uma amostra para debug
-                try {
-                  const clonedResponse = response.clone();
-                  const text = await clonedResponse.text();
-                  console.warn('Resposta da API não é JSON, usando padrão', {
-                    contentType,
-                    preview: text.substring(0, 100),
-                  });
-                } catch {
-                  // Ignora erro ao ler
-                }
-              }
-            } else {
-              // Content-Type indica JSON, tenta fazer parse
-              try {
-                const apiConfig = await response.json();
-                const features = apiConfig.features || {};
-                cachedConfig = { ...defaultConfig, ...features };
-                lastFetchTime = Date.now();
-                
-                // Salva no localStorage para cache
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedConfig));
-                
-                isLoading = false;
-                return cachedConfig;
-              } catch (jsonErr) {
-                // Se falhar ao fazer parse do JSON (mesmo com Content-Type correto)
-                // Pode ser que o servidor esteja retornando HTML com Content-Type incorreto
-                if (jsonErr instanceof SyntaxError) {
-                  // Em dev, tenta ler como texto para debug
-                  if (import.meta.env.DEV) {
-                    try {
-                      const clonedResponse = response.clone();
-                      const text = await clonedResponse.text();
-                      console.warn('Erro ao fazer parse do JSON da API (Content-Type pode estar incorreto), usando padrão', {
-                        error: jsonErr.message,
-                        contentType,
-                        preview: text.substring(0, 100),
-                      });
-                    } catch {
-                      // Ignora erro ao ler
-                    }
-                  }
-                } else {
-                  // Re-lança se não for erro de parse
-                  throw jsonErr;
-                }
-              }
-            }
-          } else {
-            // Resposta não é ok (status != 2xx)
-            if (import.meta.env.DEV) {
-              console.warn(`Resposta da API com status ${response.status}, usando padrão`);
-            }
-          }
+          // Usa fetchJson que já trata Content-Type e erros adequadamente
+          const apiConfig = await fetchJson(CONFIG_ENDPOINT);
+          const features = apiConfig.features || {};
+          cachedConfig = { ...defaultConfig, ...features };
+          lastFetchTime = Date.now();
+          
+          // Salva no localStorage para cache
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedConfig));
+          
+          isLoading = false;
+          return cachedConfig;
         } catch (err) {
-          // Erro de rede ou outro erro não relacionado a parse
-          if (err instanceof SyntaxError && err.message.includes('JSON')) {
-            // Este erro não deveria mais acontecer, mas mantemos o tratamento
-            if (import.meta.env.DEV) {
-              console.warn('Erro ao carregar configuração de features da API (resposta não é JSON válido), usando padrão', err);
+          // fetchJson já trata erros de rede e HTTP adequadamente
+          // Em dev, loga o erro; em produção, silenciosamente usa padrão
+          if (import.meta.env.DEV) {
+            // Não loga 404 como erro, pois pode ser esperado se o endpoint não existir
+            if (err.status !== 404) {
+              console.warn('Erro ao carregar configuração de features da API, usando padrão', {
+                status: err.status,
+                message: err.message,
+              });
             }
-          } else if (import.meta.env.DEV) {
-            console.warn('Erro ao carregar configuração de features da API, usando padrão', err);
           }
         }
       } else {
@@ -239,40 +189,19 @@ export async function updateFeatures(updates) {
  */
 export async function resetToFileConfig() {
   try {
-    const response = await fetch(CONFIG_ENDPOINT);
-    if (response.ok) {
-      // Verifica se a resposta é JSON antes de fazer parse
-      const contentType = response.headers.get('Content-Type') || '';
-      const isJson = contentType.includes('application/json');
-      
-      if (!isJson) {
-        // Se não for JSON, tenta ler como texto para debug
-        const text = await response.text();
-        console.warn('Resposta da API não é JSON ao resetar configuração', {
-          contentType,
-          preview: text.substring(0, 100),
-        });
-        localStorage.removeItem(STORAGE_KEY);
-        cachedConfig = null;
-        loadPromise = null;
-      } else {
-        const apiConfig = await response.json();
-        const features = apiConfig.features || {};
-        cachedConfig = features;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(features));
-      }
-    } else {
-      // Se não conseguir carregar da API, remove localStorage
-      localStorage.removeItem(STORAGE_KEY);
-      cachedConfig = null;
-      loadPromise = null;
-    }
+    // Usa fetchJson que já trata Content-Type e erros adequadamente
+    const apiConfig = await fetchJson(CONFIG_ENDPOINT);
+    const features = apiConfig.features || {};
+    cachedConfig = features;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(features));
   } catch (err) {
-    // Se o erro for de parse JSON, fornece informação mais útil
-    if (err instanceof SyntaxError && err.message.includes('JSON')) {
-      console.warn('Erro ao resetar configuração (resposta não é JSON válido)', err);
-    } else {
-      console.warn('Erro ao resetar configuração', err);
+    // fetchJson já trata erros adequadamente
+    // Em dev, loga o erro; em produção, silenciosamente remove localStorage
+    if (import.meta.env.DEV && err.status !== 404) {
+      console.warn('Erro ao resetar configuração', {
+        status: err.status,
+        message: err.message,
+      });
     }
     localStorage.removeItem(STORAGE_KEY);
     cachedConfig = null;

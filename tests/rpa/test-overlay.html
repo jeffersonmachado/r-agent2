@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste RPA Overlay</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #da190b;
+        }
+        .log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+        .log-info {
+            color: #4EC9B0;
+        }
+        .log-success {
+            color: #4CAF50;
+        }
+        .log-error {
+            color: #f44336;
+        }
+        .log-warn {
+            color: #ff9800;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste RPA Overlay</h1>
+        
+        <div class="test-section">
+            <h2>Configuração</h2>
+            <label>
+                API Base URL:
+                <input type="text" id="apiBaseUrl" value="http://localhost:3000" style="width: 300px; padding: 8px; margin: 5px;">
+            </label>
+            <br>
+            <label>
+                Execution ID:
+                <input type="text" id="executionId" value="test-execution-123" style="width: 300px; padding: 8px; margin: 5px;">
+            </label>
+        </div>
+
+        <div class="test-section">
+            <h2>Ações</h2>
+            <button onclick="injectScript()">1. Injetar Script</button>
+            <button onclick="testInit()" class="secondary">2. Testar init()</button>
+            <button onclick="testCreate()" class="secondary">3. Testar create()</button>
+            <button onclick="testRemove()" class="danger">4. Remover Overlay</button>
+            <button onclick="checkStatus()" class="secondary">5. Verificar Status</button>
+            <button onclick="clearLogs()" class="danger">Limpar Logs</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Status</h2>
+            <div id="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Logs</h2>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Intercepta console.log para mostrar nos logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        const logDiv = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'info');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
+        
+        function updateStatus(message, isSuccess = true) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${isSuccess ? 'success' : 'error'}`;
+            statusDiv.textContent = message;
+        }
+        
+        function clearLogs() {
+            logDiv.innerHTML = '';
+        }
+        
+        // Carrega o script injetável
+        async function injectScript() {
+            try {
+                addLog('📦 Carregando script injetável...', 'info');
+                
+                // Importa o script do overlayInjector.js
+                // Como estamos em HTML, vamos usar fetch para carregar o script
+                const response = await fetch('/tests/rpa/overlayInjector.js');
+                if (!response.ok) {
+                    throw new Error('Não foi possível carregar overlayInjector.js');
+                }
+                
+                // Para testar localmente, vamos usar o script inline
+                // Na prática, você precisaria servir o arquivo ou copiar o INJECTABLE_SCRIPT
+                addLog('⚠️ Para testar, você precisa copiar o INJECTABLE_SCRIPT do overlayInjector.js', 'warn');
+                addLog('💡 Use a função testCreate() ou testInit() diretamente se o script já foi injetado', 'info');
+                
+                updateStatus('Script não pode ser carregado automaticamente. Use testCreate() ou testInit() se o script já foi injetado.', false);
+            } catch (error) {
+                addLog(`❌ Erro ao carregar script: ${error.message}`, 'error');
+                updateStatus(`Erro: ${error.message}`, false);
+            }
+        }
+        
+        function testCreate() {
+            try {
+                addLog('🧪 Testando window.rpaOverlay.create()...', 'info');
+                
+                if (typeof window.rpaOverlay === 'undefined') {
+                    throw new Error('window.rpaOverlay não está definido. O script precisa ser injetado primeiro.');
+                }
+                
+                if (typeof window.rpaOverlay.create !== 'function') {
+                    throw new Error('window.rpaOverlay.create não é uma função');
+                }
+                
+                const apiBaseUrl = document.getElementById('apiBaseUrl').value;
+                const executionId = document.getElementById('executionId').value;
+                
+                addLog(`📋 Parâmetros: apiBaseUrl=${apiBaseUrl}, executionId=${executionId}`, 'info');
+                
+                const result = window.rpaOverlay.create(apiBaseUrl, executionId);
+                
+                if (result) {
+                    addLog('✅ Overlay criado com sucesso!', 'success');
+                    updateStatus('✅ Overlay criado com sucesso!', true);
+                    
+                    // Verifica elementos após um delay
+                    setTimeout(() => {
+                        checkStatus();
+                    }, 500);
+                } else {
+                    addLog('⚠️ create() retornou null', 'warn');
+                    updateStatus('⚠️ create() retornou null', false);
+                }
+            } catch (error) {
+                addLog(`❌ Erro: ${error.message}`, 'error');
+                updateStatus(`Erro: ${error.message}`, false);
+            }
+        }
+        
+        function testInit() {
+            try {
+                addLog('🧪 Testando window.rpaOverlay.init()...', 'info');
+                
+                if (typeof window.rpaOverlay === 'undefined') {
+                    throw new Error('window.rpaOverlay não está definido. O script precisa ser injetado primeiro.');
+                }
+                
+                if (typeof window.rpaOverlay.init !== 'function') {
+                    throw new Error('window.rpaOverlay.init não é uma função');
+                }
+                
+                const apiBaseUrl = document.getElementById('apiBaseUrl').value;
+                const executionId = document.getElementById('executionId').value;
+                
+                addLog(`📋 Parâmetros: apiBaseUrl=${apiBaseUrl}, executionId=${executionId}`, 'info');
+                
+                const result = window.rpaOverlay.init(apiBaseUrl, executionId);
+                
+                if (result) {
+                    addLog('✅ init() retornou true!', 'success');
+                    updateStatus('✅ init() executado com sucesso!', true);
+                    
+                    // Verifica elementos após um delay
+                    setTimeout(() => {
+                        checkStatus();
+                    }, 500);
+                } else {
+                    addLog('⚠️ init() retornou false', 'warn');
+                    updateStatus('⚠️ init() retornou false', false);
+                }
+            } catch (error) {
+                addLog(`❌ Erro: ${error.message}`, 'error');
+                updateStatus(`Erro: ${error.message}`, false);
+            }
+        }
+        
+        function testRemove() {
+            try {
+                addLog('🗑️ Removendo overlay...', 'info');
+                
+                if (typeof window.rpaOverlay === 'undefined') {
+                    throw new Error('window.rpaOverlay não está definido');
+                }
+                
+                if (typeof window.rpaOverlay.remove !== 'function') {
+                    throw new Error('window.rpaOverlay.remove não é uma função');
+                }
+                
+                window.rpaOverlay.remove();
+                addLog('✅ Overlay removido', 'success');
+                updateStatus('✅ Overlay removido', true);
+                
+                setTimeout(() => {
+                    checkStatus();
+                }, 200);
+            } catch (error) {
+                addLog(`❌ Erro: ${error.message}`, 'error');
+                updateStatus(`Erro: ${error.message}`, false);
+            }
+        }
+        
+        function checkStatus() {
+            try {
+                addLog('🔍 Verificando status do overlay...', 'info');
+                
+                const overlay = document.getElementById('rpa-replay-overlay');
+                const box = document.getElementById('rpa-replay-control-box');
+                
+                const hasRpaOverlay = typeof window.rpaOverlay !== 'undefined';
+                const hasCreate = hasRpaOverlay && typeof window.rpaOverlay.create === 'function';
+                const hasInit = hasRpaOverlay && typeof window.rpaOverlay.init === 'function';
+                const hasRemove = hasRpaOverlay && typeof window.rpaOverlay.remove === 'function';
+                
+                addLog(`📊 Status:`, 'info');
+                addLog(`  - window.rpaOverlay existe: ${hasRpaOverlay}`, hasRpaOverlay ? 'success' : 'error');
+                addLog(`  - window.rpaOverlay.create existe: ${hasCreate}`, hasCreate ? 'success' : 'error');
+                addLog(`  - window.rpaOverlay.init existe: ${hasInit}`, hasInit ? 'success' : 'error');
+                addLog(`  - window.rpaOverlay.remove existe: ${hasRemove}`, hasRemove ? 'success' : 'error');
+                addLog(`  - Overlay no DOM: ${!!overlay}`, overlay ? 'success' : 'warn');
+                addLog(`  - Box no DOM: ${!!box}`, box ? 'success' : 'warn');
+                
+                if (overlay) {
+                    const overlayRect = overlay.getBoundingClientRect();
+                    const overlayStyle = window.getComputedStyle(overlay);
+                    addLog(`  - Overlay dimensões: ${overlayRect.width}x${overlayRect.height}`, 'info');
+                    addLog(`  - Overlay display: ${overlayStyle.display}`, 'info');
+                    addLog(`  - Overlay visibility: ${overlayStyle.visibility}`, 'info');
+                    addLog(`  - Overlay opacity: ${overlayStyle.opacity}`, 'info');
+                    addLog(`  - Overlay z-index: ${overlayStyle.zIndex}`, 'info');
+                }
+                
+                if (box) {
+                    const boxRect = box.getBoundingClientRect();
+                    const boxStyle = window.getComputedStyle(box);
+                    addLog(`  - Box dimensões: ${boxRect.width}x${boxRect.height}`, 'info');
+                    addLog(`  - Box posição: top=${boxRect.top}, left=${boxRect.left}`, 'info');
+                    addLog(`  - Box display: ${boxStyle.display}`, 'info');
+                    addLog(`  - Box visibility: ${boxStyle.visibility}`, 'info');
+                    addLog(`  - Box opacity: ${boxStyle.opacity}`, 'info');
+                    addLog(`  - Box z-index: ${boxStyle.zIndex}`, 'info');
+                }
+                
+                if (overlay && box) {
+                    updateStatus('✅ Overlay e Box estão no DOM!', true);
+                } else if (hasRpaOverlay) {
+                    updateStatus('⚠️ window.rpaOverlay existe, mas overlay não está no DOM', false);
+                } else {
+                    updateStatus('❌ window.rpaOverlay não está definido. Injete o script primeiro.', false);
+                }
+            } catch (error) {
+                addLog(`❌ Erro ao verificar status: ${error.message}`, 'error');
+                updateStatus(`Erro: ${error.message}`, false);
+            }
+        }
+        
+        // Verifica status ao carregar a página
+        window.addEventListener('load', () => {
+            addLog('📄 Página carregada', 'info');
+            setTimeout(() => {
+                checkStatus();
+            }, 500);
+        });
+    </script>
+    
+    <!-- Injeta o script do overlay diretamente -->
+    <script>
+        // Copie e cole o conteúdo de INJECTABLE_SCRIPT aqui, ou carregue de um arquivo
+        // Por enquanto, vamos apenas verificar se já existe
+        if (typeof window.rpaOverlay === 'undefined') {
+            console.log('⚠️ window.rpaOverlay não está definido. Você precisa injetar o script primeiro.');
+            console.log('💡 Para injetar, copie o INJECTABLE_SCRIPT do overlayInjector.js e execute no console.');
+        }
+    </script>
+</body>
+</html>
+

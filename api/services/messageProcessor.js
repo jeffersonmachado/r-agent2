@@ -18,6 +18,7 @@ const {
   setVariableNodeHandler,
   handoffNodeHandler,
   endNodeHandler,
+  optionsNodeHandler,
 } = require('../../engine/nodes/basicNodes');
 const { aiNodeHandler } = require('../../engine/nodes/aiNode');
 const { aiTaskNodeHandler } = require('../../engine/nodes/aiTaskNode');
@@ -48,6 +49,7 @@ const {
 } = require('../../engine/services/humanLiveAdapter');
 const { ESCALATION_MODES } = require('../../engine/fallbackController');
 const config = require('../utils/config');
+const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
 
 // Sessões em memória (para produção, ideal mover para Redis/DB)
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
@@ -63,6 +65,7 @@ function createNodeRegistry() {
   registry.register('start', startNodeHandler);
   registry.register('message', messageNodeHandler);
   registry.register('user_input', userInputNodeHandler);
+  registry.register('options', optionsNodeHandler);
   registry.register('router', routerNodeHandler);
   registry.register('schedule_router', scheduleRouterNodeHandler);
   registry.register('set_variable', setVariableNodeHandler);
@@ -200,6 +203,11 @@ async function processWhatsAppMessage(message, value, deps) {
 
   // Executa UM passo com input do usuário
   const persistenceServices = require('../../engine/services/persistenceServices');
+  
+  // Obtém provider de IA para o tenant (para nós AI)
+  const tenantId = state.tenantId || config.get('api.defaultTenantId', 'tenant-demo');
+  const aiProvider = getAiProviderForTenant(tenantId);
+  
   const result = await executeStep(state, compiledFlow, {
     registry,
     input: {
@@ -207,6 +215,7 @@ async function processWhatsAppMessage(message, value, deps) {
       messageId,
       channel: 'whatsapp',
       raw: message,
+      aiProvider, // Injeta provider de IA
     },
     deps: {
       persistence: persistenceServices,
@@ -245,6 +254,7 @@ async function processWhatsAppMessage(message, value, deps) {
         }));
       
       const ticket = createTicket({
+        tenantId: result.state.tenantId, // Usa tenantId do estado da conversa
         sessionId,
         queue,
         lastUserMessage: text,

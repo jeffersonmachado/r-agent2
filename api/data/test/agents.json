@@ -1,0 +1,44 @@
+[
+  {
+    "id": "test-agent-admin",
+    "username": "test-admin",
+    "email": "test-admin@test.com",
+    "passwordHash": "1e07e9d615d76ddca2c62cfc3cadc80f73363527a518591c305a7cc10ea37620",
+    "salt": "1b215070fd045a8961228cc6efc46411",
+    "role": "admin",
+    "name": "Admin de Teste",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "lastLoginAt": null,
+    "tenantId": "tenant-test"
+  },
+  {
+    "id": "test-agent-supervisor",
+    "username": "test-supervisor",
+    "email": "test-supervisor@test.com",
+    "passwordHash": "1e07e9d615d76ddca2c62cfc3cadc80f73363527a518591c305a7cc10ea37620",
+    "salt": "1b215070fd045a8961228cc6efc46411",
+    "role": "supervisor",
+    "name": "Supervisor de Teste",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "lastLoginAt": null,
+    "tenantId": "tenant-test"
+  },
+  {
+    "id": "test-agent-agent",
+    "username": "test-agent",
+    "email": "test-agent@test.com",
+    "passwordHash": "1e07e9d615d76ddca2c62cfc3cadc80f73363527a518591c305a7cc10ea37620",
+    "salt": "1b215070fd045a8961228cc6efc46411",
+    "role": "agent",
+    "name": "Agente de Teste",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "lastLoginAt": null,
+    "tenantId": "tenant-test"
+  }
+]

@@ -54,6 +54,11 @@ function addUiMessage(error) {
   // Mapeamento de códigos para mensagens amigáveis
   // ✅ getUiMessage agora recebe code e nodeIds como parâmetros explícitos
   const getUiMessage = (code, nodeIds) => {
+    // Se já tem severity definido, usa ele
+    if (error.severity) {
+      // Mantém severity original
+    }
+
     switch (code) {
       // Estrutura do Fluxo
       case 'INVALID_FLOW_STRUCTURE':
@@ -106,6 +111,12 @@ function addUiMessage(error) {
           : `O fluxo deve ter exatamente um nó do tipo "start". Existem ${nodeIds.length} nós de início. Remova os nós extras ou ajuste o fluxo para ter apenas um ponto de entrada.`;
       case 'MISSING_END_NODE':
         return 'O fluxo deve ter pelo menos um nó do tipo "end" para definir o ponto de saída. Adicione um nó End ao fluxo.';
+      case 'START_MISSING_NEXT':
+        return 'O nó start deve ter um campo "next" apontando para o próximo nó do fluxo.';
+      case 'START_HAS_INPUTS':
+        return 'O nó start não pode ter entradas. Deve ser o único ponto de entrada do fluxo.';
+      case 'END_HAS_OUTPUTS':
+        return 'O nó end não pode ter saídas. Nós end devem ser folhas do fluxo (sem campo "next").';
       
       // Nó Message
       case 'MESSAGE_MISSING_CONFIG':
@@ -116,12 +127,18 @@ function addUiMessage(error) {
         return 'O nó de mensagem não pode ter texto vazio. Adicione uma mensagem válida na configuração do nó.';
       case 'MESSAGE_TEXT_TOO_LONG':
         return 'O texto da mensagem excede o limite de 10000 caracteres. Reduza o tamanho da mensagem ou divida em múltiplas mensagens.';
+      case 'MESSAGE_VAR_NEVER_DEFINED':
+        return 'Uma variável interpolada na mensagem nunca é definida no fluxo. Verifique se a variável é definida antes de ser usada.';
       
       // Nó User Input
+      case 'USER_INPUT_MISSING_CONFIG':
+        return 'O nó de entrada do usuário não tem configuração. Adicione o nome da variável onde a resposta será armazenada.';
       case 'USER_INPUT_INVALID_VARIABLE':
         return 'O nó de entrada do usuário não tem uma variável válida configurada. Defina o nome da variável onde a resposta do usuário será armazenada.';
       case 'USER_INPUT_INVALID_VARIABLE_NAME':
         return 'O nome da variável do nó de entrada é inválido. O nome deve começar com letra ou sublinhado (_) e conter apenas letras, números e sublinhados.';
+      case 'USER_INPUT_INVALID_TYPE':
+        return 'O tipo esperado do nó de entrada é inválido. Use: string, number ou intent.';
       
       // Nó Router
       case 'ROUTER_MISSING_CONFIG':
@@ -140,6 +157,10 @@ function addUiMessage(error) {
         return 'Uma regra do roteador não tem variável definida. Quando o operador não é "always", é necessário especificar qual variável será verificada.';
       case 'ROUTER_RULE_MISSING_NEXT':
         return 'Uma regra do roteador não tem próximo nó definido. Cada regra deve especificar para qual nó o fluxo deve seguir quando a condição for verdadeira.';
+      case 'ROUTER_MISSING_FALLBACK':
+        return 'O nó roteador deve ter um fallback explícito. Adicione uma regra com op="always" OU defina um campo "next" padrão válido.';
+      case 'ROUTER_VAR_NEVER_DEFINED':
+        return 'Uma variável usada no roteador nunca é definida no fluxo. Verifique se a variável é definida antes de ser usada.';
       
       // Nó Set Variable
       case 'SET_VARIABLE_MISSING_CONFIG':
@@ -148,6 +169,12 @@ function addUiMessage(error) {
         return 'O nó de variável não tem atribuições definidas. Adicione pelo menos uma variável e seu valor na configuração do nó.';
       case 'SET_VARIABLE_INVALID_NAME':
         return 'O nome de uma variável no nó de variável é inválido. O nome deve começar com letra ou sublinhado (_) e conter apenas letras, números e sublinhados.';
+      case 'SET_VARIABLE_EMPTY_ASSIGNMENTS':
+        return 'O nó de variável deve ter pelo menos uma atribuição definida. Adicione pelo menos uma variável e seu valor na configuração do nó.';
+      case 'SET_VARIABLE_UNDEFINED_VALUE':
+        return 'O nó de variável não pode ter valores undefined. Use null para valores vazios.';
+      case 'SET_VARIABLE_OVERWRITE':
+        return 'Uma variável será sobrescrita. Verifique se isso é intencional.';
       
       // Nó Handoff
       case 'HANDOFF_INVALID_QUEUE':
@@ -189,7 +216,7 @@ function addUiMessage(error) {
     ...error,
     message: technicalMessage,
     messageUi,
-    severity: 'error',
+    severity: error.severity || 'error', // Usa severity do erro ou default 'error'
   };
 }
 
@@ -659,6 +686,47 @@ function validateFlowStructure(flow) {
 }
 
 /**
+ * Valida regras semânticas do fluxo completo.
+ *
+ * @param {FlowDefinition} flow
+ * @returns {FlowValidationError[]}
+ */
+function validateSemanticRules(flow) {
+  const errors = [];
+  const edges = buildEdges(flow);
+  const nodeMap = buildNodeMap(flow);
+
+  // Valida que start não tem entradas
+  const startNodes = (flow.nodes || []).filter(n => n && n.type === 'start');
+  for (const startNode of startNodes) {
+    const hasIncoming = edges.some(e => e.to === startNode.id);
+    if (hasIncoming) {
+      errors.push(addUiMessage({
+        code: 'START_HAS_INPUTS',
+        message: `Nó start "${startNode.id}" não pode ter entradas (deve ser nó de entrada único).`,
+        nodeIds: [startNode.id],
+        severity: 'error',
+      }));
+    }
+  }
+
+  // Valida que end só pode ser folha (sem saídas)
+  const endNodes = (flow.nodes || []).filter(n => n && n.type === 'end');
+  for (const endNode of endNodes) {
+    if (endNode.next) {
+      errors.push(addUiMessage({
+        code: 'END_HAS_OUTPUTS',
+        message: `Nó end "${endNode.id}" não pode ter saídas (campo "next"). Nós end devem ser folhas do fluxo.`,
+        nodeIds: [endNode.id],
+        severity: 'error',
+      }));
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Valida a estrutura de cada nó individual.
  *
  * @param {FlowDefinition} flow
@@ -726,8 +794,8 @@ function validateNodeStructures(flow) {
       }));
     }
 
-    // Validação específica por tipo de nó
-    const nodeErrors = validateNodeConfig(node);
+    // Validação específica por tipo de nó (passa fluxo completo para análise de variáveis)
+    const nodeErrors = validateNodeConfig(node, flow);
     errors.push(...nodeErrors);
   }
 
@@ -735,12 +803,65 @@ function validateNodeStructures(flow) {
 }
 
 /**
+ * Analisa o fluxo completo para detectar variáveis definidas e usadas.
+ * Retorna um mapa de variáveis definidas (set_variable) e usadas (router, message).
+ *
+ * @param {FlowDefinition} flow
+ * @returns {{defined: Set<string>, used: Map<string, string[]>}}
+ */
+function analyzeVariableUsage(flow) {
+  const defined = new Set();
+  const used = new Map(); // varName -> [nodeIds que usam]
+
+  for (const node of flow.nodes || []) {
+    // Variáveis definidas em set_variable
+    if (node.type === 'set_variable' && node.config && node.config.assignments) {
+      const assignments = node.config.assignments;
+      for (const varName of Object.keys(assignments)) {
+        defined.add(varName);
+      }
+    }
+
+    // Variáveis usadas em router
+    if (node.type === 'router' && node.config && Array.isArray(node.config.rules)) {
+      for (const rule of node.config.rules) {
+        if (rule && rule.condition && rule.condition.var && rule.condition.op !== 'always') {
+          const varName = rule.condition.var;
+          if (!used.has(varName)) {
+            used.set(varName, []);
+          }
+          used.get(varName).push(node.id);
+        }
+      }
+    }
+
+    // Variáveis usadas em message (interpolação {{var}})
+    if (node.type === 'message' && node.config && node.config.text) {
+      const text = String(node.config.text);
+      const varMatches = text.match(/\{\{(\w+)\}\}/g);
+      if (varMatches) {
+        for (const match of varMatches) {
+          const varName = match.replace(/\{\{|\}\}/g, '');
+          if (!used.has(varName)) {
+            used.set(varName, []);
+          }
+          used.get(varName).push(node.id);
+        }
+      }
+    }
+  }
+
+  return { defined, used };
+}
+
+/**
  * Valida a configuração específica de um nó baseado no seu tipo.
  *
  * @param {FlowNode} node
+ * @param {FlowDefinition} flow - Fluxo completo (para análise de variáveis)
  * @returns {FlowValidationError[]}
  */
-function validateNodeConfig(node) {
+function validateNodeConfig(node, flow = null) {
   const errors = [];
   const nodeId = node.id || 'unknown';
 
@@ -774,28 +895,66 @@ function validateNodeConfig(node) {
             maxLength: 10000,
           },
         }));
+      } else {
+        // WARNING: Variáveis interpoladas não definidas
+        if (flow) {
+          const { defined } = analyzeVariableUsage(flow);
+          const text = String(node.config.text);
+          const varMatches = text.match(/\{\{(\w+)\}\}/g);
+          if (varMatches) {
+            for (const match of varMatches) {
+              const varName = match.replace(/\{\{|\}\}/g, '');
+              if (!defined.has(varName)) {
+                errors.push(addUiMessage({
+                  code: 'MESSAGE_VAR_NEVER_DEFINED',
+                  message: `Variável "${varName}" interpolada na mensagem "${nodeId}" nunca é definida no fluxo.`,
+                  nodeIds: [nodeId],
+                  severity: 'warning',
+                  details: {
+                    variable: varName,
+                  },
+                }));
+              }
+            }
+          }
+        }
       }
       break;
     }
 
     case 'user_input': {
-      if (node.config && node.config.variable) {
-        if (typeof node.config.variable !== 'string' || node.config.variable.trim() === '') {
-          errors.push(addUiMessage({
-            code: 'USER_INPUT_INVALID_VARIABLE',
-            message: `Nó de entrada "${nodeId}" tem "config.variable" inválido (deve ser string não vazia).`,
-            nodeIds: [nodeId],
-          }));
-        } else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(node.config.variable)) {
-          errors.push(addUiMessage({
-            code: 'USER_INPUT_INVALID_VARIABLE_NAME',
-            message: `Nó de entrada "${nodeId}" tem nome de variável inválido (deve começar com letra ou _ e conter apenas letras, números e _).`,
-            nodeIds: [nodeId],
-            details: {
-              variable: node.config.variable,
-            },
-          }));
-        }
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push(addUiMessage({
+          code: 'USER_INPUT_MISSING_CONFIG',
+          message: `Nó de entrada "${nodeId}" deve ter um campo "config" com "variable".`,
+          nodeIds: [nodeId],
+        }));
+      } else if (!node.config.variable || typeof node.config.variable !== 'string' || node.config.variable.trim() === '') {
+        errors.push(addUiMessage({
+          code: 'USER_INPUT_INVALID_VARIABLE',
+          message: `Nó de entrada "${nodeId}" deve ter "config.variable" (string não vazia).`,
+          nodeIds: [nodeId],
+        }));
+      } else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(node.config.variable)) {
+        errors.push(addUiMessage({
+          code: 'USER_INPUT_INVALID_VARIABLE_NAME',
+          message: `Nó de entrada "${nodeId}" tem nome de variável inválido (deve começar com letra ou _ e conter apenas letras, números e _).`,
+          nodeIds: [nodeId],
+          details: {
+            variable: node.config.variable,
+          },
+        }));
+      }
+      // Valida tipo esperado se fornecido
+      if (node.config.expectedType && !['string', 'number', 'intent'].includes(node.config.expectedType)) {
+        errors.push(addUiMessage({
+          code: 'USER_INPUT_INVALID_TYPE',
+          message: `Nó de entrada "${nodeId}" tem tipo esperado inválido. Use: string, number ou intent.`,
+          nodeIds: [nodeId],
+          details: {
+            expectedType: node.config.expectedType,
+          },
+        }));
       }
       break;
     }
@@ -820,6 +979,9 @@ function validateNodeConfig(node) {
           nodeIds: [nodeId],
         }));
       } else {
+        let hasAlwaysRule = false;
+        let hasDefaultNext = false;
+        
         // Valida cada regra
         for (let i = 0; i < node.config.rules.length; i += 1) {
           const rule = node.config.rules[i];
@@ -846,7 +1008,7 @@ function validateNodeConfig(node) {
             }));
           } else {
             const op = rule.condition.op;
-            const validOps = ['always', 'equals', 'contains'];
+            const validOps = ['always', 'equals', 'contains', 'not_equals', 'not_contains', 'greater_than', 'less_than'];
             if (!op || !validOps.includes(op)) {
               errors.push(addUiMessage({
                 code: 'ROUTER_INVALID_OPERATOR',
@@ -860,10 +1022,14 @@ function validateNodeConfig(node) {
               }));
             }
 
-            if (op !== 'always' && (!rule.condition.var || typeof rule.condition.var !== 'string')) {
+            if (op === 'always') {
+              hasAlwaysRule = true;
+            }
+
+            if (op !== 'always' && (!rule.condition.var || typeof rule.condition.var !== 'string' || rule.condition.var.trim() === '')) {
               errors.push(addUiMessage({
                 code: 'ROUTER_RULE_MISSING_VAR',
-                message: `Regra ${i + 1} do roteador "${nodeId}" deve ter "condition.var" quando o operador não é "always".`,
+                message: `Regra ${i + 1} do roteador "${nodeId}" deve ter "condition.var" não vazio quando o operador não é "always".`,
                 nodeIds: [nodeId],
                 details: {
                   ruleIndex: i,
@@ -881,6 +1047,44 @@ function validateNodeConfig(node) {
                 ruleIndex: i,
               },
             }));
+          }
+        }
+
+        // Validação de fallback explícito: deve ter regra com op=always OU defaultNext válido
+        if (node.next && typeof node.next === 'string' && node.next.trim() !== '') {
+          hasDefaultNext = true;
+        }
+
+        if (!hasAlwaysRule && !hasDefaultNext) {
+          errors.push(addUiMessage({
+            code: 'ROUTER_MISSING_FALLBACK',
+            message: `Nó roteador "${nodeId}" deve ter fallback explícito: regra com op="always" OU campo "next" padrão válido.`,
+            nodeIds: [nodeId],
+            details: {
+              hasAlwaysRule,
+              hasDefaultNext,
+            },
+          }));
+        }
+
+        // WARNING: Variáveis usadas em router que nunca são definidas
+        if (flow) {
+          const { defined, used } = analyzeVariableUsage(flow);
+          for (const rule of node.config.rules) {
+            if (rule && rule.condition && rule.condition.var && rule.condition.op !== 'always') {
+              const varName = rule.condition.var;
+              if (!defined.has(varName)) {
+                errors.push(addUiMessage({
+                  code: 'ROUTER_VAR_NEVER_DEFINED',
+                  message: `Variável "${varName}" usada no roteador "${nodeId}" nunca é definida no fluxo.`,
+                  nodeIds: [nodeId],
+                  severity: 'warning',
+                  details: {
+                    variable: varName,
+                  },
+                }));
+              }
+            }
           }
         }
       }
@@ -901,17 +1105,67 @@ function validateNodeConfig(node) {
           nodeIds: [nodeId],
         }));
       } else {
-        // Valida nomes de variáveis
-        for (const varName of Object.keys(node.config.assignments)) {
-          if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(varName)) {
-            errors.push(addUiMessage({
-              code: 'SET_VARIABLE_INVALID_NAME',
-              message: `Nó de variável "${nodeId}" tem nome de variável inválido: "${varName}".`,
-              nodeIds: [nodeId],
-              details: {
-                variable: varName,
-              },
-            }));
+        const assignments = node.config.assignments;
+        const varNames = Object.keys(assignments);
+        
+        if (varNames.length === 0) {
+          errors.push(addUiMessage({
+            code: 'SET_VARIABLE_EMPTY_ASSIGNMENTS',
+            message: `Nó de variável "${nodeId}" deve ter pelo menos uma atribuição em "config.assignments".`,
+            nodeIds: [nodeId],
+          }));
+        } else {
+          // Valida nomes de variáveis e valores
+          for (const varName of varNames) {
+            if (!varName || typeof varName !== 'string' || varName.trim() === '') {
+              errors.push(addUiMessage({
+                code: 'SET_VARIABLE_INVALID_NAME',
+                message: `Nó de variável "${nodeId}" tem nome de variável inválido (vazio ou não string).`,
+                nodeIds: [nodeId],
+                details: {
+                  variable: varName,
+                },
+              }));
+            } else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(varName)) {
+              errors.push(addUiMessage({
+                code: 'SET_VARIABLE_INVALID_NAME',
+                message: `Nó de variável "${nodeId}" tem nome de variável inválido: "${varName}".`,
+                nodeIds: [nodeId],
+                details: {
+                  variable: varName,
+                },
+              }));
+            }
+            
+            // Valida que o valor não é undefined (null é permitido)
+            if (assignments[varName] === undefined) {
+              errors.push(addUiMessage({
+                code: 'SET_VARIABLE_UNDEFINED_VALUE',
+                message: `Nó de variável "${nodeId}" tem valor undefined para variável "${varName}". Use null para valores vazios.`,
+                nodeIds: [nodeId],
+                details: {
+                  variable: varName,
+                },
+              }));
+            }
+
+            // WARNING: Sobrescrever variável existente (análise requer fluxo completo)
+            if (flow) {
+              const { defined } = analyzeVariableUsage(flow);
+              // Verifica se variável já foi definida antes deste nó
+              // (análise simplificada: se está no conjunto de definidas, pode ser sobrescrita)
+              if (defined.has(varName)) {
+                errors.push(addUiMessage({
+                  code: 'SET_VARIABLE_OVERWRITE',
+                  message: `Variável "${varName}" será sobrescrita no nó "${nodeId}".`,
+                  nodeIds: [nodeId],
+                  severity: 'warning',
+                  details: {
+                    variable: varName,
+                  },
+                }));
+              }
+            }
           }
         }
       }
@@ -979,6 +1233,31 @@ function validateNodeConfig(node) {
             },
           }));
         }
+      }
+      break;
+    }
+
+    case 'start': {
+      // Valida que start não tem entradas (será validado em validateDisconnectedNodes)
+      // Valida que start tem next definido (não pode ser nó final)
+      if (!node.next || (typeof node.next !== 'string' && !Array.isArray(node.next))) {
+        errors.push(addUiMessage({
+          code: 'START_MISSING_NEXT',
+          message: `Nó start "${nodeId}" deve ter um campo "next" apontando para o próximo nó.`,
+          nodeIds: [nodeId],
+        }));
+      }
+      break;
+    }
+
+    case 'end': {
+      // Valida que end não tem saídas (nó folha)
+      if (node.next && (typeof node.next === 'string' || Array.isArray(node.next))) {
+        errors.push(addUiMessage({
+          code: 'END_HAS_OUTPUTS',
+          message: `Nó end "${nodeId}" não pode ter saídas (campo "next"). Nós end devem ser folhas do fluxo.`,
+          nodeIds: [nodeId],
+        }));
       }
       break;
     }
@@ -1169,6 +1448,9 @@ function validateFlow(flow) {
   errors = errors.concat(validateNodeStructures(flow));
   errors = errors.concat(validateDuplicateNodeIds(flow));
   errors = errors.concat(validateRequiredNodes(flow));
+
+  // Validações semânticas adicionais (requerem fluxo completo)
+  errors = errors.concat(validateSemanticRules(flow));
 
   // Validações de grafo (requerem estrutura válida)
   const edges = buildEdges(flow);

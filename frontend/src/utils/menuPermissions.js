@@ -1,0 +1,226 @@
+/**
+ * Estrutura central de permissões do menu de usuário.
+ * Baseado no sistema RBAC do backend.
+ */
+
+/**
+ * Definição de itens do menu com suas permissões.
+ */
+export const menuItems = [
+  {
+    label: 'Dashboard',
+    path: '/dashboard',
+    icon: '🏠',
+    // Dashboard é visível para todos autenticados
+    permission: null,
+  },
+  {
+    label: 'Atendimento',
+    path: '/support',
+    icon: '💬',
+    permission: { resource: 'tickets', action: 'read' },
+  },
+  {
+    label: 'Editor',
+    path: '/editor',
+    icon: '📝',
+    permission: { resource: 'flows', action: 'read' },
+    // Editor é visível apenas para supervisor e admin (mesmo que agent tenha flows:read)
+    roles: ['supervisor', 'admin'],
+  },
+  {
+    label: 'Respostas Rápidas',
+    path: '/quick-replies',
+    icon: '⚡',
+    permission: { resource: 'quick_replies', action: 'read' },
+  },
+  {
+    label: 'Departamentos',
+    path: '/departments',
+    icon: '🏢',
+    permission: { resource: 'departments', action: 'read' },
+  },
+  {
+    label: 'Disparos em Massa',
+    path: '/bulk-messaging',
+    icon: '📢',
+    permission: { resource: 'bulk_messaging', action: 'read' },
+    roles: ['supervisor', 'admin'],
+  },
+  {
+    label: 'Analytics',
+    path: '/analytics',
+    icon: '📊',
+    permission: { resource: 'reports', action: 'read' },
+  },
+  {
+    label: 'Exportação',
+    path: '/export',
+    icon: '📥',
+    permission: { resource: 'reports', action: 'export' },
+    roles: ['supervisor', 'admin'],
+  },
+  {
+    label: 'Ferramentas de IA',
+    path: '/ai-tools',
+    icon: '🤖',
+    permission: { resource: 'tickets', action: 'read' },
+  },
+  {
+    label: 'Segmentação',
+    path: '/segmentation',
+    icon: '🏷️',
+    permission: { resource: 'tickets', action: 'read' },
+  },
+  {
+    label: 'Templates WhatsApp',
+    path: '/whatsapp-templates',
+    icon: '📋',
+    permission: { resource: 'flows', action: 'read' },
+  },
+  {
+    label: 'Configuração',
+    path: '/config',
+    icon: '⚙️',
+    permission: { resource: 'config', action: 'read' },
+  },
+  {
+    label: 'Manutenção',
+    path: '/maintenance',
+    icon: '🛠️',
+    permission: { resource: 'tickets', action: 'list_all' },
+  },
+  {
+    label: 'Agentes',
+    path: '/agents',
+    icon: '👥',
+    permission: { resource: 'agents', action: 'list_all' },
+  },
+  {
+    label: 'Auditoria',
+    path: '/audit',
+    icon: '📋',
+    permission: { resource: 'audit', action: 'read' },
+  },
+  {
+    label: 'Base de Conhecimento',
+    path: '/knowledge-base',
+    icon: '📚',
+    permission: { resource: 'rag', action: 'read' },
+  },
+  {
+    label: 'Documentação de Produtos',
+    path: '/product-docs',
+    icon: '📦',
+    permission: { resource: 'rag', action: 'read' },
+  },
+  {
+    label: 'Documentos RAG',
+    path: '/rag-documents',
+    icon: '🔍',
+    permission: { resource: 'rag', action: 'read' },
+  },
+  {
+    label: 'Raspagem de Sites',
+    path: '/web-scraping',
+    icon: '🕷️',
+    permission: { resource: 'rag', action: 'create' },
+  },
+];
+
+/**
+ * Mapeamento de permissões por papel (baseado no rbacService do backend).
+ */
+const ROLE_PERMISSIONS = {
+  admin: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'list_all' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'flows', action: 'update' },
+    { resource: 'config', action: 'read' },
+    { resource: 'agents', action: 'list_all' },
+    { resource: 'audit', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'bulk_messaging', action: 'read' },
+    { resource: 'reports', action: 'read' },
+    { resource: 'reports', action: 'export' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'update' },
+    { resource: 'rag', action: 'delete' },
+  ],
+  supervisor: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'list_all' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'config', action: 'read' },
+    { resource: 'agents', action: 'list_all' },
+    { resource: 'audit', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'bulk_messaging', action: 'read' },
+    { resource: 'reports', action: 'read' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'update' },
+  ],
+  agent: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+  ],
+};
+
+/**
+ * Verifica se um agente tem permissão para uma ação em um recurso.
+ *
+ * @param {Object} agent - Agente (deve ter campo 'role')
+ * @param {string} resource - Recurso (tickets, flows, config, etc.)
+ * @param {string} action - Ação (read, update, list_all, etc.)
+ * @returns {boolean}
+ */
+export function hasPermission(agent, resource, action) {
+  if (!agent || !agent.role) {
+    return false;
+  }
+
+  const role = agent.role.toLowerCase();
+  const permissions = ROLE_PERMISSIONS[role] || [];
+
+  return permissions.some(
+    (perm) => perm.resource === resource && perm.action === action
+  );
+}
+
+/**
+ * Filtra itens do menu baseado nas permissões do agente.
+ *
+ * @param {Object} agent - Agente autenticado
+ * @returns {Array} Itens do menu que o agente pode ver
+ */
+export function getVisibleMenuItems(agent) {
+  if (!agent) {
+    return [];
+  }
+
+  return menuItems.filter((item) => {
+    // Se o item tem restrição de roles, verifica primeiro
+    if (item.roles && Array.isArray(item.roles)) {
+      const agentRole = agent.role?.toLowerCase();
+      if (!item.roles.includes(agentRole)) {
+        return false;
+      }
+    }
+
+    // Se não tem permissão específica, é visível (após passar filtro de roles)
+    if (!item.permission) {
+      return true;
+    }
+
+    // Verifica permissão
+    return hasPermission(agent, item.permission.resource, item.permission.action);
+  });
+}
+

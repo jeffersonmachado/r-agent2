@@ -41,9 +41,6 @@
           "escalationMode": "ticket",
           "allowReturnToBot": true,
           "queue": "default",
-          "escalationMode": "ticket",
-          "allowReturnToBot": true,
-          "queue": "default",
           "safeReturnNode": "greeting"
         },
         "next": {

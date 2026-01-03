@@ -184,4 +184,43 @@ export function saveTemplate(templateData) {
   );
 }
 
+/**
+ * Gera um fluxo a partir de uma descrição em linguagem natural.
+ *
+ * @param {string} description - Descrição do fluxo em linguagem natural
+ * @param {Object} options - Opções adicionais (flowId, flowName, tenantId)
+ * @returns {Promise<any>}
+ */
+export function generateFlowFromDescription(description, options = {}) {
+  if (!description || typeof description !== 'string' || description.trim() === '') {
+    return Promise.reject(new Error('generateFlowFromDescription: description é obrigatório'));
+  }
+
+  logger.info('Gerando fluxo a partir de descrição', { 
+    description: description.substring(0, 100),
+    options 
+  });
+
+  return fetchJson('/flows/generate', {
+    method: 'POST',
+    body: JSON.stringify({
+      description: description.trim(),
+      ...options,
+    }),
+  }).then(
+    (result) => {
+      logger.info('Fluxo gerado com sucesso', { 
+        flowId: result?.id, 
+        flowName: result?.name,
+        nodeCount: result?.nodes?.length || 0 
+      });
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao gerar fluxo', error);
+      throw error;
+    }
+  );
+}
+
 

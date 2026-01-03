@@ -1,0 +1,54 @@
+{
+  "id": "generate-uuid-example",
+  "name": "Exemplo de Gerar UUID",
+  "description": "Exemplo de uso do nó generate_uuid para gerar identificadores únicos",
+  "icon": "🆔",
+  "flow": {
+    "tenantId": "tenant-demo",
+    "id": "generate-uuid-example",
+    "name": "Exemplo de Gerar UUID",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "Olá! Vou gerar um ID único para você."
+        },
+        "next": "generate-uuid"
+      },
+      {
+        "id": "generate-uuid",
+        "type": "generate_uuid",
+        "config": {
+          "outputVariable": "unique_id"
+        },
+        "next": "show-uuid"
+      },
+      {
+        "id": "show-uuid",
+        "type": "message",
+        "config": {
+          "text": "ID único gerado: {{unique_id}}"
+        },
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template demonstrando uso do nó generate_uuid para gerar identificadores únicos"
+    }
+  }
+}
+
