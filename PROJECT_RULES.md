@@ -1017,6 +1017,84 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
 
 ---
 
+## 🤖 Testes RPA (Obrigatório)
+
+### Regras Absolutas de RPA
+
+1. ✅ **RPA é exclusivamente um mecanismo de TESTE**
+   - RPA NÃO é funcionalidade do produto final
+   - RPA é usado apenas para validar fluxos e interfaces
+   - Testes RPA são executados em ambiente controlado
+
+2. ✅ **Todo fluxo funcional deve possuir ao menos um teste RPA**
+   - Fluxos gerados por IA DEVEM gerar teste RPA automaticamente quando a opção estiver marcada
+   - Testes RPA são obrigatórios para componentes: frontend, chatbot-flows
+   - Falha em teste RPA pode bloquear deploy conforme política de QA
+
+3. ✅ **Controle explícito de fontes de conhecimento**
+   - A IA **NUNCA decide sozinha** usar RAG ou scraping
+   - Tudo deve vir explicitamente do formulário do usuário
+   - Backend valida contrato (`generation.interface.json`) antes de executar
+
+4. ✅ **RAG e Scraping controlados**
+   - RAG: conhecimento interno (fluxos, QA, documentação)
+   - Scraping: fontes externas (URLs) - requer aprovação/auditoria
+   - Metadata de geração registra todas as fontes utilizadas
+
+5. ✅ **Estrutura de pastas obrigatória**
+   - `/tests/rpa/flows` - Testes RPA gerados
+   - `/tests/rpa/recordings` - Gravações de ações
+   - `/tests/rpa/replays` - Replays de execução
+   - `/tests/rpa/reports` - Relatórios de execução
+
+6. ✅ **Integração com pipeline**
+   - Testes RPA executados via `npm run test:rpa`
+   - Falha em RPA bloqueia pipeline (salvo política explícita)
+   - Relatórios gerados em `/tests/rpa/reports`
+
+### Componentes do Sistema de RPA
+
+#### 1. Contratos Formais
+- `contracts/generation.interface.json`: Interface pública de geração
+- `contracts/qa/qa.contract.json`: Tipos de teste obrigatórios
+
+#### 2. Validação de Contratos
+- Backend valida payload contra contratos antes de executar
+- Rejeita requisições que não seguem o contrato
+- Registra metadata de geração para auditoria
+
+#### 3. Geração Controlada
+- Formulário frontend controla explicitamente:
+  - Uso de RAG (checkbox + seleção de fontes)
+  - Uso de scraping (checkbox + URLs)
+  - Geração de teste RPA (checkbox + modo)
+- Backend não pode decidir usar fontes não declaradas
+
+#### 4. Execução de Testes
+- Script `tools/rpa/run-all.js` executa todos os testes
+- Gera relatórios estruturados
+- Retorna exit code ≠ 0 em falha
+
+### Regras de Implementação
+
+1. ✅ **Nunca permitir decisão automática de fontes**
+   - IA não pode decidir usar RAG ou scraping
+   - Tudo deve vir do formulário
+
+2. ✅ **Sempre validar contratos**
+   - Backend valida `generation.interface.json` antes de executar
+   - Rejeita requisições inválidas
+
+3. ✅ **Sempre registrar metadata**
+   - Toda geração registra fontes utilizadas
+   - Timestamp, modo RPA, fontes RAG, URLs raspadas
+
+4. ✅ **Sempre integrar com QA**
+   - Testes RPA são parte obrigatória do pipeline
+   - Falhas bloqueiam deploy (conforme política)
+
+---
+
 ## 🔄 Sistema de Fallback (Obrigatório)
 
 ### Regras Absolutas de Fallback

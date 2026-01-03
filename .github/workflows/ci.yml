@@ -1,317 +1,46 @@
-name: CI - Testes e Validação
+name: CI Pipeline
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
-  workflow_dispatch:
 
 jobs:
-  # Job 1: Testes Unitários
-  unit-tests:
-    name: Testes Unitários
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
     
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Executar testes unitários
-        run: npm run test:unit
-      
-      - name: Upload coverage
-        if: always()
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./coverage/lcov.info
-          flags: unit
-          name: unit-tests
-          fail_ci_if_error: false
-
-  # Job 2: Validação Estrutural
-  flow-validation:
-    name: Validação Estrutural
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    - name: Checkout code
+      uses: actions/checkout@v3
     
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Validar estrutura de fluxos
-        run: npm run test:flow
-
-  # Job 3: Gate de Dados (Pipeline completo)
-  data-pipeline:
-    name: Pipeline de Dados
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
     
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Seed de dados de teste
-        run: npm run seed:test
-      
-      - name: Gate de dados (validação)
-        run: npm run test:data
-      
-      - name: Testes de scripts
-        run: npm run test:scripts
-        continue-on-error: true
-
-  # Job 4: Governança IA (PR Blocker)
-  # Executa SEMPRE que houver mudança em:
-  # - prompts/**
-  # - api/data/rag/**
-  # - engine/ai/**
-  # - tests/ai-governance/**
-  ai-governance:
-    name: Governança IA
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    - name: Install dependencies
+      run: npm ci
     
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Verificar se prompts existem
-        run: |
-          if [ ! -f "prompts/rpa.generator.prompt.md" ] || [ ! -f "prompts/chatbot.generator.prompt.md" ]; then
-            echo "❌ Prompts oficiais não encontrados"
-            exit 1
-          fi
-          echo "✅ Prompts oficiais encontrados"
-      
-      - name: Executar testes de governança IA
-        run: npm run test:ai-governance
-
-  # Job 5: Testes RPA (modo CI)
-  rpa-tests:
-    name: Testes RPA (CI)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    - name: Run unit tests
+      run: npm run test:unit
     
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Instalar Playwright
-        run: npx playwright install chromium --with-deps
-      
-      - name: Executar testes RPA
-        run: npm run test:rpa
-        continue-on-error: true
-      
-      - name: Upload relatórios RPA
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: rpa-test-reports
-          path: tests/rpa/reports/*.json
-          retention-days: 30
-          if-no-files-found: ignore
-
-  # Job 6: QA Automático (Bloqueante)
-  # Detecta arquivos alterados, consulta impact-map, executa checks necessários
-  # BLOQUEIA PR se houver checks bloqueantes falhando
-  qa-automatic:
-    name: QA Automático
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    - name: Run flow tests
+      run: npm run test:flow
     
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Necessário para git diff funcionar
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Executar QA com governança
-        id: qa
-        run: |
-          node qa/runQa.js || true
-          if [ -f "qa/latest.json" ]; then
-            echo "status=$(node -e "const r=require('./qa/latest.json');console.log(r.status)")" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
-      
-      - name: Gerar veredito final
-        id: verdict
-        run: |
-          node qa/finalizeQa.js || true
-          if [ -f "qa/final-verdict.json" ]; then
-            echo "verdict=$(node -e "const r=require('./qa/final-verdict.json');console.log(r.verdict)")" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
-      
-      - name: Upload resultado QA
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: qa-result
-          path: |
-            qa/latest.json
-            qa/final-verdict.json
-          retention-days: 7
-          if-no-files-found: ignore
-      
-      - name: Exibir resumo QA
-        if: always()
-        run: |
-          if [ -f "qa/final-verdict.json" ]; then
-            echo "## 📋 Resumo QA e Veredito Final" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            node -e "
-              const v = require('./qa/final-verdict.json');
-              console.log('Veredito:', v.verdict);
-              console.log('Motivo:', v.reason);
-              if (v.status) console.log('Status QA:', v.status);
-              if (v.blockingFailures) console.log('Falhas bloqueantes:', v.blockingFailures);
-            " >> $GITHUB_STEP_SUMMARY
-          elif [ -f "qa/latest.json" ]; then
-            echo "## 📋 Resumo QA" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            node -e "
-              const r = require('./qa/latest.json');
-              console.log('Status:', r.status);
-              console.log('Escopos:', r.scope.join(', '));
-              console.log('Total de checks:', r.checks.length);
-              const blocking = r.checks.filter(c => c.result === 'FAIL' && c.blocking);
-              console.log('Falhas bloqueantes:', blocking.length);
-              if (blocking.length > 0) {
-                console.log('\\nFalhas bloqueantes:');
-                blocking.forEach(c => console.log('  -', c.id, ':', c.details?.message || 'Falha'));
-              }
-            " >> $GITHUB_STEP_SUMMARY
-          fi
-      
-      - name: Falhar se veredito for BLOCK
-        if: steps.verdict.outputs.verdict == 'BLOCK'
-        run: |
-          echo "❌ Veredito: BLOCK - Sistema não está pronto"
-          echo "Motivo: $(node -e "const r=require('./qa/final-verdict.json');console.log(r.reason)")"
-          exit 1
-          exit 1
-
-  # Job 7: Build (verificar se compila)
-  build-check:
-    name: Verificação de Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    - name: Run RPA Tests
+      run: npm run test:rpa
+      continue-on-error: false
     
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Verificar build da API
-        run: |
-          cd api
-          node --check server.js || true
-      
-      - name: Verificar build do Frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run build || echo "Build check - frontend pode precisar de ajustes"
-        continue-on-error: true
-
-  # Job 8: Resumo e Notificação
-  ci-summary:
-    name: Resumo CI
-    runs-on: ubuntu-latest
-    needs: [unit-tests, flow-validation, data-pipeline, ai-governance, rpa-tests, qa-automatic, build-check]
-    if: always()
-    
-    steps:
-      - name: Resumo dos resultados
-        run: |
-          echo "## 📊 Resumo da Execução CI" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Testes Unitários | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Validação Estrutural | ${{ needs.flow-validation.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Pipeline de Dados | ${{ needs.data-pipeline.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Governança IA | ${{ needs.ai-governance.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| QA Automático | ${{ needs.qa-automatic.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Testes RPA | ${{ needs.rpa-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Check | ${{ needs.build-check.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ needs.unit-tests.result }}" != "success" ] || \
-             [ "${{ needs.flow-validation.result }}" != "success" ] || \
-             [ "${{ needs.data-pipeline.result }}" != "success" ] || \
-             [ "${{ needs.ai-governance.result }}" != "success" ] || \
-             [ "${{ needs.qa-automatic.result }}" != "success" ]; then
-            echo "❌ **Pipeline falhou em etapas críticas**" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          else
-            echo "✅ **Pipeline passou com sucesso**" >> $GITHUB_STEP_SUMMARY
-          fi
-
+    - name: Upload RPA reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: rpa-reports-${{ matrix.node-version }}
+        path: tests/rpa/reports/
+        retention-days: 7

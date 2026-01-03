@@ -103987,8 +103987,8 @@
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
   },
   {
-    "id": "audit-1767378997423-wa8xcrd",
-    "timestamp": "2026-01-02T18:36:37.423Z",
+    "id": "audit-1767470291900-jkw3mkh",
+    "timestamp": "2026-01-03T19:58:11.900Z",
     "agentId": "admin-001",
     "username": "admin",
     "tenantId": "tenant-demo",
@@ -103997,7 +103997,7 @@
     "resourceId": null,
     "details": null,
     "ipAddress": "::1",
-    "userAgent": "curl/8.5.0"
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
   },
   {
     "id": "audit-1767375739605-6yod2pg",
@@ -116987,8 +116987,8 @@
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
   },
   {
-    "id": "audit-1767378997423-wa8xcrd",
-    "timestamp": "2026-01-02T18:36:37.423Z",
+    "id": "audit-1767470291900-jkw3mkh",
+    "timestamp": "2026-01-03T19:58:11.900Z",
     "agentId": "admin-001",
     "username": "admin",
     "tenantId": "tenant-demo",
@@ -116997,7 +116997,7 @@
     "resourceId": null,
     "details": null,
     "ipAddress": "::1",
-    "userAgent": "curl/8.5.0"
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
   },
   {
     "id": "audit-1767375739605-6yod2pg",

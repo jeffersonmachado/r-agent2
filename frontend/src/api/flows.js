@@ -201,12 +201,25 @@ export function generateFlowFromDescription(description, options = {}) {
     options 
   });
 
+  // Valida opções conforme contrato generation.interface.json
+  const payload = {
+    name: options.flowName || 'Fluxo Gerado',
+    description: description.trim(),
+    useRag: options.useRag || false,
+    ragSources: options.useRag ? (options.ragSources || []) : [],
+    useWebScraping: options.useWebScraping || false,
+    scrapingTargets: options.useWebScraping ? (options.scrapingTargets || []) : [],
+    generateRpaTest: options.generateRpaTest || false,
+    rpaMode: options.rpaMode || 'infer',
+    // Opções legadas (mantidas para compatibilidade)
+    flowId: options.flowId,
+    flowName: options.flowName,
+    tenantId: options.tenantId,
+  };
+
   return fetchJson('/flows/generate', {
     method: 'POST',
-    body: JSON.stringify({
-      description: description.trim(),
-      ...options,
-    }),
+    body: JSON.stringify(payload),
     // Timeout aumentado para 60 segundos pois a geração de fluxo pode demorar
     // especialmente quando precisa chamar a IA
     timeoutMs: 60000,

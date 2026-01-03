@@ -13,6 +13,8 @@
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 const { generateChatbotFlow } = require('../../engine/ai/generateChatbotFlow');
+const ragService = require('./ragService');
+const webScrapingService = require('./webScrapingService');
 
 /**
  * Constrói o prompt para a IA gerar o fluxo.
@@ -237,15 +239,79 @@ function convertWrapperResultToFlowDefinition(wrapperResult, flowId, tenantId, f
 }
 
 /**
+ * Resolve contexto de conhecimento a partir de RAG e scraping.
+ * 
+ * @param {string} description - Descrição do fluxo
+ * @param {Object} options - Opções (useRag, ragSources, useWebScraping, scrapingTargets, tenantId)
+ * @returns {Promise<string>} - Contexto adicional para o prompt
+ */
+async function resolveKnowledgeContext(description, options = {}) {
+  const { useRag, ragSources, useWebScraping, scrapingTargets, tenantId } = options;
+  const contextParts = [];
+
+  // RAG: conhecimento interno
+  if (useRag && ragSources && ragSources.length > 0) {
+    logger.info('Resolvendo contexto RAG', { ragSources, tenantId });
+    try {
+      const ragResult = await ragService.queryRag(description, tenantId || 'demo-tenant', {}, {
+        topK: 5,
+        minScore: 0.6,
+      });
+      
+      if (ragResult.success && ragResult.response) {
+        contextParts.push(`\n## Conhecimento Interno (RAG):\n${ragResult.response}\n`);
+        logger.debug('Contexto RAG resolvido', { 
+          confidence: ragResult.confidence,
+          sourcesCount: ragResult.sources?.length || 0 
+        });
+      }
+    } catch (ragError) {
+      logger.warn('Erro ao resolver RAG, continuando sem contexto RAG', { error: ragError.message });
+    }
+  }
+
+  // Web Scraping: fontes externas
+  if (useWebScraping && scrapingTargets && scrapingTargets.length > 0) {
+    logger.info('Resolvendo contexto de scraping', { urlsCount: scrapingTargets.length });
+    const scrapingResults = [];
+    
+    for (const url of scrapingTargets) {
+      if (!url || !url.trim()) continue;
+      
+      try {
+        const scrapeResult = await webScrapingService.scrapeUrl(url, {
+          tenantId: tenantId || 'demo-tenant',
+          autoIndex: false, // Não indexa automaticamente durante geração
+        });
+        
+        if (scrapeResult.success && scrapeResult.content) {
+          scrapingResults.push(`\n### ${scrapeResult.title || url}:\n${scrapeResult.content.substring(0, 1000)}...\n`);
+          logger.debug('URL raspada com sucesso', { url, contentLength: scrapeResult.contentLength });
+        }
+      } catch (scrapeError) {
+        logger.warn('Erro ao raspar URL, continuando', { url, error: scrapeError.message });
+      }
+    }
+    
+    if (scrapingResults.length > 0) {
+      contextParts.push(`\n## Fontes Externas (Scraping):\n${scrapingResults.join('\n')}\n`);
+    }
+  }
+
+  return contextParts.join('\n');
+}
+
+/**
  * Gera um fluxo a partir de uma descrição em linguagem natural usando IA.
  * 
  * REFATORADO: Agora usa o wrapper oficial generateChatbotFlow() que garante:
  * - Uso do prompt oficial (chatbot.generator.prompt.md)
  * - Validação obrigatória pelo gate (validateGeneratedPlan)
  * - Telemetria automática de falhas
+ * - Controle explícito de RAG e scraping (nunca decide automaticamente)
  * 
  * @param {string} description - Descrição do fluxo em linguagem natural
- * @param {Object} options - Opções adicionais (tenantId, flowId, flowName)
+ * @param {Object} options - Opções adicionais (tenantId, flowId, flowName, useRag, ragSources, useWebScraping, scrapingTargets)
  * @returns {Promise<Object>} - Fluxo gerado no formato FlowDefinition
  */
 async function generateFlowFromDescription(description, options = {}) {
@@ -257,12 +323,29 @@ async function generateFlowFromDescription(description, options = {}) {
     description: description.substring(0, 100),
     flowId,
     flowName,
-    tenantId
+    tenantId,
+    useRag: options.useRag || false,
+    ragSources: options.ragSources || [],
+    useWebScraping: options.useWebScraping || false,
+    scrapingTargets: options.scrapingTargets || [],
   });
 
   try {
+    // Resolve contexto de conhecimento (RAG e scraping) se solicitado
+    let enhancedDescription = description;
+    if (options.useRag || options.useWebScraping) {
+      const knowledgeContext = await resolveKnowledgeContext(description, options);
+      if (knowledgeContext) {
+        enhancedDescription = `${description}\n\n${knowledgeContext}`;
+        logger.debug('Descrição enriquecida com contexto', { 
+          originalLength: description.length,
+          enhancedLength: enhancedDescription.length 
+        });
+      }
+    }
+
     // Usa o wrapper oficial que garante validação e telemetria
-    const wrapperResult = await generateChatbotFlow(description, options);
+    const wrapperResult = await generateChatbotFlow(enhancedDescription, options);
     
     if (!wrapperResult.success) {
       logger.warn('Wrapper rejeitou a geração, usando fallback', {

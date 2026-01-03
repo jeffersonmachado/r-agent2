@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/qa/qa.contract.json",
+  "title": "Contrato de QA - Tipos de Teste Obrigatórios",
+  "description": "Define tipos de teste obrigatórios incluindo RPA como mecanismo de teste",
+  "version": "1.0.0",
+  "qa": {
+    "requiredTestTypes": {
+      "type": "array",
+      "description": "Tipos de teste obrigatórios no sistema",
+      "items": {
+        "type": "string",
+        "enum": ["unit", "integration", "e2e", "rpa"]
+      },
+      "default": ["unit", "integration", "e2e", "rpa"],
+      "uniqueItems": true
+    },
+    "rpa": {
+      "description": "Configurações específicas de testes RPA",
+      "mandatoryFor": {
+        "type": "array",
+        "description": "Componentes que DEVEM possuir testes RPA",
+        "items": {
+          "type": "string",
+          "enum": ["frontend", "chatbot-flows"]
+        },
+        "default": ["frontend", "chatbot-flows"],
+        "uniqueItems": true
+      },
+      "generation": {
+        "description": "Regras de geração de testes RPA por IA",
+        "allowedSources": {
+          "type": "array",
+          "description": "Fontes permitidas para geração de testes RPA",
+          "items": {
+            "type": "string",
+            "enum": ["rag", "scraping"]
+          },
+          "default": ["rag", "scraping"],
+          "uniqueItems": true
+        },
+        "scrapingRequiresApproval": {
+          "type": "boolean",
+          "description": "Se true, raspagem de sites requer aprovação/auditoria",
+          "default": true
+        }
+      },
+      "execution": {
+        "description": "Regras de execução de testes RPA",
+        "blockingOnFailure": {
+          "type": "boolean",
+          "description": "Se true, falha em teste RPA bloqueia pipeline (salvo política explícita)",
+          "default": true
+        },
+        "reportLocation": {
+          "type": "string",
+          "description": "Localização dos relatórios de testes RPA",
+          "default": "/tests/rpa/reports"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
+

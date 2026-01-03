@@ -63,6 +63,9 @@ const {
   getTags,
 } = require('./services/quickRepliesService');
 const { generateFlowFromDescription } = require('./services/flowGeneratorService');
+const { validateGenerationContract } = require('./utils/contractValidator');
+const { orchestrateGeneration } = require('./services/generationOrchestrator');
+const { registerGeneration, generateAuditReport } = require('./services/auditService');
 const { executeRpaFlowPipeline, previewRpaFlowPipeline } = require('./services/rpaFlowPipelineService');
 const { generateChatbotFlow } = require('../engine/ai/generateChatbotFlow');
 const { generateRpaTest } = require('../engine/ai/generateRpaTest');
@@ -1361,48 +1364,84 @@ async function requestHandler(req, res) {
     try {
       const body = await parseJsonBody(req);
       if (!body || typeof body !== 'object') {
-        badRequest(res, 'Body deve ser um objeto com campo "description"');
-        return;
-      }
-
-      const { description, flowId, flowName, tenantId } = body;
-
-      if (!description || typeof description !== 'string' || description.trim() === '') {
-        badRequest(res, 'Campo "description" é obrigatório e deve ser uma string não vazia');
+        badRequest(res, 'Body deve ser um objeto válido');
         return;
       }
 
       // Obtém tenantId do agente autenticado se disponível
       const authResult = requireAuth(req);
-      const finalTenantId = tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
 
-      // Gera o fluxo usando IA
-      const generatedFlow = await generateFlowFromDescription(description, {
+      // Usa orquestrador de geração
+      const result = await orchestrateGeneration(body, {
         tenantId: finalTenantId,
-        flowId,
-        flowName,
+        autoResolveDependencies: body.autoResolveDependencies || false,
       });
 
-      // Valida o fluxo gerado
-      const validationResult = validateFlow(generatedFlow);
-      const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
-
-      // Retorna o fluxo gerado (mesmo com erros de validação, para permitir edição)
-      const response = { ...generatedFlow };
-      if (hasValidationErrors) {
-        response.validationWarnings = {
-          valid: false,
-          errors: validationResult.errors,
-        };
+      if (!result.success) {
+        badRequest(res, result.error || 'Erro na orquestração de geração');
+        return;
       }
 
-      sendJson(res, 200, response);
+      // Registra para auditoria
+      if (result.metadata) {
+        const auditId = registerGeneration(result.metadata);
+        const auditReport = generateAuditReport(result.metadata, { format: 'json' });
+        result.metadata.auditId = auditId;
+        result.metadata.reportId = auditReport.reportId;
+      }
+
+      // Retorna resultado completo
+      sendJson(res, 200, result);
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
       } else {
         logger.error('Erro ao gerar fluxo:', err);
-        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao gerar fluxo' });
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar fluxo' });
+      }
+    }
+    return;
+  }
+
+  // POST /flows/generate/dry-run (Modo DRY-RUN)
+  if (method === 'POST' && pathname === '/flows/generate/dry-run') {
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body || typeof body !== 'object') {
+        badRequest(res, 'Body deve ser um objeto válido');
+        return;
+      }
+
+      // Obtém tenantId do agente autenticado se disponível
+      const authResult = requireAuth(req);
+      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+
+      // Usa orquestrador em modo DRY-RUN
+      const result = await orchestrateGeneration(body, {
+        tenantId: finalTenantId,
+        dryRun: true,
+      });
+
+      if (!result.success) {
+        badRequest(res, result.error || 'Erro na orquestração de geração (DRY-RUN)');
+        return;
+      }
+
+      // Retorna resultado do DRY-RUN
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro no DRY-RUN de geração:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno no DRY-RUN' });
       }
     }
     return;

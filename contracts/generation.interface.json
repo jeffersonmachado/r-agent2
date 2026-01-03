@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/generation.interface.json",
+  "title": "Interface de Geração de Fluxos e Testes RPA",
+  "description": "Contrato canônico que define explicitamente a interface pública de geração com controle de RAG e scraping",
+  "version": "1.0.0",
+  "generateFlow": {
+    "description": "Gera um fluxo de chatbot e opcionalmente um teste RPA a partir de uma descrição",
+    "inputs": {
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nome do fluxo a ser criado",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Descrição funcional do fluxo em linguagem natural",
+          "minLength": 1
+        },
+        "useRag": {
+          "type": "boolean",
+          "description": "Se true, a IA usará conhecimento interno (RAG) para gerar o fluxo",
+          "default": false
+        },
+        "ragSources": {
+          "type": "array",
+          "description": "Fontes de RAG a serem utilizadas (apenas se useRag = true)",
+          "items": {
+            "type": "string",
+            "enum": ["flows", "qa", "docs"]
+          },
+          "default": [],
+          "uniqueItems": true
+        },
+        "useWebScraping": {
+          "type": "boolean",
+          "description": "Se true, a IA usará raspagem de sites como fonte de conhecimento",
+          "default": false
+        },
+        "scrapingTargets": {
+          "type": "array",
+          "description": "URLs a serem raspadas (apenas se useWebScraping = true)",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "default": [],
+          "minItems": 1
+        },
+        "generateRpaTest": {
+          "type": "boolean",
+          "description": "Se true, gera automaticamente um teste RPA para o fluxo criado",
+          "default": false
+        },
+        "rpaMode": {
+          "type": "string",
+          "description": "Modo de geração do teste RPA",
+          "enum": ["infer", "record", "hybrid"],
+          "default": "infer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "outputs": {
+      "type": "object",
+      "required": ["flowDefinition"],
+      "properties": {
+        "flowDefinition": {
+          "type": "object",
+          "description": "Definição do fluxo gerado no formato FlowDefinition"
+        },
+        "rpaTest": {
+          "type": "object",
+          "description": "Teste RPA gerado (apenas se generateRpaTest = true)",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "flowId": {
+              "type": "string"
+            },
+            "steps": {
+              "type": "array"
+            },
+            "asserts": {
+              "type": "array"
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Metadados da geração (fonte, data, modo)",
+          "properties": {
+            "generatedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["rag", "scraping", "none"]
+              }
+            },
+            "ragSources": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scrapingTargets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rpaMode": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "restrictions": [
+      "explicit-control: A IA NUNCA decide usar RAG ou scraping - deve vir explicitamente do formulário",
+      "contract-validation: Backend valida este contrato antes de executar a geração",
+      "audit-trail: Toda geração registra metadata de fontes utilizadas",
+      "no-side-effects: Geração não persiste automaticamente - chamador decide o que fazer"
+    ]
+  }
+}
+

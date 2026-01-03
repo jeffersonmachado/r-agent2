@@ -13,6 +13,17 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
   const [flowName, setFlowName] = useState('');
   const [flowId, setFlowId] = useState('');
   const [autoResolveDependencies, setAutoResolveDependencies] = useState(true);
+  
+  // Controles de fonte de conhecimento
+  const [useRag, setUseRag] = useState(false);
+  const [ragSources, setRagSources] = useState([]);
+  const [useWebScraping, setUseWebScraping] = useState(false);
+  const [scrapingTargets, setScrapingTargets] = useState(['']);
+  
+  // Controles de geração de teste RPA
+  const [generateRpaTest, setGenerateRpaTest] = useState(false);
+  const [rpaMode, setRpaMode] = useState('infer');
+  
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -32,11 +43,25 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
 
       // Passo 1: Gerar fluxo
       setCurrentStep('Gerando fluxo por IA...');
-      logger.info('Passo 1: Gerando fluxo', { description: description.substring(0, 100) });
+      logger.info('Passo 1: Gerando fluxo', { 
+        description: description.substring(0, 100),
+        useRag,
+        ragSources,
+        useWebScraping,
+        scrapingTargets: scrapingTargets.filter(url => url.trim()),
+        generateRpaTest,
+        rpaMode
+      });
       
       const generatedFlow = await generateFlowFromDescription(description, {
         flowName: flowName || undefined,
         flowId: flowId || undefined,
+        useRag,
+        ragSources: useRag ? ragSources : [],
+        useWebScraping,
+        scrapingTargets: useWebScraping ? scrapingTargets.filter(url => url.trim()) : [],
+        generateRpaTest,
+        rpaMode,
       });
 
       logger.info('Fluxo gerado com sucesso', { 
@@ -56,33 +81,41 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
       
       logger.info('Fluxo salvo com sucesso', { flowId: savedFlow.id, flowName: savedFlow.name });
 
-      // Passo 3: Gerar teste RPA (o endpoint já faz análise de dependências internamente)
-      setCurrentStep('Gerando teste RPA por IA...');
-      logger.info('Passo 3: Gerando teste RPA', { flowId: savedFlow.id });
-      
-      const rpaTestResult = await generateRpaTestFromFlow(savedFlow.id, {
-        version: savedFlow.version || 1,
-        autoResolveDependencies,
-      });
+      // Passo 3: Gerar teste RPA (apenas se solicitado)
+      let rpaTestResult = null;
+      if (generateRpaTest) {
+        setCurrentStep('Gerando teste RPA por IA...');
+        logger.info('Passo 3: Gerando teste RPA', { flowId: savedFlow.id, rpaMode });
+        
+        rpaTestResult = await generateRpaTestFromFlow(savedFlow.id, {
+          version: savedFlow.version || 1,
+          autoResolveDependencies,
+          rpaMode,
+        });
+      } else {
+        logger.info('Passo 3: Pulando geração de teste RPA (não solicitado)');
+      }
 
-      if (!rpaTestResult || !rpaTestResult.rpaTest) {
+      if (generateRpaTest && (!rpaTestResult || !rpaTestResult.rpaTest)) {
         throw new Error('Falha ao gerar teste RPA: resultado não foi retornado corretamente');
       }
 
-      logger.info('Teste RPA gerado com sucesso', { 
-        testId: rpaTestResult?.rpaTest?.id,
-        stepCount: rpaTestResult?.rpaTest?.steps?.length || 0 
-      });
+      if (rpaTestResult) {
+        logger.info('Teste RPA gerado com sucesso', { 
+          testId: rpaTestResult?.rpaTest?.id,
+          stepCount: rpaTestResult?.rpaTest?.steps?.length || 0 
+        });
+      }
 
       setCurrentStep('Concluído!');
       
       // Monta preview completo
       setPreview({
         flow: savedFlow,
-        rpaTest: rpaTestResult.rpaTest,
-        dependencies: rpaTestResult.dependencies,
-        resolution: rpaTestResult.resolution,
-        readyToSave: !rpaTestResult.rpaTest.validationWarnings || rpaTestResult.rpaTest.validationWarnings.valid,
+        rpaTest: rpaTestResult?.rpaTest || null,
+        dependencies: rpaTestResult?.dependencies || null,
+        resolution: rpaTestResult?.resolution || null,
+        readyToSave: !rpaTestResult || !rpaTestResult.rpaTest || !rpaTestResult.rpaTest.validationWarnings || rpaTestResult.rpaTest.validationWarnings.valid,
       });
 
     } catch (err) {
@@ -132,10 +165,38 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
     setFlowName('');
     setFlowId('');
     setAutoResolveDependencies(false);
+    setUseRag(false);
+    setRagSources([]);
+    setUseWebScraping(false);
+    setScrapingTargets(['']);
+    setGenerateRpaTest(false);
+    setRpaMode('infer');
     setCurrentStep('');
     if (onCancel) {
       onCancel();
     }
+  };
+
+  const handleRagSourceToggle = (source) => {
+    if (ragSources.includes(source)) {
+      setRagSources(ragSources.filter(s => s !== source));
+    } else {
+      setRagSources([...ragSources, source]);
+    }
+  };
+
+  const handleScrapingTargetChange = (index, value) => {
+    const newTargets = [...scrapingTargets];
+    newTargets[index] = value;
+    setScrapingTargets(newTargets);
+  };
+
+  const addScrapingTarget = () => {
+    setScrapingTargets([...scrapingTargets, '']);
+  };
+
+  const removeScrapingTarget = (index) => {
+    setScrapingTargets(scrapingTargets.filter((_, i) => i !== index));
   };
 
   return (
@@ -223,6 +284,139 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
                     className="w-full font-mono text-xs"
                     disabled={generating}
                   />
+                </div>
+              </div>
+
+              {/* Fonte de Conhecimento da IA */}
+              <div className="space-y-4 p-4 bg-bg-tertiary rounded-md border border-border-default">
+                <div className="text-xs text-text-tertiary uppercase tracking-wider font-medium">
+                  Fonte de Conhecimento da IA
+                </div>
+                
+                {/* RAG */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useRag}
+                      onChange={(e) => setUseRag(e.target.checked)}
+                      disabled={generating}
+                      className="rounded border-border-default"
+                    />
+                    <span className="text-sm text-text-secondary font-medium">
+                      Usar conhecimento interno (RAG)
+                    </span>
+                  </label>
+                  {useRag && (
+                    <div className="ml-6 space-y-2">
+                      <div className="text-xs text-text-tertiary">Selecione as fontes:</div>
+                      {['flows', 'qa', 'docs'].map((source) => (
+                        <label key={source} className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={ragSources.includes(source)}
+                            onChange={() => handleRagSourceToggle(source)}
+                            disabled={generating}
+                            className="rounded border-border-default"
+                          />
+                          <span className="text-xs text-text-secondary capitalize">{source}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Web Scraping */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useWebScraping}
+                      onChange={(e) => setUseWebScraping(e.target.checked)}
+                      disabled={generating}
+                      className="rounded border-border-default"
+                    />
+                    <span className="text-sm text-text-secondary font-medium">
+                      Usar fontes externas (Raspagem de sites)
+                    </span>
+                  </label>
+                  {useWebScraping && (
+                    <div className="ml-6 space-y-2">
+                      <div className="text-xs text-text-tertiary">
+                        URLs a serem raspadas (requer aprovação/auditoria):
+                      </div>
+                      {scrapingTargets.map((url, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            type="url"
+                            value={url}
+                            onChange={(e) => handleScrapingTargetChange(index, e.target.value)}
+                            placeholder="https://exemplo.com"
+                            className="flex-1 font-mono text-xs"
+                            disabled={generating}
+                          />
+                          {scrapingTargets.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeScrapingTarget(index)}
+                              disabled={generating}
+                              className="px-2 py-1 text-xs text-status-error hover:bg-status-error/10 rounded"
+                            >
+                              Remover
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={addScrapingTarget}
+                        disabled={generating}
+                        className="text-xs text-accent-default hover:underline"
+                      >
+                        + Adicionar URL
+                      </button>
+                      <div className="text-xs text-status-warning bg-status-warning/10 p-2 rounded">
+                        ⚠️ Raspagem de sites requer aprovação e será auditada.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Geração de Teste RPA */}
+              <div className="space-y-4 p-4 bg-bg-tertiary rounded-md border border-border-default">
+                <div className="text-xs text-text-tertiary uppercase tracking-wider font-medium">
+                  Geração de Teste RPA
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={generateRpaTest}
+                      onChange={(e) => setGenerateRpaTest(e.target.checked)}
+                      disabled={generating}
+                      className="rounded border-border-default"
+                    />
+                    <span className="text-sm text-text-secondary font-medium">
+                      Gerar teste RPA automaticamente
+                    </span>
+                  </label>
+                  {generateRpaTest && (
+                    <div className="ml-6 space-y-2">
+                      <div className="text-xs text-text-tertiary">Modo de geração:</div>
+                      <select
+                        value={rpaMode}
+                        onChange={(e) => setRpaMode(e.target.value)}
+                        disabled={generating}
+                        className="w-full p-2 border border-border-default rounded-md bg-bg-primary text-text-primary text-xs"
+                      >
+                        <option value="infer">Inferido pela IA</option>
+                        <option value="record">Gravação assistida</option>
+                        <option value="hybrid">Híbrido</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
