@@ -32,12 +32,93 @@ function loadContract(contractPath) {
 }
 
 /**
+ * Valida um payload contra o contrato bootstrap.
+ * 
+ * @param {Object} payload - Payload a ser validado
+ * @returns {{valid: boolean, errors: Array<string>}} Resultado da validação
+ */
+function validateBootstrapContract(payload) {
+  const contract = loadContract('system.bootstrap.json');
+  if (!contract) {
+    logger.warn('Contrato bootstrap não encontrado, validação básica aplicada');
+    return { valid: false, errors: ['Contrato bootstrap não encontrado'] };
+  }
+
+  const errors = [];
+
+  // Valida bootstrap = true
+  if (payload.bootstrap !== true) {
+    errors.push('Campo "bootstrap" deve ser true no modo bootstrap');
+  }
+
+  // Valida useRag = false (obrigatório no bootstrap)
+  if (payload.useRag !== false) {
+    errors.push('Campo "useRag" deve ser false no modo bootstrap');
+  }
+
+  // Valida name e description
+  if (!payload.name || typeof payload.name !== 'string' || payload.name.trim() === '') {
+    errors.push('Campo "name" é obrigatório e deve ser uma string não vazia');
+  }
+
+  if (!payload.description || typeof payload.description !== 'string' || payload.description.trim() === '') {
+    errors.push('Campo "description" é obrigatório e deve ser uma string não vazia');
+  }
+
+  // Valida useWebScraping (obrigatório no bootstrap)
+  if (payload.useWebScraping !== true) {
+    errors.push('Campo "useWebScraping" deve ser true no modo bootstrap');
+  }
+
+  // Valida scrapingTargets (obrigatório se useWebScraping = true)
+  if (payload.useWebScraping === true) {
+    if (!Array.isArray(payload.scrapingTargets)) {
+      errors.push('Campo "scrapingTargets" deve ser um array quando useWebScraping = true');
+    } else if (payload.scrapingTargets.length === 0) {
+      errors.push('Campo "scrapingTargets" deve conter pelo menos uma URL quando useWebScraping = true');
+    } else {
+      // Valida URLs
+      const urlPattern = /^https?:\/\/.+/;
+      const invalidUrls = payload.scrapingTargets.filter(url => !urlPattern.test(url));
+      if (invalidUrls.length > 0) {
+        errors.push(`URLs inválidas: ${invalidUrls.join(', ')}`);
+      }
+    }
+  }
+
+  // Valida generate (obrigatório no bootstrap)
+  if (!payload.generate || typeof payload.generate !== 'object') {
+    errors.push('Campo "generate" é obrigatório no modo bootstrap');
+  } else {
+    if (payload.generate.flow !== true) {
+      errors.push('Campo "generate.flow" deve ser true no modo bootstrap');
+    }
+    if (payload.generate.seed !== true) {
+      errors.push('Campo "generate.seed" deve ser true no modo bootstrap');
+    }
+    if (payload.generate.rpa !== true) {
+      errors.push('Campo "generate.rpa" deve ser true no modo bootstrap');
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
  * Valida um payload contra o contrato de geração.
  * 
  * @param {Object} payload - Payload a ser validado
  * @returns {{valid: boolean, errors: Array<string>}} Resultado da validação
  */
 function validateGenerationContract(payload) {
+  // Se for modo bootstrap, valida contra contrato bootstrap
+  if (payload.bootstrap === true) {
+    return validateBootstrapContract(payload);
+  }
+
   const contract = loadContract('generation.interface.json');
   if (!contract || !contract.generateFlow) {
     logger.warn('Contrato de geração não encontrado, validação básica aplicada');
@@ -195,5 +276,6 @@ module.exports = {
   loadContract,
   validateGenerationContract,
   validateGenerationMetadata,
+  validateBootstrapContract,
 };
 

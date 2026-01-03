@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/system.bootstrap.json",
+  "title": "System Bootstrap Contract",
+  "description": "Contrato que governa o modo de geração do zero (Bootstrap). Garante que o sistema só nasce se o teste RPA passar.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["bootstrap", "generate"],
+  "properties": {
+    "bootstrap": {
+      "type": "boolean",
+      "const": true,
+      "description": "Indica que este é um modo bootstrap (geração do zero)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do fluxo a ser criado",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Descrição funcional do fluxo em linguagem natural",
+      "minLength": 1
+    },
+    "useRag": {
+      "type": "boolean",
+      "const": false,
+      "description": "No modo bootstrap, RAG é sempre desativado (false)"
+    },
+    "useWebScraping": {
+      "type": "boolean",
+      "description": "Se true, permite scraping controlado como fonte de conhecimento"
+    },
+    "scrapingTargets": {
+      "type": "array",
+      "description": "URLs a serem raspadas (obrigatório se useWebScraping = true)",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      },
+      "minItems": 1
+    },
+    "generate": {
+      "type": "object",
+      "required": ["flow", "seed", "rpa"],
+      "description": "No modo bootstrap, todos os artefatos devem ser gerados",
+      "properties": {
+        "flow": {
+          "type": "boolean",
+          "const": true,
+          "description": "Fluxo base deve ser gerado"
+        },
+        "seed": {
+          "type": "boolean",
+          "const": true,
+          "description": "Seed base deve ser gerado"
+        },
+        "rpa": {
+          "type": "boolean",
+          "const": true,
+          "description": "Teste RPA base deve ser gerado e validado"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "useWebScraping": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["scrapingTargets"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "bootstrap": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["useWebScraping"],
+        "properties": {
+          "useWebScraping": {
+            "description": "No modo bootstrap, pelo menos scraping deve ser informado"
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "restrictions": [
+    "bootstrap-mode: No modo bootstrap, RAG é sempre desativado",
+    "bootstrap-mode: No modo bootstrap, flow, seed e rpa devem ser gerados",
+    "bootstrap-mode: No modo bootstrap, pelo menos uma fonte (scraping) deve ser informada",
+    "bootstrap-mode: No modo bootstrap, nada é persistido antes do RPA passar",
+    "bootstrap-mode: No modo bootstrap, se RPA falhar, rollback total é executado"
+  ]
+}
+
