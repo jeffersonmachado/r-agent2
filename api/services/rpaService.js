@@ -1,69 +1,154 @@
 const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
 const { ActionRecorder } = require('../../tests/rpa/actionRecorder');
-const { INJECTABLE_SCRIPT } = require('../../tests/rpa/overlayInjector');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
+
+// Importação lazy do overlayInjector (apenas quando necessário para evitar erros de sintaxe)
+let INJECTABLE_SCRIPT = null;
+function getInjectableScript() {
+  if (INJECTABLE_SCRIPT === null) {
+    try {
+      const overlayInjector = require('../../tests/rpa/overlayInjector');
+      INJECTABLE_SCRIPT = overlayInjector.INJECTABLE_SCRIPT;
+    } catch (error) {
+      logger.warn('Não foi possível carregar overlayInjector', { error: error.message });
+      INJECTABLE_SCRIPT = ''; // Fallback vazio
+    }
+  }
+  return INJECTABLE_SCRIPT;
+}
 
 // Armazena execuções em andamento
 const activeExecutions = new Map();
 
 /**
  * Lista todas as gravações RPA disponíveis.
+ * Procura em seeds primeiro, depois em recordings (mesmo padrão do ActionRecorder).
  */
 function listRecordings() {
-  // Tenta múltiplos caminhos possíveis
-  const possiblePaths = [
-    path.join(__dirname, '../../tests/rpa/recordings'), // De api/services
-    path.join(process.cwd(), 'tests/rpa/recordings'), // Do diretório raiz do projeto
-    path.resolve(__dirname, '../../tests/rpa/recordings'), // Resolvido
-  ];
-  
-  let recordingsDir = null;
-  for (const dirPath of possiblePaths) {
-    if (fs.existsSync(dirPath)) {
-      recordingsDir = dirPath;
-      break;
-    }
-  }
-  
-  if (!recordingsDir) {
-    console.error('❌ Diretório de gravações não encontrado. Tentou:', possiblePaths);
-    return [];
-  }
-
-  const files = fs.readdirSync(recordingsDir);
-  const recordings = [];
-
-  for (const file of files) {
-    if (file.endsWith('.json')) {
+  try {
+    // Tenta múltiplos caminhos possíveis
+    const possibleBasePaths = [
+      path.join(__dirname, '../../tests/rpa'), // De api/services
+      path.join(process.cwd(), 'tests/rpa'), // Do diretório raiz do projeto
+      path.resolve(__dirname, '../../tests/rpa'), // Resolvido
+    ];
+    
+    let basePath = null;
+    for (const dirPath of possibleBasePaths) {
       try {
-        const filePath = path.join(recordingsDir, file);
-        const content = fs.readFileSync(filePath, 'utf8');
-        const recording = JSON.parse(content);
-        
-        recordings.push({
-          id: recording.id || file.replace('.json', ''),
-          name: recording.name || file.replace('.json', ''),
-          description: recording.description,
-          version: recording.version,
-          steps: recording.steps || [],
-          data: recording.data || {},
-        });
-      } catch (error) {
-        // Ignora arquivos inválidos
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`⚠️ Erro ao ler gravação ${file}:`, error.message);
+        if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+          basePath = dirPath;
+          break;
         }
+      } catch (err) {
+        // Ignora erros ao verificar caminho
+        continue;
       }
     }
-  }
+    
+    if (!basePath) {
+      logger.warn('Diretório de gravações RPA não encontrado', { 
+        triedPaths: possibleBasePaths,
+        cwd: process.cwd(),
+        __dirname: __dirname
+      });
+      return [];
+    }
 
-  // Usa console.log ao invés de logger.debug para evitar manter processo aberto
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`📋 Total de gravações encontradas: ${recordings.length}`);
+    const seedsDir = path.join(basePath, 'seeds');
+    const recordingsDir = path.join(basePath, 'recordings');
+    const recordings = [];
+    const processedFiles = new Set(); // Para evitar duplicatas
+
+    // Procura primeiro em seeds
+    try {
+      if (fs.existsSync(seedsDir) && fs.statSync(seedsDir).isDirectory()) {
+        const files = fs.readdirSync(seedsDir);
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            try {
+              const filePath = path.join(seedsDir, file);
+              const stats = fs.statSync(filePath);
+              if (!stats.isFile()) continue;
+              
+              const content = fs.readFileSync(filePath, 'utf8');
+              const recording = JSON.parse(content);
+              
+              // Usa o nome do arquivo (sem extensão) como ID para garantir consistência com deleteRecording
+              const fileNameId = file.replace('.json', '');
+              
+              recordings.push({
+                id: fileNameId, // Sempre usa o nome do arquivo como ID
+                internalId: recording.id, // Mantém o ID interno do JSON se existir
+                name: recording.name || fileNameId,
+                description: recording.description,
+                version: recording.version,
+                steps: recording.steps || [],
+                data: recording.data || {},
+              });
+              processedFiles.add(file);
+            } catch (error) {
+              // Ignora arquivos inválidos
+              logger.warn(`Erro ao ler gravação ${file}`, { error: error.message, path: seedsDir });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Erro ao ler diretório seeds', { error: error.message, path: seedsDir });
+    }
+
+    // Depois procura em recordings (apenas arquivos não processados)
+    try {
+      if (fs.existsSync(recordingsDir) && fs.statSync(recordingsDir).isDirectory()) {
+        const files = fs.readdirSync(recordingsDir);
+        for (const file of files) {
+          if (file.endsWith('.json') && !processedFiles.has(file)) {
+            try {
+              const filePath = path.join(recordingsDir, file);
+              const stats = fs.statSync(filePath);
+              if (!stats.isFile()) continue;
+              
+              const content = fs.readFileSync(filePath, 'utf8');
+              const recording = JSON.parse(content);
+              
+              // Usa o nome do arquivo (sem extensão) como ID para garantir consistência com deleteRecording
+              const fileNameId = file.replace('.json', '');
+              
+              recordings.push({
+                id: fileNameId, // Sempre usa o nome do arquivo como ID
+                internalId: recording.id, // Mantém o ID interno do JSON se existir
+                name: recording.name || fileNameId,
+                description: recording.description,
+                version: recording.version,
+                steps: recording.steps || [],
+                data: recording.data || {},
+              });
+            } catch (error) {
+              // Ignora arquivos inválidos
+              logger.warn(`Erro ao ler gravação ${file}`, { error: error.message, path: recordingsDir });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Erro ao ler diretório recordings', { error: error.message, path: recordingsDir });
+    }
+
+    logger.debug('Gravações RPA listadas', { count: recordings.length, basePath });
+    return recordings;
+  } catch (error) {
+    logger.error('Erro ao listar gravações RPA', { 
+      error: error.message, 
+      stack: error.stack,
+      cwd: process.cwd(),
+      __dirname: __dirname
+    });
+    // Retorna array vazio em caso de erro para não quebrar a API
+    return [];
   }
-  return recordings;
 }
 
 /**
@@ -322,47 +407,223 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                 // Configura listener para capturar logs do console do navegador
                 // Remove listeners anteriores para evitar duplicação
                 page.removeAllListeners('console');
+                
+                // Flag para verificar se o listener capturou a mensagem de teste
+                let testMessageCaptured = false;
+                let testMessagePromiseResolve = null;
+                
                 const consoleHandler = (msg) => {
-                  const text = msg.text();
-                  const type = msg.type();
-                  // Captura todos os logs do overlay e também erros
-                  if (text.includes('[RPA Overlay]') || text.includes('rpaOverlay') || type === 'error') {
-                    logger.info(`[RPA Overlay] [BROWSER CONSOLE ${type.toUpperCase()}] ${text}`);
+                  try {
+                    const text = msg.text();
+                    const type = msg.type();
+                    // Log todas as mensagens do console para debug (temporário)
+                    logger.info(`[RPA Overlay] [CONSOLE RAW] type=${type}, text=${text}`);
+                    // Captura todos os logs do overlay e também erros
+                    if (text.includes('[RPA Overlay]') || text.includes('rpaOverlay') || type === 'error') {
+                      logger.info(`[RPA Overlay] [BROWSER CONSOLE ${type.toUpperCase()}] ${text}`);
+                      // Marca que a mensagem de teste foi capturada
+                      if (text.includes('[RPA Overlay] [TEST] Teste de listener do console')) {
+                        testMessageCaptured = true;
+                        if (testMessagePromiseResolve) {
+                          testMessagePromiseResolve();
+                          testMessagePromiseResolve = null;
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    logger.error(`[RPA Overlay] Erro no consoleHandler: ${error.message}`);
                   }
                 };
                 page.on('console', consoleHandler);
+                logger.info('[RPA Overlay] Listener de console registrado');
                 
                 // Captura erros da página também
                 page.on('pageerror', error => {
                   logger.error(`[RPA Overlay] [PAGE ERROR] ${error.message}`);
                 });
                 
+                // Aguarda um pouco para garantir que o listener esteja totalmente registrado
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
                 // Testa se o listener está funcionando
+                // Usa uma Promise para garantir que o listener tenha tempo de processar
+                const testPromise = new Promise((resolve) => {
+                  testMessagePromiseResolve = resolve;
+                  // Timeout de 500ms para dar mais tempo
+                  setTimeout(() => {
+                    if (!testMessageCaptured) {
+                      logger.warn('[RPA Overlay] Mensagem de teste não foi capturada pelo listener após 500ms');
+                    }
+                    if (testMessagePromiseResolve === resolve) {
+                      testMessagePromiseResolve = null;
+                    }
+                    resolve();
+                  }, 500);
+                });
+                
+                // Executa o teste
+                logger.info('[RPA Overlay] Executando teste do listener...');
                 await page.evaluate(() => {
                   console.log('[RPA Overlay] [TEST] Teste de listener do console');
                 });
-                logger.info('[RPA Overlay] Listener de console configurado e testado');
+                logger.info('[RPA Overlay] Teste executado, aguardando captura...');
+                
+                // Aguarda a captura da mensagem ou timeout
+                await testPromise;
+                
+                if (testMessageCaptured) {
+                  logger.info('[RPA Overlay] ✅ Listener de console configurado e testado com sucesso');
+                } else {
+                  logger.warn('[RPA Overlay] ⚠️ Listener de console configurado, mas mensagem de teste não foi capturada');
+                }
                 
                 // Injeta script do overlay usando uma função para garantir execução correta
                 try {
-                  await page.evaluate((script) => {
-                    // Executa o script como código
-                    eval(script);
-                  }, INJECTABLE_SCRIPT);
-                  logger.info('[RPA Overlay] Script injetado via page.evaluate()');
+                  const injectResult = await page.evaluate((script) => {
+                    try {
+                      console.log('[RPA Overlay] [INJECT] Iniciando injeção do script...');
+                      console.log('[RPA Overlay] [INJECT] Tamanho do script:', script.length);
+                      
+                      // Executa o script como código
+                      let evalError = null;
+                      try {
+                        eval(script);
+                      } catch (e) {
+                        evalError = e;
+                        console.error('[RPA Overlay] [INJECT] ERRO no eval():', e);
+                        console.error('[RPA Overlay] [INJECT] Mensagem:', e.message);
+                        console.error('[RPA Overlay] [INJECT] Stack:', e.stack);
+                        // Não retorna ainda, tenta verificar se window.rpaOverlay foi criado mesmo com erro
+                      }
+                      
+                      // Aguarda um pouco para garantir que o script foi processado
+                      // (alguns scripts podem ter setTimeout ou async operations)
+                      // Não podemos usar await dentro de page.evaluate, então fazemos verificação síncrona primeiro
+                      let exists = typeof window.rpaOverlay !== 'undefined';
+                      let hasCreate = exists && typeof window.rpaOverlay.create === 'function';
+                      let hasInit = exists && typeof window.rpaOverlay.init === 'function';
+                      
+                      // Se não existe, aguarda um pouco e verifica novamente
+                      if (!exists) {
+                        // Usa uma verificação síncrona com loop (não ideal, mas necessário)
+                        const startTime = Date.now();
+                        while (!exists && (Date.now() - startTime) < 500) {
+                          // Pequeno delay síncrono
+                          const end = Date.now() + 10;
+                          while (Date.now() < end) {
+                            // Loop vazio para delay
+                          }
+                          exists = typeof window.rpaOverlay !== 'undefined';
+                          if (exists) {
+                            hasCreate = typeof window.rpaOverlay.create === 'function';
+                            hasInit = typeof window.rpaOverlay.init === 'function';
+                            break;
+                          }
+                        }
+                      }
+                      
+                      const checkResult = { exists, hasCreate, hasInit };
+                      
+                      // Verifica se window.rpaOverlay foi criado
+                      if (!checkResult.exists) {
+                        console.error('[RPA Overlay] [INJECT] ERRO: window.rpaOverlay não foi criado após eval()');
+                        if (evalError) {
+                          return { success: false, error: `Erro no eval: ${evalError.message}`, stack: evalError.stack };
+                        }
+                        return { success: false, error: 'window.rpaOverlay não foi criado' };
+                      }
+                      
+                      // Verifica se tem os métodos necessários
+                      if (!checkResult.hasCreate && !checkResult.hasInit) {
+                        console.error('[RPA Overlay] [INJECT] ERRO: window.rpaOverlay não tem create() nem init()');
+                        return { success: false, error: 'window.rpaOverlay não tem métodos necessários' };
+                      }
+                      
+                      console.log('[RPA Overlay] [INJECT] ✅ Script injetado com sucesso');
+                      console.log('[RPA Overlay] [INJECT] Métodos disponíveis:', {
+                        hasCreate: checkResult.hasCreate,
+                        hasInit: checkResult.hasInit,
+                        hasRemove: typeof window.rpaOverlay.remove === 'function',
+                        hasDebug: typeof window.rpaOverlay.debug === 'function'
+                      });
+                      
+                      return { 
+                        success: true, 
+                        hasCreate: checkResult.hasCreate, 
+                        hasInit: checkResult.hasInit,
+                        evalError: evalError ? evalError.message : null
+                      };
+                    } catch (error) {
+                      console.error('[RPA Overlay] [INJECT] ERRO ao executar script:', error);
+                      console.error('[RPA Overlay] [INJECT] Stack completo:', error.stack);
+                      return { success: false, error: error.message, stack: error.stack };
+                    }
+                  }, getInjectableScript());
+                  
+                  if (!injectResult || !injectResult.success) {
+                    const errorMsg = injectResult?.error || 'Erro desconhecido ao injetar script';
+                    logger.error(`[RPA Overlay] ERRO ao injetar script: ${errorMsg}`);
+                    if (injectResult?.stack) {
+                      logger.error(`[RPA Overlay] Stack trace: ${injectResult.stack}`);
+                    }
+                    throw new Error(`Falha ao injetar script do overlay: ${errorMsg}`);
+                  }
+                  
+                  logger.info('[RPA Overlay] Script injetado via page.evaluate() com sucesso');
+                  logger.info(`[RPA Overlay] Métodos disponíveis: create=${injectResult.hasCreate}, init=${injectResult.hasInit}`);
                 } catch (evalError) {
                   logger.error(`[RPA Overlay] ERRO ao injetar script: ${evalError.message}`);
+                  logger.error(`[RPA Overlay] Stack: ${evalError.stack}`);
                   throw evalError;
                 }
                 
-                // Verifica se o script foi injetado corretamente
+                // Verifica novamente se o script foi injetado corretamente
                 const scriptInjected = await page.evaluate(() => {
-                  return typeof window.rpaOverlay !== 'undefined';
+                  const exists = typeof window.rpaOverlay !== 'undefined';
+                  const hasCreate = exists && typeof window.rpaOverlay.create === 'function';
+                  const hasInit = exists && typeof window.rpaOverlay.init === 'function';
+                  const hasDebug = exists && typeof window.rpaOverlay.debug === 'function';
+                  
+                  console.log('[RPA Overlay] [VERIFY] Verificação pós-injeção:', {
+                    exists,
+                    hasCreate,
+                    hasInit,
+                    hasDebug
+                  });
+                  
+                  return { exists, hasCreate, hasInit, hasDebug };
                 });
                 
-                if (!scriptInjected) {
+                if (!scriptInjected.exists) {
                   logger.error('[RPA Overlay] ERRO: window.rpaOverlay não foi criado após injeção do script');
-                  throw new Error('Falha ao injetar script do overlay');
+                  logger.error('[RPA Overlay] Tentando injetar novamente...');
+                  
+                  // Tenta injetar novamente
+                  try {
+                    await page.evaluate((script) => {
+                      try {
+                        eval(script);
+                        console.log('[RPA Overlay] [RETRY] Script re-injetado');
+                      } catch (error) {
+                        console.error('[RPA Overlay] [RETRY] ERRO:', error);
+                      }
+                    }, getInjectableScript());
+                    
+                    // Verifica novamente
+                    const retryCheck = await page.evaluate(() => {
+                      return typeof window.rpaOverlay !== 'undefined';
+                    });
+                    
+                    if (!retryCheck) {
+                      throw new Error('Falha ao injetar script do overlay após tentativa de retry');
+                    }
+                    logger.info('[RPA Overlay] Script injetado com sucesso após retry');
+                  } catch (retryError) {
+                    logger.error(`[RPA Overlay] ERRO no retry: ${retryError.message}`);
+                    throw new Error('Falha ao injetar script do overlay');
+                  }
+                } else {
+                  logger.info(`[RPA Overlay] ✅ window.rpaOverlay verificado: create=${scriptInjected.hasCreate}, init=${scriptInjected.hasInit}, debug=${scriptInjected.hasDebug}`);
                 }
                 
                 logger.info('[RPA Overlay] Script injetado com sucesso, criando overlay...');
@@ -396,28 +657,18 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                   logger.info('[RPA Overlay] Executando page.evaluate() para chamar init()...');
                   // Playwright/Puppeteer só aceita 1 argumento além da função, então envolvemos em um objeto
                   initResult = await page.evaluate(({ apiUrl, execId, token }) => {
-                    console.log('[RPA Overlay] [SERVER] ========== INÍCIO page.evaluate() ==========');
-                    console.log('[RPA Overlay] [SERVER] Tentando chamar init()...', {
-                      hasRpaOverlay: typeof window.rpaOverlay !== 'undefined',
-                      hasInit: window.rpaOverlay && typeof window.rpaOverlay.init === 'function',
-                      hasCreate: window.rpaOverlay && typeof window.rpaOverlay.create === 'function',
-                      apiUrl: apiUrl,
-                      execId: execId,
-                      readyState: document.readyState,
-                      hasBody: !!document.body
-                    });
+                    console.log('[RPA Overlay] [SERVER] Chamando init()...');
                     
                     try {
                       if (window.rpaOverlay && window.rpaOverlay.init) {
-                        console.log('[RPA Overlay] [SERVER] Chamando window.rpaOverlay.init()...');
                         const result = window.rpaOverlay.init(apiUrl, execId, token);
                         console.log('[RPA Overlay] [SERVER] init() retornou:', result);
                         return { success: true, method: 'init', result: result };
                       } else if (window.rpaOverlay && window.rpaOverlay.create) {
                         console.log('[RPA Overlay] [SERVER] init() não disponível, usando create()...');
                         const result = window.rpaOverlay.create(apiUrl, execId, token);
-                        console.log('[RPA Overlay] [SERVER] create() retornou:', result);
-                        return { success: true, method: 'create', result: result };
+                        console.log('[RPA Overlay] [SERVER] create() retornou:', result !== null);
+                        return { success: true, method: 'create', result: result !== null };
                       } else {
                         console.error('[RPA Overlay] [SERVER] ERRO: window.rpaOverlay não tem init() nem create()');
                         return { success: false, error: 'window.rpaOverlay não tem init() nem create()' };
@@ -444,14 +695,21 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                   logger.info('[RPA Overlay] Tentando usar create() diretamente como fallback...');
                   try {
                     const createResult = await page.evaluate(({ apiUrl, execId, token }) => {
+                      console.log('[RPA Overlay] [FALLBACK] Tentando create() diretamente...');
                       if (window.rpaOverlay && window.rpaOverlay.create) {
-                        return window.rpaOverlay.create(apiUrl, execId, token);
+                        console.log('[RPA Overlay] [FALLBACK] Chamando create()...');
+                        const result = window.rpaOverlay.create(apiUrl, execId, token);
+                        console.log('[RPA Overlay] [FALLBACK] create() retornou:', result !== null);
+                        return result !== null;
                       }
-                      return null;
+                      console.error('[RPA Overlay] [FALLBACK] window.rpaOverlay.create não está disponível');
+                      return false;
                     }, { apiUrl: apiBaseUrl, execId: executionId, token: authToken });
                     
                     if (createResult) {
                       logger.info('[RPA Overlay] ✅ create() executado com sucesso como fallback');
+                      // Aguarda um pouco para o overlay ser criado
+                      await new Promise(resolve => setTimeout(resolve, 500));
                     } else {
                       logger.error('[RPA Overlay] ❌ create() também falhou');
                     }
@@ -460,49 +718,62 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                   }
                 } else {
                   logger.info(`[RPA Overlay] ✅ init() executado com sucesso usando método: ${initResult.method}`);
+                  // Aguarda um pouco para o overlay ser criado após init()
+                  await new Promise(resolve => setTimeout(resolve, 300));
                 }
                 
                 // Aguarda um pouco para o overlay ser criado e tenta múltiplas vezes
                 let overlayCreated = null;
                 let attempts = 0;
-                const maxAttempts = 5;
+                const maxAttempts = 10; // Aumentado para dar mais tempo
                 
                 while (attempts < maxAttempts && (!overlayCreated || !overlayCreated.success)) {
-                  await new Promise(resolve => setTimeout(resolve, 500));
+                  await new Promise(resolve => setTimeout(resolve, 300));
                   attempts++;
                   
-                  // Verifica se o overlay foi criado
+                  // Verifica se o overlay foi criado e tenta forçar visibilidade se necessário
                   overlayCreated = await page.evaluate(() => {
                   try {
                     const overlayElement = document.getElementById('rpa-replay-overlay');
                     const boxElement = document.getElementById('rpa-replay-control-box');
                     
-                    console.log('[RPA Overlay] Verificação do overlay:', {
-                      overlayElementExists: !!overlayElement,
-                      boxElementExists: !!boxElement,
-                      viewportWidth: window.innerWidth,
-                      viewportHeight: window.innerHeight,
-                      readyState: document.readyState
-                    });
-                    
-                    if (boxElement) {
-                      const rect = boxElement.getBoundingClientRect();
-                      console.log('[RPA Overlay] Posição da caixa:', {
-                        top: boxElement.style.top,
-                        left: boxElement.style.left,
-                        width: rect.width,
-                        height: rect.height,
-                        display: window.getComputedStyle(boxElement).display,
-                        visibility: window.getComputedStyle(boxElement).visibility,
-                        opacity: window.getComputedStyle(boxElement).opacity,
-                        zIndex: window.getComputedStyle(boxElement).zIndex
-                      });
+                    if (!overlayElement || !boxElement) {
+                      return {
+                        success: false,
+                        overlayExists: !!overlayElement,
+                        boxExists: !!boxElement
+                      };
                     }
                     
+                    // Força visibilidade se necessário
+                    const boxComputed = window.getComputedStyle(boxElement);
+                    const boxRect = boxElement.getBoundingClientRect();
+                    const isVisible = boxRect.width > 0 && boxRect.height > 0 && 
+                                     boxComputed.display !== 'none' && 
+                                     boxComputed.visibility !== 'hidden' && 
+                                     parseFloat(boxComputed.opacity) > 0;
+                    
+                    if (!isVisible) {
+                      console.warn('[RPA Overlay] Overlay não está visível, forçando...');
+                      boxElement.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
+                      overlayElement.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
+                    }
+                    
+                    // Verifica novamente após forçar
+                    const finalRect = boxElement.getBoundingClientRect();
+                    const finalComputed = window.getComputedStyle(boxElement);
+                    const finalVisible = finalRect.width > 0 && finalRect.height > 0 && 
+                                        finalComputed.display !== 'none' && 
+                                        finalComputed.visibility !== 'hidden' && 
+                                        parseFloat(finalComputed.opacity) > 0;
+                    
                     return {
-                      success: !!overlayElement && !!boxElement,
-                      overlayExists: !!overlayElement,
-                      boxExists: !!boxElement
+                      success: finalVisible,
+                      overlayExists: true,
+                      boxExists: true,
+                      boxVisible: finalVisible,
+                      boxWidth: finalRect.width,
+                      boxHeight: finalRect.height
                     };
                   } catch (error) {
                     console.error('[RPA Overlay] ERRO ao verificar overlay:', error);
@@ -510,18 +781,93 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                   }
                 });
                   
-                  logger.info(`[RPA Overlay] Tentativa ${attempts}/${maxAttempts}: Overlay: ${overlayCreated?.overlayExists}, Box: ${overlayCreated?.boxExists}`);
+                  logger.info(`[RPA Overlay] Tentativa ${attempts}/${maxAttempts}: Overlay: ${overlayCreated?.overlayExists}, Box: ${overlayCreated?.boxExists}, Visível: ${overlayCreated?.boxVisible}, Na viewport: ${overlayCreated?.boxInViewport}`);
                   
                   if (overlayCreated?.success) {
                     break;
                   }
+                  
+                  // Se ainda não foi criado, tenta forçar criação novamente
+                  if (attempts === 3 || attempts === 6) {
+                    logger.info(`[RPA Overlay] Tentando forçar criação do overlay na tentativa ${attempts}...`);
+                    try {
+                      await page.evaluate(({ apiUrl, execId, token }) => {
+                        if (window.rpaOverlay && window.rpaOverlay.create) {
+                          console.log('[RPA Overlay] [FORÇA] Chamando create() novamente...');
+                          return window.rpaOverlay.create(apiUrl, execId, token);
+                        }
+                        return null;
+                      }, { apiUrl: apiBaseUrl, execId: executionId, token: authToken });
+                    } catch (forceError) {
+                      logger.warn(`[RPA Overlay] Erro ao forçar criação: ${forceError.message}`);
+                    }
+                  }
                 }
                 
                 if (overlayCreated?.success) {
-                  logger.info(`[RPA Overlay] ✅ Overlay criado com sucesso após ${attempts} tentativa(s)! Overlay: ${overlayCreated.overlayExists}, Box: ${overlayCreated.boxExists}`);
+                  logger.info(`[RPA Overlay] ✅ Overlay criado com sucesso após ${attempts} tentativa(s)!`);
+                  logger.info(`[RPA Overlay] Detalhes: Overlay: ${overlayCreated.overlayExists}, Box: ${overlayCreated.boxExists}, Visível: ${overlayCreated.boxVisible}`);
+                  
+                  // Força visibilidade uma última vez para garantir
+                  try {
+                    await page.evaluate(() => {
+                      if (window.rpaOverlay && window.rpaOverlay.forceVisible) {
+                        window.rpaOverlay.forceVisible();
+                      } else {
+                        // Fallback: força manualmente
+                        const overlay = document.getElementById('rpa-replay-overlay');
+                        const box = document.getElementById('rpa-replay-control-box');
+                        if (overlay && box) {
+                          overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background: rgba(0, 0, 0, 0.5) !important; z-index: 2147483647 !important; pointer-events: auto !important; display: block !important; visibility: visible !important; opacity: 1 !important;';
+                          box.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important; top: 12px !important; left: 12px !important;';
+                        }
+                      }
+                    });
+                    logger.info('[RPA Overlay] Visibilidade forçada novamente');
+                  } catch (forceError) {
+                    logger.warn(`[RPA Overlay] Erro ao forçar visibilidade: ${forceError.message}`);
+                  }
                 } else {
-                  logger.error(`[RPA Overlay] ERRO ao criar overlay: ${overlayCreated.error}`);
-                  throw new Error(overlayCreated.error || 'Falha ao criar overlay');
+                  const errorDetails = overlayCreated?.error || 'Falha ao criar overlay';
+                  logger.error(`[RPA Overlay] ❌ ERRO ao criar overlay após ${attempts} tentativas: ${errorDetails}`);
+                  logger.error(`[RPA Overlay] Estado final: ${JSON.stringify(overlayCreated, null, 2)}`);
+                  
+                  // Tenta forçar criação uma última vez
+                  try {
+                    logger.info('[RPA Overlay] Tentando forçar criação do overlay uma última vez...');
+                    await page.evaluate(({ apiUrl, execId, token }) => {
+                      if (window.rpaOverlay && window.rpaOverlay.create) {
+                        const result = window.rpaOverlay.create(apiUrl, execId, token);
+                        if (result && window.rpaOverlay.forceVisible) {
+                          setTimeout(() => window.rpaOverlay.forceVisible(), 200);
+                        }
+                        return result !== null;
+                      }
+                      return false;
+                    }, { apiUrl: apiBaseUrl, execId: executionId, token: authToken });
+                    
+                    // Aguarda um pouco e verifica novamente
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    const finalCheck = await page.evaluate(() => {
+                      const overlay = document.getElementById('rpa-replay-overlay');
+                      const box = document.getElementById('rpa-replay-control-box');
+                      if (overlay && box) {
+                        // Força visibilidade
+                        overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background: rgba(0, 0, 0, 0.5) !important; z-index: 2147483647 !important; pointer-events: auto !important; display: block !important; visibility: visible !important; opacity: 1 !important;';
+                        box.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important; top: 12px !important; left: 12px !important;';
+                        return true;
+                      }
+                      return false;
+                    });
+                    
+                    if (finalCheck) {
+                      logger.info('[RPA Overlay] ✅ Overlay criado após tentativa final!');
+                    } else {
+                      logger.warn('[RPA Overlay] Continuando execução mesmo sem overlay visível');
+                    }
+                  } catch (finalError) {
+                    logger.warn(`[RPA Overlay] Erro na tentativa final: ${finalError.message}`);
+                  }
                 }
               } else {
                 logger.warn('[RPA Overlay] Página do Puppeteer não encontrada (page é null)');
@@ -869,6 +1215,151 @@ async function cancelExecution(executionId) {
 }
 
 /**
+ * Remove uma gravação RPA.
+ * Procura primeiro em seeds, depois em recordings (mesmo padrão do ActionRecorder).
+ * 
+ * @param {string} recordingId - ID da gravação a ser removida
+ * @returns {{success: boolean, message: string, deletedId?: string}}
+ */
+function deleteRecording(recordingId) {
+  if (!recordingId || typeof recordingId !== 'string' || recordingId.trim() === '') {
+    return {
+      success: false,
+      message: 'ID da gravação é obrigatório',
+    };
+  }
+
+  // Tenta múltiplos caminhos possíveis (mesmo padrão de listRecordings)
+  const possibleBasePaths = [
+    path.join(__dirname, '../../tests/rpa'), // De api/services
+    path.join(process.cwd(), 'tests/rpa'), // Do diretório raiz do projeto
+    path.resolve(__dirname, '../../tests/rpa'), // Resolvido
+  ];
+  
+  let basePath = null;
+  for (const dirPath of possibleBasePaths) {
+    if (fs.existsSync(dirPath)) {
+      basePath = dirPath;
+      break;
+    }
+  }
+  
+  if (!basePath) {
+    return {
+      success: false,
+      message: 'Diretório de gravações não encontrado',
+    };
+  }
+
+  // Remove .json se presente
+  let sanitizedId = recordingId.trim();
+  if (sanitizedId.endsWith('.json')) {
+    sanitizedId = sanitizedId.slice(0, -'.json'.length);
+  }
+
+  // Procura primeiro em seeds, depois em recordings (mesmo padrão do ActionRecorder.save)
+  const seedsDir = path.join(basePath, 'seeds');
+  const recordingsDir = path.join(basePath, 'recordings');
+  
+  // Tenta primeiro pelo nome do arquivo (caso mais comum)
+  let recordingFile = null;
+  let foundFileName = null;
+  
+  if (fs.existsSync(seedsDir)) {
+    const seedsFile = path.join(seedsDir, `${sanitizedId}.json`);
+    if (fs.existsSync(seedsFile)) {
+      recordingFile = seedsFile;
+      foundFileName = sanitizedId;
+    }
+  }
+  
+  // Se não encontrou em seeds, tenta em recordings
+  if (!recordingFile && fs.existsSync(recordingsDir)) {
+    const recordingsFile = path.join(recordingsDir, `${sanitizedId}.json`);
+    if (fs.existsSync(recordingsFile)) {
+      recordingFile = recordingsFile;
+      foundFileName = sanitizedId;
+    }
+  }
+
+  // Se não encontrou pelo nome do arquivo, procura pelo UUID interno (compatibilidade com dados antigos)
+  if (!recordingFile) {
+    const searchDirs = [];
+    if (fs.existsSync(seedsDir)) searchDirs.push(seedsDir);
+    if (fs.existsSync(recordingsDir)) searchDirs.push(recordingsDir);
+
+    // eslint-disable-next-line no-console
+    console.log(`[deleteRecording] Procurando por UUID: ${sanitizedId} (original: ${recordingId})`);
+    
+    for (const dir of searchDirs) {
+      const files = fs.readdirSync(dir);
+      // eslint-disable-next-line no-console
+      console.log(`[deleteRecording] Procurando em ${dir}, ${files.length} arquivos`);
+      
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          try {
+            const filePath = path.join(dir, file);
+            const content = fs.readFileSync(filePath, 'utf8');
+            const recording = JSON.parse(content);
+            
+            // Verifica se o ID interno corresponde (comparação case-insensitive e sem espaços)
+            const recordingIdNormalized = recording.id ? String(recording.id).trim().toLowerCase() : '';
+            const searchIdNormalized = sanitizedId.trim().toLowerCase();
+            const originalIdNormalized = recordingId.trim().toLowerCase();
+            
+            if (recordingIdNormalized === searchIdNormalized || recordingIdNormalized === originalIdNormalized) {
+              // eslint-disable-next-line no-console
+              console.log(`[deleteRecording] Arquivo encontrado pelo UUID: ${filePath} (recording.id: ${recording.id})`);
+              recordingFile = filePath;
+              foundFileName = file.replace('.json', '');
+              break;
+            }
+          } catch (error) {
+            // Ignora arquivos inválidos e continua procurando
+            continue;
+          }
+        }
+      }
+      if (recordingFile) break;
+    }
+    
+    if (!recordingFile) {
+      // eslint-disable-next-line no-console
+      console.log(`[deleteRecording] UUID não encontrado em nenhum arquivo`);
+    }
+  }
+
+  // Verifica se o arquivo existe
+  if (!recordingFile) {
+    return {
+      success: false,
+      message: `Gravação "${sanitizedId}" não encontrada`,
+    };
+  }
+
+  try {
+    // Remove o arquivo
+    fs.unlinkSync(recordingFile);
+    
+    // eslint-disable-next-line no-console
+    console.log(`Gravação removida: ${recordingFile}`);
+    
+    return {
+      success: true,
+      deletedId: foundFileName || sanitizedId,
+      message: `Gravação "${foundFileName || sanitizedId}" removida com sucesso`,
+    };
+  } catch (err) {
+    logger.error('Erro ao remover gravação:', err);
+    return {
+      success: false,
+      message: `Erro ao remover gravação: ${err.message}`,
+    };
+  }
+}
+
+/**
  * Limpa execuções antigas (mais de 1 hora).
  */
 function cleanupOldExecutions() {
@@ -892,5 +1383,6 @@ module.exports = {
   cancelExecution,
   continueExecution,
   nextStep,
+  deleteRecording,
 };
 

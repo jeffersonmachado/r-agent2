@@ -234,30 +234,29 @@ function createOverlay(apiBaseUrl, executionId, authToken = null) {
     pointer-events: auto;
   `;
 
-  // Adiciona estilos e animações ao documento se ainda não existir
-  if (!document.getElementById('rpa-overlay-styles')) {
-    const style = document.createElement('style');
-    style.id = 'rpa-overlay-styles';
-    style.textContent = `
-      @keyframes rpa-pulse-paused {
-        0%, 100% {
-          transform: scale(1);
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(245, 158, 11, 0.4);
-        }
-        50% {
-          transform: scale(1.02);
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 8px rgba(245, 158, 11, 0);
-        }
-      }
-      #rpa-replay-control-box {
-        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      #rpa-replay-control-box.rpa-paused-awaiting-confirmation {
-        animation: rpa-pulse-paused 2s ease-in-out infinite;
-      }
-    `;
-    document.head.appendChild(style);
-  }
+    // Adiciona estilos e animações ao documento se ainda não existir
+    if (!document.getElementById('rpa-overlay-styles')) {
+      const style = document.createElement('style');
+      style.id = 'rpa-overlay-styles';
+      // Usa concatenação de strings para evitar problemas com template strings aninhados
+      style.textContent = '@keyframes rpa-pulse-paused {' +
+        '0%, 100% {' +
+        '  transform: scale(1);' +
+        '  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(245, 158, 11, 0.4);' +
+        '}' +
+        '50% {' +
+        '  transform: scale(1.02);' +
+        '  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 8px rgba(245, 158, 11, 0);' +
+        '}' +
+        '}' +
+        '#rpa-replay-control-box {' +
+        '  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1);' +
+        '}' +
+        '#rpa-replay-control-box.rpa-paused-awaiting-confirmation {' +
+        '  animation: rpa-pulse-paused 2s ease-in-out infinite;' +
+        '}';
+      document.head.appendChild(style);
+    }
 
   // Cria caixa flutuante (tamanho natural, estilo AssistiveTouch)
   const box = document.createElement('div');
@@ -536,9 +535,11 @@ function setPausedState(isPaused) {
  */
 const INJECTABLE_SCRIPT = `
 (function() {
-  // Versão do script para debug
-  const SCRIPT_VERSION = '2.0.1';
-  console.log('[RPA Overlay] Script injetável iniciado (v' + SCRIPT_VERSION + ')');
+  try {
+    // Versão do script para debug
+    const SCRIPT_VERSION = '2.0.1';
+    // Mensagem inicial simplificada
+    console.log('[RPA Overlay] Iniciado');
   
   const OVERLAY_ID = 'rpa-replay-overlay';
   const BOX_ID = 'rpa-replay-control-box';
@@ -718,84 +719,52 @@ const INJECTABLE_SCRIPT = `
   }
 
   function createOverlay(apiBaseUrl, executionId, authToken) {
-    console.log('[RPA Overlay] ========== INÍCIO createOverlay ==========');
-    console.log('[RPA Overlay] Parâmetros:', { apiBaseUrl, executionId });
-    console.log('[RPA Overlay] Estado do documento:', {
-      readyState: document.readyState,
-      hasBody: !!document.body,
-      bodyChildren: document.body ? document.body.children.length : 0,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight
-    });
-    
-    // Garante que o body esteja disponível
-    if (!document.body) {
-      console.warn('[RPA Overlay] ⚠️ document.body não está disponível, aguardando 100ms...');
-      // Tenta aguardar o body estar pronto
-      setTimeout(function() {
-        console.log('[RPA Overlay] Tentando novamente após delay...');
-        createOverlay(apiBaseUrl, executionId);
-      }, 100);
-      return null; // Retorna null temporariamente, será criado após delay
-    }
-    
-    console.log('[RPA Overlay] ✅ document.body disponível');
-    
-    const existing = document.getElementById(OVERLAY_ID);
-    if (existing) {
-      console.log('[RPA Overlay] 🗑️ Removendo overlay existente');
-      existing.remove();
-    }
+    try {
+      // Garante que o body esteja disponível
+      if (!document.body) {
+        setTimeout(function() {
+          createOverlay(apiBaseUrl, executionId, authToken);
+        }, 100);
+        return null;
+      }
+      
+      const existing = document.getElementById(OVERLAY_ID);
+      if (existing) {
+        existing.remove();
+      }
 
-    console.log('[RPA Overlay] 📦 Criando elemento overlay...');
-    const overlay = document.createElement('div');
-    overlay.id = OVERLAY_ID;
-    // Aumenta z-index e garante visibilidade
-    overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background: rgba(0, 0, 0, 0.5) !important; z-index: 2147483647 !important; pointer-events: auto !important; display: block !important; visibility: visible !important; opacity: 1 !important;';
-    
-    console.log('[RPA Overlay] ✅ Overlay criado:', {
-      id: overlay.id,
-      tagName: overlay.tagName,
-      hasStyle: !!overlay.style,
-      styleLength: overlay.style.cssText.length
-    });
+      const overlay = document.createElement('div');
+      overlay.id = OVERLAY_ID;
+      overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background: rgba(0, 0, 0, 0.5) !important; z-index: 2147483647 !important; pointer-events: auto !important; display: block !important; visibility: visible !important; opacity: 1 !important;';
 
     // Adiciona estilos e animações ao documento se ainda não existir
     if (!document.getElementById('rpa-overlay-styles')) {
       const style = document.createElement('style');
       style.id = 'rpa-overlay-styles';
-      style.textContent = `
-        @keyframes rpa-pulse-paused {
-          0%, 100% {
-            transform: scale(1);
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(245, 158, 11, 0.4);
-          }
-          50% {
-            transform: scale(1.02);
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 8px rgba(245, 158, 11, 0);
-          }
-        }
-        #rpa-replay-control-box {
-          transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #rpa-replay-control-box.rpa-paused-awaiting-confirmation {
-          animation: rpa-pulse-paused 2s ease-in-out infinite;
-        }
-      `;
+      // Usa concatenação de strings para evitar problemas com template strings aninhados
+      style.textContent = '@keyframes rpa-pulse-paused {' +
+        '0%, 100% {' +
+        '  transform: scale(1);' +
+        '  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(245, 158, 11, 0.4);' +
+        '}' +
+        '50% {' +
+        '  transform: scale(1.02);' +
+        '  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 8px rgba(245, 158, 11, 0);' +
+        '}' +
+        '}' +
+        '#rpa-replay-control-box {' +
+        '  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1);' +
+        '}' +
+        '#rpa-replay-control-box.rpa-paused-awaiting-confirmation {' +
+        '  animation: rpa-pulse-paused 2s ease-in-out infinite;' +
+        '}';
       document.head.appendChild(style);
     }
 
-    console.log('[RPA Overlay] 📦 Criando elemento box...');
     const box = document.createElement('div');
     box.id = BOX_ID;
-    box.className = 'rpa-paused-awaiting-confirmation'; // Classe para estado pausado
-    // Garante que a caixa seja visível com z-index alto, borda visível e fundo semi-transparente
+    box.className = 'rpa-paused-awaiting-confirmation';
     box.style.cssText = 'position: fixed !important; background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: blur(6px) !important; -webkit-backdrop-filter: blur(6px) !important; border: 2px solid rgba(0, 0, 0, 0.6) !important; border-radius: 8px !important; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important; background-clip: padding-box !important; min-width: 140px !important; width: auto !important; pointer-events: auto !important; user-select: none !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important; display: block !important; visibility: visible !important; opacity: 1 !important; z-index: 2147483647 !important;';
-    
-    console.log('[RPA Overlay] ✅ Box criado:', {
-      id: box.id,
-      tagName: box.tagName
-    });
 
     // Tenta restaurar posição salva, mas ignora erro de localStorage
     let savedPos = null;
@@ -807,7 +776,6 @@ const INJECTABLE_SCRIPT = `
     }
     
     if (savedPos && savedPos.top && savedPos.left) {
-      console.log('[RPA Overlay] 📍 Usando posição salva:', savedPos);
       box.style.top = savedPos.top + 'px';
       box.style.left = savedPos.left + 'px';
       box.style.transform = 'none';
@@ -827,20 +795,11 @@ const INJECTABLE_SCRIPT = `
         box.style.top = newTop + 'px';
         box.style.left = newLeft + 'px';
         box.style.transform = 'none';
-        console.log('[RPA Overlay] 📍 Posição ajustada:', { top: newTop, left: newLeft });
       });
     } else {
-      console.log('[RPA Overlay] 📍 Posicionando caixa no canto superior esquerdo...');
-      // Posiciona no canto superior esquerdo na primeira execução
       box.style.top = MARGEM_MINIMA + 'px';
       box.style.left = MARGEM_MINIMA + 'px';
       box.style.transform = 'none';
-      
-      console.log('[RPA Overlay] 📍 Posição inicial definida:', {
-        top: box.style.top,
-        left: box.style.left,
-        transform: box.style.transform
-      });
     }
 
     const header = document.createElement('div');
@@ -962,302 +921,66 @@ const INJECTABLE_SCRIPT = `
       }
     };
 
-    console.log('[RPA Overlay] 🔗 Montando estrutura DOM...');
-    body.appendChild(btnNext);
-    body.appendChild(btnContinue);
-    body.appendChild(btnStop);
-    console.log('[RPA Overlay] ✅ Botões adicionados ao body da caixa');
+      body.appendChild(btnNext);
+      body.appendChild(btnContinue);
+      body.appendChild(btnStop);
 
-    box.appendChild(header);
-    box.appendChild(body);
-    console.log('[RPA Overlay] ✅ Header e body adicionados à box');
-    
-    overlay.appendChild(box);
-    console.log('[RPA Overlay] ✅ Box adicionado ao overlay');
-    console.log('[RPA Overlay] Estrutura DOM montada:', {
-      overlayChildren: overlay.children.length,
-      boxChildren: box.children.length,
-      headerExists: !!box.querySelector('.rpa-overlay-header'),
-      buttonsCount: box.querySelectorAll('button').length
-    });
-    
-    // Garante que o body esteja pronto antes de adicionar
-    console.log('[RPA Overlay] 📍 Adicionando overlay ao DOM...');
-    if (document.body) {
-      const beforeAppend = document.body.children.length;
-      document.body.appendChild(overlay);
-      const afterAppend = document.body.children.length;
-      console.log('[RPA Overlay] ✅ Overlay adicionado ao body:', {
-        beforeAppend,
-        afterAppend,
-        overlayInBody: document.body.contains(overlay),
-        overlayIsLastChild: document.body.lastChild === overlay
-      });
-    } else {
-      console.error('[RPA Overlay] ❌ ERRO: document.body não está disponível para adicionar overlay');
-      // Tenta adicionar ao documentElement como fallback
-      document.documentElement.appendChild(overlay);
-      console.log('[RPA Overlay] ⚠️ Overlay adicionado ao documentElement como fallback');
-    }
-
-    // Força visibilidade novamente após adicionar ao DOM
-    requestAnimationFrame(function() {
-      console.log('[RPA Overlay] 🎨 Aplicando estilos de visibilidade (requestAnimationFrame)...');
+      box.appendChild(header);
+      box.appendChild(body);
+      overlay.appendChild(box);
       
-      overlay.style.display = 'block';
-      overlay.style.visibility = 'visible';
-      overlay.style.opacity = '1';
-      box.style.display = 'block';
-      box.style.visibility = 'visible';
-      box.style.opacity = '1';
-      
-      const overlayComputed = window.getComputedStyle(overlay);
-      const boxComputed = window.getComputedStyle(box);
-      const overlayRect = overlay.getBoundingClientRect();
-      const boxRect = box.getBoundingClientRect();
-      
-      console.log('[RPA Overlay] ✅ Estilos aplicados');
-      
-      // Logs individuais para facilitar leitura
-      console.log('[RPA Overlay] 📊 VERIFICAÇÃO DETALHADA:');
-      console.log('  Overlay no DOM:', document.body.contains(overlay) || document.documentElement.contains(overlay));
-      console.log('  Box no DOM:', overlay.contains(box));
-      console.log('  Overlay Rect:', 'top=' + overlayRect.top, 'left=' + overlayRect.left, 'width=' + overlayRect.width, 'height=' + overlayRect.height);
-      console.log('  Box Rect:', 'top=' + boxRect.top, 'left=' + boxRect.left, 'width=' + boxRect.width, 'height=' + boxRect.height);
-      console.log('  Overlay Styles:', 'display=' + overlayComputed.display, 'visibility=' + overlayComputed.visibility, 'opacity=' + overlayComputed.opacity, 'zIndex=' + overlayComputed.zIndex);
-      console.log('  Box Styles:', 'display=' + boxComputed.display, 'visibility=' + boxComputed.visibility, 'opacity=' + boxComputed.opacity, 'zIndex=' + boxComputed.zIndex, 'position=' + boxComputed.position);
-      console.log('  Box Background:', boxComputed.backgroundColor);
-      console.log('  Viewport:', 'width=' + window.innerWidth, 'height=' + window.innerHeight);
-      
-      // Verifica se está dentro da viewport
-      const boxInViewport = boxRect.top >= 0 && boxRect.left >= 0 && 
-                           boxRect.bottom <= window.innerHeight && 
-                           boxRect.right <= window.innerWidth;
-      console.log('  Box dentro da viewport?', boxInViewport);
-      
-      if (boxRect.width === 0 || boxRect.height === 0) {
-        console.error('[RPA Overlay] ❌ PROBLEMA: Box tem dimensões ZERO!', {
-          width: boxRect.width,
-          height: boxRect.height
-        });
-      }
-      
-      if (!boxInViewport) {
-        console.warn('[RPA Overlay] ⚠️ Box está FORA da viewport!', {
-          boxTop: boxRect.top,
-          boxLeft: boxRect.left,
-          boxBottom: boxRect.bottom,
-          boxRight: boxRect.right,
-          viewportHeight: window.innerHeight,
-          viewportWidth: window.innerWidth
-        });
-      }
-      
-      // Log completo como objeto também
-      console.log('[RPA Overlay] 📊 Objeto completo:', {
-        overlayInDOM: document.body.contains(overlay) || document.documentElement.contains(overlay),
-        boxInDOM: overlay.contains(box),
-        overlayRect: {
-          top: overlayRect.top,
-          left: overlayRect.left,
-          width: overlayRect.width,
-          height: overlayRect.height
-        },
-        boxRect: {
-          top: boxRect.top,
-          left: boxRect.left,
-          width: boxRect.width,
-          height: boxRect.height,
-          bottom: boxRect.bottom,
-          right: boxRect.right
-        },
-        overlayStyles: {
-          display: overlayComputed.display,
-          visibility: overlayComputed.visibility,
-          opacity: overlayComputed.opacity,
-          zIndex: overlayComputed.zIndex,
-          position: overlayComputed.position
-        },
-        boxStyles: {
-          display: boxComputed.display,
-          visibility: boxComputed.visibility,
-          opacity: boxComputed.opacity,
-          zIndex: boxComputed.zIndex,
-          position: boxComputed.position,
-          backgroundColor: boxComputed.backgroundColor,
-          top: boxComputed.top,
-          left: boxComputed.left,
-          transform: boxComputed.transform
-        },
-        viewport: {
-          width: window.innerWidth,
-          height: window.innerHeight
-        },
-        boxInViewport: boxInViewport
-      });
-      
-      // Verifica se há elementos bloqueando
-      const allElements = document.querySelectorAll('*');
-      let blockingElements = [];
-      allElements.forEach(function(el) {
-        if (el === overlay || el === box || overlay.contains(el)) return;
-        const style = window.getComputedStyle(el);
-        const zIndex = parseInt(style.zIndex) || 0;
-        if (zIndex > 1000000 && style.position !== 'static') {
-          blockingElements.push({
-            tag: el.tagName,
-            id: el.id,
-            className: el.className,
-            zIndex: zIndex
-          });
-        }
-      });
-      
-      if (blockingElements.length > 0) {
-        console.warn('[RPA Overlay] ⚠️ Elementos com z-index alto encontrados (podem estar bloqueando):', blockingElements.slice(0, 5));
-      }
-    });
-
-    // Habilita drag
-    enableOverlayDrag(box);
-
-    // Verificação final após um pequeno delay
-    setTimeout(function() {
-      console.log('[RPA Overlay] 🔍 Verificação final após 100ms...');
-      const finalOverlay = document.getElementById(OVERLAY_ID);
-      const finalBox = document.getElementById(BOX_ID);
-      
-      if (finalOverlay && finalBox) {
-        const boxRect = finalBox.getBoundingClientRect();
-        const overlayRect = finalOverlay.getBoundingClientRect();
-        const boxComputed = window.getComputedStyle(finalBox);
-        const overlayComputed = window.getComputedStyle(finalOverlay);
-        
-        const isVisible = 
-          boxRect.width > 0 && 
-          boxRect.height > 0 && 
-          boxComputed.display !== 'none' && 
-          boxComputed.visibility !== 'hidden' && 
-          parseFloat(boxComputed.opacity) > 0;
-        
-        // Log detalhado expandido com valores individuais
-      console.log('[RPA Overlay] ✅ VERIFICAÇÃO FINAL:');
-      console.log('  Overlay existe:', !!finalOverlay);
-      console.log('  Box existe:', !!finalBox);
-      console.log('  Overlay Rect:', 'top=' + overlayRect.top, 'left=' + overlayRect.left, 'width=' + overlayRect.width, 'height=' + overlayRect.height);
-      console.log('  Box Rect:', 'top=' + boxRect.top, 'left=' + boxRect.left, 'width=' + boxRect.width, 'height=' + boxRect.height, 'bottom=' + boxRect.bottom, 'right=' + boxRect.right);
-      console.log('  Box Styles:', 'display=' + boxComputed.display, 'visibility=' + boxComputed.visibility, 'opacity=' + boxComputed.opacity, 'zIndex=' + boxComputed.zIndex);
-      console.log('  Box Position:', 'top=' + boxComputed.top, 'left=' + boxComputed.left, 'transform=' + boxComputed.transform);
-      console.log('  Box Background:', boxComputed.backgroundColor);
-      console.log('  Viewport:', 'width=' + window.innerWidth, 'height=' + window.innerHeight);
-      
-      const boxInViewport = boxRect.top >= 0 && boxRect.left >= 0 && 
-                           boxRect.bottom <= window.innerHeight && 
-                           boxRect.right <= window.innerWidth;
-      console.log('  Box dentro da viewport?', boxInViewport);
-      console.log('  Box visível?', isVisible);
-      
-      const logData = {
-        overlayExists: !!finalOverlay,
-        boxExists: !!finalBox,
-        overlayRect: {
-          top: overlayRect.top,
-          left: overlayRect.left,
-          width: overlayRect.width,
-          height: overlayRect.height,
-          visible: overlayRect.width > 0 && overlayRect.height > 0,
-          bottom: overlayRect.bottom,
-          right: overlayRect.right
-        },
-        boxRect: {
-          top: boxRect.top,
-          left: boxRect.left,
-          width: boxRect.width,
-          height: boxRect.height,
-          visible: boxRect.width > 0 && boxRect.height > 0,
-          bottom: boxRect.bottom,
-          right: boxRect.right
-        },
-        boxStyles: {
-          display: boxComputed.display,
-          visibility: boxComputed.visibility,
-          opacity: boxComputed.opacity,
-          zIndex: boxComputed.zIndex,
-          position: boxComputed.position,
-          backgroundColor: boxComputed.backgroundColor,
-          top: boxComputed.top,
-          left: boxComputed.left,
-          transform: boxComputed.transform
-        },
-        overlayStyles: {
-          display: overlayComputed.display,
-          visibility: overlayComputed.visibility,
-          opacity: overlayComputed.opacity,
-          zIndex: overlayComputed.zIndex,
-          position: overlayComputed.position
-        },
-        isVisible: isVisible,
-        viewport: {
-          width: window.innerWidth,
-          height: window.innerHeight
-        },
-        boxInViewport: boxInViewport
-      };
-      
-      console.log('[RPA Overlay] ✅ Objeto completo:', logData);
-      
-      // Log visual no console
-      if (isVisible && logData.boxInViewport) {
-        console.log('%c[RPA Overlay] ✅✅✅ OVERLAY DEVE ESTAR VISÍVEL! ✅✅✅', 
-          'background: #4CAF50; color: white; font-size: 16px; font-weight: bold; padding: 10px;');
+      if (document.body) {
+        document.body.appendChild(overlay);
       } else {
-        console.warn('%c[RPA Overlay] ⚠️⚠️⚠️ OVERLAY PODE NÃO ESTAR VISÍVEL ⚠️⚠️⚠️', 
-          'background: #ff9800; color: white; font-size: 16px; font-weight: bold; padding: 10px;');
-        if (!logData.boxInViewport) {
-          console.warn('[RPA Overlay] ❌ Box está FORA da viewport!', {
-            boxTop: boxRect.top,
-            boxLeft: boxRect.left,
-            viewportHeight: window.innerHeight,
-            viewportWidth: window.innerWidth
-          });
-        }
+        document.documentElement.appendChild(overlay);
       }
+
+      // Força visibilidade novamente após adicionar ao DOM
+      requestAnimationFrame(function() {
+        overlay.style.display = 'block';
+        overlay.style.visibility = 'visible';
+        overlay.style.opacity = '1';
+        box.style.display = 'block';
+        box.style.visibility = 'visible';
+        box.style.opacity = '1';
+      });
+
+      // Habilita drag
+      enableOverlayDrag(box);
+
+      // Verificação final após um pequeno delay
+      setTimeout(function() {
+        const finalOverlay = document.getElementById(OVERLAY_ID);
+        const finalBox = document.getElementById(BOX_ID);
         
-        if (!isVisible) {
-          console.error('[RPA Overlay] ❌ PROBLEMA: Box não está visível!', {
-            width: boxRect.width,
-            height: boxRect.height,
-            display: boxComputed.display,
-            visibility: boxComputed.visibility,
-            opacity: boxComputed.opacity
-          });
+        if (finalOverlay && finalBox) {
+          const boxRect = finalBox.getBoundingClientRect();
+          const boxComputed = window.getComputedStyle(finalBox);
           
-          // Tenta forçar visibilidade novamente
-          console.log('[RPA Overlay] 🔧 Tentando forçar visibilidade...');
-          finalBox.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
-          finalOverlay.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
+          const isVisible = 
+            boxRect.width > 0 && 
+            boxRect.height > 0 && 
+            boxComputed.display !== 'none' && 
+            boxComputed.visibility !== 'hidden' && 
+            parseFloat(boxComputed.opacity) > 0;
+          
+          if (!isVisible) {
+            console.warn('[RPA Overlay] Overlay não está visível, forçando visibilidade...');
+            finalBox.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
+            finalOverlay.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
+          } else {
+            console.log('[RPA Overlay] Overlay criado e visível');
+          }
         } else {
-          console.log('[RPA Overlay] ✅ Box está visível!');
+          console.error('[RPA Overlay] ERRO: Overlay ou box não encontrados após criação!');
         }
-      } else {
-        console.error('[RPA Overlay] ❌ ERRO CRÍTICO: Elementos não encontrados após criação!', {
-          overlayExists: !!finalOverlay,
-          boxExists: !!finalBox,
-          overlayById: !!document.getElementById(OVERLAY_ID),
-          boxById: !!document.getElementById(BOX_ID)
-        });
-      }
-      
-      console.log('[RPA Overlay] ========== FIM createOverlay ==========');
-      
-      // Adiciona comando para inspecionar elementos no console
-      console.log('[RPA Overlay] 💡 Para inspecionar manualmente, use:');
-      console.log('  - document.getElementById("rpa-replay-overlay")');
-      console.log('  - document.getElementById("rpa-replay-control-box")');
-      console.log('  - window.rpaOverlay.debug() // para ver estado atual');
-    }, 100);
+      }, 100);
 
-    return overlay;
+      return overlay;
+    } catch (error) {
+      console.error('[RPA Overlay] ERRO ao criar overlay:', error);
+      return null;
+    }
   }
 
   function removeOverlay() {
@@ -1272,53 +995,32 @@ const INJECTABLE_SCRIPT = `
   
   // Função para tentar criar overlay automaticamente quando DOM estiver pronto
   function tryAutoCreate() {
-    // Verificação rápida: se não há pendingConfig, não faz nada (evita logs desnecessários)
     if (!pendingConfig) {
-      // Silenciosamente retorna - init() ainda não foi chamado
-      // Isso previne logs desnecessários quando a função é chamada antes de init()
       return;
     }
     
-    const hasPendingConfig = !!pendingConfig;
-    const hasBody = !!document.body;
-    const readyState = document.readyState;
-    
-    console.log('[RPA Overlay] 🔄 tryAutoCreate() chamado');
-    console.log('[RPA Overlay] 📊 Estado atual:', {
-      hasPendingConfig: hasPendingConfig,
-      hasBody: hasBody,
-      readyState: readyState
-    });
-    
     if (pendingConfig && document.body) {
-      console.log('[RPA Overlay] 🔄 Tentando criar overlay automaticamente...', {
-        apiBaseUrl: pendingConfig.apiBaseUrl,
-        executionId: pendingConfig.executionId
-      });
       const config = pendingConfig;
-      pendingConfig = null; // Limpa para evitar múltiplas criações
-      const result = window.rpaOverlay.create(config.apiBaseUrl, config.executionId, config.authToken);
-      console.log('[RPA Overlay] ✅ Overlay criado automaticamente:', result !== null);
-    } else {
-      if (!hasBody) {
-        console.log('[RPA Overlay] ⚠️ Não foi possível criar overlay: document.body ainda não está disponível');
-      } else {
-        console.log('[RPA Overlay] ⚠️ Não foi possível criar overlay: condição não atendida');
+      pendingConfig = null;
+      if (window.rpaOverlay && window.rpaOverlay.create) {
+        window.rpaOverlay.create(config.apiBaseUrl, config.executionId, config.authToken);
       }
     }
   }
   
-  window.rpaOverlay = {
+  console.log('[RPA Overlay] Preparando para criar window.rpaOverlay...');
+  console.log('[RPA Overlay] Funções disponíveis:', {
+    hasCreateOverlay: typeof createOverlay === 'function',
+    hasRemoveOverlay: typeof removeOverlay === 'function',
+    hasSetPausedState: typeof setPausedState === 'function',
+    hasTryAutoCreate: typeof tryAutoCreate === 'function'
+  });
+  
+  try {
+    console.log('[RPA Overlay] Criando objeto window.rpaOverlay...');
+    window.rpaOverlay = {
     create: function(apiBaseUrl, executionId, authToken) {
-      console.log('[RPA Overlay] ========================================');
-      console.log('[RPA Overlay] 🚀 window.rpaOverlay.create CHAMADO!');
-      console.log('[RPA Overlay] Parâmetros recebidos:', {
-        apiBaseUrl: apiBaseUrl,
-        executionId: executionId,
-        authToken: authToken ? '***' : null,
-        apiBaseUrlType: typeof apiBaseUrl,
-        executionIdType: typeof executionId
-      });
+      console.log('[RPA Overlay] Criando overlay...');
       
       if (!apiBaseUrl || !executionId) {
         console.error('[RPA Overlay] ❌ ERRO: Parâmetros inválidos!', {
@@ -1328,9 +1030,18 @@ const INJECTABLE_SCRIPT = `
         return null;
       }
       
-      const result = createOverlay(apiBaseUrl, executionId, authToken);
-      console.log('[RPA Overlay] Resultado de createOverlay:', result);
-      return result;
+      try {
+        const result = createOverlay(apiBaseUrl, executionId, authToken);
+        if (result) {
+          console.log('[RPA Overlay] Overlay criado com sucesso');
+        } else {
+          console.warn('[RPA Overlay] createOverlay retornou null');
+        }
+        return result;
+      } catch (error) {
+        console.error('[RPA Overlay] ERRO ao chamar createOverlay:', error);
+        return null;
+      }
     },
     remove: function() {
       console.log('[RPA Overlay] 🗑️ window.rpaOverlay.remove chamado');
@@ -1342,15 +1053,7 @@ const INJECTABLE_SCRIPT = `
     },
     // Método para inicializar e criar overlay automaticamente
     init: function(apiBaseUrl, executionId, authToken) {
-      console.log('[RPA Overlay] 🔧 window.rpaOverlay.init chamado');
-      console.log('[RPA Overlay] 📋 Parâmetros recebidos no init:', {
-        apiBaseUrl: apiBaseUrl,
-        executionId: executionId,
-        apiBaseUrlType: typeof apiBaseUrl,
-        executionIdType: typeof executionId,
-        hasBody: !!document.body,
-        readyState: document.readyState
-      });
+      console.log('[RPA Overlay] Inicializando...');
       
       if (!apiBaseUrl || !executionId) {
         console.error('[RPA Overlay] ❌ ERRO: Parâmetros inválidos no init!', {
@@ -1362,35 +1065,23 @@ const INJECTABLE_SCRIPT = `
       
       // Se o DOM estiver pronto (body disponível e estado interactive ou complete), cria imediatamente
       if (document.body && (document.readyState === 'interactive' || document.readyState === 'complete')) {
-        console.log('[RPA Overlay] ✅ DOM pronto, criando overlay imediatamente...');
         const result = window.rpaOverlay.create(apiBaseUrl, executionId, authToken);
-        console.log('[RPA Overlay] ✅ init() concluído, resultado:', result !== null);
         return result !== null;
       } else {
         // Armazena para criar quando DOM estiver pronto
-        console.log('[RPA Overlay] ⏳ DOM não está pronto, aguardando...', {
-          hasBody: !!document.body,
-          readyState: document.readyState
-        });
         pendingConfig = { apiBaseUrl, executionId, authToken };
         
         // Tenta criar quando DOM estiver pronto
         if (document.readyState === 'loading') {
-          console.log('[RPA Overlay] 📌 Adicionando listener para DOMContentLoaded');
-          // Usa uma função wrapper para poder remover o listener depois se necessário
           const autoCreateWrapper = function() {
             tryAutoCreate();
           };
           document.addEventListener('DOMContentLoaded', autoCreateWrapper, { once: true });
         } else if (document.readyState === 'interactive' || document.readyState === 'complete') {
-          // DOM já está pronto, tenta criar imediatamente
-          console.log('[RPA Overlay] ✅ DOM já está pronto, tentando criar imediatamente...');
           setTimeout(function() {
             tryAutoCreate();
           }, 50);
         } else {
-          // Estado desconhecido, aguarda um pouco
-          console.log('[RPA Overlay] ⏱️ Estado desconhecido, aguardando 100ms...');
           setTimeout(function() {
             tryAutoCreate();
           }, 100);
@@ -1401,22 +1092,18 @@ const INJECTABLE_SCRIPT = `
     }
   };
   
-  console.log('[RPA Overlay] ✅ window.rpaOverlay criado:', {
-    hasCreate: typeof window.rpaOverlay.create === 'function',
-    hasRemove: typeof window.rpaOverlay.remove === 'function',
-    createType: typeof window.rpaOverlay.create
-  });
-  
-  // Teste: verifica se pode criar overlay imediatamente (apenas para debug)
-  console.log('[RPA Overlay] 🔍 Verificando ambiente...');
-  if (document.body && typeof window.rpaOverlay.create === 'function') {
-    console.log('[RPA Overlay] ✅ Ambiente OK: Função create está disponível e body está pronto');
-  } else {
-    console.warn('[RPA Overlay] ⚠️ Aviso: Ambiente pode não estar pronto', {
-      hasCreate: typeof window.rpaOverlay.create === 'function',
-      hasBody: !!document.body,
-      readyState: document.readyState
-    });
+    console.log('[RPA Overlay] ✅ window.rpaOverlay criado e pronto para uso');
+  } catch (error) {
+    console.error('[RPA Overlay] ❌ ERRO ao criar window.rpaOverlay:', error);
+    console.error('[RPA Overlay] Stack:', error.stack);
+    // Cria um objeto mínimo mesmo em caso de erro
+    window.rpaOverlay = {
+      error: error.message,
+      debug: function() {
+        console.error('[RPA Overlay] Script não foi inicializado corretamente:', error.message);
+        return { error: error.message };
+      }
+    };
   }
   
   // Nota: tryAutoCreate() só será chamado quando init() for executado e definir pendingConfig
@@ -1542,12 +1229,34 @@ const INJECTABLE_SCRIPT = `
     return debugInfo;
   };
   
-  console.log('[RPA Overlay] 💡 Dicas:');
-  console.log('  - window.rpaOverlay.test() // para testar criação');
-  console.log('  - window.rpaOverlay.debug() // para ver estado atual');
-  console.log('  - window.rpaOverlay.forceVisible() // para forçar visibilidade');
-  console.log('  - document.getElementById("rpa-replay-overlay") // para inspecionar overlay');
-  console.log('  - document.getElementById("rpa-replay-control-box") // para inspecionar box');
+    console.log('[RPA Overlay] 💡 Dicas:');
+    console.log('  - window.rpaOverlay.test() // para testar criação');
+    console.log('  - window.rpaOverlay.debug() // para ver estado atual');
+    console.log('  - window.rpaOverlay.forceVisible() // para forçar visibilidade');
+    console.log('  - document.getElementById("rpa-replay-overlay") // para inspecionar overlay');
+    console.log('  - document.getElementById("rpa-replay-control-box") // para inspecionar box');
+    
+    // Verifica se window.rpaOverlay foi criado
+    if (typeof window.rpaOverlay === 'undefined') {
+      console.error('[RPA Overlay] ❌ ERRO CRÍTICO: window.rpaOverlay não foi criado!');
+      throw new Error('window.rpaOverlay não foi criado');
+    }
+    
+    console.log('[RPA Overlay] ✅ window.rpaOverlay criado com sucesso');
+  } catch (error) {
+    console.error('[RPA Overlay] ❌ ERRO FATAL ao inicializar script:', error);
+    console.error('[RPA Overlay] Stack:', error.stack);
+    // Tenta criar um objeto mínimo mesmo em caso de erro
+    if (typeof window.rpaOverlay === 'undefined') {
+      window.rpaOverlay = {
+        error: error.message,
+        debug: function() {
+          console.error('[RPA Overlay] Script não foi inicializado corretamente:', error.message);
+          return { error: error.message };
+        }
+      };
+    }
+  }
 })();
 `;
 
