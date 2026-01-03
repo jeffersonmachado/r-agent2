@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/qa/qa-result.schema.json",
+  "title": "QaResult",
+  "description": "Contrato canônico de resultado de QA - fonte única de verdade",
+  "meta": {
+    "contractVersion": "1.0.0"
+  },
+  "type": "object",
+  "required": ["status", "scope", "checks", "meta"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "WARN"],
+      "description": "Status geral do QA: PASS (todos os checks passaram), FAIL (há checks bloqueantes falhando), WARN (há warnings mas nenhum bloqueante)"
+    },
+    "scope": {
+      "type": "array",
+      "description": "Escopos de QA afetados nesta execução",
+      "items": {
+        "type": "string",
+        "enum": ["contracts", "rag", "prompts", "wrappers", "executors", "ci", "telemetry"]
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "checks": {
+      "type": "array",
+      "description": "Lista de checks executados",
+      "items": {
+        "type": "object",
+        "required": ["id", "result", "blocking"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador único do check (ex: 'contracts.schema.validation', 'rag.actions.whitelist')"
+          },
+          "result": {
+            "type": "string",
+            "enum": ["PASS", "FAIL"],
+            "description": "Resultado do check: PASS ou FAIL"
+          },
+          "blocking": {
+            "type": "boolean",
+            "description": "Se true, este check bloqueia o PR/deploy se falhar"
+          },
+          "details": {
+            "type": "object",
+            "description": "Detalhes opcionais do check (mensagens, dados adicionais)",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "meta": {
+      "type": "object",
+      "required": ["timestamp", "source"],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp ISO 8601 da execução do QA"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["ci", "local", "runtime", "manual"],
+          "description": "Origem da execução: ci (CI/CD), local (desenvolvimento local), runtime (execução em produção), manual (execução manual)"
+        },
+        "commit": {
+          "type": "string",
+          "description": "Hash do commit (quando disponível, principalmente em CI)"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Branch do Git (quando disponível)"
+        },
+        "changedFiles": {
+          "type": "array",
+          "description": "Lista de arquivos alterados que dispararam este QA (quando disponível)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
+

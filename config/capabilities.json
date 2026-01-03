@@ -1,0 +1,31 @@
+{
+  "can": [
+    "gerar_fluxos",
+    "executar_fluxos",
+    "processar_ia",
+    "consultar_rag",
+    "consultar_filas",
+    "criar_tickets",
+    "transferir_humano",
+    "consultar_fluxos",
+    "consultar_config",
+    "chamar_apis_externas",
+    "enviar_mensagens_whatsapp",
+    "enviar_mensagens_messenger",
+    "enviar_mensagens_instagram",
+    "classificar_intencao",
+    "extrair_entidades",
+    "normalizar_texto",
+    "resposta_assistida"
+  ],
+  "cannot": [
+    "abrir_chamados_sistemas_externos",
+    "contato_direto_humano_sem_fila",
+    "promessas_futuras",
+    "simular_atendente_humano",
+    "simular_setor_equipe",
+    "estados_operacionais_falsos",
+    "acoes_nao_implementadas"
+  ]
+}
+

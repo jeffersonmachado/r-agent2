@@ -471,10 +471,30 @@ export function Toolbar({
     return hasNavigationText || isNavigationLink;
   });
   
-  // Children do grupo file (apenas os primeiros 3, excluindo Logs explicitamente)
+  // Identifica o botão Remover (verifica se tem icon-delete ou texto "Remover")
+  const removeButton = childrenArray.find(child => {
+    if (!React.isValidElement(child)) return false;
+    
+    const childChildren = React.Children.toArray(child.props?.children || []);
+    const hasDeleteIcon = childChildren.some(c => 
+      React.isValidElement(c) && 
+      c.props?.className?.includes('icon-delete')
+    );
+    
+    const hasRemoveText = childChildren.some(c => 
+      (typeof c === 'string' && c.includes('Remover')) ||
+      (React.isValidElement(c) && typeof c.props?.children === 'string' && c.props.children.includes('Remover'))
+    );
+    
+    return hasDeleteIcon || hasRemoveText;
+  });
+  
+  // Children do grupo file (Novo, Gerar com IA, FlowSelector, Remover - excluindo Logs explicitamente)
   const fileGroupChildren = childrenArray.filter((child, index) => {
-    // Primeiros 3 children (Novo, FlowSelector, Remover) sempre vão para file, mas excluindo Logs
+    // Primeiros 3 children (Novo, Gerar com IA, FlowSelector) sempre vão para file
     if (index < 3 && child !== logsButton) return true;
+    // Botão Remover também vai para file
+    if (child === removeButton) return true;
     // Logs nunca vai para file
     return false;
   });

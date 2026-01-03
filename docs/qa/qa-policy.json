@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Política de QA (SLA)",
+  "description": "Política formal de qualidade que define limites aceitáveis e regras de bloqueio",
+  "version": "1.0.0",
+  "warnings": {
+    "maxAcceptable": 3,
+    "escalationThreshold": 5,
+    "whenWarnBecomesFail": {
+      "description": "WARN vira FAIL quando excede maxAcceptable e afeta escopos críticos",
+      "criticalScopes": ["contracts", "gate", "wrappers"],
+      "rule": "Se WARN >= maxAcceptable E escopo em criticalScopes, status = FAIL"
+    }
+  },
+  "failures": {
+    "maxRuntimeFailures": {
+      "blocking": 1,
+      "description": "Quantidade de falhas runtime que geram bloqueio imediato"
+    },
+    "recurringFailureThreshold": 3,
+    "description": "Após N ocorrências da mesma falha, check vira blocking automaticamente"
+  },
+  "blockingScopes": {
+    "alwaysBlock": ["contracts", "gate"],
+    "description": "Escopos que sempre bloqueiam se houver qualquer FAIL",
+    "rules": [
+      "contracts: Qualquer FAIL em validação de contratos bloqueia",
+      "gate: Qualquer FAIL no gate de validação IA bloqueia"
+    ]
+  },
+  "sla": {
+    "ci": {
+      "maxExecutionTime": 300,
+      "unit": "seconds",
+      "description": "Tempo máximo de execução de QA no CI"
+    },
+    "runtime": {
+      "maxResponseTime": 5,
+      "unit": "seconds",
+      "description": "Tempo máximo de resposta de checks runtime"
+    }
+  },
+  "enforcement": {
+    "ci": {
+      "enabled": true,
+      "exitCode": 1,
+      "description": "CI retorna código de erro se QA falhar"
+    },
+    "deployment": {
+      "blockOnFail": true,
+      "description": "Deploy bloqueia se QA falhar"
+    }
+  }
+}
+

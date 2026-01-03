@@ -1,0 +1,540 @@
+{
+  "version": "1.0",
+  "description": "Tipos de nós disponíveis no sistema de chatbot. Extraído de frontend/src/editor/nodeSchemas.js e engine/flowTypes.js",
+  "nodeTypes": {
+    "core": {
+      "start": {
+        "description": "Nó inicial do fluxo. Define o ponto de entrada da conversa.",
+        "required": true,
+        "maxPerFlow": 1,
+        "minPerFlow": 1,
+        "hasInputs": false,
+        "hasOutputs": true,
+        "config": {}
+      },
+      "end": {
+        "description": "Nó final do fluxo. Encerra a conversa.",
+        "required": true,
+        "maxPerFlow": null,
+        "minPerFlow": 1,
+        "hasInputs": true,
+        "hasOutputs": false,
+        "config": {}
+      },
+      "message": {
+        "description": "Envia uma mensagem ao usuário. Suporta interpolação de variáveis usando {{variavel}}.",
+        "required": false,
+        "config": {
+          "text": {
+            "type": "string",
+            "required": true,
+            "maxLength": 10000,
+            "description": "Texto da mensagem a ser enviada"
+          }
+        }
+      },
+      "user_input": {
+        "description": "Captura entrada do usuário e armazena em uma variável.",
+        "required": false,
+        "config": {
+          "variable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "user_input",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+            "description": "Nome da variável onde a resposta será armazenada"
+          }
+        },
+        "errorPorts": true,
+        "supportsTimeout": false
+      },
+      "router": {
+        "description": "Roteia o fluxo baseado em condições e regras definidas.",
+        "required": false,
+        "config": {
+          "rules": {
+            "type": "array",
+            "required": true,
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["condition", "next"],
+              "properties": {
+                "condition": {
+                  "type": "object",
+                  "required": ["op"],
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "enum": ["always", "equals", "contains"]
+                    },
+                    "var": {
+                      "type": "string",
+                      "description": "Nome da variável (obrigatório quando op != 'always')"
+                    },
+                    "value": {
+                      "description": "Valor a ser comparado"
+                    }
+                  }
+                },
+                "next": {
+                  "type": "string",
+                  "description": "ID do próximo nó quando a condição for verdadeira"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ai_task": {
+        "description": "Identifica a intenção do usuário baseado nas palavras que ele digita.",
+        "required": false,
+        "config": {
+          "task": {
+            "type": "string",
+            "required": true,
+            "enum": ["intent_classification", "entity_extraction", "text_normalization", "assisted_response"]
+          },
+          "allowedOutputs": {
+            "type": "array",
+            "required": true,
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "Lista de intenções que o bot deve identificar"
+          },
+          "fallback": {
+            "type": "string",
+            "required": true,
+            "description": "Valor usado quando não conseguir identificar nenhuma intenção"
+          },
+          "confidenceThreshold": {
+            "type": "number",
+            "required": false,
+            "minimum": 0,
+            "maximum": 1,
+            "defaultValue": 0.75,
+            "description": "Nível mínimo de confiança (0.0 a 1.0)"
+          },
+          "keywords": {
+            "type": "object",
+            "required": false,
+            "description": "Palavras-chave que indicam cada intenção"
+          }
+        }
+      },
+      "set_variable": {
+        "description": "Define ou atualiza o valor de variáveis do fluxo.",
+        "required": false,
+        "config": {
+          "assignments": {
+            "type": "object",
+            "required": true,
+            "description": "Objeto com pares chave-valor onde cada chave é o nome da variável e o valor é o que será armazenado"
+          }
+        }
+      },
+      "handoff": {
+        "description": "Transfere a conversa para um agente humano ou fila de atendimento.",
+        "required": false,
+        "config": {
+          "queue": {
+            "type": "string",
+            "required": true,
+            "description": "Identificador da fila ou equipe de atendimento"
+          }
+        }
+      },
+      "ai": {
+        "description": "Processa a entrada usando IA e gera uma resposta contextual.",
+        "required": false,
+        "config": {
+          "promptTemplate": {
+            "type": "string",
+            "required": true,
+            "description": "Template do prompt para a IA. Use {{variavel}} para substituir valores"
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "ai_output",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+            "description": "Nome da variável onde a resposta será armazenada"
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": false,
+            "description": "Schema JSON Schema para validar e estruturar a resposta"
+          },
+          "fallbackText": {
+            "type": "string",
+            "required": false,
+            "description": "Mensagem exibida caso a IA falhe"
+          }
+        },
+        "errorPorts": true,
+        "supportsTimeout": true
+      },
+      "fallback": {
+        "description": "Nó de fallback centralizado. Gerencia erros, tentativas e escalada para humano.",
+        "required": false,
+        "config": {
+          "maxAttempts": {
+            "type": "number",
+            "required": false,
+            "minimum": 1,
+            "maximum": 10,
+            "defaultValue": 3,
+            "description": "Número máximo de tentativas antes de escalar"
+          },
+          "confidenceThreshold": {
+            "type": "number",
+            "required": false,
+            "minimum": 0,
+            "maximum": 1,
+            "defaultValue": 0.75,
+            "description": "Nível mínimo de confiança"
+          },
+          "enableEmotionCheck": {
+            "type": "boolean",
+            "required": false,
+            "defaultValue": true,
+            "description": "Habilitar detecção automática de frustração"
+          },
+          "safeReturnNode": {
+            "type": "string",
+            "required": false,
+            "description": "ID do nó para retornar após escalada humana"
+          },
+          "escalationMode": {
+            "type": "string",
+            "required": false,
+            "enum": ["ticket", "human"],
+            "defaultValue": "ticket",
+            "description": "Modo de escalada: ticket (assíncrono) ou human (síncrono)"
+          },
+          "allowReturnToBot": {
+            "type": "boolean",
+            "required": false,
+            "defaultValue": true,
+            "description": "Permitir que o atendente retorne a conversa ao bot"
+          },
+          "queue": {
+            "type": "string",
+            "required": false,
+            "description": "Nome da fila para escalada via ticket (apenas para modo ticket)"
+          }
+        }
+      }
+    },
+    "system": {
+      "get_flow_info": {
+        "description": "Obtém informações de outro fluxo e salva em uma variável.",
+        "config": {
+          "flowId": {
+            "type": "string",
+            "required": true
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "flow_info",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "get_queue_status": {
+        "description": "Obtém status de uma fila de atendimento.",
+        "config": {
+          "queueName": {
+            "type": "string",
+            "required": true
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "queue_status",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "get_config_value": {
+        "description": "Obtém um valor da configuração do sistema.",
+        "config": {
+          "configPath": {
+            "type": "string",
+            "required": true
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "config_value",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
+          "defaultValue": {
+            "description": "Valor padrão caso o caminho não exista"
+          }
+        }
+      },
+      "list_flows": {
+        "description": "Lista fluxos disponíveis com filtros opcionais.",
+        "config": {
+          "tenantId": {
+            "type": "string",
+            "required": false
+          },
+          "nameFilter": {
+            "type": "string",
+            "required": false
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "flows_list",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "get_current_time": {
+        "description": "Obtém a data e hora atual do sistema em diferentes formatos.",
+        "config": {
+          "format": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "ISO"
+          },
+          "timezone": {
+            "type": "string",
+            "required": false
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "current_time",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "generate_uuid": {
+        "description": "Gera um identificador único universal (UUID).",
+        "config": {
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "uuid",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "delay": {
+        "description": "Aguarda um tempo específico antes de continuar o fluxo.",
+        "config": {
+          "duration": {
+            "type": "number",
+            "required": true,
+            "minimum": 0,
+            "maximum": 60000,
+            "description": "Tempo de espera em milissegundos"
+          }
+        }
+      },
+      "format_date": {
+        "description": "Formata uma data/hora em um formato específico.",
+        "config": {
+          "inputVariable": {
+            "type": "string",
+            "required": true
+          },
+          "format": {
+            "type": "string",
+            "required": true
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "formatted_date",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "random_number": {
+        "description": "Gera um número aleatório dentro de um intervalo especificado.",
+        "config": {
+          "min": {
+            "type": "number",
+            "required": false,
+            "defaultValue": 0
+          },
+          "max": {
+            "type": "number",
+            "required": true
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "random_number",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "get_user_info": {
+        "description": "Obtém informações do usuário atual da conversa.",
+        "config": {
+          "fields": {
+            "type": "string",
+            "required": false,
+            "description": "Campos separados por vírgula (ex: 'name,phone,email')"
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "user_info",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          }
+        }
+      },
+      "schedule_router": {
+        "description": "Roteia o fluxo baseado no dia da semana e horário atual.",
+        "config": {
+          "schedules": {
+            "type": "array",
+            "required": true,
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["days", "startTime", "endTime", "next"],
+              "properties": {
+                "days": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "description": "Dias da semana (0=domingo, 6=sábado)"
+                },
+                "startTime": {
+                  "type": "string",
+                  "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$",
+                  "description": "Horário de início (HH:MM)"
+                },
+                "endTime": {
+                  "type": "string",
+                  "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$",
+                  "description": "Horário de fim (HH:MM)"
+                },
+                "next": {
+                  "type": "string",
+                  "description": "ID do próximo nó"
+                }
+              }
+            }
+          },
+          "defaultNext": {
+            "type": "string",
+            "required": false
+          },
+          "timezone": {
+            "type": "string",
+            "required": false
+          }
+        }
+      },
+      "options": {
+        "description": "Exibe opções interativas para o usuário (botões, checkboxes, etc.) e captura a resposta.",
+        "config": {
+          "message": {
+            "type": "string",
+            "required": false
+          },
+          "optionsType": {
+            "type": "string",
+            "required": true,
+            "enum": ["button", "checkbox", "radio", "list"]
+          },
+          "options": {
+            "type": "array",
+            "required": true,
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "label"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Valor opcional diferente do ID"
+                }
+              }
+            }
+          },
+          "variable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "user_option",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
+          "allowMultiple": {
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false
+          }
+        },
+        "errorPorts": true,
+        "supportsTimeout": false
+      },
+      "api": {
+        "description": "Faz chamadas HTTP para APIs externas. Suporta GET, POST, PUT, DELETE e PATCH.",
+        "config": {
+          "url": {
+            "type": "string",
+            "required": true,
+            "description": "URL completa da API. Suporta {{variavel}} para interpolação"
+          },
+          "method": {
+            "type": "string",
+            "required": false,
+            "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            "defaultValue": "GET"
+          },
+          "headers": {
+            "type": "object",
+            "required": false,
+            "description": "Headers HTTP. Suporta {{variavel}} para interpolação"
+          },
+          "body": {
+            "type": "object",
+            "required": false,
+            "description": "Corpo da requisição. Suporta {{variavel}} para interpolação"
+          },
+          "outputVariable": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "api_response",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
+          "timeout": {
+            "type": "number",
+            "required": false,
+            "minimum": 0,
+            "maximum": 300000,
+            "defaultValue": 10000,
+            "description": "Timeout em milissegundos"
+          }
+        },
+        "errorPorts": true,
+        "supportsTimeout": true
+      }
+    }
+  },
+  "variableNamingRules": {
+    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+    "description": "Nomes de variáveis devem começar com letra ou underscore e conter apenas letras, números e underscores"
+  }
+}
+

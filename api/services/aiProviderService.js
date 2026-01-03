@@ -32,6 +32,37 @@ const logger = {
 };
 
 /**
+ * Determina qual parâmetro usar para limitar tokens baseado no modelo
+ * Modelos mais recentes (gpt-5.x) usam max_completion_tokens
+ * Modelos antigos usam max_tokens
+ * 
+ * @param {string} model - Nome do modelo
+ * @param {number} promptLength - Tamanho do prompt em caracteres (opcional, para ajustar limite)
+ * @returns {Object} Parâmetros de limite de tokens
+ */
+function getTokenLimitParam(model, promptLength = 0) {
+  // Modelos que requerem max_completion_tokens
+  const requiresMaxCompletionTokens = /^gpt-5\./;
+  
+  // Ajusta o limite baseado no tamanho do prompt
+  // Para prompts grandes (>5000 chars), aumenta o limite para 4000 tokens
+  // Para prompts médios (>2000 chars), usa 2000 tokens
+  // Caso contrário, usa 1000 tokens padrão
+  let tokenLimit = 1000;
+  if (promptLength > 5000) {
+    tokenLimit = 4000;
+  } else if (promptLength > 2000) {
+    tokenLimit = 2000;
+  }
+  
+  if (requiresMaxCompletionTokens.test(model)) {
+    return { max_completion_tokens: tokenLimit };
+  }
+  
+  return { max_tokens: tokenLimit };
+}
+
+/**
  * Provider de IA usando OpenAI
  */
 function createOpenAIProvider() {
@@ -44,11 +75,14 @@ function createOpenAIProvider() {
     async generate(prompt, context) {
       try {
         const model = config.get('ai.openai.model', 'gpt-5.2');
+        const tokenParams = getTokenLimitParam(model, prompt.length);
+        
         logger.debug('🤖 OpenAI: Iniciando geração', {
           model,
           promptLength: prompt.length,
           hasApiKey: !!apiKey,
           apiKeyPrefix: apiKey ? apiKey.substring(0, 7) + '...' : 'não configurado',
+          tokenParams,
         });
 
         // Tenta usar o SDK da OpenAI se disponível
@@ -63,7 +97,7 @@ function createOpenAIProvider() {
           });
           
           const url = 'https://api.openai.com/v1/chat/completions';
-          logger.debug('📤 OpenAI: Enviando requisição via fetch', { url, model });
+          logger.debug('📤 OpenAI: Enviando requisição via fetch', { url, model, tokenParams });
           
           const response = await fetch(url, {
             method: 'POST',
@@ -74,7 +108,7 @@ function createOpenAIProvider() {
             body: JSON.stringify({
               model: model,
               messages: [{ role: 'user', content: prompt }],
-              max_tokens: 1000,
+              ...tokenParams,
             }),
           });
 
@@ -111,12 +145,12 @@ function createOpenAIProvider() {
         }
 
         // SDK disponível: usa SDK
-        logger.debug('📤 OpenAI: Enviando requisição via SDK', { model });
+        logger.debug('📤 OpenAI: Enviando requisição via SDK', { model, tokenParams });
         const openai = new OpenAI({ apiKey });
         const completion = await openai.chat.completions.create({
           model: model,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 1000,
+          ...tokenParams,
         });
 
         logger.debug('✅ OpenAI: Resposta recebida via SDK', {
@@ -156,21 +190,105 @@ function createAnthropicProvider() {
 
   return {
     async generate(prompt, context) {
-      // Nota: Você precisa instalar o pacote @anthropic-ai/sdk: npm install @anthropic-ai/sdk
-      // const Anthropic = require('@anthropic-ai/sdk');
-      // const anthropic = new Anthropic({ apiKey });
-      // const message = await anthropic.messages.create({
-      //   model: config.get('ai.anthropic.model', 'claude-3-sonnet-20240229'),
-      //   max_tokens: 1024,
-      //   messages: [{ role: 'user', content: prompt }],
-      // });
-      // return { text: message.content[0].text };
+      try {
+        const model = config.get('ai.anthropic.model', 'claude-3-sonnet-20240229');
+        logger.debug('🤖 Anthropic: Iniciando geração', {
+          model,
+          promptLength: prompt.length,
+          hasApiKey: !!apiKey,
+          apiKeyPrefix: apiKey ? apiKey.substring(0, 7) + '...' : 'não configurado',
+        });
 
-      // Por enquanto, retorna uma resposta simulada
-      // TODO: Implementar chamada real à API Anthropic
-      return {
-        text: `[Anthropic] Resposta para: ${prompt.substring(0, 50)}...`,
-      };
+        // Tenta usar o SDK da Anthropic se disponível
+        let Anthropic;
+        try {
+          Anthropic = require('@anthropic-ai/sdk');
+          logger.debug('✅ SDK Anthropic encontrado, usando SDK');
+        } catch (requireError) {
+          // SDK não instalado: usa fetch direto
+          logger.debug('⚠️ SDK Anthropic não encontrado, usando fetch direto', {
+            error: requireError.message,
+          });
+          
+          const url = 'https://api.anthropic.com/v1/messages';
+          logger.debug('📤 Anthropic: Enviando requisição via fetch', { url, model });
+          
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              max_tokens: 1000,
+              messages: [{ role: 'user', content: prompt }],
+            }),
+          });
+
+          logger.debug('📥 Anthropic: Resposta recebida', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || `Anthropic API error: ${response.status} ${response.statusText}`;
+            logger.error('❌ Anthropic: Erro na API', {
+              status: response.status,
+              statusText: response.statusText,
+              errorData,
+              errorMessage,
+            });
+            throw new Error(errorMessage);
+          }
+
+          const data = await response.json();
+          logger.debug('✅ Anthropic: Resposta processada', {
+            hasContent: !!data.content,
+            contentLength: data.content?.length,
+            textLength: data.content?.[0]?.text?.length,
+          });
+          
+          return {
+            text: data.content?.[0]?.text || '[Resposta vazia da Anthropic]',
+            usage: data.usage || null,
+          };
+        }
+
+        // SDK disponível: usa SDK
+        logger.debug('📤 Anthropic: Enviando requisição via SDK', { model });
+        const anthropic = new Anthropic({ apiKey });
+        const message = await anthropic.messages.create({
+          model: model,
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }],
+        });
+
+        logger.debug('✅ Anthropic: Resposta recebida via SDK', {
+          hasContent: !!message.content,
+          contentLength: message.content?.length,
+          textLength: message.content?.[0]?.text?.length,
+          hasUsage: !!message.usage,
+        });
+
+        return {
+          text: message.content[0]?.text || '[Resposta vazia da Anthropic]',
+          usage: message.usage || null,
+        };
+      } catch (error) {
+        logger.error('❌ Anthropic: Erro ao gerar resposta', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          code: error.code,
+          status: error.status,
+          response: error.response,
+        });
+        throw error;
+      }
     },
   };
 }

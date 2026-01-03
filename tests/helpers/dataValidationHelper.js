@@ -58,7 +58,27 @@ function checkRequiredData(requiredData = []) {
     }
     
     const data = loadTestData(filename);
-    if (!data || (Array.isArray(data) && data.length === 0)) {
+    if (!data) {
+      missing.push(dataType);
+      continue;
+    }
+    
+    // Para queues.json, verifica se tem a propriedade 'queues' com conteúdo
+    if (dataType === 'queues') {
+      if (Array.isArray(data)) {
+        if (data.length === 0) {
+          missing.push(dataType);
+        }
+      } else if (data.queues && typeof data.queues === 'object') {
+        if (Object.keys(data.queues).length === 0) {
+          missing.push(dataType);
+        }
+      } else {
+        missing.push(dataType);
+      }
+    } else if (Array.isArray(data) && data.length === 0) {
+      missing.push(dataType);
+    } else if (!Array.isArray(data) && typeof data === 'object' && Object.keys(data).length === 0) {
       missing.push(dataType);
     }
   }
@@ -123,8 +143,22 @@ function validateScriptRequirements(script) {
   if (script.requiresDetails && typeof script.requiresDetails === 'object') {
     // Valida IDs específicos de queues, agents, flows
     if (script.requiresDetails.queues && Array.isArray(script.requiresDetails.queues)) {
-      const queues = loadTestData('queues.json') || [];
-      const queueIds = queues.map(q => q.id || q.name);
+      const queuesData = loadTestData('queues.json') || {};
+      // queues.json pode ser um objeto com propriedade 'queues' ou um array direto
+      let queueIds = [];
+      if (Array.isArray(queuesData)) {
+        queueIds = queuesData.map(q => q.id || q.name || (typeof q === 'string' ? q : null)).filter(Boolean);
+      } else if (queuesData.queues && typeof queuesData.queues === 'object') {
+        // Converte objeto de queues em array de IDs
+        // Prioriza: id do objeto > chave do objeto > name do objeto
+        queueIds = Object.entries(queuesData.queues).map(([key, value]) => {
+          if (typeof value === 'object' && value !== null) {
+            // Se o objeto tem id, usa o id; caso contrário, usa a chave (que é o identificador real)
+            return value.id || key;
+          }
+          return key;
+        }).filter(Boolean);
+      }
       for (const requiredQueueId of script.requiresDetails.queues) {
         if (!queueIds.includes(requiredQueueId)) {
           missingDetails.push(`queue:${requiredQueueId}`);
@@ -134,7 +168,7 @@ function validateScriptRequirements(script) {
     
     if (script.requiresDetails.agents && Array.isArray(script.requiresDetails.agents)) {
       const agents = loadTestData('agents.json') || [];
-      const agentIds = agents.map(a => a.id || a.email);
+      const agentIds = Array.isArray(agents) ? agents.map(a => a.id || a.email) : [];
       for (const requiredAgentId of script.requiresDetails.agents) {
         if (!agentIds.includes(requiredAgentId)) {
           missingDetails.push(`agent:${requiredAgentId}`);
@@ -144,7 +178,7 @@ function validateScriptRequirements(script) {
     
     if (script.requiresDetails.flows && Array.isArray(script.requiresDetails.flows)) {
       const flows = loadTestData('flows.json') || [];
-      const flowIds = flows.map(f => f.id);
+      const flowIds = Array.isArray(flows) ? flows.map(f => f.id) : [];
       for (const requiredFlowId of script.requiresDetails.flows) {
         if (!flowIds.includes(requiredFlowId)) {
           missingDetails.push(`flow:${requiredFlowId}`);

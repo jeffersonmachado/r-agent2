@@ -620,11 +620,125 @@ function deleteAgent(agentId) {
   return { success: true };
 }
 
+/**
+ * Autentica usando token RPA exclusivo.
+ * 
+ * @param {string} rpaToken - Token RPA
+ * @param {string} ipAddress - Endereço IP da requisição
+ * @param {string} userAgent - User agent
+ * @returns {{success: boolean, token?: string, agent?: Agent, error?: string}}
+ */
+function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown') {
+  if (!rpaToken || typeof rpaToken !== 'string') {
+    return { success: false, error: 'Token RPA é obrigatório' };
+  }
+
+  // Carrega token RPA esperado
+  let rpaTokenManager;
+  try {
+    rpaTokenManager = require('../../tests/rpa/utils/rpaTokenManager');
+  } catch (error) {
+    logger.warn('[AuthService] Módulo rpaTokenManager não encontrado, usando validação básica');
+    // Fallback: aceita qualquer token se o módulo não estiver disponível (apenas para desenvolvimento)
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('[AuthService] Modo desenvolvimento: aceitando token RPA sem validação');
+    } else {
+      return { success: false, error: 'Sistema de token RPA não disponível' };
+    }
+  }
+
+  let expectedToken = null;
+  if (rpaTokenManager) {
+    expectedToken = rpaTokenManager.loadRpaToken();
+    
+    if (!expectedToken) {
+      return { success: false, error: 'Token RPA não configurado no servidor' };
+    }
+
+    // Verifica se o token corresponde
+    if (rpaToken !== expectedToken) {
+      logger.warn(`[AuthService] Tentativa de login RPA com token inválido de ${ipAddress}`);
+      return { success: false, error: 'Token RPA inválido' };
+    }
+
+    // Verifica se o token é válido (não expirado)
+    if (!rpaTokenManager.isTokenValid(rpaToken)) {
+      return { success: false, error: 'Token RPA expirado ou inválido' };
+    }
+  }
+
+  // Busca ou cria agente RPA especial
+  let rpaAgent = null;
+  const rpaUsername = 'rpa-automation';
+  
+  // Busca agente RPA existente
+  for (const agent of agents.values()) {
+    if (agent.username === rpaUsername) {
+      rpaAgent = agent;
+      break;
+    }
+  }
+
+  // Se não existe, cria agente RPA
+  if (!rpaAgent) {
+    const createResult = createAgent({
+      tenantId: 'system',
+      username: rpaUsername,
+      email: 'rpa@automation.local',
+      password: crypto.randomBytes(32).toString('hex'), // Senha aleatória (não será usada)
+      role: 'admin',
+      name: 'RPA Automation',
+    });
+    
+    if (createResult.success) {
+      rpaAgent = agents.get(createResult.agent.id);
+    } else {
+      return { success: false, error: 'Erro ao criar agente RPA' };
+    }
+  }
+
+  if (!rpaAgent.active) {
+    return { success: false, error: 'Agente RPA inativo' };
+  }
+
+  // Cria sessão
+  const token = generateToken();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + TOKEN_EXPIRATION_HOURS * 60 * 60 * 1000);
+
+  const session = {
+    token,
+    agentId: rpaAgent.id,
+    username: rpaAgent.username,
+    createdAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    lastActivityAt: now.toISOString(),
+    ipAddress,
+    userAgent: `RPA/${userAgent}`,
+  };
+
+  sessions.set(token, session);
+  saveSessionsToFile();
+
+  // Atualiza último login
+  rpaAgent.lastLoginAt = now.toISOString();
+  rpaAgent.updatedAt = now.toISOString();
+  saveAgentsToFile();
+
+  // Remove senha do retorno
+  const { passwordHash, salt, ...agentSafe } = rpaAgent;
+
+  logger.info(`[AuthService] Login RPA realizado: ${rpaAgent.username} (${rpaAgent.id})`);
+
+  return { success: true, token, agent: agentSafe };
+}
+
 module.exports = {
   createAgent,
   login,
   logout,
   validateToken,
+  loginWithRpaToken,
   listAgents,
   getAgent,
   updateAgent,

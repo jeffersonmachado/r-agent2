@@ -460,7 +460,7 @@ export function engineFlowToReteJson(flow) {
       }
     };
 
-    // Processa conexão padrão via "next"
+    // Processa conexão padrão via "next" (para saída "out" ou "default")
     if (node.next) {
       const nextConnections = Array.isArray(node.next) ? node.next : [node.next];
       for (const nextId of nextConnections) {
@@ -469,10 +469,164 @@ export function engineFlowToReteJson(flow) {
     }
 
     // Processa conexões específicas de router (config.rules[].next)
+    // Mapeia cada regra para sua saída correspondente (rule_0, rule_1, etc.)
     if (node.type === 'router' && node.config && Array.isArray(node.config.rules)) {
-      for (const rule of node.config.rules) {
+      node.config.rules.forEach((rule, index) => {
         if (rule && rule.next) {
-          addConnection(rule.next);
+          const toNumeric = engineIdToNumeric.get(String(rule.next));
+          
+          if (!toNumeric) {
+            logger.warn('Não foi possível mapear nó de destino da regra', {
+              fromId: node.id,
+              toId: rule.next,
+              ruleIndex: index,
+              availableIds: Array.from(engineIdToNumeric.keys())
+            });
+            return;
+          }
+
+          // Cria ou obtém a saída da regra (rule_0, rule_1, etc.)
+          const ruleOutputKey = `rule_${index}`;
+          if (!fromNode.outputs[ruleOutputKey]) {
+            // Gera label descritivo baseado na condição
+            let label = `Regra ${index + 1}`;
+            if (rule.condition) {
+              if (rule.condition.op === 'always') {
+                label = 'Sempre';
+              } else if (rule.condition.op === 'equals') {
+                label = `Igual a "${rule.condition.value}"`;
+              } else if (rule.condition.op === 'contains') {
+                label = `Contém "${rule.condition.value}"`;
+              } else if (rule.condition.var) {
+                label = `${rule.condition.var} ${rule.condition.op}`;
+              }
+            }
+            
+            // Cria a saída se não existir
+            const socket = { name: DEFAULT_SOCKET_NAME };
+            fromNode.outputs[ruleOutputKey] = {
+              socket,
+              label: label,
+              connections: [],
+            };
+          }
+
+          // Verifica se a conexão já existe
+          const existingConnection = fromNode.outputs[ruleOutputKey].connections.find(
+            conn => conn.node === toNumeric && conn.input === 'in'
+          );
+          
+          if (!existingConnection) {
+            fromNode.outputs[ruleOutputKey].connections.push({
+              node: toNumeric,
+              input: 'in',
+            });
+            logger.debug('Conexão de regra adicionada ao JSON', {
+              fromId: node.id,
+              toId: rule.next,
+              ruleIndex: index,
+              outputKey: ruleOutputKey,
+              fromNumeric,
+              toNumeric
+            });
+          }
+        }
+      });
+    }
+
+    // Processa conexões específicas de schedule_router (config.schedules[].next)
+    // Mapeia cada horário para sua saída correspondente (schedule_0, schedule_1, etc.)
+    if (node.type === 'schedule_router' && node.config && Array.isArray(node.config.schedules)) {
+      node.config.schedules.forEach((schedule, index) => {
+        if (schedule && schedule.next) {
+          const toNumeric = engineIdToNumeric.get(String(schedule.next));
+          
+          if (!toNumeric) {
+            logger.warn('Não foi possível mapear nó de destino do horário', {
+              fromId: node.id,
+              toId: schedule.next,
+              scheduleIndex: index,
+              availableIds: Array.from(engineIdToNumeric.keys())
+            });
+            return;
+          }
+
+          // Cria ou obtém a saída do horário (schedule_0, schedule_1, etc.)
+          const scheduleOutputKey = `schedule_${index}`;
+          if (!fromNode.outputs[scheduleOutputKey]) {
+            // Gera label descritivo baseado no horário
+            let label = `Horário ${index + 1}`;
+            if (schedule.days && schedule.startTime && schedule.endTime) {
+              const daysStr = Array.isArray(schedule.days) 
+                ? schedule.days.join(', ') 
+                : schedule.days;
+              label = `${daysStr} ${schedule.startTime}-${schedule.endTime}`;
+            } else if (schedule.label) {
+              label = schedule.label;
+            }
+            
+            // Cria a saída se não existir
+            const socket = { name: DEFAULT_SOCKET_NAME };
+            fromNode.outputs[scheduleOutputKey] = {
+              socket,
+              label: label,
+              connections: [],
+            };
+          }
+
+          // Verifica se a conexão já existe
+          const existingConnection = fromNode.outputs[scheduleOutputKey].connections.find(
+            conn => conn.node === toNumeric && conn.input === 'in'
+          );
+          
+          if (!existingConnection) {
+            fromNode.outputs[scheduleOutputKey].connections.push({
+              node: toNumeric,
+              input: 'in',
+            });
+            logger.debug('Conexão de horário adicionada ao JSON', {
+              fromId: node.id,
+              toId: schedule.next,
+              scheduleIndex: index,
+              outputKey: scheduleOutputKey,
+              fromNumeric,
+              toNumeric
+            });
+          }
+        }
+      });
+      
+      // Processa conexão padrão (defaultNext) para saída "default"
+      if (node.config.defaultNext) {
+        const toNumeric = engineIdToNumeric.get(String(node.config.defaultNext));
+        if (toNumeric) {
+          // Garante que a saída "default" existe
+          if (!fromNode.outputs.default) {
+            const socket = { name: DEFAULT_SOCKET_NAME };
+            fromNode.outputs.default = {
+              socket,
+              label: 'Padrão',
+              connections: [],
+            };
+          }
+          
+          // Verifica se a conexão já existe
+          const existingConnection = fromNode.outputs.default.connections.find(
+            conn => conn.node === toNumeric && conn.input === 'in'
+          );
+          
+          if (!existingConnection) {
+            fromNode.outputs.default.connections.push({
+              node: toNumeric,
+              input: 'in',
+            });
+            logger.debug('Conexão padrão de schedule_router adicionada ao JSON', {
+              fromId: node.id,
+              toId: node.config.defaultNext,
+              fromNumeric,
+              toNumeric
+            });
+          }
         }
       }
     }

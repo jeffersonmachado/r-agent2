@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chatbot Flow Definition",
+  "description": "Schema para definição de fluxos de chatbot. Extraído das regras existentes do sistema.",
+  "type": "object",
+  "required": ["tenantId", "id", "name", "version", "nodes"],
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "description": "Identificador do tenant"
+    },
+    "id": {
+      "type": "string",
+      "description": "Identificador único do fluxo"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do fluxo"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Versão do fluxo"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "description": "Lista de nós do fluxo",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador único do nó dentro do fluxo"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "start",
+              "message",
+              "user_input",
+              "router",
+              "ai_task",
+              "set_variable",
+              "handoff",
+              "ai",
+              "fallback",
+              "end",
+              "get_flow_info",
+              "get_queue_status",
+              "get_config_value",
+              "list_flows",
+              "get_current_time",
+              "generate_uuid",
+              "delay",
+              "format_date",
+              "random_number",
+              "get_user_info",
+              "schedule_router",
+              "options",
+              "api"
+            ],
+            "description": "Tipo do nó"
+          },
+          "config": {
+            "type": "object",
+            "description": "Configuração específica do nó (schema varia conforme o type)"
+          },
+          "next": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "ID do próximo nó (conexão única)"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "IDs dos próximos nós (múltiplas conexões)"
+              },
+              {
+                "type": "null",
+                "description": "Sem próximo nó (apenas para nós 'end')"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Metadados adicionais do fluxo"
+    }
+  },
+  "additionalProperties": false
+}
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager } from '../api/config';
+import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken } from '../api/config';
 import { listFlows } from '../api/flows';
 import { useAuth } from '../context/authContext';
 import { useToast } from '../components/Toast';
@@ -50,6 +50,8 @@ export function ConfigPage() {
   const [activeTab, setActiveTab] = useState('api'); // 'api', 'frontend', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'general'
   const [flows, setFlows] = useState([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
+  const [validatingTokens, setValidatingTokens] = useState({}); // { 'ai.openai.apiKey': true }
+  const [tokenValidationStatus, setTokenValidationStatus] = useState({}); // { 'ai.openai.apiKey': { valid: true, error: null } }
 
   const configLoadedRef = useRef(false);
   const showToastRef = useRef(showToast);
@@ -306,6 +308,58 @@ export function ConfigPage() {
     }
   };
 
+  // Valida token de um provedor
+  const validateToken = useCallback(async (path, apiKey) => {
+    if (!apiKey || apiKey.trim() === '') {
+      setTokenValidationStatus(prev => ({ ...prev, [path]: null }));
+      return;
+    }
+
+    // Determina qual provider baseado no path
+    let provider = null;
+    if (path === 'ai.openai.apiKey') {
+      provider = 'openai';
+    } else if (path === 'ai.anthropic.apiKey') {
+      provider = 'anthropic';
+    }
+
+    if (!provider) {
+      return; // Não é um token de provedor que precisa validação
+    }
+
+    setValidatingTokens(prev => ({ ...prev, [path]: true }));
+    setTokenValidationStatus(prev => ({ ...prev, [path]: null }));
+
+    try {
+      const result = await validateProviderToken(provider, apiKey);
+      setTokenValidationStatus(prev => ({
+        ...prev,
+        [path]: {
+          valid: result.valid,
+          error: result.error || null,
+        },
+      }));
+
+      if (result.valid) {
+        showToast(`Token ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} válido!`, 'success');
+      } else {
+        showToast(`Token ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} inválido: ${result.error || 'Erro desconhecido'}`, 'error');
+      }
+    } catch (error) {
+      logger.error('Erro ao validar token', error);
+      setTokenValidationStatus(prev => ({
+        ...prev,
+        [path]: {
+          valid: false,
+          error: error.message || 'Erro ao validar token',
+        },
+      }));
+      showToast(`Erro ao validar token: ${error.message || 'Erro desconhecido'}`, 'error');
+    } finally {
+      setValidatingTokens(prev => ({ ...prev, [path]: false }));
+    }
+  }, [showToast]);
+
   // Atualiza valor no modo form
   const updateValue = useCallback((path, value) => {
     if (!editedConfig) return;
@@ -342,11 +396,19 @@ export function ConfigPage() {
     if (viewMode === 'json') {
       setJsonText(JSON.stringify(newConfig, null, 2));
     }
+
+    // Limpa status de validação quando o valor muda
+    if (path === 'ai.openai.apiKey' || path === 'ai.anthropic.apiKey') {
+      setTokenValidationStatus(prev => ({ ...prev, [path]: null }));
+    }
   }, [editedConfig, viewMode]);
 
   // Renderiza campo de input para um valor
   const renderField = (label, path, value, type = 'text', options = null) => {
     const displayValue = value === null || value === undefined ? '' : String(value);
+    const isTokenField = path === 'ai.openai.apiKey' || path === 'ai.anthropic.apiKey';
+    const isValidating = validatingTokens[path] || false;
+    const validationStatus = tokenValidationStatus[path];
 
     // Se tem opções, renderiza como select
     if (options && Array.isArray(options)) {
@@ -387,21 +449,78 @@ export function ConfigPage() {
         <label className="block mb-2 text-sm font-medium text-text-primary">
           {label}
         </label>
-        {type === 'textarea' ? (
-          <textarea
-            value={displayValue}
-            onChange={(e) => updateValue(path, e.target.value)}
-            className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all min-h-[80px] resize-y"
-            placeholder={label}
-          />
-        ) : (
-          <input
-            type={type}
-            value={displayValue}
-            onChange={(e) => updateValue(path, e.target.value)}
-            className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
-            placeholder={label}
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            {type === 'textarea' ? (
+              <textarea
+                value={displayValue}
+                onChange={(e) => updateValue(path, e.target.value)}
+                className={`w-full px-3 py-2 bg-bg-secondary border rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all min-h-[80px] resize-y ${
+                  validationStatus
+                    ? validationStatus.valid
+                      ? 'border-status-success'
+                      : 'border-status-error'
+                    : 'border-border-default'
+                }`}
+                placeholder={label}
+              />
+            ) : (
+              <input
+                type={type}
+                value={displayValue}
+                onChange={(e) => updateValue(path, e.target.value)}
+                className={`w-full px-3 py-2 pr-10 bg-bg-secondary border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all ${
+                  validationStatus
+                    ? validationStatus.valid
+                      ? 'border-status-success'
+                      : 'border-status-error'
+                    : 'border-border-default'
+                }`}
+                placeholder={label}
+              />
+            )}
+            {isTokenField && validationStatus && (
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                {validationStatus.valid ? (
+                  <svg className="w-5 h-5 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-status-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+              </div>
+            )}
+          </div>
+          {isTokenField && (
+            <button
+              type="button"
+              onClick={() => validateToken(path, displayValue)}
+              disabled={!displayValue || isValidating}
+              className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+            >
+              {isValidating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Testando...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Testar Token</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+        {isTokenField && validationStatus && !validationStatus.valid && validationStatus.error && (
+          <p className="mt-1 text-xs text-status-error">{validationStatus.error}</p>
+        )}
+        {isTokenField && validationStatus && validationStatus.valid && (
+          <p className="mt-1 text-xs text-status-success">✓ Token válido e funcionando corretamente</p>
         )}
       </div>
     );

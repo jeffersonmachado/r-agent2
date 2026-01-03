@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Política de Aprovação de WARN",
+  "description": "Define quem pode aprovar WARN, obrigatoriedade de justificativa e regras de escalonamento",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "approvalRequired": {
+    "description": "Quando aprovação é obrigatória",
+    "conditions": [
+      "WARN >= maxAcceptable (3)",
+      "WARN em escopos críticos (contracts, gate)",
+      "WARN recorrente (mesmo check >= 2 vezes)",
+      "WARN que afeta múltiplos escopos (>= 2)"
+    ]
+  },
+  "approvers": {
+    "roles": {
+      "tech_lead": {
+        "canApprove": true,
+        "maxWarningsPerApproval": 5,
+        "requiresJustification": true,
+        "scope": ["all"]
+      },
+      "qa_lead": {
+        "canApprove": true,
+        "maxWarningsPerApproval": 10,
+        "requiresJustification": true,
+        "scope": ["all"]
+      },
+      "senior_engineer": {
+        "canApprove": true,
+        "maxWarningsPerApproval": 3,
+        "requiresJustification": true,
+        "scope": ["non_critical"]
+      },
+      "engineer": {
+        "canApprove": false,
+        "description": "Engenheiros não podem aprovar WARN"
+      }
+    },
+    "rules": [
+      "Apenas tech_lead e qa_lead podem aprovar WARN em escopos críticos",
+      "Aprovações devem ser registradas com timestamp e justificativa",
+      "Aprovações expiram após 7 dias se WARN não for corrigido"
+    ]
+  },
+  "justification": {
+    "required": true,
+    "minLength": 50,
+    "maxLength": 1000,
+    "fields": {
+      "reason": {
+        "required": true,
+        "description": "Razão técnica para aprovar WARN"
+      },
+      "mitigation": {
+        "required": true,
+        "description": "Plano de mitigação ou correção futura"
+      },
+      "riskAssessment": {
+        "required": true,
+        "description": "Avaliação de risco da aprovação",
+        "options": ["low", "medium", "high"]
+      },
+      "timeline": {
+        "required": true,
+        "description": "Prazo estimado para correção",
+        "format": "ISO 8601 duration"
+      }
+    },
+    "validation": {
+      "rejectIfEmpty": true,
+      "rejectIfTooShort": true,
+      "requireRiskAssessment": true
+    }
+  },
+  "autoEscalation": {
+    "enabled": true,
+    "rules": [
+      {
+        "condition": "WARN sem aprovação após 24h",
+        "action": "auto_fail",
+        "description": "WARN não aprovado vira FAIL automaticamente"
+      },
+      {
+        "condition": "WARN aprovado mas não corrigido após 7 dias",
+        "action": "revoke_approval",
+        "description": "Aprovação é revogada e WARN vira FAIL"
+      },
+      {
+        "condition": "WARN recorrente (>= 3 aprovações do mesmo check)",
+        "action": "force_fix",
+        "description": "WARN recorrente não pode mais ser aprovado, deve ser corrigido"
+      }
+    ]
+  },
+  "audit": {
+    "enabled": true,
+    "logAllApprovals": true,
+    "retentionDays": 365,
+    "fields": [
+      "approver",
+      "timestamp",
+      "warnId",
+      "justification",
+      "riskAssessment",
+      "scope"
+    ]
+  },
+  "restrictions": {
+    "cannotApprove": [
+      "WARN em escopos neverIgnore (contracts, gate, runtime)",
+      "WARN que já foi aprovado 3+ vezes",
+      "WARN que afeta segurança (security scope)",
+      "WARN que viola contratos públicos"
+    ],
+    "requiresMultipleApprovers": [
+      {
+        "condition": "WARN >= 10",
+        "requiredApprovers": 2,
+        "roles": ["tech_lead", "qa_lead"]
+      },
+      {
+        "condition": "WARN em produção",
+        "requiredApprovers": 2,
+        "roles": ["tech_lead", "qa_lead"]
+      }
+    ]
+  }
+}
+

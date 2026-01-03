@@ -1,0 +1,262 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Papéis Organizacionais (RACI)",
+  "description": "Define papéis formais, responsabilidades e permissões para governança de QA e IA",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "roles": {
+    "tech_lead": {
+      "name": "Tech Lead",
+      "description": "Líder técnico responsável por decisões arquiteturais e técnicas",
+      "raci": {
+        "qa": {
+          "approve_warn": "A",
+          "block_deploy": "A",
+          "override_policy": "A",
+          "approve_rollout": "A"
+        },
+        "incidents": {
+          "resolve": "R",
+          "escalate": "A",
+          "post_mortem": "R"
+        },
+        "governance": {
+          "modify_policy": "A",
+          "approve_changes": "A"
+        }
+      },
+      "permissions": {
+        "canIgnoreWarn": true,
+        "canBlockDeploy": true,
+        "canApproveRollout": true,
+        "canOverridePolicy": true,
+        "maxWarningsPerApproval": 5,
+        "scope": ["all"]
+      }
+    },
+    "qa_lead": {
+      "name": "QA Lead",
+      "description": "Líder de qualidade responsável por políticas de QA e validação",
+      "raci": {
+        "qa": {
+          "define_policy": "R",
+          "approve_warn": "A",
+          "block_deploy": "A",
+          "review_results": "R"
+        },
+        "incidents": {
+          "classify": "R",
+          "investigate": "R",
+          "post_mortem": "A"
+        },
+        "governance": {
+          "modify_policy": "A",
+          "approve_changes": "A"
+        }
+      },
+      "permissions": {
+        "canIgnoreWarn": true,
+        "canBlockDeploy": true,
+        "canApproveRollout": true,
+        "canOverridePolicy": false,
+        "maxWarningsPerApproval": 10,
+        "scope": ["all"]
+      }
+    },
+    "senior_engineer": {
+      "name": "Senior Engineer",
+      "description": "Engenheiro sênior com permissões limitadas de aprovação",
+      "raci": {
+        "qa": {
+          "approve_warn": "A",
+          "review_results": "C",
+          "block_deploy": "N"
+        },
+        "incidents": {
+          "investigate": "R",
+          "resolve": "R"
+        },
+        "governance": {
+          "modify_policy": "N",
+          "suggest_changes": "C"
+        }
+      },
+      "permissions": {
+        "canIgnoreWarn": true,
+        "canBlockDeploy": false,
+        "canApproveRollout": false,
+        "canOverridePolicy": false,
+        "maxWarningsPerApproval": 3,
+        "scope": ["non_critical"]
+      }
+    },
+    "engineer": {
+      "name": "Engineer",
+      "description": "Engenheiro sem permissões de aprovação ou bloqueio",
+      "raci": {
+        "qa": {
+          "review_results": "C",
+          "fix_issues": "R",
+          "approve_warn": "N",
+          "block_deploy": "N"
+        },
+        "incidents": {
+          "investigate": "C",
+          "resolve": "C"
+        },
+        "governance": {
+          "modify_policy": "N",
+          "suggest_changes": "C"
+        }
+      },
+      "permissions": {
+        "canIgnoreWarn": false,
+        "canBlockDeploy": false,
+        "canApproveRollout": false,
+        "canOverridePolicy": false,
+        "maxWarningsPerApproval": 0,
+        "scope": []
+      }
+    },
+    "product_owner": {
+      "name": "Product Owner",
+      "description": "Responsável por decisões de produto e rollout",
+      "raci": {
+        "qa": {
+          "review_results": "C",
+          "approve_warn": "N",
+          "block_deploy": "A",
+          "approve_rollout": "A"
+        },
+        "incidents": {
+          "classify_impact": "R",
+          "post_mortem": "A"
+        },
+        "governance": {
+          "modify_policy": "N",
+          "approve_changes": "A"
+        }
+      },
+      "permissions": {
+        "canIgnoreWarn": false,
+        "canBlockDeploy": true,
+        "canApproveRollout": true,
+        "canOverridePolicy": false,
+        "maxWarningsPerApproval": 0,
+        "scope": []
+      }
+    },
+    "cto": {
+      "name": "Chief Technology Officer",
+      "description": "Executivo técnico com permissões máximas",
+      "raci": {
+        "qa": {
+          "approve_warn": "A",
+          "block_deploy": "A",
+          "override_policy": "A",
+          "approve_rollout": "A"
+        },
+        "incidents": {
+          "escalate": "A",
+          "post_mortem": "A"
+        },
+        "governance": {
+          "modify_policy": "A",
+          "approve_changes": "A"
+        }
+      },
+      "permissions": {
+        "canIgnoreWarn": true,
+        "canBlockDeploy": true,
+        "canApproveRollout": true,
+        "canOverridePolicy": true,
+        "maxWarningsPerApproval": -1,
+        "scope": ["all"],
+        "description": "Permissões ilimitadas"
+      }
+    }
+  },
+  "raciDefinitions": {
+    "R": "Responsible - Executa a tarefa",
+    "A": "Accountable - Responsável final, aprova",
+    "C": "Consulted - Consultado, fornece input",
+    "I": "Informed - Informado sobre progresso",
+    "N": "Not involved - Não envolvido"
+  },
+  "warnApprovalMatrix": {
+    "tech_lead": {
+      "canApprove": true,
+      "maxWarnings": 5,
+      "scope": ["all"],
+      "requiresJustification": true
+    },
+    "qa_lead": {
+      "canApprove": true,
+      "maxWarnings": 10,
+      "scope": ["all"],
+      "requiresJustification": true
+    },
+    "senior_engineer": {
+      "canApprove": true,
+      "maxWarnings": 3,
+      "scope": ["non_critical"],
+      "requiresJustification": true
+    },
+    "engineer": {
+      "canApprove": false,
+      "maxWarnings": 0,
+      "scope": [],
+      "requiresJustification": false
+    }
+  },
+  "deployBlockingMatrix": {
+    "tech_lead": {
+      "canBlock": true,
+      "canOverride": true,
+      "requiresApproval": false
+    },
+    "qa_lead": {
+      "canBlock": true,
+      "canOverride": false,
+      "requiresApproval": false
+    },
+    "product_owner": {
+      "canBlock": true,
+      "canOverride": false,
+      "requiresApproval": false
+    },
+    "senior_engineer": {
+      "canBlock": false,
+      "canOverride": false,
+      "requiresApproval": false
+    },
+    "engineer": {
+      "canBlock": false,
+      "canOverride": false,
+      "requiresApproval": false
+    }
+  },
+  "rolloutApprovalMatrix": {
+    "tech_lead": {
+      "canApprove": true,
+      "stages": ["OFF_to_INTERNAL", "INTERNAL_to_LIMITED", "LIMITED_to_GENERAL"]
+    },
+    "qa_lead": {
+      "canApprove": true,
+      "stages": ["OFF_to_INTERNAL", "LIMITED_to_GENERAL"]
+    },
+    "product_owner": {
+      "canApprove": true,
+      "stages": ["LIMITED_to_GENERAL"]
+    },
+    "senior_engineer": {
+      "canApprove": false,
+      "stages": []
+    },
+    "engineer": {
+      "canApprove": false,
+      "stages": []
+    }
+  }
+}
+

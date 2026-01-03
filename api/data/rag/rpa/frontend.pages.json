@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "description": "Páginas válidas do frontend",
+  "pages": [
+    {
+      "path": "/editor",
+      "description": "Editor de fluxos - onde o chat de teste é acessado como modal",
+      "accessible": true,
+      "requiresAuth": true
+    },
+    {
+      "path": "/chat",
+      "description": "Página de chat completo - permite selecionar e testar fluxos através de interface de chat",
+      "accessible": true,
+      "requiresAuth": true
+    },
+    {
+      "path": "/login",
+      "description": "Página de login",
+      "accessible": true,
+      "requiresAuth": false
+    },
+    {
+      "path": "/departments",
+      "description": "Página de gerenciamento de departamentos",
+      "accessible": true,
+      "requiresAuth": true
+    },
+    {
+      "path": "/queues",
+      "description": "Página de gerenciamento de filas",
+      "accessible": true,
+      "requiresAuth": true
+    },
+    {
+      "path": "/agents",
+      "description": "Página de gerenciamento de agentes",
+      "accessible": true,
+      "requiresAuth": true
+    }
+  ],
+  "critical": [
+    "EXISTE rota '/chat' - página completa de chat para testar fluxos",
+    "A interface de chat de teste pode ser acessada através do editor de fluxos (/editor) como modal OU através da rota /chat como página completa",
+    "A rota /chat permite selecionar um fluxo e testá-lo através de interface de chat completa",
+    "NUNCA use domínios fictícios como 'rpa.local' - use a URL base fornecida"
+  ],
+  "baseUrl": {
+    "description": "URL base deve ser fornecida no contexto do teste",
+    "required": true,
+    "example": "${frontendUrl}"
+  }
+}
+

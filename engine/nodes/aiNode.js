@@ -83,6 +83,7 @@ function cloneState(state) {
 
 const { renderTemplate } = require('../utils/templateRenderer');
 const { validateJsonSchema } = require('../utils/jsonSchemaValidator');
+const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
 
 // Alias para compatibilidade com código existente
 const renderPromptTemplate = renderTemplate;
@@ -436,6 +437,66 @@ async function aiNodeHandler(node, state, input, deps = null) {
     } catch (err) {
       aiFailed = true;
       aiErrorMessage = err && err.message ? err.message : String(err);
+    }
+  }
+
+  // Validação CDR (Capability-Driven Responses)
+  // Verifica se a resposta está dentro das capacidades permitidas
+  if (!aiFailed && rawResponse) {
+    const textToValidate = typeof parsed === 'string' ? parsed : rawResponse;
+    const cdrValidation = validateCDR(textToValidate);
+    
+    if (cdrValidation.status === 'error') {
+      // Resposta viola regras CDR - bloqueia em produção/QA
+      const violationLog = generateViolationLog(cdrValidation, textToValidate);
+      logger.error('[aiNode] Resposta viola regras CDR e foi bloqueada', {
+        sessionId: state.sessionId,
+        violation: violationLog,
+      });
+
+      events.push(
+        createEngineEvent({
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+          type: 'AI_ERROR',
+          payload: {
+            reason: 'CDR_VIOLATION',
+            code: cdrValidation.code,
+            message: cdrValidation.message,
+            violation: violationLog,
+          },
+        }),
+      );
+
+      // Em produção/QA: trata como falha e usa resposta segura
+      aiFailed = true;
+      aiErrorMessage = `Resposta viola regras CDR: ${cdrValidation.code}`;
+      // Substitui resposta por resposta segura
+      rawResponse = getSafeResponse();
+      parsed = typeof parsed === 'string' ? getSafeResponse() : parsed;
+    } else if (cdrValidation.status === 'warn') {
+      // Desenvolvimento: apenas registra warning mas permite resposta
+      const violationLog = generateViolationLog(cdrValidation, textToValidate);
+      logger.warn('[aiNode] Resposta viola regras CDR (dev mode)', {
+        sessionId: state.sessionId,
+        violation: violationLog,
+      });
+
+      events.push(
+        createEngineEvent({
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+          type: 'AI_WARNING',
+          payload: {
+            reason: 'CDR_WARNING',
+            code: cdrValidation.code,
+            message: cdrValidation.message,
+            violation: violationLog,
+          },
+        }),
+      );
     }
   }
 

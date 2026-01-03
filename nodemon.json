@@ -10,7 +10,19 @@
     "logs",
     "*.test.js",
     "*.spec.js",
-    "api/data/*.json"
+    "api/data/agents.json",
+    "api/data/audit.json",
+    "api/data/departments.json",
+    "api/data/documents.json",
+    "api/data/flows.json",
+    "api/data/queues.json",
+    "api/data/quickReplies.json",
+    "api/data/rag_audit.json",
+    "api/data/rag_documents.json",
+    "api/data/rag_prompts.json",
+    "api/data/sessions.json",
+    "api/data/webhooks.json",
+    "api/data/test/**/*.json"
   ],
   "exec": "node api/server.js",
   "env": {

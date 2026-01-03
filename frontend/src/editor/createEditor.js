@@ -8,6 +8,7 @@ import ReactRenderPlugin from '../ReteReactPluginShim';
 import { runFlowValidation } from './validation/runFlowValidation';
 import { canCreateNode, canCreateConnection } from './validation/preventiveValidation';
 import { createNode } from './nodeFactory';
+import { DEFAULT_SOCKET_NAME, getNodeInputs, getNodeOutputs } from './nodeSchemas';
 import logger from '../utils/logger';
 
 /**
@@ -1164,6 +1165,127 @@ export async function createEditor(container, options = {}) {
     }
   }
 
+  /**
+   * Atualiza inputs/outputs de um nó dinamicamente quando o config muda
+   * Útil para nós com outputs dinâmicos (router, schedule_router) ou inputs de erro
+   * @param {string} nodeId - ID do nó
+   */
+  function updateNodeIO(nodeId) {
+    try {
+      const node = editor.getNode(nodeId);
+      if (!node) {
+        logger.warn('updateNodeIO - nó não encontrado', { nodeId });
+        return;
+      }
+
+      const nodeType = node.data?.type;
+      if (!nodeType) {
+        logger.warn('updateNodeIO - tipo de nó não encontrado', { nodeId });
+        return;
+      }
+
+      // Usa funções importadas
+      
+      // Obtém inputs/outputs atualizados
+      const newInputs = getNodeInputs(nodeType, node);
+      const newOutputs = getNodeOutputs(nodeType, node);
+      
+      // Remove inputs antigos que não estão mais na lista
+      const currentInputKeys = Object.keys(node.inputs || {});
+      const newInputKeys = newInputs.map(inp => inp.key);
+      
+      currentInputKeys.forEach(key => {
+        if (!newInputKeys.includes(key)) {
+          try {
+            node.removeInput(key);
+          } catch (err) {
+            logger.warn('updateNodeIO - erro ao remover input', { nodeId, key, error: err });
+          }
+        }
+      });
+      
+      // Adiciona/atualiza inputs
+      newInputs.forEach(inputDef => {
+        if (!node.inputs[inputDef.key]) {
+          const inputSocket = new ClassicPreset.Socket(
+            inputDef.socketName || DEFAULT_SOCKET_NAME
+          );
+          node.addInput(
+            inputDef.key,
+            new ClassicPreset.Input(inputSocket, inputDef.label)
+          );
+        } else {
+          // Atualiza label se mudou
+          const existingInput = node.inputs[inputDef.key];
+          if (existingInput && existingInput.label !== inputDef.label) {
+            existingInput.label = inputDef.label;
+          }
+        }
+      });
+      
+      // Remove outputs antigos que não estão mais na lista
+      const currentOutputKeys = Object.keys(node.outputs || {});
+      const newOutputKeys = newOutputs.map(out => out.key);
+      
+      currentOutputKeys.forEach(key => {
+        if (!newOutputKeys.includes(key)) {
+          try {
+            // Remove conexões primeiro
+            const connections = editor.getConnections();
+            connections.forEach(conn => {
+              if (conn.source === nodeId && conn.sourceOutput === key) {
+                try {
+                  editor.removeConnection(conn.id);
+                } catch (err) {
+                  logger.warn('updateNodeIO - erro ao remover conexão', { connectionId: conn.id, error: err });
+                }
+              }
+            });
+            node.removeOutput(key);
+          } catch (err) {
+            logger.warn('updateNodeIO - erro ao remover output', { nodeId, key, error: err });
+          }
+        }
+      });
+      
+      // Adiciona/atualiza outputs
+      newOutputs.forEach(outputDef => {
+        if (!node.outputs[outputDef.key]) {
+          const outputSocket = new ClassicPreset.Socket(
+            outputDef.socketName || DEFAULT_SOCKET_NAME
+          );
+          node.addOutput(
+            outputDef.key,
+            new ClassicPreset.Output(outputSocket, outputDef.label)
+          );
+        } else {
+          // Atualiza label se mudou
+          const existingOutput = node.outputs[outputDef.key];
+          if (existingOutput && existingOutput.label !== outputDef.label) {
+            existingOutput.label = outputDef.label;
+          }
+        }
+      });
+      
+      // Força atualização visual
+      if (area && typeof area.update === 'function') {
+        area.update('node', nodeId);
+      }
+      
+      logger.debug('updateNodeIO - inputs/outputs atualizados', {
+        nodeId,
+        nodeType,
+        inputsCount: newInputs.length,
+        outputsCount: newOutputs.length,
+      });
+    } catch (err) {
+      logger.error('updateNodeIO - erro ao atualizar inputs/outputs', {
+        nodeId,
+        error: err,
+      });
+    }
+  }
+
   return {
     destroy: () => {
       resizeObserver.disconnect();
@@ -1187,6 +1309,7 @@ export async function createEditor(container, options = {}) {
     loadFromJson,
     toJSON,
     clearEditor,
+    updateNodeIO,
   };
 }
 

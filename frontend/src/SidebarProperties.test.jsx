@@ -102,12 +102,15 @@ describe('SidebarProperties', () => {
     expect(textareas.length).toBeGreaterThan(0);
     
     // Verifica que há um textarea para edição de mensagem
-    const messageTextarea = textareas.find(t => t.placeholder === 'Digite a mensagem...');
-    expect(messageTextarea).toBeInTheDocument();
-    
-    // Verifica que o componente está configurado para chamar onChangeConfig quando houver mudanças
-    // (a implementação real do componente faz isso via updateConfigField)
-    expect(messageTextarea).toBeInTheDocument();
+    // O placeholder real é "Olá! Como posso ajudá-lo hoje?" conforme nodeSchemas.js
+    const messageTextarea = textareas.find(t => 
+      t.placeholder === 'Olá! Como posso ajudá-lo hoje?' || 
+      t.placeholder?.includes('mensagem')
+    );
+    expect(messageTextarea).toBeTruthy();
+    if (messageTextarea) {
+      expect(messageTextarea).toBeInTheDocument();
+    }
   });
 });
 

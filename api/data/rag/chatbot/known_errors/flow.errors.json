@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "description": "Erros conhecidos e comuns em fluxos de chatbot. Este arquivo deve ser atualizado conforme novos erros são detectados durante a geração por IA.",
+  "errors": [],
+  "notes": [
+    "Este arquivo está inicialmente vazio.",
+    "Erros conhecidos devem ser adicionados aqui conforme são detectados durante a geração por IA.",
+    "Formato sugerido para cada erro:",
+    "  {",
+    "    \"id\": \"ERR_XXX\",",
+    "    \"description\": \"Descrição do erro\",",
+    "    \"examples\": [\"exemplo1\", \"exemplo2\"],",
+    "    \"fix\": \"Como corrigir o erro\",",
+    "    \"detectedAt\": \"ISO timestamp\"",
+    "  }"
+  ]
+}
+

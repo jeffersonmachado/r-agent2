@@ -190,6 +190,7 @@ export const NODE_SCHEMAS = {
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    // Nota: inputs de erro (error, no_match) são adicionados dinamicamente via getNodeInputs
     outputs: [
       {
         key: 'out',
@@ -243,13 +244,56 @@ export const NODE_SCHEMAS = {
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    // Outputs são gerados dinamicamente baseados em config.rules
     outputs: [
       {
-        key: 'out',
-        label: 'Próximo',
+        key: 'default',
+        label: 'Padrão',
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    /**
+     * Gera outputs dinâmicos baseados nas regras configuradas
+     * @param {Object} node - Nó completo
+     * @returns {Array} Array de outputs
+     */
+    getOutputs(node) {
+      const outputs = [];
+      
+      // Adiciona uma saída para cada regra
+      if (node.config && Array.isArray(node.config.rules)) {
+        node.config.rules.forEach((rule, index) => {
+          // Gera uma label descritiva baseada na condição
+          let label = `Regra ${index + 1}`;
+          if (rule.condition) {
+            if (rule.condition.op === 'always') {
+              label = 'Sempre';
+            } else if (rule.condition.op === 'equals') {
+              label = `Igual a "${rule.condition.value}"`;
+            } else if (rule.condition.op === 'contains') {
+              label = `Contém "${rule.condition.value}"`;
+            } else if (rule.condition.var) {
+              label = `${rule.condition.var} ${rule.condition.op}`;
+            }
+          }
+          
+          outputs.push({
+            key: `rule_${index}`,
+            label: label,
+            socketName: DEFAULT_SOCKET_NAME,
+          });
+        });
+      }
+      
+      // Sempre adiciona saída padrão
+      outputs.push({
+        key: 'default',
+        label: 'Padrão',
+        socketName: DEFAULT_SOCKET_NAME,
+      });
+      
+      return outputs;
+    },
     properties: [
       {
         key: 'rules',
@@ -1267,6 +1311,7 @@ export const NODE_SCHEMAS = {
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    // Outputs são gerados dinamicamente baseados em config.schedules
     outputs: [
       {
         key: 'default',
@@ -1274,6 +1319,43 @@ export const NODE_SCHEMAS = {
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    /**
+     * Gera outputs dinâmicos baseados nos horários configurados
+     * @param {Object} node - Nó completo
+     * @returns {Array} Array de outputs
+     */
+    getOutputs(node) {
+      const outputs = [];
+      
+      // Adiciona uma saída para cada horário configurado
+      if (node.config && Array.isArray(node.config.schedules)) {
+        node.config.schedules.forEach((schedule, index) => {
+          // Gera uma label descritiva baseada no horário
+          let label = `Horário ${index + 1}`;
+          if (schedule.days && schedule.startTime && schedule.endTime) {
+            const daysStr = Array.isArray(schedule.days) 
+              ? schedule.days.join(', ') 
+              : schedule.days;
+            label = `${daysStr} ${schedule.startTime}-${schedule.endTime}`;
+          }
+          
+          outputs.push({
+            key: `schedule_${index}`,
+            label: label,
+            socketName: DEFAULT_SOCKET_NAME,
+          });
+        });
+      }
+      
+      // Sempre adiciona saída padrão
+      outputs.push({
+        key: 'default',
+        label: 'Padrão',
+        socketName: DEFAULT_SOCKET_NAME,
+      });
+      
+      return outputs;
+    },
     properties: [
       {
         key: 'schedules',
@@ -2213,18 +2295,66 @@ export function getNodeProperties(type) {
 
 /**
  * Helper para obter inputs de um tipo de nó
+ * @param {string} type - Tipo do nó
+ * @param {Object} node - Nó completo (opcional, para inputs dinâmicos)
+ * @returns {Array} Array de inputs
  */
-export function getNodeInputs(type) {
+export function getNodeInputs(type, node = null) {
   const schema = getNodeSchema(type);
-  return schema ? schema.inputs : [];
+  if (!schema) return [];
+  
+  // Se o schema tem uma função getInputs, usa ela
+  if (typeof schema.getInputs === 'function' && node) {
+    return schema.getInputs(node);
+  }
+  
+  // Se o nó tem errorPorts, adiciona entradas de erro
+  if (schema.errorPorts && node) {
+    const baseInputs = schema.inputs || [];
+    const errorInputs = [
+      {
+        key: 'error',
+        label: 'Erro',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+      {
+        key: 'no_match',
+        label: 'Sem Correspondência',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ];
+    
+    if (schema.supportsTimeout) {
+      errorInputs.splice(1, 0, {
+        key: 'timeout',
+        label: 'Timeout',
+        socketName: DEFAULT_SOCKET_NAME,
+      });
+    }
+    
+    // Combina inputs base com inputs de erro
+    return [...baseInputs, ...errorInputs];
+  }
+  
+  return schema.inputs || [];
 }
 
 /**
  * Helper para obter outputs de um tipo de nó
+ * @param {string} type - Tipo do nó
+ * @param {Object} node - Nó completo (opcional, para outputs dinâmicos)
+ * @returns {Array} Array de outputs
  */
-export function getNodeOutputs(type) {
+export function getNodeOutputs(type, node = null) {
   const schema = getNodeSchema(type);
-  return schema ? schema.outputs : [];
+  if (!schema) return [];
+  
+  // Se o schema tem uma função getOutputs, usa ela
+  if (typeof schema.getOutputs === 'function' && node) {
+    return schema.getOutputs(node);
+  }
+  
+  return schema.outputs || [];
 }
 
 /**

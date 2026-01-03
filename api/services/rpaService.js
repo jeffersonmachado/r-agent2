@@ -1,5 +1,6 @@
 const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
 const { ActionRecorder } = require('../../tests/rpa/actionRecorder');
+const { normalizeRpaTestUrls } = require('../../tests/rpa/utils/urlNormalizer');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
@@ -317,6 +318,10 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           throw error;
         }
       }
+      
+      // Normaliza URLs no recording (corrige URLs inválidas de testes antigos)
+      normalizeRpaTestUrls(recording);
+      
       execution.totalSteps = recording.steps?.length || 0;
       addLog('info', `📝 Total de ações: ${execution.totalSteps}`, { step: 'init' });
 
@@ -364,7 +369,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           
           let stepDetails = '';
           if (step.type === 'navigate') {
-            stepDetails = `URL: ${step.url}`;
+            stepDetails = `URL: ${step.url || step.value || '(não especificada)'}`;
           } else if (step.selector) {
             stepDetails = `Seletor: ${step.selector}`;
             if (step.value && !step.value.includes('***')) {

@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/ia/ia-generation-result.schema.json",
+  "title": "IaGenerationResult",
+  "description": "Contrato canônico para o retorno dos wrappers de geração por IA",
+  "meta": {
+    "contractVersion": "1.0.0"
+  },
+  "type": "object",
+  "required": ["success", "domain", "meta"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Indica se a geração foi bem-sucedida"
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["chatbot", "rpa"],
+      "description": "Domínio da geração: chatbot (fluxo) ou rpa (teste RPA)"
+    },
+    "meta": {
+      "type": "object",
+      "required": ["prompt", "ragVersion", "timestamp"],
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Prompt utilizado na geração (identificador ou conteúdo)"
+        },
+        "ragVersion": {
+          "type": "string",
+          "description": "Versão do RAG utilizado (ou null se não utilizado)"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp ISO 8601 da geração"
+        }
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object",
+      "description": "Dados gerados quando success === true. Estrutura varia conforme domain"
+    },
+    "errors": {
+      "type": "array",
+      "description": "Lista de erros quando success === false",
+      "items": {
+        "type": "object",
+        "required": ["code", "message", "source"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código de erro estável (ex: VALIDATION_FAILED, INVALID_INPUT, GENERATION_ERROR)"
+          },
+          "message": {
+            "type": "string",
+            "description": "Mensagem de erro descritiva"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["schema", "rag", "gate", "validator"],
+            "description": "Origem do erro: schema (validação estrutural), rag (erro no RAG), gate (rejeição do gate), validator (validador específico)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "success": {
+          "const": true
+        }
+      },
+      "required": ["success", "domain", "meta", "data"]
+    },
+    {
+      "properties": {
+        "success": {
+          "const": false
+        }
+      },
+      "required": ["success", "domain", "meta", "errors"]
+    }
+  ],
+  "additionalProperties": false
+}
+

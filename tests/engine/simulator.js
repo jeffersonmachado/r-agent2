@@ -124,7 +124,8 @@ class ConversationSimulator {
     }
     
     // Carrega fluxo principal
-    const flowId = script.requires?.flows?.[0] || script.flowId;
+    // Verifica requiresDetails.flows primeiro (formato novo), depois requires.flows (formato antigo), depois flowId
+    const flowId = script.requiresDetails?.flows?.[0] || script.requires?.flows?.[0] || script.flowId;
     if (!flowId) {
       throw new Error('Script não especifica fluxo');
     }

@@ -170,6 +170,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'flows', action: 'read' },
     { resource: 'quick_replies', action: 'read' },
     { resource: 'departments', action: 'read' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'query' },
   ],
 };
 

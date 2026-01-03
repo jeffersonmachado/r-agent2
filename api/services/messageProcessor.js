@@ -50,6 +50,7 @@ const {
 const { ESCALATION_MODES } = require('../../engine/fallbackController');
 const config = require('../utils/config');
 const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
+const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
 
 // Sessões em memória (para produção, ideal mover para Redis/DB)
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
@@ -326,6 +327,24 @@ async function processWhatsAppMessage(message, value, deps) {
 
     if (messageText) {
       try {
+        // Validação CDR antes de enviar mensagem
+        const cdrValidation = validateCDR(messageText);
+        
+        if (cdrValidation.status === 'error') {
+          // Produção/QA: bloqueia resposta e usa resposta segura
+          const violationLog = generateViolationLog(cdrValidation, messageText);
+          logger.error('[CDR_VIOLATION] Resposta bloqueada', violationLog);
+          
+          const safeMessage = getSafeResponse();
+          await sendTextMessage(from, safeMessage);
+          return;
+        } else if (cdrValidation.status === 'warn') {
+          // Desenvolvimento: apenas loga warning mas permite resposta
+          const violationLog = generateViolationLog(cdrValidation, messageText);
+          logger.warn('[CDR_WARNING] Resposta com violação (dev mode)', violationLog);
+        }
+        
+        // Resposta válida ou warning em dev: envia normalmente
         await sendTextMessage(from, messageText);
       } catch (err) {
         logger.error('[ERROR] Não foi possível enviar mensagem do bot:', err);

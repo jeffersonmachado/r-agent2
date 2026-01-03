@@ -14,6 +14,7 @@ import { Button } from '../styles/Button';
  * @param {string} [props.confirmLabel='Confirmar'] - Texto do botão de confirmação
  * @param {string} [props.cancelLabel='Cancelar'] - Texto do botão de cancelamento
  * @param {string} [props.variant='warning'] - Variante: 'warning', 'danger', 'info'
+ * @param {boolean} [props.disabled=false] - Se os botões devem estar desabilitados
  */
 export function ConfirmDialog({
   isOpen,
@@ -24,9 +25,16 @@ export function ConfirmDialog({
   confirmLabel = 'Confirmar',
   cancelLabel = 'Cancelar',
   variant = 'warning',
+  disabled = false,
 }) {
   const handleConfirm = () => {
+    if (disabled) return;
     onConfirm();
+    onClose();
+  };
+
+  const handleClose = () => {
+    if (disabled) return;
     onClose();
   };
 
@@ -53,12 +61,12 @@ export function ConfirmDialog({
   return (
     <Dialog
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={title || 'Confirmação'}
       size="md"
       draggable={false}
       resizable={false}
-      showCloseButton={true}
+      showCloseButton={!disabled}
     >
       <div className="space-y-4">
         {/* Mensagem */}
@@ -76,15 +84,17 @@ export function ConfirmDialog({
         {/* Botões */}
         <div className="flex justify-end gap-3 pt-4 border-t border-border-default">
           <Button
-            onClick={onClose}
+            onClick={handleClose}
             variant="secondary"
             className="flex items-center gap-2"
+            disabled={disabled}
           >
             <span>{cancelLabel}</span>
           </Button>
           <Button
             onClick={handleConfirm}
             className={`flex items-center gap-2 ${style.confirmClass}`}
+            disabled={disabled}
           >
             <span>{confirmLabel}</span>
           </Button>

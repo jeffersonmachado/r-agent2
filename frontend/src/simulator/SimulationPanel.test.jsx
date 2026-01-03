@@ -21,7 +21,7 @@ describe('simulator/SimulationPanel', () => {
     renderWithTheme(<SimulationPanel simulation={null} onSelectStep={vi.fn()} />);
 
     expect(
-      screen.getByText(/Nenhuma simulação executada ainda/i),
+      screen.getByText(/Nenhuma simulação executada/i),
     ).toBeInTheDocument();
   });
 

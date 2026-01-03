@@ -216,6 +216,15 @@ function queryLogs(filters = {}) {
     // Adiciona logs da memória
     allLogs.push(...auditLogs);
 
+    // Remove duplicatas baseadas no ID (logs podem estar tanto no arquivo quanto na memória)
+    const uniqueLogsMap = new Map();
+    allLogs.forEach((log) => {
+      if (log.id && !uniqueLogsMap.has(log.id)) {
+        uniqueLogsMap.set(log.id, log);
+      }
+    });
+    allLogs = Array.from(uniqueLogsMap.values());
+
     // Aplica filtros
     let filteredLogs = allLogs;
 

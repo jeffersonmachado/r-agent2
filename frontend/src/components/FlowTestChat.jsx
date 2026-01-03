@@ -29,7 +29,7 @@ export function FlowTestChat({ flow, onSizeChange }) {
     resetConversation,
   } = useFlowRunner(flow);
 
-  const { themeName } = useTheme();
+  const { theme, themeName } = useTheme();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [showExecutionLog, setShowExecutionLog] = useState(true);
@@ -253,12 +253,9 @@ export function FlowTestChat({ flow, onSizeChange }) {
     flow?.nodes?.find((n) => n.id === conversationState.currentNodeId)?.type === 'user_input';
   
   // Indica quando o bot está processando/respondendo
-  const isBotProcessing = isProcessing || (
-    isRunning &&
-    !isWaitingInput &&
-    !isFinished &&
-    conversationState?.currentNodeId !== null
-  );
+  // Mostra apenas quando está realmente processando (isProcessing = true)
+  // Não mostra quando está aguardando input do usuário ou quando o fluxo terminou
+  const isBotProcessing = isProcessing && !isWaitingInput && !isFinished;
 
   // Erro de validação
   if (validationResult && !validationResult.valid && !isRunning) {
@@ -646,18 +643,37 @@ export function FlowTestChat({ flow, onSizeChange }) {
 
         {/* Indicador de digitação */}
         {isBotProcessing && (
-          <div className="flex justify-start">
-            <div className="bg-bg-secondary border border-border-default rounded-lg px-4 py-2">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce" />
-                <div
-                  className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce"
-                  style={{ animationDelay: '0.2s' }}
-                />
-                <div
-                  className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce"
-                  style={{ animationDelay: '0.4s' }}
-                />
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{
+              backgroundColor: theme.colors.bg.secondary,
+              border: `1px solid ${theme.colors.border.default}`,
+              borderRadius: '8px',
+              padding: '8px 16px'
+            }}>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: theme.colors.text.tertiary,
+                  borderRadius: '50%',
+                  animation: 'bounce 1.4s ease-in-out infinite'
+                }} />
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: theme.colors.text.tertiary,
+                  borderRadius: '50%',
+                  animation: 'bounce 1.4s ease-in-out infinite',
+                  animationDelay: '0.2s'
+                }} />
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: theme.colors.text.tertiary,
+                  borderRadius: '50%',
+                  animation: 'bounce 1.4s ease-in-out infinite',
+                  animationDelay: '0.4s'
+                }} />
               </div>
             </div>
           </div>

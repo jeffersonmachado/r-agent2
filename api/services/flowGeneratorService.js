@@ -4,12 +4,15 @@
  * Este serviço atua como um "operador especialista do DESIGNER DE FLUXOS",
  * gerando fluxos válidos e editáveis usando APENAS os componentes existentes.
  * 
- * Utiliza IA (OpenAI/Anthropic) para interpretar a descrição e gerar o fluxo.
+ * REFATORADO: Agora usa o wrapper oficial generateChatbotFlow() que garante:
+ * - Uso do prompt oficial (chatbot.generator.prompt.md)
+ * - Validação obrigatória pelo gate (validateGeneratedPlan)
+ * - Telemetria automática de falhas
  */
 
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
-const { generateAiResponse } = require('./aiProviderService');
+const { generateChatbotFlow } = require('../../engine/ai/generateChatbotFlow');
 
 /**
  * Constrói o prompt para a IA gerar o fluxo.
@@ -173,7 +176,73 @@ function parseAiResponse(aiResponse) {
 }
 
 /**
+ * Converte o formato do wrapper (com action/metadata) para FlowDefinition
+ * 
+ * @param {Object} wrapperResult - Resultado do generateChatbotFlow
+ * @param {string} flowId - ID do fluxo
+ * @param {string} tenantId - ID do tenant
+ * @param {string} flowName - Nome do fluxo
+ * @param {string} description - Descrição original
+ * @returns {Object} - FlowDefinition formatado
+ */
+function convertWrapperResultToFlowDefinition(wrapperResult, flowId, tenantId, flowName, description) {
+  const generatedFlow = wrapperResult.flow;
+  
+  // O wrapper retorna formato: { action, metadata, nodes, edges }
+  // Precisamos converter para FlowDefinition: { id, tenantId, name, version, nodes, metadata }
+  const flow = {
+    id: flowId,
+    tenantId,
+    name: generatedFlow.metadata?.name || flowName,
+    version: 1,
+    nodes: generatedFlow.nodes || [],
+    metadata: {
+      generated: true,
+      generatedBy: 'ai',
+      description: description,
+      generatedAt: new Date().toISOString(),
+      promptVersion: wrapperResult.promptVersion,
+      validation: wrapperResult.validation,
+    },
+  };
+  
+  // Garante que há nó start e end (validação adicional)
+  const hasStart = flow.nodes.some(n => n.type === 'start');
+  const hasEnd = flow.nodes.some(n => n.type === 'end');
+  
+  if (!hasStart) {
+    flow.nodes.unshift({
+      id: 'start',
+      type: 'start',
+      next: flow.nodes[0]?.id || 'end',
+    });
+  }
+  
+  if (!hasEnd) {
+    flow.nodes.push({
+      id: 'end',
+      type: 'end',
+    });
+  }
+  
+  // Garante que todos os caminhos terminem em end
+  const endNodeId = flow.nodes.find(n => n.type === 'end')?.id || 'end';
+  flow.nodes.forEach(node => {
+    if (node.next && !flow.nodes.find(n => n.id === node.next)) {
+      node.next = endNodeId;
+    }
+  });
+  
+  return flow;
+}
+
+/**
  * Gera um fluxo a partir de uma descrição em linguagem natural usando IA.
+ * 
+ * REFATORADO: Agora usa o wrapper oficial generateChatbotFlow() que garante:
+ * - Uso do prompt oficial (chatbot.generator.prompt.md)
+ * - Validação obrigatória pelo gate (validateGeneratedPlan)
+ * - Telemetria automática de falhas
  * 
  * @param {string} description - Descrição do fluxo em linguagem natural
  * @param {Object} options - Opções adicionais (tenantId, flowId, flowName)
@@ -184,7 +253,7 @@ async function generateFlowFromDescription(description, options = {}) {
   const flowId = options.flowId || `flow-${uuidv4().slice(0, 8)}`;
   const flowName = options.flowName || 'Fluxo Gerado';
   
-  logger.info('Gerando fluxo a partir de descrição usando IA', { 
+  logger.info('Gerando fluxo a partir de descrição usando wrapper oficial', { 
     description: description.substring(0, 100),
     flowId,
     flowName,
@@ -192,81 +261,36 @@ async function generateFlowFromDescription(description, options = {}) {
   });
 
   try {
-    // Constrói o prompt para a IA
-    const prompt = buildFlowGenerationPrompt(description);
+    // Usa o wrapper oficial que garante validação e telemetria
+    const wrapperResult = await generateChatbotFlow(description, options);
     
-    logger.debug('Prompt construído para IA', { promptLength: prompt.length });
-    
-    // Chama a IA para gerar o fluxo
-    const aiResponse = await generateAiResponse(prompt, tenantId, {
-      flowId,
-      nodeId: 'flow-generator',
-    });
-    
-    logger.debug('Resposta da IA recebida', { 
-      hasText: !!aiResponse?.text,
-      textLength: aiResponse?.text?.length 
-    });
-    
-    // Parseia a resposta da IA
-    const parsedFlow = parseAiResponse(aiResponse.text);
-    
-    if (!parsedFlow) {
-      logger.warn('Falha ao parsear resposta da IA, usando geração por palavras-chave');
+    if (!wrapperResult.success) {
+      logger.warn('Wrapper rejeitou a geração, usando fallback', {
+        error: wrapperResult.error,
+        validation: wrapperResult.validation
+      });
       // Fallback: usa geração por palavras-chave
       return generateFlowFromKeywords(description, options);
     }
     
-    // Converte o formato da IA para o formato do engine
-    const flow = {
-      id: flowId,
-      tenantId,
-      name: parsedFlow.metadata?.name || flowName,
-      version: 1,
-      nodes: parsedFlow.nodes || [],
-      metadata: {
-        generated: true,
-        generatedBy: 'ai',
-        description: description,
-        generatedAt: new Date().toISOString(),
-      },
-    };
-    
-    // Garante que há nó start e end
-    const hasStart = flow.nodes.some(n => n.type === 'start');
-    const hasEnd = flow.nodes.some(n => n.type === 'end');
-    
-    if (!hasStart) {
-      flow.nodes.unshift({
-        id: 'start',
-        type: 'start',
-        next: flow.nodes[0]?.id || 'end',
-      });
-    }
-    
-    if (!hasEnd) {
-      flow.nodes.push({
-        id: 'end',
-        type: 'end',
-      });
-    }
-    
-    // Garante que todos os caminhos terminem em end
-    const endNodeId = flow.nodes.find(n => n.type === 'end')?.id || 'end';
-    flow.nodes.forEach(node => {
-      if (node.next && !flow.nodes.find(n => n.id === node.next)) {
-        node.next = endNodeId;
-      }
-    });
-    
-    logger.info('Fluxo gerado pela IA com sucesso', { 
+    // Converte o formato do wrapper para FlowDefinition
+    const flow = convertWrapperResultToFlowDefinition(
+      wrapperResult,
       flowId,
-      nodeCount: flow.nodes.length 
+      tenantId,
+      flowName,
+      description
+    );
+    
+    logger.info('Fluxo gerado pelo wrapper oficial com sucesso', { 
+      flowId,
+      nodeCount: flow.nodes.length,
+      validation: wrapperResult.validation
     });
     
     return flow;
   } catch (err) {
-    logger.error('Erro ao gerar fluxo com IA, usando fallback', { 
+    logger.error('Erro ao gerar fluxo com wrapper oficial, usando fallback', { 
       error: err.message,
       stack: err.stack 
     });

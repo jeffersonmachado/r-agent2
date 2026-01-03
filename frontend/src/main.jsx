@@ -24,6 +24,8 @@ import { ProductDocsPage } from './pages/ProductDocsPage';
 import { RAGDocumentsPage } from './pages/RAGDocumentsPage';
 import { WebScrapingPage } from './pages/WebScrapingPage';
 import { RpaTestPage } from './pages/RpaTestPage';
+import { ChatPage } from './pages/ChatPage';
+import { QaPage } from './pages/QaPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { useRouter } from './hooks/useRouter';
@@ -128,6 +130,8 @@ function AppWithAuth() {
   const isRAGDocuments = currentPath === '/rag-documents' || currentPath.startsWith('/rag-documents');
   const isWebScraping = currentPath === '/web-scraping' || currentPath.startsWith('/web-scraping');
   const isRpaTest = currentPath === '/rpa-test' || currentPath.startsWith('/rpa-test');
+  const isChat = currentPath === '/chat' || currentPath.startsWith('/chat');
+  const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
   // Todas as rotas requerem autenticação, exceto /login
@@ -138,7 +142,7 @@ function AppWithAuth() {
     const allRoutes = [
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isLogin
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -151,7 +155,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isLogin, isAuthenticated, navigate
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isLogin, isAuthenticated, navigate
   ]);
 
   // Redireciona para /dashboard quando autenticado e está em rota de login
@@ -238,6 +242,10 @@ function AppWithAuth() {
         <WebScrapingPage />
       ) : isRpaTest ? (
         <RpaTestPage />
+      ) : isChat ? (
+        <ChatPage />
+      ) : isQa ? (
+        <QaPage />
       ) : null}
     </div>
   );

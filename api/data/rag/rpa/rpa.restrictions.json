@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "description": "Restrições técnicas para testes RPA",
+  "technical": {
+    "timeout": {
+      "default": 30000,
+      "min": 1000,
+      "max": 60000,
+      "unit": "milliseconds"
+    },
+    "retries": {
+      "max": 3,
+      "default": 1
+    },
+    "screenshot": {
+      "enabled": true,
+      "onFailure": true,
+      "onCriticalSteps": true
+    }
+  },
+  "environment": {
+    "mode": "test-only",
+    "allowedDomains": [],
+    "blockedDomains": [
+      "production",
+      "prod",
+      "live"
+    ],
+    "dataAccess": {
+      "realData": false,
+      "productionData": false,
+      "sensitiveData": false
+    }
+  },
+  "execution": {
+    "parallel": false,
+    "maxSteps": 100,
+    "maxDuration": 300000,
+    "cleanup": true
+  },
+  "validation": {
+    "schemaValidation": true,
+    "actionWhitelist": true,
+    "selectorValidation": true,
+    "pageValidation": true,
+    "ruleEnforcement": true
+  },
+  "reporting": {
+    "format": "json",
+    "includeScreenshots": true,
+    "includeErrors": true,
+    "includeSuggestions": true
+  }
+}
+

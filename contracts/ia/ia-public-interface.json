@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/ia/ia-public-interface.json",
+  "title": "Interface Pública de Geração por IA",
+  "description": "Contrato canônico declarando os únicos entry-points públicos para geração por IA",
+  "version": "1.0.0",
+  "publicEntryPoints": {
+    "generateRpaTest": {
+      "domain": "rpa",
+      "description": "Gera um teste RPA a partir de input do usuário",
+      "input": {
+        "type": "object",
+        "description": "Input genérico (estrutura específica definida pela implementação)"
+      },
+      "output": {
+        "description": "Retorno seguindo o contrato IaGenerationResult definido em ia-generation-result.schema.json"
+      },
+      "restrictions": [
+        "test-only: planos gerados devem ter context.mode = 'test-only'",
+        "no-side-effects: geração não persiste automaticamente",
+        "gate-required: todo plano deve passar pelo gate de validação"
+      ]
+    },
+    "generateChatbotFlow": {
+      "domain": "chatbot",
+      "description": "Gera um fluxo de chatbot a partir de descrição em linguagem natural",
+      "input": {
+        "type": "object",
+        "description": "Input genérico (estrutura específica definida pela implementação)"
+      },
+      "output": {
+        "description": "Retorno seguindo o contrato IaGenerationResult definido em ia-generation-result.schema.json"
+      },
+      "restrictions": [
+        "no-side-effects: geração não persiste automaticamente",
+        "gate-required: todo fluxo deve passar pelo gate de validação"
+      ]
+    }
+  },
+  "nonPublicComponents": {
+    "description": "Componentes internos que NÃO fazem parte da interface pública",
+    "components": [
+      {
+        "name": "gate",
+        "description": "Gate de validação obrigatória (validateGeneratedPlan). Componente interno."
+      },
+      {
+        "name": "validators",
+        "description": "Validadores específicos (validateFlowPlan, validateRpaPlan). Componentes internos."
+      },
+      {
+        "name": "ragLoaders",
+        "description": "Loaders e serviços de RAG. Componentes internos."
+      },
+      {
+        "name": "executors",
+        "description": "Executores de planos RPA e fluxos. Componentes internos."
+      }
+    ]
+  }
+}
+

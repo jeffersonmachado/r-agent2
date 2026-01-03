@@ -74,6 +74,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'bulk_messaging', action: 'delete' },
     // RAG
     { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
     { resource: 'rag', action: 'index' },
     { resource: 'rag', action: 'delete' },
@@ -112,6 +113,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'bulk_messaging', action: 'read' },
     // RAG
     { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
     { resource: 'rag', action: 'index' },
   ],
@@ -133,8 +135,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'quick_replies', action: 'read' },
     // Departamentos (apenas leitura)
     { resource: 'departments', action: 'read' },
-    // RAG (apenas consulta)
+    // RAG (consulta e leitura de documentos)
     { resource: 'rag', action: 'query' },
+    { resource: 'rag', action: 'read' },
   ],
 };
 

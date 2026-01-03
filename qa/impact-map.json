@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Mapa de impacto: paths (glob) → escopos de QA obrigatórios",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["scopes"],
+    "properties": {
+      "scopes": {
+        "type": "array",
+        "description": "Escopos de QA que devem ser executados quando arquivos neste padrão são alterados",
+        "items": {
+          "type": "string",
+          "enum": ["contracts", "rag", "prompts", "wrappers", "executors", "ci", "telemetry"]
+        },
+        "uniqueItems": true,
+        "minItems": 1
+      },
+      "description": {
+        "type": "string",
+        "description": "Descrição do impacto deste padrão"
+      }
+    },
+    "additionalProperties": false
+  },
+  "properties": {
+    "contracts/**": {
+      "scopes": ["contracts", "wrappers", "ci"],
+      "description": "Mudanças em contratos afetam wrappers e devem ser validadas no CI"
+    },
+    "contracts/ia/**": {
+      "scopes": ["contracts", "wrappers", "executors", "ci"],
+      "description": "Contratos de IA afetam wrappers e executores"
+    },
+    "contracts/qa/**": {
+      "scopes": ["contracts", "ci"],
+      "description": "Contratos de QA afetam o próprio sistema de QA"
+    },
+    "rag/**": {
+      "scopes": ["rag", "prompts", "wrappers"],
+      "description": "Mudanças em RAG afetam prompts e wrappers"
+    },
+    "api/data/rag/**": {
+      "scopes": ["rag", "prompts", "wrappers"],
+      "description": "Dados de RAG afetam geração e validação"
+    },
+    "prompts/**": {
+      "scopes": ["prompts", "wrappers"],
+      "description": "Mudanças em prompts afetam wrappers de geração"
+    },
+    "engine/ai/**": {
+      "scopes": ["wrappers", "contracts", "telemetry"],
+      "description": "Mudanças na engine de IA afetam wrappers, contratos e telemetria"
+    },
+    "engine/ai/validateGeneratedPlan.js": {
+      "scopes": ["wrappers", "contracts", "telemetry", "ci"],
+      "description": "Gate de validação é crítico e afeta tudo"
+    },
+    "engine/ai/generate*.js": {
+      "scopes": ["wrappers", "contracts", "telemetry"],
+      "description": "Wrappers de geração afetam contratos e telemetria"
+    },
+    "api/services/rpaService.js": {
+      "scopes": ["executors", "telemetry"],
+      "description": "Executor RPA afeta telemetria"
+    },
+    "api/services/flowGeneratorService.js": {
+      "scopes": ["executors", "wrappers", "telemetry"],
+      "description": "Gerador de fluxos afeta wrappers e telemetria"
+    },
+    ".github/workflows/**": {
+      "scopes": ["ci"],
+      "description": "Mudanças no CI afetam o próprio CI"
+    },
+    "qa/**": {
+      "scopes": ["ci", "telemetry"],
+      "description": "Mudanças no sistema de QA afetam CI e telemetria"
+    },
+    "engine/qa/**": {
+      "scopes": ["telemetry", "ci"],
+      "description": "Telemetria de QA afeta CI"
+    },
+    "tests/ai-governance/**": {
+      "scopes": ["wrappers", "contracts", "ci"],
+      "description": "Testes de governança IA validam wrappers e contratos"
+    },
+    "api/utils/validateFlowPlan.js": {
+      "scopes": ["wrappers", "contracts", "ci"],
+      "description": "Validador de fluxos é crítico"
+    },
+    "api/utils/validateRpaPlan.js": {
+      "scopes": ["wrappers", "contracts", "ci"],
+      "description": "Validador de RPA é crítico"
+    }
+  }
+}
+

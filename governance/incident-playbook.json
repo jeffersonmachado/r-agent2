@@ -1,0 +1,424 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Playbook de Incidentes de IA",
+  "description": "Define tipos de incidente, passos obrigatórios e responsáveis por tipo",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "incidentTypes": {
+    "qa_failure": {
+      "name": "Falha de QA",
+      "severity": "high",
+      "description": "Falha em checks de QA que bloqueia deploy ou produção",
+      "responsible": "qa_lead",
+      "escalation": "tech_lead",
+      "steps": [
+        {
+          "order": 1,
+          "action": "identify_failure",
+          "responsible": "engineer",
+          "timeout": 300,
+          "unit": "seconds"
+        },
+        {
+          "order": 2,
+          "action": "assess_impact",
+          "responsible": "qa_lead",
+          "timeout": 600,
+          "unit": "seconds"
+        },
+        {
+          "order": 3,
+          "action": "block_deploy_if_needed",
+          "responsible": "qa_lead",
+          "timeout": 60,
+          "unit": "seconds"
+        },
+        {
+          "order": 4,
+          "action": "create_fix_plan",
+          "responsible": "engineer",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 5,
+          "action": "implement_fix",
+          "responsible": "engineer",
+          "timeout": 3600,
+          "unit": "seconds"
+        },
+        {
+          "order": 6,
+          "action": "verify_fix",
+          "responsible": "qa_lead",
+          "timeout": 600,
+          "unit": "seconds"
+        },
+        {
+          "order": 7,
+          "action": "unblock_deploy",
+          "responsible": "qa_lead",
+          "timeout": 60,
+          "unit": "seconds"
+        }
+      ]
+    },
+    "runtime_failure": {
+      "name": "Falha Runtime",
+      "severity": "critical",
+      "description": "Falha em execução runtime que afeta produção",
+      "responsible": "tech_lead",
+      "escalation": "cto",
+      "steps": [
+        {
+          "order": 1,
+          "action": "detect_failure",
+          "responsible": "monitoring_system",
+          "timeout": 60,
+          "unit": "seconds",
+          "automatic": true
+        },
+        {
+          "order": 2,
+          "action": "assess_production_impact",
+          "responsible": "tech_lead",
+          "timeout": 300,
+          "unit": "seconds"
+        },
+        {
+          "order": 3,
+          "action": "decide_rollback",
+          "responsible": "tech_lead",
+          "timeout": 300,
+          "unit": "seconds"
+        },
+        {
+          "order": 4,
+          "action": "execute_rollback_if_needed",
+          "responsible": "tech_lead",
+          "timeout": 600,
+          "unit": "seconds"
+        },
+        {
+          "order": 5,
+          "action": "investigate_root_cause",
+          "responsible": "engineer",
+          "timeout": 3600,
+          "unit": "seconds"
+        },
+        {
+          "order": 6,
+          "action": "implement_fix",
+          "responsible": "engineer",
+          "timeout": 7200,
+          "unit": "seconds"
+        },
+        {
+          "order": 7,
+          "action": "verify_fix",
+          "responsible": "qa_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 8,
+          "action": "deploy_fix",
+          "responsible": "tech_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 9,
+          "action": "monitor_production",
+          "responsible": "tech_lead",
+          "timeout": 3600,
+          "unit": "seconds"
+        },
+        {
+          "order": 10,
+          "action": "post_mortem",
+          "responsible": "tech_lead",
+          "timeout": 86400,
+          "unit": "seconds"
+        }
+      ]
+    },
+    "contract_violation": {
+      "name": "Violação de Contrato",
+      "severity": "critical",
+      "description": "Violação de contrato público que afeta integração",
+      "responsible": "tech_lead",
+      "escalation": "cto",
+      "steps": [
+        {
+          "order": 1,
+          "action": "detect_violation",
+          "responsible": "qa_system",
+          "timeout": 60,
+          "unit": "seconds",
+          "automatic": true
+        },
+        {
+          "order": 2,
+          "action": "assess_integration_impact",
+          "responsible": "tech_lead",
+          "timeout": 600,
+          "unit": "seconds"
+        },
+        {
+          "order": 3,
+          "action": "block_deploy_immediate",
+          "responsible": "qa_lead",
+          "timeout": 60,
+          "unit": "seconds",
+          "automatic": true
+        },
+        {
+          "order": 4,
+          "action": "notify_integration_partners",
+          "responsible": "product_owner",
+          "timeout": 300,
+          "unit": "seconds"
+        },
+        {
+          "order": 5,
+          "action": "create_fix_plan",
+          "responsible": "tech_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 6,
+          "action": "implement_fix",
+          "responsible": "engineer",
+          "timeout": 3600,
+          "unit": "seconds"
+        },
+        {
+          "order": 7,
+          "action": "verify_contract_compliance",
+          "responsible": "qa_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 8,
+          "action": "unblock_deploy",
+          "responsible": "qa_lead",
+          "timeout": 60,
+          "unit": "seconds"
+        }
+      ]
+    },
+    "security_breach": {
+      "name": "Violação de Segurança",
+      "severity": "critical",
+      "description": "Falha de segurança detectada em QA ou runtime",
+      "responsible": "tech_lead",
+      "escalation": "cto",
+      "steps": [
+        {
+          "order": 1,
+          "action": "detect_breach",
+          "responsible": "security_system",
+          "timeout": 60,
+          "unit": "seconds",
+          "automatic": true
+        },
+        {
+          "order": 2,
+          "action": "assess_security_impact",
+          "responsible": "tech_lead",
+          "timeout": 300,
+          "unit": "seconds"
+        },
+        {
+          "order": 3,
+          "action": "block_all_deploys",
+          "responsible": "tech_lead",
+          "timeout": 60,
+          "unit": "seconds",
+          "automatic": true
+        },
+        {
+          "order": 4,
+          "action": "notify_security_team",
+          "responsible": "tech_lead",
+          "timeout": 300,
+          "unit": "seconds"
+        },
+        {
+          "order": 5,
+          "action": "investigate_breach",
+          "responsible": "security_team",
+          "timeout": 7200,
+          "unit": "seconds"
+        },
+        {
+          "order": 6,
+          "action": "implement_security_fix",
+          "responsible": "engineer",
+          "timeout": 3600,
+          "unit": "seconds"
+        },
+        {
+          "order": 7,
+          "action": "verify_security_fix",
+          "responsible": "security_team",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 8,
+          "action": "unblock_deploys",
+          "responsible": "tech_lead",
+          "timeout": 60,
+          "unit": "seconds"
+        },
+        {
+          "order": 9,
+          "action": "security_post_mortem",
+          "responsible": "security_team",
+          "timeout": 86400,
+          "unit": "seconds"
+        }
+      ]
+    },
+    "rollout_failure": {
+      "name": "Falha em Rollout",
+      "severity": "high",
+      "description": "Falha durante rollout de IA que requer rollback",
+      "responsible": "tech_lead",
+      "escalation": "product_owner",
+      "steps": [
+        {
+          "order": 1,
+          "action": "detect_rollout_issue",
+          "responsible": "monitoring_system",
+          "timeout": 300,
+          "unit": "seconds",
+          "automatic": true
+        },
+        {
+          "order": 2,
+          "action": "assess_rollout_impact",
+          "responsible": "tech_lead",
+          "timeout": 600,
+          "unit": "seconds"
+        },
+        {
+          "order": 3,
+          "action": "execute_rollback",
+          "responsible": "tech_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 4,
+          "action": "verify_rollback_success",
+          "responsible": "qa_lead",
+          "timeout": 600,
+          "unit": "seconds"
+        },
+        {
+          "order": 5,
+          "action": "investigate_failure",
+          "responsible": "engineer",
+          "timeout": 3600,
+          "unit": "seconds"
+        },
+        {
+          "order": 6,
+          "action": "create_fix_plan",
+          "responsible": "tech_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 7,
+          "action": "implement_fix",
+          "responsible": "engineer",
+          "timeout": 7200,
+          "unit": "seconds"
+        },
+        {
+          "order": 8,
+          "action": "verify_fix",
+          "responsible": "qa_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        },
+        {
+          "order": 9,
+          "action": "resume_rollout",
+          "responsible": "tech_lead",
+          "timeout": 1800,
+          "unit": "seconds"
+        }
+      ]
+    }
+  },
+  "severityLevels": {
+    "critical": {
+      "description": "Impacta produção, requer ação imediata",
+      "sla": {
+        "responseTime": 300,
+        "resolutionTime": 3600,
+        "unit": "seconds"
+      },
+      "escalation": "immediate"
+    },
+    "high": {
+      "description": "Impacta desenvolvimento ou bloqueia deploy",
+      "sla": {
+        "responseTime": 1800,
+        "resolutionTime": 14400,
+        "unit": "seconds"
+      },
+      "escalation": "after_sla"
+    },
+    "medium": {
+      "description": "Impacta desenvolvimento mas não bloqueia",
+      "sla": {
+        "responseTime": 7200,
+        "resolutionTime": 86400,
+        "unit": "seconds"
+      },
+      "escalation": "after_sla"
+    },
+    "low": {
+      "description": "Impacto mínimo, pode ser tratado normalmente",
+      "sla": {
+        "responseTime": 86400,
+        "resolutionTime": 604800,
+        "unit": "seconds"
+      },
+      "escalation": "none"
+    }
+  },
+  "commonSteps": {
+    "post_mortem": {
+      "required": true,
+      "timeout": 86400,
+      "unit": "seconds",
+      "responsible": "tech_lead",
+      "participants": ["tech_lead", "qa_lead", "engineer"],
+      "output": "post_mortem_report"
+    },
+    "documentation": {
+      "required": true,
+      "timeout": 3600,
+      "unit": "seconds",
+      "responsible": "engineer",
+      "output": "incident_report"
+    },
+    "prevention": {
+      "required": true,
+      "timeout": 604800,
+      "unit": "seconds",
+      "responsible": "tech_lead",
+      "output": "prevention_plan"
+    }
+  }
+}
+

@@ -11,6 +11,8 @@ const { ReplaySystem } = require('./replaySystem');
 const config = require('./rpaConfig');
 const path = require('path');
 const fs = require('fs');
+const { normalizeRpaTestUrls } = require('./utils/urlNormalizer');
+const { ensureAuthenticated } = require('./utils/authHelper');
 
 class RpaTestRunner {
   constructor(options = {}) {
@@ -72,6 +74,15 @@ class RpaTestRunner {
       recordingData = recording;
     }
 
+    // Normaliza URLs no recording
+    if (recordingData) {
+      try {
+        normalizeRpaTestUrls(recordingData);
+      } catch (error) {
+        console.warn(`Aviso: Erro ao normalizar URLs: ${error.message}`);
+      }
+    }
+
     // Mescla dados
     const mergedData = {
       ...recordingData.data,
@@ -107,6 +118,50 @@ class RpaTestRunner {
     }
 
     try {
+      // Garante que o executor está inicializado
+      if (!this.executor) {
+        await this.init();
+      }
+
+      // Faz login automático antes de executar os steps
+      // Navega para a página inicial primeiro se necessário
+      if (this.executor?.page) {
+        const firstStep = recordingData.steps?.[0];
+        if (firstStep && firstStep.type === 'navigate') {
+          const targetUrl = firstStep.url || firstStep.value;
+          if (targetUrl) {
+            try {
+              await this.executor.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+              await this.executor.page.waitForTimeout(1000);
+            } catch (error) {
+              // Se falhar, tenta navegar para a URL base
+              const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
+              await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+              await this.executor.page.waitForTimeout(1000);
+            }
+          } else {
+            // Se não há URL, navega para a URL base
+            const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
+            await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await this.executor.page.waitForTimeout(1000);
+          }
+        } else {
+          // Se não há step de navegação, navega para a URL base
+          const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
+          await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await this.executor.page.waitForTimeout(1000);
+        }
+
+        // Garante autenticação
+        const authResult = await ensureAuthenticated(this.executor.page);
+        if (!authResult.success) {
+          console.warn(`⚠️  Aviso: Não foi possível fazer login automático: ${authResult.error}`);
+          console.warn('   O teste continuará, mas pode falhar se a página requer autenticação.');
+        } else if (authResult.loggedIn) {
+          console.log('✅ Login automático realizado com sucesso');
+        }
+      }
+
       // Executa cada step
       for (let i = 0; i < recordingData.steps.length; i++) {
         const step = recordingData.steps[i];

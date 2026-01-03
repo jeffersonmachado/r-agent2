@@ -106,3 +106,26 @@ export async function getProcessManager() {
   }
 }
 
+/**
+ * Valida um token de provedor de IA.
+ * 
+ * @param {string} provider - Nome do provedor ('openai' ou 'anthropic')
+ * @param {string} apiKey - Token/API Key a ser validado
+ * @returns {Promise<{success: boolean, valid: boolean, error?: string}>}
+ */
+export async function validateProviderToken(provider, apiKey) {
+  try {
+    if (!provider || !apiKey) {
+      throw new Error('Provider e apiKey são obrigatórios');
+    }
+
+    return await fetchJson('/config/validate-provider-token', {
+      method: 'POST',
+      body: JSON.stringify({ provider, apiKey }),
+    });
+  } catch (error) {
+    logger.error('Erro ao validar token de provedor', error);
+    throw error;
+  }
+}
+

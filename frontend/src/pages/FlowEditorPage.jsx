@@ -552,17 +552,30 @@ export function FlowEditorPage() {
   const handleUpdateNodeConfig = (nodeId, newConfig) => {
     if (!editorRef.current) return;
     try {
-      if (editorRef.current.updateNodeConfig) {
-        editorRef.current.updateNodeConfig(nodeId, newConfig);
-      } else if (editorRef.current.editor?.current) {
-        const editor = editorRef.current.editor.current;
-        const node = editor.getNode(nodeId);
-        if (node) {
-          node.data.config = { ...node.data.config, ...newConfig };
-        }
+      const editor = editorRef.current.editor?.current;
+      if (!editor) return;
+      
+      const node = editor.getNode(nodeId);
+      if (!node) return;
+      
+      // Atualiza config do nó
+      node.data.config = { ...node.data.config, ...newConfig };
+      
+      // Se o editor tem updateNodeIO, atualiza inputs/outputs dinamicamente
+      // Isso é necessário para nós com outputs dinâmicos (router, schedule_router)
+      // ou inputs de erro (nós com errorPorts)
+      if (editorRef.current.updateNodeIO) {
+        editorRef.current.updateNodeIO(nodeId);
       }
+      
+      // Atualiza nó selecionado no estado
       if (selectedNode && selectedNode.id === nodeId) {
         setSelectedNode({ ...selectedNode, config: { ...selectedNode.config, ...newConfig } });
+      }
+      
+      // Notifica mudança no fluxo
+      if (editorRef.current.onFlowChanged) {
+        editorRef.current.onFlowChanged(editor);
       }
     } catch (err) {
       logger.error('Erro ao atualizar config do nó', { nodeId, error: err });

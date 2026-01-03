@@ -23,6 +23,7 @@ const {
   login: authLogin,
   logout: authLogout,
   validateToken,
+  loginWithRpaToken,
   createAgent,
   listAgents,
   getAgent,
@@ -62,6 +63,10 @@ const {
   getTags,
 } = require('./services/quickRepliesService');
 const { generateFlowFromDescription } = require('./services/flowGeneratorService');
+const { executeRpaFlowPipeline, previewRpaFlowPipeline } = require('./services/rpaFlowPipelineService');
+const { generateChatbotFlow } = require('../engine/ai/generateChatbotFlow');
+const { generateRpaTest } = require('../engine/ai/generateRpaTest');
+const rpaDependencyResolver = require('../engine/rpaDependencyResolver');
 const {
   listDepartments,
   getDepartment,
@@ -147,6 +152,13 @@ const {
   scrapeUrl,
   scrapeUrls,
 } = require('./services/webScrapingService');
+const {
+  getLatestQaResult,
+  getQaHistory,
+  getQaResultById,
+  runQaManual,
+  getQaStatistics,
+} = require('./services/qaService');
 const {
   createWebhook,
   listWebhooks,
@@ -659,6 +671,76 @@ async function requestHandler(req, res) {
         logger.error('Erro ao fazer login:', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar login' });
       }
+    }
+    return;
+  }
+
+  // POST /auth/rpa/login - Login RPA usando token exclusivo
+  if (method === 'POST' && pathname === '/auth/rpa/login') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const rpaToken = body.token || body.rpaToken;
+
+      if (!rpaToken) {
+        badRequest(res, 'Token RPA é obrigatório');
+        return;
+      }
+
+      // Extrai IP e User-Agent
+      const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'RPA-Automation';
+
+      const result = loginWithRpaToken(rpaToken, ipAddress, userAgent);
+
+      if (!result.success) {
+        sendJson(res, 401, { error: 'rpa_authentication_failed', message: result.error });
+        return;
+      }
+
+      // Registra ação de auditoria
+      logAction({
+        agentId: result.agent.id,
+        username: result.agent.username,
+        action: 'rpa_login',
+        resource: 'auth',
+        ipAddress,
+        userAgent,
+      });
+
+      sendJson(res, 200, {
+        token: result.token,
+        agent: result.agent,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao fazer login RPA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar login RPA' });
+      }
+    }
+    return;
+  }
+
+  // GET /auth/rpa/token - Obtém ou gera token RPA
+  if (method === 'GET' && pathname === '/auth/rpa/token') {
+    try {
+      const rpaTokenManager = require('../../tests/rpa/utils/rpaTokenManager');
+      const token = rpaTokenManager.getOrCreateRpaToken();
+      
+      sendJson(res, 200, {
+        token,
+        message: 'Token RPA obtido com sucesso',
+        note: 'Use este token para autenticação RPA via POST /auth/rpa/login',
+      });
+    } catch (err) {
+      logger.error('Erro ao obter token RPA:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter token RPA' });
     }
     return;
   }
@@ -1327,6 +1409,247 @@ async function requestHandler(req, res) {
   }
 
   // -----------------------------------------------------------------------
+  // Geração de teste RPA por IA
+  // -----------------------------------------------------------------------
+
+  // POST /flows/:flowId/generate-rpa-test
+  if (method === 'POST' && pathname.match(/^\/flows\/([^\/]+)\/generate-rpa-test$/)) {
+    const flowIdMatch = pathname.match(/^\/flows\/([^\/]+)\/generate-rpa-test$/);
+    const flowId = flowIdMatch ? flowIdMatch[1] : null;
+
+    if (!flowId) {
+      badRequest(res, 'flowId é obrigatório na URL');
+      return;
+    }
+
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    // Declara flowVersion no escopo do try para estar disponível no catch
+    let flowVersion = 1;
+    
+    try {
+      const body = await parseJsonBody(req);
+      const { version, autoResolveDependencies = false } = body || {};
+
+      // Obtém o fluxo
+      const flow = flows.get(flowId);
+      if (!flow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${flowId}" não encontrado` });
+        return;
+      }
+
+      // Valida versão se fornecida
+      flowVersion = version || flow.version || 1;
+      if (flow.version && flow.version !== flowVersion) {
+        sendJson(res, 400, { error: 'version_mismatch', message: `Versão do fluxo não corresponde. Esperado: ${flow.version}, recebido: ${flowVersion}` });
+        return;
+      }
+
+      // Obtém tenantId
+      const authResult = requireAuth(req);
+      const tenantId = flow.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+
+      // Importa serviços
+      const { analyzeFlowDependencies, resolveDependencies } = require('./services/rpaTestDependencyAnalyzer');
+      const { generateRpaTestFromFlow } = require('./services/rpaTestGeneratorService');
+
+      logger.info('Iniciando geração de teste RPA por IA', { flowId, flowVersion, tenantId });
+
+      // Passo 1: Analisa dependências
+      logger.info('Passo 1: Analisando dependências do fluxo', { flowId });
+      let dependencies;
+      try {
+        dependencies = await analyzeFlowDependencies(flow, tenantId);
+        logger.debug('Dependências analisadas', {
+          hasSeeds: !!dependencies.seeds,
+          seedsStructure: dependencies.seeds ? Object.keys(dependencies.seeds) : [],
+          missingCount: dependencies.seeds?.missing?.length || 0
+        });
+      } catch (depError) {
+        logger.error('Erro ao analisar dependências', {
+          error: depError.message,
+          stack: depError.stack,
+          flowId
+        });
+        throw new Error(`Erro ao analisar dependências: ${depError.message}`);
+      }
+
+      // Passo 2: Resolve dependências se solicitado
+      let resolution = null;
+      if (autoResolveDependencies && dependencies.seeds && dependencies.seeds.missing && dependencies.seeds.missing.length > 0) {
+        logger.info('Passo 2: Resolvendo dependências faltantes', { 
+          flowId,
+          missingCount: dependencies.seeds.missing.length 
+        });
+        try {
+          resolution = await resolveDependencies(dependencies, tenantId);
+          if (resolution && resolution.executedSeeds && resolution.executedSeeds.length > 0) {
+            if (!dependencies.seeds) {
+              dependencies.seeds = {};
+            }
+            dependencies.seeds.executedSeeds = resolution.executedSeeds;
+          }
+        } catch (resolveError) {
+          logger.error('Erro ao resolver dependências', {
+            error: resolveError.message,
+            stack: resolveError.stack,
+            flowId
+          });
+          // Não falha o processo se a resolução de dependências falhar
+          logger.warn('Continuando sem resolver dependências devido a erro');
+        }
+      }
+
+      // Passo 3: Gera script de teste RPA por IA
+      logger.info('Passo 3: Gerando script de teste RPA por IA', { flowId });
+      let rpaTest;
+      try {
+        rpaTest = await generateRpaTestFromFlow(flow, dependencies, {
+          tenantId,
+          testId: `test-${flowId}-${Date.now()}`,
+        });
+      } catch (rpaError) {
+        logger.error('Erro ao gerar teste RPA', {
+          error: rpaError.message,
+          stack: rpaError.stack,
+          flowId
+        });
+        throw rpaError;
+      }
+
+      // Passo 4: Gate de validação obrigatória (IA nunca executa sem passar por aqui)
+      logger.info('Passo 4: Validando plano gerado pelo gate de validação', { flowId });
+      const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+      try {
+        validateGeneratedPlanOrThrow(rpaTest, 'rpa');
+        logger.info('Passo 4: Validação do script concluída', { 
+          flowId,
+          valid: true
+        });
+      } catch (validationError) {
+        logger.error('Gate de validação bloqueou plano RPA gerado', {
+          flowId,
+          error: validationError.message
+        });
+        throw new Error(`Validação falhou: ${validationError.message}`);
+      }
+
+      // Retorna preview completo (não salva ainda)
+      const preview = {
+        flowId,
+        flowVersion,
+        flowName: flow.name,
+        dependencies,
+        resolution,
+        rpaTest,
+        readyToSave: !rpaTest.validationWarnings || rpaTest.validationWarnings.valid,
+      };
+
+      sendJson(res, 200, preview);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao gerar teste RPA:', {
+          error: err.message,
+          stack: err.stack,
+          flowId,
+          flowVersion
+        });
+        
+        // Mensagem de erro mais específica para diferentes tipos de erro
+        let errorMessage = 'Erro interno ao gerar teste RPA';
+        let errorDetails = err.message;
+        
+        if (err.message && err.message.includes('Serviço de IA não está disponível')) {
+          errorMessage = 'Serviço de IA não disponível';
+          errorDetails = 'O serviço de IA não está configurado ou não está disponível no momento. Verifique a configuração da IA e tente novamente.';
+        } else if (err.message && err.message.includes('parsear resposta da IA')) {
+          errorMessage = 'Erro ao processar resposta da IA';
+          errorDetails = 'A resposta da IA não está em formato JSON válido. Tente novamente ou verifique a configuração da IA.';
+        } else if (err.message && err.message.includes('Resposta da IA não contém texto')) {
+          errorMessage = 'Resposta inválida da IA';
+          errorDetails = 'A IA não retornou uma resposta válida. Verifique a configuração da IA.';
+        }
+        
+        sendJson(res, 500, { 
+          error: 'internal_error', 
+          message: errorMessage, 
+          details: errorDetails 
+        });
+      }
+    }
+    return;
+  }
+
+  // POST /rpa-tests (salvar teste RPA gerado)
+  if (method === 'POST' && pathname === '/rpa-tests') {
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { rpaTest } = body || {};
+
+      if (!rpaTest || !rpaTest.id) {
+        badRequest(res, 'Campo "rpaTest" é obrigatório e deve ter um "id"');
+        return;
+      }
+
+      // Gate de validação obrigatória (IA nunca executa sem passar por aqui)
+      // ARQUITETURA: RAG define LIMITES | Schema valida FORMA | Gate valida SEMÂNTICA
+      // TODO conteúdo gerado por IA passa por este gate antes de qualquer execução
+      const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+      try {
+        validateGeneratedPlanOrThrow(rpaTest, 'rpa');
+      } catch (validationError) {
+        logger.error('Gate de validação bloqueou plano RPA', {
+          testId: rpaTest.id,
+          error: validationError.message
+        });
+        badRequest(res, `Validação falhou: ${validationError.message}`);
+        return;
+      }
+
+      // Salva o teste RPA em arquivo
+      const fs = require('fs');
+      const path = require('path');
+      const recordingsDir = path.join(__dirname, '../tests/rpa/recordings');
+      
+      if (!fs.existsSync(recordingsDir)) {
+        fs.mkdirSync(recordingsDir, { recursive: true });
+      }
+
+      const testFilePath = path.join(recordingsDir, `${rpaTest.id}.json`);
+      fs.writeFileSync(testFilePath, JSON.stringify(rpaTest, null, 2), 'utf8');
+
+      logger.info('Teste RPA salvo com sucesso', { testId: rpaTest.id, filePath: testFilePath });
+
+      sendJson(res, 200, {
+        success: true,
+        testId: rpaTest.id,
+        filePath: testFilePath,
+        message: 'Teste RPA salvo com sucesso',
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao salvar teste RPA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao salvar teste RPA', details: err.message });
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
   // Simulação de fluxo
   // -----------------------------------------------------------------------
 
@@ -1401,6 +1724,117 @@ async function requestHandler(req, res) {
           message: err && err.message ? err.message : 'Erro interno ao simular fluxo',
         });
       }
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // RPA Flow Pipeline - Resolução de Dependências e Conversão
+  // -----------------------------------------------------------------------
+
+  // POST /flows/:id/resolve-dependencies
+  if (method === 'POST' && pathname.match(/^\/flows\/[^\/]+\/resolve-dependencies$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const flowId = pathname.split('/')[2];
+      const flow = flows.get(flowId);
+      
+      if (!flow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${flowId}" não encontrado` });
+        return;
+      }
+
+      const tenantId = flow.tenantId || req.tenantId || 'tenant-demo';
+      const resolution = await rpaDependencyResolver.resolveDependencies(flow, tenantId);
+
+      sendJson(res, 200, resolution);
+    } catch (err) {
+      logger.error('Erro ao resolver dependências:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao resolver dependências' });
+    }
+    return;
+  }
+
+  // POST /flows/:id/preview-rpa
+  if (method === 'POST' && pathname.match(/^\/flows\/[^\/]+\/preview-rpa$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const flowId = pathname.split('/')[2];
+      const flow = flows.get(flowId);
+      
+      if (!flow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${flowId}" não encontrado` });
+        return;
+      }
+
+      const preview = await previewRpaFlowPipeline(flow);
+
+      sendJson(res, 200, preview);
+    } catch (err) {
+      logger.error('Erro ao gerar preview RPA:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao gerar preview RPA' });
+    }
+    return;
+  }
+
+  // POST /flows/:id/generate-rpa
+  if (method === 'POST' && pathname.match(/^\/flows\/[^\/]+\/generate-rpa$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const flowId = pathname.split('/')[2];
+      const flow = flows.get(flowId);
+      
+      if (!flow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${flowId}" não encontrado` });
+        return;
+      }
+
+      const options = {
+        autoExecuteSeeds: body.autoExecuteSeeds || false,
+        saveRecording: body.saveRecording !== false,
+      };
+
+      const result = await executeRpaFlowPipeline(flow, options);
+
+      if (result.success) {
+        sendJson(res, 200, result);
+      } else {
+        sendJson(res, 400, result);
+      }
+    } catch (err) {
+      logger.error('Erro ao gerar gravação RPA:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao gerar gravação RPA' });
     }
     return;
   }
@@ -2500,6 +2934,148 @@ async function requestHandler(req, res) {
   // API de IA
   // -----------------------------------------------------------------------
 
+  // -----------------------------------------------------------------------
+  // API Interna de Geração por IA (Wrappers)
+  // -----------------------------------------------------------------------
+
+  // POST /ai/chatbot/generate - Gera fluxo de chatbot via wrapper oficial
+  if (method === 'POST' && pathname === '/ai/chatbot/generate') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { userInput, options = {} } = body || {};
+
+      if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
+        badRequest(res, 'Campo "userInput" é obrigatório e deve ser uma string não vazia');
+        return;
+      }
+
+      logger.info('[API] Geração de chatbot via wrapper', {
+        inputLength: userInput.length
+      });
+
+      // Chama wrapper oficial
+      const wrapperResult = await generateChatbotFlow(userInput, options);
+
+      // Converte para formato IaGenerationResult
+      const iaResult = {
+        success: wrapperResult.success,
+        domain: 'chatbot',
+        meta: {
+          prompt: 'chatbot.generator.prompt.md',
+          ragVersion: null,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      if (wrapperResult.success) {
+        iaResult.data = {
+          flow: wrapperResult.flow,
+          validation: wrapperResult.validation,
+          promptVersion: wrapperResult.promptVersion
+        };
+      } else {
+        iaResult.errors = wrapperResult.error ? [{
+          code: wrapperResult.error.type || 'GENERATION_ERROR',
+          message: wrapperResult.error.message || 'Erro na geração',
+          source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
+        }] : [];
+      }
+
+      sendJson(res, wrapperResult.success ? 200 : 400, iaResult);
+    } catch (err) {
+      logger.error('[API] Erro ao gerar chatbot', { error: err.message, stack: err.stack });
+      sendJson(res, 500, {
+        success: false,
+        domain: 'chatbot',
+        meta: {
+          prompt: 'chatbot.generator.prompt.md',
+          ragVersion: null,
+          timestamp: new Date().toISOString()
+        },
+        errors: [{
+          code: 'INTERNAL_ERROR',
+          message: err.message || 'Erro interno ao gerar chatbot',
+          source: 'validator'
+        }]
+      });
+    }
+    return;
+  }
+
+  // POST /ai/rpa/generate - Gera teste RPA via wrapper oficial
+  if (method === 'POST' && pathname === '/ai/rpa/generate') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { userInput, options = {} } = body || {};
+
+      if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
+        badRequest(res, 'Campo "userInput" é obrigatório e deve ser uma string não vazia');
+        return;
+      }
+
+      logger.info('[API] Geração de RPA via wrapper', {
+        inputLength: userInput.length
+      });
+
+      // Chama wrapper oficial
+      const wrapperResult = await generateRpaTest(userInput, options);
+
+      // Converte para formato IaGenerationResult
+      const iaResult = {
+        success: wrapperResult.success,
+        domain: 'rpa',
+        meta: {
+          prompt: 'rpa.generator.prompt.md',
+          ragVersion: null,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      if (wrapperResult.success) {
+        iaResult.data = {
+          plan: wrapperResult.plan,
+          validation: wrapperResult.validation,
+          promptVersion: wrapperResult.promptVersion
+        };
+      } else {
+        iaResult.errors = wrapperResult.error ? [{
+          code: wrapperResult.error.type || 'GENERATION_ERROR',
+          message: wrapperResult.error.message || 'Erro na geração',
+          source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
+        }] : [];
+      }
+
+      sendJson(res, wrapperResult.success ? 200 : 400, iaResult);
+    } catch (err) {
+      logger.error('[API] Erro ao gerar RPA', { error: err.message, stack: err.stack });
+      sendJson(res, 500, {
+        success: false,
+        domain: 'rpa',
+        meta: {
+          prompt: 'rpa.generator.prompt.md',
+          ragVersion: null,
+          timestamp: new Date().toISOString()
+        },
+        errors: [{
+          code: 'INTERNAL_ERROR',
+          message: err.message || 'Erro interno ao gerar RPA',
+          source: 'validator'
+        }]
+      });
+    }
+    return;
+  }
+
   // POST /api/ai/generate - Gera resposta de IA
   if (method === 'POST' && pathname === '/api/ai/generate') {
     if (!hasJsonContentType(req)) {
@@ -3100,18 +3676,40 @@ async function requestHandler(req, res) {
         return;
       }
 
-      // Salva no arquivo
-      ensureDataDir();
-      const configData = JSON.stringify(body, null, 2);
-      fs.writeFileSync(configFile, configData, 'utf8');
-      
-      // Recarrega a configuração
-      config.reload();
-      
-      // eslint-disable-next-line no-console
-      console.log('Configuração atualizada via API');
-      
-      sendJson(res, 200, { success: true, message: 'Configuração atualizada com sucesso' });
+      // Envia resposta primeiro para evitar interrupção quando nodemon reiniciar
+      sendJson(res, 200, { 
+        success: true, 
+        message: 'Configuração atualizada com sucesso. Servidor será reiniciado automaticamente.' 
+      });
+
+      // Salva no arquivo de forma assíncrona após enviar a resposta
+      // Isso permite que o nodemon reinicie o servidor sem interromper a requisição HTTP
+      setImmediate(() => {
+        try {
+          ensureDataDir();
+          const configData = JSON.stringify(body, null, 2);
+          fs.writeFileSync(configFile, configData, 'utf8');
+          
+          // Recarrega a configuração
+          config.reload();
+          
+          // Reinicializa os providers de IA com a nova configuração
+          try {
+            initializeAiProviders();
+            // eslint-disable-next-line no-console
+            console.log('✅ Providers de IA reinicializados com nova configuração');
+          } catch (aiError) {
+            // eslint-disable-next-line no-console
+            console.warn('⚠️  Erro ao reinicializar providers de IA:', aiError.message);
+          }
+          
+          // eslint-disable-next-line no-console
+          console.log('Configuração atualizada via API - nodemon reiniciará o servidor automaticamente');
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Erro ao salvar configuração após resposta:', err);
+        }
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Erro ao atualizar configuração:', err);
@@ -3129,6 +3727,138 @@ async function requestHandler(req, res) {
       hasProcessManager: processManager.hasProcessManager,
       details: processManager.details,
     });
+    return;
+  }
+
+  // POST /config/validate-provider-token - Valida token de um provedor de IA
+  // IMPORTANTE: Esta validação SEMPRE usa chamadas diretas à API, nunca usa fallback
+  if (method === 'POST' && pathname === '/config/validate-provider-token') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { provider, apiKey } = body;
+
+      if (!provider || !apiKey) {
+        badRequest(res, 'Provider e apiKey são obrigatórios');
+        return;
+      }
+
+      if (provider !== 'openai' && provider !== 'anthropic') {
+        badRequest(res, 'Provider deve ser "openai" ou "anthropic"');
+        return;
+      }
+
+      // Remove espaços em branco do token
+      const cleanApiKey = apiKey.trim();
+      if (!cleanApiKey) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          error: 'Token não pode estar vazio',
+        });
+        return;
+      }
+
+      let isValid = false;
+      let error = null;
+
+      try {
+        if (provider === 'openai') {
+          // Valida token OpenAI fazendo uma chamada REAL à API (nunca usa fallback)
+          // Usa endpoint de listagem de modelos que é leve e rápido
+          const response = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${cleanApiKey}`,
+            },
+            // Timeout de 10 segundos para evitar espera longa
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (response.ok) {
+            // Verifica se a resposta realmente contém dados válidos
+            const data = await response.json().catch(() => null);
+            if (data && Array.isArray(data.data)) {
+              isValid = true;
+            } else {
+              error = 'Resposta inválida da API OpenAI';
+            }
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+              error = 'Token inválido ou expirado';
+            } else if (response.status === 403) {
+              error = 'Token não tem permissão para acessar a API';
+            } else {
+              error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+            }
+          }
+        } else if (provider === 'anthropic') {
+          // Valida token Anthropic fazendo uma chamada REAL à API (nunca usa fallback)
+          // Anthropic não tem endpoint de listagem, então fazemos uma chamada de teste mínima
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': cleanApiKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'test' }],
+            }),
+            // Timeout de 10 segundos para evitar espera longa
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (response.ok) {
+            // Verifica se a resposta realmente contém dados válidos
+            const data = await response.json().catch(() => null);
+            if (data && data.content) {
+              isValid = true;
+            } else {
+              error = 'Resposta inválida da API Anthropic';
+            }
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+              error = 'Token inválido ou expirado';
+            } else if (response.status === 403) {
+              error = 'Token não tem permissão para acessar a API';
+            } else {
+              error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+            }
+          }
+        }
+      } catch (validationError) {
+        // Trata diferentes tipos de erro
+        if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
+          error = 'Timeout ao validar token. Verifique sua conexão com a internet.';
+        } else if (validationError.name === 'TypeError' && validationError.message.includes('fetch')) {
+          error = 'Erro de conexão. Verifique sua conexão com a internet.';
+        } else {
+          error = validationError.message || 'Erro ao validar token';
+        }
+      }
+
+      sendJson(res, 200, {
+        success: true,
+        valid: isValid,
+        error: error || null,
+      });
+    } catch (err) {
+      logger.error('Erro ao validar token de provedor', err);
+      sendJson(res, 500, { 
+        success: false,
+        error: 'Erro ao validar token', 
+        message: err.message 
+      });
+    }
     return;
   }
 
@@ -5470,6 +6200,7 @@ async function requestHandler(req, res) {
     cancelExecution,
     continueExecution,
     nextStep,
+    deleteRecording,
   } = require('./services/rpaService');
 
   // GET /rpa/recordings - Lista gravações disponíveis
@@ -5486,6 +6217,62 @@ async function requestHandler(req, res) {
     } catch (error) {
       logger.error('Erro ao listar gravações RPA:', error);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar gravações RPA' });
+    }
+    return;
+  }
+
+  // DELETE /rpa/recordings/:id - Remove uma gravação
+  if (method === 'DELETE' && pathname.startsWith('/rpa/recordings/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      let recordingId = decodeURIComponent(pathname.slice('/rpa/recordings/'.length));
+      // Remove .json se presente
+      if (recordingId.endsWith('.json')) {
+        recordingId = recordingId.slice(0, -'.json'.length);
+      }
+      
+      if (!recordingId || recordingId.trim() === '') {
+        badRequest(res, 'ID da gravação é obrigatório');
+        return;
+      }
+
+      const result = deleteRecording(recordingId);
+
+      if (!result.success) {
+        if (result.message.includes('não encontrada')) {
+          sendJson(res, 404, {
+            error: 'not_found',
+            message: result.message,
+          });
+        } else {
+          sendJson(res, 500, {
+            error: 'internal_error',
+            message: result.message,
+          });
+        }
+        return;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`Gravação removida: ${recordingId}`);
+
+      sendJson(res, 200, {
+        success: true,
+        deletedId: result.deletedId,
+        message: result.message,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Erro ao remover gravação:', err);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: 'Erro interno ao remover gravação',
+      });
     }
     return;
   }
@@ -5687,6 +6474,144 @@ async function requestHandler(req, res) {
     } catch (error) {
       logger.error('Erro ao obter relatório da execução RPA:', error);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter relatório' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // QA - Qualidade e Validação
+  // -----------------------------------------------------------------------
+
+  // GET /qa/latest - Último resultado de QA
+  if (method === 'GET' && pathname === '/qa/latest') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const result = getLatestQaResult();
+      if (!result) {
+        sendJson(res, 404, { error: 'not_found', message: 'Nenhum resultado de QA encontrado' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (error) {
+      logger.error('Erro ao obter último resultado QA:', error);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter resultado QA' });
+    }
+    return;
+  }
+
+  // GET /qa/history - Histórico de resultados de QA
+  if (method === 'GET' && pathname === '/qa/history') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+      const source = url.searchParams.get('source') || undefined;
+
+      const history = getQaHistory({ limit, source });
+      sendJson(res, 200, { results: history, count: history.length });
+    } catch (error) {
+      logger.error('Erro ao obter histórico QA:', error);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter histórico QA' });
+    }
+    return;
+  }
+
+  // GET /qa/stats - Estatísticas de QA
+  if (method === 'GET' && pathname === '/qa/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const stats = getQaStatistics();
+      sendJson(res, 200, stats);
+    } catch (error) {
+      logger.error('Erro ao obter estatísticas QA:', error);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter estatísticas QA' });
+    }
+    return;
+  }
+
+  // GET /qa/:id - Resultado de QA por ID (commit ou timestamp)
+  if (method === 'GET' && pathname.startsWith('/qa/') && pathname !== '/qa/latest' && pathname !== '/qa/history' && pathname !== '/qa/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const id = pathname.split('/qa/')[1];
+      if (!id) {
+        badRequest(res, 'ID do resultado QA é obrigatório');
+        return;
+      }
+
+      const result = getQaResultById(id);
+      if (!result) {
+        sendJson(res, 404, { error: 'not_found', message: 'Resultado de QA não encontrado' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (error) {
+      logger.error('Erro ao obter resultado QA por ID:', error);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter resultado QA' });
+    }
+    return;
+  }
+
+  // POST /qa/run - Executa QA manualmente
+  if (method === 'POST' && pathname === '/qa/run') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'qa', 'execute');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const changedFiles = body.changedFiles || undefined;
+      const source = body.source || 'manual';
+
+      const result = runQaManual({ changedFiles, source });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'execute',
+        resource: 'qa',
+        details: { status: result.status, scopes: result.scope },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (error) {
+      logger.error('Erro ao executar QA:', error);
+      sendJson(res, 500, { error: 'internal_error', message: error.message || 'Erro ao executar QA' });
     }
     return;
   }

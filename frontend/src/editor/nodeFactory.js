@@ -1,5 +1,5 @@
 import { ClassicPreset } from 'rete';
-import { NODE_SCHEMAS, DEFAULT_SOCKET_NAME } from './nodeSchemas';
+import { NODE_SCHEMAS, DEFAULT_SOCKET_NAME, getNodeInputs, getNodeOutputs } from './nodeSchemas';
 import logger from '../utils/logger';
 
 /**
@@ -32,9 +32,12 @@ export function createNode(nodeType, options = {}) {
     config: config,
   };
 
-  // Adiciona inputs baseado no schema
-  if (schema.inputs && schema.inputs.length > 0) {
-    schema.inputs.forEach(inputDef => {
+  // Obtém inputs (pode ser dinâmico baseado no node)
+  const inputs = getNodeInputs(nodeType, node);
+  
+  // Adiciona inputs ao nó
+  if (inputs && inputs.length > 0) {
+    inputs.forEach(inputDef => {
       const inputSocket = new ClassicPreset.Socket(
         inputDef.socketName || DEFAULT_SOCKET_NAME
       );
@@ -45,9 +48,12 @@ export function createNode(nodeType, options = {}) {
     });
   }
 
-  // Adiciona outputs baseado no schema
-  if (schema.outputs && schema.outputs.length > 0) {
-    schema.outputs.forEach(outputDef => {
+  // Obtém outputs (pode ser dinâmico baseado no node)
+  const outputs = getNodeOutputs(nodeType, node);
+  
+  // Adiciona outputs ao nó
+  if (outputs && outputs.length > 0) {
+    outputs.forEach(outputDef => {
       const outputSocket = new ClassicPreset.Socket(
         outputDef.socketName || DEFAULT_SOCKET_NAME
       );

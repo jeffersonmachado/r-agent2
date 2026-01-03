@@ -166,6 +166,68 @@ export function useFlowRunner(flow) {
     const flowAiErrors = validateFlowDoesNotDependExclusivelyOnAI(flowToValidate);
     errors.push(...flowAiErrors);
 
+    // Validação: verifica se todos os nós referenciados existem
+    const nodeIds = new Set(flowToValidate.nodes.map((n) => n.id));
+    const missingNodes = new Set();
+
+    for (const node of flowToValidate.nodes) {
+      // Verifica campo 'next' (pode ser string, array ou objeto)
+      if (node.next) {
+        if (typeof node.next === 'string') {
+          if (node.next && !nodeIds.has(node.next)) {
+            missingNodes.add(node.next);
+          }
+        } else if (Array.isArray(node.next)) {
+          for (const nextId of node.next) {
+            if (nextId && !nodeIds.has(nextId)) {
+              missingNodes.add(nextId);
+            }
+          }
+        } else if (typeof node.next === 'object') {
+          // Para objetos (ex: { retry: 'node1', human: 'node2' })
+          for (const nextId of Object.values(node.next)) {
+            if (nextId && typeof nextId === 'string' && !nodeIds.has(nextId)) {
+              missingNodes.add(nextId);
+            }
+          }
+        }
+      }
+
+      // Verifica regras de router
+      if (node.type === 'router' && node.config?.rules) {
+        for (const rule of node.config.rules) {
+          if (rule.next && !nodeIds.has(rule.next)) {
+            missingNodes.add(rule.next);
+          }
+        }
+        if (node.config.defaultNext && !nodeIds.has(node.config.defaultNext)) {
+          missingNodes.add(node.config.defaultNext);
+        }
+      }
+
+      // Verifica schedules de schedule_router
+      if (node.type === 'schedule_router' && node.config?.schedules) {
+        for (const schedule of node.config.schedules) {
+          if (schedule.next && !nodeIds.has(schedule.next)) {
+            missingNodes.add(schedule.next);
+          }
+        }
+        if (node.config.defaultNext && !nodeIds.has(node.config.defaultNext)) {
+          missingNodes.add(node.config.defaultNext);
+        }
+      }
+    }
+
+    // Adiciona erros para nós faltantes
+    for (const missingNodeId of missingNodes) {
+      errors.push({
+        code: 'MISSING_NODE_REFERENCE',
+        message: `Nó referenciado não encontrado: ${missingNodeId}`,
+        messageUi: `O fluxo referencia um nó que não existe: "${missingNodeId}". Verifique as conexões do fluxo.`,
+        nodeId: missingNodeId,
+      });
+    }
+
     return {
       valid: errors.length === 0,
       errors,
@@ -320,6 +382,39 @@ export function useFlowRunner(flow) {
         throw new Error(errorMsg);
       }
 
+      // Log de debug para rastrear estado
+      logger.debug('Executando passo do fluxo', {
+        flowId: currentFlow.id,
+        stateFlowId: state.flowId,
+        currentNodeId: state.currentNodeId,
+        availableNodeIds: currentFlow.nodes?.map(n => n.id) || [],
+      });
+
+      // Verifica se o flowId do estado corresponde ao fluxo atual
+      if (state.flowId && state.flowId !== currentFlow.id) {
+        logger.warn('Incompatibilidade de flowId detectada', {
+          stateFlowId: state.flowId,
+          currentFlowId: currentFlow.id,
+          currentNodeId: state.currentNodeId,
+        });
+        // Se o flowId não corresponde, reseta para o início do fluxo atual
+        const startNode = findStartNode(currentFlow);
+        if (startNode) {
+          logger.info('Resetando para nó inicial do fluxo atual', {
+            newFlowId: currentFlow.id,
+            startNodeId: startNode.id,
+          });
+          return {
+            state: {
+              ...state,
+              flowId: currentFlow.id,
+              currentNodeId: startNode.id,
+            },
+            output: { type: 'start' },
+          };
+        }
+      }
+
       if (!state.currentNodeId) {
         return {
           state: { ...state },
@@ -327,14 +422,81 @@ export function useFlowRunner(flow) {
         };
       }
 
+      // Verifica se o currentNodeId existe no fluxo atual antes de tentar encontrá-lo
+      const nodeIds = new Set(currentFlow.nodes?.map(n => n.id) || []);
+      if (!nodeIds.has(state.currentNodeId)) {
+        logger.error('currentNodeId não existe no fluxo atual', {
+          currentNodeId: state.currentNodeId,
+          flowId: currentFlow.id,
+          availableNodeIds: Array.from(nodeIds),
+        });
+        // Tenta resetar para o nó inicial
+        const startNode = findStartNode(currentFlow);
+        if (startNode) {
+          logger.info('Resetando para nó inicial devido a currentNodeId inválido', {
+            invalidNodeId: state.currentNodeId,
+            startNodeId: startNode.id,
+          });
+          return {
+            state: {
+              ...state,
+              currentNodeId: startNode.id,
+            },
+            output: { type: 'start' },
+          };
+        }
+      }
+
       const node = findNodeById(currentFlow, state.currentNodeId);
       if (!node) {
-        const errorMsg = `Nó não encontrado: ${state.currentNodeId}`;
+        // Log detalhado para debug
+        logger.error('Nó não encontrado durante execução', {
+          missingNodeId: state.currentNodeId,
+          flowId: currentFlow.id,
+          availableNodeIds: currentFlow.nodes?.map(n => n.id) || [],
+          nodeCount: currentFlow.nodes?.length || 0,
+        });
+
+        // Tenta encontrar qual nó referenciou este nó faltante
+        let referencingNode = null;
+        for (const n of currentFlow.nodes || []) {
+          if (n.next === state.currentNodeId || 
+              (Array.isArray(n.next) && n.next.includes(state.currentNodeId)) ||
+              (typeof n.next === 'object' && Object.values(n.next || {}).includes(state.currentNodeId))) {
+            referencingNode = n;
+            break;
+          }
+          // Verifica regras de router
+          if (n.type === 'router' && n.config?.rules) {
+            for (const rule of n.config.rules) {
+              if (rule.next === state.currentNodeId) {
+                referencingNode = n;
+                break;
+              }
+            }
+          }
+          // Verifica schedules
+          if (n.type === 'schedule_router' && n.config?.schedules) {
+            for (const schedule of n.config.schedules) {
+              if (schedule.next === state.currentNodeId) {
+                referencingNode = n;
+                break;
+              }
+            }
+          }
+        }
+        
+        const errorMsg = referencingNode
+          ? `Nó não encontrado: "${state.currentNodeId}". Referenciado pelo nó "${referencingNode.id}" (${referencingNode.type}). Verifique se o nó existe no fluxo.`
+          : `Nó não encontrado: "${state.currentNodeId}". Verifique se o nó existe no fluxo e se todas as conexões estão corretas.`;
+        
         addLogEvent(LOG_EVENTS.ERROR, {
           nodeId: state.currentNodeId,
           nodeType: null,
           action: 'node_not_found',
           error: errorMsg,
+          referencingNodeId: referencingNode?.id || null,
+          availableNodeIds: currentFlow.nodes?.map(n => n.id) || [],
         });
         throw new Error(errorMsg);
       }
@@ -989,11 +1151,22 @@ export function useFlowRunner(flow) {
       return false;
     }
 
+    // Log do fluxo para debug
+    logger.debug('Validando fluxo antes de iniciar', {
+      flowId: currentFlow.id,
+      nodeCount: currentFlow.nodes?.length || 0,
+      nodeIds: currentFlow.nodes?.map(n => n.id) || [],
+    });
+
     const validation = validateFlow(currentFlow);
     setValidationResult(validation);
 
     if (!validation.valid) {
       const errorMsg = validation.errors[0]?.messageUi || 'Fluxo inválido';
+      logger.error('Validação do fluxo falhou', {
+        flowId: currentFlow.id,
+        errors: validation.errors,
+      });
       setError(errorMsg);
       // Log: Erro de validação
       addLogEvent(LOG_EVENTS.ERROR, {
@@ -1005,6 +1178,10 @@ export function useFlowRunner(flow) {
       });
       return false;
     }
+
+    logger.debug('Validação do fluxo passou', {
+      flowId: currentFlow.id,
+    });
 
     const startNode = findStartNode(currentFlow);
     if (!startNode) {

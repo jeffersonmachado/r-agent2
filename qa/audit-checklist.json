@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Checklist de Auditoria Externa / Compliance",
+  "description": "Checklist completo para auditoria externa e compliance",
+  "version": "1.0.0",
+  "timestamp": "2026-01-03T17:43:00Z",
+  "categories": {
+    "qa": {
+      "name": "QA e Qualidade",
+      "artifacts": [
+        {
+          "name": "Política de QA",
+          "path": "governance/qa-policy.json",
+          "status": "EXISTS",
+          "description": "Política formal de QA com regras de bloqueio e SLA"
+        },
+        {
+          "name": "Relatório de Testes",
+          "path": "qa/test-report.json",
+          "status": "EXISTS",
+          "description": "Relatório completo de testes sistêmicos"
+        },
+        {
+          "name": "Resultado de QA",
+          "path": "qa/qa-result.json",
+          "status": "EXISTS",
+          "description": "Último resultado de execução de QA"
+        },
+        {
+          "name": "Métricas de QA",
+          "path": "qa/metrics.json",
+          "status": "EXISTS",
+          "description": "Métricas históricas de qualidade"
+        },
+        {
+          "name": "Relatório de Runtime",
+          "path": "qa/runtime-report.json",
+          "status": "EXISTS",
+          "description": "Relatório de telemetria e qualidade em runtime"
+        },
+        {
+          "name": "Relatório de Teste com Usuários Internos",
+          "path": "qa/internal-users-test-report.json",
+          "status": "EXISTS",
+          "description": "Relatório de validação de acesso e coleta de erros/WARNs"
+        }
+      ],
+      "checks": [
+        "✓ Política de QA definida e versionada",
+        "✓ Testes sistêmicos implementados e executando",
+        "✓ QA runtime gerando resultados",
+        "✓ Escalonamento automático configurado",
+        "✓ Bloqueios de deploy funcionando"
+      ]
+    },
+    "ia": {
+      "name": "IA e Governança",
+      "artifacts": [
+        {
+          "name": "Política de Rollout de IA",
+          "path": "governance/ia-rollout-policy.json",
+          "status": "EXISTS",
+          "description": "Política de rollout com estágios e critérios"
+        },
+        {
+          "name": "Contrato Público de IA",
+          "path": "contracts/ia/ia-public-interface.json",
+          "status": "EXISTS",
+          "description": "Contrato público da interface de IA"
+        },
+        {
+          "name": "Schema de Resultado de IA",
+          "path": "contracts/ia/ia-generation-result.schema.json",
+          "status": "EXISTS",
+          "description": "Schema de validação de resultados de IA"
+        },
+        {
+          "name": "Playbook de Incidentes",
+          "path": "governance/incident-playbook.json",
+          "status": "EXISTS",
+          "description": "Playbook de resposta a incidentes de IA"
+        }
+      ],
+      "checks": [
+        "✓ Política de rollout definida (OFF → INTERNAL → LIMITED → GENERAL)",
+        "✓ Critérios objetivos para avanço entre estágios",
+        "✓ Regras de rollback automático",
+        "✓ Contratos públicos versionados",
+        "✓ Playbook de incidentes definido"
+      ]
+    },
+    "governance": {
+      "name": "Governança Organizacional",
+      "artifacts": [
+        {
+          "name": "Política de Aprovação de WARN",
+          "path": "governance/warn-approval-policy.json",
+          "status": "EXISTS",
+          "description": "Política de aprovação de warnings"
+        },
+        {
+          "name": "Política de Escalonamento Runtime",
+          "path": "governance/runtime-escalation-policy.json",
+          "status": "EXISTS",
+          "description": "Política de escalonamento de QA runtime"
+        },
+        {
+          "name": "Papéis RACI",
+          "path": "governance/roles-raci.json",
+          "status": "EXISTS",
+          "description": "Definição de papéis e responsabilidades"
+        }
+      ],
+      "checks": [
+        "✓ Políticas de governança definidas e versionadas",
+        "✓ Papéis organizacionais definidos (RACI)",
+        "✓ Regras de aprovação e escalonamento claras",
+        "✓ Aprovações auditáveis e rastreáveis"
+      ]
+    },
+    "logs": {
+      "name": "Logs e Telemetria",
+      "artifacts": [
+        {
+          "name": "Telemetria de QA",
+          "path": "logs/qa-telemetry/qa-results.jsonl",
+          "status": "EXISTS",
+          "description": "Logs estruturados de resultados de QA runtime"
+        },
+        {
+          "name": "Telemetria de IA",
+          "path": "logs/ai-telemetry/",
+          "status": "EXISTS",
+          "description": "Logs de falhas e validações de IA"
+        }
+      ],
+      "checks": [
+        "✓ Logs estruturados (JSON/JSONL)",
+        "✓ Telemetria de QA runtime funcionando",
+        "✓ Telemetria de IA funcionando",
+        "✓ Logs auditáveis e rastreáveis"
+      ]
+    },
+    "decisao": {
+      "name": "Decisão e Transparência",
+      "artifacts": [
+        {
+          "name": "GO Técnico",
+          "path": "qa/go-technical-approved.json",
+          "status": "EXISTS",
+          "description": "Resultado da validação de GO técnico"
+        },
+        {
+          "name": "Relatório Final",
+          "path": "qa/final-verdict.json",
+          "status": "EXISTS",
+          "description": "Veredito final com status e próximos passos"
+        }
+      ],
+      "checks": [
+        "✓ GO técnico validado e documentado",
+        "✓ Decisões documentadas e justificadas",
+        "✓ Próximos passos claros",
+        "✓ Transparência total no processo"
+      ]
+    }
+  },
+  "summary": {
+    "totalArtifacts": 17,
+    "artifactsExists": 17,
+    "artifactsPending": 0,
+    "coverage": "100%"
+  }
+}
+

@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "description": "Regras fundamentais do projeto",
+  "rules": [
+    {
+      "id": "RPA_TEST_ONLY",
+      "description": "Todo RPA é EXCLUSIVAMENTE PARA TESTE",
+      "enforcement": "hard"
+    },
+    {
+      "id": "NO_PRODUCTION_ACCESS",
+      "description": "É PROIBIDO acesso a produção",
+      "enforcement": "hard"
+    },
+    {
+      "id": "NO_REAL_DATA",
+      "description": "É PROIBIDO acesso a dados reais",
+      "enforcement": "hard"
+    },
+    {
+      "id": "NO_SIDE_EFFECTS",
+      "description": "É PROIBIDO side-effect externo",
+      "enforcement": "hard"
+    },
+    {
+      "id": "STATIC_VALIDATION",
+      "description": "Toda ação deve ser validável estaticamente",
+      "enforcement": "hard"
+    },
+    {
+      "id": "DETERMINISTIC",
+      "description": "O teste DEVE ser determinístico e reexecutável",
+      "enforcement": "hard"
+    },
+    {
+      "id": "MANDATORY_ASSERTS",
+      "description": "O teste DEVE incluir asserts obrigatórios em cada etapa crítica",
+      "enforcement": "hard"
+    },
+    {
+      "id": "EXISTING_FORMAT",
+      "description": "O teste DEVE seguir o formato de gravação RPA existente",
+      "enforcement": "hard"
+    },
+    {
+      "id": "VALID_PATH",
+      "description": "O teste DEVE inferir um caminho válido através do fluxo",
+      "enforcement": "hard"
+    },
+    {
+      "id": "NO_CODE_EXECUTION",
+      "description": "O teste NUNCA executa ações reais, apenas gera o script",
+      "enforcement": "hard"
+    },
+    {
+      "id": "NO_INVENTED_SELECTORS",
+      "description": "NUNCA invente seletores que não existem - use apenas seletores CSS genéricos ou validações lógicas",
+      "enforcement": "hard"
+    },
+    {
+      "id": "LOGICAL_VALIDATION",
+      "description": "Focar em validações lógicas (variáveis, estados) ao invés de elementos visuais",
+      "enforcement": "medium"
+    }
+  ],
+  "enforcementLevels": {
+    "hard": "Bloqueia geração se violado",
+    "medium": "Gera aviso mas permite geração",
+    "soft": "Apenas informativo"
+  }
+}
+

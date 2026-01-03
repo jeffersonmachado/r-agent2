@@ -91,3 +91,46 @@ export async function getRpaExecutionReport(executionId) {
   });
 }
 
+/**
+ * Remove uma gravação RPA.
+ * 
+ * Tratamento idempotente: se a gravação já foi removida (404), trata como sucesso
+ * e retorna um resultado indicando que já estava removida.
+ * 
+ * @param {string} recordingId - ID da gravação a ser removida
+ * @returns {Promise<{success: boolean, deletedId: string, message: string, alreadyDeleted?: boolean}>}
+ */
+export async function deleteRpaRecording(recordingId) {
+  if (!recordingId || typeof recordingId !== 'string' || recordingId.trim() === '') {
+    return Promise.reject(new Error('deleteRpaRecording: recordingId é obrigatório'));
+  }
+
+  try {
+    const result = await fetchJson(`/rpa/recordings/${encodeURIComponent(recordingId)}`, {
+      method: 'DELETE',
+    });
+    return result;
+  } catch (error) {
+    // Tratamento idempotente: 404 significa que a gravação já foi removida
+    // Retorna sucesso para manter consistência do estado local
+    if (error.status === 404) {
+      const errorBody = error.body || {};
+      const isNotFound = errorBody.error === 'not_found' || 
+                        (typeof errorBody === 'string' && errorBody.includes('não encontrada'));
+      
+      if (isNotFound) {
+        // Gravação já removida - retorna sucesso idempotente
+        return {
+          success: true,
+          deletedId: recordingId,
+          message: `Gravação "${recordingId}" já havia sido removida`,
+          alreadyDeleted: true,
+        };
+      }
+    }
+    
+    // Para outros erros (500, 403, etc), relança o erro
+    throw error;
+  }
+}
+

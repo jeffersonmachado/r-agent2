@@ -207,6 +207,9 @@ export function generateFlowFromDescription(description, options = {}) {
       description: description.trim(),
       ...options,
     }),
+    // Timeout aumentado para 60 segundos pois a geração de fluxo pode demorar
+    // especialmente quando precisa chamar a IA
+    timeoutMs: 60000,
   }).then(
     (result) => {
       logger.info('Fluxo gerado com sucesso', { 
@@ -218,6 +221,76 @@ export function generateFlowFromDescription(description, options = {}) {
     },
     (error) => {
       logger.error('Erro ao gerar fluxo', error);
+      throw error;
+    }
+  );
+}
+
+/**
+ * Gera um teste RPA a partir de um fluxo usando IA.
+ *
+ * @param {string} flowId - ID do fluxo
+ * @param {Object} options - Opções (version, autoResolveDependencies)
+ * @returns {Promise<any>}
+ */
+export function generateRpaTestFromFlow(flowId, options = {}) {
+  if (!flowId || typeof flowId !== 'string' || flowId.trim() === '') {
+    return Promise.reject(new Error('generateRpaTestFromFlow: flowId é obrigatório'));
+  }
+
+  logger.info('Gerando teste RPA a partir de fluxo', { 
+    flowId,
+    options 
+  });
+
+  return fetchJson(`/flows/${encodeURIComponent(flowId)}/generate-rpa-test`, {
+    method: 'POST',
+    body: JSON.stringify({
+      version: options.version,
+      autoResolveDependencies: options.autoResolveDependencies || false,
+    }),
+    // Timeout aumentado para 60 segundos pois a geração de teste RPA pode demorar
+    // especialmente quando precisa chamar a IA e processar dependências
+    timeoutMs: 60000,
+  }).then(
+    (result) => {
+      logger.info('Teste RPA gerado com sucesso', { 
+        testId: result?.rpaTest?.id, 
+        stepCount: result?.rpaTest?.steps?.length || 0,
+        assertCount: result?.rpaTest?.asserts?.length || 0
+      });
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao gerar teste RPA', error);
+      throw error;
+    }
+  );
+}
+
+/**
+ * Salva um teste RPA gerado.
+ *
+ * @param {Object} rpaTest - Teste RPA a ser salvo
+ * @returns {Promise<any>}
+ */
+export function saveRpaTest(rpaTest) {
+  if (!rpaTest || !rpaTest.id) {
+    return Promise.reject(new Error('saveRpaTest: rpaTest é obrigatório e deve ter um id'));
+  }
+
+  logger.info('Salvando teste RPA', { testId: rpaTest.id });
+
+  return fetchJson('/rpa-tests', {
+    method: 'POST',
+    body: JSON.stringify({ rpaTest }),
+  }).then(
+    (result) => {
+      logger.info('Teste RPA salvo com sucesso', { testId: rpaTest.id, filePath: result?.filePath });
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao salvar teste RPA', error);
       throw error;
     }
   );

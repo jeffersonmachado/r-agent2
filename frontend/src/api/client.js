@@ -14,21 +14,22 @@ const DEFAULT_TIMEOUT_MS = 15000;
 
 /**
  * Constrói a URL a partir da base e do path relativo.
- * Se não houver base configurada, usa caminho relativo.
+ * SEMPRE retorna uma URL absoluta para evitar resolução implícita pelo browser.
+ * 
+ * Fallback explícito: http://localhost:3000 (porta padrão da API)
  *
  * @param {string} path
  * @returns {string}
  */
 function buildUrl(path) {
-  const base = import.meta.env.VITE_API_BASE_URL || '';
+  // Fallback explícito documentado para evitar que requisições sejam resolvidas
+  // implicitamente pelo browser para a origem do Vite (porta 5173)
+  const DEFAULT_BASE_URL = 'http://localhost:3000';
+  
+  const base = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   
-  // Se não há base configurada, usa caminho relativo
-  if (!base) {
-    return normalizedPath;
-  }
-  
-  // Se há base, constrói URL absoluta
+  // Sempre constrói URL absoluta
   const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
   return `${normalizedBase}${normalizedPath}`;
 }
@@ -70,8 +71,15 @@ async function fetchWithTimeout(input, init) {
  */
 export async function fetchJson(path, init) {
   const url = buildUrl(path);
+  const method = init?.method || 'GET';
   
-  logger.debug('HTTP Request', { method: init?.method || 'GET', url, path });
+  // Log estruturado com URL final resolvida
+  logger.debug('HTTP Request', { 
+    method, 
+    url, 
+    path,
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback)'
+  });
 
   try {
     // Inclui headers de autenticação se disponível
@@ -89,12 +97,13 @@ export async function fetchJson(path, init) {
       ...(hasBody && { 'Content-Type': 'application/json' }),
     };
     
-    // Remove headers do init para evitar sobrescrita
-    const { headers: _, ...restInit } = init || {};
+    // Remove headers do init para evitar sobrescrita, mas mantém timeoutMs
+    const { headers: _, timeoutMs, ...restInit } = init || {};
     
     const response = await fetchWithTimeout(url, {
       ...restInit,
       headers: mergedHeaders,
+      timeoutMs, // Passa timeoutMs explicitamente
     });
 
     const contentType = response.headers.get('Content-Type') || '';
@@ -123,7 +132,14 @@ export async function fetchJson(path, init) {
          (typeof errorBody === 'string' && errorBody.includes('ticket_not_found')));
       
       if (!isTicketNotFound) {
-        logger.error(`HTTP Error ${response.status}`, { url, status: response.status, errorBody });
+        // Log estruturado com URL final resolvida
+        logger.error(`HTTP Error ${response.status}`, { 
+          method: init?.method || 'GET',
+          url, 
+          path,
+          status: response.status, 
+          errorBody 
+        });
       }
 
       const error = new Error(
@@ -135,6 +151,8 @@ export async function fetchJson(path, init) {
       error.status = response.status;
       // @ts-ignore
       error.body = errorBody;
+      // @ts-ignore
+      error.url = url; // Inclui URL final no erro para rastreabilidade
       throw error;
     }
 
@@ -146,11 +164,22 @@ export async function fetchJson(path, init) {
       result = /** @type {T} */ (await response.json());
     }
 
-    logger.debug('HTTP Response', { method: init?.method || 'GET', url, status: response.status });
+    // Log estruturado com URL final resolvida
+    logger.debug('HTTP Response', { 
+      method: init?.method || 'GET', 
+      url, 
+      path,
+      status: response.status 
+    });
     return result;
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
-      logger.error('Request timeout', { url, timeout: DEFAULT_TIMEOUT_MS });
+      logger.error('Request timeout', { 
+        method: init?.method || 'GET',
+        url, 
+        path,
+        timeout: DEFAULT_TIMEOUT_MS 
+      });
     } else if (err instanceof Error) {
       // Não loga erros 404 de ticket_not_found (são esperados quando ticket foi removido)
       const isTicketNotFound = err.status === 404 && 
@@ -166,11 +195,128 @@ export async function fetchJson(path, init) {
       // "Failed to fetch" geralmente significa que a API não está acessível
       if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
         logger.error('API não acessível - verifique se o servidor está rodando', { 
+          method: init?.method || 'GET',
           url,
+          path,
           hint: 'Verifique se a API está acessível no caminho configurado',
         });
       } else {
-        logger.error('Request failed', { url, error: err.message });
+        logger.error('Request failed', { 
+          method: init?.method || 'GET',
+          url, 
+          path,
+          error: err.message 
+        });
+      }
+    }
+    throw err;
+  }
+}
+
+/**
+ * Faz download de um arquivo (blob) da API.
+ * 
+ * @param {string} path - Caminho do endpoint
+ * @param {RequestInit} [init] - Opções de requisição
+ * @returns {Promise<Response>} Response com blob
+ */
+export async function fetchBlob(path, init) {
+  const url = buildUrl(path);
+  const method = init?.method || 'GET';
+  
+  logger.debug('HTTP Request (Blob)', { 
+    method, 
+    url, 
+    path,
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback)'
+  });
+
+  try {
+    const authHeaders = getAuthHeaders();
+    const mergedHeaders = {
+      ...(init && init.headers),
+      ...authHeaders,
+    };
+    
+    const { headers: _, ...restInit } = init || {};
+    
+    const response = await fetchWithTimeout(url, {
+      ...restInit,
+      headers: mergedHeaders,
+    });
+
+    if (!response.ok) {
+      let errorBody = null;
+      const contentType = response.headers.get('Content-Type') || '';
+      const isJson = contentType.includes('application/json');
+      
+      if (isJson) {
+        try {
+          errorBody = await response.json();
+        } catch {
+          // ignora parse error
+        }
+      } else {
+        try {
+          errorBody = await response.text();
+        } catch {
+          // ignora parse error
+        }
+      }
+
+      logger.error(`HTTP Error ${response.status} (Blob)`, { 
+        method,
+        url, 
+        path,
+        status: response.status, 
+        errorBody 
+      });
+
+      const error = new Error(
+        `Erro HTTP ${response.status} ao chamar ${url}${
+          errorBody ? ` - ${JSON.stringify(errorBody)}` : ''
+        }`,
+      );
+      // @ts-ignore
+      error.status = response.status;
+      // @ts-ignore
+      error.body = errorBody;
+      // @ts-ignore
+      error.url = url;
+      throw error;
+    }
+
+    logger.debug('HTTP Response (Blob)', { 
+      method, 
+      url, 
+      path,
+      status: response.status 
+    });
+    
+    return response;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      logger.error('Request timeout (Blob)', { 
+        method: init?.method || 'GET',
+        url, 
+        path,
+        timeout: DEFAULT_TIMEOUT_MS 
+      });
+    } else if (err instanceof Error) {
+      if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
+        logger.error('API não acessível - verifique se o servidor está rodando (Blob)', { 
+          method: init?.method || 'GET',
+          url,
+          path,
+          hint: 'Verifique se a API está acessível no caminho configurado',
+        });
+      } else {
+        logger.error('Request failed (Blob)', { 
+          method: init?.method || 'GET',
+          url, 
+          path,
+          error: err.message 
+        });
       }
     }
     throw err;
@@ -179,6 +325,7 @@ export async function fetchJson(path, init) {
 
 export const httpClient = {
   fetchJson,
+  fetchBlob,
 };
 
 

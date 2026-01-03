@@ -1,0 +1,221 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Política de Rollout de IA",
+  "description": "Define estágios de rollout, critérios objetivos para avançar e regras de rollback",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "stages": {
+    "OFF": {
+      "name": "Desabilitado",
+      "description": "IA completamente desabilitada, não processa requisições",
+      "allowedActions": [],
+      "nextStage": "INTERNAL",
+      "criteriaToAdvance": {
+        "qa": {
+          "allChecks": "PASS",
+          "maxWarnings": 0,
+          "maxFailures": 0
+        },
+        "tests": {
+          "coverage": 80,
+          "unit": "PASS",
+          "integration": "PASS"
+        },
+        "approval": {
+          "required": ["tech_lead", "qa_lead"],
+          "unanimous": true
+        }
+      }
+    },
+    "INTERNAL": {
+      "name": "Uso Interno",
+      "description": "IA habilitada apenas para uso interno da equipe de desenvolvimento",
+      "allowedActions": [
+        "test_generation",
+        "development_use",
+        "internal_testing"
+      ],
+      "restrictions": [
+        "Não processa requisições de produção",
+        "Não afeta usuários finais",
+        "Logs detalhados obrigatórios"
+      ],
+      "nextStage": "LIMITED",
+      "criteriaToAdvance": {
+        "runtime": {
+          "maxFailures": 0,
+          "maxWarnings": 2,
+          "timeWindow": 604800,
+          "unit": "seconds"
+        },
+        "qa": {
+          "allChecks": "PASS",
+          "maxWarnings": 2
+        },
+        "metrics": {
+          "successRate": 95,
+          "responseTime": 5,
+          "unit": "seconds"
+        },
+        "approval": {
+          "required": ["tech_lead"],
+          "unanimous": false
+        },
+        "minDuration": {
+          "value": 7,
+          "unit": "days",
+          "description": "Deve permanecer em INTERNAL por pelo menos 7 dias"
+        }
+      }
+    },
+    "LIMITED": {
+      "name": "Rollout Limitado",
+      "description": "IA habilitada para um subconjunto limitado de usuários ou funcionalidades",
+      "allowedActions": [
+        "beta_users",
+        "specific_features",
+        "percentage_rollout"
+      ],
+      "restrictions": [
+        "Máximo 10% do tráfego",
+        "Apenas funcionalidades específicas",
+        "Monitoramento intensivo obrigatório"
+      ],
+      "nextStage": "GENERAL",
+      "criteriaToAdvance": {
+        "runtime": {
+          "maxFailures": 0,
+          "maxWarnings": 1,
+          "timeWindow": 2592000,
+          "unit": "seconds"
+        },
+        "qa": {
+          "allChecks": "PASS",
+          "maxWarnings": 1
+        },
+        "metrics": {
+          "successRate": 98,
+          "responseTime": 3,
+          "unit": "seconds",
+          "userSatisfaction": 4,
+          "scale": 5
+        },
+        "approval": {
+          "required": ["tech_lead", "qa_lead", "product_owner"],
+          "unanimous": true
+        },
+        "minDuration": {
+          "value": 14,
+          "unit": "days",
+          "description": "Deve permanecer em LIMITED por pelo menos 14 dias"
+        },
+        "userFeedback": {
+          "required": true,
+          "minSamples": 100,
+          "satisfactionThreshold": 4
+        }
+      }
+    },
+    "GENERAL": {
+      "name": "Disponibilidade Geral",
+      "description": "IA habilitada para todos os usuários e funcionalidades",
+      "allowedActions": [
+        "all_users",
+        "all_features",
+        "full_rollout"
+      ],
+      "restrictions": [],
+      "nextStage": null,
+      "criteriaToAdvance": {
+        "description": "GENERAL é o estágio final, não há avanço além deste"
+      },
+      "ongoingRequirements": {
+        "runtime": {
+          "maxFailures": 0,
+          "maxWarnings": 3,
+          "timeWindow": 604800,
+          "unit": "seconds"
+        },
+        "qa": {
+          "allChecks": "PASS",
+          "maxWarnings": 3
+        },
+        "metrics": {
+          "successRate": 99,
+          "responseTime": 5,
+          "unit": "seconds"
+        }
+      }
+    }
+  },
+  "rollbackRules": {
+    "enabled": true,
+    "immediate": {
+      "conditions": [
+        "FAIL em QA",
+        "FAIL em runtime >= 3 ocorrências",
+        "Violação de contrato público",
+        "Falha de segurança"
+      ],
+      "action": "rollback_immediate",
+      "targetStage": "OFF",
+      "requiresApproval": false,
+      "description": "Rollback imediato para OFF quando condições críticas são atendidas"
+    },
+    "automatic": {
+      "enabled": true,
+      "conditions": [
+        "Runtime failures >= level3 threshold",
+        "Success rate < 90%",
+        "Response time > 10s"
+      ],
+      "action": "rollback_one_stage",
+      "requiresApproval": false,
+      "description": "Rollback automático de um estágio quando métricas degradam"
+    },
+    "manual": {
+      "enabled": true,
+      "requiresApproval": ["tech_lead", "qa_lead"],
+      "description": "Rollback manual pode ser executado com aprovação"
+    }
+  },
+  "advancementRules": {
+    "cannotSkipStages": true,
+    "mustMeetAllCriteria": true,
+    "approvalRequired": true,
+    "description": "Não é possível pular estágios, todos os critérios devem ser atendidos"
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics": [
+      "success_rate",
+      "response_time",
+      "error_rate",
+      "user_satisfaction",
+      "qa_status",
+      "runtime_failures"
+    ],
+    "alerting": {
+      "enabled": true,
+      "thresholds": {
+        "successRate": 90,
+        "responseTime": 10,
+        "errorRate": 5
+      }
+    }
+  },
+  "approval": {
+    "required": true,
+    "roles": {
+      "OFF_to_INTERNAL": ["tech_lead", "qa_lead"],
+      "INTERNAL_to_LIMITED": ["tech_lead"],
+      "LIMITED_to_GENERAL": ["tech_lead", "qa_lead", "product_owner"]
+    },
+    "unanimous": {
+      "OFF_to_INTERNAL": true,
+      "INTERNAL_to_LIMITED": false,
+      "LIMITED_to_GENERAL": true
+    }
+  }
+}
+

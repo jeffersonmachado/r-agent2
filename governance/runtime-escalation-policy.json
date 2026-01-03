@@ -1,0 +1,167 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Política de Escalonamento de QA Runtime",
+  "description": "Define regras de escalonamento automático baseado em ocorrências runtime",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "fundamentalRule": {
+    "description": "Runtime nunca é ignorável",
+    "enforced": true,
+    "cannotOverride": true
+  },
+  "escalationLevels": {
+    "level1": {
+      "name": "Detecção",
+      "threshold": {
+        "occurrences": 1,
+        "timeWindow": 3600,
+        "unit": "seconds"
+      },
+      "actions": [
+        "log_warning",
+        "notify_engineer"
+      ],
+      "blocking": false
+    },
+    "level2": {
+      "name": "Atenção",
+      "threshold": {
+        "occurrences": 3,
+        "timeWindow": 3600,
+        "unit": "seconds"
+      },
+      "actions": [
+        "log_error",
+        "notify_tech_lead",
+        "create_ticket"
+      ],
+      "blocking": false
+    },
+    "level3": {
+      "name": "Crítico",
+      "threshold": {
+        "occurrences": 5,
+        "timeWindow": 3600,
+        "unit": "seconds"
+      },
+      "actions": [
+        "block_deploy",
+        "notify_all_stakeholders",
+        "create_incident",
+        "escalate_to_management"
+      ],
+      "blocking": true,
+      "requiresImmediateAction": true
+    },
+    "level4": {
+      "name": "Emergência",
+      "threshold": {
+        "occurrences": 10,
+        "timeWindow": 3600,
+        "unit": "seconds"
+      },
+      "actions": [
+        "block_deploy",
+        "block_production_deploy",
+        "create_severity1_incident",
+        "notify_oncall",
+        "escalate_to_cto"
+      ],
+      "blocking": true,
+      "requiresRollback": true
+    }
+  },
+  "timeWindows": {
+    "short": {
+      "duration": 3600,
+      "unit": "seconds",
+      "description": "Janela de 1 hora para detecção de padrões"
+    },
+    "medium": {
+      "duration": 86400,
+      "unit": "seconds",
+      "description": "Janela de 24 horas para análise de tendências"
+    },
+    "long": {
+      "duration": 604800,
+      "unit": "seconds",
+      "description": "Janela de 7 dias para análise histórica"
+    }
+  },
+  "automaticActions": {
+    "blockDeploy": {
+      "enabled": true,
+      "conditions": [
+        "level3 ou level4 atingido",
+        "falha recorrente >= recurringFailureThreshold (3)"
+      ],
+      "description": "Bloqueia deploy automaticamente quando threshold é atingido"
+    },
+    "createIncident": {
+      "enabled": true,
+      "conditions": [
+        "level3 ou level4 atingido",
+        "falha afeta produção",
+        "falha afeta múltiplos usuários"
+      ],
+      "severity": "auto_determined",
+      "description": "Cria incidente automaticamente quando condições são atendidas"
+    },
+    "notifyStakeholders": {
+      "enabled": true,
+      "recipients": {
+        "level2": ["tech_lead"],
+        "level3": ["tech_lead", "qa_lead", "product_owner"],
+        "level4": ["tech_lead", "qa_lead", "product_owner", "cto", "oncall"]
+      }
+    }
+  },
+  "recurringFailureDetection": {
+    "enabled": true,
+    "threshold": 3,
+    "timeWindow": 86400,
+    "unit": "seconds",
+    "action": "auto_blocking",
+    "description": "Após N ocorrências da mesma falha em 24h, check vira blocking automaticamente"
+  },
+  "scopeRules": {
+    "runtime": {
+      "neverIgnore": true,
+      "alwaysBlocking": false,
+      "autoEscalation": true,
+      "description": "Falhas runtime nunca podem ser ignoradas, mas nem sempre bloqueiam imediatamente"
+    },
+    "production": {
+      "neverIgnore": true,
+      "alwaysBlocking": true,
+      "autoEscalation": true,
+      "description": "Falhas em produção sempre bloqueiam e nunca podem ser ignoradas"
+    }
+  },
+  "rollbackRules": {
+    "enabled": true,
+    "conditions": [
+      "level4 atingido",
+      "falha crítica em produção",
+      "múltiplas falhas simultâneas"
+    ],
+    "automatic": false,
+    "requiresApproval": ["tech_lead", "qa_lead"],
+    "description": "Rollback pode ser necessário em casos extremos"
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics": [
+      "occurrence_count",
+      "time_window",
+      "failure_rate",
+      "recurrence_pattern"
+    ],
+    "alerting": {
+      "level2": "warning",
+      "level3": "error",
+      "level4": "critical"
+    }
+  }
+}
+

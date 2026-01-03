@@ -10,6 +10,15 @@
     "test:data": "jest tests/data",
     "test:scripts": "jest tests/scripts",
     "test:rpa": "jest tests/rpa",
+    "test:ai-governance": "jest tests/ai-governance",
+    "test:contracts": "jest tests/contracts",
+    "test:governance": "jest tests/governance",
+    "test:ci": "jest tests/ci",
+    "test:runtime": "jest tests/runtime",
+    "test:organizational": "jest tests/organizational",
+    "test:stress": "jest tests/stress",
+    "test:system": "jest tests/contracts tests/governance tests/ci tests/runtime tests/organizational tests/stress",
+    "qa": "node qa/qaRunner.js",
     "test:rpa:record": "node tests/rpa/record.js",
     "rpa:demo": "node tests/rpa/demo.js",
     "rpa:seed": "node tests/rpa/seedPlatformRPA.js",
@@ -21,6 +30,8 @@
     "rpa:replay:ver": "node tests/rpa/verReplaySeed.js",
     "rpa:replay:gerar": "node tests/rpa/gerarReplayDetalhado.js",
     "test:all": "jest",
+    "autotest": "node scripts/autotest.js",
+    "check:green": "node scripts/check-green.js",
     "seed:test": "node tests/seeds/seedTestData.js",
     "seed": "node scripts/seed.js",
     "seed:reset": "node scripts/seed.js --reset",
@@ -42,12 +53,18 @@
     "pm2:status": "pm2 status",
     "prod": "pm2 start ecosystem.config.js --env production",
     "prod:stop": "pm2 stop ecosystem.config.js",
-    "prod:restart": "pm2 restart ecosystem.config.js"
+    "prod:restart": "pm2 restart ecosystem.config.js",
+    "zip": "./scripts/generate-zip.sh",
+    "zip:all": "./scripts/generate-zip.sh --include-node-modules --include-coverage --include-dist",
+    "zip:api": "./scripts/generate-zip.sh -i 'api/**' -i 'package.json' -i 'package-lock.json' -n api-only.zip",
+    "zip:frontend": "./scripts/generate-zip.sh -i 'frontend/**' -i 'package.json' -i 'package-lock.json' -n frontend-only.zip"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
     "uuid": "^9.0.0",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "openai": "^4.20.0",
+    "@anthropic-ai/sdk": "^0.20.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",

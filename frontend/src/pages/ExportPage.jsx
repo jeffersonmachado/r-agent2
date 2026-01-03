@@ -3,6 +3,7 @@ import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
+import { fetchBlob } from '../api/client';
 import logger from '../utils/logger';
 
 export function ExportPage() {
@@ -23,16 +24,6 @@ export function ExportPage() {
   });
   const [exporting, setExporting] = useState(false);
 
-  const buildExportUrl = (endpoint) => {
-    const params = new URLSearchParams();
-    if (dateRange.startDate) params.append('startDate', dateRange.startDate);
-    if (dateRange.endDate) params.append('endDate', dateRange.endDate);
-    
-    const query = params.toString();
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    return `${baseUrl}${endpoint}${query ? `?${query}` : ''}`;
-  };
-
   const handleExport = async (type) => {
     setExporting(true);
     try {
@@ -43,25 +34,18 @@ export function ExportPage() {
         fullReport: '/export/full-report.json',
       };
       
-      const url = buildExportUrl(endpoints[type]);
+      // Constrói query string com parâmetros de data
+      const params = new URLSearchParams();
+      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
       
-      // Obtém token de autenticação
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        showToast('Você precisa estar autenticado para exportar', 'error');
-        return;
-      }
+      const query = params.toString();
+      const endpoint = `${endpoints[type]}${query ? `?${query}` : ''}`;
       
-      // Faz download
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      // Usa client centralizado para garantir baseURL correta
+      const response = await fetchBlob(endpoint, {
+        method: 'GET',
       });
-      
-      if (!response.ok) {
-        throw new Error(`Erro ${response.status}`);
-      }
       
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);

@@ -11,8 +11,10 @@ function frontendRoutesPlugin() {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat'];
       
+      // IMPORTANTE: Este middleware deve ser executado ANTES do proxy do Vite
+      // Para garantir que rotas de API sejam passadas adiante sem modificação
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0] || '';
         
@@ -36,8 +38,10 @@ function frontendRoutesPlugin() {
                           (url.startsWith('/web-scraping/') && url !== '/web-scraping') || // /web-scraping/scrape é API
                           (url.startsWith('/audit/') && url !== '/audit'); // /audit/logs, /audit/stats são API
         
+        // Para rotas de API (especialmente DELETE, POST, PUT), não faz nada e deixa o proxy lidar
+        // O proxy do Vite será aplicado depois deste middleware
         if (isApiRoute) {
-          // Deixa o proxy lidar com rotas da API
+          // Deixa o proxy lidar com rotas da API - não modifica nada, apenas passa adiante
           return next();
         }
         
@@ -97,8 +101,10 @@ const viteConfig = defineConfig({
     fs: {
       allow: ['..'],
     },
-    // Proxy para API em desenvolvimento (quando VITE_API_BASE_URL não está configurado)
-    proxy: process.env.VITE_API_BASE_URL ? {} : {
+    // Proxy para API em desenvolvimento
+    // Em desenvolvimento, sempre usamos proxy para garantir que funcione corretamente
+    // mesmo se VITE_API_BASE_URL estiver definido (pode estar vindo de config.json)
+    proxy: process.env.NODE_ENV === 'production' && process.env.VITE_API_BASE_URL ? {} : {
       // Rotas da API que devem ser proxyadas
       // Usa regex explícitas para garantir que rotas aninhadas sejam capturadas
       '^/tickets': {
@@ -160,6 +166,22 @@ const viteConfig = defineConfig({
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
+        bypass(req, res, options) {
+          // Se for GET de navegação para /rpa-test (sem subcaminho), serve index.html
+          if (req.method === 'GET' && req.url === '/rpa-test') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') && 
+                                 !acceptHeader.includes('application/json');
+            
+            if (isNavigation) {
+              // Não faz proxy - o plugin frontend-routes já serviu o index.html
+              return false;
+            }
+          }
+          
+          // Para /rpa/recordings, /rpa/execute ou outros métodos, faz proxy para API
+          return undefined;
+        },
       },
       '^/web-scraping': {
         target: `http://localhost:${config.api?.port || 3000}`,

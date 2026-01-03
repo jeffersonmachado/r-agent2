@@ -11,6 +11,8 @@ const { ActionExecutor } = require('../actionExecutor');
 const { ReplaySystem } = require('../replaySystem');
 const { getModeConfig } = require('../rpaConfig');
 const { ActionRecorder } = require('../actionRecorder');
+const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
+const { ensureAuthenticated } = require('../utils/authHelper');
 const path = require('path');
 const fs = require('fs');
 
@@ -35,14 +37,22 @@ class RpaPlayer {
     if (!fs.existsSync(seedFile)) {
       try {
         this.seedData = ActionRecorder.load(seedName);
-        return;
       } catch (error) {
         throw new Error(`Seed não encontrado: ${seedName}`);
       }
+    } else {
+      const content = fs.readFileSync(seedFile, 'utf8');
+      this.seedData = JSON.parse(content);
     }
 
-    const content = fs.readFileSync(seedFile, 'utf8');
-    this.seedData = JSON.parse(content);
+    // Normaliza URLs no seed/recording carregado
+    if (this.seedData) {
+      try {
+        normalizeRpaTestUrls(this.seedData);
+      } catch (error) {
+        console.warn(`Aviso: Erro ao normalizar URLs: ${error.message}`);
+      }
+    }
   }
 
   /**
@@ -199,6 +209,43 @@ class RpaPlayer {
     }
 
     await this.init();
+
+    // Faz login automático antes de executar os steps
+    // Navega para a página inicial primeiro se necessário
+    const firstStep = this.seedData.steps?.[0];
+    if (firstStep && firstStep.type === 'navigate') {
+      const targetUrl = firstStep.url || firstStep.value;
+      if (targetUrl) {
+        try {
+          await this.executor.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await this.executor.page.waitForTimeout(1000);
+        } catch (error) {
+          // Se falhar, tenta navegar para a URL base
+          const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
+          await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await this.executor.page.waitForTimeout(1000);
+        }
+      } else {
+        // Se não há URL, navega para a URL base
+        const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
+        await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await this.executor.page.waitForTimeout(1000);
+      }
+    } else {
+      // Se não há step de navegação, navega para a URL base
+      const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
+      await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await this.executor.page.waitForTimeout(1000);
+    }
+
+    // Garante autenticação
+    const authResult = await ensureAuthenticated(this.executor.page);
+    if (!authResult.success) {
+      console.warn(`⚠️  Aviso: Não foi possível fazer login automático: ${authResult.error}`);
+      console.warn('   O teste continuará, mas pode falhar se a página requer autenticação.');
+    } else if (authResult.loggedIn) {
+      console.log('✅ Login automático realizado com sucesso');
+    }
 
     const results = {
       seedId: this.seedData.id || this.seedData.name,

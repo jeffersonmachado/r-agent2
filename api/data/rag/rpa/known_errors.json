@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "description": "Erros conhecidos que não devem ser reintroduzidos",
+  "errors": [
+    {
+      "id": "ERR_INVENTED_SELECTOR",
+      "description": "Uso de seletores inventados que não existem no código",
+      "examples": [
+        "[data-testid='chat-root']",
+        "[data-testid='chat-message']",
+        "[data-testid='chat-input']"
+      ],
+      "fix": "Usar seletores genéricos ou validar que o seletor existe no código"
+    },
+    {
+      "id": "ERR_INVALID_ROUTE",
+      "description": "Uso de rotas que não existem",
+      "examples": [
+        "/chat (não existe - chat é modal no /editor)"
+      ],
+      "fix": "Usar /editor para acessar o chat de teste"
+    },
+    {
+      "id": "ERR_FICTITIOUS_DOMAIN",
+      "description": "Uso de domínios fictícios",
+      "examples": [
+        "rpa.local",
+        "test.local",
+        "localhost.fake"
+      ],
+      "fix": "Usar a URL base fornecida no contexto"
+    },
+    {
+      "id": "ERR_PRODUCTION_ACCESS",
+      "description": "Tentativa de acesso a produção",
+      "examples": [
+        "URLs com 'production' ou 'prod'",
+        "Acesso a dados reais"
+      ],
+      "fix": "Garantir que mode='test-only' e não há acesso a produção"
+    },
+    {
+      "id": "ERR_MISSING_ASSERTS",
+      "description": "Falta de asserts em etapas críticas",
+      "fix": "Incluir asserts obrigatórios em cada etapa crítica"
+    },
+    {
+      "id": "ERR_NON_DETERMINISTIC",
+      "description": "Teste não determinístico ou não reexecutável",
+      "fix": "Garantir que o teste seja determinístico e reexecutável"
+    },
+    {
+      "id": "ERR_INVALID_ACTION",
+      "description": "Uso de ação não permitida na whitelist",
+      "fix": "Usar apenas ações da whitelist RAG_ACTIONS"
+    },
+    {
+      "id": "ERR_INVALID_SELECTOR",
+      "description": "Uso de seletor não disponível",
+      "fix": "Usar apenas seletores da lista RAG_SELECTORS"
+    }
+  ],
+  "prevention": {
+    "validation": "Todas as gerações devem passar pelo validador estrutural",
+    "ragEnforcement": "Usar apenas dados dos blocos RAG fornecidos",
+    "errorTracking": "Erros devem ser adicionados a este arquivo após detecção"
+  }
+}
+

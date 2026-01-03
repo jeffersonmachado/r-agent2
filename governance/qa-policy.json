@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Política de QA (SLA e Bloqueios)",
+  "description": "Política formal de qualidade que define limites aceitáveis, regras de bloqueio e SLA de correção",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "warnings": {
+    "maxAcceptable": 3,
+    "escalationThreshold": 5,
+    "whenWarnBecomesFail": {
+      "description": "WARN vira FAIL quando excede maxAcceptable e afeta escopos críticos",
+      "criticalScopes": ["contracts", "gate", "wrappers"],
+      "rule": "Se WARN >= maxAcceptable E escopo em criticalScopes, status = FAIL",
+      "autoEscalation": true,
+      "requiresApproval": false
+    },
+    "blockingRules": {
+      "description": "Regras que determinam quando WARN bloqueia deploy",
+      "rules": [
+        "WARN em escopos críticos (contracts, gate) bloqueia imediatamente",
+        "WARN >= escalationThreshold bloqueia até aprovação",
+        "WARN sem aprovação após 24h vira FAIL automaticamente"
+      ]
+    }
+  },
+  "failures": {
+    "maxRuntimeFailures": {
+      "blocking": 1,
+      "description": "Quantidade de falhas runtime que geram bloqueio imediato",
+      "action": "block_deploy"
+    },
+    "recurringFailureThreshold": 3,
+    "description": "Após N ocorrências da mesma falha, check vira blocking automaticamente",
+    "sla": {
+      "critical": {
+        "maxTimeToFix": 3600,
+        "unit": "seconds",
+        "description": "Tempo máximo para correção de falhas críticas (contracts, gate)"
+      },
+      "high": {
+        "maxTimeToFix": 14400,
+        "unit": "seconds",
+        "description": "Tempo máximo para correção de falhas de alta prioridade"
+      },
+      "medium": {
+        "maxTimeToFix": 86400,
+        "unit": "seconds",
+        "description": "Tempo máximo para correção de falhas de média prioridade"
+      },
+      "low": {
+        "maxTimeToFix": 604800,
+        "unit": "seconds",
+        "description": "Tempo máximo para correção de falhas de baixa prioridade"
+      }
+    }
+  },
+  "blockingScopes": {
+    "alwaysBlock": ["contracts", "gate"],
+    "description": "Escopos que sempre bloqueiam se houver qualquer FAIL",
+    "rules": [
+      "contracts: Qualquer FAIL em validação de contratos bloqueia",
+      "gate: Qualquer FAIL no gate de validação IA bloqueia"
+    ],
+    "neverIgnore": ["contracts", "gate", "runtime"],
+    "description": "Escopos que nunca podem ser ignorados, mesmo com aprovação"
+  },
+  "sla": {
+    "ci": {
+      "maxExecutionTime": 300,
+      "unit": "seconds",
+      "description": "Tempo máximo de execução de QA no CI",
+      "actionOnExceed": "fail_build"
+    },
+    "runtime": {
+      "maxResponseTime": 5,
+      "unit": "seconds",
+      "description": "Tempo máximo de resposta de checks runtime",
+      "actionOnExceed": "log_warning"
+    },
+    "correction": {
+      "description": "SLA de correção por tipo de falha",
+      "types": {
+        "blocking": {
+          "maxTimeToFix": 3600,
+          "unit": "seconds",
+          "escalation": "immediate"
+        },
+        "nonBlocking": {
+          "maxTimeToFix": 86400,
+          "unit": "seconds",
+          "escalation": "after_sla"
+        }
+      }
+    }
+  },
+  "enforcement": {
+    "ci": {
+      "enabled": true,
+      "exitCode": 1,
+      "description": "CI retorna código de erro se QA falhar",
+      "blockOnFail": true,
+      "blockOnWarn": false
+    },
+    "deployment": {
+      "blockOnFail": true,
+      "blockOnWarn": false,
+      "description": "Deploy bloqueia se QA falhar",
+      "allowOverride": false,
+      "overrideRequires": ["tech_lead", "qa_lead"]
+    }
+  },
+  "escalation": {
+    "automatic": {
+      "enabled": true,
+      "rules": [
+        {
+          "condition": "WARN >= escalationThreshold",
+          "action": "escalate_to_tech_lead",
+          "timeout": 3600,
+          "unit": "seconds"
+        },
+        {
+          "condition": "FAIL em escopo crítico",
+          "action": "escalate_immediate",
+          "notify": ["tech_lead", "qa_lead", "product_owner"]
+        }
+      ]
+    }
+  }
+}
+

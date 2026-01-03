@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "description": "Seletores CSS e XPath disponíveis no frontend",
+  "available": [
+    "body",
+    "input[type='text']",
+    "input[type='password']",
+    "input[type='email']",
+    "textarea",
+    "button",
+    "a",
+    "select",
+    "form",
+    "[data-testid]",
+    ".class-name",
+    "#id-name"
+  ],
+  "selectorTypes": {
+    "generic": {
+      "description": "Seletores genéricos que sempre existem",
+      "selectors": [
+        "body",
+        "html",
+        "head",
+        "main",
+        "div",
+        "span",
+        "p"
+      ]
+    },
+    "form": {
+      "description": "Seletores para elementos de formulário",
+      "selectors": [
+        "input[type='text']",
+        "input[type='password']",
+        "input[type='email']",
+        "input[type='number']",
+        "textarea",
+        "select",
+        "button[type='submit']",
+        "form"
+      ]
+    },
+    "interactive": {
+      "description": "Seletores para elementos interativos",
+      "selectors": [
+        "button",
+        "a",
+        "[role='button']",
+        "[onclick]"
+      ]
+    },
+    "custom": {
+      "description": "Seletores customizados (usar apenas se existirem no código)",
+      "selectors": [
+        "[data-testid]",
+        "[data-cy]",
+        "[data-qa]"
+      ],
+      "warning": "NUNCA invente data-testid que não existem no código"
+    }
+  },
+  "rules": [
+    "Use seletores genéricos quando possível",
+    "NUNCA invente seletores que não existem",
+    "Para aguardar carregamento: use 'body' como seletor genérico",
+    "Foque em validações lógicas (variáveis, estados) ao invés de elementos visuais"
+  ]
+}
+

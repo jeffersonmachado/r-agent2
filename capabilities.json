@@ -1,0 +1,426 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-01-02",
+  "description": "Fonte única da verdade sobre as capacidades reais e implementadas do sistema de chatbot",
+  "rule": "CDR - Capability-Driven Responses: O chatbot só pode responder com base em capacidades declaradas neste arquivo",
+  
+  "capabilities": {
+    "flowGeneration": {
+      "id": "flow_generation",
+      "name": "Geração de Fluxos de Chatbot",
+      "description": "Gera fluxos de chatbot a partir de descrições em linguagem natural",
+      "status": "active",
+      "implementation": {
+        "service": "api/services/flowGeneratorService.js",
+        "validator": "api/utils/validateFlowPlan.js",
+        "engine": "engine/validator.js"
+      },
+      "constraints": [
+        "Apenas tipos de nós existentes podem ser usados",
+        "Fluxos devem ter exatamente 1 nó start e pelo menos 1 nó end",
+        "Todos os nós devem estar conectados",
+        "Não pode inventar propriedades ou tipos de nós"
+      ],
+      "supportedNodeTypes": [
+        "start",
+        "end",
+        "message",
+        "user_input",
+        "router",
+        "schedule_router",
+        "set_variable",
+        "ai_task",
+        "ai",
+        "handoff",
+        "fallback",
+        "options",
+        "api",
+        "get_flow_info",
+        "get_queue_status",
+        "get_config_value",
+        "list_flows",
+        "get_current_time",
+        "generate_uuid",
+        "delay",
+        "format_date",
+        "random_number",
+        "get_user_info"
+      ]
+    },
+    
+    "flowExecution": {
+      "id": "flow_execution",
+      "name": "Execução de Fluxos",
+      "description": "Executa fluxos de chatbot em conversas com usuários",
+      "status": "active",
+      "implementation": {
+        "engine": "engine/runner.js",
+        "executor": "engine/executeStep.js",
+        "processor": "api/services/messageProcessor.js"
+      },
+      "features": [
+        "Execução passo a passo de fluxos",
+        "Gerenciamento de estado de conversa",
+        "Histórico de interações",
+        "Variáveis de contexto",
+        "Replay de conversas"
+      ]
+    },
+    
+    "aiProcessing": {
+      "id": "ai_processing",
+      "name": "Processamento com IA",
+      "description": "Gera respostas usando modelos de IA (OpenAI, Anthropic)",
+      "status": "active",
+      "implementation": {
+        "node": "engine/nodes/aiNode.js",
+        "provider": "engine/aiProviderManager.js",
+        "service": "api/services/aiProviderService.js"
+      },
+      "supportedProviders": [
+        "openai",
+        "anthropic",
+        "fallback"
+      ],
+      "features": [
+        "Geração de texto com templates",
+        "Validação de saída com JSON Schema",
+        "Fallback automático em caso de erro",
+        "Medição de uso (tokens)"
+      ],
+      "constraints": [
+        "Requer configuração de API key",
+        "Fallback automático se provider não disponível",
+        "Respostas podem ser validadas contra schema"
+      ]
+    },
+    
+    "ragIntegration": {
+      "id": "rag_integration",
+      "name": "Integração RAG (Retrieval-Augmented Generation)",
+      "description": "Consulta base de conhecimento para respostas contextualizadas",
+      "status": "active",
+      "implementation": {
+        "service": "api/services/ragService.js",
+        "backend": "rag-service/main.py"
+      },
+      "features": [
+        "Consulta base de conhecimento",
+        "Filtros por roles, agentId, productId, clientId",
+        "Confiança mínima configurável",
+        "Fallback para IA direta se RAG falhar"
+      ],
+      "constraints": [
+        "Requer serviço RAG em execução",
+        "Pode falhar e fazer fallback para IA direta",
+        "Apenas para texto livre (não JSON estruturado)"
+      ]
+    },
+    
+    "aiTasks": {
+      "id": "ai_tasks",
+      "name": "Tarefas Especializadas de IA",
+      "description": "Executa tarefas específicas de IA como classificação de intenção e extração de entidades",
+      "status": "active",
+      "implementation": {
+        "node": "engine/nodes/aiTaskNode.js",
+        "executor": "engine/utils/aiTaskExecutor.js"
+      },
+      "supportedTasks": [
+        "intent_classification",
+        "entity_extraction",
+        "text_normalization",
+        "assisted_response"
+      ],
+      "constraints": [
+        "Cada tarefa tem configuração específica",
+        "Requer allowedOutputs definido",
+        "Tem threshold de confiança configurável"
+      ]
+    },
+    
+    "humanHandoff": {
+      "id": "human_handoff",
+      "name": "Transferência para Atendimento Humano",
+      "description": "Transfere conversa para fila de atendimento humano",
+      "status": "active",
+      "implementation": {
+        "node": "engine/nodes/basicNodes.js (handoffNodeHandler)",
+        "service": "api/services/queueService.js",
+        "adapter": "engine/services/humanLiveAdapter.js"
+      },
+      "features": [
+        "Criação de tickets em filas",
+        "Transferência para filas específicas",
+        "Sessões de atendimento humano em tempo real",
+        "Retorno ao bot após atendimento"
+      ],
+      "constraints": [
+        "Requer fila configurada",
+        "Fila deve existir no sistema",
+        "Apenas modo 'ticket' ou 'human' suportados"
+      ]
+    },
+    
+    "fallbackSystem": {
+      "id": "fallback_system",
+      "name": "Sistema de Fallback",
+      "description": "Gerencia fallback automático quando IA falha ou confiança é baixa",
+      "status": "active",
+      "implementation": {
+        "node": "engine/nodes/fallbackNode.js",
+        "controller": "engine/fallbackController.js"
+      },
+      "features": [
+        "Detecção de baixa confiança",
+        "Múltiplas tentativas configuráveis",
+        "Detecção de loops e frustração",
+        "Escalação automática para humano",
+        "Modos: ticket ou human"
+      ],
+      "constraints": [
+        "maxAttempts configurável",
+        "confidenceThreshold configurável",
+        "Escalação requer fila se modo ticket"
+      ]
+    },
+    
+    "flowValidation": {
+      "id": "flow_validation",
+      "name": "Validação de Fluxos",
+      "description": "Valida estrutura, tipos e regras de fluxos antes de execução",
+      "status": "active",
+      "implementation": {
+        "validator": "engine/validator.js",
+        "pipeline": "api/utils/ragValidationPipeline.js"
+      },
+      "validations": [
+        "Estrutura do fluxo",
+        "Tipos de nós válidos",
+        "Conexões entre nós",
+        "Nós obrigatórios (start, end)",
+        "Loops inválidos",
+        "Compatibilidade de tipos",
+        "Configurações de nós"
+      ]
+    },
+    
+    "persistence": {
+      "id": "persistence",
+      "name": "Persistência de Dados",
+      "description": "Acesso a dados persistidos: fluxos, filas, configurações",
+      "status": "active",
+      "implementation": {
+        "service": "engine/services/persistenceServices.js",
+        "nodes": "engine/nodes/persistenceNodes.js"
+      },
+      "supportedData": [
+        "Fluxos (flows.json)",
+        "Filas e tickets (queues.json)",
+        "Configurações (config.json)"
+      ],
+      "operations": [
+        "getFlows",
+        "getFlow",
+        "findFlows",
+        "getQueuesData",
+        "getQueueTickets",
+        "getQueueInfo",
+        "listQueues",
+        "getConfig",
+        "getConfigValue"
+      ]
+    },
+    
+    "externalApis": {
+      "id": "external_apis",
+      "name": "Chamadas a APIs Externas",
+      "description": "Faz chamadas HTTP para APIs externas via nó api",
+      "status": "active",
+      "implementation": {
+        "node": "engine/nodes/apiNode.js"
+      },
+      "features": [
+        "Requisições HTTP GET, POST, PUT, DELETE",
+        "Headers customizáveis",
+        "Body JSON",
+        "Tratamento de erros"
+      ],
+      "constraints": [
+        "URL deve ser válida",
+        "Método HTTP deve ser suportado",
+        "Erros são tratados e não quebram o fluxo"
+      ]
+    },
+    
+    "whatsappIntegration": {
+      "id": "whatsapp_integration",
+      "name": "Integração WhatsApp",
+      "description": "Envia e recebe mensagens via WhatsApp",
+      "status": "active",
+      "implementation": {
+        "service": "api/services/whatsappService.js",
+        "webhook": "api/server.js (/webhooks/whatsapp)"
+      },
+      "features": [
+        "Envio de mensagens de texto",
+        "Recebimento de mensagens via webhook",
+        "Templates aprovados",
+        "Integração com fluxos"
+      ],
+      "constraints": [
+        "Requer configuração de API do WhatsApp",
+        "Phone Number ID e Access Token necessários",
+        "Webhook deve ser verificado"
+      ]
+    },
+    
+    "messengerIntegration": {
+      "id": "messenger_integration",
+      "name": "Integração Facebook Messenger",
+      "description": "Envia e recebe mensagens via Facebook Messenger",
+      "status": "active",
+      "implementation": {
+        "webhook": "api/server.js (/webhooks/messenger)"
+      },
+      "constraints": [
+        "Requer configuração de API do Facebook",
+        "Webhook deve ser verificado"
+      ]
+    },
+    
+    "instagramIntegration": {
+      "id": "instagram_integration",
+      "name": "Integração Instagram Direct",
+      "description": "Envia e recebe mensagens via Instagram Direct",
+      "status": "active",
+      "implementation": {
+        "webhook": "api/server.js (/webhooks/instagram)"
+      },
+      "constraints": [
+        "Requer configuração de API do Instagram",
+        "Webhook deve ser verificado"
+      ]
+    },
+    
+    "queueManagement": {
+      "id": "queue_management",
+      "name": "Gerenciamento de Filas",
+      "description": "Gerencia filas de atendimento e tickets",
+      "status": "active",
+      "implementation": {
+        "service": "api/services/queueService.js"
+      },
+      "features": [
+        "Criação de tickets",
+        "Listagem de filas",
+        "Consulta de status de filas",
+        "Atribuição de tickets a agentes",
+        "Atualização de status de tickets"
+      ]
+    },
+    
+    "agentManagement": {
+      "id": "agent_management",
+      "name": "Gerenciamento de Agentes",
+      "description": "Gerencia agentes e permissões do sistema",
+      "status": "active",
+      "implementation": {
+        "data": "api/data/agents.json"
+      },
+      "features": [
+        "Criação e edição de agentes",
+        "Definição de permissões",
+        "Perfis de agentes"
+      ]
+    },
+    
+    "auditSystem": {
+      "id": "audit_system",
+      "name": "Sistema de Auditoria",
+      "description": "Registra ações e eventos do sistema para auditoria",
+      "status": "active",
+      "implementation": {
+        "service": "api/services/auditService.js"
+      },
+      "features": [
+        "Log de ações de agentes",
+        "Filtros por agente, ação, recurso",
+        "Estatísticas de auditoria"
+      ]
+    },
+    
+    "rpaTesting": {
+      "id": "rpa_testing",
+      "name": "RPA de Testes",
+      "description": "Automação de testes via RPA (apenas ambiente de testes)",
+      "status": "active",
+      "restrictions": [
+        "APENAS para testes",
+        "NÃO acessa produção",
+        "NÃO modifica dados reais",
+        "Whitelist de ações"
+      ],
+      "implementation": {
+        "runner": "tests/rpa/rpaTestRunner.js",
+        "executor": "tests/rpa/actionExecutor.js"
+      },
+      "supportedActions": [
+        "navigate",
+        "click",
+        "fill",
+        "select",
+        "wait",
+        "assert",
+        "scroll",
+        "hover",
+        "keyboard",
+        "screenshot"
+      ],
+      "constraints": [
+        "Test-only mode obrigatório",
+        "Apenas ações na whitelist",
+        "Validação de seletores",
+        "Screenshots em falhas"
+      ]
+    }
+  },
+  
+  "limitations": {
+    "notSupported": [
+      "Ações que não estejam explicitamente declaradas aqui",
+      "Integrações não implementadas",
+      "Funcionalidades futuras ou planejadas",
+      "Simulação de ações humanas externas",
+      "Promessas de retorno futuro",
+      "Abertura de chamados em sistemas externos não integrados",
+      "Contato direto com humanos sem passar por filas",
+      "Ações que requeiram intervenção manual externa"
+    ],
+    "requiresConfiguration": [
+      "Integrações de IA requerem API keys configuradas",
+      "Integrações de mensageria requerem tokens e configuração",
+      "RAG requer serviço em execução",
+      "Filas devem existir antes de usar handoff"
+    ]
+  },
+  
+  "responsePatterns": {
+    "denial": {
+      "template": "No momento, eu não tenho a capacidade de executar essa ação. {availableAlternatives}",
+      "availableAlternatives": "Posso ajudar consultando informações disponíveis ou explicando como o processo funciona."
+    },
+    "prohibitedPhrases": [
+      "Já estou resolvendo",
+      "Em breve",
+      "Encaminhei para o setor",
+      "Estamos analisando",
+      "Vou pedir para alguém",
+      "Isso será feito",
+      "Vou verificar",
+      "Vou solicitar",
+      "Vou analisar"
+    ]
+  }
+}
+

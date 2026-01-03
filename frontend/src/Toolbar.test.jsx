@@ -18,26 +18,24 @@ describe('Toolbar', () => {
   });
 
   it('renderiza apenas botões com callbacks fornecidos e dispara eventos', async () => {
-    const onLoadFlow = vi.fn();
+    const onOpen = vi.fn();
     const onSave = vi.fn();
     const onValidate = vi.fn();
     const onSimulate = vi.fn();
 
     renderWithTheme(
       <Toolbar
-        onLoadFlow={onLoadFlow}
+        onOpen={onOpen}
         onSave={onSave}
         onValidate={onValidate}
         onSimulate={onSimulate}
       />,
     );
 
-    await userEvent.click(screen.getByText('Carregar'));
     await userEvent.click(screen.getByText('Salvar'));
     await userEvent.click(screen.getByText('Validar'));
     await userEvent.click(screen.getByText('Simular'));
 
-    expect(onLoadFlow).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onValidate).toHaveBeenCalledTimes(1);
     expect(onSimulate).toHaveBeenCalledTimes(1);

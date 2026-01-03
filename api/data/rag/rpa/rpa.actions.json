@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "description": "Whitelist de ações permitidas para testes RPA",
+  "allowed": [
+    "navigate",
+    "click",
+    "fill",
+    "select",
+    "wait",
+    "assert",
+    "scroll",
+    "hover",
+    "keyboard",
+    "screenshot"
+  ],
+  "actionDetails": {
+    "navigate": {
+      "description": "Navega para uma URL",
+      "required": ["target"],
+      "optional": ["timeout"]
+    },
+    "click": {
+      "description": "Clica em um elemento",
+      "required": ["target"],
+      "optional": ["timeout"]
+    },
+    "fill": {
+      "description": "Preenche um campo de entrada",
+      "required": ["target", "value"],
+      "optional": ["timeout"]
+    },
+    "select": {
+      "description": "Seleciona uma opção em um select",
+      "required": ["target", "value"],
+      "optional": ["timeout"]
+    },
+    "wait": {
+      "description": "Aguarda um elemento aparecer",
+      "required": ["target"],
+      "optional": ["timeout"]
+    },
+    "assert": {
+      "description": "Valida algo na página",
+      "required": ["target"],
+      "optional": ["value", "timeout"]
+    },
+    "scroll": {
+      "description": "Rola a página",
+      "required": ["target"],
+      "optional": ["timeout"]
+    },
+    "hover": {
+      "description": "Passa o mouse sobre um elemento",
+      "required": ["target"],
+      "optional": ["timeout"]
+    },
+    "keyboard": {
+      "description": "Envia teclas do teclado",
+      "required": ["value"],
+      "optional": ["target", "timeout"]
+    },
+    "screenshot": {
+      "description": "Captura screenshot da página",
+      "required": [],
+      "optional": ["target", "timeout"]
+    }
+  },
+  "restrictions": {
+    "testOnly": true,
+    "noProductionAccess": true,
+    "noRealData": true,
+    "noSideEffects": true
+  }
+}
+

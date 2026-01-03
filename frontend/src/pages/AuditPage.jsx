@@ -308,8 +308,8 @@ export function AuditPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {logs.map((log) => (
-                          <tr key={log.id} className="border-b border-border-default hover:bg-bg-hover transition-colors">
+                        {logs.map((log, index) => (
+                          <tr key={`${log.id}-${index}`} className="border-b border-border-default hover:bg-bg-hover transition-colors">
                             <td className="px-4 py-3 text-sm text-text-primary">
                               {formatDate(log.timestamp)}
                             </td>

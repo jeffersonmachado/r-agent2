@@ -20,6 +20,9 @@ logs/
 .env.local
 .env.*.local
 
+# Token RPA (não deve ser commitado)
+tests/rpa/config/rpa-token.json
+
 # Build outputs
 dist/
 build/

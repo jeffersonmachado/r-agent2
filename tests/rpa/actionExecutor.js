@@ -89,6 +89,23 @@ class ActionExecutor {
    * @param {Object} data - Dados para substituição de variáveis
    */
   async executeAction(action, data = {}) {
+    // Validação inicial
+    if (!action) {
+      return {
+        success: false,
+        error: 'Ação não fornecida (action é null ou undefined)',
+        code: 'RPA_INVALID_ACTION',
+      };
+    }
+
+    if (!this.page) {
+      return {
+        success: false,
+        error: 'Página não inicializada (this.page é null)',
+        code: 'RPA_PAGE_NOT_INITIALIZED',
+      };
+    }
+
     const actionType = action.type;
     let result = { success: false, error: null };
 
@@ -149,7 +166,28 @@ class ActionExecutor {
    */
   async executeNavigate(action, data) {
     try {
-      const url = this.replaceVariables(action.url, data);
+      // Tenta obter URL de action.url ou action.value (compatibilidade)
+      const urlSource = action.url || action.value;
+      
+      // Valida se a URL existe
+      if (!urlSource) {
+        return {
+          success: false,
+          error: 'URL não especificada na ação de navegação (campos url ou value ausentes)',
+          code: 'RPA_MISSING_URL',
+        };
+      }
+
+      const url = this.replaceVariables(urlSource, data);
+      
+      // Valida se a URL resultante é uma string válida
+      if (!url || typeof url !== 'string' || url.trim() === '') {
+        return {
+          success: false,
+          error: `URL inválida após substituição de variáveis: ${urlSource}`,
+          code: 'RPA_INVALID_URL',
+        };
+      }
       
       // Aguarda navegação com múltiplas estratégias
       await this.page.goto(url, { 
@@ -469,24 +507,104 @@ class ActionExecutor {
    */
   async executeWait(action, data) {
     try {
-      const condition = action.condition;
+      // Suporta múltiplos formatos: condition (legado), selector (novo), ou value como número
+      const condition = action.condition || action.selector;
+      const value = action.value;
 
-      // Se for número, espera tempo em ms
-      if (typeof condition === 'number') {
+      // Se há um seletor/condition, aguarda o seletor (value pode ser usado como timeout)
+      if (condition && typeof condition === 'string' && condition.trim() !== '') {
+        let selector = this.replaceVariables(condition, data);
+        
+        // Garante que selector é uma string válida
+        if (!selector) {
+          selector = condition; // Fallback para o original se replaceVariables retornar null/undefined
+        }
+        if (typeof selector !== 'string') {
+          selector = String(selector);
+        }
+        
+        // Valida se o seletor resultante é válido
+        if (!selector || selector.trim() === '') {
+          return {
+            success: false,
+            error: `Seletor inválido após substituição: ${condition}`,
+            code: 'RPA_INVALID_SELECTOR',
+          };
+        }
+
+        const state = action.state || 'visible';
+        
+        // Calcula timeout: action.timeout > value (se numérico) > options.timeout
+        let timeout = action.timeout;
+        if (!timeout && value) {
+          if (typeof value === 'number') {
+            timeout = value;
+          } else if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+            timeout = parseInt(value, 10);
+          }
+        }
+        timeout = timeout || this.options.timeout;
+
+        // Validação final antes de chamar waitForSelector
+        if (!selector || typeof selector !== 'string' || selector.trim() === '') {
+          return {
+            success: false,
+            error: `Seletor inválido antes de waitForSelector: ${JSON.stringify({ condition, selector, value, action })}`,
+            code: 'RPA_INVALID_SELECTOR',
+          };
+        }
+
+        // Validação extra: garante que this.page existe e que selector é uma string válida
+        if (!this.page) {
+          return {
+            success: false,
+            error: 'Página não inicializada (this.page é null)',
+            code: 'RPA_PAGE_NOT_INITIALIZED',
+          };
+        }
+
+        // Garante que selector é uma string não vazia (última verificação)
+        const finalSelector = String(selector).trim();
+        if (!finalSelector) {
+          return {
+            success: false,
+            error: `Seletor final vazio após todas as validações: ${JSON.stringify({ condition, selector, value })}`,
+            code: 'RPA_INVALID_SELECTOR',
+          };
+        }
+
+        await this.page.waitForSelector(finalSelector, {
+          state,
+          timeout,
+        });
+
+        return { success: true };
+      }
+
+      // Se não há seletor mas value é numérico, aguarda tempo
+      if (value && typeof value === 'number') {
+        await this.page.waitForTimeout(value);
+        return { success: true };
+      }
+      
+      // Se value é string numérica e não há seletor, aguarda tempo
+      if (value && typeof value === 'string' && /^\d+$/.test(value.trim())) {
+        await this.page.waitForTimeout(parseInt(value, 10));
+        return { success: true };
+      }
+
+      // Se condition é número (formato legado), aguarda tempo
+      if (condition && typeof condition === 'number') {
         await this.page.waitForTimeout(condition);
         return { success: true };
       }
 
-      // Se for string, espera seletor
-      const selector = this.replaceVariables(condition, data);
-      const state = action.state || 'visible';
-
-      await this.page.waitForSelector(selector, {
-        state,
-        timeout: action.timeout || this.options.timeout,
-      });
-
-      return { success: true };
+      // Se nenhuma condição válida foi encontrada
+      return {
+        success: false,
+        error: 'Ação wait requer condition/selector (string) ou value (número)',
+        code: 'RPA_INVALID_WAIT',
+      };
     } catch (error) {
       return { 
         success: false, 
@@ -912,7 +1030,18 @@ class ActionExecutor {
    * @param {Object} data - Dados para substituição
    */
   replaceVariables(str, data) {
-    if (typeof str !== 'string') return str;
+    // Se não for string, retorna como está (mas valida se é undefined/null)
+    if (typeof str !== 'string') {
+      if (str === null || str === undefined) {
+        return '';
+      }
+      return str;
+    }
+
+    // Se string vazia, retorna como está
+    if (str.trim() === '') {
+      return str;
+    }
 
     return str.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
       const keys = key.trim().split('.');
@@ -926,7 +1055,7 @@ class ActionExecutor {
         }
       }
       
-      return value !== undefined ? String(value) : match;
+      return value !== undefined && value !== null ? String(value) : match;
     });
   }
 

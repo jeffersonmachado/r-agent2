@@ -3,8 +3,13 @@ import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { RpaConfigDialog } from '../components/RpaConfigDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { RpaTestGeneratorDialog } from '../components/RpaTestGeneratorDialog';
+import { FlowAndRpaTestGeneratorDialog } from '../components/FlowAndRpaTestGeneratorDialog';
+import { FlowSelector } from '../components/FlowSelector';
 import { Button } from '../styles/Button';
-import { listRpaRecordings, executeRpaRecording, getRpaExecutionStatus, cancelRpaExecution, continueRpaExecution, nextRpaStep } from '../api/rpa';
+import { listRpaRecordings, executeRpaRecording, getRpaExecutionStatus, cancelRpaExecution, continueRpaExecution, nextRpaStep, deleteRpaRecording } from '../api/rpa';
+import { listFlows } from '../api/flows';
 import logger from '../utils/logger';
 
 /**
@@ -24,6 +29,13 @@ export function RpaTestPage() {
   const [executionId, setExecutionId] = useState(null);
   const [executionStatus, setExecutionStatus] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [recordingToDelete, setRecordingToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [showRpaTestGenerator, setShowRpaTestGenerator] = useState(false);
+  const [showFlowAndRpaTestGenerator, setShowFlowAndRpaTestGenerator] = useState(false);
+  const [selectedFlow, setSelectedFlow] = useState(null);
+  const [flows, setFlows] = useState([]);
+  const [loadingFlows, setLoadingFlows] = useState(false);
   const logsEndRef = useRef(null);
   const previousStatusRef = useRef(null);
 
@@ -37,7 +49,28 @@ export function RpaTestPage() {
   // Carrega gravações disponíveis
   useEffect(() => {
     loadRecordings();
+    loadFlows();
   }, []);
+
+  const loadFlows = async () => {
+    setLoadingFlows(true);
+    try {
+      const data = await listFlows();
+      setFlows(Array.isArray(data) ? data : []);
+    } catch (error) {
+      logger.error('Erro ao carregar fluxos', error);
+      setFlows([]);
+    } finally {
+      setLoadingFlows(false);
+    }
+  };
+
+  const handleFlowSelected = (flow) => {
+    setSelectedFlow(flow);
+    if (flow) {
+      setShowRpaTestGenerator(true);
+    }
+  };
 
   // Scroll automático para o final dos logs
   useEffect(() => {
@@ -232,6 +265,68 @@ export function RpaTestPage() {
     console.log('✅ Estado atualizado - diálogo deve abrir');
   };
 
+  const handleDeleteClick = (e, recording) => {
+    e.stopPropagation(); // Previne que o clique no botão selecione a gravação
+    setRecordingToDelete(recording);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!recordingToDelete) return;
+
+    const recordingId = recordingToDelete.id;
+    const recordingName = recordingToDelete.name || recordingToDelete.id;
+
+    try {
+      setDeleting(true);
+      logger.info('🗑️ Removendo gravação RPA', {
+        id: recordingId,
+        internalId: recordingToDelete.internalId,
+        name: recordingName,
+      });
+      
+      const result = await deleteRpaRecording(recordingId);
+      
+      // Remove imediatamente da lista local sem reload completo
+      setRecordings(prev => prev.filter(r => r.id !== recordingId));
+      
+      // Toast apropriado baseado no resultado
+      if (result.alreadyDeleted) {
+        logger.info('Gravação já havia sido removida (idempotente)', { recordingId });
+        showToast(`Gravação "${recordingName}" já havia sido removida`, 'warning');
+      } else {
+        logger.info('Gravação removida com sucesso', { recordingId });
+        showToast(`Gravação "${recordingName}" removida com sucesso`, 'success');
+      }
+    } catch (err) {
+      logger.error('Erro ao remover gravação RPA', {
+        recordingId,
+        error: err.message,
+        status: err.status,
+        url: err.url,
+      });
+      
+      // Determina tipo de erro para toast apropriado
+      let errorMessage = err.message || 'Erro desconhecido';
+      let toastType = 'error';
+      
+      if (err.status === 403) {
+        errorMessage = 'Sem permissão para remover esta gravação';
+        toastType = 'error';
+      } else if (err.status === 500) {
+        errorMessage = 'Erro interno do servidor ao remover gravação';
+        toastType = 'error';
+      } else if (err.message?.includes('Failed to fetch') || err.message?.includes('fetch')) {
+        errorMessage = 'Não foi possível conectar ao servidor. Verifique se a API está rodando.';
+        toastType = 'error';
+      }
+      
+      showToast(`Erro ao remover gravação: ${errorMessage}`, toastType);
+    } finally {
+      setDeleting(false);
+      setRecordingToDelete(null);
+    }
+  };
+
   const handleConfigConfirm = async (config) => {
     if (!selectedRecording) return;
 
@@ -333,6 +428,50 @@ export function RpaTestPage() {
           </p>
         </div>
 
+        {/* Gerar Teste RPA por IA */}
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary mb-2">Gerar Teste RPA por IA</h2>
+              <p className="text-text-secondary text-sm">
+                Gera automaticamente um teste RPA executável a partir de um fluxo existente ou crie um novo fluxo
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setShowFlowAndRpaTestGenerator(true)}
+                className="flex items-center gap-2"
+              >
+                <span>✨</span>
+                <span>Criar Fluxo e Gerar Teste RPA</span>
+              </Button>
+              <div className="w-64">
+                <FlowSelector
+                  onFlowSelected={handleFlowSelected}
+                  currentFlowId={selectedFlow?.id}
+                  refreshTrigger={0}
+                />
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (selectedFlow) {
+                    setShowRpaTestGenerator(true);
+                  } else {
+                    showToast('Selecione um fluxo primeiro', 'warning');
+                  }
+                }}
+                disabled={!selectedFlow || loadingFlows}
+                className="flex items-center gap-2"
+              >
+                <span>🤖</span>
+                <span>Gerar Teste RPA por IA</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Lista de Gravações */}
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
           <div className="flex justify-between items-center mb-6">
@@ -365,14 +504,13 @@ export function RpaTestPage() {
               {recordings.map((recording) => (
                 <div
                   key={recording.id}
-                  className="bg-bg-secondary rounded-lg border border-border-default p-4 hover:border-accent-primary transition-colors cursor-pointer"
+                  className="relative bg-bg-secondary rounded-lg border border-border-default p-4 hover:border-accent-primary transition-colors cursor-pointer group"
                   onClick={() => handleSelectRecording(recording)}
                 >
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="mb-2">
                     <h3 className="text-lg font-semibold text-text-primary">
                       {recording.name || recording.id}
                     </h3>
-                    <span className="text-2xl">▶️</span>
                   </div>
                   {recording.description && (
                     <p className="text-text-secondary text-sm mb-2">{recording.description}</p>
@@ -381,6 +519,15 @@ export function RpaTestPage() {
                     <span>📝 {recording.steps?.length || 0} ações</span>
                     {recording.version && <span>• v{recording.version}</span>}
                   </div>
+                  <span className="absolute bottom-2 right-2 text-2xl">▶️</span>
+                  <button
+                    onClick={(e) => handleDeleteClick(e, recording)}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-status-error/10 hover:bg-status-error/20 text-status-error opacity-0 group-hover:opacity-100 transition-opacity duration-fast flex items-center justify-center text-xs font-bold z-10"
+                    title="Remover gravação"
+                    disabled={deleting}
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
@@ -621,6 +768,57 @@ export function RpaTestPage() {
             retryDelay: 1000,
           }}
         />
+
+        {/* Diálogo de Confirmação de Remoção */}
+        <ConfirmDialog
+          isOpen={!!recordingToDelete}
+          onClose={() => !deleting && setRecordingToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          title="Remover Gravação"
+          message={`Tem certeza que deseja remover a gravação "${recordingToDelete?.name || recordingToDelete?.id}"?\n\nEsta ação não pode ser desfeita.`}
+          confirmLabel={deleting ? 'Removendo...' : 'Remover'}
+          cancelLabel="Cancelar"
+          variant="danger"
+          disabled={deleting}
+        />
+
+        {/* Diálogo de Geração de Teste RPA por IA */}
+        {showRpaTestGenerator && selectedFlow && (
+          <RpaTestGeneratorDialog
+            flowId={selectedFlow.id}
+            flowName={selectedFlow.name}
+            flowVersion={selectedFlow.version}
+            onTestGenerated={(rpaTest, result) => {
+              logger.info('Teste RPA gerado e salvo', { testId: rpaTest?.id });
+              setShowRpaTestGenerator(false);
+              showToast('Teste RPA gerado e salvo com sucesso!', 'success', 3000);
+              // Recarrega gravações para mostrar o novo teste
+              loadRecordings();
+            }}
+            onCancel={() => {
+              setShowRpaTestGenerator(false);
+              setSelectedFlow(null);
+            }}
+          />
+        )}
+
+        {/* Diálogo de Criação de Fluxo e Geração de Teste RPA */}
+        {showFlowAndRpaTestGenerator && (
+          <FlowAndRpaTestGeneratorDialog
+            onComplete={({ flow, rpaTest, saveResult }) => {
+              logger.info('Fluxo e teste RPA criados com sucesso', { 
+                flowId: flow?.id, 
+                testId: rpaTest?.id 
+              });
+              setShowFlowAndRpaTestGenerator(false);
+              showToast('Fluxo e teste RPA criados com sucesso!', 'success', 3000);
+              // Recarrega gravações e fluxos
+              loadRecordings();
+              loadFlows();
+            }}
+            onCancel={() => setShowFlowAndRpaTestGenerator(false)}
+          />
+        )}
 
         <ToastContainer />
       </div>

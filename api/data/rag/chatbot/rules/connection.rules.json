@@ -1,0 +1,409 @@
+{
+  "version": "1.0",
+  "description": "Regras de conexão entre nós do fluxo. Extraído de engine/utils/typeCompatibility.js",
+  "rules": {
+    "compatibility": {
+      "description": "Mapa de compatibilidade de tipos. Define quais tipos de nós podem ser conectados.",
+      "source": "engine/utils/typeCompatibility.js",
+      "mapping": {
+        "start": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "message": {
+          "canConnectTo": [
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "user_input": {
+          "canConnectTo": [
+            "router",
+            "schedule_router",
+            "message",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "router": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "schedule_router": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "set_variable": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "ai": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "ai_task": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info"
+          ]
+        },
+        "handoff": {
+          "canConnectTo": [
+            "end"
+          ],
+          "restriction": "handoff só pode conectar a end"
+        },
+        "get_flow_info": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "get_queue_status": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "get_config_value": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "list_flows": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "get_current_time": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "generate_uuid": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "delay": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "format_date": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "random_number": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "get_user_info": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "ai_task",
+            "end"
+          ]
+        },
+        "end": {
+          "canConnectTo": [],
+          "restriction": "end não pode ter saídas"
+        }
+      }
+    },
+    "structural": {
+      "description": "Regras estruturais do fluxo",
+      "rules": [
+        {
+          "id": "MUST_HAVE_START",
+          "description": "Todo fluxo DEVE ter exatamente 1 nó do tipo 'start'",
+          "enforcement": "hard"
+        },
+        {
+          "id": "MUST_HAVE_END",
+          "description": "Todo fluxo DEVE ter pelo menos 1 nó do tipo 'end'",
+          "enforcement": "hard"
+        },
+        {
+          "id": "NO_DISCONNECTED_NODES",
+          "description": "Todos os nós devem ser alcançáveis a partir do nó 'start'",
+          "enforcement": "hard"
+        },
+        {
+          "id": "NO_INVALID_LOOPS",
+          "description": "Não são permitidos loops no fluxo (ciclos no grafo)",
+          "enforcement": "hard"
+        },
+        {
+          "id": "UNIQUE_NODE_IDS",
+          "description": "Cada nó deve ter um ID único dentro do fluxo",
+          "enforcement": "hard"
+        },
+        {
+          "id": "START_MUST_HAVE_NEXT",
+          "description": "O nó 'start' deve ter um campo 'next' apontando para o próximo nó",
+          "enforcement": "hard"
+        },
+        {
+          "id": "END_CANNOT_HAVE_NEXT",
+          "description": "Nós 'end' não podem ter campo 'next' (devem ser folhas do grafo)",
+          "enforcement": "hard"
+        },
+        {
+          "id": "MAX_NODES",
+          "description": "Um fluxo não pode ter mais de 1000 nós",
+          "enforcement": "hard",
+          "value": 1000
+        }
+      ]
+    },
+    "validation": {
+      "description": "Regras de validação específicas por tipo de nó",
+      "source": "engine/validator.js e frontend/src/editor/nodeSchemas.js",
+      "nodeSpecific": {
+        "message": {
+          "textRequired": true,
+          "textMaxLength": 10000,
+          "textCannotBeEmpty": true
+        },
+        "router": {
+          "rulesRequired": true,
+          "rulesMinItems": 1,
+          "mustHaveFallback": true
+        },
+        "ai_task": {
+          "taskRequired": true,
+          "allowedOutputsRequired": true,
+          "fallbackRequired": true,
+          "confidenceThresholdRange": [0, 1]
+        },
+        "set_variable": {
+          "assignmentsRequired": true,
+          "variableNamePattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        },
+        "handoff": {
+          "queueRequired": true
+        },
+        "ai": {
+          "promptTemplateRequired": true,
+          "promptTemplateCannotBeEmpty": true
+        }
+      }
+    }
+  }
+}
+

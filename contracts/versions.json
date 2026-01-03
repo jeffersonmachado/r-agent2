@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Versionamento de Contratos e QA",
+  "description": "Define versões ativas e permite coexistência de múltiplas versões",
+  "version": "1.0.0",
+  "activeVersion": "1.0.0",
+  "contracts": {
+    "ia": {
+      "versions": [
+        {
+          "version": "1.0.0",
+          "active": true,
+          "files": [
+            "contracts/ia/ia-generation-result.schema.json",
+            "contracts/ia/ia-public-interface.json"
+          ],
+          "meta": {
+            "createdAt": "2024-01-01T00:00:00Z",
+            "description": "Versão inicial dos contratos de IA"
+          }
+        }
+      ]
+    },
+    "qa": {
+      "versions": [
+        {
+          "version": "1.0.0",
+          "active": true,
+          "files": [
+            "contracts/qa/qa-result.schema.json"
+          ],
+          "meta": {
+            "createdAt": "2024-01-01T00:00:00Z",
+            "description": "Versão inicial dos contratos de QA"
+          }
+        }
+      ]
+    }
+  },
+  "qa": {
+    "versions": [
+      {
+        "version": "1.0.0",
+        "active": true,
+        "files": [
+          "qa/impact-map.json",
+          "qa/qaRunner.js"
+        ],
+        "meta": {
+          "createdAt": "2024-01-01T00:00:00Z",
+          "description": "Versão inicial do sistema de QA"
+        }
+      }
+    ]
+  },
+  "migration": {
+    "allowMultipleVersions": true,
+    "deprecationPolicy": {
+      "minSupportedVersions": 1,
+      "deprecationNoticeDays": 90
+    }
+  }
+}
+
