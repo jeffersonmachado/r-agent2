@@ -177,13 +177,30 @@ export async function uploadDocument(file, options = {}) {
         // Processa conteúdo baseado no tipo de arquivo
         let documentContent = content;
         
-        // Se for texto, usa diretamente
-        if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv'].includes(fileExtension)) {
+        // PRIORIDADE: Se o conteúdo extraído já foi fornecido nos metadados (OCR, PDF, texto extraído), usa ele
+        if (options.metadata?.extractedContent) {
+          documentContent = options.metadata.extractedContent;
+          logger.debug('Usando conteúdo extraído fornecido nos metadados', {
+            fileName,
+            contentLength: documentContent.length,
+          });
+        } else if (file.type.startsWith('image/')) {
+          // Para imagens sem OCR pré-processado, usa placeholder informativo
+          documentContent = `[Imagem: ${fileName}]\n\nEsta imagem foi enviada para indexação no RAG. Se necessário, use OCR para extrair texto da imagem.`;
+        } else if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv'].includes(fileExtension)) {
+          // Se for texto, usa diretamente
           documentContent = content;
         } else if (fileExtension === 'pdf') {
-          // Para PDF, precisaria de uma biblioteca específica
-          // Por enquanto, tenta extrair texto se possível
-          documentContent = content;
+          // Para PDF sem extração prévia, usa placeholder
+          // Nota: O conteúdo deve ser extraído antes de chamar uploadDocument
+          documentContent = `[PDF: ${fileName}]\n\nConteúdo do PDF não foi extraído. Use processFile() antes de chamar uploadDocument() para extrair o texto.`;
+        } else {
+          // Para outros tipos, tenta usar como texto ou usa placeholder
+          try {
+            documentContent = content;
+          } catch {
+            documentContent = `[Arquivo: ${fileName} - Tipo: ${file.type}]\n\nConteúdo não foi extraído. Use processFile() antes de chamar uploadDocument() para extrair o conteúdo.`;
+          }
         }
         
         const documentData = {
@@ -217,6 +234,7 @@ export async function uploadDocument(file, options = {}) {
     if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv'].includes(file.name.split('.').pop()?.toLowerCase() || '')) {
       reader.readAsText(file);
     } else {
+      // Para imagens e outros tipos, lê como data URL
       reader.readAsDataURL(file);
     }
   });

@@ -4,7 +4,9 @@ import { SidebarProperties } from '../SidebarProperties';
 import { Toolbar } from '../Toolbar';
 import { AreaExtensions } from 'rete-area-plugin';
 import { SimulationPanel } from '../simulator/SimulationPanel';
+import { ConversationTimeline } from '../simulator/ConversationTimeline';
 import { useEditor } from '../state/editorStore';
+import { getReplay } from '../api/flows';
 import { NodePalette, NodePaletteCollapsed } from '../components/NodePalette';
 import { ThemeSelector } from '../components/ThemeSelector';
 import { FlowSelector } from '../components/FlowSelector';
@@ -27,6 +29,7 @@ import { reteJsonToEngineFlow, engineFlowToReteJson } from '../engine-mapper/eng
 import { NavigationLink } from '../components/NavigationLink';
 import { FallbackEventsViewer } from '../components/FallbackEventsViewer';
 import { getNodeSchema } from '../editor/nodeSchemas';
+import { useWebSocketContext } from '../context/WebSocketContext';
 
 export function FlowEditorPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -83,6 +86,60 @@ export function FlowEditorPage() {
   const [templateListRefreshTrigger, setTemplateListRefreshTrigger] = useState(0);
   const { showToast, ToastContainer } = useToast();
   const lastErrorRef = useRef(null);
+  
+  // Estados para replay de sessão
+  const [sessionId, setSessionId] = useState('');
+  const [replay, setReplay] = useState(null);
+  const [loadingReplay, setLoadingReplay] = useState(false);
+  const [replayError, setReplayError] = useState(null);
+  const [replayCollapsed, setReplayCollapsed] = useState(false);
+
+  // WebSocket para atualizações em tempo real
+  const handleWebSocketEvent = useCallback((event, data, fullMessage) => {
+    logger.debug('[FlowEditorPage] Evento WebSocket recebido', { event, data });
+    
+    // Trata evento de atualização de fluxo
+    if (event === 'flow.updated') {
+      // O backend envia { flowId, flowName, agentId } no evento
+      const updatedFlowId = data?.flowId || data?.flow?.id || data?.id;
+      const currentFlowId = currentFlow?.id;
+      
+      // Se for o fluxo atual, recarrega automaticamente
+      if (updatedFlowId && updatedFlowId === currentFlowId) {
+        logger.info('[FlowEditorPage] Fluxo atual foi atualizado via WebSocket, recarregando...', {
+          flowId: updatedFlowId,
+          flowName: data?.flowName,
+          updatedBy: data?.agentId,
+        });
+        
+        // Recarrega o fluxo do backend
+        loadFlow(updatedFlowId).then(() => {
+          const flowName = data?.flowName || currentFlow?.name || 'Fluxo';
+          showToast(`"${flowName}" foi atualizado automaticamente`, 'info', 3000);
+        }).catch((err) => {
+          logger.error('[FlowEditorPage] Erro ao recarregar fluxo após atualização WebSocket', err);
+          showToast('Erro ao recarregar fluxo atualizado', 'error', 3000);
+        });
+      } else if (updatedFlowId) {
+        // Se for outro fluxo, apenas loga (opcional)
+        logger.debug('[FlowEditorPage] Outro fluxo foi atualizado', { 
+          updatedFlowId, 
+          currentFlowId,
+          flowName: data?.flowName,
+        });
+      }
+    }
+    
+    // Trata outros eventos se necessário
+    // Exemplo: ticket.created, ticket.updated, etc.
+  }, [currentFlow, loadFlow, showToast]);
+
+  // Conecta ao WebSocket quando autenticado
+  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+    enabled: isAuthenticated,
+    onEvent: handleWebSocketEvent,
+    subscribeEvents: ['flow.updated'], // Inscreve-se em atualizações de fluxo
+  });
 
   // Monitora erros do editorStore e exibe via Toast
   useEffect(() => {
@@ -943,6 +1000,46 @@ export function FlowEditorPage() {
   const handleAlignTop = () => showToast('Align não implementado', 'warning', 2000);
   const handleAlignMiddle = () => showToast('Align não implementado', 'warning', 2000);
   const handleAlignBottom = () => showToast('Align não implementado', 'warning', 2000);
+
+  // Handler para carregar replay de sessão
+  const handleLoadReplay = async () => {
+    if (!sessionId.trim()) {
+      showToast('Digite um Session ID', 'warning', 2000);
+      return;
+    }
+    
+    setLoadingReplay(true);
+    setReplayError(null);
+    try {
+      const result = await getReplay(sessionId.trim());
+      setReplay(result);
+      setReplayCollapsed(false);
+      showToast('Replay carregado com sucesso', 'success', 2000);
+    } catch (err) {
+      logger.error('Erro ao carregar replay', err);
+      setReplayError(err instanceof Error ? err.message : String(err));
+      setReplay(null);
+      showToast('Erro ao carregar replay', 'error', 3000);
+    } finally {
+      setLoadingReplay(false);
+    }
+  };
+
+  const handleSeekNode = (nodeId, index) => {
+    // Foca no nó correspondente no editor
+    if (nodeId && editorRef.current?.editor?.current) {
+      const editor = editorRef.current.editor.current;
+      const node = editor.getNodes().find(n => String(n.id) === String(nodeId));
+      if (node) {
+        setSelectedNode(node);
+        // Scroll para o nó
+        const area = editorRef.current?.area;
+        if (area && area.area) {
+          AreaExtensions.zoomAt(area, [node]);
+        }
+      }
+    }
+  };
   const handleDistributeHorizontal = () => showToast('Distribute não implementado', 'warning', 2000);
   const handleDistributeVertical = () => showToast('Distribute não implementado', 'warning', 2000);
   const handleToggleReroutePoints = () => showToast('Reroute não implementado', 'warning', 2000);
@@ -1185,6 +1282,30 @@ export function FlowEditorPage() {
           <span className="icon icon-logs"></span>
           <span>Logs</span>
         </button>
+        {/* Indicador de status WebSocket */}
+        {isAuthenticated && (
+          <div 
+            className="flex items-center gap-1 px-2 py-1 text-xs"
+            title={wsConnected && wsAuthenticated 
+              ? 'WebSocket conectado e autenticado - Atualizações em tempo real ativas' 
+              : wsConnected 
+                ? 'WebSocket conectado, aguardando autenticação...' 
+                : 'WebSocket desconectado'}
+          >
+            <span 
+              className={`inline-block w-2 h-2 rounded-full ${
+                wsConnected && wsAuthenticated 
+                  ? 'bg-green-500 animate-pulse' 
+                  : wsConnected 
+                    ? 'bg-yellow-500' 
+                    : 'bg-red-500'
+              }`}
+            />
+            <span className="hidden sm:inline text-text-secondary">
+              {wsConnected && wsAuthenticated ? 'WS' : wsConnected ? 'WS...' : 'WS'}
+            </span>
+          </div>
+        )}
         <ThemeSelector />
       </Toolbar>
 
@@ -1446,6 +1567,63 @@ export function FlowEditorPage() {
                   {!simulationCollapsed && (
                     <div className="section-content">
                       <SimulationPanel simulation={simulation} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Replay de Sessão - com colapso vertical */}
+                <div className={`flex flex-col ${replayCollapsed ? 'section-collapsed' : 'section-expanded'} section-container`}>
+                  <div className="section-header">
+                    <span className="section-header-title">Replay de Sessão</span>
+                    <button
+                      className={`collapse-btn-vertical ${replayCollapsed ? 'collapsed' : ''}`}
+                      onClick={() => setReplayCollapsed(!replayCollapsed)}
+                      title={replayCollapsed ? 'Expandir' : 'Recolher'}
+                    >
+                    </button>
+                  </div>
+                  {!replayCollapsed && (
+                    <div className="section-content">
+                      <div className="space-y-3 p-3">
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={sessionId}
+                            onChange={(e) => setSessionId(e.target.value)}
+                            placeholder="Session ID (ex: sess-123)"
+                            className="flex-1 px-3 py-2 text-sm border border-border-default rounded-md bg-bg-primary text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-default"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !loadingReplay) {
+                                handleLoadReplay();
+                              }
+                            }}
+                            disabled={loadingReplay}
+                          />
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleLoadReplay}
+                            disabled={loadingReplay || !sessionId.trim()}
+                          >
+                            {loadingReplay ? 'Carregando...' : 'Carregar'}
+                          </Button>
+                        </div>
+                        {replayError && (
+                          <div className="p-2 bg-status-error/10 border border-status-error/20 text-status-error text-sm rounded">
+                            Erro: {replayError}
+                          </div>
+                        )}
+                        {replay && (
+                          <div className="space-y-3">
+                            <ConversationTimeline replay={replay} onSeekNode={handleSeekNode} />
+                            {replay.simulation && (
+                              <div className="mt-3 pt-3 border-t border-border-default">
+                                <SimulationPanel simulation={replay.simulation} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

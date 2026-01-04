@@ -201,9 +201,15 @@ async function isLoginPage(page) {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function performRpaLogin(page, options = {}) {
+  // Prioridade: options.apiBaseUrl > TEST_API_URL > API_BASE_URL > rpa.config.json > config.json > fallback
+  const rpaConfig = require('../rpaConfig');
+  const mainConfig = require('../../../api/utils/config');
   const apiBaseUrl = options.apiBaseUrl || 
                      process.env.TEST_API_URL || 
                      process.env.API_BASE_URL || 
+                     rpaConfig.urls.api ||
+                     mainConfig.get('tests.rpa.apiUrl') ||
+                     mainConfig.get('api.baseUrl') ||
                      'http://localhost:3000';
 
   try {

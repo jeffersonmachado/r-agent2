@@ -147,7 +147,7 @@ function validateGenerationContract(payload) {
     if (!Array.isArray(payload.ragSources)) {
       errors.push('Campo "ragSources" deve ser um array quando useRag = true');
     } else {
-      const validSources = ['flows', 'qa', 'docs'];
+      const validSources = ['flows', 'qa', 'docs', 'uploads'];
       const invalidSources = payload.ragSources.filter(s => !validSources.includes(s));
       if (invalidSources.length > 0) {
         errors.push(`Fontes RAG inválidas: ${invalidSources.join(', ')}. Válidas: ${validSources.join(', ')}`);

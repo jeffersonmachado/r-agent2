@@ -1,0 +1,150 @@
+{
+  "id": "test-flow-9c7d25f9-20260104T190751043Z",
+  "name": "IA - Teste RPA - sistema de arquivos",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-9c7d25f9",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-04T19:07:51.043Z",
+    "dependenciesResolved": true,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "Abrir página de chat e iniciar execução do fluxo selecionado"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "Aguardar processamento e validar que a mensagem do nó foi emitida"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "Validar término do fluxo"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "http://localhost:5173/chat",
+      "value": "",
+      "description": "Navegar para a página completa de chat (/chat) para testar o fluxo",
+      "critical": "true",
+      "url": "http://localhost:5173"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173/chat"
+      },
+      "description": "Assert crítico: URL atual deve estar na rota /chat",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "",
+      "description": "Aguardar carregamento inicial da página de chat",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "visible",
+        "expected": "true"
+      },
+      "description": "Assert crítico: página carregada (body visível)",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Bem-vindo"
+      },
+      "description": "Assert crítico: mensagem de boas-vindas do nó start deve estar presente no conteúdo renderizado",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "",
+      "description": "Aguardar processamento do nó message_1",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Assert crítico: mensagem do nó message_1 deve estar presente no conteúdo renderizado",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Assert crítico: estado final alcançado (página ainda ativa após término do fluxo) — validação estrutural mínima e determinística",
+      "critical": "true"
+    }
+  ],
+  "asserts": [
+    {
+      "step": "2",
+      "type": "url",
+      "selector": "http://localhost:5173/chat",
+      "expected": "http://localhost:5173/chat",
+      "description": "Validar navegação determinística para /chat"
+    },
+    {
+      "step": "4",
+      "type": "visible",
+      "selector": "body",
+      "expected": "true",
+      "description": "Validar que a página de chat carregou"
+    },
+    {
+      "step": "5",
+      "type": "text",
+      "selector": "body",
+      "expected": "Bem-vindo",
+      "description": "Validar mensagem do nó start_1"
+    },
+    {
+      "step": "7",
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Validar mensagem do nó message_1"
+    },
+    {
+      "step": "8",
+      "type": "exists",
+      "selector": "body",
+      "expected": "true",
+      "description": "Validação mínima de término do fluxo (sem seletores específicos de estado disponíveis)"
+    }
+  ],
+  "filePath": "/opt/results/ria/r-agent2/tests/rpa/flows/test-flow-9c7d25f9-20260104T190751043Z.json"
+}

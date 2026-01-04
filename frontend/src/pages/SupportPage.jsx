@@ -14,7 +14,9 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
-import { NavigationLink } from '../components/NavigationLink';
+import { useWebSocketContext } from '../context/WebSocketContext';
+import { useDebounce } from '../hooks/useDebounce';
+import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
 
 /**
@@ -23,10 +25,25 @@ import logger from '../utils/logger';
  * Estilo inspirado no WhatsApp.
  */
 export function SupportPage() {
-  const { agent, logout, isAuthenticated, loading: authLoading } = useAuth();
+  const { agent, isAuthenticated, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+
+  // Estados - devem ser declarados antes de qualquer early return
+  const [queues, setQueues] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketMessages, setTicketMessages] = useState([]);
+  const [messageText, setMessageText] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [loading, setLoading] = useState(false);
+  // Auto-refresh sempre ativo quando WebSocket não está disponível
+  const autoRefresh = true;
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [newConversationPhone, setNewConversationPhone] = useState('');
+  const [newConversationMessage, setNewConversationMessage] = useState('');
+  const [newConversationQueue, setNewConversationQueue] = useState('');
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -37,8 +54,10 @@ export function SupportPage() {
 
   if (authLoading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <p>Carregando...</p>
+      <div className="support-page">
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <p>Carregando...</p>
+        </div>
       </div>
     );
   }
@@ -46,18 +65,86 @@ export function SupportPage() {
   if (!isAuthenticated) {
     return null; // Será redirecionado pelo useEffect
   }
-  const [queues, setQueues] = useState([]);
-  const [tickets, setTickets] = useState([]);
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [ticketMessages, setTicketMessages] = useState([]);
-  const [messageText, setMessageText] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
-  const [newConversationPhone, setNewConversationPhone] = useState('');
-  const [newConversationMessage, setNewConversationMessage] = useState('');
-  const [newConversationQueue, setNewConversationQueue] = useState('');
+
+  // WebSocket para atualizações em tempo real
+  const handleWebSocketEvent = useCallback((event, data) => {
+    logger.debug('[SupportPage] Evento WebSocket recebido', event, data);
+    
+    // Registra métrica de evento WebSocket
+    websocketMetrics.recordWebSocketEvent(event);
+    
+    switch (event) {
+      case 'ticket.created':
+        // Novo ticket criado - recarrega lista (com debounce)
+        debouncedLoadTickets();
+        // Se o ticket foi criado para este agente, mostra notificação
+        if (data.agentId === agent?.id || !data.agentId) {
+          showToastRef.current(`Novo ticket criado: ${data.ticketId?.slice(0, 8)}`, 'info', 3000);
+        }
+        break;
+        
+      case 'ticket.assigned':
+        // Ticket atribuído - atualiza lista (com debounce)
+        debouncedLoadTickets();
+        // Se foi atribuído para este agente, mostra notificação
+        if (data.assignedTo === agent?.id || data.assignedTo === agent?.username) {
+          showToastRef.current(`Ticket atribuído para você: ${data.ticketId?.slice(0, 8)}`, 'success', 3000);
+        }
+        break;
+        
+      case 'ticket.updated':
+        // Ticket atualizado - recarrega lista (com debounce) e mensagens se for o ticket selecionado
+        debouncedLoadTickets();
+        if (selectedTicketIdRef.current === data.ticketId) {
+          if (loadTicketMessagesRef.current) {
+            loadTicketMessagesRef.current(data.ticketId);
+          }
+        }
+        break;
+        
+      case 'ticket.closed':
+        // Ticket fechado - remove da lista se estiver selecionado
+        if (selectedTicketIdRef.current === data.ticketId) {
+          setSelectedTicket(null);
+          setTicketMessages([]);
+        }
+        debouncedLoadTickets();
+        break;
+        
+      case 'ticket.message.received':
+      case 'ticket.message.sent':
+        // Nova mensagem - atualiza mensagens se for o ticket selecionado
+        if (selectedTicketIdRef.current === data.ticketId) {
+          if (loadTicketMessagesRef.current) {
+            loadTicketMessagesRef.current(data.ticketId);
+          }
+          // Mostra notificação se não for o ticket atual em foco
+          if (document.hidden || !document.hasFocus()) {
+            showToastRef.current(`Nova mensagem no ticket ${data.ticketId?.slice(0, 8)}`, 'info', 3000);
+          }
+        } else {
+          // Atualiza contador de não lidas na lista (com debounce)
+          debouncedLoadTickets();
+        }
+        break;
+        
+      default:
+        logger.debug('[SupportPage] Evento WebSocket não tratado', event);
+    }
+  }, [agent, debouncedLoadTickets]);
+
+  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+    enabled: isAuthenticated && autoRefresh,
+    onEvent: handleWebSocketEvent,
+    subscribeEvents: [
+      'ticket.created',
+      'ticket.assigned',
+      'ticket.updated',
+      'ticket.closed',
+      'ticket.message.received',
+      'ticket.message.sent',
+    ],
+  });
 
   // Usa useRef para manter referências estáveis
   const showToastRef = React.useRef(showToast);
@@ -66,6 +153,13 @@ export function SupportPage() {
   React.useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
+
+  // Debounce para loadTickets - agrupa múltiplos eventos WebSocket
+  const { debouncedFn: debouncedLoadTickets } = useDebounce(() => {
+    if (loadTicketsRef.current) {
+      loadTicketsRef.current();
+    }
+  }, 500); // 500ms de debounce
 
   // Carrega filas disponíveis (apenas para o modal de nova conversa)
   const loadQueues = useCallback(async () => {
@@ -240,10 +334,35 @@ export function SupportPage() {
     loadTicketMessagesRef.current = loadTicketMessages;
   }, [loadTicketMessages]);
 
-  useEffect(() => {
-    if (!autoRefresh) return;
+  // Ref para o container de mensagens para scroll automático
+  const messagesContainerRef = React.useRef(null);
 
+  // Scroll automático para o final quando novas mensagens são carregadas
+  useEffect(() => {
+    if (messagesContainerRef.current && ticketMessages.length > 0) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [ticketMessages]);
+
+  // Atualiza métricas de status WebSocket
+  useEffect(() => {
+    websocketMetrics.setWebSocketStatus(wsConnected && wsAuthenticated);
+  }, [wsConnected, wsAuthenticated]);
+
+  // Polling como fallback quando WebSocket não está conectado
+  useEffect(() => {
+    // Se WebSocket está conectado e autenticado, não precisa de polling
+    if (wsConnected && wsAuthenticated) {
+      logger.debug('[SupportPage] WebSocket conectado, polling desabilitado');
+      return;
+    }
+
+    // Fallback: polling a cada 30 segundos se WebSocket não estiver disponível
+    logger.debug('[SupportPage] WebSocket não disponível, usando polling como fallback');
     const interval = setInterval(() => {
+      // Registra métrica de polling
+      websocketMetrics.recordPollingRequest();
+      
       // Usa ref para evitar dependências que mudam constantemente
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
@@ -254,10 +373,10 @@ export function SupportPage() {
       if (ticketId && loadTicketMessagesRef.current) {
         loadTicketMessagesRef.current(ticketId);
       }
-    }, 5000);
+    }, 30000); // Otimizado de 5s para 30s
 
     return () => clearInterval(interval);
-  }, [autoRefresh]); // Apenas autoRefresh como dependência
+  }, [wsConnected, wsAuthenticated]); // Inclui status do WebSocket
 
   // Atribui ticket para atendente
   const handleAssign = async () => {
@@ -284,7 +403,8 @@ export function SupportPage() {
       }
     } catch (error) {
       logger.error('Erro ao atribuir ticket', error);
-      showToast('Erro ao atribuir ticket', 'error');
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao atribuir ticket. Verifique se o atendente existe.';
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -292,7 +412,7 @@ export function SupportPage() {
   const handleClose = async (ticketId) => {
     const confirmed = await confirm({
       title: 'Fechar Ticket',
-      message: 'Deseja realmente fechar este ticket?',
+      message: 'Deseja realmente fechar este ticket? Esta ação não pode ser desfeita.',
       confirmLabel: 'Fechar',
       cancelLabel: 'Cancelar',
       variant: 'warning',
@@ -313,7 +433,8 @@ export function SupportPage() {
       }
     } catch (error) {
       logger.error('Erro ao fechar ticket', error);
-      showToast('Erro ao fechar ticket', 'error');
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao fechar ticket. Tente novamente.';
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -324,10 +445,14 @@ export function SupportPage() {
       return;
     }
 
+    const messageToSend = messageText.trim();
+    
+    // Limpa o campo imediatamente para melhor UX
+    setMessageText('');
+
     try {
-      await sendTicketMessage(selectedTicket.id, messageText.trim());
+      await sendTicketMessage(selectedTicket.id, messageToSend);
       showToastRef.current('Mensagem enviada com sucesso', 'success');
-      setMessageText('');
       
       // Recarrega mensagens para mostrar a nova mensagem
       await loadTicketMessages(selectedTicket.id);
@@ -337,7 +462,10 @@ export function SupportPage() {
       }
     } catch (error) {
       logger.error('Erro ao enviar mensagem', error);
-      showToast('Erro ao enviar mensagem', 'error');
+      // Restaura a mensagem em caso de erro
+      setMessageText(messageToSend);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao enviar mensagem. Verifique sua conexão e tente novamente.';
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -372,14 +500,57 @@ export function SupportPage() {
           <h1>💬 Atendimento</h1>
         </div>
         <div className="support-controls">
-          <label>
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-            />
-            <span>Auto-atualizar (5s)</span>
-          </label>
+          {wsConnected && wsAuthenticated ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span 
+                style={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#25D366',
+                  animation: 'pulse 2s infinite'
+                }}
+                title="WebSocket conectado e autenticado - Atualizações em tempo real ativas"
+              />
+              <span style={{ fontSize: '14px', color: '#666' }}>
+                Atualização em tempo real
+              </span>
+            </div>
+          ) : wsConnected ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span 
+                style={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#3b82f6',
+                  animation: 'pulse 2s infinite'
+                }}
+                title="WebSocket conectado, autenticando..."
+              />
+              <span style={{ fontSize: '14px', color: '#666' }}>
+                Autenticando...
+              </span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span 
+                style={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#f59e0b',
+                }}
+                title="WebSocket desconectado - Usando atualização automática a cada 5 segundos"
+              />
+              <span style={{ fontSize: '14px', color: '#666' }}>
+                Atualização automática (5s)
+              </span>
+            </div>
+          )}
           <Button 
             onClick={() => {
               if (loadTicketsRef.current) {
@@ -411,18 +582,28 @@ export function SupportPage() {
           ) : tickets.length === 0 ? (
             <p className="support-tickets-empty">Nenhum ticket disponível</p>
           ) : (
-            <div className="support-tickets-list">
+            <div className="support-tickets-list" role="list">
               {tickets.map((ticket) => (
                 <div
                   key={ticket.id}
+                  role="listitem"
+                  tabIndex={0}
                   onClick={() => {
                     setSelectedTicket(ticket);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedTicket(ticket);
+                    }
+                  }}
                   className={`support-ticket-card ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
+                  aria-label={`Ticket ${ticket.id.slice(0, 12)}, ${ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'in_progress' ? 'Em atendimento' : 'Fechado'}, ${ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : ''}`}
+                  aria-selected={selectedTicket?.id === ticket.id}
                 >
                   <div className="support-ticket-header">
                     <span className="support-ticket-id">#{ticket.id.slice(0, 12)}</span>
-                    <span className={`support-ticket-status ${getStatusClass(ticket.status)}`}>
+                    <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${ticket.status}`}>
                       {ticket.status === 'waiting'
                         ? 'Aguardando'
                         : ticket.status === 'in_progress'
@@ -430,7 +611,7 @@ export function SupportPage() {
                           : 'Fechado'}
                     </span>
                   </div>
-                  <div className="support-ticket-phone">
+                  <div className="support-ticket-phone" aria-label={`Telefone: ${formatPhoneNumber(ticket.phoneNumber)}`}>
                     📞 {formatPhoneNumber(ticket.phoneNumber)}
                   </div>
                   {ticket.lastUserMessage && (
@@ -447,21 +628,26 @@ export function SupportPage() {
                     </div>
                   )}
                   {ticket.unreadCount > 0 && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '10px',
-                      right: '10px',
-                      background: '#e74c3c',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      fontWeight: 'bold'
-                    }}>
+                    <div
+                      className="support-ticket-unread-badge"
+                      role="status"
+                      aria-label={`${ticket.unreadCount} mensagens não lidas`}
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: '#e74c3c',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}
+                    >
                       {ticket.unreadCount}
                     </div>
                   )}
@@ -515,15 +701,20 @@ export function SupportPage() {
                   <h4 style={{ marginBottom: '10px', fontSize: '14px', fontWeight: 'bold', flexShrink: 0 }}>
                     Histórico de Mensagens
                   </h4>
-                  <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    border: '1px solid #ddd',
-                    borderRadius: '8px',
-                    padding: '10px',
-                    backgroundColor: '#f9f9f9',
-                    minHeight: 0
-                  }}>
+                  <div
+                    ref={messagesContainerRef}
+                    style={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      padding: '10px',
+                      backgroundColor: '#f9f9f9',
+                      minHeight: 0
+                    }}
+                    role="log"
+                    aria-label="Histórico de mensagens do ticket"
+                  >
                     {ticketMessages.length === 0 ? (
                       <p style={{ color: '#999', fontSize: '12px', textAlign: 'center' }}>
                         Nenhuma mensagem ainda
@@ -563,13 +754,23 @@ export function SupportPage() {
               <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {selectedTicket.status === 'waiting' && (
                   <div className="support-form-group">
-                    <label className="support-form-label">Atribuir para:</label>
+                    <label htmlFor="assign-ticket-input" className="support-form-label">
+                      Atribuir para:
+                    </label>
                     <input
+                      id="assign-ticket-input"
                       type="text"
                       value={assignedTo || (agent?.username || agent?.id || '')}
                       onChange={(e) => setAssignedTo(e.target.value)}
                       placeholder="Nome do atendente"
                       className="support-form-input"
+                      aria-label="Nome do atendente para atribuir o ticket"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAssign();
+                        }
+                      }}
                     />
                     <Button onClick={handleAssign} className="support-button-full">
                       Atribuir Ticket
@@ -579,23 +780,37 @@ export function SupportPage() {
 
                 {selectedTicket.status === 'in_progress' && (
                   <div className="support-form-group">
-                    <label className="support-form-label">Enviar mensagem:</label>
+                    <label htmlFor="send-message-textarea" className="support-form-label">
+                      Enviar mensagem:
+                    </label>
                     <textarea
+                      id="send-message-textarea"
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder="Digite sua mensagem..."
                       rows={4}
                       className="support-form-textarea"
+                      aria-label="Campo para digitar mensagem"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
                     />
                     <Button onClick={handleSendMessage} className="support-button-full">
                       Enviar Mensagem
                     </Button>
+                    <small style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                      Pressione Ctrl+Enter (ou Cmd+Enter no Mac) para enviar
+                    </small>
                   </div>
                 )}
 
                 <Button
                   onClick={() => handleClose(selectedTicket.id)}
                   className="support-button-danger"
+                  aria-label="Fechar ticket"
                 >
                   Fechar Ticket
                 </Button>
@@ -614,65 +829,72 @@ export function SupportPage() {
 
       {/* Modal para Iniciar Nova Conversa */}
       {showNewConversationModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '24px',
-            borderRadius: '8px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-          }}>
-            <h2 style={{ marginTop: 0 }}>Iniciar Nova Conversa</h2>
+        <div
+          className="support-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-conversation-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowNewConversationModal(false);
+              setNewConversationPhone('');
+              setNewConversationMessage('');
+              setNewConversationQueue('');
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowNewConversationModal(false);
+              setNewConversationPhone('');
+              setNewConversationMessage('');
+              setNewConversationQueue('');
+            }
+          }}
+        >
+          <div
+            className="support-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="new-conversation-title" style={{ marginTop: 0 }}>
+              Iniciar Nova Conversa
+            </h2>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              <label
+                htmlFor="new-conversation-phone"
+                style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}
+              >
                 Número de Telefone *
               </label>
               <input
-                type="text"
+                id="new-conversation-phone"
+                type="tel"
                 value={newConversationPhone}
                 onChange={(e) => setNewConversationPhone(e.target.value)}
                 placeholder="+5511999999999 ou 5511999999999"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
+                className="support-form-input"
+                aria-required="true"
+                aria-describedby="phone-format-hint"
+                autoFocus
               />
-              <small style={{ color: '#666', fontSize: '12px' }}>
+              <small id="phone-format-hint" style={{ color: '#666', fontSize: '12px' }}>
                 Formato: +5511999999999 ou 5511999999999
               </small>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              <label
+                htmlFor="new-conversation-queue"
+                style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}
+              >
                 Fila *
               </label>
               <select
+                id="new-conversation-queue"
                 value={newConversationQueue}
                 onChange={(e) => setNewConversationQueue(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
+                className="support-form-select"
+                aria-required="true"
               >
                 <option value="">Selecione uma fila</option>
                 {queues.map((q) => (
@@ -682,23 +904,19 @@ export function SupportPage() {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              <label
+                htmlFor="new-conversation-message"
+                style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}
+              >
                 Mensagem Inicial (opcional)
               </label>
               <textarea
+                id="new-conversation-message"
                 value={newConversationMessage}
                 onChange={(e) => setNewConversationMessage(e.target.value)}
                 placeholder="Olá! Como posso ajudá-lo hoje?"
                 rows={4}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                  resize: 'vertical',
-                }}
+                className="support-form-textarea"
               />
             </div>
 
@@ -711,6 +929,7 @@ export function SupportPage() {
                   setNewConversationQueue('');
                 }}
                 style={{ backgroundColor: '#6c757d' }}
+                aria-label="Cancelar criação de nova conversa"
               >
                 Cancelar
               </Button>
@@ -752,6 +971,7 @@ export function SupportPage() {
                   }
                 }}
                 style={{ backgroundColor: '#25D366', color: 'white' }}
+                aria-label="Iniciar nova conversa"
               >
                 Iniciar Conversa
               </Button>

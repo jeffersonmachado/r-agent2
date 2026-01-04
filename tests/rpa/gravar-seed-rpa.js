@@ -27,7 +27,8 @@ async function gravarSeed(seedName, initialUrl) {
     process.exit(1);
   }
 
-  const url = initialUrl || 'http://localhost:5173';
+  const rpaConfig = require('./rpaConfig');
+  const url = initialUrl || rpaConfig.urls.frontend;
   const config = getModeConfig('record');
 
   console.log(`📋 Configuração da Gravação:\n`);

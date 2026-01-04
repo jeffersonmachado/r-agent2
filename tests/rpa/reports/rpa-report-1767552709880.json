@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-01-04T18:51:49.880Z",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "success": true
+  },
+  "tests": [
+    {
+      "name": "test-load",
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "example-test",
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "test-flow-f9df24af-20260104T185102682Z",
+      "success": true,
+      "error": null
+    }
+  ]
+}

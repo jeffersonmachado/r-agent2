@@ -73,11 +73,8 @@ def test_index_document_empty_content():
     }
     
     response = client.post("/rag/index", json={"document": document})
-    # Pode retornar sucesso mas com 0 chunks
-    assert response.status_code == 200
-    data = response.json()
-    # Se o conteúdo for muito pequeno, pode não gerar chunks
-    assert data["chunksCreated"] >= 0
+    # Conteúdo vazio deve ser rejeitado
+    assert response.status_code == 400
 
 
 def test_index_document_with_permissions():

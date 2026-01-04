@@ -219,13 +219,14 @@ async function userInputNodeHandler(node, state, input) {
   // Em modo teste, usa valor padrão se fornecido e input não disponível
   const isTestMode = state.metadata && state.metadata.testMode === true;
   let text = '';
+  const files = input?.files || [];
   
   if (input && input.text !== undefined && input.text !== null) {
     text = String(input.text);
   } else if (isTestMode && defaultValue !== undefined) {
     text = String(defaultValue);
-  } else if (!input || !input.text) {
-    // Em runtime normal, erro se input não foi capturado
+  } else if (!input || (!input.text && files.length === 0)) {
+    // Em runtime normal, erro se input não foi capturado (mas permite apenas arquivos)
     const error = new Error(`User input node "${node.id}" não recebeu input do usuário.`);
     // @ts-ignore
     error.code = 'ENGINE_USER_INPUT_MISSING';
@@ -236,8 +237,65 @@ async function userInputNodeHandler(node, state, input) {
     throw error;
   }
 
-  // Valida tipo se esperado
-  if (expectedType) {
+  // Processa arquivos se houver
+  let enhancedText = text;
+  if (files.length > 0) {
+    // Salva arquivos no estado para uso posterior
+    nextState.variables = nextState.variables || {};
+    nextState.variables.lastFiles = files;
+    
+    // Indexa arquivos no RAG se configurado
+    const autoIndexFiles = node.config?.autoIndexFiles !== false; // true por padrão
+    if (autoIndexFiles) {
+      try {
+        const { indexFilesInRag } = require('../services/fileRagService');
+        const tenantId = state.tenantId || 'demo-tenant';
+        
+        // Indexa em background (não bloqueia)
+        indexFilesInRag(files, tenantId, {
+          category: 'chat_upload',
+          metadata: {
+            sessionId: state.sessionId,
+            flowId: state.flowId,
+            nodeId: node.id,
+          },
+        }).catch((indexError) => {
+          // Loga erro mas não falha o processamento
+          const logger = require('../../api/utils/logger');
+          logger.warn('Erro ao indexar arquivos no RAG (não bloqueante)', {
+            error: indexError.message,
+            filesCount: files.length,
+          });
+        });
+      } catch (requireError) {
+        // Se o serviço não estiver disponível, continua sem indexar
+        const logger = require('../../api/utils/logger');
+        logger.debug('Serviço de indexação RAG não disponível', {
+          error: requireError.message,
+        });
+      }
+    }
+    
+    // Extrai texto dos arquivos para contexto
+    const filesText = files
+      .map(f => {
+        if (f.content && !f.content.startsWith('[')) {
+          return `[Arquivo: ${f.name}]\n${f.content}`;
+        }
+        return `[Arquivo: ${f.name}]`;
+      })
+      .join('\n\n');
+    
+    // Adiciona conteúdo dos arquivos ao texto do usuário
+    if (text) {
+      enhancedText = `${text}\n\n[Arquivos anexados]:\n${filesText}`;
+    } else {
+      enhancedText = `[Arquivos anexados]:\n${filesText}`;
+    }
+  }
+
+  // Valida tipo se esperado (apenas para texto, não para arquivos)
+  if (expectedType && text) {
     if (expectedType === 'number' && isNaN(Number(text))) {
       const error = new Error(`User input node "${node.id}" esperava número mas recebeu: "${text}".`);
       // @ts-ignore
@@ -250,7 +308,8 @@ async function userInputNodeHandler(node, state, input) {
     }
   }
 
-  nextState.variables[variableName] = text;
+  // Armazena texto (potencialmente enriquecido com conteúdo de arquivos)
+  nextState.variables[variableName] = enhancedText;
 
   /** @type {EngineStepOutput} */
   const result = {
@@ -259,7 +318,8 @@ async function userInputNodeHandler(node, state, input) {
     output: {
       type: 'user_input',
       storedAs: variableName,
-      text,
+      text: enhancedText,
+      files: files.length > 0 ? files : undefined,
     },
   };
 
@@ -271,9 +331,10 @@ async function userInputNodeHandler(node, state, input) {
       nodeId: node.id,
       type: 'MESSAGE_IN',
       payload: {
-        text,
+        text: enhancedText,
         variable: variableName,
         expectedType,
+        filesCount: files.length,
       },
     }),
   );

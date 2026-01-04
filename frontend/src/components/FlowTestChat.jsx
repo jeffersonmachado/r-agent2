@@ -5,6 +5,7 @@ import { ResizableDivider } from './ResizableDivider';
 import { getFeature, setFeature } from '../utils/featuresConfig';
 import { useTheme } from '../styles/themeContext';
 import { speak, stopSpeaking, isAvailable } from '../utils/textToSpeech';
+import { processFile, validateFile, formatFileSize, getFileIcon } from '../utils/fileProcessor';
 
 /**
  * Componente de Chat de Teste para validar e executar fluxos de chatbot.
@@ -37,8 +38,10 @@ export function FlowTestChat({ flow, onSizeChange }) {
   const [aiTasksEnabled, setAiTasksEnabled] = useState(true);
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const executionLogEndRef = useRef(null);
   const lastProcessedOutputsRef = useRef([]);
   const ttsAvailable = isAvailable();
@@ -221,21 +224,158 @@ export function FlowTestChat({ flow, onSizeChange }) {
   }, [ttsEnabled, ttsAvailable]);
 
 
+  // Manipulação de arquivos
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Limite de arquivos por mensagem (5 arquivos)
+    const MAX_FILES = 5;
+    const currentFileCount = attachedFiles.length;
+    const remainingSlots = MAX_FILES - currentFileCount;
+    
+    if (files.length > remainingSlots) {
+      alert(`Você pode anexar no máximo ${MAX_FILES} arquivos por mensagem. Já tem ${currentFileCount} arquivo(s) anexado(s).`);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    const newFiles = [];
+    
+    for (const file of files) {
+      try {
+        // Valida arquivo
+        validateFile(file, 10, [
+          'image/*',
+          'application/pdf',
+          'text/*',
+          'application/json',
+          'text/csv',
+        ]);
+
+        const fileObj = {
+          file,
+          id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          status: 'processing', // pending, processing, ready, error
+          preview: null,
+          content: null,
+          error: null,
+          progress: 0,
+          progressMessage: 'Iniciando...',
+        };
+
+        newFiles.push(fileObj);
+        setAttachedFiles((prev) => [...prev, fileObj]);
+
+        // Processa arquivo com progresso
+        processFile(fileObj.file, {
+          compressImages: true,
+          extractImageText: false, // OCR pode ser lento, desabilitado por padrão
+          onProgress: (progress, message) => {
+            setAttachedFiles((prev) =>
+              prev.map((f) =>
+                f.id === fileObj.id
+                  ? { ...f, progress, progressMessage: message || 'Processando...' }
+                  : f
+              )
+            );
+          },
+        })
+          .then(({ content, preview, file: processedFile }) => {
+            setAttachedFiles((prev) =>
+              prev.map((f) =>
+                f.id === fileObj.id
+                  ? { 
+                      ...f, 
+                      status: 'ready', 
+                      content, 
+                      preview,
+                      file: processedFile, // Arquivo pode ter sido comprimido
+                      size: processedFile.size, // Atualiza tamanho se comprimido
+                      progress: 100,
+                      progressMessage: 'Concluído',
+                    }
+                  : f
+              )
+            );
+          })
+          .catch((error) => {
+            logger.error('Erro ao processar arquivo:', error);
+            setAttachedFiles((prev) =>
+              prev.map((f) =>
+                f.id === fileObj.id
+                  ? { 
+                      ...f, 
+                      status: 'error', 
+                      error: error.message,
+                      progress: 0,
+                      progressMessage: 'Erro',
+                    }
+                  : f
+              )
+            );
+          });
+      } catch (error) {
+        logger.error('Erro ao validar arquivo:', error);
+        // Mostra erro para o usuário de forma mais amigável
+        const errorMessage = error.message || 'Erro desconhecido';
+        alert(`Erro ao adicionar arquivo "${file.name}": ${errorMessage}`);
+      }
+    }
+
+    // Limpa input para permitir selecionar o mesmo arquivo novamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (fileId) => {
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
   const handleSend = async () => {
-    if (!inputText.trim() || !isRunning) return;
+    const hasText = inputText.trim().length > 0;
+    const hasFiles = attachedFiles.some((f) => f.status === 'ready');
+    
+    if ((!hasText && !hasFiles) || !isRunning) return;
+
+    // Prepara arquivos prontos
+    const readyFiles = attachedFiles
+      .filter((f) => f.status === 'ready')
+      .map((f) => ({
+        name: f.name,
+        type: f.type,
+        size: f.size,
+        content: f.content,
+        preview: f.preview,
+      }));
 
     const userMessage = {
       id: `msg-${Date.now()}-${Math.random()}`,
       role: 'user',
       text: inputText.trim(),
+      files: readyFiles,
       timestamp: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    const textToSend = inputText.trim();
+    
+    // Prepara input com texto e arquivos
+    const input = {
+      text: inputText.trim(),
+      files: readyFiles,
+    };
+    
     setInputText('');
+    setAttachedFiles([]);
 
-    await sendMessage(textToSend);
+    // Envia mensagem com arquivos
+    await sendMessage(input);
   };
 
   const handleKeyPress = (e) => {
@@ -245,7 +385,9 @@ export function FlowTestChat({ flow, onSizeChange }) {
     }
   };
 
-  const canSend = isRunning && inputText.trim().length > 0;
+  const canSend = isRunning && 
+    (inputText.trim().length > 0 || attachedFiles.some(f => f.status === 'ready')) &&
+    !attachedFiles.some(f => f.status === 'processing');
   const isFinished = conversationState && conversationState.currentNodeId === null;
   const isWaitingInput =
     isRunning &&
@@ -540,7 +682,72 @@ export function FlowTestChat({ flow, onSizeChange }) {
                   : 'bg-bg-secondary text-text-primary border border-border-default'
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+              {msg.text && (
+                <p className={`whitespace-pre-wrap break-words ${
+                  msg.role === 'user' ? 'text-white' : 'text-text-primary'
+                }`}>
+                  {msg.text}
+                </p>
+              )}
+              
+              {/* Renderiza arquivos anexados */}
+              {msg.files && msg.files.length > 0 && (
+                <div className={`mt-2 space-y-2 ${msg.text ? 'mt-3' : ''}`}>
+                  {msg.files.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-2 rounded-lg ${
+                        msg.role === 'user'
+                          ? 'bg-primary/20 border border-primary/30'
+                          : 'bg-bg-tertiary border border-border-default'
+                      }`}
+                    >
+                      {/* Preview de imagem */}
+                      {file.preview && file.type.startsWith('image/') && (
+                        <img
+                          src={file.preview}
+                          alt={file.name}
+                          className="max-w-full h-auto rounded mb-2 max-h-48 object-contain"
+                        />
+                      )}
+                      
+                      {/* Informações do arquivo */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{getFileIcon(file.type)}</span>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className={`text-sm font-medium truncate ${
+                            msg.role === 'user' ? 'text-white' : 'text-text-primary'
+                          }`}>
+                            {file.name}
+                          </span>
+                          <span className={`text-xs ${
+                            msg.role === 'user' ? 'text-primary-100' : 'text-text-tertiary'
+                          }`}>
+                            {formatFileSize(file.size)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Preview de conteúdo de texto (primeiras linhas) */}
+                      {file.content && 
+                       !file.type.startsWith('image/') && 
+                       file.content.length > 0 &&
+                       !file.content.startsWith('[') && (
+                        <div className={`mt-2 p-2 rounded text-xs max-h-32 overflow-y-auto ${
+                          msg.role === 'user'
+                            ? 'bg-primary/10 text-primary-100'
+                            : 'bg-bg-primary text-text-secondary'
+                        }`}>
+                          <p className="line-clamp-4 whitespace-pre-wrap break-words">
+                            {file.content.substring(0, 500)}
+                            {file.content.length > 500 && '...'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               
               {/* Renderiza opções interativas */}
               {msg.options && Array.isArray(msg.options) && msg.options.length > 0 && (
@@ -683,37 +890,186 @@ export function FlowTestChat({ flow, onSizeChange }) {
           </div>
 
           {/* Área de input */}
-          <div className="flow-test-chat-input p-4 border-t border-border-default bg-bg-secondary">
+          <div 
+            className="flow-test-chat-input p-4 border-t border-border-default bg-bg-secondary"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              if (!isRunning || isFinished || attachedFiles.length >= 5) {
+                return;
+              }
+
+              const files = Array.from(e.dataTransfer.files || []);
+              if (files.length > 0) {
+                // Cria um evento sintético para reutilizar handleFileSelect
+                const syntheticEvent = {
+                  target: {
+                    files: files,
+                  },
+                };
+                handleFileSelect(syntheticEvent);
+              }
+            }}
+          >
         <form
-          className="flex gap-2"
+          className="flex flex-col gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             handleSend();
           }}
         >
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={
-              isFinished
-                ? 'Conversa encerrada'
-                : isRunning
-                ? 'Digite sua mensagem...'
-                : 'Aguardando início...'
-            }
-            disabled={!isRunning || isFinished}
-            className="flex-1 px-4 py-2 border border-border-default rounded-lg bg-bg-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <button
-            type="submit"
-            disabled={!canSend || isFinished}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Enviar
-          </button>
+          {/* Preview de arquivos anexados */}
+          {attachedFiles.length > 0 && (
+            <div className="space-y-2 pb-2">
+              <div className="flex items-center justify-between text-xs text-text-tertiary">
+                <span>
+                  {attachedFiles.filter(f => f.status === 'ready').length} de {attachedFiles.length} arquivo(s) pronto(s)
+                </span>
+                {attachedFiles.some(f => f.status === 'processing') && (
+                  <span className="animate-pulse">Processando arquivos...</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {attachedFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className={`flex items-center gap-2 p-2 rounded-lg border transition-all max-w-full ${
+                      file.status === 'ready'
+                        ? 'bg-status-success/10 border-status-success/30'
+                        : file.status === 'error'
+                        ? 'bg-status-error/10 border-status-error/30'
+                        : file.status === 'processing'
+                        ? 'bg-status-warning/10 border-status-warning/30'
+                        : 'bg-bg-tertiary border-border-default'
+                    }`}
+                  >
+                    <span className="text-sm flex-shrink-0">
+                      {file.status === 'processing' ? (
+                        <span className="animate-spin">⏳</span>
+                      ) : file.status === 'error' ? (
+                        '❌'
+                      ) : (
+                        getFileIcon(file.type)
+                      )}
+                    </span>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-xs font-medium text-text-primary truncate" title={file.name}>
+                        {file.name}
+                      </span>
+                    <span className="text-xs text-text-tertiary">
+                      {formatFileSize(file.size)}
+                      {file.status === 'processing' && (
+                        <>
+                          <span className="ml-1 text-status-warning">
+                            {file.progressMessage || 'processando...'}
+                          </span>
+                          {file.progress > 0 && (
+                            <span className="ml-1 text-status-warning">
+                              ({Math.round(file.progress)}%)
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {file.status === 'error' && (
+                        <span className="ml-1 text-status-error" title={file.error}>
+                          erro
+                        </span>
+                      )}
+                      {file.status === 'ready' && (
+                        <span className="ml-1 text-status-success">✓</span>
+                      )}
+                    </span>
+                    {/* Barra de progresso */}
+                    {file.status === 'processing' && file.progress > 0 && (
+                      <div className="w-full h-1 bg-bg-tertiary rounded-full mt-1 overflow-hidden">
+                        <div
+                          className="h-full bg-status-warning transition-all duration-300"
+                          style={{ width: `${file.progress}%` }}
+                        />
+                      </div>
+                    )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(file.id)}
+                      className="text-status-error hover:opacity-80 text-sm px-1 transition-opacity flex-shrink-0"
+                      title="Remover arquivo"
+                      disabled={file.status === 'processing'}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            {/* Botão de anexo */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!isRunning || isFinished || attachedFiles.length >= 5}
+              className="px-3 py-2 bg-bg-tertiary text-text-primary rounded-lg hover:bg-bg-tertiary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative"
+              title={
+                attachedFiles.length >= 5
+                  ? 'Limite de 5 arquivos por mensagem atingido'
+                  : 'Anexar arquivo (máx. 5 arquivos)'
+              }
+            >
+              📎
+              {attachedFiles.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {attachedFiles.length}
+                </span>
+              )}
+            </button>
+
+            {/* Input de arquivo oculto */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+              accept="image/*,.pdf,.doc,.docx,.txt,.md,.json,.csv"
+              disabled={!isRunning || isFinished || attachedFiles.length >= 5}
+            />
+
+            {/* Input de texto */}
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={
+                isFinished
+                  ? 'Conversa encerrada'
+                  : isRunning
+                  ? 'Digite sua mensagem...'
+                  : 'Aguardando início...'
+              }
+              disabled={!isRunning || isFinished}
+              className="flex-1 px-4 py-2 border border-border-default rounded-lg bg-bg-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <button
+              type="submit"
+              disabled={!canSend || isFinished}
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Enviar
+            </button>
+          </div>
         </form>
         </div>
       </div>

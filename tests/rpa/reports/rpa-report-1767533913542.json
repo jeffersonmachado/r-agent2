@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-01-04T13:38:33.542Z",
+  "summary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "success": true
+  },
+  "tests": [
+    {
+      "name": "test-load",
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "example-test",
+      "success": true,
+      "error": null
+    }
+  ]
+}

@@ -1230,21 +1230,39 @@ export function useFlowRunner(flow) {
 
   /**
    * Envia uma mensagem do usuário.
+   * Aceita string (compatibilidade) ou objeto { text, files }
    */
   const sendMessage = useCallback(
-    async (userText) => {
+    async (inputData) => {
       if (!isRunning || !conversationState || processingRef.current) {
         return;
       }
 
-      if (!userText || userText.trim() === '') {
+      // Compatibilidade: aceita string ou objeto
+      const userText = typeof inputData === 'string' ? inputData : (inputData?.text || '');
+      const files = typeof inputData === 'object' ? (inputData.files || []) : [];
+
+      // Deve ter texto ou arquivos
+      if (!userText.trim() && files.length === 0) {
         return;
       }
 
       try {
         processingRef.current = true;
         setIsProcessing(true);
-        const input = { text: userText.trim() };
+        
+        // Prepara input com texto e arquivos
+        const input = { 
+          text: userText.trim(),
+          files: files.map(f => ({
+            name: f.name,
+            type: f.type,
+            size: f.size,
+            content: f.content,
+            preview: f.preview,
+          }))
+        };
+        
         let currentState = conversationState;
         const outputs = [];
         const maxSteps = 50;
@@ -1292,7 +1310,7 @@ export function useFlowRunner(flow) {
           nodeType: null,
           action: 'message_processing_error',
           error: errorMsg,
-          input: userText,
+          input: typeof inputData === 'string' ? inputData : inputData?.text || '',
         });
         processingRef.current = false;
         setIsProcessing(false);

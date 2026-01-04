@@ -135,7 +135,7 @@ class RpaTestRunner {
               await this.executor.page.waitForTimeout(1000);
             } catch (error) {
               // Se falhar, tenta navegar para a URL base
-              const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
+              const baseUrl = process.env.TEST_FRONTEND_URL || config.urls.frontend;
               await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
               await this.executor.page.waitForTimeout(1000);
             }

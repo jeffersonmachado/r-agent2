@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const mainConfig = require('../../api/utils/config');
 
 // Carrega configuração de rpa.config.json se existir
 let configFromFile = {};
@@ -91,9 +92,18 @@ const defaultConfig = {
     validateBeforeUse: true,
   },
   urls: {
-    base: process.env.TEST_BASE_URL || 'http://localhost:3000',
-    frontend: process.env.TEST_FRONTEND_URL || 'http://localhost:5173',
-    api: process.env.TEST_API_URL || 'http://localhost:3000',
+    base: process.env.TEST_BASE_URL || 
+          mainConfig.get('tests.rpa.apiUrl') ||
+          mainConfig.get('api.baseUrl') ||
+          'http://localhost:3000',
+    frontend: process.env.TEST_FRONTEND_URL || 
+              mainConfig.get('tests.rpa.frontendUrl') ||
+              mainConfig.get('frontend.url') ||
+              'http://localhost:5173',
+    api: process.env.TEST_API_URL || 
+         mainConfig.get('tests.rpa.apiUrl') ||
+         mainConfig.get('api.baseUrl') ||
+         'http://localhost:3000',
   },
   credentials: {
     testUser: {

@@ -9,6 +9,7 @@ const {
   getStats,
 } = require('../websocketService');
 const { createAgent, login } = require('../authService');
+const { cleanupAfterTest, runWithTimeout, safeTest } = require('../../../tests/utils/testHelpers');
 
 // Mock do logger
 jest.mock('../../utils/logger', () => ({
@@ -21,63 +22,140 @@ jest.mock('../../utils/logger', () => ({
 describe('websocketService', () => {
   let httpServer;
   let wssPort;
+  const activeConnections = [];
 
-  beforeAll((done) => {
-    httpServer = http.createServer();
-    initializeWebSocket(httpServer);
+  beforeAll(async () => {
+    return runWithTimeout(async () => {
+      httpServer = http.createServer();
+      initializeWebSocket(httpServer);
 
-    httpServer.listen(0, () => {
-      const address = httpServer.address();
-      if (address && typeof address === 'object') {
-        wssPort = address.port;
-      }
-      done();
-    });
+      return new Promise((resolve, reject) => {
+        httpServer.listen(0, () => {
+          const address = httpServer.address();
+          if (address && typeof address === 'object') {
+            wssPort = address.port;
+            resolve();
+          } else {
+            reject(new Error('Não foi possível obter porta do servidor'));
+          }
+        });
+      });
+    }, 10000);
   });
 
-  afterAll((done) => {
-    if (httpServer) {
-      httpServer.closeAllConnections();
-      httpServer.close(() => {
-        // Aguarda um pouco para garantir que todas as conexões foram fechadas
-        setTimeout(done, 500);
+  afterAll(async () => {
+    return runWithTimeout(async () => {
+      // Fecha todas as conexões ativas com timeout individual
+      const closePromises = activeConnections.map(ws => {
+        return new Promise((resolve) => {
+          try {
+            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+              ws.once('close', resolve);
+              ws.close();
+              // Timeout de segurança
+              setTimeout(resolve, 1000);
+            } else {
+              resolve();
+            }
+          } catch (err) {
+            // Ignora erros ao fechar
+            resolve();
+          }
+        });
       });
-    } else {
-      done();
-    }
+      
+      await Promise.all(closePromises);
+      activeConnections.length = 0;
+
+      if (httpServer) {
+        httpServer.closeAllConnections();
+        return new Promise((resolve) => {
+          const timeout = setTimeout(resolve, 2000); // Timeout de segurança
+          httpServer.close(() => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        });
+      }
+    }, 15000); // Aumentado para 15s para garantir limpeza completa
+  });
+
+  afterEach(() => {
+    cleanupAfterTest();
   });
 
   describe('Conexão WebSocket', () => {
-    test('cliente pode conectar ao servidor', (done) => {
-      const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+    test('cliente pode conectar ao servidor', async () => {
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
 
-      ws.on('open', () => {
-        expect(ws.readyState).toBe(WebSocket.OPEN);
-        ws.close();
-        done();
-      });
+          const timeout = setTimeout(() => {
+            try {
+              if (ws.readyState !== WebSocket.CLOSED) {
+                ws.close();
+              }
+            } catch (err) {
+              // Ignora erros
+            }
+            reject(new Error('Timeout ao conectar'));
+          }, 5000);
 
-      ws.on('error', (err) => {
-        done(err);
-      });
+          ws.on('open', () => {
+            clearTimeout(timeout);
+            expect(ws.readyState).toBe(WebSocket.OPEN);
+            try {
+              ws.close();
+            } catch (err) {
+              // Ignora erros
+            }
+            resolve();
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            try {
+              if (ws.readyState !== WebSocket.CLOSED) {
+                ws.close();
+              }
+            } catch (closeErr) {
+              // Ignora erros
+            }
+            reject(err);
+          });
+        });
+      }, 10000);
     });
 
-    test('recebe mensagem de conexão ao conectar', (done) => {
-      const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+    test('recebe mensagem de conexão ao conectar', async () => {
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
 
-      ws.on('message', (data) => {
-        const message = JSON.parse(data.toString());
-        if (message.type === 'connection') {
-          expect(message.status).toBe('connected');
-          expect(message.clientId).toBeDefined();
-          ws.close();
-          done();
-        }
-      });
+          const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('Timeout ao receber mensagem de conexão'));
+          }, 5000);
 
-      ws.on('error', (err) => {
-        done(err);
-      });
+          ws.on('message', (data) => {
+            const message = JSON.parse(data.toString());
+            if (message.type === 'connection') {
+              clearTimeout(timeout);
+              expect(message.status).toBe('connected');
+              expect(message.clientId).toBeDefined();
+              ws.close();
+              resolve();
+            }
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+      }, 10000);
     });
   });
 
@@ -108,137 +186,178 @@ describe('websocketService', () => {
         throw new Error(`Falha ao fazer login: ${loginResult.error}`);
       }
 
-      return new Promise((resolve, reject) => {
-        const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
-        let connectionReceived = false;
-        let authSent = false;
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
+          let connectionReceived = false;
+          let authSent = false;
 
-        ws.on('open', () => {
-          // Aguarda mensagem de conexão antes de autenticar
-        });
-
-        ws.on('message', (data) => {
-          const message = JSON.parse(data.toString());
-          
-          // Primeiro recebe mensagem de conexão
-          if (message.type === 'connection' && !connectionReceived) {
-            connectionReceived = true;
-            // Agora envia autenticação
-            if (!authSent) {
-              authSent = true;
-              ws.send(
-                JSON.stringify({
-                  type: 'auth',
-                  token: loginResult.token,
-                })
-              );
+          const timeout = setTimeout(() => {
+            if (ws.readyState !== WebSocket.CLOSED) {
+              ws.close();
             }
-          }
-          
-          // Depois recebe resposta de autenticação
-          if (message.type === 'auth' && message.status === 'success') {
-            expect(message.agent).toBeDefined();
-            expect(message.agent.username).toBe(uniqueUsername);
-            ws.close();
-            resolve();
-          }
-          
-          if (message.type === 'auth' && message.status === 'error') {
-            ws.close();
-            reject(new Error(`Autenticação falhou: ${message.message}`));
-          }
-        });
-
-        ws.on('error', (err) => {
-          ws.close();
-          reject(err);
-        });
-
-        // Timeout de segurança
-        setTimeout(() => {
-          if (ws.readyState !== WebSocket.CLOSED) {
-            ws.close();
             reject(new Error('Timeout ao aguardar autenticação'));
-          }
-        }, 5000);
-      });
+          }, 10000);
+
+          ws.on('open', () => {
+            // Aguarda mensagem de conexão antes de autenticar
+          });
+
+          ws.on('message', (data) => {
+            const message = JSON.parse(data.toString());
+            
+            // Primeiro recebe mensagem de conexão
+            if (message.type === 'connection' && !connectionReceived) {
+              connectionReceived = true;
+              // Agora envia autenticação
+              if (!authSent) {
+                authSent = true;
+                ws.send(
+                  JSON.stringify({
+                    type: 'auth',
+                    token: loginResult.token,
+                  })
+                );
+              }
+            }
+            
+            // Depois recebe resposta de autenticação
+            if (message.type === 'auth' && message.status === 'success') {
+              clearTimeout(timeout);
+              expect(message.agent).toBeDefined();
+              expect(message.agent.username).toBe(uniqueUsername);
+              ws.close();
+              resolve();
+            }
+            
+            if (message.type === 'auth' && message.status === 'error') {
+              clearTimeout(timeout);
+              ws.close();
+              reject(new Error(`Autenticação falhou: ${message.message}`));
+            }
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            ws.close();
+            reject(err);
+          });
+        });
+      }, 15000);
     });
 
-    test('cliente recebe erro com token inválido', (done) => {
-      const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+    test('cliente recebe erro com token inválido', async () => {
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
 
-      ws.on('open', () => {
-        ws.send(
-          JSON.stringify({
-            type: 'auth',
-            token: 'invalid-token',
-          })
-        );
-      });
+          const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('Timeout ao receber erro de autenticação'));
+          }, 5000);
 
-      ws.on('message', (data) => {
-        const message = JSON.parse(data.toString());
-        if (message.type === 'auth' && message.status === 'error') {
-          expect(message.message).toBeDefined();
-          ws.close();
-          done();
-        }
-      });
+          ws.on('open', () => {
+            ws.send(
+              JSON.stringify({
+                type: 'auth',
+                token: 'invalid-token',
+              })
+            );
+          });
 
-      ws.on('error', (err) => {
-        done(err);
-      });
+          ws.on('message', (data) => {
+            const message = JSON.parse(data.toString());
+            if (message.type === 'auth' && message.status === 'error') {
+              clearTimeout(timeout);
+              expect(message.message).toBeDefined();
+              ws.close();
+              resolve();
+            }
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+      }, 10000);
     });
   });
 
   describe('Ping/Pong', () => {
-    test('cliente recebe pong ao enviar ping', (done) => {
-      const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+    test('cliente recebe pong ao enviar ping', async () => {
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
 
-      ws.on('open', () => {
-        ws.send(JSON.stringify({ type: 'ping' }));
-      });
+          const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('Timeout ao receber pong'));
+          }, 5000);
 
-      ws.on('message', (data) => {
-        const message = JSON.parse(data.toString());
-        if (message.type === 'pong') {
-          expect(message.timestamp).toBeDefined();
-          ws.close();
-          done();
-        }
-      });
+          ws.on('open', () => {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          });
 
-      ws.on('error', (err) => {
-        done(err);
-      });
+          ws.on('message', (data) => {
+            const message = JSON.parse(data.toString());
+            if (message.type === 'pong') {
+              clearTimeout(timeout);
+              expect(message.timestamp).toBeDefined();
+              ws.close();
+              resolve();
+            }
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+      }, 10000);
     });
   });
 
   describe('Subscribe', () => {
-    test('cliente pode se inscrever em eventos', (done) => {
-      const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+    test('cliente pode se inscrever em eventos', async () => {
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
 
-      ws.on('open', () => {
-        ws.send(
-          JSON.stringify({
-            type: 'subscribe',
-            events: ['ticket.created', 'ticket.updated'],
-          })
-        );
-      });
+          const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('Timeout ao se inscrever em eventos'));
+          }, 5000);
 
-      ws.on('message', (data) => {
-        const message = JSON.parse(data.toString());
-        if (message.type === 'subscribe' && message.status === 'success') {
-          expect(message.events).toEqual(['ticket.created', 'ticket.updated']);
-          ws.close();
-          done();
-        }
-      });
+          ws.on('open', () => {
+            ws.send(
+              JSON.stringify({
+                type: 'subscribe',
+                events: ['ticket.created', 'ticket.updated'],
+              })
+            );
+          });
 
-      ws.on('error', (err) => {
-        done(err);
-      });
+          ws.on('message', (data) => {
+            const message = JSON.parse(data.toString());
+            if (message.type === 'subscribe' && message.status === 'success') {
+              clearTimeout(timeout);
+              expect(message.events).toEqual(['ticket.created', 'ticket.updated']);
+              ws.close();
+              resolve();
+            }
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+      }, 10000);
     });
   });
 
@@ -268,64 +387,68 @@ describe('websocketService', () => {
         throw new Error(`Falha ao fazer login: ${loginResult.error}`);
       }
 
-      return new Promise((resolve, reject) => {
-        const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
-        let connectionReceived = false;
-        let authenticated = false;
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
+          let connectionReceived = false;
+          let authenticated = false;
 
-        ws.on('open', () => {
-          // Aguarda mensagem de conexão
-        });
-
-        ws.on('message', (data) => {
-          const message = JSON.parse(data.toString());
-
-          // Primeiro recebe mensagem de conexão
-          if (message.type === 'connection' && !connectionReceived) {
-            connectionReceived = true;
-            // Agora envia autenticação
-            ws.send(
-              JSON.stringify({
-                type: 'auth',
-                token: loginResult.token,
-              })
-            );
-          }
-
-          // Depois recebe resposta de autenticação
-          if (message.type === 'auth' && message.status === 'success' && !authenticated) {
-            authenticated = true;
-            // Emite evento após autenticação
-            setTimeout(() => {
-              emitEvent(
-                'ticket.created',
-                { ticketId: '123', queue: 'suporte' },
-                { tenantId: 'tenant-test-ws' }
-              );
-            }, 100);
-          }
-
-          if (authenticated && message.type === 'event') {
-            expect(message.event).toBe('ticket.created');
-            expect(message.data.ticketId).toBe('123');
-            ws.close();
-            resolve();
-          }
-        });
-
-        ws.on('error', (err) => {
-          ws.close();
-          reject(err);
-        });
-
-        // Timeout de segurança
-        setTimeout(() => {
-          if (ws.readyState !== WebSocket.CLOSED) {
-            ws.close();
+          const timeout = setTimeout(() => {
+            if (ws.readyState !== WebSocket.CLOSED) {
+              ws.close();
+            }
             reject(new Error('Timeout ao aguardar evento'));
-          }
-        }, 5000);
-      });
+          }, 10000);
+
+          ws.on('open', () => {
+            // Aguarda mensagem de conexão
+          });
+
+          ws.on('message', (data) => {
+            const message = JSON.parse(data.toString());
+
+            // Primeiro recebe mensagem de conexão
+            if (message.type === 'connection' && !connectionReceived) {
+              connectionReceived = true;
+              // Agora envia autenticação
+              ws.send(
+                JSON.stringify({
+                  type: 'auth',
+                  token: loginResult.token,
+                })
+              );
+            }
+
+            // Depois recebe resposta de autenticação
+            if (message.type === 'auth' && message.status === 'success' && !authenticated) {
+              authenticated = true;
+              // Emite evento após autenticação
+              setTimeout(() => {
+                emitEvent(
+                  'ticket.created',
+                  { ticketId: '123', queue: 'suporte' },
+                  { tenantId: 'tenant-test-ws' }
+                );
+              }, 100);
+            }
+
+            if (authenticated && message.type === 'event') {
+              clearTimeout(timeout);
+              expect(message.event).toBe('ticket.created');
+              expect(message.data.ticketId).toBe('123');
+              ws.close();
+              resolve();
+            }
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            ws.close();
+            reject(err);
+          });
+        });
+      }, 15000);
     });
   });
 

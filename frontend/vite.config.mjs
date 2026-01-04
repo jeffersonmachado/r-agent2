@@ -18,6 +18,15 @@ function frontendRoutesPlugin() {
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0] || '';
         
+        // CRÍTICO: Ignora requisições do Vite (HMR, WebSocket, etc)
+        // O Vite usa rotas que começam com /@ para HMR e WebSocket para hot reload
+        if (url.startsWith('/@') || 
+            req.headers.upgrade === 'websocket' ||
+            url.includes('?token=')) {
+          // Deixa o Vite lidar com suas próprias requisições
+          return next();
+        }
+        
         // Ignora rotas da API - deixa o proxy lidar com elas
         // IMPORTANTE: 
         // - /audit/logs e /audit/stats são rotas de API, mas /audit é rota de página
@@ -101,6 +110,13 @@ const viteConfig = defineConfig({
     fs: {
       allow: ['..'],
     },
+    // Configuração explícita do HMR (Hot Module Replacement)
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: Number(process.env.FRONTEND_PORT || config.frontend?.port || 5173),
+      clientPort: Number(process.env.FRONTEND_PORT || config.frontend?.port || 5173),
+    },
     // Proxy para API em desenvolvimento
     // Em desenvolvimento, sempre usamos proxy para garantir que funcione corretamente
     // mesmo se VITE_API_BASE_URL estiver definido (pode estar vindo de config.json)
@@ -143,6 +159,11 @@ const viteConfig = defineConfig({
         secure: false,
       },
       '^/server': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/tests': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,

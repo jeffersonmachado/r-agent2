@@ -39,6 +39,20 @@ const ENV_TO_CONFIG_MAP = {
   'API_URL': 'scripts.apiUrl',
   'MAX_AGE_DAYS': 'scripts.maxAgeDays',
   'DRY_RUN': 'scripts.dryRun',
+  'RATE_LIMIT_REDIS_URL': 'rateLimit.redis.url',
+  'REDIS_URL': 'rateLimit.redis.url',
+  'RATE_LIMIT_DRY_RUN_POINTS': 'rateLimit.policies.dryRun.points',
+  'RATE_LIMIT_DRY_RUN_DURATION': 'rateLimit.policies.dryRun.duration',
+  'RATE_LIMIT_GENERATION_POINTS': 'rateLimit.policies.generation.points',
+  'RATE_LIMIT_GENERATION_DURATION': 'rateLimit.policies.generation.duration',
+  'RATE_LIMIT_BOOTSTRAP_POINTS': 'rateLimit.policies.bootstrap.points',
+  'RATE_LIMIT_BOOTSTRAP_DURATION': 'rateLimit.policies.bootstrap.duration',
+  'RATE_LIMIT_SCRAPING_POINTS': 'rateLimit.policies.scraping.points',
+  'RATE_LIMIT_SCRAPING_DURATION': 'rateLimit.policies.scraping.duration',
+  'RATE_LIMIT_SCRAPING_RPS': 'rateLimit.policies.scraping.requestsPerSecond',
+  'RATE_LIMIT_SCRAPING_PAGES': 'rateLimit.policies.scraping.pagesPerExecution',
+  'RATE_LIMIT_SYSTEM_VALIDATE_POINTS': 'rateLimit.policies.systemValidate.points',
+  'RATE_LIMIT_SYSTEM_VALIDATE_DURATION': 'rateLimit.policies.systemValidate.duration',
 };
 
 /**
@@ -55,12 +69,32 @@ function loadConfig() {
     if (fs.existsSync(configFile)) {
       const data = fs.readFileSync(configFile, 'utf8');
       cachedConfig = JSON.parse(data);
+      // Usa console.log aqui pois logger pode depender de config
       // eslint-disable-next-line no-console
       console.log(`[Config] Configuração carregada de ${configFile}`);
     } else {
       // eslint-disable-next-line no-console
       console.warn(`[Config] Arquivo de configuração não encontrado: ${configFile}. Usando valores padrão e process.env.`);
       cachedConfig = {};
+    }
+    
+    // Valida configuração do Redis após carregar
+    try {
+      const redisValidation = validateRedisConfig();
+      if (!redisValidation.valid) {
+        // eslint-disable-next-line no-console
+        console.warn('[Config] Avisos na configuração do Redis:');
+        redisValidation.errors.forEach(error => {
+          // eslint-disable-next-line no-console
+          console.warn(`  - ${error}`);
+        });
+      } else if (redisValidation.config) {
+        // eslint-disable-next-line no-console
+        console.log(`[Config] Configuração do Redis válida: ${redisValidation.config.url}`);
+      }
+    } catch (validationErr) {
+      // eslint-disable-next-line no-console
+      console.warn('[Config] Erro ao validar configuração do Redis:', validationErr.message);
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -163,10 +197,82 @@ function reload() {
   return loadConfig();
 }
 
+/**
+ * Valida a configuração do Redis.
+ * 
+ * Verifica:
+ * - Se a URL está configurada
+ * - Se o formato da URL é válido (redis:// ou rediss://)
+ * - Se a URL tem estrutura válida (host:port)
+ * 
+ * @returns {Object} { valid: boolean, errors: string[], config?: Object }
+ */
+function validateRedisConfig() {
+  const errors = [];
+  const config = loadConfig();
+  
+  // Obtém a URL do Redis (com fallback para env vars)
+  // Primeiro tenta do config.json
+  let redisUrl = config?.rateLimit?.redis?.url;
+  
+  // Fallback para env vars
+  if (!redisUrl) {
+    redisUrl = process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL;
+  }
+  
+  // Verifica se está configurada
+  if (!redisUrl) {
+    errors.push('URL do Redis não configurada. Configure rateLimit.redis.url em config.json ou defina RATE_LIMIT_REDIS_URL/REDIS_URL');
+    return { valid: false, errors };
+  }
+  
+  // Verifica se é uma string
+  if (typeof redisUrl !== 'string') {
+    errors.push('URL do Redis deve ser uma string');
+    return { valid: false, errors };
+  }
+  
+  // Valida formato da URL
+  const redisUrlPattern = /^(redis|rediss):\/\/([^:\/]+)(:(\d+))?(\/.*)?$/;
+  const match = redisUrl.match(redisUrlPattern);
+  
+  if (!match) {
+    errors.push(`Formato de URL do Redis inválido: "${redisUrl}". Formato esperado: redis://host:port ou rediss://host:port`);
+    return { valid: false, errors };
+  }
+  
+  // Valida porta se presente
+  const port = match[4];
+  if (port) {
+    const portNum = parseInt(port, 10);
+    if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+      errors.push(`Porta do Redis inválida: ${port}. Deve ser um número entre 1 e 65535`);
+    }
+  }
+  
+  // Valida host
+  const host = match[2];
+  if (!host || host.trim().length === 0) {
+    errors.push('Host do Redis não pode estar vazio');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    config: {
+      url: redisUrl,
+      host: host,
+      port: port ? parseInt(port, 10) : 6379,
+      secure: match[1] === 'rediss'
+    }
+  };
+}
+
 module.exports = {
   get,
   getAll,
   reload,
   loadConfig,
+  validateRedisConfig,
 };
 

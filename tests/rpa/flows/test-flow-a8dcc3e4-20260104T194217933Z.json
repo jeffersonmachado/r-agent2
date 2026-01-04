@@ -1,0 +1,169 @@
+{
+  "id": "test-flow-a8dcc3e4-20260104T194217933Z",
+  "name": "IA - Teste RPA - sistema de atendimento",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-a8dcc3e4",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-04T19:42:17.933Z",
+    "dependenciesResolved": true,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "Abrir página de chat e iniciar teste do fluxo"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "Validar que a mensagem do bot foi processada"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "Validar que o fluxo foi finalizado"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "http://localhost:5173/chat",
+      "value": "",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173/chat"
+      },
+      "description": "Navegar para a página completa de chat (/chat) para testar o fluxo",
+      "critical": "true",
+      "url": "http://localhost:5173"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Aguardar carregamento básico da página de chat",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Bem-vindo"
+      },
+      "description": "Validar que o fluxo iniciou (mensagem do nó start: 'Bem-vindo') foi processada",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Aguardar processamento do próximo nó (message_1)",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar que a mensagem do nó message_1 ('Olá! Como posso ajudar?') foi processada",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "count",
+        "expected": "1"
+      },
+      "description": "Validar deterministicamente que a mensagem 'Olá! Como posso ajudar?' aparece exatamente uma vez no conteúdo da página (evita duplicidade)",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Aguardar estabilização após o fim do fluxo (end_1)",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar que o estado final do chat permanece consistente após finalização do fluxo (nenhuma mensagem adicional inesperada)",
+      "critical": "true"
+    }
+  ],
+  "asserts": [
+    {
+      "step": "1",
+      "type": "url",
+      "selector": "",
+      "expected": "http://localhost:5173/chat",
+      "description": "A URL atual deve ser /chat"
+    },
+    {
+      "step": "2",
+      "type": "exists",
+      "selector": "body",
+      "expected": "true",
+      "description": "A página deve carregar (body presente no DOM)"
+    },
+    {
+      "step": "3",
+      "type": "text",
+      "selector": "body",
+      "expected": "Bem-vindo",
+      "description": "O início do fluxo deve ser processado (mensagem 'Bem-vindo')"
+    },
+    {
+      "step": "5",
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "O nó message_1 deve ser processado (mensagem esperada)"
+    },
+    {
+      "step": "6",
+      "type": "count",
+      "selector": "body",
+      "expected": "1",
+      "description": "A mensagem 'Olá! Como posso ajudar?' não deve duplicar no resultado do teste"
+    },
+    {
+      "step": "8",
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Após o end_1, o conteúdo deve permanecer estável (sem mensagens extras inesperadas)"
+    }
+  ],
+  "filePath": "/opt/results/ria/r-agent2/tests/rpa/flows/test-flow-a8dcc3e4-20260104T194217933Z.json"
+}

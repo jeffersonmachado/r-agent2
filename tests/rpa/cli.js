@@ -13,9 +13,11 @@ const { RpaRecorder } = require('./recorder/rpaRecorder');
 const { RpaPlayer } = require('./player/rpaPlayer');
 const path = require('path');
 
+const rpaConfig = require('./rpaConfig');
+
 const mode = process.argv[2];
 const seedName = process.argv[3];
-const initialUrl = process.argv[4] || 'http://localhost:5173';
+const initialUrl = process.argv[4] || rpaConfig.urls.frontend;
 
 async function runRecord(seedName, initialUrl) {
   console.log('🎬 Modo RECORD - Gravação de interação');

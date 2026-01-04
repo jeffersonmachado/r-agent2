@@ -22,6 +22,7 @@ const logger = require('./utils/logger');
 const {
   login: authLogin,
   logout: authLogout,
+  logoutAllSessions,
   validateToken,
   loginWithRpaToken,
   createAgent,
@@ -66,6 +67,8 @@ const { generateFlowFromDescription } = require('./services/flowGeneratorService
 const { validateGenerationContract } = require('./utils/contractValidator');
 const { orchestrateGeneration } = require('./services/generationOrchestrator');
 const { registerGeneration, generateAuditReport } = require('./services/auditService');
+const { generateAndValidate } = require('./services/generate-and-validate');
+const { clearLimitersCache } = require('../infra/rate-limit');
 const { executeRpaFlowPipeline, previewRpaFlowPipeline } = require('./services/rpaFlowPipelineService');
 const { generateChatbotFlow } = require('../engine/ai/generateChatbotFlow');
 const { generateRpaTest } = require('../engine/ai/generateRpaTest');
@@ -151,6 +154,7 @@ const {
   reindexDocument,
   getDocumentsStats,
 } = require('./services/ragDocumentsService');
+const { parseMultipartFormData } = require('./utils/multipartParser');
 const {
   scrapeUrl,
   scrapeUrls,
@@ -423,15 +427,22 @@ function parseJsonBody(req, maxSize = 10 * 1024 * 1024) {
 }
 
 /**
- * Adiciona headers CORS à resposta.
+ * Adiciona headers CORS e de segurança à resposta.
  *
  * @param {http.ServerResponse} res
  */
 function setCorsHeaders(res) {
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
+  
+  // Security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 }
 
 /**
@@ -595,8 +606,7 @@ async function requestHandler(req, res) {
 
   // Log de debug para todas as requisições GET a /metrics
   if (method === 'GET' && pathname.startsWith('/metrics')) {
-    // eslint-disable-next-line no-console
-    console.log(`[Server] Requisição GET recebida: ${pathname}`);
+    logger.debug(`[Server] Requisição GET recebida: ${pathname}`);
   }
 
   // Healthcheck básico
@@ -611,6 +621,29 @@ async function requestHandler(req, res) {
       name: 'chatbot-engine-api',
       env: config.get('nodeEnv', 'development'),
     });
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Admin - Limpeza de Cache de Rate Limiting
+  // -----------------------------------------------------------------------
+
+  // POST /admin/rate-limit/clear-cache - Limpa cache de limiters em memória
+  if (method === 'POST' && pathname === '/admin/rate-limit/clear-cache') {
+    try {
+      clearLimitersCache();
+      logger.info('[Admin] Cache de rate limiters limpo via endpoint');
+      sendJson(res, 200, {
+        success: true,
+        message: 'Cache de rate limiters limpo com sucesso',
+      });
+    } catch (err) {
+      logger.error('[Admin] Erro ao limpar cache de rate limiters:', err);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: err.message || 'Erro ao limpar cache',
+      });
+    }
     return;
   }
 
@@ -777,6 +810,40 @@ async function requestHandler(req, res) {
 
     const result = authLogout(token);
     sendJson(res, 200, { success: result.success });
+    return;
+  }
+
+  // POST /auth/logout-all - Logout de todas as sessões do agente
+  if (method === 'POST' && pathname === '/auth/logout-all') {
+    const token = req.headers.authorization?.replace('Bearer ', '') || null;
+
+    if (!token) {
+      sendJson(res, 401, { error: 'unauthorized', message: 'Token não fornecido' });
+      return;
+    }
+
+    const validation = validateToken(token);
+    if (!validation.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: validation.error || 'Token inválido' });
+      return;
+    }
+
+    // Registra ação de auditoria
+    logAction({
+      agentId: validation.agent.id,
+      username: validation.agent.username,
+      action: 'logout_all',
+      resource: 'auth',
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    const removed = logoutAllSessions(validation.agent.id);
+    sendJson(res, 200, { 
+      success: true, 
+      message: `Todas as sessões foram encerradas`,
+      sessionsRemoved: removed 
+    });
     return;
   }
 
@@ -1163,6 +1230,22 @@ async function requestHandler(req, res) {
       flows.set(flow.id, flow);
       saveFlowsToFile(); // Salva no arquivo após criar
       
+      // Dispara webhooks e WebSocket
+      const tenantId = req.tenantId || flow.tenantId || defaultTenantId;
+      triggerWebhooks(tenantId, 'flow.created', {
+        flowId: flow.id,
+        flowName: flow.name,
+        agentId: req.agent?.id,
+      }).catch((err) => {
+        logger.error('[Webhook] Erro ao disparar webhook para flow.created:', err);
+      });
+
+      emitEvent('flow.created', {
+        flowId: flow.id,
+        flowName: flow.name,
+        agentId: req.agent?.id,
+      }, { tenantId });
+      
       // ✅ Retorna o fluxo criado, incluindo erros de validação se houver
       // Isso permite que o frontend exiba os erros mas não bloqueia a criação
       const response = { ...flow };
@@ -1180,8 +1263,7 @@ async function requestHandler(req, res) {
       } else if (err.message && err.message.includes('excede o tamanho máximo')) {
         badRequest(res, err.message);
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Erro ao criar fluxo:', err);
+        logger.error('Erro ao criar fluxo', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
       }
     }
@@ -1261,6 +1343,23 @@ async function requestHandler(req, res) {
       const flow = ensureFlowHasMeta(merged);
       flows.set(id, flow);
       saveFlowsToFile(); // Salva no arquivo após atualizar
+      
+      // Dispara webhooks e WebSocket
+      const tenantId = req.tenantId || flow.tenantId || defaultTenantId;
+      triggerWebhooks(tenantId, 'flow.updated', {
+        flowId: flow.id,
+        flowName: flow.name,
+        agentId: req.agent?.id,
+      }).catch((err) => {
+        logger.error('[Webhook] Erro ao disparar webhook para flow.updated:', err);
+      });
+
+      emitEvent('flow.updated', {
+        flowId: flow.id,
+        flowName: flow.name,
+        agentId: req.agent?.id,
+      }, { tenantId });
+      
       sendJson(res, 200, flow);
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -1289,8 +1388,33 @@ async function requestHandler(req, res) {
       sendJson(res, 404, { error: 'flow_not_found' });
       return;
     }
+    
+    // Valida tenant se autenticado
+    const authResult = requireAuth(req);
+    if (authResult.valid && req.tenantId && flow.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+      return;
+    }
+    
     flows.delete(id);
     saveFlowsToFile(); // Salva no arquivo após deletar
+    
+    // Dispara webhooks e WebSocket
+    const tenantId = req.tenantId || flow.tenantId || defaultTenantId;
+    triggerWebhooks(tenantId, 'flow.deleted', {
+      flowId: flow.id,
+      flowName: flow.name,
+      agentId: req.agent?.id,
+    }).catch((err) => {
+      logger.error('[Webhook] Erro ao disparar webhook para flow.deleted:', err);
+    });
+
+    emitEvent('flow.deleted', {
+      flowId: flow.id,
+      flowName: flow.name,
+      agentId: req.agent?.id,
+    }, { tenantId });
+    
     sendJson(res, 200, { success: true, deletedId: id });
     return;
   }
@@ -1442,6 +1566,81 @@ async function requestHandler(req, res) {
       } else {
         logger.error('Erro no DRY-RUN de geração:', err);
         sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno no DRY-RUN' });
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Sistema de Geração e Validação Único
+  // -----------------------------------------------------------------------
+
+  // POST /system/generate-and-validate
+  if (method === 'POST' && pathname === '/system/generate-and-validate') {
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body || typeof body !== 'object') {
+        badRequest(res, 'Body deve ser um objeto válido');
+        return;
+      }
+
+      // Obtém tenantId do agente autenticado se disponível
+      const authResult = requireAuth(req);
+      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      const userId = req.agent?.id || req.agent?.username || finalTenantId;
+      const agentId = req.agent?.id;
+
+      // Callback para enviar atualizações de progresso via WebSocket
+      const { emitEvent } = require('./services/websocketService');
+      const onProgress = (progress) => {
+        if (agentId) {
+          emitEvent('generation.progress', progress, { agentId });
+        } else if (finalTenantId) {
+          emitEvent('generation.progress', progress, { tenantId: finalTenantId });
+        }
+      };
+
+      // Usa orquestrador único generate-and-validate
+      const result = await generateAndValidate(body, {
+        tenantId: finalTenantId,
+        userId,
+      }, onProgress);
+
+      // Trata erro de rate limit no resultado
+      if (result.rateLimitExceeded) {
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: result.errors[0] || 'Rate limit excedido',
+          retryAfter: result.retryAfter,
+        });
+        return;
+      }
+
+      // Retorna resultado completo
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err.code === 'RATE_LIMIT_EXCEEDED') {
+        // Garante que retryAfter é um número válido
+        const retryAfter = (err.retryAfter && !isNaN(err.retryAfter) && err.retryAfter > 0)
+          ? err.retryAfter
+          : 60; // Fallback padrão de 60 segundos
+        
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Rate limit excedido. Tente novamente em ${retryAfter} segundos.`,
+          retryAfter: retryAfter,
+        });
+      } else {
+        logger.error('Erro em generate-and-validate:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno em generate-and-validate' });
       }
     }
     return;
@@ -1756,8 +1955,7 @@ async function requestHandler(req, res) {
       } else if (err.message && err.message.includes('excede o tamanho máximo')) {
         badRequest(res, err.message);
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Erro ao simular fluxo:', err);
+        logger.error('Erro ao simular fluxo', err);
         sendJson(res, 500, {
           error: 'simulation_error',
           message: err && err.message ? err.message : 'Erro interno ao simular fluxo',
@@ -2216,8 +2414,7 @@ async function requestHandler(req, res) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Erro ao criar fila:', err);
+        logger.error('Erro ao criar fila', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
       }
     }
@@ -2938,6 +3135,22 @@ async function requestHandler(req, res) {
         }
       }
 
+      // Dispara webhooks e WebSocket
+      const tenantId = req.tenantId || defaultTenantId;
+      triggerWebhooks(tenantId, 'ticket.message.sent', {
+        ticketId: id,
+        agentId: req.agent.id,
+        message,
+      }).catch((err) => {
+        logger.error('[Webhook] Erro ao disparar webhook para ticket.message.sent:', err);
+      });
+
+      emitEvent('ticket.message.sent', {
+        ticketId: id,
+        agentId: req.agent.id,
+        message,
+      }, { tenantId, agentId: ticket.assignedTo });
+
       // Registra ação de auditoria
       logAction({
         agentId: req.agent.id,
@@ -3118,8 +3331,7 @@ async function requestHandler(req, res) {
   // POST /api/ai/generate - Gera resposta de IA
   if (method === 'POST' && pathname === '/api/ai/generate') {
     if (!hasJsonContentType(req)) {
-      // eslint-disable-next-line no-console
-      console.error('[ERROR] Requisição de IA sem Content-Type JSON');
+      logger.warn('Requisição de IA sem Content-Type JSON');
       badRequest(res, 'Content-Type deve ser application/json');
       return;
     }
@@ -3128,8 +3340,7 @@ async function requestHandler(req, res) {
       const body = await parseJsonBody(req);
       const { prompt, sessionId, flowId, nodeId, tenantId } = body || {};
 
-      // eslint-disable-next-line no-console
-      console.log('[INFO] Requisição de IA recebida', {
+      logger.debug('Requisição de IA recebida', {
         promptLength: prompt?.length,
         sessionId,
         flowId,
@@ -3138,19 +3349,16 @@ async function requestHandler(req, res) {
       });
 
       if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
-        // eslint-disable-next-line no-console
-        console.error('[ERROR] Prompt inválido na requisição de IA', { prompt, type: typeof prompt });
+        logger.warn('Prompt inválido na requisição de IA', { prompt, type: typeof prompt });
         badRequest(res, 'Campo "prompt" é obrigatório e deve ser uma string não vazia');
         return;
       }
 
       const effectiveTenantId = tenantId || defaultTenantId;
-      // eslint-disable-next-line no-console
-      console.log('[DEBUG] Usando tenant para IA', { effectiveTenantId, defaultTenantId });
+      logger.debug('Usando tenant para IA', { effectiveTenantId, defaultTenantId });
 
       try {
-        // eslint-disable-next-line no-console
-        console.log('[INFO] Gerando resposta de IA...', {
+        logger.debug('Gerando resposta de IA...', {
           tenantId: effectiveTenantId,
           promptPreview: prompt.substring(0, 100),
         });
@@ -3161,8 +3369,7 @@ async function requestHandler(req, res) {
           nodeId,
         });
 
-        // eslint-disable-next-line no-console
-        console.log('[INFO] Resposta de IA gerada com sucesso', {
+        logger.debug('Resposta de IA gerada com sucesso', {
           hasText: !!result?.text,
           textLength: result?.text?.length,
           hasUsage: !!result?.usage,
@@ -3173,8 +3380,7 @@ async function requestHandler(req, res) {
           usage: result.usage || null,
         });
       } catch (aiError) {
-        // eslint-disable-next-line no-console
-        console.error('[ERROR] Erro ao gerar resposta de IA:', {
+        logger.error('Erro ao gerar resposta de IA', {
           message: aiError.message,
           stack: aiError.stack,
           tenantId: effectiveTenantId,
@@ -3188,12 +3394,10 @@ async function requestHandler(req, res) {
       }
     } catch (err) {
       if (err instanceof SyntaxError) {
-        // eslint-disable-next-line no-console
-        console.error('[ERROR] JSON inválido na requisição de IA:', err.message);
+        logger.warn('JSON inválido na requisição de IA', { message: err.message });
         badRequest(res, 'JSON inválido no corpo da requisição');
       } else {
-        // eslint-disable-next-line no-console
-        console.error('[ERROR] Erro ao processar requisição de IA:', {
+        logger.error('Erro ao processar requisição de IA', {
           message: err.message,
           stack: err.stack,
         });
@@ -3483,8 +3687,7 @@ async function requestHandler(req, res) {
 
       sendJson(res, 200, templates);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao listar templates:', err);
+      logger.error('Erro ao listar templates', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar templates' });
     }
     return;
@@ -3523,7 +3726,7 @@ async function requestHandler(req, res) {
         sendJson(res, 500, { error: 'parse_error', message: 'Erro ao parsear template JSON' });
       } else {
         // eslint-disable-next-line no-console
-        console.error('Erro ao obter template:', err);
+        logger.error('Erro ao obter template', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter template' });
       }
     }
@@ -3594,8 +3797,7 @@ async function requestHandler(req, res) {
       // Salva o arquivo JSON
       fs.writeFileSync(templateFile, JSON.stringify(template, null, 2), 'utf8');
 
-      // eslint-disable-next-line no-console
-      console.log(`Template salvo: ${templateFile}`);
+      logger.debug(`Template salvo: ${templateFile}`);
 
       sendJson(res, 201, {
         success: true,
@@ -3606,8 +3808,7 @@ async function requestHandler(req, res) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Erro ao salvar template:', err);
+        logger.error('Erro ao salvar template', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao salvar template' });
       }
     }
@@ -3654,8 +3855,7 @@ async function requestHandler(req, res) {
         message: `Template "${sanitizedId}" removido com sucesso`,
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao remover template:', err);
+      logger.error('Erro ao remover template', err);
       sendJson(res, 500, {
         error: 'internal_error',
         message: 'Erro interno ao remover template',
@@ -3684,6 +3884,7 @@ async function requestHandler(req, res) {
       try {
         logger.error('Erro ao ler configuração:', err);
       } catch (logErr) {
+        // Fallback: usa console.error se logger falhar
         // eslint-disable-next-line no-console
         console.error('Erro ao ler configuração:', err);
         // eslint-disable-next-line no-console
@@ -3735,23 +3936,18 @@ async function requestHandler(req, res) {
           // Reinicializa os providers de IA com a nova configuração
           try {
             initializeAiProviders();
-            // eslint-disable-next-line no-console
-            console.log('✅ Providers de IA reinicializados com nova configuração');
+            logger.info('Providers de IA reinicializados com nova configuração');
           } catch (aiError) {
-            // eslint-disable-next-line no-console
-            console.warn('⚠️  Erro ao reinicializar providers de IA:', aiError.message);
+            logger.warn('Erro ao reinicializar providers de IA', { message: aiError.message });
           }
           
-          // eslint-disable-next-line no-console
-          console.log('Configuração atualizada via API - nodemon reiniciará o servidor automaticamente');
+          logger.info('Configuração atualizada via API - nodemon reiniciará o servidor automaticamente');
         } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error('Erro ao salvar configuração após resposta:', err);
+          logger.error('Erro ao salvar configuração após resposta', err);
         }
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao atualizar configuração:', err);
+      logger.error('Erro ao atualizar configuração', err);
       sendJson(res, 500, { error: 'Erro ao atualizar configuração', message: err.message });
     }
     return;
@@ -3895,6 +4091,113 @@ async function requestHandler(req, res) {
       sendJson(res, 500, { 
         success: false,
         error: 'Erro ao validar token', 
+        message: err.message 
+      });
+    }
+    return;
+  }
+
+  // POST /config/validate-redis - Valida conexão do Redis
+  if (method === 'POST' && pathname === '/config/validate-redis') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { redisUrl } = body;
+
+      if (!redisUrl || typeof redisUrl !== 'string' || redisUrl.trim() === '') {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          error: 'URL do Redis não pode estar vazia',
+        });
+        return;
+      }
+
+      // Valida formato da URL
+      const redisUrlPattern = /^(redis|rediss):\/\/([^:\/]+)(:(\d+))?(\/.*)?$/;
+      const match = redisUrl.trim().match(redisUrlPattern);
+      
+      if (!match) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          error: `Formato de URL inválido. Formato esperado: redis://host:port ou rediss://host:port`,
+        });
+        return;
+      }
+
+      // Valida porta se presente
+      const port = match[4];
+      if (port) {
+        const portNum = parseInt(port, 10);
+        if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+          sendJson(res, 200, {
+            success: true,
+            valid: false,
+            error: `Porta inválida: ${port}. Deve ser um número entre 1 e 65535`,
+          });
+          return;
+        }
+      }
+
+      // Tenta conectar ao Redis usando a URL fornecida
+      let isValid = false;
+      let error = null;
+
+      try {
+        // Cria um cliente Redis temporário para testar a conexão
+        const Redis = require('ioredis');
+        const testClient = new Redis(redisUrl.trim(), {
+          connectTimeout: 5000,
+          lazyConnect: true,
+          maxRetriesPerRequest: 1,
+          enableOfflineQueue: false,
+        });
+
+        // Tenta conectar com timeout
+        const connectPromise = testClient.connect();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout ao conectar ao Redis (5s)')), 5000)
+        );
+        
+        await Promise.race([connectPromise, timeoutPromise]);
+        
+        // Se conectou, tenta fazer um PING
+        const pingResult = await testClient.ping();
+        isValid = pingResult === 'PONG';
+        
+        // Fecha o cliente de teste
+        await testClient.quit();
+        
+      } catch (validationError) {
+        // Trata diferentes tipos de erro
+        if (validationError.message && validationError.message.includes('Timeout')) {
+          error = 'Timeout ao conectar ao Redis. Verifique se o servidor está rodando e acessível.';
+        } else if (validationError.message && (validationError.message.includes('ECONNREFUSED') || validationError.message.includes('connect ECONNREFUSED'))) {
+          error = 'Conexão recusada. Verifique se o Redis está rodando e se a porta está correta.';
+        } else if (validationError.message && (validationError.message.includes('ENOTFOUND') || validationError.message.includes('getaddrinfo'))) {
+          error = 'Host não encontrado. Verifique se o endereço do Redis está correto.';
+        } else if (validationError.message && validationError.message.includes('invalid password')) {
+          error = 'Senha inválida. Verifique as credenciais do Redis.';
+        } else {
+          error = validationError.message || 'Erro ao conectar ao Redis';
+        }
+      }
+
+      sendJson(res, 200, {
+        success: true,
+        valid: isValid,
+        error: error || null,
+      });
+    } catch (err) {
+      logger.error('Erro ao validar conexão do Redis', err);
+      sendJson(res, 500, { 
+        success: false,
+        error: 'Erro ao validar conexão do Redis', 
         message: err.message 
       });
     }
@@ -5924,6 +6227,9 @@ async function requestHandler(req, res) {
         badRequest(res, 'URL é obrigatória');
         return;
       }
+      const userId = req.agent?.id || req.agent?.username || 'anonymous';
+      const executionId = body.executionId || `exec-${Date.now()}`;
+      
       const result = await scrapeUrl(body.url, {
         contentSelector: body.contentSelector,
         removeSelectors: body.removeSelectors,
@@ -5933,6 +6239,8 @@ async function requestHandler(req, res) {
         category: body.category,
         tags: body.tags || [],
         tenantId: defaultTenantId,
+        userId,
+        executionId,
       });
       logAction({
         agentId: req.agent.id,
@@ -5946,6 +6254,20 @@ async function requestHandler(req, res) {
       });
       sendJson(res, 200, result);
     } catch (err) {
+      // Trata erro de rate limit
+      if (err.code === 'RATE_LIMIT_EXCEEDED') {
+        // Garante que retryAfter é um número válido
+        const retryAfter = (err.retryAfter && !isNaN(err.retryAfter) && err.retryAfter > 0)
+          ? err.retryAfter
+          : 60; // Fallback padrão de 60 segundos
+        
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Rate limit excedido. Tente novamente em ${retryAfter} segundos.`,
+          retryAfter: retryAfter,
+        });
+        return;
+      }
       logger.error('Erro ao raspar URL:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
     }
@@ -6298,7 +6620,7 @@ async function requestHandler(req, res) {
       }
 
       // eslint-disable-next-line no-console
-      console.log(`Gravação removida: ${recordingId}`);
+      logger.debug(`Gravação removida: ${recordingId}`);
 
       sendJson(res, 200, {
         success: true,
@@ -6306,8 +6628,7 @@ async function requestHandler(req, res) {
         message: result.message,
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao remover gravação:', err);
+      logger.error('Erro ao remover gravação', err);
       sendJson(res, 500, {
         error: 'internal_error',
         message: 'Erro interno ao remover gravação',
@@ -6517,6 +6838,100 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /tests/rpa/reports/:filename - Serve arquivo de relatório RPA
+  if (method === 'GET' && pathname.startsWith('/tests/rpa/reports/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const filename = pathname.slice('/tests/rpa/reports/'.length);
+      
+      // Validação de segurança: apenas arquivos JSON e sem path traversal
+      if (!filename || filename.includes('..') || filename.includes('/') || !filename.endsWith('.json')) {
+        sendJson(res, 400, { error: 'invalid_filename', message: 'Nome de arquivo inválido' });
+        return;
+      }
+
+      const reportPath = path.join(__dirname, '..', 'tests', 'rpa', 'reports', filename);
+      
+      // Verifica se o arquivo existe
+      if (!fs.existsSync(reportPath)) {
+        sendJson(res, 404, { error: 'not_found', message: 'Relatório não encontrado' });
+        return;
+      }
+
+      // Lê e retorna o arquivo JSON
+      const reportContent = fs.readFileSync(reportPath, 'utf8');
+      const reportData = JSON.parse(reportContent);
+      
+      // Retorna com Content-Type correto
+      setCorsHeaders(res);
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+      });
+      res.end(JSON.stringify(reportData));
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        logger.error('Erro ao fazer parse do relatório JSON:', error);
+        sendJson(res, 500, { error: 'invalid_json', message: 'Relatório contém JSON inválido' });
+      } else {
+        logger.error('Erro ao servir relatório RPA:', error);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao servir relatório' });
+      }
+    }
+    return;
+  }
+
+  // GET /tests/rpa/replay/:filename - Serve arquivo de log/replay RPA
+  if (method === 'GET' && pathname.startsWith('/tests/rpa/replay/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const filename = pathname.slice('/tests/rpa/replay/'.length);
+      
+      // Validação de segurança: apenas arquivos JSON e sem path traversal
+      if (!filename || filename.includes('..') || filename.includes('/') || !filename.endsWith('.json')) {
+        sendJson(res, 400, { error: 'invalid_filename', message: 'Nome de arquivo inválido' });
+        return;
+      }
+
+      const replayPath = path.join(__dirname, '..', 'tests', 'rpa', 'replay', filename);
+      
+      // Verifica se o arquivo existe
+      if (!fs.existsSync(replayPath)) {
+        sendJson(res, 404, { error: 'not_found', message: 'Log/Replay não encontrado' });
+        return;
+      }
+
+      // Lê e retorna o arquivo JSON
+      const replayContent = fs.readFileSync(replayPath, 'utf8');
+      const replayData = JSON.parse(replayContent);
+      
+      // Retorna com Content-Type correto
+      setCorsHeaders(res);
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+      });
+      res.end(JSON.stringify(replayData));
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        logger.error('Erro ao fazer parse do log/replay JSON:', error);
+        sendJson(res, 500, { error: 'invalid_json', message: 'Log/Replay contém JSON inválido' });
+      } else {
+        logger.error('Erro ao servir log/replay RPA:', error);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao servir log/replay' });
+      }
+    }
+    return;
+  }
+
   // -----------------------------------------------------------------------
   // QA - Qualidade e Validação
   // -----------------------------------------------------------------------
@@ -6670,8 +7085,7 @@ function createServer() {
   const server = http.createServer((req, res) => {
     // Garante que erros não derrubem o processo.
     requestHandler(req, res).catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error('Erro inesperado ao processar requisição', err);
+      logger.error('Erro inesperado ao processar requisição', err);
       sendJson(res, 500, { error: 'internal_error' });
     });
   });
@@ -6685,9 +7099,11 @@ function createServer() {
 const server = createServer();
 
 if (require.main === module) {
+  // Limpa cache de limiters na inicialização para garantir que novas políticas sejam aplicadas
+  clearLimitersCache();
+  
   server.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`API server listening on http://0.0.0.0:${port}`);
+    logger.info(`API server listening on http://0.0.0.0:${port}`);
   });
 }
 

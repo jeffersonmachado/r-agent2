@@ -15,6 +15,7 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
+const config = require('../utils/config');
 const { generateAiResponse } = require('./aiProviderService');
 const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
 
@@ -69,23 +70,26 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
   const flowDescription = JSON.stringify(flow, null, 2);
   
   // Obtém URL base do frontend para incluir no prompt
+  // Prioridade: TEST_FRONTEND_URL > FRONTEND_URL > config.json > fallback
   const frontendUrl = process.env.TEST_FRONTEND_URL || 
                       process.env.FRONTEND_URL || 
+                      config.get('tests.rpa.frontendUrl') ||
+                      config.get('frontend.url') ||
                       'http://localhost:5173';
   
   // Carrega prompts do arquivo de configuração
   const prompts = loadRpaTestPrompts();
-  const config = prompts?.rpaTestGeneration || {};
+  const promptConfig = prompts?.rpaTestGeneration || {};
   
   // Constrói o prompt usando a configuração ou fallback para prompt padrão
   let prompt = '';
   
   // System role
-  prompt += `${config.systemRole || 'Você é um especialista em testes RPA (Robotic Process Automation). Sua tarefa é gerar um teste RPA executável para validar um fluxo de chatbot.'}\n\n`;
+  prompt += `${promptConfig.systemRole || 'Você é um especialista em testes RPA (Robotic Process Automation). Sua tarefa é gerar um teste RPA executável para validar um fluxo de chatbot.'}\n\n`;
   
   // Regras absolutas
   prompt += 'REGRAS ABSOLUTAS:\n';
-  const rules = config.absoluteRules || [
+  const rules = promptConfig.absoluteRules || [
     'O teste DEVE ser determinístico e reexecutável',
     'O teste DEVE incluir asserts obrigatórios em cada etapa crítica',
     'O teste DEVE seguir o formato de gravação RPA existente',
@@ -105,17 +109,17 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
   prompt += `IMPORTANTE: Sempre use URLs absolutas começando com ${frontendUrl} para ações de navegação. NÃO use domínios fictícios como "rpa.local" ou "localhost.local".\n\n`;
   
   // Informações sobre a interface
-  if (config.interfaceInfo) {
+  if (promptConfig.interfaceInfo) {
     prompt += 'ESTRUTURA REAL DA INTERFACE:\n';
     prompt += '⚠️ INFORMAÇÕES CRÍTICAS SOBRE A INTERFACE:\n';
-    const criticalInfo = config.interfaceInfo.critical || [];
+    const criticalInfo = promptConfig.interfaceInfo.critical || [];
     criticalInfo.forEach((info, index) => {
       prompt += `${index + 1}. ${info}\n`;
     });
     prompt += '\n';
     
     prompt += 'SELETORES DISPONÍVEIS:\n';
-    const availableSelectors = config.interfaceInfo.availableSelectors || [];
+    const availableSelectors = promptConfig.interfaceInfo.availableSelectors || [];
     availableSelectors.forEach(selector => {
       prompt += `- ${selector}\n`;
     });
@@ -123,10 +127,10 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
   }
   
   // Estratégia de teste
-  if (config.testStrategy && config.testStrategy.length > 0) {
+  if (promptConfig.testStrategy && promptConfig.testStrategy.length > 0) {
     prompt += 'ESTRATÉGIA DE TESTE:\n';
     prompt += 'Como não há interface de chat pública, os testes devem:\n';
-    config.testStrategy.forEach((strategy, index) => {
+    promptConfig.testStrategy.forEach((strategy, index) => {
       prompt += `${index + 1}. ${strategy}\n`;
     });
     prompt += '\n';
@@ -135,7 +139,7 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
   // Formato do teste
   prompt += 'FORMATO DO TESTE RPA:\n';
   prompt += 'O teste deve seguir este formato JSON:\n\n';
-  prompt += JSON.stringify(config.outputFormat?.template || {
+  prompt += JSON.stringify(promptConfig.outputFormat?.template || {
     id: 'test-{flowId}-{timestamp}',
     name: 'IA - Teste RPA - {nome do fluxo}',
     type: 'test',
@@ -173,36 +177,36 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
   prompt += '\n\n';
   
   // Tipos de ações
-  if (config.actionTypes) {
+  if (promptConfig.actionTypes) {
     prompt += 'TIPOS DE AÇÕES DISPONÍVEIS:\n';
-    Object.entries(config.actionTypes).forEach(([type, description]) => {
+    Object.entries(promptConfig.actionTypes).forEach(([type, description]) => {
       prompt += `- ${type}: ${description}\n`;
     });
     prompt += '\n';
   }
   
   // Tipos de asserts
-  if (config.assertTypes) {
+  if (promptConfig.assertTypes) {
     prompt += 'TIPOS DE ASSERTS DISPONÍVEIS:\n';
-    Object.entries(config.assertTypes).forEach(([type, description]) => {
+    Object.entries(promptConfig.assertTypes).forEach(([type, description]) => {
       prompt += `- ${type}: ${description}\n`;
     });
     prompt += '\n';
   }
   
   // Ordem obrigatória dos passos
-  if (config.stepOrder) {
+  if (promptConfig.stepOrder) {
     prompt += 'ORDEM OBRIGATÓRIA DOS PASSOS:\n';
-    prompt += `⚠️ IMPORTANTE: ${config.stepOrder.description}\n\n`;
+    prompt += `⚠️ IMPORTANTE: ${promptConfig.stepOrder.description}\n\n`;
     
-    config.stepOrder.steps.forEach((step, index) => {
+    promptConfig.stepOrder.steps.forEach((step, index) => {
       prompt += `${index + 1}. ${step}\n`;
     });
     prompt += '\n';
     
     // Seção de dependências
-    if (config.stepOrder.dependenciesSection) {
-      const depsSection = config.stepOrder.dependenciesSection;
+    if (promptConfig.stepOrder.dependenciesSection) {
+      const depsSection = promptConfig.stepOrder.dependenciesSection;
       prompt += `${depsSection.title}\n`;
       prompt += `${depsSection.description}\n\n`;
       
@@ -248,18 +252,18 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
   }
   
   // Instruções do caminho do fluxo
-  if (config.flowPathInstructions) {
+  if (promptConfig.flowPathInstructions) {
     prompt += 'PASSO 2 - CAMINHO DO FLUXO:\n';
-    prompt += `${config.flowPathInstructions.description}\n`;
+    prompt += `${promptConfig.flowPathInstructions.description}\n`;
     
-    config.flowPathInstructions.steps.forEach((step, index) => {
+    promptConfig.flowPathInstructions.steps.forEach((step, index) => {
       prompt += `${index + 1}. ${step}\n`;
     });
     prompt += '\n';
     
     prompt += 'Para cada nó no caminho, gere ações RPA apropriadas:\n';
-    if (config.flowPathInstructions.nodeActions) {
-      Object.entries(config.flowPathInstructions.nodeActions).forEach(([nodeType, action]) => {
+    if (promptConfig.flowPathInstructions.nodeActions) {
+      Object.entries(promptConfig.flowPathInstructions.nodeActions).forEach(([nodeType, action]) => {
         const actionText = action.replace('{frontendUrl}', frontendUrl);
         prompt += `- Nós "${nodeType}": ${actionText}\n`;
       });
@@ -268,15 +272,15 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
   }
   
   // Notas importantes
-  if (config.importantNotes) {
-    if (config.importantNotes.selectors) {
+  if (promptConfig.importantNotes) {
+    if (promptConfig.importantNotes.selectors) {
       prompt += 'IMPORTANTE SOBRE SELETORES:\n';
-      prompt += `- ${config.importantNotes.selectors}\n\n`;
+      prompt += `- ${promptConfig.importantNotes.selectors}\n\n`;
     }
   }
   
   // Instrução final
-  prompt += config.importantNotes?.output || 'Gere o teste RPA JSON agora (APENAS JSON, sem explicações):';
+  prompt += promptConfig.importantNotes?.output || 'Gere o teste RPA JSON agora (APENAS JSON, sem explicações):';
   
   return prompt;
 }
@@ -581,8 +585,12 @@ function buildDependencySteps(dependencies, flow) {
     return steps;
   }
   
+  // Obtém URL base do frontend
+  // Prioridade: TEST_FRONTEND_URL > FRONTEND_URL > config.json > fallback
   const frontendUrl = process.env.TEST_FRONTEND_URL || 
                       process.env.FRONTEND_URL || 
+                      config.get('tests.rpa.frontendUrl') ||
+                      config.get('frontend.url') ||
                       'http://localhost:5173';
   
   logger.info('Construindo passos de dependências', {

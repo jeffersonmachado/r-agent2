@@ -2,6 +2,7 @@
   "nodeEnv": "production",
   "api": {
     "port": 3000,
+    "baseUrl": "http://localhost:3000",
     "defaultTenantId": "tenant-demo",
     "ticketCleanup": {
       "intervalHours": 1,
@@ -9,7 +10,8 @@
     }
   },
   "frontend": {
-    "port": 8080,
+    "port": 5173,
+    "url": "http://localhost:5173",
     "apiBaseUrl": "http://localhost:3000"
   },
   "whatsapp": {
@@ -51,6 +53,41 @@
   "logging": {
     "level": "INFO",
     "format": "json"
+  },
+  "tests": {
+    "rpa": {
+      "frontendUrl": "http://localhost:5173",
+      "apiUrl": "http://localhost:3000"
+    }
+  },
+  "rateLimit": {
+    "redis": {
+      "url": "redis://localhost:6379"
+    },
+    "policies": {
+      "dryRun": {
+        "points": 50,
+        "duration": 60
+      },
+      "generation": {
+        "points": 5,
+        "duration": 60
+      },
+      "bootstrap": {
+        "points": 1,
+        "duration": 300
+      },
+      "scraping": {
+        "points": 10,
+        "duration": 300,
+        "requestsPerSecond": 3,
+        "pagesPerExecution": 20
+      },
+      "systemValidate": {
+        "points": 10,
+        "duration": 60
+      }
+    }
   }
 }
 

@@ -10,6 +10,7 @@
 const logger = require('../utils/logger');
 const ragDocumentsService = require('./ragDocumentsService');
 const { v4: uuidv4 } = require('uuid');
+const { enforceScrapingRateLimit } = require('../../infra/rate-limit/scraping');
 
 // Verifica se cheerio está disponível
 let cheerio = null;
@@ -187,6 +188,16 @@ async function scrapeUrl(url, options = {}) {
   logger.info('[WebScraping] Iniciando scraping', { url });
 
   try {
+    // Aplica rate limiting ANTES de fazer requisição
+    const executionId = options.executionId || `exec-${Date.now()}`;
+    const userId = options.userId || tenantId;
+    
+    await enforceScrapingRateLimit({
+      url,
+      executionId,
+      userId,
+    });
+
     // Faz requisição
     const response = await fetchUrl(url, { timeout });
     const html = await response.text();

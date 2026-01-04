@@ -16,7 +16,13 @@ const DEFAULT_TIMEOUT_MS = 15000;
  * Constrói a URL a partir da base e do path relativo.
  * SEMPRE retorna uma URL absoluta para evitar resolução implícita pelo browser.
  * 
- * Fallback explícito: http://localhost:3000 (porta padrão da API)
+ * Prioridade de configuração:
+ * 1. VITE_API_BASE_URL (variável de ambiente)
+ * 2. Configuração via API /config (se disponível)
+ * 3. Fallback: http://localhost:3000 (porta padrão da API)
+ * 
+ * NOTA: O frontend não pode acessar diretamente api/data/config.json.
+ * A configuração deve ser fornecida via variável de ambiente ou endpoint /config.
  *
  * @param {string} path
  * @returns {string}
@@ -24,6 +30,7 @@ const DEFAULT_TIMEOUT_MS = 15000;
 function buildUrl(path) {
   // Fallback explícito documentado para evitar que requisições sejam resolvidas
   // implicitamente pelo browser para a origem do Vite (porta 5173)
+  // Este valor deve corresponder a api.data.config.json > frontend.apiBaseUrl
   const DEFAULT_BASE_URL = 'http://localhost:3000';
   
   const base = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
@@ -78,7 +85,7 @@ export async function fetchJson(path, init) {
     method, 
     url, 
     path,
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback)'
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)'
   });
 
   try {
@@ -228,7 +235,7 @@ export async function fetchBlob(path, init) {
     method, 
     url, 
     path,
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback)'
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)'
   });
 
   try {

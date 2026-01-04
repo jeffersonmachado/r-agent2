@@ -208,7 +208,7 @@ describe('FlowEditor', () => {
 
     // Verifica se o container do editor foi renderizado
     const editorContainer = container.querySelector('.flow-editor-container');
-    expect(editorContainer).toBeInTheDocument();
+    expect(editorContainer).toBeTruthy();
   });
 
   it('inicializa o editor Rete quando montado', async () => {

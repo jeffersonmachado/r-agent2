@@ -38,7 +38,10 @@ async function executarTesteVisivel() {
       steps: [
         {
           type: 'navigate',
-          url: 'http://localhost:5173/login',
+          url: (() => {
+            const rpaConfig = require('./rpaConfig');
+            return `${rpaConfig.urls.frontend}/login`;
+          })(),
           waitFor: 'input[type="text"], input[type="email"]',
           timeout: 30000,
         },
@@ -66,7 +69,10 @@ async function executarTesteVisivel() {
       ],
       data: {
         urls: {
-          frontend: 'http://localhost:5173',
+          frontend: (() => {
+            const rpaConfig = require('./rpaConfig');
+            return rpaConfig.urls.frontend;
+          })(),
         },
       },
     };
@@ -115,7 +121,10 @@ async function executarTesteVisivel() {
       steps: [
         {
           type: 'navigate',
-          url: 'http://localhost:5173',
+          url: (() => {
+            const rpaConfig = require('./rpaConfig');
+            return rpaConfig.urls.frontend;
+          })(),
           waitFor: 'body',
           timeout: 30000,
         },
@@ -127,7 +136,10 @@ async function executarTesteVisivel() {
           type: 'assert',
           page: {
             url: {
-              contains: 'localhost:5173',
+              contains: (() => {
+            const rpaConfig = require('./rpaConfig');
+            return new URL(rpaConfig.urls.frontend).hostname;
+          })(),
             },
             landmarks: [
               {
@@ -174,7 +186,8 @@ async function executarTesteVisivel() {
       console.error('   2. Execute novamente: node tests/rpa/executar-teste-visivel.js\n');
     } else if (error.message.includes('net::ERR_CONNECTION_REFUSED') || error.message.includes('Navigation failed')) {
       console.error('\n💡 Solução:');
-      console.error('   1. Certifique-se de que a aplicação está rodando em http://localhost:5173');
+      const rpaConfig = require('./rpaConfig');
+      console.error(`   1. Certifique-se de que a aplicação está rodando em ${rpaConfig.urls.frontend}`);
       console.error('   2. Inicie o servidor: npm run dev (ou comando equivalente)');
       console.error('   3. Execute novamente: node tests/rpa/executar-teste-visivel.js\n');
     } else {

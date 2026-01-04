@@ -18,6 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 const config = require('../utils/config');
+const logger = require('../utils/logger');
 
 /**
  * @typedef {Object} Message
@@ -96,11 +97,9 @@ function saveQueuesToFile() {
     const jsonData = JSON.stringify(data, null, 2);
     fs.writeFileSync(queuesFile, jsonData, 'utf8');
     
-    // eslint-disable-next-line no-console
-    console.log(`[QueueService] Dados salvos: ${ticketsArray.length} ticket(s), ${Object.keys(queuesObj).length} fila(s)`);
+    logger.debug(`[QueueService] Dados salvos: ${ticketsArray.length} ticket(s), ${Object.keys(queuesObj).length} fila(s)`);
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[QueueService] Erro ao salvar dados no arquivo:', err.message);
+    logger.error('[QueueService] Erro ao salvar dados no arquivo', err);
   }
 }
 
@@ -113,8 +112,7 @@ function loadQueuesFromFile() {
     ensureDataDir();
     
     if (!fs.existsSync(queuesFile)) {
-      // eslint-disable-next-line no-console
-      console.log(`[QueueService] Arquivo de dados não encontrado: ${queuesFile}. Iniciando com dados vazios.`);
+      logger.debug(`[QueueService] Arquivo de dados não encontrado: ${queuesFile}. Iniciando com dados vazios.`);
       return;
     }
     
@@ -148,16 +146,13 @@ function loadQueuesFromFile() {
       }
     }
     
-    // eslint-disable-next-line no-console
-    console.log(`[QueueService] Dados carregados: ${tickets.size} ticket(s), ${queues.size} fila(s)`);
+    logger.debug(`[QueueService] Dados carregados: ${tickets.size} ticket(s), ${queues.size} fila(s)`);
     if (migratedTickets > 0) {
-      // eslint-disable-next-line no-console
-      console.log(`[QueueService] ${migratedTickets} ticket(s) migrado(s) para tenant padrão: ${defaultTenantId}`);
+      logger.info(`[QueueService] ${migratedTickets} ticket(s) migrado(s) para tenant padrão: ${defaultTenantId}`);
       saveQueuesToFile(); // Salva com tenantId
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[QueueService] Erro ao carregar dados do arquivo:', err.message);
+    logger.error('[QueueService] Erro ao carregar dados do arquivo', err);
     // Continua com Map vazio se houver erro
   }
 }
@@ -170,8 +165,7 @@ if (process.env.NODE_ENV !== 'production') {
   // Aguarda um pouco para garantir que os dados foram carregados
   setTimeout(() => {
     const testMetrics = getMetrics();
-    // eslint-disable-next-line no-console
-    console.log('[QueueService] Teste de getMetrics após carregar dados:', {
+    logger.debug('[QueueService] Teste de getMetrics após carregar dados:', {
       totalTickets: testMetrics.totalTickets,
       ticketsByStatus: testMetrics.ticketsByStatus,
       ticketsByQueue: testMetrics.ticketsByQueue,
@@ -352,8 +346,7 @@ function createQueue(queueName) {
   // Salva automaticamente
   saveQueuesToFile();
 
-  // eslint-disable-next-line no-console
-  console.log(`[QueueService] Fila criada: ${normalizedName}`);
+  logger.debug(`[QueueService] Fila criada: ${normalizedName}`);
 
   return {
     success: true,
@@ -425,8 +418,7 @@ function deleteQueue(queueName, force = false) {
   // Salva automaticamente
   saveQueuesToFile();
 
-  // eslint-disable-next-line no-console
-  console.log(`[QueueService] Fila excluída: ${normalizedName}${deletedTickets > 0 ? ` (${deletedTickets} ticket(s) fechado(s))` : ''}`);
+  logger.debug(`[QueueService] Fila excluída: ${normalizedName}${deletedTickets > 0 ? ` (${deletedTickets} ticket(s) fechado(s))` : ''}`);
 
   return {
     success: true,
@@ -677,8 +669,7 @@ function listAllTickets(options = {}) {
   }
 
   // Log de debug para comparar com getMetrics
-  // eslint-disable-next-line no-console
-  console.log(`[QueueService] listAllTickets: Map tem ${tickets.size} ticket(s), Array tem ${ticketList.length} ticket(s)`, {
+  logger.debug(`[QueueService] listAllTickets: Map tem ${tickets.size} ticket(s), Array tem ${ticketList.length} ticket(s)`, {
     filters: { tenantId: options.tenantId, status: options.status, queue: options.queue },
   });
 
@@ -735,8 +726,7 @@ function cleanupOldTickets(maxAgeDays = 7) {
   }
 
   if (cleaned > 0) {
-    // eslint-disable-next-line no-console
-    console.log(`[QueueService] Limpeza de tickets: ${cleaned} ticket(s) fechado(s) antigo(s) removido(s)`);
+    logger.info(`[QueueService] Limpeza de tickets: ${cleaned} ticket(s) fechado(s) antigo(s) removido(s)`);
   }
 
   return cleaned;
@@ -761,8 +751,7 @@ function startAutoCleanup(intervalHours = 1, maxAgeDays = 7) {
     cleanupOldTickets(maxAgeDays);
   }, intervalMs);
 
-  // eslint-disable-next-line no-console
-  console.log(`[QueueService] Limpeza automática iniciada: a cada ${intervalHours}h, removendo tickets fechados com mais de ${maxAgeDays} dias`);
+  logger.info(`[QueueService] Limpeza automática iniciada: a cada ${intervalHours}h, removendo tickets fechados com mais de ${maxAgeDays} dias`);
 
   return intervalId;
 }
@@ -779,8 +768,7 @@ function getMetrics() {
   const maxAge30Days = 30 * 24 * 60 * 60 * 1000;
 
   // Log de debug para verificar o estado do Map
-  // eslint-disable-next-line no-console
-  console.log(`[QueueService] getMetrics: Map tem ${tickets.size} ticket(s), Array tem ${allTickets.length} ticket(s)`);
+  logger.debug(`[QueueService] getMetrics: Map tem ${tickets.size} ticket(s), Array tem ${allTickets.length} ticket(s)`);
 
   const metrics = {
     totalTickets: allTickets.length,
@@ -810,8 +798,7 @@ function getMetrics() {
   allTickets.forEach((ticket) => {
     // Valida se o ticket é válido
     if (!ticket || !ticket.id) {
-      // eslint-disable-next-line no-console
-      console.warn(`[QueueService] Ticket inválido encontrado no Map:`, ticket);
+      logger.warn(`[QueueService] Ticket inválido encontrado no Map:`, ticket);
       return;
     }
 
@@ -821,8 +808,7 @@ function getMetrics() {
         (metrics.ticketsByStatus[ticket.status] || 0) + 1;
     } else if (ticket.status) {
       // Log para debug: status inválido encontrado
-      // eslint-disable-next-line no-console
-      console.warn(`[QueueService] Ticket com status inválido: ${ticket.status}`, { ticketId: ticket.id });
+      logger.warn(`[QueueService] Ticket com status inválido: ${ticket.status}`, { ticketId: ticket.id });
     } else {
       // Log para debug: ticket sem status
       // eslint-disable-next-line no-console
@@ -867,8 +853,7 @@ function getMetrics() {
   });
 
   // Log de debug sempre (para identificar quando está vazio)
-  // eslint-disable-next-line no-console
-  console.log(`[QueueService] Métricas calculadas: ${allTickets.length} ticket(s)`, {
+  logger.debug(`[QueueService] Métricas calculadas: ${allTickets.length} ticket(s)`, {
     totalTickets: metrics.totalTickets,
     byStatus: metrics.ticketsByStatus,
     byQueue: Object.keys(metrics.ticketsByQueue).length,

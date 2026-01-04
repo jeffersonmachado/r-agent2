@@ -41,13 +41,14 @@ const { fallbackNodeHandler } = require('../../engine/nodes/fallbackNode');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const { sendTextMessage } = require('./whatsappService');
 const logger = require('../utils/logger');
-const { createTicket, getTicketBySession, updateLastMessage } = require('./queueService');
+const { createTicket, getTicketBySession, updateLastMessage, getTicket } = require('./queueService');
 const { 
   createHumanSession, 
   isInHumanSession, 
   getHumanSession 
 } = require('../../engine/services/humanLiveAdapter');
 const { ESCALATION_MODES } = require('../../engine/fallbackController');
+const { emitEvent } = require('./websocketService');
 const config = require('../utils/config');
 const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
 const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
@@ -143,6 +144,18 @@ async function processWhatsAppMessage(message, value, deps) {
   if (existingTicket && existingTicket.status !== 'closed') {
     // Atualiza última mensagem do usuário no ticket e adiciona ao histórico
     updateLastMessage(existingTicket.id, text);
+    
+    // Emite evento WebSocket para notificar sobre nova mensagem do usuário
+    const ticket = getTicket(existingTicket.id);
+    if (ticket) {
+      const tenantId = ticket.tenantId;
+      emitEvent('ticket.message.received', {
+        ticketId: ticket.id,
+        message: text,
+        sender: 'user',
+      }, { tenantId, agentId: ticket.assignedTo });
+    }
+    
     // Não processa mensagens do bot durante atendimento humano assíncrono
     // O atendente deve responder manualmente via painel
     // A mensagem já foi adicionada ao histórico e será exibida na interface

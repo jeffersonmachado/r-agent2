@@ -1,0 +1,16 @@
+{
+  "id": "a2bc4690-1daf-4240-a806-11c23eb8a06c",
+  "name": "test-load",
+  "version": "1.0.0",
+  "createdAt": "2026-01-04T03:41:21.905Z",
+  "url": null,
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "http://example.com",
+      "waitFor": null,
+      "timeout": 30000
+    }
+  ],
+  "data": {}
+}

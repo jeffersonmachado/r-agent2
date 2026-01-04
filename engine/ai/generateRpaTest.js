@@ -18,9 +18,11 @@ const fs = require('fs');
 const path = require('path');
 const { validateGeneratedPlan } = require('./validateGeneratedPlan');
 const logger = require('../../api/utils/logger');
+const config = require('../../api/utils/config');
 
 // Caminho do prompt oficial
-const PROMPT_PATH = path.join(__dirname, '../../../prompts/rpa.generator.prompt.md');
+// Corrigido: usa caminho absoluto baseado na raiz do projeto
+const PROMPT_PATH = path.resolve(__dirname, '../../prompts/rpa.generator.prompt.md');
 
 /**
  * Carrega o prompt oficial de geração RPA
@@ -72,7 +74,7 @@ function simulateAiGeneration(userInput, prompt) {
       {
         type: "navigate",
         selector: "body",
-        value: "http://localhost:3000",
+        value: config.get('api.baseUrl') || config.get('frontend.apiBaseUrl') || 'http://localhost:3000',
         description: "Navegar para aplicação",
         critical: true
       }

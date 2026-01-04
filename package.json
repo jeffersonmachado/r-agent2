@@ -18,7 +18,8 @@
     "test:runtime": "jest tests/runtime",
     "test:organizational": "jest tests/organizational",
     "test:stress": "jest tests/stress",
-    "test:system": "jest tests/contracts tests/governance tests/ci tests/runtime tests/organizational tests/stress",
+    "test:rate-limit": "jest tests/rate-limit",
+    "test:system": "jest tests/contracts tests/governance tests/ci tests/runtime tests/organizational tests/stress tests/rate-limit",
     "qa": "node qa/qaRunner.js",
     "system:validate": "node tools/system/validate.js",
     "system:checklist": "node tools/system/checklist.js",
@@ -33,6 +34,7 @@
     "rpa:replay:ver": "node tests/rpa/verReplaySeed.js",
     "rpa:replay:gerar": "node tests/rpa/gerarReplayDetalhado.js",
     "test:all": "jest",
+    "test:complete": "node scripts/run-all-tests.js",
     "autotest": "node scripts/autotest.js",
     "check:green": "node scripts/check-green.js",
     "seed:test": "node tests/seeds/seedTestData.js",
@@ -60,20 +62,33 @@
     "zip": "./scripts/generate-zip.sh",
     "zip:all": "./scripts/generate-zip.sh --include-node-modules --include-coverage --include-dist",
     "zip:api": "./scripts/generate-zip.sh -i 'api/**' -i 'package.json' -i 'package-lock.json' -n api-only.zip",
-    "zip:frontend": "./scripts/generate-zip.sh -i 'frontend/**' -i 'package.json' -i 'package-lock.json' -n frontend-only.zip"
+    "zip:frontend": "./scripts/generate-zip.sh -i 'frontend/**' -i 'package.json' -i 'package-lock.json' -n frontend-only.zip",
+    "rate-limit:clear": "node scripts/clear-rate-limit.js",
+    "rate-limit:clear:bootstrap": "node scripts/clear-rate-limit.js --operation BOOTSTRAP",
+    "rate-limit:clear:generation": "node scripts/clear-rate-limit.js --operation GENERATION_REAL",
+    "rate-limit:clear:dry-run": "node scripts/clear-rate-limit.js --operation DRY_RUN",
+    "rate-limit:clear-cache": "node scripts/clear-rate-limit-cache.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0",
+    "browser-image-compression": "^2.0.2",
+    "busboy": "^1.6.0",
     "cheerio": "^1.0.0",
-    "uuid": "^9.0.0",
-    "ws": "^8.18.3",
+    "ioredis": "^5.3.2",
     "openai": "^4.20.0",
-    "@anthropic-ai/sdk": "^0.20.0"
+    "pdf-parse": "^1.1.4",
+    "pdfjs-dist": "^3.11.174",
+    "rate-limiter-flexible": "^5.0.3",
+    "sharp": "^0.33.5",
+    "tesseract.js": "^5.1.1",
+    "uuid": "^9.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.0",
-    "pm2": "^5.3.0",
-    "@playwright/test": "^1.40.0",
-    "playwright": "^1.40.0"
+    "playwright": "^1.40.0",
+    "pm2": "^5.3.0"
   }
 }

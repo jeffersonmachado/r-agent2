@@ -3438,6 +3438,77 @@ div:has(svg[data-testid="connection"]) {
   width: 100%;
 }
 
+/* Modal de Nova Conversa */
+.support-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.support-modal-content {
+  background-color: var(--color-bg-elevated);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-default);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+.support-modal-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.support-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.support-modal-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.support-modal-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-hover);
+}
+
+.support-form-select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.support-form-select:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+
+.support-form-select:hover {
+  border-color: var(--color-border-hover);
+}
+
 /* Chat WhatsApp Style - Para visualização de mensagens */
 .support-chat-container {
   display: flex;
@@ -4998,6 +5069,15 @@ div:has(svg[data-testid="connection"]) {
 .user-avatar-status-offline {
   background-color: #95a5a6;
   box-shadow: 0 0 0 2px rgba(149, 165, 166, 0.3);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes pulse-busy {

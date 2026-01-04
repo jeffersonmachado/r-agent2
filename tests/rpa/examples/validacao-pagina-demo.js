@@ -60,7 +60,10 @@ async function demonstrarValidacaoPagina() {
       steps: [
         {
           type: 'navigate',
-          url: 'http://localhost:5173/support',
+          url: (() => {
+            const rpaConfig = require('../rpaConfig');
+            return `${rpaConfig.urls.frontend}/support`;
+          })(),
           waitFor: '.support-page',
         },
         {

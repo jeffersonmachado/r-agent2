@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken } from '../api/config';
+import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection } from '../api/config';
 import { listFlows } from '../api/flows';
 import { useAuth } from '../context/authContext';
 import { useToast } from '../components/Toast';
@@ -47,11 +47,13 @@ export function ConfigPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [jsonError, setJsonError] = useState(null);
   const [viewMode, setViewMode] = useState('form'); // 'form' ou 'json'
-  const [activeTab, setActiveTab] = useState('api'); // 'api', 'frontend', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'general'
+  const [activeTab, setActiveTab] = useState('api'); // 'api', 'frontend', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'general'
   const [flows, setFlows] = useState([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
   const [validatingTokens, setValidatingTokens] = useState({}); // { 'ai.openai.apiKey': true }
   const [tokenValidationStatus, setTokenValidationStatus] = useState({}); // { 'ai.openai.apiKey': { valid: true, error: null } }
+  const [validatingRedis, setValidatingRedis] = useState(false);
+  const [redisValidationStatus, setRedisValidationStatus] = useState(null); // { valid: true, error: null }
 
   const configLoadedRef = useRef(false);
   const showToastRef = useRef(showToast);
@@ -360,6 +362,40 @@ export function ConfigPage() {
     }
   }, [showToast]);
 
+  // Valida conexão do Redis
+  const validateRedis = useCallback(async (redisUrl) => {
+    if (!redisUrl || redisUrl.trim() === '') {
+      setRedisValidationStatus(null);
+      return;
+    }
+
+    setValidatingRedis(true);
+    setRedisValidationStatus(null);
+
+    try {
+      const result = await validateRedisConnection(redisUrl);
+      setRedisValidationStatus({
+        valid: result.valid,
+        error: result.error || null,
+      });
+
+      if (result.valid) {
+        showToast('Conexão com Redis válida!', 'success');
+      } else {
+        showToast(`Conexão com Redis inválida: ${result.error || 'Erro desconhecido'}`, 'error');
+      }
+    } catch (error) {
+      logger.error('Erro ao validar conexão do Redis', error);
+      setRedisValidationStatus({
+        valid: false,
+        error: error.message || 'Erro ao validar conexão do Redis',
+      });
+      showToast(`Erro ao validar conexão do Redis: ${error.message || 'Erro desconhecido'}`, 'error');
+    } finally {
+      setValidatingRedis(false);
+    }
+  }, [showToast]);
+
   // Atualiza valor no modo form
   const updateValue = useCallback((path, value) => {
     if (!editedConfig) return;
@@ -401,14 +437,20 @@ export function ConfigPage() {
     if (path === 'ai.openai.apiKey' || path === 'ai.anthropic.apiKey') {
       setTokenValidationStatus(prev => ({ ...prev, [path]: null }));
     }
+    if (path === 'rateLimit.redis.url') {
+      setRedisValidationStatus(null);
+    }
   }, [editedConfig, viewMode]);
 
   // Renderiza campo de input para um valor
   const renderField = (label, path, value, type = 'text', options = null) => {
     const displayValue = value === null || value === undefined ? '' : String(value);
     const isTokenField = path === 'ai.openai.apiKey' || path === 'ai.anthropic.apiKey';
+    const isRedisField = path === 'rateLimit.redis.url';
     const isValidating = validatingTokens[path] || false;
     const validationStatus = tokenValidationStatus[path];
+    const redisValidating = isRedisField && validatingRedis;
+    const redisStatus = isRedisField ? redisValidationStatus : null;
 
     // Se tem opções, renderiza como select
     if (options && Array.isArray(options)) {
@@ -470,8 +512,8 @@ export function ConfigPage() {
                 value={displayValue}
                 onChange={(e) => updateValue(path, e.target.value)}
                 className={`w-full px-3 py-2 pr-10 bg-bg-secondary border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all ${
-                  validationStatus
-                    ? validationStatus.valid
+                  (validationStatus || redisStatus)
+                    ? (validationStatus?.valid || redisStatus?.valid)
                       ? 'border-status-success'
                       : 'border-status-error'
                     : 'border-border-default'
@@ -479,9 +521,9 @@ export function ConfigPage() {
                 placeholder={label}
               />
             )}
-            {isTokenField && validationStatus && (
+            {(isTokenField && validationStatus) || (isRedisField && redisStatus) ? (
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                {validationStatus.valid ? (
+                {(validationStatus?.valid || redisStatus?.valid) ? (
                   <svg className="w-5 h-5 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -491,16 +533,16 @@ export function ConfigPage() {
                   </svg>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
-          {isTokenField && (
+          {(isTokenField || isRedisField) && (
             <button
               type="button"
-              onClick={() => validateToken(path, displayValue)}
-              disabled={!displayValue || isValidating}
+              onClick={() => isTokenField ? validateToken(path, displayValue) : validateRedis(displayValue)}
+              disabled={!displayValue || isValidating || redisValidating}
               className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
             >
-              {isValidating ? (
+              {(isValidating || redisValidating) ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Testando...</span>
@@ -510,7 +552,7 @@ export function ConfigPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Testar Token</span>
+                  <span>{isTokenField ? 'Testar Token' : 'Testar Conexão'}</span>
                 </>
               )}
             </button>
@@ -521,6 +563,12 @@ export function ConfigPage() {
         )}
         {isTokenField && validationStatus && validationStatus.valid && (
           <p className="mt-1 text-xs text-status-success">✓ Token válido e funcionando corretamente</p>
+        )}
+        {isRedisField && redisStatus && !redisStatus.valid && redisStatus.error && (
+          <p className="mt-1 text-xs text-status-error">{redisStatus.error}</p>
+        )}
+        {isRedisField && redisStatus && redisStatus.valid && (
+          <p className="mt-1 text-xs text-status-success">✓ Conexão com Redis válida e funcionando corretamente</p>
         )}
       </div>
     );
@@ -535,6 +583,7 @@ export function ConfigPage() {
     { id: 'features', label: 'Features', icon: '✨' },
     { id: 'scripts', label: 'Scripts', icon: '📜' },
     { id: 'logging', label: 'Logging', icon: '📝' },
+    { id: 'rateLimit', label: 'Rate Limiting', icon: '🚦' },
     { id: 'general', label: 'Geral', icon: '🌐' },
   ];
 
@@ -1008,6 +1057,103 @@ export function ConfigPage() {
                   <p className="text-sm text-text-primary">
                     <strong>ℹ️ Nota:</strong> Após alterar as configurações de logging, reinicie o servidor da API para aplicar as mudanças.
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Aba: Rate Limiting */}
+            {activeTab === 'rateLimit' && (
+              <div className="space-y-6">
+                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
+                  <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+                    <span>🚦</span>
+                    <span>Rate Limiting</span>
+                  </h3>
+                  
+                  <div className="mb-6 pb-6 border-b border-border-default">
+                    <h4 className="text-lg font-medium text-text-primary mb-4">Redis</h4>
+                    {renderField('URL do Redis', 'rateLimit.redis.url', editedConfig.rateLimit?.redis?.url)}
+                    <div className="mt-4 p-4 bg-accent-light rounded-lg border border-accent-primary/20">
+                      <p className="text-sm text-text-secondary">
+                        💡 URL de conexão do Redis para armazenar contadores de rate limiting. Exemplo: <code className="bg-bg-primary px-1 rounded">redis://localhost:6379</code>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 pb-6 border-b border-border-default">
+                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - DRY-RUN</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {renderField('Pontos (execuções)', 'rateLimit.policies.dryRun.points', editedConfig.rateLimit?.policies?.dryRun?.points, 'number')}
+                      {renderField('Duração (segundos)', 'rateLimit.policies.dryRun.duration', editedConfig.rateLimit?.policies?.dryRun?.duration, 'number')}
+                    </div>
+                    <div className="mt-4 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
+                      <p className="text-sm text-text-secondary">
+                        ℹ️ DRY-RUN é mais permissivo (padrão: 50 execuções por minuto) - usado para testes
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 pb-6 border-b border-border-default">
+                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Geração Real</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {renderField('Pontos (execuções)', 'rateLimit.policies.generation.points', editedConfig.rateLimit?.policies?.generation?.points, 'number')}
+                      {renderField('Duração (segundos)', 'rateLimit.policies.generation.duration', editedConfig.rateLimit?.policies?.generation?.duration, 'number')}
+                    </div>
+                    <div className="mt-4 p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
+                      <p className="text-sm text-text-secondary">
+                        ⚠️ Geração real é restritiva (padrão: 5 execuções por minuto) - usado em produção
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 pb-6 border-b border-border-default">
+                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Bootstrap</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {renderField('Pontos (execuções)', 'rateLimit.policies.bootstrap.points', editedConfig.rateLimit?.policies?.bootstrap?.points, 'number')}
+                      {renderField('Duração (segundos)', 'rateLimit.policies.bootstrap.duration', editedConfig.rateLimit?.policies?.bootstrap?.duration, 'number')}
+                    </div>
+                    <div className="mt-4 p-4 bg-status-error/10 rounded-lg border border-status-error/30">
+                      <p className="text-sm text-text-secondary">
+                        🚨 Bootstrap é extremamente restritivo (padrão: 1 execução a cada 5 minutos) - usado para operações críticas
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 pb-6 border-b border-border-default">
+                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Scraping</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {renderField('Pontos (requisições)', 'rateLimit.policies.scraping.points', editedConfig.rateLimit?.policies?.scraping?.points, 'number')}
+                      {renderField('Duração (segundos)', 'rateLimit.policies.scraping.duration', editedConfig.rateLimit?.policies?.scraping?.duration, 'number')}
+                      {renderField('Requisições por Segundo (por domínio)', 'rateLimit.policies.scraping.requestsPerSecond', editedConfig.rateLimit?.policies?.scraping?.requestsPerSecond, 'number')}
+                      {renderField('Páginas por Execução', 'rateLimit.policies.scraping.pagesPerExecution', editedConfig.rateLimit?.policies?.scraping?.pagesPerExecution, 'number')}
+                    </div>
+                    <div className="mt-4 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
+                      <p className="text-sm text-text-secondary">
+                        ℹ️ Scraping tem limites por domínio (requests por segundo) e por execução (páginas máximas)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Validação de Sistema</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {renderField('Pontos (execuções)', 'rateLimit.policies.systemValidate.points', editedConfig.rateLimit?.policies?.systemValidate?.points, 'number')}
+                      {renderField('Duração (segundos)', 'rateLimit.policies.systemValidate.duration', editedConfig.rateLimit?.policies?.systemValidate?.duration, 'number')}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
+                    <p className="text-sm text-text-primary mb-2">
+                      <strong>ℹ️ Sobre Rate Limiting:</strong>
+                    </p>
+                    <ul className="text-sm text-text-secondary space-y-1 ml-4 list-disc">
+                      <li>Todas as execuções passam por rate limiting antes de qualquer processamento</li>
+                      <li>Rate limiting bloqueia execuções que excedem os limites configurados</li>
+                      <li>Erros de rate limit retornam HTTP 429 com informação de quando tentar novamente</li>
+                      <li>Eventos são registrados em <code className="bg-bg-primary px-1 rounded">reports/rate-limit-events.json</code></li>
+                      <li>Redis é obrigatório em produção para rate limiting distribuído</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             )}

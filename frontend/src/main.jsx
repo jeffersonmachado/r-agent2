@@ -4,6 +4,7 @@ import './index.css';
 import { EditorProvider } from './state/editorStore';
 import { ThemeProvider } from './styles/themeContext';
 import { AuthProvider, useAuth } from './context/authContext';
+import { WebSocketProvider } from './context/WebSocketContext';
 import { FlowEditorPage } from './pages/FlowEditorPage';
 import { SupportPage } from './pages/SupportPage';
 import { TicketMaintenancePage } from './pages/TicketMaintenancePage';
@@ -26,7 +27,7 @@ import { WebScrapingPage } from './pages/WebScrapingPage';
 import { RpaTestPage } from './pages/RpaTestPage';
 import { ChatPage } from './pages/ChatPage';
 import { QaPage } from './pages/QaPage';
-import { FlowRpaGeneratorPage } from './pages/FlowRpaGeneratorPage';
+import { GenerateSystemPage } from './pages/GenerateSystemPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { useRouter } from './hooks/useRouter';
@@ -100,7 +101,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppWithAuth />
+        <WebSocketProvider>
+          <AppWithAuth />
+        </WebSocketProvider>
       </AuthProvider>
     </ThemeProvider>
   );
@@ -133,7 +136,7 @@ function AppWithAuth() {
   const isRpaTest = currentPath === '/rpa-test' || currentPath.startsWith('/rpa-test');
   const isChat = currentPath === '/chat' || currentPath.startsWith('/chat');
   const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
-  const isFlowRpaGenerator = currentPath === '/flow-rpa-generator' || currentPath.startsWith('/flow-rpa-generator');
+  const isGenerateSystem = currentPath === '/generate-system' || currentPath.startsWith('/generate-system');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
   // Todas as rotas requerem autenticação, exceto /login
@@ -144,7 +147,7 @@ function AppWithAuth() {
     const allRoutes = [
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isFlowRpaGenerator, isLogin
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -157,7 +160,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isFlowRpaGenerator, isLogin, isAuthenticated, navigate
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isLogin, isAuthenticated, navigate
   ]);
 
   // Redireciona para /dashboard quando autenticado e está em rota de login
@@ -190,10 +193,10 @@ function AppWithAuth() {
       '/product-docs': '📖 Documentação de Produtos',
       '/rag-documents': '📚 Gerenciamento de Documentos RAG',
       '/web-scraping': '🕷️ Raspagem de Sites',
-      '/rpa-test': '🚀 Flow & RPA Generator',
+      '/rpa-test': '🚀 Execução de Testes RPA',
       '/chat': '💬 Chat de Teste',
       '/qa': '✅ Painel de Qualidade (QA)',
-      '/flow-rpa-generator': '🚀 Flow & RPA Generator',
+      '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
       '/login': '🔐 Login',
     };
 
@@ -291,8 +294,8 @@ function AppWithAuth() {
         <ChatPage />
       ) : isQa ? (
         <QaPage />
-      ) : isFlowRpaGenerator ? (
-        <FlowRpaGeneratorPage />
+      ) : isGenerateSystem ? (
+        <GenerateSystemPage />
       ) : null}
     </div>
   );

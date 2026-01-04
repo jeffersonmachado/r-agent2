@@ -57,7 +57,17 @@ async function testOverlay() {
         return window.rpaOverlay.init(apiUrl, execId);
       }
       return false;
-    }, { apiUrl: 'http://localhost:3000', execId: 'test-execution-123' });
+    }, { 
+      apiUrl: (() => {
+        try {
+          const rpaConfig = require('./rpaConfig');
+          return rpaConfig.urls.api || 'http://localhost:3000';
+        } catch {
+          return 'http://localhost:3000';
+        }
+      })(), 
+      execId: 'test-execution-123' 
+    });
     
     console.log(`   Resultado: ${initResult ? '✅ true' : '❌ false'}\n`);
     

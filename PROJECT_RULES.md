@@ -548,6 +548,51 @@ api/
 - Validação na API (sanitização)
 - Validação no frontend (UX apenas)
 
+### Rate Limiting
+
+**Regra Fundamental:** ✅ **Todas as execuções passam por rate limiting antes de qualquer processamento**
+
+#### Políticas de Rate Limiting
+
+- **DRY-RUN**: Mais permissivo (50 execuções/minuto) - para testes
+- **Geração Real**: Restritivo (5 execuções/minuto) - para produção
+- **Bootstrap**: Extremamente restritivo (1 execução/5 minutos) - para operações críticas
+- **Scraping**: 
+  - 10 requisições por 5 minutos (global)
+  - 3 requisições por segundo por domínio
+  - Máximo 20 páginas por execução
+
+#### Implementação
+
+- **Backend**: Redis obrigatório em produção (`RATE_LIMIT_REDIS_URL`)
+- **Fallback**: Memória apenas em desenvolvimento (não recomendado)
+- **Integração**: Rate limiting aplicado ANTES de qualquer processamento (IA, scraping, etc.)
+- **Auditoria**: Todos os eventos registrados em `reports/rate-limit-events.json`
+
+#### Regras Críticas
+
+1. ❌ **Nenhuma execução sem rate limit**
+   - Rate limiting é aplicado na ETAPA 0 do orquestrador
+   - Falha de rate limit bloqueia execução ANTES da IA ser chamada
+
+2. ❌ **Nenhum scraping sem rate limit**
+   - Rate limit por domínio (requests por segundo)
+   - Rate limit por execução (páginas por execução)
+
+3. ❌ **Nenhum retry automático silencioso**
+   - Erros de rate limit retornam HTTP 429
+   - Frontend exibe mensagem clara com `retryAfter`
+
+4. ✅ **Tudo auditável**
+   - Eventos registrados com timestamp, usuário, tipo de operação
+   - Relatórios disponíveis em `reports/rate-limit-events.json`
+
+#### Configuração
+
+- Políticas configuráveis via variáveis de ambiente (ver `env.example`)
+- Valores padrão em `infra/rate-limit/policies.js`
+- Redis configurado via `docker-compose.yml` ou variável `RATE_LIMIT_REDIS_URL`
+
 ---
 
 ## 🚀 Performance

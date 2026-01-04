@@ -404,8 +404,13 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
               const page = runner.executor?.page;
               logger.info(`[RPA Overlay] Página do Puppeteer: ${page ? 'disponível' : 'NÃO disponível'}`);
               if (page) {
-                // Obtém URL base da API (assume que está rodando na mesma origem ou usa variável de ambiente)
-                const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+                // Obtém URL base da API
+                // Prioridade: API_BASE_URL > config.json > fallback
+                const config = require('../utils/config');
+                const apiBaseUrl = process.env.API_BASE_URL || 
+                                   config.get('api.baseUrl') ||
+                                   config.get('scripts.apiUrl') ||
+                                   'http://localhost:3000';
                 
                 logger.info(`[RPA Overlay] Injetando overlay para execução ${executionId}`);
                 

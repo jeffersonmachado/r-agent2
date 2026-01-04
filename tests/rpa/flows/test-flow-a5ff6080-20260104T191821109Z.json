@@ -1,0 +1,142 @@
+{
+  "id": "test-flow-a5ff6080-20260104T191821109Z",
+  "name": "IA - Teste RPA - sistema de arquivos ## Fontes Externas (Scraping",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-a5ff6080",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-04T19:18:21.109Z",
+    "dependenciesResolved": true,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "open_chat_and_initialize_flow"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "validate_message_processed_and_flow_advanced"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "validate_flow_finished"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "http://localhost:5173/chat",
+      "description": "Navegar para a página de chat (rota /chat) para iniciar o teste do fluxo",
+      "critical": "true",
+      "url": "http://localhost:5173"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173/chat"
+      },
+      "description": "Assert crítico: garantir que a navegação para /chat ocorreu",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "description": "Aguardar carregamento da página de chat (seletor genérico)",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Assert crítico: garantir que o DOM base foi carregado",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "Bem-vindo"
+      },
+      "description": "Assert crítico: validar que a mensagem do nó start ('Bem-vindo') foi processada/apresentada no contexto do chat (validação por texto no body)",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "description": "Aguardar processamento do próximo nó de mensagem do fluxo",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Assert crítico: validar que a mensagem do nó message_1 foi processada/apresentada (validação por texto no body)",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "count",
+        "expected": 1
+      },
+      "description": "Assert crítico: garantir que a página ainda está em estado consistente após a execução do fluxo (body presente exatamente 1 vez)",
+      "critical": "true"
+    }
+  ],
+  "asserts": [
+    {
+      "step": "2",
+      "type": "url",
+      "selector": "body",
+      "expected": "http://localhost:5173/chat",
+      "description": "URL atual deve ser /chat"
+    },
+    {
+      "step": "4",
+      "type": "exists",
+      "selector": "body",
+      "expected": "true",
+      "description": "Body deve existir no DOM (página carregada)"
+    },
+    {
+      "step": "5",
+      "type": "text",
+      "selector": "body",
+      "expected": "Bem-vindo",
+      "description": "Mensagem do nó start_1 deve ter sido processada"
+    },
+    {
+      "step": "7",
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Mensagem do nó message_1 deve ter sido processada"
+    },
+    {
+      "step": "8",
+      "type": "count",
+      "selector": "body",
+      "expected": 1,
+      "description": "Sanity check: body deve existir uma única vez (estado final consistente após end_1)"
+    }
+  ],
+  "filePath": "/opt/results/ria/r-agent2/tests/rpa/flows/test-flow-a5ff6080-20260104T191821109Z.json"
+}

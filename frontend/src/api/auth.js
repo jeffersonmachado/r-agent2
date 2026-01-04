@@ -74,6 +74,24 @@ export async function logout() {
 }
 
 /**
+ * Faz logout de todas as sessões do agente
+ */
+export async function logoutAll() {
+  try {
+    const result = await fetchJson('/auth/logout-all', {
+      method: 'POST',
+    });
+    return result;
+  } catch (err) {
+    console.warn('Erro ao fazer logout de todas as sessões:', err);
+    throw err;
+  } finally {
+    // Remove o token local mesmo se houver erro
+    removeToken();
+  }
+}
+
+/**
  * Obtém informações do agente autenticado
  */
 export async function getCurrentAgent() {

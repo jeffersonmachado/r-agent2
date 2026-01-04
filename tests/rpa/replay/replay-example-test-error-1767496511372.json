@@ -1,0 +1,21 @@
+{
+  "id": "replay-1767496511144",
+  "recordingId": "example-test",
+  "startTime": "2026-01-04T03:15:11.144Z",
+  "endTime": "2026-01-04T03:15:11.372Z",
+  "screens": [],
+  "actions": [],
+  "timings": {
+    "total": 228,
+    "steps": {}
+  },
+  "errors": [
+    {
+      "step": "fatal",
+      "timestamp": "2026-01-04T03:15:11.372Z",
+      "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "code": null,
+      "stack": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"\u001b[22m\n\n    at RpaTestRunner.playback (/opt/results/ria/r-agent2/tests/rpa/rpaTestRunner.js:139:40)\n    at async runRpaTest (/opt/results/ria/r-agent2/tools/rpa/run-all.js:82:22)\n    at async main (/opt/results/ria/r-agent2/tools/rpa/run-all.js:178:20)"
+    }
+  ]
+}

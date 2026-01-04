@@ -59,9 +59,11 @@ const dataDir = path.join(__dirname, '..', 'data');
 const agentsFile = path.join(dataDir, 'agents.json');
 const sessionsFile = path.join(dataDir, 'sessions.json');
 
-// Configurações
-const TOKEN_EXPIRATION_HOURS = 24; // Tokens expiram em 24 horas
-const TOKEN_LENGTH = 64; // Tamanho do token em caracteres
+// Configurações - lidas do config.json
+const TOKEN_EXPIRATION_HOURS = config.get('auth.tokenExpirationHours', 24); // Tokens expiram em 24 horas (padrão)
+const TOKEN_LENGTH = 64; // Tamanho do token em caracteres (fixo)
+const MAX_SESSIONS_PER_AGENT = config.get('auth.maxSessionsPerAgent', 3); // Máximo de sessões simultâneas por agente (padrão: 3)
+const INACTIVITY_TIMEOUT_MINUTES = config.get('auth.inactivityTimeoutMinutes', 30); // Timeout de inatividade em minutos (padrão: 30)
 
 /**
  * Garante que o diretório de dados existe.
@@ -272,8 +274,21 @@ function cleanupExpiredSessions() {
   }
 }
 
+/**
+ * Limpa sessões inativas (timeout de inatividade).
+ */
+function cleanupInactiveSessionsPeriodic() {
+  const removed = cleanupInactiveSessions();
+  if (removed > 0) {
+    logger.debug(`[AuthService] Limpeza de inatividade: ${removed} sessão(ões) removida(s)`);
+  }
+}
+
 // Limpa sessões expiradas a cada hora
 setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
+
+// Limpa sessões inativas a cada 5 minutos
+setInterval(cleanupInactiveSessionsPeriodic, 5 * 60 * 1000);
 
 /**
  * Cria um novo agente.
@@ -384,6 +399,9 @@ function login(username, password, ipAddress = 'unknown', userAgent = 'unknown')
     return { success: false, error: 'Credenciais inválidas' };
   }
 
+  // Remove sessões antigas do agente antes de criar nova (mantém apenas as mais recentes)
+  cleanupOldSessions(agent.id, MAX_SESSIONS_PER_AGENT - 1);
+
   // Cria sessão
   const token = generateToken();
   const now = new Date();
@@ -438,6 +456,107 @@ function logout(token) {
 }
 
 /**
+ * Remove sessões antigas de um agente, mantendo apenas as mais recentes.
+ *
+ * @param {string} agentId - ID do agente
+ * @param {number} maxSessions - Número máximo de sessões a manter
+ * @returns {number} - Número de sessões removidas
+ */
+function cleanupOldSessions(agentId, maxSessions) {
+  const agentSessions = [];
+  
+  // Coleta todas as sessões do agente
+  for (const [token, session] of sessions.entries()) {
+    if (session.agentId === agentId) {
+      agentSessions.push({ token, session, createdAt: new Date(session.createdAt) });
+    }
+  }
+
+  // Se não exceder o limite, não faz nada
+  if (agentSessions.length <= maxSessions) {
+    return 0;
+  }
+
+  // Ordena por data de criação (mais antigas primeiro)
+  agentSessions.sort((a, b) => a.createdAt - b.createdAt);
+
+  // Remove as sessões mais antigas
+  const toRemove = agentSessions.length - maxSessions;
+  let removed = 0;
+  
+  for (let i = 0; i < toRemove; i++) {
+    sessions.delete(agentSessions[i].token);
+    removed++;
+  }
+
+  if (removed > 0) {
+    saveSessionsToFile();
+    logger.debug(`[AuthService] ${removed} sessão(ões) antiga(s) removida(s) do agente ${agentId}`);
+  }
+
+  return removed;
+}
+
+/**
+ * Remove todas as sessões de um agente.
+ *
+ * @param {string} agentId - ID do agente
+ * @returns {number} - Número de sessões removidas
+ */
+function logoutAllSessions(agentId) {
+  let removed = 0;
+  
+  for (const [token, session] of sessions.entries()) {
+    if (session.agentId === agentId) {
+      sessions.delete(token);
+      removed++;
+    }
+  }
+
+  if (removed > 0) {
+    saveSessionsToFile();
+    logger.info(`[AuthService] Todas as sessões removidas do agente ${agentId}: ${removed} sessão(ões)`);
+  }
+
+  return removed;
+}
+
+/**
+ * Verifica e remove sessões inativas (timeout de inatividade).
+ *
+ * @param {string} agentId - ID do agente (opcional, se não fornecido verifica todos)
+ * @returns {number} - Número de sessões removidas por inatividade
+ */
+function cleanupInactiveSessions(agentId = null) {
+  const now = new Date();
+  const timeoutMs = INACTIVITY_TIMEOUT_MINUTES * 60 * 1000;
+  let removed = 0;
+
+  for (const [token, session] of sessions.entries()) {
+    // Filtra por agente se fornecido
+    if (agentId && session.agentId !== agentId) {
+      continue;
+    }
+
+    // Verifica timeout de inatividade
+    const lastActivity = new Date(session.lastActivityAt);
+    const inactiveTime = now - lastActivity;
+
+    if (inactiveTime > timeoutMs) {
+      sessions.delete(token);
+      removed++;
+      logger.debug(`[AuthService] Sessão removida por inatividade: ${session.username} (${Math.round(inactiveTime / 60000)} min inativo)`);
+    }
+  }
+
+  if (removed > 0) {
+    saveSessionsToFile();
+  }
+
+  return removed;
+}
+
+/**
  * Valida um token e retorna o agente associado.
  *
  * @param {string} token - Token da sessão
@@ -460,6 +579,17 @@ function validateToken(token) {
     sessions.delete(token);
     saveSessionsToFile();
     return { valid: false, error: 'Sessão expirada' };
+  }
+
+  // Verifica timeout de inatividade
+  const lastActivity = new Date(session.lastActivityAt);
+  const inactiveTime = now - lastActivity;
+  const timeoutMs = INACTIVITY_TIMEOUT_MINUTES * 60 * 1000;
+  
+  if (inactiveTime > timeoutMs) {
+    sessions.delete(token);
+    saveSessionsToFile();
+    return { valid: false, error: 'Sessão expirada por inatividade' };
   }
 
   // Busca agente
@@ -737,6 +867,7 @@ module.exports = {
   createAgent,
   login,
   logout,
+  logoutAllSessions,
   validateToken,
   loginWithRpaToken,
   listAgents,
@@ -752,6 +883,8 @@ module.exports = {
     loadAgentsFromFile,
     saveSessionsToFile,
     loadSessionsFromFile,
+    cleanupOldSessions,
+    cleanupInactiveSessions,
   },
 };
 

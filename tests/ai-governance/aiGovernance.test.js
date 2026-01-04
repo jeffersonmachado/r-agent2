@@ -124,7 +124,7 @@ describe('Governança IA - Validação de Contratos', () => {
           {
             action: 'navigate',
             target: 'body',
-            value: 'http://localhost:3000'
+            value: process.env.TEST_API_URL || process.env.API_BASE_URL || 'http://localhost:3000'
           }
         ],
         assertions: [
@@ -160,7 +160,7 @@ describe('Governança IA - Validação de Contratos', () => {
           {
             action: 'navigate',
             target: 'body',
-            value: 'http://localhost:3000'
+            value: process.env.TEST_API_URL || process.env.API_BASE_URL || 'http://localhost:3000'
           }
         ],
         assertions: [
@@ -195,7 +195,7 @@ describe('Governança IA - Validação de Contratos', () => {
           {
             action: 'navigate',
             target: 'body',
-            value: 'http://localhost:3000'
+            value: process.env.TEST_API_URL || process.env.API_BASE_URL || 'http://localhost:3000'
           }
         ],
         assertions: [] // ❌ Vazio
@@ -225,7 +225,7 @@ describe('Governança IA - Validação de Contratos', () => {
           {
             action: 'navigate',
             target: 'body',
-            value: 'http://localhost:3000'
+            value: process.env.TEST_API_URL || process.env.API_BASE_URL || 'http://localhost:3000'
           }
         ],
         assertions: [

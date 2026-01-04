@@ -1112,7 +1112,16 @@ const INJECTABLE_SCRIPT = `
   // Adiciona um método de teste manual
   window.rpaOverlay.test = function() {
     console.log('[RPA Overlay] 🧪 TESTE MANUAL: Chamando create com valores de teste...');
-    return window.rpaOverlay.create('http://localhost:3000', 'test-execution-id');
+    // Usa configuração ou fallback para teste manual
+    const apiUrl = (() => {
+      try {
+        const rpaConfig = require('./rpaConfig');
+        return rpaConfig.urls.api || 'http://localhost:3000';
+      } catch {
+        return 'http://localhost:3000';
+      }
+    })();
+    return window.rpaOverlay.create(apiUrl, 'test-execution-id');
   };
   
   // Adiciona método para forçar visibilidade

@@ -65,7 +65,8 @@ def test_query_missing_tenant():
     }
     
     response = client.post("/rag/query", json=request)
-    assert response.status_code == 400
+    # FastAPI retorna 422 para erros de validação do Pydantic
+    assert response.status_code == 422
 
 
 def test_query_no_results(indexed_document):

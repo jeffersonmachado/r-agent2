@@ -1,0 +1,106 @@
+{
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "successRate": "100.00%"
+  },
+  "results": [
+    {
+      "recordingId": "test-flow-9c7d25f9-20260104T190751043Z",
+      "recordingName": "IA - Teste RPA - sistema de arquivos",
+      "success": true,
+      "stepsCount": 8,
+      "errorsCount": 0,
+      "duration": 5774
+    }
+  ],
+  "details": [
+    {
+      "recordingId": "test-flow-9c7d25f9-20260104T190751043Z",
+      "recordingName": "IA - Teste RPA - sistema de arquivos",
+      "success": true,
+      "steps": [
+        {
+          "step": 1,
+          "action": "navigate",
+          "selector": "http://localhost:5173/chat",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:10.477Z",
+          "duration": 1685
+        },
+        {
+          "step": 2,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:12.162Z",
+          "duration": 388
+        },
+        {
+          "step": 3,
+          "action": "wait",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:12.550Z",
+          "duration": 145
+        },
+        {
+          "step": 4,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:12.695Z",
+          "duration": 314
+        },
+        {
+          "step": 5,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:13.009Z",
+          "duration": 211
+        },
+        {
+          "step": 6,
+          "action": "wait",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:13.220Z",
+          "duration": 355
+        },
+        {
+          "step": 7,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:13.575Z",
+          "duration": 321
+        },
+        {
+          "step": 8,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T19:08:13.896Z",
+          "duration": 301
+        }
+      ],
+      "errors": [],
+      "screenshots": [],
+      "startTime": "2026-01-04T19:08:08.435Z",
+      "replayId": "replay-1767553688435",
+      "replayPath": "/opt/results/ria/r-agent2/tests/rpa/replay/replay-test-flow-9c7d25f9-20260104T190751043Z-1767553694197.json",
+      "endTime": "2026-01-04T19:08:14.209Z",
+      "duration": 5774
+    }
+  ]
+}

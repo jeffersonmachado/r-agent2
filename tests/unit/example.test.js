@@ -5,18 +5,26 @@
  * Adicione mais testes unitários aqui conforme necessário.
  */
 
+const { withTimeout, cleanupAfterTest } = require('../utils/testHelpers');
+
 describe('Testes Unitários - Exemplo', () => {
-  test('deve passar um teste básico', () => {
-    expect(1 + 1).toBe(2);
+  afterEach(() => {
+    cleanupAfterTest();
   });
-  
-  test('deve validar estrutura básica', () => {
+
+  test('deve passar um teste básico', withTimeout(async () => {
+    expect(1 + 1).toBe(2);
+  }, 5000));
+
+  test('deve validar estrutura básica', withTimeout(async () => {
     const obj = { id: 'test', name: 'Test' };
     expect(obj).toHaveProperty('id');
     expect(obj).toHaveProperty('name');
     expect(obj.id).toBe('test');
-  });
+  }, 5000));
 });
+
+
 
 
 

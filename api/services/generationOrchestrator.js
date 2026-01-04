@@ -312,6 +312,10 @@ function removeFlowFromFile(flowId) {
  */
 async function executeAndValidateRpa(rpaTest, options = {}) {
   try {
+    // Normaliza URLs no teste antes de converter (garante que ações navigate tenham URL)
+    const { normalizeRpaTestUrls } = require('../../tests/rpa/utils/urlNormalizer');
+    normalizeRpaTestUrls(rpaTest);
+    
     // Converte teste em gravação
     const recording = convertRpaTestToRecording(rpaTest);
     
@@ -353,8 +357,41 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
         }
         
         if (status.status === 'failed' || status.status === 'cancelled') {
-          const error = status.error || 'Execução RPA falhou';
-          logger.error('Teste RPA falhou', { executionId, testId: rpaTest.id, error });
+          // Extrai mensagem de erro detalhada
+          let error = status.error || 'Execução RPA falhou';
+          
+          // Tenta obter mais detalhes dos results
+          if (status.results && status.results.errors && status.results.errors.length > 0) {
+            const firstError = status.results.errors[0];
+            const errorDetails = [];
+            
+            if (firstError.step) {
+              errorDetails.push(`Step ${firstError.step}`);
+            }
+            if (firstError.action) {
+              errorDetails.push(`Ação: ${firstError.action}`);
+            }
+            if (firstError.error) {
+              errorDetails.push(firstError.error);
+            }
+            
+            if (errorDetails.length > 0) {
+              error = errorDetails.join(' - ');
+            }
+            
+            // Se houver múltiplos erros, adiciona informação
+            if (status.results.errors.length > 1) {
+              error += ` (e mais ${status.results.errors.length - 1} erro(s))`;
+            }
+          }
+          
+          logger.error('Teste RPA falhou', { 
+            executionId, 
+            testId: rpaTest.id, 
+            error,
+            errorsCount: status.results?.errors?.length || 0,
+            currentStep: status.currentStep
+          });
           return { success: false, error, executionId };
         }
         
@@ -499,9 +536,20 @@ async function orchestrateGeneration(payload, options = {}) {
     }
 
     // Passo 4: Gera teste RPA se solicitado
+    // Verifica tanto generateRpaTest quanto generate?.rpa ou bootstrap
+    const shouldGenerateRpa = payload.generateRpaTest || 
+                              payload.generate?.rpa || 
+                              payload.bootstrap === true;
+    
     let rpaArtifact = null;
-    if (payload.generateRpaTest) {
-      logger.info('Gerando teste RPA', { flowId: flow.id, rpaMode: payload.rpaMode });
+    if (shouldGenerateRpa) {
+      logger.info('Gerando teste RPA', { 
+        flowId: flow.id, 
+        rpaMode: payload.rpaMode,
+        reason: payload.generateRpaTest ? 'generateRpaTest' : 
+                payload.generate?.rpa ? 'generate.rpa' : 
+                'bootstrap'
+      });
       rpaArtifact = await generateRpaArtifact(flow, {
         tenantId,
         rpaMode: payload.rpaMode || 'infer',

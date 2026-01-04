@@ -64,6 +64,21 @@ Testa bloqueio sem quebrar e prevenção de ações perigosas.
 npm run test:stress
 ```
 
+### 7. Rate Limiting
+**Arquivo:** `tests/rate-limit/rateLimit.test.js` e `tests/rate-limit/integration.test.js`
+
+Testa sistema de rate limiting:
+- Políticas de rate limiting (DRY_RUN, GENERATION_REAL, BOOTSTRAP, SCRAPING)
+- Rate limiting por domínio e execução (scraping)
+- Integração com Redis
+- Bloqueio de execuções quando limite é excedido
+- Auditoria de eventos
+
+**Executar:**
+```bash
+npm run test:rate-limit
+```
+
 ## 🚀 Executar Todos os Testes Sistêmicos
 
 Para executar todas as categorias de testes sistêmicos de uma vez:

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="26" failures="0" errors="0" time="4.379">
+    <testsuite name="src/utils/fileProcessor.test.js" timestamp="2026-01-04T18:38:52.263Z" hostname="jmachado-Precision-5530" tests="26" failures="0" errors="0" skipped="0" time="3.110146271">
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; createImagePreview &gt; deve criar preview de imagem válida" time="0.114134524">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; createImagePreview &gt; deve rejeitar se houver erro ao ler arquivo" time="0.107475174">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; extractTextContent &gt; deve extrair conteúdo de arquivo de texto" time="0.107155021">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; extractTextContent &gt; deve rejeitar se houver erro ao ler arquivo" time="0.104310282">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; extractPdfContent &gt; deve retornar placeholder quando pdfjs não está disponível" time="0.328262261">
+            <system-err>
+[2026-01-04T18:38:49.688Z] [ERROR] Erro ao extrair conteúdo do PDF {
+  &quot;fileName&quot;: &quot;test.pdf&quot;,
+  &quot;error&quot;: &quot;Setting up fake worker failed: \&quot;Cannot find module &apos;//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js&apos;\nRequire stack:\n- /opt/results/ria/r-agent2/frontend/node_modules/pdfjs-dist/build/pdf.js\&quot;.&quot;
+}
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; extractPdfContent &gt; deve processar PDF quando pdfjs está disponível" time="0.103487895">
+            <system-err>
+[2026-01-04T18:38:49.793Z] [ERROR] Erro ao extrair conteúdo do PDF {
+  &quot;fileName&quot;: &quot;test.pdf&quot;,
+  &quot;error&quot;: &quot;Setting up fake worker failed: \&quot;Cannot find module &apos;//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js&apos;\nRequire stack:\n- /opt/results/ria/r-agent2/frontend/node_modules/pdfjs-dist/build/pdf.js\&quot;.&quot;
+}
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; extractImageContent &gt; deve retornar placeholder quando Tesseract não está disponível" time="0.16254909">
+            <system-err>
+[2026-01-04T18:38:49.956Z] [ERROR] Erro ao extrair conteúdo da imagem {
+  &quot;fileName&quot;: &quot;test.png&quot;,
+  &quot;error&quot;: &quot;The worker script or module filename must be an absolute path or a relative path starting with &apos;./&apos; or &apos;../&apos;. Received \&quot;http://localhost:3000/opt/results/ria/r-agent2/frontend/node_modules/tesseract.js/src/worker-script/node/index.js\&quot;&quot;
+}
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; compressImage &gt; deve retornar arquivo original quando biblioteca não está disponível" time="0.112080632">
+            <system-err>
+[2026-01-04T18:38:50.069Z] [WARN] browser-image-compression não disponível {
+  &quot;cause&quot;: {}
+}
+[2026-01-04T18:38:50.070Z] [WARN] browser-image-compression não disponível, retornando arquivo original
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; compressImage &gt; deve comprimir imagem quando biblioteca está disponível" time="0.103564166">
+            <system-err>
+[2026-01-04T18:38:50.173Z] [WARN] browser-image-compression não disponível {
+  &quot;cause&quot;: {}
+}
+[2026-01-04T18:38:50.173Z] [WARN] browser-image-compression não disponível, retornando arquivo original
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; processFile &gt; deve processar arquivo de texto" time="0.107035065">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; processFile &gt; deve processar imagem com preview" time="0.105310005">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; processFile &gt; deve processar PDF" time="0.103246307">
+            <system-err>
+[2026-01-04T18:38:50.489Z] [ERROR] Erro ao extrair conteúdo do PDF {
+  &quot;fileName&quot;: &quot;test.pdf&quot;,
+  &quot;error&quot;: &quot;Setting up fake worker failed: \&quot;Cannot find module &apos;//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js&apos;\nRequire stack:\n- /opt/results/ria/r-agent2/frontend/node_modules/pdfjs-dist/build/pdf.js\&quot;.&quot;
+}
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; processFile &gt; deve chamar callback de progresso" time="0.109527765">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; processFile &gt; deve processar imagem com OCR quando extractImageText é true" time="0.106378286">
+            <system-err>
+[2026-01-04T18:38:50.706Z] [ERROR] Erro ao extrair conteúdo da imagem {
+  &quot;fileName&quot;: &quot;test.png&quot;,
+  &quot;error&quot;: &quot;The worker script or module filename must be an absolute path or a relative path starting with &apos;./&apos; or &apos;../&apos;. Received \&quot;http://localhost:3000/opt/results/ria/r-agent2/frontend/node_modules/tesseract.js/src/worker-script/node/index.js\&quot;&quot;
+}
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; processFile &gt; deve processar todos os tipos de arquivo de texto" time="0.115942185">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; processFile &gt; deve tentar extrair conteúdo de tipos desconhecidos" time="0.105912666">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; validateFile &gt; deve validar arquivo válido" time="0.101810666">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; validateFile &gt; deve rejeitar arquivo muito grande" time="0.184053363">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; validateFile &gt; deve rejeitar tipo de arquivo não permitido" time="0.10208111">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; validateFile &gt; deve aceitar todos os tipos quando allowedTypes está vazio" time="0.102579955">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; formatFileSize &gt; deve formatar bytes corretamente" time="0.102451833">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; formatFileSize &gt; deve formatar tamanhos decimais" time="0.102367338">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; getFileIcon &gt; deve retornar ícone correto para imagens" time="0.102367413">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; getFileIcon &gt; deve retornar ícone correto para PDF" time="0.101917957">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; getFileIcon &gt; deve retornar ícone correto para texto" time="0.101555318">
+        </testcase>
+        <testcase classname="src/utils/fileProcessor.test.js" name="fileProcessor &gt; getFileIcon &gt; deve retornar ícone padrão para tipos desconhecidos" time="0.100930629">
+        </testcase>
+    </testsuite>
+</testsuites>

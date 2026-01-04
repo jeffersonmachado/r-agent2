@@ -129,3 +129,25 @@ export async function validateProviderToken(provider, apiKey) {
   }
 }
 
+/**
+ * Valida a conexão do Redis.
+ * 
+ * @param {string} redisUrl - URL do Redis a ser testada
+ * @returns {Promise<{success: boolean, valid: boolean, error?: string}>}
+ */
+export async function validateRedisConnection(redisUrl) {
+  try {
+    if (!redisUrl) {
+      throw new Error('URL do Redis é obrigatória');
+    }
+
+    return await fetchJson('/config/validate-redis', {
+      method: 'POST',
+      body: JSON.stringify({ redisUrl }),
+    });
+  } catch (error) {
+    logger.error('Erro ao validar conexão do Redis', error);
+    throw error;
+  }
+}
+

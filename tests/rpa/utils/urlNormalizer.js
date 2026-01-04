@@ -7,6 +7,9 @@
  * - Aplica base URL do frontend
  */
 
+const config = require('../../../api/utils/config');
+const logger = require('../../../api/utils/logger');
+
 /**
  * Normaliza URLs nos steps e asserts do teste RPA.
  * Substitui URLs inválidas ou relativas pela URL base do frontend.
@@ -15,8 +18,11 @@
  */
 function normalizeRpaTestUrls(test) {
   // Obtém URL base do frontend
+  // Prioridade: TEST_FRONTEND_URL > FRONTEND_URL > rpa.config.json > config.json > fallback
   const frontendUrl = process.env.TEST_FRONTEND_URL || 
                       process.env.FRONTEND_URL || 
+                      config.get('tests.rpa.frontendUrl') ||
+                      config.get('frontend.url') ||
                       'http://localhost:5173';
   
   // Remove barra final se houver
@@ -69,8 +75,20 @@ function normalizeRpaTestUrls(test) {
   
   // Normaliza URLs nos steps
   if (test.steps && Array.isArray(test.steps)) {
-    test.steps.forEach(step => {
+    test.steps.forEach((step, index) => {
       if (step.type === 'navigate') {
+        // Garante que há uma URL válida (url ou value)
+        if (!step.url && !step.value) {
+          // Se não houver URL, adiciona URL padrão (base do frontend)
+          // Isso corrige casos onde a IA gera ações navigate sem URL
+          step.url = baseUrl;
+          logger.warn('[urlNormalizer] Ação navigate sem URL, usando URL padrão', {
+            stepIndex: index + 1,
+            defaultUrl: baseUrl,
+            stepType: step.type
+          });
+        }
+        
         // Normaliza URL em action.url ou action.value
         if (step.url) {
           step.url = normalizeUrl(step.url);

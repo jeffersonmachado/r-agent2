@@ -11,6 +11,7 @@ import {
 import { useToast } from './Toast';
 import { useConfirmDialog } from './ConfirmDialog';
 import { Button } from '../styles/Button';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import logger from '../utils/logger';
 
 /**
@@ -31,6 +32,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
   const showToastRef = React.useRef(showToast);
   const loadTicketsRef = React.useRef();
   const selectedTicketRef = React.useRef(selectedTicket);
+  const loadTicketMessagesRef = React.useRef();
 
   React.useEffect(() => {
     showToastRef.current = showToast;
@@ -39,6 +41,80 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
   React.useEffect(() => {
     selectedTicketRef.current = selectedTicket;
   }, [selectedTicket]);
+
+  // WebSocket para atualizações em tempo real
+  const handleWebSocketEvent = useCallback((event, data) => {
+    logger.debug('[QueueModal] Evento WebSocket recebido', event, data);
+    
+    switch (event) {
+      case 'ticket.created':
+        // Novo ticket criado na fila - recarrega lista
+        if (loadTicketsRef.current) {
+          loadTicketsRef.current();
+        }
+        break;
+        
+      case 'ticket.assigned':
+        // Ticket atribuído - atualiza lista
+        if (loadTicketsRef.current) {
+          loadTicketsRef.current();
+        }
+        break;
+        
+      case 'ticket.updated':
+        // Ticket atualizado - recarrega lista e mensagens se for o ticket selecionado
+        if (loadTicketsRef.current) {
+          loadTicketsRef.current();
+        }
+        if (selectedTicketRef.current?.id === data.ticketId) {
+          if (loadTicketMessagesRef.current) {
+            loadTicketMessagesRef.current(data.ticketId);
+          }
+        }
+        break;
+        
+      case 'ticket.closed':
+        // Ticket fechado - remove da lista se estiver selecionado
+        if (selectedTicketRef.current?.id === data.ticketId) {
+          setSelectedTicket(null);
+        }
+        if (loadTicketsRef.current) {
+          loadTicketsRef.current();
+        }
+        break;
+        
+      case 'ticket.message.received':
+      case 'ticket.message.sent':
+        // Nova mensagem - atualiza mensagens se for o ticket selecionado
+        if (selectedTicketRef.current?.id === data.ticketId) {
+          if (loadTicketMessagesRef.current) {
+            loadTicketMessagesRef.current(data.ticketId);
+          }
+        } else {
+          // Atualiza contador de não lidas na lista
+          if (loadTicketsRef.current) {
+            loadTicketsRef.current();
+          }
+        }
+        break;
+        
+      default:
+        logger.debug('[QueueModal] Evento WebSocket não tratado', event);
+    }
+  }, []);
+
+  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+    enabled: isOpen && autoRefresh && !!queueName,
+    onEvent: handleWebSocketEvent,
+    subscribeEvents: [
+      'ticket.created',
+      'ticket.assigned',
+      'ticket.updated',
+      'ticket.closed',
+      'ticket.message.received',
+      'ticket.message.sent',
+    ],
+  });
 
   // Carrega tickets da fila
   const loadTickets = useCallback(async () => {
@@ -100,6 +176,10 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     }
   }, [tickets]);
 
+  React.useEffect(() => {
+    loadTicketMessagesRef.current = loadTicketMessages;
+  }, [loadTicketMessages]);
+
   // Carrega mensagens quando ticket é selecionado
   useEffect(() => {
     if (selectedTicket) {
@@ -109,22 +189,30 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     }
   }, [selectedTicket, loadTicketMessages]);
 
-  // Auto-refresh a cada 5 segundos
+  // Polling como fallback quando WebSocket não está conectado
   useEffect(() => {
     if (!autoRefresh || !isOpen) return;
+    
+    // Se WebSocket está conectado e autenticado, não precisa de polling
+    if (wsConnected && wsAuthenticated) {
+      logger.debug('[QueueModal] WebSocket conectado, polling desabilitado');
+      return;
+    }
 
+    // Fallback: polling a cada 5 segundos se WebSocket não estiver disponível
+    logger.debug('[QueueModal] WebSocket não disponível, usando polling como fallback');
     const interval = setInterval(() => {
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
       }
       
-      if (selectedTicketRef.current?.id) {
-        loadTicketMessages(selectedTicketRef.current.id);
+      if (selectedTicketRef.current?.id && loadTicketMessagesRef.current) {
+        loadTicketMessagesRef.current(selectedTicketRef.current.id);
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, isOpen, loadTicketMessages]);
+  }, [autoRefresh, isOpen, wsConnected, wsAuthenticated]);
 
   // Atribui ticket para atendente
   const handleAssign = async () => {
@@ -240,14 +328,33 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
         <div className="queue-modal-container">
           {/* Controles superiores */}
           <div className="queue-modal-controls">
-            <label className="queue-modal-checkbox">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-              />
-              <span>Auto-atualizar (5s)</span>
-            </label>
+            {wsConnected && wsAuthenticated ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span 
+                  style={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#25D366',
+                    animation: 'pulse 2s infinite'
+                  }}
+                  title="WebSocket conectado - Atualizações em tempo real ativas"
+                />
+                <span style={{ fontSize: '14px', color: '#666' }}>
+                  Atualização em tempo real
+                </span>
+              </div>
+            ) : (
+              <label className="queue-modal-checkbox">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                />
+                <span>Auto-atualizar (5s)</span>
+              </label>
+            )}
             <Button 
               onClick={() => {
                 if (loadTicketsRef.current) {

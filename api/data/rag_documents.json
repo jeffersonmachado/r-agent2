@@ -1,4 +1,842 @@
-{
-  "documents": [],
-  "savedAt": "2026-01-02T15:39:39.515Z"
-}
+[
+  {
+    "id": "doc-1767552425844-f1lqvf1st",
+    "tenantId": "tenant-demo",
+    "title": "Planos Balé",
+    "content": "--- Página 1 ---\nFaça já seu plano   Faça já seu plano   Faça já seu plano  PLANO  MENSAL  2x - p/semana:   R$200,00  1x - p/semana:   R$160,00  PLANOS  SEMESTRAL   ANUAL  PLANO   PLANO  BALÉ  2x - p/semana:   R$187,00  1x - p/semana:   R$150,00  2x - p/semana:   R$182,00  1x - p/semana:   R$145,00",
+    "metadata": {
+      "source": "upload",
+      "category": "tabelas_preco",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "tabelas_preco",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T18:47:05.844Z",
+      "updatedAt": "2026-01-04T18:47:05.844Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767552434258-761bkc30x",
+    "tenantId": "tenant-demo",
+    "title": "dc664ec2-7fa7-4f12-a457-6c1e35138939",
+    "content": "[Imagem: dc664ec2-7fa7-4f12-a457-6c1e35138939.jpeg]\n\nTexto extraído (OCR):\n(Ace;\nFRIDAY\n\n> R$5,00,\n$TUDI OU",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T18:47:14.258Z",
+      "updatedAt": "2026-01-04T18:47:14.258Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767552435982-dg2az4zzi",
+    "tenantId": "tenant-demo",
+    "title": "119cb26c-2fb9-4967-95df-0cf3bd2b65f9",
+    "content": "[Imagem: 119cb26c-2fb9-4967-95df-0cf3bd2b65f9.jpeg]\n\nTexto extraído (OCR):\n- TH\nStoo Fg\nHORARIOS DO\n\nCROSSFITE\n\nFUNCIONAL\nSegunda a\nQuinta-feira\nSexta-feira\n\nSÁBADO\n\nDOMINGO\n\nesTuPIOOLY",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T18:47:15.982Z",
+      "updatedAt": "2026-01-04T18:47:15.982Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767552438761-e4fglcbza",
+    "tenantId": "tenant-demo",
+    "title": "66c33dd6-6341-4fb4-9ddc-45f395e56203",
+    "content": "[Imagem: 66c33dd6-6341-4fb4-9ddc-45f395e56203.jpeg]\n\nTexto extraído (OCR):\nStir pied\n(sf\na FISIOTERAPIA\n1 10 5\nSESSÃO SESSÕES SESSÕES\nR$150,00 R$1.200,00 R$675,00\nAté 4 sessões A partir de 10 sessões A partir de 5 sessões\nCada sessão fica no valor de Cada sessão fica no valor de Cada sessão fica no valor de\nR$150,00. R$120,00. R$135,00.\nVALORES VÁLIDOS EM 2025",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T18:47:18.761Z",
+      "updatedAt": "2026-01-04T18:47:18.761Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767552442565-iqcq2jizd",
+    "tenantId": "tenant-demo",
+    "title": "d2bcc626-ff21-4a4c-b2b1-519234ed1ec8",
+    "content": "[Imagem: d2bcc626-ff21-4a4c-b2b1-519234ed1ec8.jpeg]\n\nTexto extraído (OCR):\nPague com Sm\nnossa chave PIX: Pagar e tranáfeir |\nPrático, seguro e rápido! $9 cCódigoaR\nIna macnadoastudicoly com.br Pix\nBanco Itaú - Ag.:6767 - C.c.: 23136-5 3 Pix copia cola\nMaria Helena Machado\n5 Meus limites Pix\nEscolha opção pagar com pix no\na App do seu banco, digite nossa\nchave que é E-MAIL e o valor\ncorrespondente ao pagamento...\nEncaminhe o comprovante para\nÉ nossa central via WhatsApp S\n11970946712 e o nome (f\ncompleto do aluno. TUDI IY\nwww.studiooly.com.br O (11) 97094-6712 | Fone: (11) 2386-1800",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T18:47:22.565Z",
+      "updatedAt": "2026-01-04T18:47:22.565Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767553342847-baifymouw",
+    "tenantId": "tenant-demo",
+    "title": "66c33dd6-6341-4fb4-9ddc-45f395e56203",
+    "content": "[Imagem: 66c33dd6-6341-4fb4-9ddc-45f395e56203.jpeg]\n\nTexto extraído (OCR):\nStir pied\n(sf\na FISIOTERAPIA\n1 10 5\nSESSÃO SESSÕES SESSÕES\nR$150,00 R$1.200,00 R$675,00\nAté 4 sessões A partir de 10 sessões A partir de 5 sessões\nCada sessão fica no valor de Cada sessão fica no valor de Cada sessão fica no valor de\nR$150,00. R$120,00. R$135,00.\nVALORES VÁLIDOS EM 2025",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:02:22.847Z",
+      "updatedAt": "2026-01-04T19:02:22.847Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767553347923-71k2lldv8",
+    "tenantId": "tenant-demo",
+    "title": "119cb26c-2fb9-4967-95df-0cf3bd2b65f9",
+    "content": "[Imagem: 119cb26c-2fb9-4967-95df-0cf3bd2b65f9.jpeg]\n\nTexto extraído (OCR):\n- TH\nStoo Fg\nHORARIOS DO\n\nCROSSFITE\n\nFUNCIONAL\nSegunda a\nQuinta-feira\nSexta-feira\n\nSÁBADO\n\nDOMINGO\n\nesTuPIOOLY",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:02:27.923Z",
+      "updatedAt": "2026-01-04T19:02:27.923Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767553359710-fe1vhh701",
+    "tenantId": "tenant-demo",
+    "title": "d2bcc626-ff21-4a4c-b2b1-519234ed1ec8",
+    "content": "[Imagem: d2bcc626-ff21-4a4c-b2b1-519234ed1ec8.jpeg]\n\nTexto extraído (OCR):\nPague com Sm\nnossa chave PIX: Pagar e tranáfeir |\nPrático, seguro e rápido! $9 cCódigoaR\nIna macnadoastudicoly com.br Pix\nBanco Itaú - Ag.:6767 - C.c.: 23136-5 3 Pix copia cola\nMaria Helena Machado\n5 Meus limites Pix\nEscolha opção pagar com pix no\na App do seu banco, digite nossa\nchave que é E-MAIL e o valor\ncorrespondente ao pagamento...\nEncaminhe o comprovante para\nÉ nossa central via WhatsApp S\n11970946712 e o nome (f\ncompleto do aluno. TUDI IY\nwww.studiooly.com.br O (11) 97094-6712 | Fone: (11) 2386-1800",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:02:39.710Z",
+      "updatedAt": "2026-01-04T19:02:39.710Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767553364093-ebbxiqgm2",
+    "tenantId": "tenant-demo",
+    "title": "dc664ec2-7fa7-4f12-a457-6c1e35138939",
+    "content": "[Imagem: dc664ec2-7fa7-4f12-a457-6c1e35138939.jpeg]\n\nTexto extraído (OCR):\n(Ace;\nFRIDAY\n\n> R$5,00,\n$TUDI OU",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:02:44.093Z",
+      "updatedAt": "2026-01-04T19:02:44.093Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767553365605-xov5ns18c",
+    "tenantId": "tenant-demo",
+    "title": "Planos Balé",
+    "content": "--- Página 1 ---\nFaça já seu plano   Faça já seu plano   Faça já seu plano  PLANO  MENSAL  2x - p/semana:   R$200,00  1x - p/semana:   R$160,00  PLANOS  SEMESTRAL   ANUAL  PLANO   PLANO  BALÉ  2x - p/semana:   R$187,00  1x - p/semana:   R$150,00  2x - p/semana:   R$182,00  1x - p/semana:   R$145,00",
+    "metadata": {
+      "source": "upload",
+      "category": "tabelas_preco",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "tabelas_preco",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:02:45.605Z",
+      "updatedAt": "2026-01-04T19:02:45.605Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554080301-vjpfgvdw1",
+    "tenantId": "tenant-demo",
+    "title": "66c33dd6-6341-4fb4-9ddc-45f395e56203",
+    "content": "[Imagem: 66c33dd6-6341-4fb4-9ddc-45f395e56203.jpeg]\n\nTexto extraído (OCR):\nStir pied\n(sf\na FISIOTERAPIA\n1 10 5\nSESSÃO SESSÕES SESSÕES\nR$150,00 R$1.200,00 R$675,00\nAté 4 sessões A partir de 10 sessões A partir de 5 sessões\nCada sessão fica no valor de Cada sessão fica no valor de Cada sessão fica no valor de\nR$150,00. R$120,00. R$135,00.\nVALORES VÁLIDOS EM 2025",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:14:40.301Z",
+      "updatedAt": "2026-01-04T19:14:40.301Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554086671-bn68yovbn",
+    "tenantId": "tenant-demo",
+    "title": "119cb26c-2fb9-4967-95df-0cf3bd2b65f9",
+    "content": "[Imagem: 119cb26c-2fb9-4967-95df-0cf3bd2b65f9.jpeg]\n\nTexto extraído (OCR):\n- TH\nStoo Fg\nHORARIOS DO\n\nCROSSFITE\n\nFUNCIONAL\nSegunda a\nQuinta-feira\nSexta-feira\n\nSÁBADO\n\nDOMINGO\n\nesTuPIOOLY",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:14:46.671Z",
+      "updatedAt": "2026-01-04T19:14:46.671Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554098980-b7yuhm7gg",
+    "tenantId": "tenant-demo",
+    "title": "d2bcc626-ff21-4a4c-b2b1-519234ed1ec8",
+    "content": "[Imagem: d2bcc626-ff21-4a4c-b2b1-519234ed1ec8.jpeg]\n\nTexto extraído (OCR):\nPague com Sm\nnossa chave PIX: Pagar e tranáfeir |\nPrático, seguro e rápido! $9 cCódigoaR\nIna macnadoastudicoly com.br Pix\nBanco Itaú - Ag.:6767 - C.c.: 23136-5 3 Pix copia cola\nMaria Helena Machado\n5 Meus limites Pix\nEscolha opção pagar com pix no\na App do seu banco, digite nossa\nchave que é E-MAIL e o valor\ncorrespondente ao pagamento...\nEncaminhe o comprovante para\nÉ nossa central via WhatsApp S\n11970946712 e o nome (f\ncompleto do aluno. TUDI IY\nwww.studiooly.com.br O (11) 97094-6712 | Fone: (11) 2386-1800",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:14:58.980Z",
+      "updatedAt": "2026-01-04T19:14:58.980Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554104770-e7dbs0fds",
+    "tenantId": "tenant-demo",
+    "title": "dc664ec2-7fa7-4f12-a457-6c1e35138939",
+    "content": "[Imagem: dc664ec2-7fa7-4f12-a457-6c1e35138939.jpeg]\n\nTexto extraído (OCR):\n(Ace;\nFRIDAY\n\n> R$5,00,\n$TUDI OU",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:15:04.770Z",
+      "updatedAt": "2026-01-04T19:15:04.770Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554106500-2rtecl8ek",
+    "tenantId": "tenant-demo",
+    "title": "Planos Balé",
+    "content": "--- Página 1 ---\nFaça já seu plano   Faça já seu plano   Faça já seu plano  PLANO  MENSAL  2x - p/semana:   R$200,00  1x - p/semana:   R$160,00  PLANOS  SEMESTRAL   ANUAL  PLANO   PLANO  BALÉ  2x - p/semana:   R$187,00  1x - p/semana:   R$150,00  2x - p/semana:   R$182,00  1x - p/semana:   R$145,00",
+    "metadata": {
+      "source": "upload",
+      "category": "tabelas_preco",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "tabelas_preco",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:15:06.500Z",
+      "updatedAt": "2026-01-04T19:15:06.500Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554277738-qk5wt6f0b",
+    "tenantId": "tenant-demo",
+    "title": "66c33dd6-6341-4fb4-9ddc-45f395e56203",
+    "content": "[Imagem: 66c33dd6-6341-4fb4-9ddc-45f395e56203.jpeg]\n\nTexto extraído (OCR):\nStir pied\n(sf\na FISIOTERAPIA\n1 10 5\nSESSÃO SESSÕES SESSÕES\nR$150,00 R$1.200,00 R$675,00\nAté 4 sessões A partir de 10 sessões A partir de 5 sessões\nCada sessão fica no valor de Cada sessão fica no valor de Cada sessão fica no valor de\nR$150,00. R$120,00. R$135,00.\nVALORES VÁLIDOS EM 2025",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:17:57.738Z",
+      "updatedAt": "2026-01-04T19:17:57.738Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554283552-e1v5eb1vp",
+    "tenantId": "tenant-demo",
+    "title": "119cb26c-2fb9-4967-95df-0cf3bd2b65f9",
+    "content": "[Imagem: 119cb26c-2fb9-4967-95df-0cf3bd2b65f9.jpeg]\n\nTexto extraído (OCR):\n- TH\nStoo Fg\nHORARIOS DO\n\nCROSSFITE\n\nFUNCIONAL\nSegunda a\nQuinta-feira\nSexta-feira\n\nSÁBADO\n\nDOMINGO\n\nesTuPIOOLY",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:18:03.552Z",
+      "updatedAt": "2026-01-04T19:18:03.552Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554294294-xmh9tw3w9",
+    "tenantId": "tenant-demo",
+    "title": "d2bcc626-ff21-4a4c-b2b1-519234ed1ec8",
+    "content": "[Imagem: d2bcc626-ff21-4a4c-b2b1-519234ed1ec8.jpeg]\n\nTexto extraído (OCR):\nPague com Sm\nnossa chave PIX: Pagar e tranáfeir |\nPrático, seguro e rápido! $9 cCódigoaR\nIna macnadoastudicoly com.br Pix\nBanco Itaú - Ag.:6767 - C.c.: 23136-5 3 Pix copia cola\nMaria Helena Machado\n5 Meus limites Pix\nEscolha opção pagar com pix no\na App do seu banco, digite nossa\nchave que é E-MAIL e o valor\ncorrespondente ao pagamento...\nEncaminhe o comprovante para\nÉ nossa central via WhatsApp S\n11970946712 e o nome (f\ncompleto do aluno. TUDI IY\nwww.studiooly.com.br O (11) 97094-6712 | Fone: (11) 2386-1800",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:18:14.294Z",
+      "updatedAt": "2026-01-04T19:18:14.294Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554298960-qf1ieozmt",
+    "tenantId": "tenant-demo",
+    "title": "dc664ec2-7fa7-4f12-a457-6c1e35138939",
+    "content": "[Imagem: dc664ec2-7fa7-4f12-a457-6c1e35138939.jpeg]\n\nTexto extraído (OCR):\n(Ace;\nFRIDAY\n\n> R$5,00,\n$TUDI OU",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:18:18.960Z",
+      "updatedAt": "2026-01-04T19:18:18.960Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767554300069-5ia1py46n",
+    "tenantId": "tenant-demo",
+    "title": "Planos Balé",
+    "content": "--- Página 1 ---\nFaça já seu plano   Faça já seu plano   Faça já seu plano  PLANO  MENSAL  2x - p/semana:   R$200,00  1x - p/semana:   R$160,00  PLANOS  SEMESTRAL   ANUAL  PLANO   PLANO  BALÉ  2x - p/semana:   R$187,00  1x - p/semana:   R$150,00  2x - p/semana:   R$182,00  1x - p/semana:   R$145,00",
+    "metadata": {
+      "source": "upload",
+      "category": "tabelas_preco",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "tabelas_preco",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:18:20.069Z",
+      "updatedAt": "2026-01-04T19:18:20.069Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555602567-qsgirebcq",
+    "tenantId": "tenant-demo",
+    "title": "66c33dd6-6341-4fb4-9ddc-45f395e56203",
+    "content": "[Imagem: 66c33dd6-6341-4fb4-9ddc-45f395e56203.jpeg]\n\nTexto extraído (OCR):\nStir pied\n(sf\na FISIOTERAPIA\n1 10 5\nSESSÃO SESSÕES SESSÕES\nR$150,00 R$1.200,00 R$675,00\nAté 4 sessões A partir de 10 sessões A partir de 5 sessões\nCada sessão fica no valor de Cada sessão fica no valor de Cada sessão fica no valor de\nR$150,00. R$120,00. R$135,00.\nVALORES VÁLIDOS EM 2025",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:40:02.567Z",
+      "updatedAt": "2026-01-04T19:40:02.567Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555608413-okkpa4cvq",
+    "tenantId": "tenant-demo",
+    "title": "119cb26c-2fb9-4967-95df-0cf3bd2b65f9",
+    "content": "[Imagem: 119cb26c-2fb9-4967-95df-0cf3bd2b65f9.jpeg]\n\nTexto extraído (OCR):\n- TH\nStoo Fg\nHORARIOS DO\n\nCROSSFITE\n\nFUNCIONAL\nSegunda a\nQuinta-feira\nSexta-feira\n\nSÁBADO\n\nDOMINGO\n\nesTuPIOOLY",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:40:08.413Z",
+      "updatedAt": "2026-01-04T19:40:08.413Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555620319-vt68irnxa",
+    "tenantId": "tenant-demo",
+    "title": "d2bcc626-ff21-4a4c-b2b1-519234ed1ec8",
+    "content": "[Imagem: d2bcc626-ff21-4a4c-b2b1-519234ed1ec8.jpeg]\n\nTexto extraído (OCR):\nPague com Sm\nnossa chave PIX: Pagar e tranáfeir |\nPrático, seguro e rápido! $9 cCódigoaR\nIna macnadoastudicoly com.br Pix\nBanco Itaú - Ag.:6767 - C.c.: 23136-5 3 Pix copia cola\nMaria Helena Machado\n5 Meus limites Pix\nEscolha opção pagar com pix no\na App do seu banco, digite nossa\nchave que é E-MAIL e o valor\ncorrespondente ao pagamento...\nEncaminhe o comprovante para\nÉ nossa central via WhatsApp S\n11970946712 e o nome (f\ncompleto do aluno. TUDI IY\nwww.studiooly.com.br O (11) 97094-6712 | Fone: (11) 2386-1800",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:40:20.319Z",
+      "updatedAt": "2026-01-04T19:40:20.319Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555625125-n4cau7xfa",
+    "tenantId": "tenant-demo",
+    "title": "dc664ec2-7fa7-4f12-a457-6c1e35138939",
+    "content": "[Imagem: dc664ec2-7fa7-4f12-a457-6c1e35138939.jpeg]\n\nTexto extraído (OCR):\n(Ace;\nFRIDAY\n\n> R$5,00,\n$TUDI OU",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:40:25.125Z",
+      "updatedAt": "2026-01-04T19:40:25.125Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555626927-y5xd5ribh",
+    "tenantId": "tenant-demo",
+    "title": "Planos Balé",
+    "content": "--- Página 1 ---\nFaça já seu plano   Faça já seu plano   Faça já seu plano  PLANO  MENSAL  2x - p/semana:   R$200,00  1x - p/semana:   R$160,00  PLANOS  SEMESTRAL   ANUAL  PLANO   PLANO  BALÉ  2x - p/semana:   R$187,00  1x - p/semana:   R$150,00  2x - p/semana:   R$182,00  1x - p/semana:   R$145,00",
+    "metadata": {
+      "source": "upload",
+      "category": "tabelas_preco",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "tabelas_preco",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:40:26.927Z",
+      "updatedAt": "2026-01-04T19:40:26.927Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555712388-ug8ezb8qb",
+    "tenantId": "tenant-demo",
+    "title": "66c33dd6-6341-4fb4-9ddc-45f395e56203",
+    "content": "[Imagem: 66c33dd6-6341-4fb4-9ddc-45f395e56203.jpeg]\n\nTexto extraído (OCR):\nStir pied\n(sf\na FISIOTERAPIA\n1 10 5\nSESSÃO SESSÕES SESSÕES\nR$150,00 R$1.200,00 R$675,00\nAté 4 sessões A partir de 10 sessões A partir de 5 sessões\nCada sessão fica no valor de Cada sessão fica no valor de Cada sessão fica no valor de\nR$150,00. R$120,00. R$135,00.\nVALORES VÁLIDOS EM 2025",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:41:52.388Z",
+      "updatedAt": "2026-01-04T19:41:52.388Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555718194-xrjh6dk3c",
+    "tenantId": "tenant-demo",
+    "title": "119cb26c-2fb9-4967-95df-0cf3bd2b65f9",
+    "content": "[Imagem: 119cb26c-2fb9-4967-95df-0cf3bd2b65f9.jpeg]\n\nTexto extraído (OCR):\n- TH\nStoo Fg\nHORARIOS DO\n\nCROSSFITE\n\nFUNCIONAL\nSegunda a\nQuinta-feira\nSexta-feira\n\nSÁBADO\n\nDOMINGO\n\nesTuPIOOLY",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:41:58.194Z",
+      "updatedAt": "2026-01-04T19:41:58.194Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555729670-a19hyg8wa",
+    "tenantId": "tenant-demo",
+    "title": "d2bcc626-ff21-4a4c-b2b1-519234ed1ec8",
+    "content": "[Imagem: d2bcc626-ff21-4a4c-b2b1-519234ed1ec8.jpeg]\n\nTexto extraído (OCR):\nPague com Sm\nnossa chave PIX: Pagar e tranáfeir |\nPrático, seguro e rápido! $9 cCódigoaR\nIna macnadoastudicoly com.br Pix\nBanco Itaú - Ag.:6767 - C.c.: 23136-5 3 Pix copia cola\nMaria Helena Machado\n5 Meus limites Pix\nEscolha opção pagar com pix no\na App do seu banco, digite nossa\nchave que é E-MAIL e o valor\ncorrespondente ao pagamento...\nEncaminhe o comprovante para\nÉ nossa central via WhatsApp S\n11970946712 e o nome (f\ncompleto do aluno. TUDI IY\nwww.studiooly.com.br O (11) 97094-6712 | Fone: (11) 2386-1800",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:42:09.670Z",
+      "updatedAt": "2026-01-04T19:42:09.670Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555734845-5cqf1db5q",
+    "tenantId": "tenant-demo",
+    "title": "dc664ec2-7fa7-4f12-a457-6c1e35138939",
+    "content": "[Imagem: dc664ec2-7fa7-4f12-a457-6c1e35138939.jpeg]\n\nTexto extraído (OCR):\n(Ace;\nFRIDAY\n\n> R$5,00,\n$TUDI OU",
+    "metadata": {
+      "source": "upload",
+      "category": "imagens",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "imagens",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:42:14.845Z",
+      "updatedAt": "2026-01-04T19:42:14.845Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  },
+  {
+    "id": "doc-1767555736813-gnlm2k2bd",
+    "tenantId": "tenant-demo",
+    "title": "Planos Balé",
+    "content": "--- Página 1 ---\nFaça já seu plano   Faça já seu plano   Faça já seu plano  PLANO  MENSAL  2x - p/semana:   R$200,00  1x - p/semana:   R$160,00  PLANOS  SEMESTRAL   ANUAL  PLANO   PLANO  BALÉ  2x - p/semana:   R$187,00  1x - p/semana:   R$150,00  2x - p/semana:   R$182,00  1x - p/semana:   R$145,00",
+    "metadata": {
+      "source": "upload",
+      "category": "tabelas_preco",
+      "productId": null,
+      "clientId": null,
+      "tags": [
+        "tabelas_preco",
+        "generate-system"
+      ],
+      "author": null,
+      "createdAt": "2026-01-04T19:42:16.813Z",
+      "updatedAt": "2026-01-04T19:42:16.813Z",
+      "version": 1
+    },
+    "permissions": {
+      "roles": null,
+      "agents": null
+    },
+    "status": "active",
+    "indexed": false,
+    "indexedAt": null,
+    "chunksCount": 0
+  }
+]

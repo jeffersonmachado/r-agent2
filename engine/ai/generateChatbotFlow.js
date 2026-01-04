@@ -20,7 +20,8 @@ const { validateGeneratedPlan } = require('./validateGeneratedPlan');
 const logger = require('../../api/utils/logger');
 
 // Caminho do prompt oficial
-const PROMPT_PATH = path.join(__dirname, '../../../prompts/chatbot.generator.prompt.md');
+// Corrigido: usa caminho absoluto baseado na raiz do projeto
+const PROMPT_PATH = path.resolve(__dirname, '../../prompts/chatbot.generator.prompt.md');
 
 /**
  * Carrega o prompt oficial de geração de chatbot
@@ -81,6 +82,27 @@ function simulateAiGeneration(userInput, prompt) {
 }
 
 /**
+ * Garante que o fluxo tem metadados obrigatórios antes da validação
+ * 
+ * @param {Object} flow - Fluxo gerado
+ * @param {Object} options - Opções com tenantId, flowId, flowName
+ * @returns {Object} Fluxo com metadados garantidos
+ */
+function ensureFlowMetadata(flow, options = {}) {
+  const tenantId = options.tenantId || 'demo-tenant';
+  const flowId = options.flowId || `flow-${Date.now()}`;
+  const flowName = options.flowName || flow.metadata?.name || 'Fluxo Gerado';
+  
+  return {
+    ...flow,
+    id: flow.id || flowId,
+    tenantId: flow.tenantId || tenantId,
+    version: typeof flow.version === 'number' && flow.version >= 1 ? flow.version : 1,
+    name: flow.name || flowName,
+  };
+}
+
+/**
  * Gera fluxo de chatbot a partir do input do usuário
  * 
  * @param {string} userInput - Descrição do fluxo desejado
@@ -113,8 +135,11 @@ async function generateChatbotFlow(userInput, options = {}) {
       nodeCount: generatedFlow.nodes?.length || 0 
     });
 
+    // 2.5. Garante metadados obrigatórios ANTES da validação
+    const flowWithMetadata = ensureFlowMetadata(generatedFlow, options);
+
     // 3. Validação OBRIGATÓRIA pelo gate
-    const validation = validateGeneratedPlan(generatedFlow, 'chatbot');
+    const validation = validateGeneratedPlan(flowWithMetadata, 'chatbot');
     
     if (!validation.valid) {
       logger.warn('[generateChatbotFlow] Fluxo rejeitado pelo gate', {
@@ -135,7 +160,7 @@ async function generateChatbotFlow(userInput, options = {}) {
     }
 
     logger.info('[generateChatbotFlow] Fluxo validado com sucesso', {
-      nodeCount: generatedFlow.nodes?.length || 0,
+      nodeCount: flowWithMetadata.nodes?.length || 0,
       domain: validation.domain
     });
 
@@ -144,7 +169,7 @@ async function generateChatbotFlow(userInput, options = {}) {
 
     return {
       success: true,
-      flow: generatedFlow,
+      flow: flowWithMetadata,
       validation,
       promptVersion: '1.0.0' // Versão do prompt utilizado
     };

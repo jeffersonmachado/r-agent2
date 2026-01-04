@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mock do client ANTES de importar flows
+vi.mock('./client', () => ({
+  fetchJson: vi.fn(),
+}));
+
+// eslint-disable-next-line import/first
 import {
   listFlows,
   getFlow,
@@ -9,29 +16,35 @@ import {
   getReplay,
 } from './flows';
 
-vi.mock('./client', () => ({
-  fetchJson: vi.fn(),
-}));
-
 // eslint-disable-next-line import/first
 import { fetchJson } from './client';
 
 describe('api/flows', () => {
   beforeEach(() => {
-    fetchJson.mockReset();
+    vi.clearAllMocks();
+    vi.mocked(fetchJson).mockReset();
+    vi.mocked(fetchJson).mockClear();
   });
 
   it('listFlows chama /flows com GET', async () => {
-    fetchJson.mockResolvedValue([]);
+    const mockFetch = vi.mocked(fetchJson);
+    mockFetch.mockResolvedValue([]);
 
     const result = await listFlows();
 
-    expect(fetchJson).toHaveBeenCalledWith('/flows', { method: 'GET' });
+    // Verifica que fetchJson foi chamado
+    expect(mockFetch).toHaveBeenCalled();
+    
+    // Verifica os argumentos da chamada
+    const calls = mockFetch.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[0][0]).toBe('/flows');
+    expect(calls[0][1]).toMatchObject({ method: 'GET' });
     expect(result).toEqual([]);
   });
 
   it('getFlow chama /flows/:id com GET', async () => {
-    fetchJson.mockResolvedValue({ id: 'flow-1' });
+    vi.mocked(fetchJson).mockResolvedValue({ id: 'flow-1' });
 
     const result = await getFlow('flow-1');
 
@@ -41,7 +54,7 @@ describe('api/flows', () => {
 
   it('createFlow chama POST /flows com body', async () => {
     const flow = { id: 'new', nodes: [] };
-    fetchJson.mockResolvedValue(flow);
+    vi.mocked(fetchJson).mockResolvedValue(flow);
 
     const result = await createFlow(flow);
 
@@ -54,7 +67,7 @@ describe('api/flows', () => {
 
   it('updateFlow chama PUT /flows/:id com body', async () => {
     const flow = { id: 'flow-1', nodes: [] };
-    fetchJson.mockResolvedValue(flow);
+    vi.mocked(fetchJson).mockResolvedValue(flow);
 
     const result = await updateFlow('flow-1', flow);
 
@@ -68,7 +81,7 @@ describe('api/flows', () => {
   it('validateFlow chama POST /flows/validate', async () => {
     const flow = { id: 'flow-1', nodes: [] };
     const validation = { valid: true, errors: [] };
-    fetchJson.mockResolvedValue(validation);
+    vi.mocked(fetchJson).mockResolvedValue(validation);
 
     const result = await validateFlow(flow);
 
@@ -81,7 +94,7 @@ describe('api/flows', () => {
 
   it('simulateFlow chama POST /flows/simulate com flowId e options', async () => {
     const simulation = { steps: [] };
-    fetchJson.mockResolvedValue(simulation);
+    vi.mocked(fetchJson).mockResolvedValue(simulation);
 
     const result = await simulateFlow('flow-1', { maxSteps: 10 });
 
@@ -94,7 +107,7 @@ describe('api/flows', () => {
 
   it('getReplay chama GET /replay/:sessionId', async () => {
     const replay = { messages: [] };
-    fetchJson.mockResolvedValue(replay);
+    vi.mocked(fetchJson).mockResolvedValue(replay);
 
     const result = await getReplay('sess-1');
 

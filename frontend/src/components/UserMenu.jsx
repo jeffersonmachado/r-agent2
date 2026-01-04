@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/authContext';
 import { NavigationLink } from './NavigationLink';
 import { Button } from '../styles/Button';
 import { getVisibleMenuItems } from '../utils/menuPermissions';
 import { listAllTickets } from '../api/tickets';
+import { logoutAll } from '../api/auth';
+import { useToast } from './Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
+import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
 
 /**
@@ -16,9 +20,11 @@ import logger from '../utils/logger';
  */
 export function UserMenu() {
   const { agent, logout } = useAuth();
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTicketsCount, setActiveTicketsCount] = useState(0);
   const [agentStatus, setAgentStatus] = useState('online'); // online, busy, offline
+  const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
 
@@ -59,7 +65,116 @@ export function UserMenu() {
     }
   }, [isOpen]);
 
-  // Carrega tickets ativos do agente e atualiza status
+  // Função para carregar tickets ativos e atualizar status
+  const loadActiveTickets = useCallback(async () => {
+    if (!agent) {
+      setActiveTicketsCount(0);
+      setAgentStatus('offline');
+      return;
+    }
+
+    try {
+      // Busca tickets em atendimento atribuídos ao agente
+      const result = await listAllTickets({
+        status: 'in_progress',
+        limit: 1000,
+      });
+
+      // Filtra tickets atribuídos ao agente atual
+      const agentTickets = result.tickets?.filter((ticket) => {
+        return (
+          ticket.assignedTo === agent.id ||
+          ticket.assignedTo === agent.username
+        );
+      }) || [];
+
+      const count = agentTickets.length;
+      setActiveTicketsCount(count);
+
+      // Determina status do agente:
+      // - busy: tem tickets em atendimento
+      // - online: autenticado e sem tickets em atendimento
+      if (count > 0) {
+        setAgentStatus('busy');
+      } else {
+        setAgentStatus('online');
+      }
+    } catch (err) {
+      logger.warn('Erro ao carregar tickets ativos', err);
+      setAgentStatus('online'); // Assume online em caso de erro
+    }
+  }, [agent]);
+
+  // Ref para manter referência estável da função
+  const loadActiveTicketsRef = useRef(loadActiveTickets);
+  useEffect(() => {
+    loadActiveTicketsRef.current = loadActiveTickets;
+  }, [loadActiveTickets]);
+
+  // WebSocket para atualizações em tempo real
+  const handleWebSocketEvent = useCallback((event, data) => {
+    logger.debug('[UserMenu] Evento WebSocket recebido', event, data);
+
+    // Registra métrica de evento WebSocket
+    websocketMetrics.recordWebSocketEvent(event);
+
+    // Só processa eventos relacionados a tickets do agente atual
+    const isRelevantEvent = 
+      data.assignedTo === agent?.id || 
+      data.assignedTo === agent?.username ||
+      !data.assignedTo; // Eventos sem assignedTo podem ser relevantes
+
+    if (!isRelevantEvent) {
+      return;
+    }
+
+    switch (event) {
+      case 'ticket.assigned':
+        // Ticket atribuído - recarrega contador
+        if (loadActiveTicketsRef.current) {
+          loadActiveTicketsRef.current();
+        }
+        break;
+
+      case 'ticket.updated':
+        // Ticket atualizado - recarrega contador se mudou status ou atribuição
+        if (data.status === 'in_progress' || data.status === 'closed') {
+          if (loadActiveTicketsRef.current) {
+            loadActiveTicketsRef.current();
+          }
+        }
+        break;
+
+      case 'ticket.closed':
+        // Ticket fechado - recarrega contador
+        if (loadActiveTicketsRef.current) {
+          loadActiveTicketsRef.current();
+        }
+        break;
+
+      default:
+        // Outros eventos não afetam o contador
+        break;
+    }
+  }, [agent]);
+
+  // Conecta ao WebSocket para receber atualizações em tempo real
+  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+    enabled: !!agent,
+    onEvent: handleWebSocketEvent,
+    subscribeEvents: [
+      'ticket.assigned',
+      'ticket.updated',
+      'ticket.closed',
+    ],
+  });
+
+  // Atualiza métricas de status WebSocket
+  useEffect(() => {
+    websocketMetrics.setWebSocketStatus(wsConnected && wsAuthenticated);
+  }, [wsConnected, wsAuthenticated]);
+
+  // Carrega tickets iniciais e configura polling como fallback
   useEffect(() => {
     if (!agent) {
       setActiveTicketsCount(0);
@@ -67,55 +182,26 @@ export function UserMenu() {
       return;
     }
 
-    let isMounted = true;
-
-    async function loadActiveTickets() {
-      try {
-        // Busca tickets em atendimento atribuídos ao agente
-        const result = await listAllTickets({
-          status: 'in_progress',
-          limit: 1000,
-        });
-
-        if (!isMounted) return;
-
-        // Filtra tickets atribuídos ao agente atual
-        const agentTickets = result.tickets?.filter((ticket) => {
-          return (
-            ticket.assignedTo === agent.id ||
-            ticket.assignedTo === agent.username
-          );
-        }) || [];
-
-        const count = agentTickets.length;
-        setActiveTicketsCount(count);
-
-        // Determina status do agente:
-        // - busy: tem tickets em atendimento
-        // - online: autenticado e sem tickets em atendimento
-        if (count > 0) {
-          setAgentStatus('busy');
-        } else {
-          setAgentStatus('online');
-        }
-      } catch (err) {
-        logger.warn('Erro ao carregar tickets ativos', err);
-        if (isMounted) {
-          setAgentStatus('online'); // Assume online em caso de erro
-        }
-      }
-    }
-
+    // Carrega dados iniciais
     loadActiveTickets();
 
-    // Atualiza a cada 30 segundos
-    const interval = setInterval(loadActiveTickets, 30000);
+    // Polling como fallback apenas se WebSocket não estiver disponível
+    if (!wsConnected || !wsAuthenticated) {
+      logger.debug('[UserMenu] WebSocket não disponível, usando polling como fallback');
+      const interval = setInterval(() => {
+        // Registra métrica de polling
+        websocketMetrics.recordPollingRequest();
+        
+        if (loadActiveTicketsRef.current) {
+          loadActiveTicketsRef.current();
+        }
+      }, 30000); // 30 segundos quando WebSocket não está disponível
 
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [agent]);
+      return () => clearInterval(interval);
+    } else {
+      logger.debug('[UserMenu] WebSocket conectado, polling desabilitado');
+    }
+  }, [agent, wsConnected, wsAuthenticated, loadActiveTickets]);
 
   // Gera inicial do nome para o avatar
   const getInitials = (name) => {
@@ -130,6 +216,29 @@ export function UserMenu() {
   const handleLogout = async () => {
     await logout();
     window.location.href = '/login';
+  };
+
+  const handleLogoutAll = async () => {
+    if (!confirm('Deseja encerrar todas as sessões? Você será desconectado de todos os dispositivos.')) {
+      return;
+    }
+
+    setIsLoggingOutAll(true);
+    try {
+      const result = await logoutAll();
+      showToast(
+        `Todas as sessões foram encerradas (${result.sessionsRemoved || 0} sessão(ões) removida(s))`,
+        'success'
+      );
+      // Aguarda um pouco antes de redirecionar para mostrar o toast
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1000);
+    } catch (err) {
+      logger.error('Erro ao fazer logout de todas as sessões', err);
+      showToast('Erro ao encerrar todas as sessões', 'error');
+      setIsLoggingOutAll(false);
+    }
   };
 
   if (!agent) {
@@ -228,6 +337,16 @@ export function UserMenu() {
           <div className="user-menu-divider"></div>
 
           <div className="user-menu-footer">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogoutAll}
+              className="user-menu-logout-all"
+              disabled={isLoggingOutAll}
+              style={{ marginBottom: '8px', width: '100%' }}
+            >
+              {isLoggingOutAll ? 'Encerrando...' : 'Encerrar todas as sessões'}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
