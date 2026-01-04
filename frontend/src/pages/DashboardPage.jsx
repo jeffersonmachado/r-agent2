@@ -194,7 +194,7 @@ export function DashboardPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Dashboard</h1>
+          <h1>📊 Dashboard</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Bem-vindo, {agent?.name || agent?.username}! Acesse todas as funcionalidades do sistema.

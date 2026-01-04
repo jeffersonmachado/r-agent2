@@ -150,7 +150,7 @@ export function AuditPage() {
       <div className="support-page">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-text-primary mb-4">Acesso Negado</h1>
+            <h1 className="text-3xl font-bold text-text-primary mb-4">🚫 Acesso Negado</h1>
             <p className="text-text-secondary mb-6">Você não tem permissão para visualizar logs de auditoria.</p>
             <NavigationLink to="/support">
               <Button>Voltar</Button>
@@ -166,7 +166,7 @@ export function AuditPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Auditoria</h1>
+          <h1>🔍 Auditoria</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Visualize e monitore todas as ações realizadas no sistema

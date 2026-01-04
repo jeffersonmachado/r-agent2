@@ -10,9 +10,9 @@
       "description": "Tipos de teste obrigatórios no sistema",
       "items": {
         "type": "string",
-        "enum": ["unit", "integration", "e2e", "rpa"]
+        "enum": ["unit", "flow", "stress", "rpa"]
       },
-      "default": ["unit", "integration", "e2e", "rpa"],
+      "default": ["unit", "flow", "stress", "rpa"],
       "uniqueItems": true
     },
     "rpa": {

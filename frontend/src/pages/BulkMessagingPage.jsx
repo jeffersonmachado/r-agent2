@@ -168,7 +168,7 @@ export function BulkMessagingPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Disparos em Massa</h1>
+          <h1>📢 Disparos em Massa</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Gerencie campanhas de envio em massa

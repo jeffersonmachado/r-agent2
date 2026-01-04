@@ -104,7 +104,7 @@ export function AiChatbotGenerationPage() {
       
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary mb-2">
-          Geração de Fluxo de Chatbot por IA
+          🤖 Geração de Fluxo de Chatbot por IA
         </h1>
         <p className="text-text-secondary text-sm">
           Descreva o fluxo desejado e a IA gerará um fluxo válido e editável.

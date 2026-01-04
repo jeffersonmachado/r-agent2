@@ -4,7 +4,7 @@
   "private": true,
   "description": "Engine de fluxo de chatbot (Node.js) com execução determinística e replay.",
   "scripts": {
-    "test": "node tests/runner.js && npm run test:rpa",
+    "test": "npm run test:unit && npm run test:flow && npm run test:rpa",
     "test:unit": "jest tests/unit",
     "test:flow": "jest tests/flow",
     "test:data": "jest tests/data",
@@ -20,6 +20,8 @@
     "test:stress": "jest tests/stress",
     "test:system": "jest tests/contracts tests/governance tests/ci tests/runtime tests/organizational tests/stress",
     "qa": "node qa/qaRunner.js",
+    "system:validate": "node tools/system/validate.js",
+    "system:checklist": "node tools/system/checklist.js",
     "test:rpa:record": "node tests/rpa/record.js",
     "rpa:demo": "node tests/rpa/demo.js",
     "rpa:seed": "node tests/rpa/seedPlatformRPA.js",

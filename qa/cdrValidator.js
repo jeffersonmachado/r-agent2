@@ -63,6 +63,7 @@ function checkR1_ActionsNotAllowed(text, capabilities) {
   const actionVerbs = [
     /\b(?:vou|irei|vamos|iremos)\s+(?:abrir|solicitar|verificar|analisar|encaminhar|processar|executar|criar|alterar|excluir|resolver|consultar|buscar|enviar|transferir|pedir|fazer|realizar)/i,
     /\b(?:já|estou|estamos|foi|será|serão)\s+(?:abrindo|solicitando|verificando|analisando|encaminhando|processando|executando|criando|alterando|excluindo|resolvendo|consultando|buscando|enviando|transferindo|pedindo|fazendo|realizando)/i,
+    /\b(?:estou|estamos)\s+(?:abrindo|solicitando|verificando|analisando|encaminhando|processando|executando|criando|alterando|excluindo|resolvendo|consultando|buscando|enviando|transferindo|pedindo|fazendo|realizando)/i,
     /\b(?:abri|solicitei|verifiquei|analisei|encaminhei|processei|executei|criei|alterei|excluí|resolvi|consultei|busquei|enviei|transfiri|pedi|fiz|realizei)\b/i
   ];
 
@@ -97,10 +98,24 @@ function checkR1_ActionsNotAllowed(text, capabilities) {
         const prohibitedPatterns = [
           /\b(?:vou|irei|vamos)\s+(?:abrir|solicitar|verificar|analisar|encaminhar)\s+(?:chamado|ticket|pedido|solicitação)\s+(?:em|no|para)\s+(?:sistema|sistemas|externo|externos)/i,
           /\b(?:vou|irei|vamos)\s+(?:contatar|ligar|chamar|falar)\s+(?:com|ao|a)\s+(?:atendente|humano|pessoa|equipe|setor)/i,
+          /\b(?:vou|irei|vamos)\s+(?:solicitar)\s+(?:a|o)\s+(?:abertura|abrir)\s+(?:do|da|de)\s+(?:seu|sua|seu)\s+(?:chamado|ticket|pedido|solicitação)/i,
+          /\b(?:já|estou|estamos)\s+(?:verificando|analisando|processando)\s+.*\s+(?:sistema|no sistema)/i,
         ];
         
         if (prohibitedPatterns.some(pattern => pattern.test(text))) {
           errors.push('CDR_ACTION_NOT_ALLOWED');
+        } else {
+          // Se há verbo de ação mas não está em can e não está nos padrões proibidos específicos,
+          // ainda pode ser uma ação não permitida se menciona "sistema" ou "chamado" sem estar em can
+          const systemActionPatterns = [
+            /\b(?:vou|irei|vamos|já|estou|estamos)\s+(?:solicitar|abrir|verificar|analisar|verificando|analisando)\s+.*\s+(?:chamado|ticket|sistema)/i,
+            /\b(?:solicitar|abrir|verificar|analisar)\s+.*\s+(?:chamado|ticket)\s+.*\s+(?:sistema)/i,
+            /\b(?:verificando|analisando|processando)\s+.*\s+(?:sistema|no sistema)/i,
+          ];
+          
+          if (systemActionPatterns.some(pattern => pattern.test(text))) {
+            errors.push('CDR_ACTION_NOT_ALLOWED');
+          }
         }
       }
     }
@@ -153,18 +168,34 @@ function checkR3_FakeHandoff(text, capabilities) {
   // Padrões que indicam simulação de humano/setor
   const humanSimulationPatterns = [
     /\b(?:atendente|atendentes|pessoa|pessoas|humano|humanos|equipe|equipes|setor|setores|departamento|departamentos)\s+(?:já|está|estão|foi|foram|será|serão)\s+(?:resolvendo|analisando|verificando|processando|atendendo)/i,
-    /\b(?:nossa|nosso)\s+(?:atendente|atendentes|equipe|equipes|setor|setores|departamento|departamentos)\s+(?:já|está|estão|foi|foram|será|serão)\b/i,
+    /(?:nossa|nosso)\s+(?:atendente|atendentes|equipe|equipes|setor|setores|departamento|departamentos).*?(?:já|está|estão|foi|foram|será|serão).*?(?:analisando|resolvendo|verificando|processando|atendendo)/i,
     /\b(?:transferi|transfiri|encaminhei|encaminhamos)\s+(?:para|ao|a)\s+(?:atendente|atendentes|equipe|equipes|setor|setores|departamento|departamentos)\s+(?:e|que)\s+(?:já|está|estão|foi|foram|será|serão)\b/i,
+    /\b(?:atendente|equipe|setor|departamento)\s+(?:já|está|estão)\s+(?:resolvendo|analisando|verificando|processando|atendendo)/i,
+    /\b(?:já|está|estão)\s+(?:resolvendo|analisando|verificando|processando|atendendo)\s+(?:pela|pelo|pela)\s+(?:equipe|setor|departamento|atendente)/i,
+    /(?:o|a)\s+(?:atendente|equipe|setor|departamento).*?(?:já|está|estão).*?(?:resolvendo|analisando|verificando|processando|atendendo)/i,
+    /(?:nossa|nosso)\s+equipe.*?(?:já|está|estão).*?(?:analisando|resolvendo|verificando|processando)/i,
+    /(?:o|a)\s+atendente.*?(?:já|está|estão).*?(?:resolvendo|analisando|verificando|processando)/i,
+    /(?:nossa|nosso)\s+equipe.*?(?:já|está|estão).*?(?:analisando|resolvendo).*?(?:seu|sua|seu).*?(?:caso|pedido|solicitação)/i,
   ];
   
-  const hasHumanSimulation = humanSimulationPatterns.some(pattern => pattern.test(text));
+  // Verifica também padrões mais simples que podem não estar sendo capturados
+  const simplePatterns = [
+    /nossa\s+equipe.*?(?:já|está|estão).*?(?:analisando|resolvendo)/i,
+    /o\s+atendente.*?(?:já|está|estão).*?(?:resolvendo|analisando)/i,
+    /(?:já|está|estão)\s+(?:sendo|foi)\s+(?:processado|resolvido)\s+(?:pela|pelo)\s+(?:equipe|atendente)/i,
+  ];
+  
+  const hasHumanSimulation = humanSimulationPatterns.some(pattern => pattern.test(text)) ||
+                             simplePatterns.some(pattern => pattern.test(text));
   
   if (hasHumanSimulation && !hasHumanHandoff) {
     errors.push('CDR_FAKE_HANDOFF');
   } else if (hasHumanSimulation) {
     // Mesmo com capacidade de handoff, verifica se não está simulando ação já feita
     const fakeActionPatterns = [
-      /\b(?:atendente|equipe|setor)\s+(?:já|está|estão)\s+(?:resolvendo|analisando|verificando|processando)\b/i,
+      /\b(?:atendente|equipe|setor|departamento)\s+(?:já|está|estão)\s+(?:resolvendo|analisando|verificando|processando)\b/i,
+      /\b(?:já|está|estão)\s+(?:resolvendo|analisando|verificando|processando)\s+(?:pela|pelo|pela)\s+(?:equipe|setor|departamento|atendente)\b/i,
+      /\b(?:seu|sua)\s+(?:pedido|solicitação|chamado)\s+(?:já|está|estão)\s+(?:sendo|foi|foram)\s+(?:processado|resolvido|analisado)\s+(?:pela|pelo|pela)\s+(?:equipe|setor|departamento|atendente)\b/i,
     ];
     
     if (fakeActionPatterns.some(pattern => pattern.test(text))) {
@@ -212,8 +243,9 @@ function checkR5_InvalidDenial(text, capabilities) {
   
   // Padrões de negação
   const denialPatterns = [
-    /\b(?:não|não posso|não consigo|não tenho|não disponível|não implementado|não disponho)\s+(?:de|da|do|das|dos)\b/i,
+    /\b(?:não|não posso|não consigo|não tenho|não disponível|não implementado|não disponho)\s+(?:de|da|do|das|dos|dessa|desse|isso|essa)\b/i,
     /\b(?:infelizmente|desculpe|desculpa)\s+(?:não|não posso|não consigo|não tenho)\b/i,
+    /\b(?:não)\s+(?:posso|consigo|tenho|disponho)\s+(?:fazer|fazer isso|isso|dessa funcionalidade)\b/i,
   ];
   
   const hasDenial = denialPatterns.some(pattern => pattern.test(text));
@@ -223,7 +255,11 @@ function checkR5_InvalidDenial(text, capabilities) {
     const invalidAfterDenialPatterns = [
       /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:em breve|assim que possível|logo|iremos|vamos|será|serão)\b/i,
       /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:você pode|você poderá|será possível|estará disponível)\s+(?:em breve|assim que possível|logo)\b/i,
-      /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:estamos|estou)\s+(?:trabalhando|desenvolvendo|planejando|preparando)\s+(?:para|isso|essa funcionalidade)\b/i,
+      /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:estamos|estou)\s+(?:trabalhando|desenvolvendo|planejando|preparando)\s+(?:para|isso|essa funcionalidade|nisso|nisto)\b/i,
+      /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:em breve)\s+(?:será|serão)\s+(?:possível|disponível)\b/i,
+      /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:iremos|vamos)\s+(?:implementar|desenvolver|adicionar|criar)\b/i,
+      /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:será|serão)\s+(?:possível|disponível)\b/i,
+      /\b(?:mas|porém|contudo|entretanto|no entanto)\s+(?:estamos|estou)\s+(?:trabalhando)\s+(?:nisso|nisto|nesta|neste)\b/i,
     ];
     
     const hasInvalidAfterDenial = invalidAfterDenialPatterns.some(pattern => pattern.test(text));

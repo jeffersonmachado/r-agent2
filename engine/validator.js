@@ -1459,8 +1459,11 @@ function validateFlow(flow) {
   errors = errors.concat(validateInvalidLoops(flow, edges));
   errors = errors.concat(validateTypeCompatibility(flow, edges));
 
+  // Filtra apenas erros (não warnings) para determinar se o fluxo é válido
+  const actualErrors = errors.filter(e => e.severity !== 'warning');
+  
   return {
-    valid: errors.length === 0,
+    valid: actualErrors.length === 0,
     errors,
   };
 }

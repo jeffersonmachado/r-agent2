@@ -159,7 +159,7 @@ export function QaPage() {
       <div className="support-page">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-text-primary mb-4">Acesso Negado</h1>
+            <h1 className="text-3xl font-bold text-text-primary mb-4">🚫 Acesso Negado</h1>
             <p className="text-text-secondary mb-6">Você não tem permissão para visualizar QA.</p>
             <NavigationLink to="/support">
               <Button>Voltar</Button>
@@ -175,7 +175,7 @@ export function QaPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Painel de Qualidade (QA)</h1>
+          <h1>✅ Painel de Qualidade (QA)</h1>
           {canRunQa && (
             <Button onClick={handleRunQa} disabled={running}>
               {running ? 'Executando...' : 'Executar QA'}

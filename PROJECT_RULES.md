@@ -1017,6 +1017,78 @@ A Toolbar implementa um sistema inteligente de prioridades que esconde grupos au
 
 ---
 
+## 🎯 Execução Oficial do Sistema
+
+### Comando Único de Validação
+
+O projeto possui **um único comando oficial** para validação completa do sistema:
+
+```bash
+npm run system:validate
+```
+
+Este comando executa, nesta ordem exata:
+1. **Validação de Contratos** - Verifica existência e leitura de:
+   - `contracts/generation.interface.json`
+   - `contracts/qa/qa.contract.json`
+2. **Execução Completa de QA** - Executa todos os tipos de teste obrigatórios:
+   - Testes unitários (`test:unit`)
+   - Testes flow (`test:flow`)
+   - Testes stress (`test:stress`)
+   - Testes RPA (`test:rpa`)
+
+**Regras Absolutas:**
+- ✅ Se qualquer etapa falhar → `process.exit(1)` (sistema não está conforme)
+- ✅ Se tudo passar → `process.exit(0)` (sistema está conforme)
+- ✅ Execuções fora desse comando **não são consideradas conformes** para validação oficial
+
+### Checklist Automático de Conformidade
+
+Para verificar conformidade estrutural do projeto:
+
+```bash
+npm run system:checklist
+```
+
+Este comando verifica automaticamente:
+- 📦 **Estrutura** - Pastas e arquivos obrigatórios existem
+- 📜 **Governança** - `PROJECT_RULES.md` contém seções obrigatórias
+- 🧪 **QA** - Scripts de QA estão configurados no `package.json`
+- 🔒 **Segurança** - Verificação básica de segurança organizacional
+
+**Regras:**
+- ✅ Qualquer falha → `process.exit(1)`
+- ✅ Tudo conforme → `process.exit(0)`
+
+### Execução em CI/CD
+
+**Obrigatório:** CI/CD deve usar `npm run system:validate` como único comando de validação.
+
+**Não permitido:**
+- ❌ Executar testes individuais isoladamente em CI/CD
+- ❌ Pular etapas de validação
+- ❌ Usar comandos alternativos para validação oficial
+
+**Permitido (apenas para desenvolvimento local):**
+- ✅ Executar testes individuais para desenvolvimento/debug
+- ✅ Usar scripts utilitários para diagnóstico rápido
+- ✅ Executar `qa` para testes incrementais durante desenvolvimento
+
+### Auditoria de Bypass
+
+Todos os possíveis bypass do sistema estão documentados em:
+- `docs/BYPASS_AUDIT.md`
+
+Este documento mapeia:
+- Scripts que podem ser executados isoladamente
+- Pontos onde QA pode ser ignorado
+- Pontos onde IA poderia ser chamada fora do fluxo oficial
+- Como `system:validate` resolve ou não cada caso
+
+**Regra:** NÃO removemos scripts, NÃO bloqueamos manualmente, apenas **documentamos e mitigamos por processo**.
+
+---
+
 ## 🤖 Testes RPA (Obrigatório)
 
 ### Regras Absolutas de RPA

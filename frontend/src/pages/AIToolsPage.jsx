@@ -113,7 +113,7 @@ export function AIToolsPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Ferramentas de IA</h1>
+          <h1>🤖 Ferramentas de IA</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Sugestões de resposta e reescrita inteligente

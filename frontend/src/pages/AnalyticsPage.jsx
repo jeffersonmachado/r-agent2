@@ -74,7 +74,7 @@ export function AnalyticsPage() {
       <div className="support-page">
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h1>Analytics & Métricas</h1>
+            <h1>📈 Analytics & Métricas</h1>
           </div>
         </div>
         <div className="text-center py-12">
@@ -88,7 +88,7 @@ export function AnalyticsPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Analytics & Métricas</h1>
+          <h1>📈 Analytics & Métricas</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Dashboard com KPIs e indicadores em tempo real

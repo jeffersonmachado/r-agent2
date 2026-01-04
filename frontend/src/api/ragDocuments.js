@@ -150,3 +150,75 @@ export function getDocumentsStats(tenantId = null) {
   });
 }
 
+/**
+ * Processa um arquivo e cria um documento RAG.
+ * 
+ * @param {File} file - Arquivo a ser processado
+ * @param {Object} options - Opções (metadata, autoIndex)
+ * @returns {Promise<Object>} Documento criado
+ */
+export async function uploadDocument(file, options = {}) {
+  if (!file) {
+    return Promise.reject(new Error('uploadDocument: file é obrigatório'));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      try {
+        const content = e.target.result;
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+        
+        // Extrai título do nome do arquivo (sem extensão)
+        const title = fileName.replace(/\.[^/.]+$/, '');
+        
+        // Processa conteúdo baseado no tipo de arquivo
+        let documentContent = content;
+        
+        // Se for texto, usa diretamente
+        if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv'].includes(fileExtension)) {
+          documentContent = content;
+        } else if (fileExtension === 'pdf') {
+          // Para PDF, precisaria de uma biblioteca específica
+          // Por enquanto, tenta extrair texto se possível
+          documentContent = content;
+        }
+        
+        const documentData = {
+          title: title,
+          content: documentContent,
+          metadata: {
+            source: 'upload',
+            category: options.category || null,
+            tags: options.tags || [],
+            fileName: fileName,
+            fileType: file.type,
+            fileSize: file.size,
+            ...options.metadata,
+          },
+          autoIndex: options.autoIndex !== false,
+        };
+        
+        const result = await createDocument(documentData);
+        resolve(result);
+      } catch (error) {
+        logger.error('Erro ao processar arquivo', error);
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Erro ao ler arquivo'));
+    };
+    
+    // Lê como texto para arquivos de texto, ou como data URL para outros
+    if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv'].includes(file.name.split('.').pop()?.toLowerCase() || '')) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsDataURL(file);
+    }
+  });
+}
+

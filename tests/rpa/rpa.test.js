@@ -151,7 +151,9 @@ describe('Sistema RPA', () => {
           },
         ],
         data: {
-          testValue: 'test-123',
+          data: {
+            testValue: 'test-123',
+          },
         },
       };
 

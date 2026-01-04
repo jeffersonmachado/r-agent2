@@ -309,4 +309,51 @@ export function saveRpaTest(rpaTest) {
   );
 }
 
+/**
+ * Gera fluxo e teste RPA usando o orquestrador completo (suporta Bootstrap).
+ * 
+ * @param {Object} payload - Payload completo conforme generation.interface.json
+ * @returns {Promise<any>}
+ */
+export function generateFlowWithOrchestrator(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return Promise.reject(new Error('generateFlowWithOrchestrator: payload é obrigatório'));
+  }
+
+  if (!payload.description || typeof payload.description !== 'string' || payload.description.trim() === '') {
+    return Promise.reject(new Error('generateFlowWithOrchestrator: description é obrigatório'));
+  }
+
+  logger.info('Gerando fluxo com orquestrador', { 
+    name: payload.name,
+    bootstrap: payload.bootstrap || false,
+    useRag: payload.useRag || false,
+    useWebScraping: payload.useWebScraping || false,
+    generateRpaTest: payload.generateRpaTest || false,
+  });
+
+  // Envia o payload completo para o endpoint /flows/generate
+  return fetchJson('/flows/generate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    // Timeout aumentado para 120 segundos pois o modo Bootstrap pode demorar mais
+    // (precisa gerar fluxo, seed, RPA e executar validação)
+    timeoutMs: 120000,
+  }).then(
+    (result) => {
+      logger.info('Geração concluída com sucesso', { 
+        flowId: result?.flowDefinition?.id, 
+        flowName: result?.flowDefinition?.name,
+        bootstrap: result?.bootstrap || false,
+        bootstrapValidation: result?.validation?.bootstrap?.success || null,
+      });
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao gerar fluxo com orquestrador', error);
+      throw error;
+    }
+  );
+}
+
 

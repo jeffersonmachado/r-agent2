@@ -131,7 +131,7 @@ export function WebScrapingPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Raspagem de Sites</h1>
+          <h1>🕷️ Raspagem de Sites</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Extraia conteúdo de sites e indexe automaticamente no RAG

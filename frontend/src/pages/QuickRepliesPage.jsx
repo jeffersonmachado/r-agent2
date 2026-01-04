@@ -162,7 +162,7 @@ export function QuickRepliesPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Respostas Rápidas</h1>
+          <h1>⚡ Respostas Rápidas</h1>
         </div>
         <div className="support-controls">
           <Button 

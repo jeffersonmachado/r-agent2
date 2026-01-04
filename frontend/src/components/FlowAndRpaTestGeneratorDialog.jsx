@@ -203,7 +203,7 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
     <Dialog
       isOpen={true}
       onClose={handleCancel}
-      title="Criar Fluxo e Gerar Teste RPA por IA"
+      title="🚀 Flow & RPA Generator"
       size="xl"
     >
       <div className="space-y-6">

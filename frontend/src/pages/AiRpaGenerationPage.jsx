@@ -104,7 +104,7 @@ export function AiRpaGenerationPage() {
       
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary mb-2">
-          Geração de Teste RPA por IA
+          🤖 Geração de Teste RPA por IA
         </h1>
         <p className="text-text-secondary text-sm">
           Descreva o teste RPA desejado e a IA gerará um plano de teste válido.

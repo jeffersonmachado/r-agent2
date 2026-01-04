@@ -205,7 +205,7 @@ export function AgentsPage() {
       <div className="support-page">
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h1>Gerenciamento de Agentes</h1>
+            <h1>👥 Gerenciamento de Agentes</h1>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -222,7 +222,7 @@ export function AgentsPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>Gerenciamento de Agentes</h1>
+          <h1>👥 Gerenciamento de Agentes</h1>
         </div>
         <div className="support-controls">
           <Button 

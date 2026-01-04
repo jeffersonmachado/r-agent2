@@ -26,6 +26,7 @@ import { WebScrapingPage } from './pages/WebScrapingPage';
 import { RpaTestPage } from './pages/RpaTestPage';
 import { ChatPage } from './pages/ChatPage';
 import { QaPage } from './pages/QaPage';
+import { FlowRpaGeneratorPage } from './pages/FlowRpaGeneratorPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { useRouter } from './hooks/useRouter';
@@ -132,6 +133,7 @@ function AppWithAuth() {
   const isRpaTest = currentPath === '/rpa-test' || currentPath.startsWith('/rpa-test');
   const isChat = currentPath === '/chat' || currentPath.startsWith('/chat');
   const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
+  const isFlowRpaGenerator = currentPath === '/flow-rpa-generator' || currentPath.startsWith('/flow-rpa-generator');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
   // Todas as rotas requerem autenticação, exceto /login
@@ -142,7 +144,7 @@ function AppWithAuth() {
     const allRoutes = [
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isLogin
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isFlowRpaGenerator, isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -155,7 +157,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isLogin, isAuthenticated, navigate
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isFlowRpaGenerator, isLogin, isAuthenticated, navigate
   ]);
 
   // Redireciona para /dashboard quando autenticado e está em rota de login
@@ -164,6 +166,49 @@ function AppWithAuth() {
       navigate('/dashboard');
     }
   }, [isAuthenticated, isLogin, currentPath, navigate]);
+
+  // Atualiza o título do documento baseado na rota atual
+  useEffect(() => {
+    const pageTitles = {
+      '/': '📊 Dashboard',
+      '/dashboard': '📊 Dashboard',
+      '/editor': '📝 Editor de Fluxos',
+      '/support': '💬 Atendimento',
+      '/maintenance': '🔧 Manutenção de Tickets',
+      '/config': '⚙️ Configuração do Sistema',
+      '/agents': '👥 Gerenciamento de Agentes',
+      '/audit': '🔍 Auditoria',
+      '/quick-replies': '⚡ Respostas Rápidas',
+      '/departments': '🏢 Departamentos',
+      '/bulk-messaging': '📢 Disparos em Massa',
+      '/analytics': '📈 Analytics & Métricas',
+      '/export': '📤 Exportação de Dados',
+      '/ai-tools': '🤖 Ferramentas de IA',
+      '/segmentation': '🎯 Segmentação',
+      '/whatsapp-templates': '💬 Templates WhatsApp Business API',
+      '/knowledge-base': '🧠 Base de Conhecimento',
+      '/product-docs': '📖 Documentação de Produtos',
+      '/rag-documents': '📚 Gerenciamento de Documentos RAG',
+      '/web-scraping': '🕷️ Raspagem de Sites',
+      '/rpa-test': '🚀 Flow & RPA Generator',
+      '/chat': '💬 Chat de Teste',
+      '/qa': '✅ Painel de Qualidade (QA)',
+      '/flow-rpa-generator': '🚀 Flow & RPA Generator',
+      '/login': '🔐 Login',
+    };
+
+    // Encontra o título correspondente à rota atual
+    let pageTitle = 'Chatbot Flow Editor'; // Título padrão
+    
+    for (const [route, title] of Object.entries(pageTitles)) {
+      if (currentPath === route || (route !== '/' && currentPath.startsWith(route))) {
+        pageTitle = title;
+        break;
+      }
+    }
+
+    document.title = pageTitle;
+  }, [currentPath]);
 
   // Mostra loading enquanto verifica autenticação
   if (loading) {
@@ -246,6 +291,8 @@ function AppWithAuth() {
         <ChatPage />
       ) : isQa ? (
         <QaPage />
+      ) : isFlowRpaGenerator ? (
+        <FlowRpaGeneratorPage />
       ) : null}
     </div>
   );

@@ -192,7 +192,7 @@ export function ChatPage() {
           fontWeight: '600',
           color: theme.colors.text.primary
         }}>
-          Chat de Teste
+          💬 Chat de Teste
         </h1>
       </div>
 
