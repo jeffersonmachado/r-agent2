@@ -63,7 +63,7 @@ async function seedPlatform() {
     console.log('1️⃣  Fazendo login...\n');
     await runner.init();
     
-    const loginRecording = require('./recordings/seed-platform-login.json');
+    const loginRecording = require('./seeds/seed-platform-login.json');
     results.login = await runner.playback(loginRecording, {
       admin: {
         username: 'admin', // Usa username, não email
@@ -88,7 +88,7 @@ async function seedPlatform() {
     for (const flow of SEED_DATA.flows) {
       console.log(`   📝 Criando fluxo: ${flow.name}...`);
       
-      const createFlowRecording = require('./recordings/seed-platform-create-flow.json');
+      const createFlowRecording = require('./seeds/seed-platform-create-flow.json');
       const result = await runner.playback(createFlowRecording, {
         flow: {
           name: flow.name,
@@ -125,7 +125,7 @@ async function seedPlatform() {
       console.log(`   📋 Criando fila: ${queue.name}...`);
       
       try {
-        const createQueueRecording = require('./recordings/seed-platform-create-queue.json');
+        const createQueueRecording = require('./seeds/seed-platform-create-queue.json');
         const result = await runner.playback(createQueueRecording, {
           queue: {
             name: queue.name,
@@ -170,7 +170,7 @@ async function seedPlatform() {
       console.log(`   🏢 Criando departamento: ${dept.name}...`);
       
       try {
-        const createDeptRecording = require('./recordings/seed-platform-create-department.json');
+        const createDeptRecording = require('./seeds/seed-platform-create-department.json');
         const result = await runner.playback(createDeptRecording, {
           department: {
             name: dept.name,
@@ -223,7 +223,7 @@ async function seedPlatform() {
       console.log(`   👤 Criando agente: ${agent.username}...`);
       
       try {
-        const createAgentRecording = require('./recordings/seed-platform-create-agent.json');
+        const createAgentRecording = require('./seeds/seed-platform-create-agent.json');
         const result = await runner.playback(createAgentRecording, {
           agent: {
             username: agent.username,

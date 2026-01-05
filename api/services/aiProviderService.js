@@ -295,12 +295,42 @@ function createAnthropicProvider() {
 
 /**
  * Provider de fallback (respostas estáticas)
+ * 
+ * CRÍTICO: Este provider deve ser usado apenas como último recurso.
+ * Seu uso frequente indica problemas graves no sistema.
  */
 function createFallbackProvider() {
   return {
     async generate(prompt, context) {
+      // CRÍTICO: Log como erro - uso de fallback estático indica problema grave
+      logger.error('[aiProviderService] CRÍTICO: Provider de fallback estático sendo usado', {
+        promptLength: prompt?.length || 0,
+        sessionId: context?.sessionId || 'unknown',
+        tenantId: context?.tenantId || 'unknown',
+        severity: 'CRITICAL',
+        alert: 'FALLBACK_STATIC_PROVIDER_USED',
+        warning: 'Todos os providers de IA falharam. Sistema está degradado.',
+      });
+      
+      // Registra no monitoramento de fallbacks
+      try {
+        const { recordFallback, FALLBACK_TYPES } = require('../../engine/fallbackMonitor');
+        recordFallback(FALLBACK_TYPES.AI_PROVIDER_STATIC, {
+          sessionId: context?.sessionId || 'unknown',
+          tenantId: context?.tenantId || 'unknown',
+          promptLength: prompt?.length || 0,
+        });
+      } catch (monitorError) {
+        // Não falha se monitoramento não estiver disponível
+      }
+      
       return {
         text: '[IA não disponível] Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.',
+        metadata: {
+          fallbackUsed: true,
+          severity: 'CRITICAL',
+          timestamp: new Date().toISOString(),
+        },
       };
     },
   };

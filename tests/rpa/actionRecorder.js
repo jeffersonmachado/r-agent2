@@ -254,15 +254,12 @@ class ActionRecorder {
    * @param {Object} data - Dados adicionais para incluir
    */
   save(filename, data = {}) {
-    // Tenta salvar em /seeds primeiro, fallback para /recordings
+    // UNIFICADO: Tudo salva em /seeds/ agora
     const seedsDir = path.join(__dirname, 'seeds');
-    const recordingsDir = path.join(__dirname, 'recordings');
-    
-    const targetDir = fs.existsSync(seedsDir) ? seedsDir : recordingsDir;
     
     // Cria diretório se não existir
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
+    if (!fs.existsSync(seedsDir)) {
+      fs.mkdirSync(seedsDir, { recursive: true });
     }
 
     const recording = {
@@ -271,9 +268,11 @@ class ActionRecorder {
       data: {
         ...data,
       },
+      // Adiciona flag de origem (manual ou automatic)
+      source: data.source || this.metadata.source || 'manual',
     };
 
-    const filepath = path.join(targetDir, `${filename}.json`);
+    const filepath = path.join(seedsDir, `${filename}.json`);
     fs.writeFileSync(filepath, JSON.stringify(recording, null, 2), 'utf8');
 
     return filepath;
@@ -285,22 +284,14 @@ class ActionRecorder {
    * @param {string} filename - Nome do arquivo (sem extensão)
    */
   static load(filename) {
-    // Tenta carregar de /seeds primeiro, fallback para /recordings
+    // UNIFICADO: Tudo está em /seeds/
     const seedsFile = path.join(__dirname, 'seeds', `${filename}.json`);
-    const recordingsFile = path.join(__dirname, 'recordings', `${filename}.json`);
     
-    let filepath = null;
-    if (fs.existsSync(seedsFile)) {
-      filepath = seedsFile;
-    } else if (fs.existsSync(recordingsFile)) {
-      filepath = recordingsFile;
-    }
-    
-    if (!filepath) {
+    if (!fs.existsSync(seedsFile)) {
       throw new Error(`Gravação não encontrada: ${filename}`);
     }
 
-    const content = fs.readFileSync(filepath, 'utf8');
+    const content = fs.readFileSync(seedsFile, 'utf8');
     return JSON.parse(content);
   }
 
@@ -309,7 +300,6 @@ class ActionRecorder {
    */
   static list() {
     const seedsDir = path.join(__dirname, 'seeds');
-    const recordingsDir = path.join(__dirname, 'recordings');
     
     const seeds = fs.existsSync(seedsDir)
       ? fs.readdirSync(seedsDir)
@@ -317,14 +307,7 @@ class ActionRecorder {
           .map(f => f.replace('.json', ''))
       : [];
     
-    const recordings = fs.existsSync(recordingsDir)
-      ? fs.readdirSync(recordingsDir)
-          .filter(f => f.endsWith('.json'))
-          .map(f => f.replace('.json', ''))
-      : [];
-    
-    // Remove duplicatas
-    return [...new Set([...seeds, ...recordings])];
+    return seeds;
   }
 }
 

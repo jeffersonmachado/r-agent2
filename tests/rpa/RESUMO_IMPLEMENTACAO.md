@@ -113,7 +113,7 @@ npm run rpa:seed:gravar
   seedPlatformCompleto.js         # ✅ Versão completa
   seedPlatformGravar.js           # ✅ Helper para gravar
   
-  /recordings/
+  /seeds/
     seed-platform-login.json       # ✅ Login
     seed-platform-create-flow.json # ✅ Criar fluxo
     seed-platform-create-agent.json # ✅ Criar agente

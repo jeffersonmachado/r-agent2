@@ -166,27 +166,52 @@ function getAiProviderForTenant(tenantId) {
         });
         return result;
       } catch (err) {
-        log.warn('⚠️ Provider composto: Provider primário falhou, tentando fallback', {
+        // CRÍTICO: Log como erro ao invés de warning - fallback não deve ser silencioso
+        log.error('❌ Provider composto: Provider primário falhou, usando fallback', {
           tenantId,
           primaryId: cfg.primary,
           fallbackId: cfg.fallback,
           error: err.message,
           errorStack: err.stack,
+          severity: 'HIGH',
+          alert: 'AI_PROVIDER_FALLBACK_USED',
         });
+        
+        // Registra no monitoramento de fallbacks
+        try {
+          const { recordFallback, FALLBACK_TYPES } = require('./fallbackMonitor');
+          recordFallback(FALLBACK_TYPES.AI_PROVIDER_FALLBACK, {
+            tenantId,
+            primaryProvider: cfg.primary,
+            fallbackProvider: cfg.fallback,
+            errorType: err.name || 'UnknownError',
+            sessionId: context?.sessionId,
+          });
+        } catch (monitorError) {
+          // Não falha se monitoramento não estiver disponível
+          log.debug('Não foi possível registrar métrica de fallback', { error: monitorError.message });
+        }
+        
         // Tentamos o fallback, mas sem mudar a semântica de fluxo:
         // qualquer erro ainda será tratado no nível do nó de IA.
         if (!fallback) {
           log.error('❌ Provider composto: Fallback não disponível', {
             tenantId,
             fallbackId: cfg.fallback,
+            severity: 'CRITICAL',
+            alert: 'AI_PROVIDER_FALLBACK_UNAVAILABLE',
           });
           throw err;
         }
         const fallbackResult = await fallback.generate(prompt, context);
-        log.debug('✅ Provider composto: Fallback funcionou', {
+        // Log como warning - fallback funcionou mas é um sinal de problema
+        log.warn('⚠️ Provider composto: Fallback funcionou (problema no provider primário deve ser investigado)', {
           tenantId,
           fallbackId: cfg.fallback,
+          primaryId: cfg.primary,
           hasText: !!fallbackResult?.text,
+          severity: 'MEDIUM',
+          alert: 'AI_PROVIDER_FALLBACK_SUCCESS',
         });
         return fallbackResult;
       }

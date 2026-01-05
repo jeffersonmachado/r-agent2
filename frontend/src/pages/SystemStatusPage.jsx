@@ -11,8 +11,11 @@
 import React, { useState, useEffect } from 'react';
 import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
+import { Button } from '../styles/Button';
+import { useToast } from '../components/Toast';
 
 export function SystemStatusPage() {
+  const { showToast, ToastContainer } = useToast();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,7 +36,9 @@ export function SystemStatusPage() {
       logger.debug('[SystemStatus] Status atualizado', data);
     } catch (err) {
       logger.error('[SystemStatus] Erro ao buscar status', err);
-      setError(err.message || 'Erro ao buscar status dos serviços');
+      const errorMessage = err.message || 'Erro ao buscar status dos serviços';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -55,17 +60,17 @@ export function SystemStatusPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, refreshInterval]);
 
-  // Função para obter cor do status
-  const getStatusColor = (status) => {
-    switch (status) {
+  // Função para obter cor do status usando classes do tema
+  const getStatusColor = (statusValue) => {
+    switch (statusValue) {
       case 'healthy':
-        return 'text-green-600 bg-green-50 border-green-200';
+        return 'text-status-success bg-status-success/10 border-status-success/30';
       case 'degraded':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+        return 'text-status-warning bg-status-warning/10 border-status-warning/30';
       case 'unhealthy':
-        return 'text-red-600 bg-red-50 border-red-200';
+        return 'text-status-error bg-status-error/10 border-status-error/30';
       default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+        return 'text-text-secondary bg-bg-secondary border-border-default';
     }
   };
 
@@ -92,8 +97,8 @@ export function SystemStatusPage() {
       if (value !== null && value !== undefined) {
         details.push(
           <div key={key} className="text-sm">
-            <span className="font-medium text-gray-700">{key}:</span>{' '}
-            <span className="text-gray-600">
+            <span className="font-medium text-text-primary">{key}:</span>{' '}
+            <span className="text-text-secondary">
               {typeof value === 'object' ? JSON.stringify(value) : String(value)}
             </span>
           </div>
@@ -105,157 +110,157 @@ export function SystemStatusPage() {
 
   if (loading && !status) {
     return (
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Status dos Serviços</h1>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-gray-500">Carregando...</div>
+      <div className="support-page">
+        <div className="support-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h1>📊 Status dos Serviços</h1>
           </div>
         </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-text-secondary">Carregando...</div>
+        </div>
+        <ToastContainer />
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Status dos Serviços</h1>
-            <p className="text-gray-600">
-              Monitoramento em tempo real dos serviços fundamentais da plataforma
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={fetchStatus}
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Atualizando...' : 'Atualizar'}
-            </button>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm text-gray-700">Auto-atualizar</span>
-            </label>
-            {autoRefresh && (
-              <select
-                value={refreshInterval}
-                onChange={(e) => setRefreshInterval(Number(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value={5000}>5s</option>
-                <option value={10000}>10s</option>
-                <option value={30000}>30s</option>
-                <option value={60000}>1min</option>
-              </select>
-            )}
-          </div>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>📊 Status dos Serviços</h1>
         </div>
-
-        {/* Status Geral */}
-        {status && (
-          <div className="mb-6">
-            <div
-              className={`p-6 rounded-lg border-2 ${getStatusColor(status.overall.status)}`}
+        <div className="support-controls">
+          <Button
+            onClick={fetchStatus}
+            disabled={loading}
+            variant="primary"
+          >
+            {loading ? 'Atualizando...' : '🔄 Atualizar'}
+          </Button>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-text-primary">Auto-atualizar</span>
+          </label>
+          {autoRefresh && (
+            <select
+              value={refreshInterval}
+              onChange={(e) => setRefreshInterval(Number(e.target.value))}
+              className="px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl font-bold">
-                      {getStatusIcon(status.overall.status)}
-                    </span>
-                    <h2 className="text-xl font-bold">
-                      Status Geral: {status.overall.status.toUpperCase()}
-                    </h2>
-                  </div>
-                  <p className="text-sm">
-                    {status.overall.healthy} de {status.overall.total} serviços saudáveis (
-                    {status.overall.percentage}%)
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">Última atualização</div>
-                  <div className="text-sm font-medium">
-                    {lastUpdate
-                      ? new Date(lastUpdate).toLocaleTimeString('pt-BR')
-                      : 'Nunca'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+              <option value={5000}>5s</option>
+              <option value={10000}>10s</option>
+              <option value={30000}>30s</option>
+              <option value={60000}>1min</option>
+            </select>
+          )}
+        </div>
+      </div>
 
-        {/* Erro */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            <strong>Erro:</strong> {error}
-          </div>
-        )}
-
-        {/* Lista de Serviços */}
-        {status && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(status.services).map(([key, service]) => (
-              <div
-                key={key}
-                className={`p-6 rounded-lg border-2 ${getStatusColor(service.status)}`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl font-bold">
-                        {getStatusIcon(service.status)}
-                      </span>
-                      <h3 className="text-lg font-bold">{service.name}</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{service.description}</p>
-                    <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-white border">
-                      {service.status.toUpperCase()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Detalhes */}
-                {formatDetails(service)}
-
-                {/* Erro */}
-                {service.error && (
-                  <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded text-sm text-red-700">
-                    <strong>Erro:</strong> {service.error}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Informações adicionais */}
-        {status && (
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+      {/* Status Geral */}
+      {status && (
+        <div className="mb-6">
+          <div
+            className={`p-6 rounded-xl border-2 ${getStatusColor(status.overall.status)}`}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <strong>Timestamp:</strong> {new Date(status.timestamp).toLocaleString('pt-BR')}
-              </div>
-              <div>
-                {autoRefresh && (
-                  <span>
-                    Próxima atualização em{' '}
-                    {Math.ceil(refreshInterval / 1000)} segundos
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl font-bold">
+                    {getStatusIcon(status.overall.status)}
                   </span>
-                )}
+                  <h2 className="text-xl font-bold text-text-primary">
+                    Status Geral: {status.overall.status.toUpperCase()}
+                  </h2>
+                </div>
+                <p className="text-sm text-text-secondary">
+                  {status.overall.healthy} de {status.overall.total} serviços saudáveis (
+                  {status.overall.percentage}%)
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-text-secondary">Última atualização</div>
+                <div className="text-sm font-medium text-text-primary">
+                  {lastUpdate
+                    ? new Date(lastUpdate).toLocaleTimeString('pt-BR')
+                    : 'Nunca'}
+                </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Erro */}
+      {error && (
+        <div className="mb-6 p-4 bg-status-error/10 border border-status-error/30 rounded-xl text-status-error">
+          <strong>Erro:</strong> {error}
+        </div>
+      )}
+
+      {/* Lista de Serviços */}
+      {status && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(status.services).map(([key, service]) => (
+            <div
+              key={key}
+              className={`p-6 rounded-xl border-2 ${getStatusColor(service.status)}`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl font-bold">
+                      {getStatusIcon(service.status)}
+                    </span>
+                    <h3 className="text-lg font-bold text-text-primary">{service.name}</h3>
+                  </div>
+                  <p className="text-sm text-text-secondary mb-2">{service.description}</p>
+                  <div className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-bg-elevated border border-border-default text-text-primary">
+                    {service.status.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detalhes */}
+              {formatDetails(service)}
+
+              {/* Erro */}
+              {service.error && (
+                <div className="mt-3 p-2 bg-status-error/10 border border-status-error/30 rounded text-sm text-status-error">
+                  <strong>Erro:</strong> {service.error}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Informações adicionais */}
+      {status && (
+        <div className="mt-6 p-4 bg-bg-elevated rounded-xl border border-border-default text-sm text-text-secondary">
+          <div className="flex items-center justify-between">
+            <div>
+              <strong className="text-text-primary">Timestamp:</strong>{' '}
+              {new Date(status.timestamp).toLocaleString('pt-BR')}
+            </div>
+            <div>
+              {autoRefresh && (
+                <span>
+                  Próxima atualização em{' '}
+                  {Math.ceil(refreshInterval / 1000)} segundos
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer />
     </div>
   );
 }

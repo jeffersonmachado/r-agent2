@@ -200,12 +200,17 @@ function saveTemporaryRecording(recording) {
     fs.mkdirSync(seedsDir, { recursive: true });
   }
 
+  // Adiciona flag source: automatic
+  if (!recording.source) {
+    recording.source = 'automatic';
+  }
+
   const fileName = `${recording.id}.json`;
   const filePath = path.join(seedsDir, fileName);
 
   fs.writeFileSync(filePath, JSON.stringify(recording, null, 2), 'utf8');
 
-  logger.info('Gravação RPA temporária salva', { recordingId: recording.id, filePath });
+  logger.info('Gravação RPA temporária salva', { recordingId: recording.id, filePath, source: recording.source });
 
   return filePath;
 }
@@ -601,6 +606,27 @@ async function orchestrateGeneration(payload, options = {}) {
       logger.info('Modo Bootstrap: Persistindo artefatos após validação RPA bem-sucedida', {
         flowId: flow.id,
       });
+
+      // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA antes de persistir
+      // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
+      const isAiGenerated = flow.metadata?.generatedBy === 'ai' || flow.metadata?.generated === true;
+      if (isAiGenerated) {
+        const { validateGeneratedPlanOrThrow } = require('../../engine/ai/validateGeneratedPlan');
+        try {
+          validateGeneratedPlanOrThrow(flow, 'chatbot');
+          logger.info('[orchestrateGeneration] Fluxo gerado por IA passou no gate de validação antes de persistir', {
+            flowId: flow.id,
+            flowName: flow.name
+          });
+        } catch (validationError) {
+          logger.error('[orchestrateGeneration] Gate de validação bloqueou fluxo gerado por IA', {
+            flowId: flow.id,
+            flowName: flow.name,
+            error: validationError.message
+          });
+          throw new Error(`Gate de validação bloqueou fluxo gerado por IA: ${validationError.message}`);
+        }
+      }
 
       // Salva fluxo
       saveFlowToFile(flow);

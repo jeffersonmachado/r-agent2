@@ -245,6 +245,35 @@ async function aiNodeHandler(node, state, input, deps = null) {
       } else {
         // RAG falhou ou confidence baixa
         if (ragFallbackToDirect) {
+          // CRÍTICO: Fallback para IA direta - log como warning/error
+          const reason = ragResult.success ? 'low_confidence' : 'rag_failed';
+          const severity = ragResult.success ? 'MEDIUM' : 'HIGH';
+          
+          logger.warn('[aiNode] RAG fallback acionado - usando IA direta', {
+            sessionId: state.sessionId,
+            flowId: state.flowId,
+            nodeId: node.id,
+            reason,
+            confidence: ragResult.confidence || 0.0,
+            error: ragResult.error || null,
+            severity,
+            alert: 'RAG_FALLBACK_TO_DIRECT',
+          });
+          
+          // Registra no monitoramento de fallbacks
+          try {
+            const { recordFallback, FALLBACK_TYPES } = require('../fallbackMonitor');
+            recordFallback(FALLBACK_TYPES.RAG_FALLBACK_TO_DIRECT, {
+              sessionId: state.sessionId,
+              flowId: state.flowId,
+              nodeId: node.id,
+              reason,
+              confidence: ragResult.confidence || 0.0,
+            });
+          } catch (monitorError) {
+            // Não falha se monitoramento não estiver disponível
+          }
+          
           // Fallback para IA direta
           events.push(
             createEngineEvent({
@@ -253,9 +282,11 @@ async function aiNodeHandler(node, state, input, deps = null) {
               nodeId: node.id,
               type: 'RAG_FALLBACK_TO_DIRECT',
               payload: {
-                reason: ragResult.success ? 'low_confidence' : 'rag_failed',
+                reason,
                 confidence: ragResult.confidence || 0.0,
                 error: ragResult.error || null,
+                severity,
+                alert: 'RAG_FALLBACK_TO_DIRECT',
               },
             }),
           );
@@ -284,10 +315,15 @@ async function aiNodeHandler(node, state, input, deps = null) {
         }
       }
     } catch (ragError) {
-      // Erro ao consultar RAG
-      logger.error('[aiNode] Erro ao consultar RAG', {
+      // CRÍTICO: Erro ao consultar RAG - log com severidade aumentada
+      logger.error('[aiNode] ERRO ao consultar RAG', {
         error: ragError.message,
+        errorStack: ragError.stack,
         sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        severity: 'HIGH',
+        alert: 'RAG_QUERY_ERROR',
       });
 
       events.push(
@@ -331,6 +367,28 @@ async function aiNodeHandler(node, state, input, deps = null) {
   if (!ragUsed && (!aiFailed || ragFallbackToDirect)) {
     // Verifica se temos provider
     if (!aiProvider || typeof aiProvider.generate !== 'function') {
+      // CRÍTICO: Sem provider de IA - log como erro crítico
+      logger.error('[aiNode] CRÍTICO: Provider de IA não disponível', {
+        sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        reason: 'NO_PROVIDER',
+        severity: 'CRITICAL',
+        alert: 'AI_PROVIDER_MISSING',
+      });
+      
+      // Registra no monitoramento de fallbacks
+      try {
+        const { recordFallback, FALLBACK_TYPES } = require('../fallbackMonitor');
+        recordFallback(FALLBACK_TYPES.AI_NODE_NO_PROVIDER, {
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+        });
+      } catch (monitorError) {
+        // Não falha se monitoramento não estiver disponível
+      }
+      
       // Sem provider de IA: não quebramos o fluxo, apenas registramos erro
       // e retornamos saída de fallback.
       events.push(
@@ -341,6 +399,8 @@ async function aiNodeHandler(node, state, input, deps = null) {
           type: 'AI_ERROR',
           payload: {
             reason: 'NO_PROVIDER',
+            severity: 'CRITICAL',
+            alert: 'AI_PROVIDER_MISSING',
           },
         }),
       );

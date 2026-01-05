@@ -27,6 +27,8 @@ fi
 # Gera o novo ZIP
 cd "$OUTPUT_DIR"
 
+echo "Processando arquivos (isso pode levar alguns minutos para projetos grandes)..."
+
 zip -r "$ZIP_FILE" "$PROJECT_NAME" \
     -x "*/node_modules/*" \
     -x "*/frontend/node_modules/*" \
@@ -51,7 +53,21 @@ zip -r "$ZIP_FILE" "$PROJECT_NAME" \
     -x "*/.env" \
     -x "*/.env.local" \
     -x "*/.env.*.local" \
-    -q
+    -x "*/venv/*" \
+    -x "*/env/*" \
+    -x "*/.venv/*" \
+    -x "*/rag-service/venv/*" \
+    -x "*/rag-service/.venv/*" \
+    -x "*/rag-service/__pycache__/*" \
+    -x "*/rag-service/*.index" \
+    -x "*/rag-service/*.index.faiss" \
+    -x "*/rag-service/models/*" \
+    -x "*/rag-service/.cache/*" \
+    -x "*/.pytest_cache/*" \
+    -x "*/tests/recordings/*" \
+    -x "*/tests/screenshots/*" \
+    -x "*/tests/videos/*" \
+    -x "*/tests/rpa/replay/*"
 
 # Verifica se o arquivo foi criado
 if [ -f "$ZIP_FILE" ]; then

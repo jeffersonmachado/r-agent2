@@ -189,30 +189,20 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     }
   }, [selectedTicket, loadTicketMessages]);
 
-  // Polling como fallback quando WebSocket não está conectado
+  // Polling removido - apenas WebSocket é usado para atualizações em tempo real
+  // Se o WebSocket não estiver conectado, as atualizações só ocorrerão quando:
+  // 1. O modal for aberto e carregar dados iniciais
+  // 2. O WebSocket se reconectar e enviar eventos
+  // 3. O usuário clicar no botão "Atualizar" (se houver)
   useEffect(() => {
-    if (!autoRefresh || !isOpen) return;
+    if (!isOpen) return;
     
-    // Se WebSocket está conectado e autenticado, não precisa de polling
-    if (wsConnected && wsAuthenticated) {
-      logger.debug('[QueueModal] WebSocket conectado, polling desabilitado');
-      return;
-    }
-
-    // Fallback: polling a cada 5 segundos se WebSocket não estiver disponível
-    logger.debug('[QueueModal] WebSocket não disponível, usando polling como fallback');
-    const interval = setInterval(() => {
-      if (loadTicketsRef.current) {
-        loadTicketsRef.current();
-      }
-      
-      if (selectedTicketRef.current?.id && loadTicketMessagesRef.current) {
-        loadTicketMessagesRef.current(selectedTicketRef.current.id);
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, isOpen, wsConnected, wsAuthenticated]);
+    logger.debug('[QueueModal] Modal aberto. Atualizações via WebSocket apenas.', {
+      wsConnected,
+      wsAuthenticated,
+      autoRefresh,
+    });
+  }, [isOpen, wsConnected, wsAuthenticated, autoRefresh]);
 
   // Atribui ticket para atendente
   const handleAssign = async () => {

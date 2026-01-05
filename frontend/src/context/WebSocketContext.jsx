@@ -99,11 +99,15 @@ export function WebSocketProvider({ children }) {
       });
       return response.ok;
     } catch (err) {
-      logger.warn('[WebSocketContext] Servidor não está acessível', { 
-        httpUrl, 
-        error: err.message,
-        hint: 'Verifique se o servidor está rodando e acessível'
-      });
+      // Não loga warning na primeira tentativa - pode ser apenas o servidor iniciando
+      // Só loga se já tentou várias vezes
+      if (reconnectAttemptsRef.current > 0) {
+        logger.debug('[WebSocketContext] Servidor não está acessível', { 
+          httpUrl, 
+          error: err.message,
+          hint: 'Verifique se o servidor está rodando e acessível'
+        });
+      }
       return false;
     }
   }, [getWebSocketUrl]);
@@ -146,12 +150,14 @@ export function WebSocketProvider({ children }) {
     isConnectingRef.current = true;
     const url = getWebSocketUrl();
     
-    // Verifica se o servidor está acessível (apenas na primeira tentativa ou após muitas falhas)
-    if (reconnectAttemptsRef.current === 0 || reconnectAttemptsRef.current % 5 === 0) {
+    // Verifica se o servidor está acessível (apenas após algumas tentativas para evitar logs desnecessários)
+    // Na primeira tentativa, não verifica para evitar erros durante a inicialização do servidor
+    if (reconnectAttemptsRef.current > 0 && reconnectAttemptsRef.current % 5 === 0) {
       const isHealthy = await checkServerHealth();
-      if (!isHealthy && reconnectAttemptsRef.current === 0) {
-        logger.error('[WebSocketContext] Servidor não está acessível. Verifique se o servidor está rodando.', {
+      if (!isHealthy) {
+        logger.warn('[WebSocketContext] Servidor não está acessível após várias tentativas. Verifique se o servidor está rodando.', {
           url: url.replace('ws://', 'http://').replace('wss://', 'https://').replace('/ws', ''),
+          attempts: reconnectAttemptsRef.current,
           hint: 'Inicie o servidor com: cd api && npm start'
         });
       }
@@ -259,12 +265,22 @@ export function WebSocketProvider({ children }) {
       ws.onerror = (error) => {
         const errorMessage = error.message || 'Erro desconhecido na conexão WebSocket';
         const url = getWebSocketUrl();
-        logger.error('[WebSocketContext] Erro na conexão WebSocket', {
-          error: errorMessage,
-          url,
-          readyState: ws.readyState,
-          hint: 'Verifique se o servidor está rodando e acessível em ' + url.replace('ws://', 'http://').replace('wss://', 'https://').replace('/ws', '')
-        });
+        // Só loga erro se já tentou várias vezes - na primeira tentativa pode ser apenas o servidor iniciando
+        if (reconnectAttemptsRef.current > 2) {
+          logger.error('[WebSocketContext] Erro na conexão WebSocket', {
+            error: errorMessage,
+            url,
+            readyState: ws.readyState,
+            attempts: reconnectAttemptsRef.current,
+            hint: 'Verifique se o servidor está rodando e acessível em ' + url.replace('ws://', 'http://').replace('wss://', 'https://').replace('/ws', '')
+          });
+        } else {
+          logger.debug('[WebSocketContext] Erro na conexão WebSocket (tentativa inicial)', {
+            error: errorMessage,
+            url,
+            readyState: ws.readyState
+          });
+        }
         isConnectingRef.current = false;
         setConnected(false);
         setAuthenticated(false);

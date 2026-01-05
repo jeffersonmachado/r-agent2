@@ -137,6 +137,57 @@ export function getReplay(sessionId) {
 }
 
 /**
+ * Lista todos os arquivos de replay RPA.
+ *
+ * @returns {Promise<{files: Array<{filename: string, size: number, modified: string, created: string}>}>}
+ */
+export function listRpaReplays() {
+  return fetchJson('/tests/rpa/replay', {
+    method: 'GET',
+  });
+}
+
+/**
+ * Carrega um arquivo de replay RPA específico.
+ *
+ * @param {string} filename
+ * @returns {Promise<any>}
+ */
+export function getRpaReplay(filename) {
+  if (!filename) {
+    return Promise.reject(new Error('getRpaReplay: filename é obrigatório'));
+  }
+  return fetchJson(`/tests/rpa/replay/${encodeURIComponent(filename)}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Remove um arquivo de replay RPA.
+ *
+ * @param {string} filename
+ * @returns {Promise<{success: boolean, deletedFilename: string, message: string}>}
+ */
+export function deleteRpaReplay(filename) {
+  if (!filename) {
+    return Promise.reject(new Error('deleteRpaReplay: filename é obrigatório'));
+  }
+  logger.info('Removendo replay RPA', { filename });
+  return fetchJson(`/tests/rpa/replay/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+  }).then(
+    (result) => {
+      logger.info('Replay RPA removido com sucesso', { filename, result });
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao remover replay RPA', { filename, error });
+      throw error;
+    }
+  );
+}
+
+/**
  * Remove um fluxo.
  *
  * @param {string} flowId

@@ -438,7 +438,7 @@ export function GenerateSystemPage() {
     });
 
     try {
-      // Verifica rate limit ANTES de processar arquivos
+      // Verifica rate limit ANTES de processar arquivos (verificação local)
       if (rateLimitUntil && rateLimitUntil > Date.now()) {
         const remaining = Math.ceil((rateLimitUntil - Date.now()) / 1000);
         const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
@@ -458,6 +458,51 @@ export function GenerateSystemPage() {
 
       // Gera payload antes de processar arquivos
       const payload = generatePayload();
+      
+      // Verificação proativa do rate limit no servidor ANTES de processar arquivos
+      // Isso evita processar arquivos se o rate limit já foi excedido
+      try {
+        logger.debug('[Execute] Verificando rate limit no servidor antes de executar');
+        const rateLimitCheck = await checkRateLimit(payload);
+        
+        if (!rateLimitCheck.allowed) {
+          const retryAfter = rateLimitCheck.retryAfter || 60;
+          const until = Date.now() + (retryAfter * 1000);
+          setRateLimitUntil(until);
+          setRateLimitSecondsRemaining(retryAfter);
+          
+          const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
+          let message = `Limite de execuções atingido`;
+          if (operationType === 'BOOTSTRAP') {
+            message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
+          } else if (operationType === 'GENERATION_REAL') {
+            message += ` (modo Real: 5 execuções por minuto)`;
+          }
+          message += `. Tente novamente em ${retryAfter} segundos.`;
+          
+          setError(message);
+          showToast(message, 'error', 8000);
+          setExecuting(false);
+          logger.warn('[Execute] Rate limit verificado no servidor: bloqueado', {
+            retryAfter,
+            remainingPoints: rateLimitCheck.remainingPoints,
+            totalPoints: rateLimitCheck.totalPoints,
+          });
+          return;
+        }
+        
+        logger.debug('[Execute] Rate limit verificado no servidor: permitido', {
+          remainingPoints: rateLimitCheck.remainingPoints,
+          totalPoints: rateLimitCheck.totalPoints,
+        });
+      } catch (rateLimitError) {
+        // Se a verificação de rate limit falhar, ainda tentamos executar
+        // mas logamos como warning
+        logger.warn('[Execute] Erro ao verificar rate limit no servidor, continuando execução', {
+          error: rateLimitError.message,
+        });
+        // Não bloqueia a execução se a verificação falhar
+      }
 
       // ETAPA 0: Inferir categorias e fazer upload dos arquivos pendentes
       logger.info('[Execute] ETAPA 0: Processando arquivos pendentes');
@@ -601,16 +646,27 @@ export function GenerateSystemPage() {
         
         // Mensagem mais detalhada baseada no tipo de operação
         const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
-        let message = `Limite de execuções atingido`;
+        let message = `⏱️ Limite de execuções atingido`;
         if (operationType === 'BOOTSTRAP') {
-          message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
+          message += `\n\nModo Bootstrap: 1 execução a cada 5 minutos\nTente novamente em ${retryAfter} segundos (${Math.ceil(retryAfter / 60)} minuto${Math.ceil(retryAfter / 60) !== 1 ? 's' : ''})`;
         } else if (operationType === 'GENERATION_REAL') {
-          message += ` (modo Real: 5 execuções por minuto)`;
+          message += `\n\nModo Real: 5 execuções por minuto\nTente novamente em ${retryAfter} segundos`;
+        } else {
+          message += `\n\nModo Dry-Run: 50 execuções por minuto\nTente novamente em ${retryAfter} segundos`;
         }
-        message += `. Tente novamente em ${retryAfter} segundos.`;
+        
+        // Log estruturado para monitoramento
+        logger.warn('[Execute] Rate limit excedido durante execução', {
+          operationType,
+          retryAfter,
+          bootstrap,
+          executionMode,
+          severity: 'MEDIUM',
+          alert: 'RATE_LIMIT_EXCEEDED_DURING_EXECUTION',
+        });
         
         setError(message);
-        showToast(message, 'error', 8000);
+        showToast(message, 'error', 10000); // Aumenta duração para 10 segundos
       } else {
         setError(err.message || 'Erro desconhecido');
         showToast(`Erro: ${err.message || 'Erro desconhecido'}`, 'error');

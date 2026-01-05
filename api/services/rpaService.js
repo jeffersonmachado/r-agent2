@@ -23,13 +23,16 @@ function getInjectableScript() {
 // Armazena execuções em andamento
 const activeExecutions = new Map();
 
+// Armazena gravações manuais em andamento
+const activeRecordings = new Map();
+
 /**
  * Lista todas as gravações RPA disponíveis.
- * Procura em seeds primeiro, depois em recordings (mesmo padrão do ActionRecorder).
+ * UNIFICADO: Tudo está em /seeds/
  */
 function listRecordings() {
   try {
-    // Tenta múltiplos caminhos possíveis
+    // Tenta múltiplos caminhos possíveis (necessário para diferentes contextos de execução)
     const possibleBasePaths = [
       path.join(__dirname, '../../tests/rpa'), // De api/services
       path.join(process.cwd(), 'tests/rpa'), // Do diretório raiz do projeto
@@ -59,11 +62,9 @@ function listRecordings() {
     }
 
     const seedsDir = path.join(basePath, 'seeds');
-    const recordingsDir = path.join(basePath, 'recordings');
     const recordings = [];
-    const processedFiles = new Set(); // Para evitar duplicatas
 
-    // Procura primeiro em seeds
+    // UNIFICADO: Tudo está em /seeds/
     try {
       if (fs.existsSync(seedsDir) && fs.statSync(seedsDir).isDirectory()) {
         const files = fs.readdirSync(seedsDir);
@@ -88,8 +89,8 @@ function listRecordings() {
                 version: recording.version,
                 steps: recording.steps || [],
                 data: recording.data || {},
+                source: recording.source || 'manual', // Flag manual/automatic
               });
-              processedFiles.add(file);
             } catch (error) {
               // Ignora arquivos inválidos
               logger.warn(`Erro ao ler gravação ${file}`, { error: error.message, path: seedsDir });
@@ -99,43 +100,6 @@ function listRecordings() {
       }
     } catch (error) {
       logger.warn('Erro ao ler diretório seeds', { error: error.message, path: seedsDir });
-    }
-
-    // Depois procura em recordings (apenas arquivos não processados)
-    try {
-      if (fs.existsSync(recordingsDir) && fs.statSync(recordingsDir).isDirectory()) {
-        const files = fs.readdirSync(recordingsDir);
-        for (const file of files) {
-          if (file.endsWith('.json') && !processedFiles.has(file)) {
-            try {
-              const filePath = path.join(recordingsDir, file);
-              const stats = fs.statSync(filePath);
-              if (!stats.isFile()) continue;
-              
-              const content = fs.readFileSync(filePath, 'utf8');
-              const recording = JSON.parse(content);
-              
-              // Usa o nome do arquivo (sem extensão) como ID para garantir consistência com deleteRecording
-              const fileNameId = file.replace('.json', '');
-              
-              recordings.push({
-                id: fileNameId, // Sempre usa o nome do arquivo como ID
-                internalId: recording.id, // Mantém o ID interno do JSON se existir
-                name: recording.name || fileNameId,
-                description: recording.description,
-                version: recording.version,
-                steps: recording.steps || [],
-                data: recording.data || {},
-              });
-            } catch (error) {
-              // Ignora arquivos inválidos
-              logger.warn(`Erro ao ler gravação ${file}`, { error: error.message, path: recordingsDir });
-            }
-          }
-        }
-      }
-    } catch (error) {
-      logger.warn('Erro ao ler diretório recordings', { error: error.message, path: recordingsDir });
     }
 
     logger.debug('Gravações RPA listadas', { count: recordings.length, basePath });
@@ -289,14 +253,14 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         if (foundRecording) {
           // Tenta carregar pelo nome do arquivo (que pode ser diferente do ID)
           // O nome do arquivo geralmente é baseado no nome da gravação ou ID
-          const recordingsDir = path.join(__dirname, '../../tests/rpa/recordings');
-          const files = fs.readdirSync(recordingsDir);
+          const seedsDir = path.join(__dirname, '../../tests/rpa/seeds');
+          const files = fs.readdirSync(seedsDir);
           let recordingFile = null;
           
           for (const file of files) {
             if (file.endsWith('.json')) {
               try {
-                const filePath = path.join(recordingsDir, file);
+                const filePath = path.join(seedsDir, file);
                 const content = fs.readFileSync(filePath, 'utf8');
                 const rec = JSON.parse(content);
                 if (rec.id === recordingId) {
@@ -1267,9 +1231,8 @@ function deleteRecording(recordingId) {
     sanitizedId = sanitizedId.slice(0, -'.json'.length);
   }
 
-  // Procura primeiro em seeds, depois em recordings (mesmo padrão do ActionRecorder.save)
+  // UNIFICADO: Tudo está em /seeds/
   const seedsDir = path.join(basePath, 'seeds');
-  const recordingsDir = path.join(basePath, 'recordings');
   
   // Tenta primeiro pelo nome do arquivo (caso mais comum)
   let recordingFile = null;
@@ -1282,21 +1245,11 @@ function deleteRecording(recordingId) {
       foundFileName = sanitizedId;
     }
   }
-  
-  // Se não encontrou em seeds, tenta em recordings
-  if (!recordingFile && fs.existsSync(recordingsDir)) {
-    const recordingsFile = path.join(recordingsDir, `${sanitizedId}.json`);
-    if (fs.existsSync(recordingsFile)) {
-      recordingFile = recordingsFile;
-      foundFileName = sanitizedId;
-    }
-  }
 
-  // Se não encontrou pelo nome do arquivo, procura pelo UUID interno (compatibilidade com dados antigos)
+  // Se não encontrou pelo nome do arquivo, procura pelo UUID interno
   if (!recordingFile) {
     const searchDirs = [];
     if (fs.existsSync(seedsDir)) searchDirs.push(seedsDir);
-    if (fs.existsSync(recordingsDir)) searchDirs.push(recordingsDir);
 
     // eslint-disable-next-line no-console
     console.log(`[deleteRecording] Procurando por UUID: ${sanitizedId} (original: ${recordingId})`);
@@ -1386,6 +1339,159 @@ function cleanupOldExecutions() {
 // Limpa execuções antigas a cada 30 minutos
 setInterval(cleanupOldExecutions, 30 * 60 * 1000);
 
+/**
+ * Inicia gravação manual de seed RPA.
+ * 
+ * @param {string} seedName - Nome do seed a ser gravado
+ * @param {string} initialUrl - URL inicial para navegação
+ * @returns {Promise<{success: boolean, recordingId: string, message: string}>}
+ */
+async function startManualRecording(seedName, initialUrl) {
+  try {
+    if (!seedName || seedName.trim() === '') {
+      return {
+        success: false,
+        error: 'Nome do seed é obrigatório',
+      };
+    }
+
+    // Verifica se já existe uma gravação com esse nome
+    if (activeRecordings.has(seedName)) {
+      return {
+        success: false,
+        error: `Gravação "${seedName}" já está em andamento`,
+      };
+    }
+
+    const { RpaRecorder } = require('../../tests/rpa/recorder/rpaRecorder');
+    const rpaConfig = require('../../tests/rpa/rpaConfig');
+    
+    const url = initialUrl || rpaConfig.urls.frontend;
+    
+    const recorder = new RpaRecorder({
+      mode: 'record',
+      seedName,
+    });
+
+    await recorder.init();
+    await recorder.startRecording(url);
+
+    // Armazena o recorder
+    activeRecordings.set(seedName, {
+      recorder,
+      seedName,
+      startTime: new Date().toISOString(),
+      status: 'recording',
+    });
+
+    logger.info('Gravação manual iniciada', { seedName, url });
+
+    return {
+      success: true,
+      recordingId: seedName,
+      message: `Gravação "${seedName}" iniciada. Interaja com o navegador e chame /rpa/record/stop quando terminar.`,
+    };
+  } catch (error) {
+    logger.error('Erro ao iniciar gravação manual', { error: error.message, stack: error.stack });
+    return {
+      success: false,
+      error: error.message || 'Erro ao iniciar gravação manual',
+    };
+  }
+}
+
+/**
+ * Para gravação manual e salva o seed.
+ * 
+ * @param {string} recordingId - ID da gravação (nome do seed)
+ * @returns {Promise<{success: boolean, seedPath?: string, replayPath?: string, message?: string, error?: string}>}
+ */
+async function stopManualRecording(recordingId) {
+  try {
+    if (!recordingId || recordingId.trim() === '') {
+      return {
+        success: false,
+        error: 'ID da gravação é obrigatório',
+      };
+    }
+
+    const recording = activeRecordings.get(recordingId);
+    if (!recording) {
+      return {
+        success: false,
+        error: `Gravação "${recordingId}" não encontrada ou já foi finalizada`,
+      };
+    }
+
+    const { recorder } = recording;
+    
+    // Para e salva a gravação
+    const result = await recorder.stopRecording();
+    await recorder.close();
+
+    // Remove da lista de gravações ativas
+    activeRecordings.delete(recordingId);
+
+    logger.info('Gravação manual finalizada', { recordingId, seedPath: result.seedPath });
+
+    return {
+      success: true,
+      seedPath: result.seedPath,
+      replayPath: result.replayPath,
+      seedId: result.seedId,
+      message: `Gravação "${recordingId}" salva com sucesso`,
+    };
+  } catch (error) {
+    logger.error('Erro ao parar gravação manual', { error: error.message, stack: error.stack });
+    
+    // Remove da lista mesmo em caso de erro
+    activeRecordings.delete(recordingId);
+    
+    return {
+      success: false,
+      error: error.message || 'Erro ao parar gravação manual',
+    };
+  }
+}
+
+/**
+ * Obtém status de uma gravação manual em andamento.
+ * 
+ * @param {string} recordingId - ID da gravação
+ * @returns {{success: boolean, status?: string, seedName?: string, startTime?: string, error?: string}}
+ */
+function getRecordingStatus(recordingId) {
+  try {
+    if (!recordingId || recordingId.trim() === '') {
+      return {
+        success: false,
+        error: 'ID da gravação é obrigatório',
+      };
+    }
+
+    const recording = activeRecordings.get(recordingId);
+    if (!recording) {
+      return {
+        success: false,
+        error: `Gravação "${recordingId}" não encontrada`,
+      };
+    }
+
+    return {
+      success: true,
+      status: recording.status,
+      seedName: recording.seedName,
+      startTime: recording.startTime,
+    };
+  } catch (error) {
+    logger.error('Erro ao obter status da gravação', { error: error.message });
+    return {
+      success: false,
+      error: error.message || 'Erro ao obter status da gravação',
+    };
+  }
+}
+
 module.exports = {
   listRecordings,
   executeRecording,
@@ -1394,5 +1500,8 @@ module.exports = {
   continueExecution,
   nextStep,
   deleteRecording,
+  startManualRecording,
+  stopManualRecording,
+  getRecordingStatus,
 };
 

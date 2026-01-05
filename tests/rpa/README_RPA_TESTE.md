@@ -6,11 +6,15 @@ Sistema RPA exclusivo para **TESTE/SEED**. O RPA NÃO é recurso do sistema, NÃ
 
 ```
 /tests/rpa/
-  /recorder/      -> Gravação das ações
-  /player/        -> Execução/replay
-  /seeds/         -> Arquivos gravados
-  /replay/        -> Artefatos de execução
-  /screens/       -> Screenshots ou hashes
+  /recorder/      -> Gravação das ações (código)
+  /player/        -> Execução/replay (código)
+  /seeds/         -> Arquivos gravados (UNIFICADO)
+  /flows/         -> Testes RPA gerados de fluxos
+  /replay/        -> Artefatos de execução (obrigatório)
+  /screenshots/   -> Screenshots de erros
+  /reports/       -> Relatórios de execução
+  /utils/         -> Utilitários
+  /config/        -> Configurações e tokens
   rpa.config.json -> Configuração de velocidade
 ```
 

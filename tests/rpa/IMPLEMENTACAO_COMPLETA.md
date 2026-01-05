@@ -129,7 +129,7 @@ TEST_ADMIN_PASSWORD
   ✅ CI_INTEGRATION.md               # Documentação CI/CD
   ✅ IMPLEMENTACAO_COMPLETA.md       # Este arquivo
   
-  /recordings/
+  /seeds/
     ✅ seed-platform-login.json
     ✅ seed-platform-create-flow.json
     ✅ seed-platform-create-agent.json

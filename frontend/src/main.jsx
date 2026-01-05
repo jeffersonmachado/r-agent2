@@ -25,10 +25,13 @@ import { ProductDocsPage } from './pages/ProductDocsPage';
 import { RAGDocumentsPage } from './pages/RAGDocumentsPage';
 import { WebScrapingPage } from './pages/WebScrapingPage';
 import { RpaTestPage } from './pages/RpaTestPage';
+import { RpaReplaysPage } from './pages/RpaReplaysPage';
+import { RpaSeedsPage } from './pages/RpaSeedsPage';
 import { ChatPage } from './pages/ChatPage';
 import { QaPage } from './pages/QaPage';
 import { GenerateSystemPage } from './pages/GenerateSystemPage';
 import { SystemStatusPage } from './pages/SystemStatusPage';
+import { DevDashboardPage } from './pages/DevDashboardPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { useRouter } from './hooks/useRouter';
@@ -135,10 +138,13 @@ function AppWithAuth() {
   const isRAGDocuments = currentPath === '/rag-documents' || currentPath.startsWith('/rag-documents');
   const isWebScraping = currentPath === '/web-scraping' || currentPath.startsWith('/web-scraping');
   const isRpaTest = currentPath === '/rpa-test' || currentPath.startsWith('/rpa-test');
+  const isRpaReplays = currentPath === '/rpa-replays' || currentPath.startsWith('/rpa-replays');
+  const isRpaSeeds = currentPath === '/rpa-seeds' || currentPath.startsWith('/rpa-seeds');
   const isChat = currentPath === '/chat' || currentPath.startsWith('/chat');
   const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
   const isGenerateSystem = currentPath === '/generate-system' || currentPath.startsWith('/generate-system');
   const isSystemStatus = currentPath === '/system-status' || currentPath.startsWith('/system-status');
+  const isDevDashboard = currentPath === '/dev' || currentPath === '/dev-dashboard' || currentPath.startsWith('/dev');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
   // Todas as rotas requerem autenticação, exceto /login
@@ -146,10 +152,13 @@ function AppWithAuth() {
 
   // Se a rota não for reconhecida, redireciona para login se não autenticado, ou /dashboard se autenticado
   useEffect(() => {
+    // Aguarda o loading terminar antes de verificar rotas
+    if (loading) return;
+    
     const allRoutes = [
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isSystemStatus, isLogin
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -162,7 +171,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isSystemStatus, isLogin, isAuthenticated, navigate
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // Redireciona para /dashboard quando autenticado e está em rota de login
@@ -196,9 +205,13 @@ function AppWithAuth() {
       '/rag-documents': '📚 Gerenciamento de Documentos RAG',
       '/web-scraping': '🕷️ Raspagem de Sites',
       '/rpa-test': '🚀 Execução de Testes RPA',
+      '/rpa-replays': '📋 Replays RPA',
+      '/rpa-seeds': '🌱 Seeds RPA',
       '/chat': '💬 Chat de Teste',
       '/qa': '✅ Painel de Qualidade (QA)',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
+      '/dev': '🛠️ Dashboard de Desenvolvimento',
+      '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/login': '🔐 Login',
     };
 
@@ -292,6 +305,10 @@ function AppWithAuth() {
         <WebScrapingPage />
       ) : isRpaTest ? (
         <RpaTestPage />
+      ) : isRpaReplays ? (
+        <RpaReplaysPage />
+      ) : isRpaSeeds ? (
+        <RpaSeedsPage />
       ) : isChat ? (
         <ChatPage />
       ) : isQa ? (
@@ -300,6 +317,8 @@ function AppWithAuth() {
         <GenerateSystemPage />
       ) : isSystemStatus ? (
         <SystemStatusPage />
+      ) : isDevDashboard ? (
+        <DevDashboardPage />
       ) : null}
     </div>
   );

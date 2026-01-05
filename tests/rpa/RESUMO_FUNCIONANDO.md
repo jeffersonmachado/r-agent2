@@ -13,7 +13,7 @@ O sistema RPA foi implementado e testado com sucesso!
 ============================================================
 
 📹 1. Criando gravação de exemplo...
-✅ Gravação criada: /opt/results/ria/r-agent2/tests/rpa/recordings/demo-login-completo.json
+✅ Gravação criada: /opt/results/ria/r-agent2/tests/rpa/seeds/demo-login-completo.json
    - Nome: demo-login-completo
    - ID: dbc02f9f-7952-4ce3-b953-16ea421afe53
    - 6 ações gravadas

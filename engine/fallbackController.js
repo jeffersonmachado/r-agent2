@@ -200,7 +200,8 @@ function processFallback(fallbackType, context, config = {}) {
     ? escalationMode 
     : ESCALATION_MODES.TICKET;
   
-  // Log estruturado do fallback
+  // Log estruturado do fallback com severidade aumentada
+  const severity = action === FALLBACK_ACTIONS.HUMAN ? 'HIGH' : 'MEDIUM';
   logEvent('fallback_triggered', {
     fallbackType,
     attempt: context.attempt || 1,
@@ -211,7 +212,29 @@ function processFallback(fallbackType, context, config = {}) {
     timestamp: new Date().toISOString(),
     hasLoop: detectLoop(context),
     hasFrustration: detectFrustration(context.userMessage),
+    severity,
+    alert: `FALLBACK_${fallbackType.toUpperCase()}_${action.toUpperCase()}`,
   });
+  
+  // Registra no monitoramento de fallbacks
+  try {
+    const { recordFallback, FALLBACK_TYPES: MONITOR_TYPES } = require('./fallbackMonitor');
+    // Mapeia tipos de fallback do controller para tipos do monitor
+    const monitorType = MONITOR_TYPES.AI_PROVIDER_FALLBACK; // Fallback genérico do sistema
+    recordFallback(monitorType, {
+      fallbackType,
+      action,
+      attempt: context.attempt || 1,
+      nodeId: context.nodeId,
+      sessionId: context.sessionId,
+    });
+  } catch (monitorError) {
+    // Não falha se monitoramento não estiver disponível
+    // eslint-disable-next-line no-console
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[FallbackController] Monitoramento não disponível', monitorError.message);
+    }
+  }
   
   return {
     action,

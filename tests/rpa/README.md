@@ -148,15 +148,20 @@ recorder.save('minha-gravacao', {
 
 ```
 /tests/rpa/
-  /recordings/          # Seeds gravados (JSON)
-  /seeds/               # Seeds adicionais
+  /seeds/               # Todos os seeds (manuais e automáticos) - UNIFICADO
+  /flows/               # Testes RPA gerados de fluxos
   /replay/              # Replays gerados (obrigatório)
   /screenshots/         # Screenshots de erros
   /reports/             # Relatórios de execução
-  /player/              # Player RPA
+  /player/              # Player RPA (código)
     rpaPlayer.js        # Executor de seeds
-  /recorder/            # Recorder RPA
+  /recorder/            # Recorder RPA (código)
     rpaRecorder.js      # Gravador visual
+  /utils/               # Utilitários
+    authHelper.js       # Helper de autenticação
+    rpaTokenManager.js  # Gerenciador de tokens
+  /config/              # Configurações
+    rpa-token.json      # Token RPA
   actionRecorder.js     # Gravador de ações (programático)
   actionExecutor.js     # Executor de ações
   errorDetection.js     # Detecção de erros

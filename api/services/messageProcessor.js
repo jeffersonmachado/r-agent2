@@ -149,10 +149,12 @@ async function processWhatsAppMessage(message, value, deps) {
     const ticket = getTicket(existingTicket.id);
     if (ticket) {
       const tenantId = ticket.tenantId;
+      // Inclui ticket completo no evento WebSocket para evitar requisições HTTP no frontend
       emitEvent('ticket.message.received', {
         ticketId: ticket.id,
         message: text,
         sender: 'user',
+        ticket: ticket, // Ticket completo para atualização local sem requisição HTTP
       }, { tenantId, agentId: ticket.assignedTo });
     }
     

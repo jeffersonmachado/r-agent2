@@ -1,11 +1,11 @@
 [
   {
-    "token": "dba4bf550d8ba4a1491f1f368bad22ec880fa6f20044a0c351a6cb0d664ffd49",
+    "token": "506555ab3abefe377aeeb362bed56408953b9c5fb7a94dab9be3186c389bb684",
     "agentId": "admin-001",
     "username": "admin",
-    "createdAt": "2026-01-05T00:55:59.021Z",
-    "expiresAt": "2026-01-06T00:55:59.021Z",
-    "lastActivityAt": "2026-01-05T01:21:28.558Z",
+    "createdAt": "2026-01-05T04:14:19.201Z",
+    "expiresAt": "2026-01-06T04:14:19.201Z",
+    "lastActivityAt": "2026-01-05T04:37:54.298Z",
     "ipAddress": "::1",
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
   }

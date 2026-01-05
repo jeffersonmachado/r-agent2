@@ -768,13 +768,18 @@ function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown
   try {
     rpaTokenManager = require('../../tests/rpa/utils/rpaTokenManager');
   } catch (error) {
-    logger.warn('[AuthService] Módulo rpaTokenManager não encontrado, usando validação básica');
-    // Fallback: aceita qualquer token se o módulo não estiver disponível (apenas para desenvolvimento)
-    if (process.env.NODE_ENV === 'development') {
-      logger.warn('[AuthService] Modo desenvolvimento: aceitando token RPA sem validação');
-    } else {
-      return { success: false, error: 'Sistema de token RPA não disponível' };
-    }
+    // CRÍTICO: Não aceita tokens sem validação, mesmo em desenvolvimento
+    logger.error('[AuthService] CRÍTICO: Módulo rpaTokenManager não encontrado. Validação de token RPA indisponível.', {
+      error: error.message,
+      errorStack: error.stack,
+      environment: process.env.NODE_ENV,
+    });
+    // Sempre falha explicitamente - não há fallback seguro para autenticação
+    return { 
+      success: false, 
+      error: 'Sistema de validação de token RPA não disponível. Autenticação não pode ser realizada.',
+      critical: true,
+    };
   }
 
   let expectedToken = null;

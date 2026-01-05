@@ -27,7 +27,26 @@ export function checkRateLimit(payload) {
     },
     (error) => {
       logger.error('Erro ao verificar rate limit', error);
-      // Em caso de erro, assume que está permitido (fail-open)
+      // CRÍTICO: Fail-closed ao invés de fail-open
+      // Em produção, bloqueia ao invés de permitir silenciosamente
+      const isProduction = import.meta.env.PROD || import.meta.env.MODE === 'production';
+      if (isProduction) {
+        logger.error('[RateLimit] CRÍTICO: Erro ao verificar rate limit em produção. Bloqueando requisição.', {
+          error: error.message,
+          errorStack: error.stack,
+        });
+        // Em produção, bloqueia por segurança
+        return { 
+          allowed: false, 
+          retryAfter: 60,
+          error: 'RATE_LIMIT_CHECK_FAILED',
+        };
+      }
+      // Em desenvolvimento, permite mas loga como erro crítico
+      logger.error('[RateLimit] ERRO: Erro ao verificar rate limit (permitindo apenas em desenvolvimento)', {
+        error: error.message,
+        warning: 'Em produção, isso bloquearia a requisição',
+      });
       return { allowed: true };
     }
   );

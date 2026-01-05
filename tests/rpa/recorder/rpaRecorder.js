@@ -277,6 +277,7 @@ class RpaRecorder {
       // NÃO inclui modeConfig - isso é config, não seed
       // NÃO inclui delays ou velocidade
       screenshots: this.screenshots,
+      source: 'manual', // Flag para identificar gravação manual
     });
 
     // REPLAY OBRIGATÓRIO: Para e salva replay da gravação

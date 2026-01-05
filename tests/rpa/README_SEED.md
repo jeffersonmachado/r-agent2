@@ -32,7 +32,7 @@ Este script mostra exemplos de como gravar ações para popular a plataforma.
 
 ```
 /tests/rpa/
-  /recordings/
+  /seeds/
     seed-platform-login.json          # Gravação de login
     seed-platform-create-flow.json    # Gravação de criação de fluxo
   seedPlatformRPA.js                  # Executor principal

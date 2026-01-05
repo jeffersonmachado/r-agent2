@@ -138,7 +138,12 @@ export async function fetchJson(path, init) {
         (errorBody.error === 'ticket_not_found' || 
          (typeof errorBody === 'string' && errorBody.includes('ticket_not_found')));
       
-      if (!isTicketNotFound) {
+      // Não loga erros 404 para endpoints opcionais de desenvolvimento
+      const isOptionalDevEndpoint = response.status === 404 && 
+        (path.includes('/system/websocket/connections') || 
+         path.includes('/analytics/metrics'));
+      
+      if (!isTicketNotFound && !isOptionalDevEndpoint) {
         // Log estruturado com URL final resolvida
         logger.error(`HTTP Error ${response.status}`, { 
           method: init?.method || 'GET',
@@ -200,13 +205,25 @@ export async function fetchJson(path, init) {
       }
       
       // "Failed to fetch" geralmente significa que a API não está acessível
+      // Mas pode ser apenas o servidor iniciando, então não logamos como erro crítico
       if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
-        logger.error('API não acessível - verifique se o servidor está rodando', { 
-          method: init?.method || 'GET',
-          url,
-          path,
-          hint: 'Verifique se a API está acessível no caminho configurado',
-        });
+        // Para rotas de autenticação/health na inicialização, usa debug em vez de error
+        const isInitializationRoute = path === '/auth/me' || path === '/health';
+        if (isInitializationRoute) {
+          logger.debug('API não acessível (inicialização)', { 
+            method: init?.method || 'GET',
+            url,
+            path,
+            hint: 'Servidor pode estar iniciando. Tentando novamente...',
+          });
+        } else {
+          logger.error('API não acessível - verifique se o servidor está rodando', { 
+            method: init?.method || 'GET',
+            url,
+            path,
+            hint: 'Verifique se a API está acessível no caminho configurado',
+          });
+        }
       } else {
         logger.error('Request failed', { 
           method: init?.method || 'GET',

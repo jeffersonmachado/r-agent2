@@ -66,6 +66,22 @@ export function SupportPage() {
     return null; // Será redirecionado pelo useEffect
   }
 
+  // Usa useRef para manter referências estáveis
+  const showToastRef = React.useRef(showToast);
+  const loadTicketsRef = React.useRef();
+
+  React.useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
+  // Debounce para loadTickets - agrupa múltiplos eventos WebSocket
+  // DEVE ser definido ANTES de handleWebSocketEvent para evitar erro de inicialização
+  const { debouncedFn: debouncedLoadTickets } = useDebounce(() => {
+    if (loadTicketsRef.current) {
+      loadTicketsRef.current();
+    }
+  }, 500); // 500ms de debounce
+
   // WebSocket para atualizações em tempo real
   const handleWebSocketEvent = useCallback((event, data) => {
     logger.debug('[SupportPage] Evento WebSocket recebido', event, data);
@@ -73,10 +89,54 @@ export function SupportPage() {
     // Registra métrica de evento WebSocket
     websocketMetrics.recordWebSocketEvent(event);
     
+    // Função auxiliar para atualizar ticket na lista local sem requisição HTTP
+    const updateTicketInList = (ticket) => {
+      if (!ticket) return;
+      
+      setTickets(prevTickets => {
+        const existingIndex = prevTickets.findIndex(t => t.id === ticket.id);
+        const newTickets = [...prevTickets];
+        
+        // Filtra apenas tickets waiting ou in_progress que o agente pode ver
+        const shouldShow = (ticket.status === 'waiting' || ticket.status === 'in_progress') &&
+          (!ticket.assignedTo || ticket.assignedTo === agent?.id || ticket.assignedTo === agent?.username);
+        
+        if (existingIndex >= 0) {
+          if (shouldShow) {
+            // Atualiza ticket existente
+            newTickets[existingIndex] = ticket;
+          } else {
+            // Remove se não deve mais ser exibido
+            newTickets.splice(existingIndex, 1);
+          }
+        } else if (shouldShow) {
+          // Adiciona novo ticket
+          newTickets.push(ticket);
+        }
+        
+        // Ordena por data de criação (mais recentes primeiro)
+        newTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return newTickets;
+      });
+      
+      // Atualiza ticket selecionado se for o mesmo
+      setSelectedTicket(prevSelected => {
+        if (prevSelected?.id === ticket.id) {
+          return ticket;
+        }
+        return prevSelected;
+      });
+    };
+    
     switch (event) {
       case 'ticket.created':
-        // Novo ticket criado - recarrega lista (com debounce)
-        debouncedLoadTickets();
+        // Novo ticket criado - atualiza lista local se tiver dados do ticket
+        if (data.ticket) {
+          updateTicketInList(data.ticket);
+        } else {
+          // Fallback: recarrega lista se não tiver dados do ticket
+          debouncedLoadTickets();
+        }
         // Se o ticket foi criado para este agente, mostra notificação
         if (data.agentId === agent?.id || !data.agentId) {
           showToastRef.current(`Novo ticket criado: ${data.ticketId?.slice(0, 8)}`, 'info', 3000);
@@ -84,8 +144,13 @@ export function SupportPage() {
         break;
         
       case 'ticket.assigned':
-        // Ticket atribuído - atualiza lista (com debounce)
-        debouncedLoadTickets();
+        // Ticket atribuído - atualiza lista local se tiver dados do ticket
+        if (data.ticket) {
+          updateTicketInList(data.ticket);
+        } else {
+          // Fallback: recarrega lista se não tiver dados do ticket
+          debouncedLoadTickets();
+        }
         // Se foi atribuído para este agente, mostra notificação
         if (data.assignedTo === agent?.id || data.assignedTo === agent?.username) {
           showToastRef.current(`Ticket atribuído para você: ${data.ticketId?.slice(0, 8)}`, 'success', 3000);
@@ -93,8 +158,14 @@ export function SupportPage() {
         break;
         
       case 'ticket.updated':
-        // Ticket atualizado - recarrega lista (com debounce) e mensagens se for o ticket selecionado
-        debouncedLoadTickets();
+        // Ticket atualizado - atualiza lista local se tiver dados do ticket
+        if (data.ticket) {
+          updateTicketInList(data.ticket);
+        } else {
+          // Fallback: recarrega lista se não tiver dados do ticket
+          debouncedLoadTickets();
+        }
+        // Atualiza mensagens se for o ticket selecionado
         if (selectedTicketIdRef.current === data.ticketId) {
           if (loadTicketMessagesRef.current) {
             loadTicketMessagesRef.current(data.ticketId);
@@ -103,17 +174,21 @@ export function SupportPage() {
         break;
         
       case 'ticket.closed':
-        // Ticket fechado - remove da lista se estiver selecionado
+        // Ticket fechado - remove da lista local
+        setTickets(prevTickets => prevTickets.filter(t => t.id !== data.ticketId));
         if (selectedTicketIdRef.current === data.ticketId) {
           setSelectedTicket(null);
           setTicketMessages([]);
         }
-        debouncedLoadTickets();
         break;
         
       case 'ticket.message.received':
       case 'ticket.message.sent':
-        // Nova mensagem - atualiza mensagens se for o ticket selecionado
+        // Nova mensagem - atualiza ticket na lista se tiver dados
+        if (data.ticket) {
+          updateTicketInList(data.ticket);
+        }
+        // Atualiza mensagens se for o ticket selecionado
         if (selectedTicketIdRef.current === data.ticketId) {
           if (loadTicketMessagesRef.current) {
             loadTicketMessagesRef.current(data.ticketId);
@@ -122,8 +197,8 @@ export function SupportPage() {
           if (document.hidden || !document.hasFocus()) {
             showToastRef.current(`Nova mensagem no ticket ${data.ticketId?.slice(0, 8)}`, 'info', 3000);
           }
-        } else {
-          // Atualiza contador de não lidas na lista (com debounce)
+        } else if (!data.ticket) {
+          // Fallback: atualiza contador de não lidas na lista apenas se não tiver dados do ticket
           debouncedLoadTickets();
         }
         break;
@@ -145,21 +220,6 @@ export function SupportPage() {
       'ticket.message.sent',
     ],
   });
-
-  // Usa useRef para manter referências estáveis
-  const showToastRef = React.useRef(showToast);
-  const loadTicketsRef = React.useRef();
-
-  React.useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
-
-  // Debounce para loadTickets - agrupa múltiplos eventos WebSocket
-  const { debouncedFn: debouncedLoadTickets } = useDebounce(() => {
-    if (loadTicketsRef.current) {
-      loadTicketsRef.current();
-    }
-  }, 500); // 500ms de debounce
 
   // Carrega filas disponíveis (apenas para o modal de nova conversa)
   const loadQueues = useCallback(async () => {
@@ -349,34 +409,11 @@ export function SupportPage() {
     websocketMetrics.setWebSocketStatus(wsConnected && wsAuthenticated);
   }, [wsConnected, wsAuthenticated]);
 
-  // Polling como fallback quando WebSocket não está conectado
-  useEffect(() => {
-    // Se WebSocket está conectado e autenticado, não precisa de polling
-    if (wsConnected && wsAuthenticated) {
-      logger.debug('[SupportPage] WebSocket conectado, polling desabilitado');
-      return;
-    }
-
-    // Fallback: polling a cada 30 segundos se WebSocket não estiver disponível
-    logger.debug('[SupportPage] WebSocket não disponível, usando polling como fallback');
-    const interval = setInterval(() => {
-      // Registra métrica de polling
-      websocketMetrics.recordPollingRequest();
-      
-      // Usa ref para evitar dependências que mudam constantemente
-      if (loadTicketsRef.current) {
-        loadTicketsRef.current();
-      }
-      
-      // Atualiza mensagens do ticket selecionado
-      const ticketId = selectedTicketIdRef.current;
-      if (ticketId && loadTicketMessagesRef.current) {
-        loadTicketMessagesRef.current(ticketId);
-      }
-    }, 30000); // Otimizado de 5s para 30s
-
-    return () => clearInterval(interval);
-  }, [wsConnected, wsAuthenticated]); // Inclui status do WebSocket
+  // Polling removido - apenas WebSocket é usado para atualizações em tempo real
+  // Se o WebSocket não estiver conectado, as atualizações só ocorrerão quando:
+  // 1. O usuário recarregar a página manualmente
+  // 2. O WebSocket se reconectar e enviar eventos
+  // 3. O usuário clicar no botão "Atualizar"
 
   // Atribui ticket para atendente
   const handleAssign = async () => {

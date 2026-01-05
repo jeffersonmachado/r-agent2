@@ -110,7 +110,25 @@ function getLimiter(operationType) {
         blockDuration: 0, // Não bloqueia permanentemente, apenas retorna erro
       });
     } catch (err) {
-      logger.warn('[RateLimit] Erro ao criar limiter Redis, usando memória', { error: err.message });
+      logger.error('[RateLimit] ERRO ao criar limiter Redis, usando memória', { 
+        error: err.message,
+        errorStack: err.stack,
+        operationType,
+        severity: 'HIGH',
+        alert: 'RATE_LIMIT_REDIS_TO_MEMORY_FALLBACK',
+      });
+      
+      // Registra no monitoramento de fallbacks
+      try {
+        const { recordFallback, FALLBACK_TYPES } = require('../../engine/fallbackMonitor');
+        recordFallback(FALLBACK_TYPES.RATE_LIMIT_REDIS_TO_MEMORY, {
+          operationType,
+          error: err.message,
+        });
+      } catch (monitorError) {
+        // Não falha se monitoramento não estiver disponível
+      }
+      
       limiter = new RateLimiterMemory({
         points: policy.points,
         duration: policy.duration,
@@ -119,7 +137,35 @@ function getLimiter(operationType) {
     }
   } else {
     // Fallback para memória (não recomendado em produção)
-    logger.warn('[RateLimit] Redis não disponível, usando limiter em memória', { operationType });
+    // CRÍTICO: Em produção, isso deve falhar explicitamente
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      logger.error('[RateLimit] CRÍTICO: Redis não disponível em produção. Rate limiting desabilitado pode causar vulnerabilidades.', {
+        operationType,
+        environment: process.env.NODE_ENV,
+        severity: 'CRITICAL',
+        alert: 'RATE_LIMIT_REDIS_UNAVAILABLE_IN_PRODUCTION',
+      });
+      // Em produção, lança erro ao invés de usar fallback silencioso
+      throw new Error(`Rate limiting requer Redis em produção. Redis não disponível para operação: ${operationType}`);
+    }
+    logger.error('[RateLimit] ERRO: Redis não disponível, usando limiter em memória (APENAS DESENVOLVIMENTO)', { 
+      operationType,
+      warning: 'Em produção, isso causaria falha. Redis é obrigatório.',
+      severity: 'HIGH',
+      alert: 'RATE_LIMIT_REDIS_TO_MEMORY_FALLBACK',
+    });
+    
+    // Registra no monitoramento de fallbacks
+    try {
+      const { recordFallback, FALLBACK_TYPES } = require('../../engine/fallbackMonitor');
+      recordFallback(FALLBACK_TYPES.RATE_LIMIT_REDIS_TO_MEMORY, {
+        operationType,
+        environment: process.env.NODE_ENV,
+      });
+    } catch (monitorError) {
+      // Não falha se monitoramento não estiver disponível
+    }
     limiter = new RateLimiterMemory({
       points: policy.points,
       duration: policy.duration,
@@ -355,28 +401,130 @@ async function checkRateLimitStatus(options) {
         // Alternativa: consulta direta ao Redis se disponível
         const redisClient = getRateLimitClient();
         if (redisClient) {
-          // Consulta direta ao Redis para obter informações sem consumir
-          const redisKey = `rl:${operationType}:${key}`;
-          const data = await redisClient.get(redisKey);
-          if (data) {
-            const parsed = JSON.parse(data);
-            rateLimiterRes = {
-              remainingPoints: parsed.points || 0,
-              totalPoints: policy.points,
-              msBeforeNext: parsed.expire ? (parsed.expire - Date.now()) : 0,
-            };
-          } else {
+          // Verifica se Redis está realmente disponível antes de usar
+          const redisAvailable = await isRedisAvailable();
+          if (!redisAvailable) {
+            // Redis não está pronto, não podemos verificar status
+            const isProduction = process.env.NODE_ENV === 'production';
+            if (isProduction) {
+              logger.error('[RateLimit] CRÍTICO: Redis não está pronto em produção', {
+                operationType,
+                userId,
+                error: 'Redis não disponível e método get() não suportado',
+              });
+              // Em produção, bloqueia ao invés de permitir
+              return {
+                allowed: false,
+                retryAfter: policy.duration || 60,
+                remainingPoints: 0,
+                totalPoints: policy.points,
+                error: 'RATE_LIMIT_SERVICE_UNAVAILABLE',
+              };
+            }
+            // Em desenvolvimento, permite mas loga como erro crítico
+            logger.error('[RateLimit] ERRO: Redis não está pronto (assumindo permitido apenas em desenvolvimento)', {
+              operationType,
+              userId,
+              warning: 'Em produção, isso bloquearia a requisição',
+            });
             rateLimiterRes = null;
+          } else {
+            // Redis está pronto, pode consultar
+            try {
+              // Consulta direta ao Redis para obter informações sem consumir
+              const redisKey = `rl:${operationType}:${key}`;
+              const data = await redisClient.get(redisKey);
+              if (data) {
+                const parsed = JSON.parse(data);
+                rateLimiterRes = {
+                  remainingPoints: parsed.points || 0,
+                  totalPoints: policy.points,
+                  msBeforeNext: parsed.expire ? (parsed.expire - Date.now()) : 0,
+                };
+              } else {
+                rateLimiterRes = null;
+              }
+            } catch (redisError) {
+              // Erro ao consultar Redis (pode ser "Stream isn't writeable")
+              const isProduction = process.env.NODE_ENV === 'production';
+              if (isProduction) {
+                logger.error('[RateLimit] CRÍTICO: Erro ao consultar Redis em produção', {
+                  operationType,
+                  userId,
+                  error: redisError.message,
+                });
+                return {
+                  allowed: false,
+                  retryAfter: policy.duration || 60,
+                  remainingPoints: 0,
+                  totalPoints: policy.points,
+                  error: 'RATE_LIMIT_SERVICE_UNAVAILABLE',
+                };
+              }
+              // Em desenvolvimento, permite mas loga como erro
+              logger.error('[RateLimit] ERRO: Erro ao consultar Redis (assumindo permitido apenas em desenvolvimento)', {
+                operationType,
+                userId,
+                error: redisError.message,
+                warning: 'Em produção, isso bloquearia a requisição',
+              });
+              rateLimiterRes = null;
+            }
           }
         } else {
-          // Sem Redis e sem get(), assume permitido (fail-open)
+          // Sem Redis e sem get(), não podemos verificar status
+          // CRÍTICO: Fail-closed ao invés de fail-open
+          const isProduction = process.env.NODE_ENV === 'production';
+          if (isProduction) {
+            logger.error('[RateLimit] CRÍTICO: Não é possível verificar status sem Redis em produção', {
+              operationType,
+              userId,
+              error: 'Redis não disponível e método get() não suportado',
+            });
+            // Em produção, bloqueia ao invés de permitir
+            return {
+              allowed: false,
+              retryAfter: policy.duration || 60,
+              remainingPoints: 0,
+              totalPoints: policy.points,
+              error: 'RATE_LIMIT_SERVICE_UNAVAILABLE',
+            };
+          }
+          // Em desenvolvimento, permite mas loga como erro crítico
+          logger.error('[RateLimit] ERRO: Não é possível verificar status (assumindo permitido apenas em desenvolvimento)', {
+            operationType,
+            userId,
+            warning: 'Em produção, isso bloquearia a requisição',
+          });
           rateLimiterRes = null;
         }
       }
     } catch (getError) {
-      // Se get() falhar, assume que não há registro
-      logger.debug('[RateLimit] Erro ao obter status (assumindo permitido)', {
+      // Se get() falhar, não podemos verificar status
+      // CRÍTICO: Fail-closed ao invés de fail-open
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        logger.error('[RateLimit] CRÍTICO: Erro ao verificar status do rate limit em produção', {
+          operationType,
+          userId,
+          error: getError.message,
+          errorStack: getError.stack,
+        });
+        // Em produção, bloqueia ao invés de permitir
+        return {
+          allowed: false,
+          retryAfter: policy.duration || 60,
+          remainingPoints: 0,
+          totalPoints: policy.points,
+          error: 'RATE_LIMIT_CHECK_FAILED',
+        };
+      }
+      // Em desenvolvimento, permite mas loga como erro crítico
+      logger.error('[RateLimit] ERRO: Erro ao obter status (assumindo permitido apenas em desenvolvimento)', {
+        operationType,
+        userId,
         error: getError.message,
+        warning: 'Em produção, isso bloquearia a requisição',
       });
       rateLimiterRes = null;
     }
@@ -416,11 +564,32 @@ async function checkRateLimitStatus(options) {
       };
     }
   } catch (err) {
-    // Em caso de erro, assume que está permitido (fail-open)
-    logger.warn('[RateLimit] Erro ao verificar status, permitindo execução', {
+    // CRÍTICO: Fail-closed ao invés de fail-open
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      logger.error('[RateLimit] CRÍTICO: Erro ao verificar rate limit em produção. Bloqueando requisição por segurança.', {
+        error: err.message,
+        errorStack: err.stack,
+        userId,
+        operationType,
+        policy: policy.points,
+      });
+      // Em produção, bloqueia ao invés de permitir
+      return {
+        allowed: false,
+        retryAfter: policy.duration || 60,
+        remainingPoints: 0,
+        totalPoints: policy.points,
+        error: 'RATE_LIMIT_SERVICE_ERROR',
+      };
+    }
+    // Em desenvolvimento, permite mas loga como erro crítico
+    logger.error('[RateLimit] ERRO: Erro ao verificar status (permitindo apenas em desenvolvimento)', {
       error: err.message,
+      errorStack: err.stack,
       userId,
       operationType,
+      warning: 'Em produção, isso bloquearia a requisição',
     });
     return {
       allowed: true,
@@ -440,6 +609,13 @@ async function clearRedisRateLimitKeys() {
   const redisClient = getRateLimitClient();
   if (!redisClient) {
     logger.warn('[RateLimit] Redis não disponível, não é possível limpar chaves');
+    return 0;
+  }
+
+  // Verifica se Redis está realmente pronto antes de usar
+  const redisAvailable = await isRedisAvailable();
+  if (!redisAvailable) {
+    logger.warn('[RateLimit] Redis não está pronto, não é possível limpar chaves');
     return 0;
   }
 

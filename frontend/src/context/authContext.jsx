@@ -44,9 +44,23 @@ export function AuthProvider({ children }) {
       setAgent(result.agent);
       setIsAuthenticated(true);
     } catch (err) {
-      logger.warn('Erro ao carregar agente autenticado', err);
-      // Token inválido, remove
-      authApi.removeToken();
+      // Se for erro de conexão (servidor não acessível), não remove o token
+      // Pode ser apenas o servidor iniciando
+      const isConnectionError = err.message === 'Failed to fetch' || 
+                                err.message?.includes('fetch') ||
+                                err.message?.includes('ERR_CONNECTION_REFUSED');
+      
+      if (isConnectionError) {
+        // Não loga warning para erros de conexão na inicialização
+        // O servidor pode estar apenas iniciando
+        logger.debug('Servidor não acessível ao carregar agente (pode estar iniciando)', err);
+        // Não remove o token - pode ser apenas uma falha temporária
+      } else {
+        // Para outros erros (401, 403, etc), remove o token
+        logger.warn('Erro ao carregar agente autenticado', err);
+        authApi.removeToken();
+      }
+      
       setAgent(null);
       setIsAuthenticated(false);
     } finally {

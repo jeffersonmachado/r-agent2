@@ -185,14 +185,15 @@ export function TicketMaintenancePage() {
     loadTickets();
   }, [loadTickets]);
 
-  // Auto-refresh de métricas - usa refs para evitar recriação do intervalo
+  // Auto-refresh de métricas apenas (polling de tickets removido - use WebSocket)
+  // Nota: Esta página é administrativa e pode precisar de refresh manual de métricas
   useEffect(() => {
     if (!autoRefresh) return;
 
     const interval = setInterval(() => {
-      // Usa refs para evitar dependências que mudam constantemente
+      // Apenas atualiza métricas - tickets são atualizados via WebSocket
       if (loadMetricsRef.current) loadMetricsRef.current();
-      if (loadTicketsRef.current) loadTicketsRef.current();
+      // Polling de tickets removido - use WebSocket para atualizações em tempo real
     }, 10000); // 10 segundos
 
     return () => clearInterval(interval);

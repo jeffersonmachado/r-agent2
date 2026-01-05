@@ -1,0 +1,156 @@
+{
+  "id": "test-flow-b1f17103-20260105T014200Z",
+  "name": "IA - Teste RPA - sistema de atendimento",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-b1f17103",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-05T01:42:00.000Z",
+    "dependenciesResolved": true,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "validate welcome message"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "validate assistant message"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "validate flow completion (no further bot output)"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "",
+      "value": "http://localhost:5173",
+      "description": "Abrir o frontend do chatbot (URL base).",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Assert crítico: página carregada (body existe).",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "",
+      "value": "500",
+      "description": "Aguardar estabilização inicial da UI.",
+      "critical": "false"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Bem-vindo"
+      },
+      "description": "Assert crítico: mensagem de início (start_1) deve estar visível no conteúdo da página.",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "",
+      "value": "500",
+      "description": "Aguardar renderização da próxima mensagem do bot.",
+      "critical": "false"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Assert crítico: mensagem do bot (message_1) deve estar visível no conteúdo da página.",
+      "critical": "true"
+    },
+    {
+      "type": "wait",
+      "selector": "",
+      "value": "500",
+      "description": "Aguardar possível término do fluxo sem novas mensagens.",
+      "critical": "false"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "count",
+        "expected": "1"
+      },
+      "description": "Assert crítico de determinismo: a mensagem 'Bem-vindo' deve ocorrer exatamente 1 vez na página (evita duplicidade de eventos).",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "count",
+        "expected": "1"
+      },
+      "description": "Assert crítico de determinismo: a mensagem 'Olá! Como posso ajudar?' deve ocorrer exatamente 1 vez na página (evita duplicidade de eventos).",
+      "critical": "true"
+    }
+  ],
+  "asserts": [
+    {
+      "step": "2",
+      "type": "exists",
+      "selector": "body",
+      "expected": "true",
+      "description": "Página carregada: elemento body existe."
+    },
+    {
+      "step": "4",
+      "type": "text",
+      "selector": "body",
+      "expected": "Bem-vindo",
+      "description": "Mensagem inicial do fluxo presente."
+    },
+    {
+      "step": "6",
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Mensagem do bot presente."
+    },
+    {
+      "step": "8",
+      "type": "count",
+      "selector": "body",
+      "expected": "1",
+      "description": "Determinismo: 'Bem-vindo' aparece 1 vez."
+    },
+    {
+      "step": "9",
+      "type": "count",
+      "selector": "body",
+      "expected": "1",
+      "description": "Determinismo: 'Olá! Como posso ajudar?' aparece 1 vez."
+    }
+  ],
+  "filePath": "/opt/results/ria/r-agent2/tests/rpa/flows/test-flow-b1f17103-20260105T014200Z.json"
+}

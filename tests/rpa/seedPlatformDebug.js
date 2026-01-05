@@ -46,7 +46,7 @@ async function seedPlatformDebug() {
     console.log(`   Username: admin`);
     console.log(`   Password: ${config.credentials.admin.password ? '***' : 'NÃO CONFIGURADO'}\n`);
     
-    const loginRecording = require('./recordings/seed-platform-login.json');
+    const loginRecording = require('./seeds/seed-platform-login.json');
     
     // Navega para login
     console.log('   📍 Navegando para página de login...');

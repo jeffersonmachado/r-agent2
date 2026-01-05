@@ -67,5 +67,5 @@ console.log(`✅ Gravação de exemplo salva em: ${filepath}\n`);
 console.log('📚 Próximos passos:');
 console.log('   1. Edite a gravação salva para suas necessidades');
 console.log('   2. Use seedPlatformRPA.js para executar as gravações');
-console.log('   3. Veja exemplos em tests/rpa/recordings/seed-platform-*.json\n');
+console.log('   3. Veja exemplos em tests/rpa/seeds/seed-platform-*.json\n');
 

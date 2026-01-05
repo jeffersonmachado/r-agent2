@@ -961,15 +961,35 @@ export function useFlowRunner(flow) {
                     throw new Error(errorMsg);
                   }
                 } catch (apiError) {
-                  logger.error('Erro ao chamar API de IA, usando simulação', {
+                  // CRÍTICO: Em produção, não usar simulação - falhar explicitamente
+                  const isProduction = import.meta.env.PROD || import.meta.env.MODE === 'production';
+                  
+                  if (isProduction) {
+                    logger.error('[useFlowRunner] CRÍTICO: Erro ao chamar API de IA em produção. Simulação desabilitada.', {
+                      nodeId: node.id,
+                      error: apiError.message,
+                      errorStack: apiError.stack,
+                      errorStatus: apiError.status,
+                      errorBody: apiError.body,
+                      apiBaseUrl,
+                      severity: 'CRITICAL',
+                      alert: 'AI_API_ERROR_IN_PRODUCTION',
+                    });
+                    // Em produção, lança erro ao invés de simular
+                    throw new Error(`API de IA indisponível em produção: ${apiError.message}`);
+                  }
+                  
+                  // Apenas em desenvolvimento: permite simulação mas loga como erro
+                  logger.error('[useFlowRunner] ERRO: Erro ao chamar API de IA, usando simulação (APENAS DESENVOLVIMENTO)', {
                     nodeId: node.id,
                     error: apiError.message,
                     errorStack: apiError.stack,
                     errorStatus: apiError.status,
                     errorBody: apiError.body,
                     apiBaseUrl,
+                    warning: 'Em produção, isso causaria falha. API de IA deve estar disponível.',
                   });
-                  // Fallback para simulação se API falhar
+                  // Fallback para simulação se API falhar (apenas desenvolvimento)
                   aiResponse = generateSimulatedResponse(prompt);
                   addLogEvent(LOG_EVENTS.IA_TASK_RESPONSE, {
                     nodeId: node.id,
@@ -981,14 +1001,30 @@ export function useFlowRunner(flow) {
                     reason: 'api_error',
                     error: apiError.message,
                     errorStatus: apiError.status,
+                    developmentOnly: true,
                   });
                 }
               } else {
-                // Sem API configurada: usa simulação
-                logger.warn('API de IA não configurada (VITE_API_BASE_URL vazio), usando simulação', {
+                // CRÍTICO: Sem API configurada
+                const isProduction = import.meta.env.PROD || import.meta.env.MODE === 'production';
+                
+                if (isProduction) {
+                  logger.error('[useFlowRunner] CRÍTICO: API de IA não configurada em produção', {
+                    nodeId: node.id,
+                    env: import.meta.env,
+                    severity: 'CRITICAL',
+                    alert: 'AI_API_NOT_CONFIGURED',
+                  });
+                  // Em produção, lança erro
+                  throw new Error('API de IA não configurada (VITE_API_BASE_URL vazio). Configure em config.json → frontend.apiBaseUrl');
+                }
+                
+                // Apenas em desenvolvimento: permite simulação mas loga como erro
+                logger.error('[useFlowRunner] ERRO: API de IA não configurada, usando simulação (APENAS DESENVOLVIMENTO)', {
                   nodeId: node.id,
                   env: import.meta.env,
                   hint: 'Configure VITE_API_BASE_URL em config.json → frontend.apiBaseUrl',
+                  warning: 'Em produção, isso causaria falha. API de IA deve estar configurada.',
                 });
                 aiResponse = generateSimulatedResponse(prompt);
                 addLogEvent(LOG_EVENTS.IA_TASK_RESPONSE, {
@@ -999,6 +1035,7 @@ export function useFlowRunner(flow) {
                   storedIn: outputVariable,
                   simulated: true,
                   reason: 'no_api_configured',
+                  developmentOnly: true,
                 });
               }
             } catch (err) {

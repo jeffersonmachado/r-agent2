@@ -138,7 +138,7 @@ await runner.close();
 Execute a demonstração para ver as gravações criadas:
 
 ```bash
-ls tests/rpa/recordings/
+ls tests/rpa/seeds/
 ```
 
 Você verá:

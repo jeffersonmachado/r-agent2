@@ -430,7 +430,7 @@ export function RpaTestPage() {
               <div className="text-center py-8">
                 <p className="text-text-secondary text-sm mb-2">Nenhuma gravação</p>
                 <p className="text-text-tertiary text-xs">
-                  Gravações em <code className="bg-bg-secondary px-1 py-0.5 rounded text-xs">tests/rpa/recordings/</code>
+                  Gravações em <code className="bg-bg-secondary px-1 py-0.5 rounded text-xs">tests/rpa/seeds/</code>
                 </p>
               </div>
             ) : (

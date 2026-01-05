@@ -92,6 +92,47 @@ export async function getRpaExecutionReport(executionId) {
 }
 
 /**
+ * Inicia gravação manual de seed RPA.
+ * 
+ * @param {string} seedName - Nome do seed a ser gravado
+ * @param {string} initialUrl - URL inicial (opcional)
+ * @returns {Promise<{success: boolean, recordingId: string, message: string}>}
+ */
+export async function startManualRecording(seedName, initialUrl) {
+  return fetchJson('/rpa/record/start', {
+    method: 'POST',
+    body: JSON.stringify({
+      seedName,
+      initialUrl,
+    }),
+  });
+}
+
+/**
+ * Para gravação manual e salva o seed.
+ * 
+ * @param {string} recordingId - ID da gravação (nome do seed)
+ * @returns {Promise<{success: boolean, seedPath?: string, replayPath?: string, message?: string}>}
+ */
+export async function stopManualRecording(recordingId) {
+  return fetchJson(`/rpa/record/stop/${encodeURIComponent(recordingId)}`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Obtém status de uma gravação manual em andamento.
+ * 
+ * @param {string} recordingId - ID da gravação
+ * @returns {Promise<{success: boolean, status?: string, seedName?: string, startTime?: string}>}
+ */
+export async function getRecordingStatus(recordingId) {
+  return fetchJson(`/rpa/record/status/${encodeURIComponent(recordingId)}`, {
+    method: 'GET',
+  });
+}
+
+/**
  * Remove uma gravação RPA.
  * 
  * Tratamento idempotente: se a gravação já foi removida (404), trata como sucesso

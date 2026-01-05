@@ -5,9 +5,26 @@
 const { RpaTestRunner } = require('./rpaTestRunner');
 const { ActionRecorder } = require('./actionRecorder');
 const config = require('./rpaConfig');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Helper para limpar arquivo de teste.
+ * 
+ * @param {string} filename - Nome do arquivo (sem extensão)
+ */
+function cleanupTestFile(filename) {
+  // UNIFICADO: Tudo está em /seeds/
+  const seedsFile = path.join(__dirname, 'seeds', `${filename}.json`);
+  
+  if (fs.existsSync(seedsFile)) {
+    fs.unlinkSync(seedsFile);
+  }
+}
 
 describe('Sistema RPA', () => {
   let runner;
+  const testFilesToCleanup = []; // Rastreia arquivos criados pelos testes
 
   beforeAll(async () => {
     runner = new RpaTestRunner({
@@ -19,6 +36,28 @@ describe('Sistema RPA', () => {
 
   afterAll(async () => {
     await runner.close();
+    
+    // Limpa todos os arquivos de teste criados
+    testFilesToCleanup.forEach(filepath => {
+      try {
+        if (fs.existsSync(filepath)) {
+          fs.unlinkSync(filepath);
+        }
+      } catch (error) {
+        // Ignora erros ao limpar (arquivo pode já ter sido removido)
+        console.warn(`Aviso: Não foi possível remover arquivo de teste: ${filepath}`);
+      }
+    });
+    
+    // Limpa arquivos de teste conhecidos que podem ter sido deixados por testes anteriores
+    const knownTestFiles = ['test-load', 'test-save', 'test-recording'];
+    knownTestFiles.forEach(filename => {
+      try {
+        cleanupTestFile(filename);
+      } catch (error) {
+        // Ignora erros (arquivo pode não existir)
+      }
+    });
   });
 
   describe('ActionRecorder', () => {
@@ -53,8 +92,10 @@ describe('Sistema RPA', () => {
       const filepath = recorder.save('test-save');
       expect(filepath).toContain('test-save.json');
       
-      // Limpa arquivo de teste
-      const fs = require('fs');
+      // Registra arquivo para limpeza no afterAll
+      testFilesToCleanup.push(filepath);
+      
+      // Limpa arquivo de teste imediatamente também
       if (fs.existsSync(filepath)) {
         fs.unlinkSync(filepath);
       }
@@ -66,19 +107,23 @@ describe('Sistema RPA', () => {
       recorder.recordNavigate('http://example.com');
       recorder.stop();
       
-      recorder.save('test-load');
+      // Salva e obtém o caminho real onde foi salvo
+      const savedPath = recorder.save('test-load');
+      
+      // Registra arquivo para limpeza no afterAll
+      testFilesToCleanup.push(savedPath);
       
       const loaded = ActionRecorder.load('test-load');
       expect(loaded.name).toBe('test-load');
       expect(loaded.steps).toHaveLength(1);
       
-      // Limpa arquivo de teste
-      const fs = require('fs');
-      const path = require('path');
-      const filepath = path.join(__dirname, 'recordings', 'test-load.json');
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
+      // Limpa arquivo de teste usando o caminho real retornado por save()
+      if (fs.existsSync(savedPath)) {
+        fs.unlinkSync(savedPath);
       }
+      
+      // Também limpa de ambos os diretórios para garantir (caso tenha sido salvo em outro lugar)
+      cleanupTestFile('test-load');
     });
   });
 

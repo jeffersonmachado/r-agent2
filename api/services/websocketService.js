@@ -315,6 +315,48 @@ function getStats() {
 }
 
 /**
+ * Obtém informações detalhadas sobre conexões WebSocket.
+ * 
+ * @returns {Object}
+ */
+function getConnectionsInfo() {
+  const stats = getStats();
+  const wss = getWebSocketServer();
+  
+  const connections = Array.from(clients.values()).map((client) => {
+    const readyState = client.ws.readyState;
+    const stateNames = {
+      0: 'CONNECTING',
+      1: 'OPEN',
+      2: 'CLOSING',
+      3: 'CLOSED',
+    };
+    
+    return {
+      id: client.id,
+      state: stateNames[readyState] || 'UNKNOWN',
+      authenticated: client.agentId !== null,
+      tenantId: client.tenantId || null,
+      agentId: client.agentId || null,
+      username: client.username || null,
+      connectedAt: client.connectedAt.toISOString(),
+      lastActivity: client.lastActivity.toISOString(),
+      uptime: Math.floor((Date.now() - client.connectedAt.getTime()) / 1000), // em segundos
+    };
+  });
+
+  return {
+    server: {
+      initialized: wss !== null,
+      path: wss ? '/ws' : null,
+    },
+    stats,
+    connections,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
  * Obtém o servidor WebSocket.
  * 
  * @returns {WebSocketServer|null}
@@ -330,6 +372,7 @@ module.exports = {
   sendToAgent,
   emitEvent,
   getStats,
+  getConnectionsInfo,
   getWebSocketServer,
 };
 

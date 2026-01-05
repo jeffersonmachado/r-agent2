@@ -217,24 +217,27 @@ class TestRunner {
       await rpaRunner.init();
       
       // Executa testes RPA (pode ser configurado via arquivos de cenário)
-      // Por enquanto, executa testes básicos se disponíveis
-      const recordingsDir = require('path').join(__dirname, 'rpa', 'recordings');
+      // UNIFICADO: Tudo está em /seeds/ agora
+      const seedsDir = require('path').join(__dirname, 'rpa', 'seeds');
+      const flowsDir = require('path').join(__dirname, 'rpa', 'flows');
       const fs = require('fs');
       
-      if (!fs.existsSync(recordingsDir)) {
-        console.log('⚠️  Diretório de gravações RPA não encontrado. Pulando testes RPA.');
-        this.results.rpa = {
-          success: true,
-          skipped: true,
-          message: 'Diretório de gravações RPA não encontrado'
-        };
-        await rpaRunner.close();
-        return true;
+      // Busca seeds e flows
+      const recordings = [];
+      
+      if (fs.existsSync(seedsDir)) {
+        const seedFiles = fs.readdirSync(seedsDir)
+          .filter(f => f.endsWith('.json'))
+          .map(f => f.replace('.json', ''));
+        recordings.push(...seedFiles);
       }
       
-      const recordings = fs.readdirSync(recordingsDir)
-        .filter(f => f.endsWith('.json'))
-        .map(f => f.replace('.json', ''));
+      if (fs.existsSync(flowsDir)) {
+        const flowFiles = fs.readdirSync(flowsDir)
+          .filter(f => f.endsWith('.json'))
+          .map(f => f.replace('.json', ''));
+        recordings.push(...flowFiles);
+      }
       
       if (recordings.length === 0) {
         console.log('⚠️  Nenhuma gravação RPA encontrada. Pulando testes RPA.');

@@ -30,19 +30,11 @@ class RpaPlayer {
    * Carrega seed de arquivo.
    */
   loadSeed(seedName) {
-    const seedsDir = path.join(__dirname, '..', 'seeds');
-    const seedFile = path.join(seedsDir, `${seedName}.json`);
-    
-    // Fallback para recordings se não encontrar em seeds
-    if (!fs.existsSync(seedFile)) {
-      try {
-        this.seedData = ActionRecorder.load(seedName);
-      } catch (error) {
-        throw new Error(`Seed não encontrado: ${seedName}`);
-      }
-    } else {
-      const content = fs.readFileSync(seedFile, 'utf8');
-      this.seedData = JSON.parse(content);
+    // UNIFICADO: Tudo está em /seeds/
+    try {
+      this.seedData = ActionRecorder.load(seedName);
+    } catch (error) {
+      throw new Error(`Seed não encontrado: ${seedName}`);
     }
 
     // Normaliza URLs no seed/recording carregado

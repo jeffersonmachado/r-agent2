@@ -122,23 +122,57 @@ export function UserMenu() {
     const isRelevantEvent = 
       data.assignedTo === agent?.id || 
       data.assignedTo === agent?.username ||
+      data.ticket?.assignedTo === agent?.id ||
+      data.ticket?.assignedTo === agent?.username ||
       !data.assignedTo; // Eventos sem assignedTo podem ser relevantes
 
     if (!isRelevantEvent) {
       return;
     }
 
+    // Função auxiliar para atualizar contador baseado no ticket recebido
+    const updateCounterFromTicket = (ticket) => {
+      if (!ticket) return;
+      
+      // Só conta tickets in_progress atribuídos ao agente
+      const isAgentTicket = ticket.assignedTo === agent?.id || ticket.assignedTo === agent?.username;
+      const isInProgress = ticket.status === 'in_progress';
+      
+      setActiveTicketsCount(prevCount => {
+        if (isInProgress && isAgentTicket) {
+          // Verifica se já está na contagem (não duplica)
+          return prevCount; // Mantém o contador, será recalculado abaixo
+        } else {
+          // Se foi fechado ou mudou de status, recalcula
+          return prevCount; // Será recalculado abaixo
+        }
+      });
+      
+      // Recalcula contador completo (mais confiável)
+      if (loadActiveTicketsRef.current) {
+        loadActiveTicketsRef.current();
+      }
+    };
+
     switch (event) {
       case 'ticket.assigned':
-        // Ticket atribuído - recarrega contador
-        if (loadActiveTicketsRef.current) {
-          loadActiveTicketsRef.current();
+        // Ticket atribuído - atualiza contador usando dados do WebSocket
+        if (data.ticket) {
+          updateCounterFromTicket(data.ticket);
+        } else {
+          // Fallback: recarrega contador se não tiver dados do ticket
+          if (loadActiveTicketsRef.current) {
+            loadActiveTicketsRef.current();
+          }
         }
         break;
 
       case 'ticket.updated':
-        // Ticket atualizado - recarrega contador se mudou status ou atribuição
-        if (data.status === 'in_progress' || data.status === 'closed') {
+        // Ticket atualizado - atualiza contador se mudou status ou atribuição
+        if (data.ticket) {
+          updateCounterFromTicket(data.ticket);
+        } else if (data.status === 'in_progress' || data.status === 'closed') {
+          // Fallback: recarrega contador se não tiver dados do ticket
           if (loadActiveTicketsRef.current) {
             loadActiveTicketsRef.current();
           }
@@ -146,9 +180,14 @@ export function UserMenu() {
         break;
 
       case 'ticket.closed':
-        // Ticket fechado - recarrega contador
-        if (loadActiveTicketsRef.current) {
-          loadActiveTicketsRef.current();
+        // Ticket fechado - atualiza contador usando dados do WebSocket
+        if (data.ticket) {
+          updateCounterFromTicket(data.ticket);
+        } else {
+          // Fallback: recarrega contador se não tiver dados do ticket
+          if (loadActiveTicketsRef.current) {
+            loadActiveTicketsRef.current();
+          }
         }
         break;
 
@@ -174,7 +213,8 @@ export function UserMenu() {
     websocketMetrics.setWebSocketStatus(wsConnected && wsAuthenticated);
   }, [wsConnected, wsAuthenticated]);
 
-  // Carrega tickets iniciais e configura polling como fallback
+  // Carrega tickets iniciais - apenas uma vez quando o agente é carregado
+  // Polling removido - apenas WebSocket é usado para atualizações em tempo real
   useEffect(() => {
     if (!agent) {
       setActiveTicketsCount(0);
@@ -182,26 +222,14 @@ export function UserMenu() {
       return;
     }
 
-    // Carrega dados iniciais
+    // Carrega dados iniciais apenas uma vez
     loadActiveTickets();
 
-    // Polling como fallback apenas se WebSocket não estiver disponível
-    if (!wsConnected || !wsAuthenticated) {
-      logger.debug('[UserMenu] WebSocket não disponível, usando polling como fallback');
-      const interval = setInterval(() => {
-        // Registra métrica de polling
-        websocketMetrics.recordPollingRequest();
-        
-        if (loadActiveTicketsRef.current) {
-          loadActiveTicketsRef.current();
-        }
-      }, 30000); // 30 segundos quando WebSocket não está disponível
-
-      return () => clearInterval(interval);
-    } else {
-      logger.debug('[UserMenu] WebSocket conectado, polling desabilitado');
-    }
-  }, [agent, wsConnected, wsAuthenticated, loadActiveTickets]);
+    logger.debug('[UserMenu] Dados iniciais carregados. Atualizações via WebSocket apenas.', {
+      wsConnected,
+      wsAuthenticated,
+    });
+  }, [agent, loadActiveTickets]);
 
   // Gera inicial do nome para o avatar
   const getInitials = (name) => {

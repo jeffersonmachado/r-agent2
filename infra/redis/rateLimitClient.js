@@ -167,16 +167,73 @@ async function isRedisAvailable() {
     return false;
   }
 
-  // Verifica se o cliente está conectado
-  if (client.status !== 'ready' && client.status !== 'connect') {
+  // Se o cliente não está conectado, tenta conectar
+  if (client.status === 'end' || client.status === 'close') {
+    try {
+      await client.connect();
+      // Aguarda um pouco após conectar para garantir que está pronto
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (err) {
+      logger.debug('[RateLimit] Erro ao conectar Redis para verificação', { error: err.message });
+      return false;
+    }
+  }
+  
+  // Se está em estado "connect", pode precisar aguardar um pouco mais
+  if (client.status === 'connect') {
+    // Aguarda até que mude para "ready" ou timeout
+    const maxWait = 2000;
+    const startTime = Date.now();
+    while (client.status === 'connect' && (Date.now() - startTime) < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (client.status === 'ready') {
+        break;
+      }
+    }
+  }
+
+  // Aguarda um pouco se estiver conectando ou em estado connect
+  if (client.status === 'connecting' || client.status === 'connect') {
+    // Aguarda até 3 segundos para conectar completamente
+    const maxWait = 3000;
+    const startTime = Date.now();
+    while ((client.status === 'connecting' || client.status === 'connect') && (Date.now() - startTime) < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      // Se mudou para ready, pode sair do loop
+      if (client.status === 'ready') {
+        break;
+      }
+    }
+  }
+
+  // Verifica se o cliente está em um estado válido
+  const validStates = ['ready', 'connect', 'connecting'];
+  if (!validStates.includes(client.status)) {
+    logger.debug('[RateLimit] Redis em estado inválido', { status: client.status });
     return false;
   }
 
   try {
-    await client.ping();
+    // Tenta fazer ping com timeout maior para estados transitórios
+    const timeout = client.status === 'ready' ? 2000 : 5000; // Mais tempo se ainda está conectando
+    const pingPromise = client.ping();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`Timeout ao verificar Redis (${timeout}ms)`)), timeout)
+    );
+    await Promise.race([pingPromise, timeoutPromise]);
     return true;
   } catch (err) {
-    logger.warn('[RateLimit] Redis não disponível', { error: err.message });
+    // Se estiver em estado connect/connecting, pode ser apenas que ainda está conectando
+    if (client.status === 'connect' || client.status === 'connecting') {
+      logger.debug('[RateLimit] Redis ainda conectando', { 
+        error: err.message, 
+        status: client.status,
+        hint: 'Conexão em andamento, pode estar disponível em breve'
+      });
+      // Retorna false mas não é um erro crítico
+    } else {
+      logger.debug('[RateLimit] Redis não disponível', { error: err.message, status: client.status });
+    }
     return false;
   }
 }

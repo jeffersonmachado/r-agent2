@@ -39,13 +39,17 @@ unit → flow → data → scripts → rpa
 
 ```
 /tests/rpa/
-  /scenarios/      # Cenários de teste E2E
-  /screens/         # Assinaturas/telas esperadas
-  /recordings/      # Gravações de ações
-  /replay/          # Sistema de replay determinístico
-  /runner/           # Runner de testes RPA
-  rpaTestRunner.js   # Runner principal
-  rpaConfig.js       # Configurações
+  /seeds/           # Todos os seeds (manuais e automáticos)
+  /flows/           # Testes RPA gerados de fluxos
+  /replay/          # Sistema de replay determinístico (obrigatório)
+  /reports/         # Relatórios de execução
+  /screenshots/     # Screenshots de erros
+  /player/          # Player RPA (código)
+  /recorder/        # Recorder RPA (código)
+  /utils/           # Utilitários
+  /config/          # Configurações e tokens
+  rpaTestRunner.js  # Runner principal
+  rpaConfig.js      # Configurações
 ```
 
 ## Contrato de Testes RPA

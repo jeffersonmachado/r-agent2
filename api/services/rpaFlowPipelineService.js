@@ -254,21 +254,28 @@ async function validateSystemState(flow, tenantId) {
  * Salva uma gravação RPA em arquivo.
  */
 async function saveRpaRecording(recording) {
-  const recordingsDir = path.join(__dirname, '../../tests/rpa/recordings');
+  // UNIFICADO: Tudo salva em /seeds/ agora
+  const seedsDir = path.join(__dirname, '../../tests/rpa/seeds');
   
   // Garante que o diretório existe
-  if (!fs.existsSync(recordingsDir)) {
-    fs.mkdirSync(recordingsDir, { recursive: true });
+  if (!fs.existsSync(seedsDir)) {
+    fs.mkdirSync(seedsDir, { recursive: true });
+  }
+
+  // Adiciona flag source: automatic
+  if (!recording.source) {
+    recording.source = 'automatic';
   }
 
   const filename = `${recording.id}.json`;
-  const filepath = path.join(recordingsDir, filename);
+  const filepath = path.join(seedsDir, filename);
 
   fs.writeFileSync(filepath, JSON.stringify(recording, null, 2), 'utf8');
 
   logger.info('[RpaFlowPipeline] Gravação salva', {
     filepath,
     recordingId: recording.id,
+    source: recording.source,
   });
 }
 

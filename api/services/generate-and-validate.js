@@ -27,6 +27,11 @@ const { orchestrateGeneration } = require('./generationOrchestrator');
 const { validateFlow } = require('../../engine/validator');
 const { saveFlowToFile, removeFlowFromFile } = require('./generationOrchestrator');
 const { enforceRateLimit } = require('../../infra/rate-limit');
+const { createExecutionContext, updateStage, updateStatus, toProgressFormat } = require('./pipelineExecutionContext');
+const { advancePipeline } = require('./pipelineOrchestrator');
+
+// Cache de execuções em andamento (proteção reentrante)
+const runningExecutions = new Map();
 
 /**
  * Executa validação de governança.
@@ -206,7 +211,46 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
   const isDryRun = executionMode === 'dry-run';
   const isBootstrap = payload.bootstrap === true;
 
-  logger.info('Iniciando generate-and-validate', {
+  // Cria Execution Context
+  const execution = createExecutionContext(payload, options);
+
+  // Proteção reentrante: verifica se já existe uma execução em andamento
+  // Usa executionId como chave única
+  const executionKey = execution.executionId;
+  if (runningExecutions.has(executionKey)) {
+    logger.warn(`[Pipeline][${execution.executionId}] Execução já em andamento, ignorando chamada duplicada`);
+    return {
+      success: false,
+      errors: ['Execução já em andamento'],
+      motivo: 'Execução duplicada detectada',
+      executionId: execution.executionId,
+    };
+  }
+
+  // Verifica se há outra execução em andamento para o mesmo payload (proteção adicional)
+  // Compara payload.name e tenantId para evitar execuções simultâneas do mesmo sistema
+  const payloadKey = `${payload.name}-${options.tenantId || 'default'}`;
+  for (const [key, existingExecution] of runningExecutions.entries()) {
+    if (existingExecution.payload.name === payload.name && 
+        (existingExecution.options.tenantId || 'default') === (options.tenantId || 'default') &&
+        existingExecution.status === 'running') {
+      logger.warn(`[Pipeline][${execution.executionId}] Execução similar já em andamento`, {
+        existingExecutionId: existingExecution.executionId,
+        payloadKey,
+      });
+      return {
+        success: false,
+        errors: ['Execução similar já em andamento'],
+        motivo: 'Execução duplicada detectada',
+        executionId: execution.executionId,
+      };
+    }
+  }
+
+  // Marca como em execução
+  runningExecutions.set(executionKey, execution);
+
+  logger.info(`[Pipeline][${execution.executionId}] Iniciando generate-and-validate`, {
     name: payload.name,
     executionMode,
     bootstrap: isBootstrap,
@@ -224,6 +268,7 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
     motivo: null,
     replayLink: null,
     reportLink: null,
+    executionId: execution.executionId,
   };
 
   // Artefatos gerados (para rollback se necessário)
@@ -234,9 +279,19 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
     seedPath: null,
   };
 
+  // Callback wrapper que inclui executionId
+  const progressCallback = (progress) => {
+    if (onProgress) {
+      onProgress({
+        ...progress,
+        executionId: execution.executionId,
+      });
+    }
+  };
+
   try {
     // ETAPA 0: Rate Limiting (ANTES de qualquer coisa)
-    logger.info('ETAPA 0: Verificando rate limiting');
+    logger.info(`[Pipeline][${execution.executionId}] ETAPA 0: Verificando rate limiting`);
     try {
       // Identifica tipo de operação
       // Prioriza BOOTSTRAP sobre DRY_RUN porque é mais restritivo
@@ -252,7 +307,7 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
       // Identifica usuário (ou sessão)
       const userId = options.userId || options.tenantId || 'anonymous';
 
-      logger.info('Aplicando rate limiting', { 
+      logger.info(`[Pipeline][${execution.executionId}] Aplicando rate limiting`, { 
         userId, 
         operationType, 
         isBootstrap, 
@@ -266,7 +321,7 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         operationType,
       });
 
-      logger.info('Rate limiting aprovado', { userId, operationType });
+      logger.info(`[Pipeline][${execution.executionId}] Rate limiting aprovado`, { userId, operationType });
     } catch (rateLimitError) {
       if (rateLimitError.code === 'RATE_LIMIT_EXCEEDED') {
         // Garante que retryAfter é um número válido
@@ -274,95 +329,44 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
           ? rateLimitError.retryAfter
           : 60; // Fallback padrão de 60 segundos
         
+        logger.warn(`[Pipeline][${execution.executionId}] Rate limit excedido`, { retryAfter });
         result.errors.push(`Rate limit excedido. Tente novamente em ${retryAfter} segundos.`);
         result.motivo = 'Rate limit excedido';
         result.rateLimitExceeded = true;
         result.retryAfter = retryAfter;
+        updateStatus(execution, 'failed');
         return result;
       }
       // Se não for erro de rate limit, propaga
       throw rateLimitError;
     }
 
-    // ETAPA 1: Validar payload contra contrato
-    logger.info('[generate-and-validate] ETAPA 1: Validando payload contra contrato', {
-      payloadName: payload.name,
-      executionMode,
-      isBootstrap,
-    });
-    const contractValidation = validateGenerationContract(payload);
-    logger.debug('[generate-and-validate] Resultado da validação de contrato', {
-      valid: contractValidation.valid,
-      errors: contractValidation.errors,
-    });
-    
-    if (onProgress) {
-      logger.debug('[generate-and-validate] Enviando atualização de progresso: payloadValid=true, contractValid=' + contractValidation.valid);
-      onProgress({
-        payloadValid: true,
-        contractValid: contractValidation.valid,
-        contextBuilt: false,
-        aiExecuted: false,
-        flowGenerated: false,
-        seedGenerated: false,
-        rpaGenerated: false,
-        rpaExecuted: false,
-        approved: false,
-      });
-    }
-    
-    if (!contractValidation.valid) {
-      logger.error('[generate-and-validate] Validação de contrato falhou', {
-        errors: contractValidation.errors,
-        payloadName: payload.name,
-      });
-      result.errors.push(`Validação de contrato falhou: ${contractValidation.errors.join('; ')}`);
-      result.motivo = 'Validação de contrato falhou';
-      return result;
-    }
-    
-    logger.info('[generate-and-validate] ETAPA 1 concluída: Contrato validado com sucesso');
+    // Marca filesInferred como concluído (já foi tratado no frontend)
+    updateStage(execution, 'filesInferred', true);
+    updateStage(execution, 'payloadValid', true);
 
-    // ETAPA 2: Validar governança
-    logger.info('[generate-and-validate] ETAPA 2: Validando governança');
+    // Executa validação de governança (antes do orchestrator)
+    logger.info(`[Pipeline][${execution.executionId}] Validando governança`);
     const governanceValidation = await validateGovernance();
-    logger.debug('[generate-and-validate] Resultado da validação de governança', {
-      valid: governanceValidation.valid,
-      errors: governanceValidation.errors,
-    });
-    
-    if (onProgress) {
-      logger.debug('[generate-and-validate] Enviando atualização de progresso: contractValid=true');
-      onProgress({
-        payloadValid: true,
-        contractValid: true,
-        contextBuilt: false,
-        aiExecuted: false,
-        flowGenerated: false,
-        seedGenerated: false,
-        rpaGenerated: false,
-        rpaExecuted: false,
-        approved: false,
-      });
-    }
-    
     if (!governanceValidation.valid) {
-      logger.error('[generate-and-validate] Validação de governança falhou', {
+      logger.error(`[Pipeline][${execution.executionId}] Validação de governança falhou`, {
         errors: governanceValidation.errors,
       });
       result.errors.push(`Validação de governança falhou: ${governanceValidation.errors.join('; ')}`);
       result.motivo = 'Validação de governança falhou';
+      updateStatus(execution, 'failed');
       return result;
     }
-    
-    logger.info('[generate-and-validate] ETAPA 2 concluída: Governança validada com sucesso');
+    logger.info(`[Pipeline][${execution.executionId}] Governança validada`);
 
     // Se DRY-RUN, retorna aqui
     if (isDryRun) {
-      logger.info('Modo DRY-RUN: retornando validação sem executar');
+      logger.info(`[Pipeline][${execution.executionId}] Modo DRY-RUN: retornando validação sem executar`);
+      updateStatus(execution, 'approved');
+      progressCallback(toProgressFormat(execution));
       return {
         success: true,
-        rpaPassed: null, // Não executado em DRY-RUN
+        rpaPassed: null,
         flowGenerated: false,
         seedGenerated: false,
         rpaGenerated: false,
@@ -371,333 +375,147 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         warnings: [],
         errors: [],
         motivo: 'DRY-RUN: Nenhuma execução real realizada',
+        executionId: execution.executionId,
       };
     }
 
-    // ETAPA 3: Montar contexto e executar IA
-    logger.info('[generate-and-validate] ETAPA 3: Montando contexto e executando IA', {
-      useRag: payload.useRag,
-      ragSources: payload.ragSources,
-      useWebScraping: payload.useWebScraping,
-      scrapingTargets: payload.scrapingTargets?.length || 0,
-    });
-    
-    if (onProgress) {
-      logger.debug('[generate-and-validate] Enviando atualização de progresso: contextBuilt=true');
-      onProgress({
-        payloadValid: true,
-        contractValid: true,
-        contextBuilt: true,
-        aiExecuted: false,
-        flowGenerated: false,
-        seedGenerated: false,
-        rpaGenerated: false,
-        rpaExecuted: false,
-        approved: false,
-      });
-    }
-    
-    const generationStartTime = Date.now();
-    const generationResult = await orchestrateGeneration(payload, {
-      tenantId: options.tenantId || 'demo-tenant',
-      dryRun: false,
-    });
-    const generationDuration = Date.now() - generationStartTime;
-    
-    logger.info('[generate-and-validate] Geração de artefatos concluída', {
-      success: generationResult.success,
-      duration: `${generationDuration}ms`,
-      hasFlow: !!generationResult.flowDefinition,
-      hasRpaTest: !!generationResult.rpaTest,
-    });
-
-    if (!generationResult.success) {
-      logger.error('[generate-and-validate] Falha na geração de artefatos', {
-        error: generationResult.error,
-        duration: generationDuration,
-      });
-      result.errors.push('Falha na geração de artefatos');
-      result.motivo = 'Falha na geração de artefatos';
-      return result;
-    }
-
-    const flow = generationResult.flowDefinition;
-    if (!flow) {
-      logger.error('[generate-and-validate] Fluxo não foi gerado');
-      result.errors.push('Fluxo não foi gerado');
-      result.motivo = 'Fluxo não foi gerado';
-      return result;
-    }
-
-    artifacts.flowId = flow.id;
-    result.flowGenerated = true;
-    logger.info('[generate-and-validate] Fluxo gerado com sucesso', {
-      flowId: flow.id,
-      flowName: flow.name,
-    });
-    
-    if (onProgress) {
-      logger.debug('[generate-and-validate] Enviando atualização de progresso: aiExecuted=true, flowGenerated=true');
-      onProgress({
-        payloadValid: true,
-        contractValid: true,
-        contextBuilt: true,
-        aiExecuted: true,
-        flowGenerated: true,
-        seedGenerated: result.seedGenerated || false,
-        rpaGenerated: result.rpaGenerated || false,
-        rpaExecuted: result.rpaExecuted || false,
-        approved: false,
-      });
-    }
-
-    // ETAPA 4: Validar schema do fluxo
-    logger.info('[generate-and-validate] ETAPA 4: Validando schema do fluxo', {
-      flowId: flow.id,
-    });
-    const schemaValidation = await validateSchema(flow);
-    logger.debug('[generate-and-validate] Resultado da validação de schema', {
-      valid: schemaValidation.valid,
-      errors: schemaValidation.errors,
-    });
-    
-    if (!schemaValidation.valid) {
-      logger.error('[generate-and-validate] Validação de schema falhou', {
-        flowId: flow.id,
-        errors: schemaValidation.errors,
-      });
-      result.errors.push(`Validação de schema falhou: ${schemaValidation.errors.join('; ')}`);
-      result.motivo = 'Validação de schema falhou';
+    // Usa o Orchestrator para avançar o pipeline
+    // O orchestrator controla todas as etapas de forma determinística
+    let shouldContinue = true;
+    while (shouldContinue) {
+      const advanceResult = await advancePipeline(execution, progressCallback);
+      shouldContinue = advanceResult.shouldContinue;
       
-      // Rollback em modo bootstrap
-      if (isBootstrap) {
-        logger.info('[generate-and-validate] Modo Bootstrap: Fazendo rollback após falha de schema');
-        if (artifacts.flowPath) {
-          removeFlowFromFile(artifacts.flowId);
-        }
+      if (advanceResult.error) {
+        result.errors.push(advanceResult.error);
+        result.motivo = advanceResult.error;
+        updateStatus(execution, 'failed');
+        break;
       }
-      
-      return result;
-    }
-    
-    logger.info('[generate-and-validate] ETAPA 4 concluída: Schema validado com sucesso');
-
-    // ETAPA 5: Gerar seed (se solicitado)
-    if (payload.generate?.seed || isBootstrap) {
-      logger.info('[generate-and-validate] ETAPA 5: Gerando seed', {
-        flowId: flow.id,
-        isBootstrap,
-      });
-      const seedResult = await generateSeed(flow, options);
-      if (seedResult.success) {
-        result.seedGenerated = true;
-        artifacts.seedPath = seedResult.seedPath;
-        logger.info('[generate-and-validate] Seed gerado com sucesso', {
-          seedPath: seedResult.seedPath,
-        });
-      } else {
-        logger.warn('[generate-and-validate] Falha ao gerar seed (não crítico)', {
-          error: seedResult.error,
-        });
-        result.warnings.push('Falha ao gerar seed (não crítico)');
-      }
-      if (onProgress) {
-        logger.debug('[generate-and-validate] Enviando atualização de progresso: seedGenerated=' + result.seedGenerated);
-        onProgress({
-          payloadValid: true,
-          contractValid: true,
-          contextBuilt: true,
-          aiExecuted: true,
-          flowGenerated: true,
-          seedGenerated: result.seedGenerated,
-          rpaGenerated: result.rpaGenerated || false,
-          rpaExecuted: result.rpaExecuted || false,
-          approved: false,
-        });
-      }
-    } else {
-      logger.debug('[generate-and-validate] ETAPA 5: Pulando geração de seed (não solicitado)');
     }
 
-    // ETAPA 6: Gerar RPA (se solicitado)
-    let rpaTestPath = null;
-    if (payload.generate?.rpa || isBootstrap) {
-      logger.info('[generate-and-validate] ETAPA 6: Gerando teste RPA', {
-        flowId: flow.id,
-        rpaMode: payload.rpaMode,
-        isBootstrap,
-      });
-      
-      if (generationResult.rpaTest) {
-        // Salva teste RPA temporariamente (não persiste ainda em bootstrap)
-        const flowsDir = path.join(__dirname, '..', '..', 'tests', 'rpa', 'flows');
-        if (!fs.existsSync(flowsDir)) {
-          fs.mkdirSync(flowsDir, { recursive: true });
-          logger.debug('[generate-and-validate] Diretório de testes RPA criado', { flowsDir });
-        }
-
-        rpaTestPath = path.join(flowsDir, `${generationResult.rpaTest.id}.json`);
-        fs.writeFileSync(rpaTestPath, JSON.stringify(generationResult.rpaTest, null, 2), 'utf8');
+    // Se chegou aqui, todas as etapas foram concluídas
+    if (execution.status === 'approved') {
+      // BLOCO 5: Validação obrigatória do fluxo gerado
+      if (execution.flow) {
+        // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
+        // Fluxos gerados por IA DEVEM passar pelo gate antes de serem persistidos
+        const isAiGenerated = execution.flow.metadata?.generatedBy === 'ai' || 
+                               execution.flow.metadata?.generated === true;
         
-        artifacts.rpaTestPath = rpaTestPath;
-        result.rpaGenerated = true;
-        
-        logger.info('[generate-and-validate] Teste RPA gerado e salvo', {
-          rpaTestId: generationResult.rpaTest.id,
-          rpaTestPath,
-        });
-        
-        if (onProgress) {
-          logger.debug('[generate-and-validate] Enviando atualização de progresso: rpaGenerated=true');
-          onProgress({
-            payloadValid: true,
-            contractValid: true,
-            contextBuilt: true,
-            aiExecuted: true,
-            flowGenerated: true,
-            seedGenerated: result.seedGenerated || false,
-            rpaGenerated: true,
-            rpaExecuted: result.rpaExecuted || false,
-            approved: false,
-          });
-        }
-      } else {
-        logger.warn('[generate-and-validate] Teste RPA não foi gerado pela IA');
-        result.warnings.push('Teste RPA não foi gerado');
-      }
-    } else {
-      logger.debug('[generate-and-validate] ETAPA 6: Pulando geração de RPA (não solicitado)');
-    }
-
-    // ETAPA 7: Executar RPA (se gerado)
-    if (rpaTestPath) {
-      logger.info('[generate-and-validate] ETAPA 7: Executando teste RPA', {
-        rpaTestPath,
-        flowId: flow.id,
-      });
-      
-      const rpaStartTime = Date.now();
-      const rpaResult = await executeRpaTest(rpaTestPath);
-      const rpaDuration = Date.now() - rpaStartTime;
-      result.rpaExecuted = true;
-      
-      logger.info('[generate-and-validate] Teste RPA executado', {
-        success: rpaResult.success,
-        duration: `${rpaDuration}ms`,
-        hasReport: !!rpaResult.reportPath,
-      });
-      
-      if (onProgress) {
-        logger.debug('[generate-and-validate] Enviando atualização de progresso: rpaExecuted=true');
-        onProgress({
-          payloadValid: true,
-          contractValid: true,
-          contextBuilt: true,
-          aiExecuted: true,
-          flowGenerated: true,
-          seedGenerated: result.seedGenerated || false,
-          rpaGenerated: result.rpaGenerated || false,
-          rpaExecuted: true,
-          approved: false,
-        });
-      }
-
-      if (rpaResult.success) {
-        result.rpaPassed = true;
-        if (rpaResult.reportPath) {
-          result.reportLink = `/tests/rpa/reports/${path.basename(rpaResult.reportPath)}`;
-          logger.debug('[generate-and-validate] Link do relatório RPA gerado', {
-            reportLink: result.reportLink,
-          });
-        }
-        if (rpaResult.replayPath) {
-          result.replayLink = `/tests/rpa/replay/${path.basename(rpaResult.replayPath)}`;
-          logger.debug('[generate-and-validate] Link do replay/log RPA gerado', {
-            replayLink: result.replayLink,
-          });
-        }
-        logger.info('[generate-and-validate] ETAPA 7 concluída: Teste RPA passou');
-      } else {
-        // Mesmo em caso de falha, inclui o replay se disponível
-        if (rpaResult.replayPath) {
-          result.replayLink = `/tests/rpa/replay/${path.basename(rpaResult.replayPath)}`;
-          logger.debug('[generate-and-validate] Link do replay/log RPA gerado (falha)', {
-            replayLink: result.replayLink,
-          });
-        }
-        logger.error('[generate-and-validate] Teste RPA falhou', {
-          error: rpaResult.error,
-          duration: rpaDuration,
-        });
-        result.rpaPassed = false;
-        result.errors.push(`Teste RPA falhou: ${rpaResult.error}`);
-        result.motivo = `Teste RPA falhou: ${rpaResult.error}`;
-
-        // Rollback em modo bootstrap
-        if (isBootstrap) {
-          logger.info('[generate-and-validate] Modo Bootstrap: Fazendo rollback após falha de RPA');
-          if (artifacts.flowPath) {
-            removeFlowFromFile(artifacts.flowId);
-          }
-          if (artifacts.rpaTestPath && fs.existsSync(artifacts.rpaTestPath)) {
-            fs.unlinkSync(artifacts.rpaTestPath);
-          }
-          if (artifacts.seedPath && fs.existsSync(artifacts.seedPath)) {
-            fs.unlinkSync(artifacts.seedPath);
+        if (isAiGenerated) {
+          logger.info(`[Pipeline][${execution.executionId}] BLOCO 5: Validando fluxo gerado por IA no gate obrigatório`);
+          const { validateGeneratedPlanOrThrow } = require('../../engine/ai/validateGeneratedPlan');
+          try {
+            validateGeneratedPlanOrThrow(execution.flow, 'chatbot');
+            logger.info(`[Pipeline][${execution.executionId}] BLOCO 5: Fluxo gerado por IA passou no gate de validação`, {
+              flowId: execution.flow.id,
+              flowName: execution.flow.name
+            });
+          } catch (validationError) {
+            logger.error(`[Pipeline][${execution.executionId}] BLOCO 5: Gate de validação bloqueou fluxo gerado por IA`, {
+              flowId: execution.flow.id,
+              flowName: execution.flow.name,
+              error: validationError.message
+            });
+            result.errors.push(`Gate de validação bloqueou fluxo gerado por IA: ${validationError.message}`);
+            result.motivo = 'Fluxo gerado por IA não passou na validação obrigatória do gate';
+            
+            // Rollback em modo bootstrap
+            if (isBootstrap && artifacts.flowPath) {
+              logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após falha do gate de IA`);
+              removeFlowFromFile(execution.flow.id);
+            }
+            
+            updateStatus(execution, 'failed');
+            return result;
           }
         }
 
-        return result;
+        // Valida schema do fluxo (se gerado)
+        const schemaValidation = await validateSchema(execution.flow);
+        if (!schemaValidation.valid) {
+          logger.error(`[Pipeline][${execution.executionId}] BLOCO 5: Validação de schema falhou`, {
+            flowId: execution.flow.id,
+            errors: schemaValidation.errors,
+          });
+          result.errors.push(`Validação de schema falhou: ${schemaValidation.errors.join('; ')}`);
+          result.motivo = 'Validação de schema falhou';
+          
+          // Rollback em modo bootstrap
+          if (isBootstrap && artifacts.flowPath) {
+            logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após falha de schema`);
+            removeFlowFromFile(execution.flow.id);
+          }
+          
+          updateStatus(execution, 'failed');
+          return result;
+        }
       }
+
+      // Persiste artefatos (apenas se RPA passou ou não foi executado)
+      if (execution.rpaPassed !== false || !execution.rpaTestPath) {
+        if (execution.flow) {
+          if (!isBootstrap || execution.rpaPassed) {
+            const flowPath = saveFlowToFile(execution.flow);
+            artifacts.flowPath = flowPath;
+            artifacts.flowId = execution.flow.id;
+          }
+        }
+      }
+
+      // Executa validação completa (se solicitado)
+      if (payload.executeFullValidation) {
+        logger.info(`[Pipeline][${execution.executionId}] Executando validação completa (system:validate)`);
+        const systemValidation = await executeSystemValidate();
+        if (!systemValidation.success) {
+          result.warnings.push(`system:validate falhou: ${systemValidation.errors.join('; ')}`);
+        }
+      }
+
+      // Preenche resultado final
+      result.success = true;
+      result.flowGenerated = execution.stages.flowGenerated;
+      result.seedGenerated = execution.stages.seedGenerated;
+      result.rpaGenerated = execution.stages.rpaGenerated;
+      result.rpaExecuted = execution.stages.rpaExecuted;
+      result.rpaPassed = execution.rpaPassed || false;
+
+      if (execution.rpaResult) {
+        if (execution.rpaResult.reportPath) {
+          result.reportLink = `/tests/rpa/reports/${path.basename(execution.rpaResult.reportPath)}`;
+        }
+        if (execution.rpaResult.replayPath) {
+          result.replayLink = `/tests/rpa/replay/${path.basename(execution.rpaResult.replayPath)}`;
+        }
+      }
+
+      if (!result.motivo) {
+        result.motivo = 'Geração e validação concluídas com sucesso';
+      }
+
+      logger.info(`[Pipeline][${execution.executionId}] Pipeline concluído com sucesso`, {
+        flowId: artifacts.flowId,
+        rpaPassed: result.rpaPassed,
+        duration: Date.now() - startTime,
+      });
     } else {
-      logger.debug('[generate-and-validate] ETAPA 7: Pulando execução de RPA (não gerado)');
-    }
-
-    // ETAPA 8: Persistir artefatos (apenas se RPA passou ou não foi executado)
-    if (result.rpaPassed || !rpaTestPath) {
-      logger.info('ETAPA 8: Persistindo artefatos');
-      
-      // Salva fluxo
-      if (!isBootstrap || result.rpaPassed) {
-        const flowPath = saveFlowToFile(flow);
-        artifacts.flowPath = flowPath;
-      }
-
-      // Em modo bootstrap, marca como Base v1
-      if (isBootstrap && result.rpaPassed) {
-        logger.info('Modo Bootstrap: Marcando como Base v1');
-        // TODO: Adicionar metadata de versão base
+      // Pipeline falhou
+      result.success = false;
+      if (!result.motivo) {
+        result.motivo = 'Pipeline falhou';
       }
     }
-
-    // ETAPA 9: Executar validação completa (se solicitado)
-    if (payload.executeFullValidation) {
-      logger.info('ETAPA 9: Executando validação completa (system:validate)');
-      const systemValidation = await executeSystemValidate();
-      if (!systemValidation.success) {
-        result.warnings.push(`system:validate falhou: ${systemValidation.errors.join('; ')}`);
-      }
-    }
-
-    // Sucesso!
-    result.success = true;
-    if (!result.motivo) {
-      result.motivo = 'Geração e validação concluídas com sucesso';
-    }
-
-    logger.info('generate-and-validate concluído com sucesso', {
-      flowId: artifacts.flowId,
-      rpaPassed: result.rpaPassed,
-      duration: Date.now() - startTime,
-    });
 
     return result;
   } catch (err) {
-    logger.error('Erro em generate-and-validate', err);
+    logger.error(`[Pipeline][${execution.executionId}] Erro em generate-and-validate`, err);
+
+    updateStatus(execution, 'failed');
 
     // Rollback em modo bootstrap
     if (isBootstrap) {
-      logger.info('Modo Bootstrap: Fazendo rollback após erro');
+      logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após erro`);
       if (artifacts.flowId && artifacts.flowPath) {
         removeFlowFromFile(artifacts.flowId);
       }
@@ -712,10 +530,14 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
     result.errors.push(err.message || 'Erro desconhecido');
     result.motivo = err.message || 'Erro desconhecido';
     return result;
+  } finally {
+    // Remove da lista de execuções em andamento
+    runningExecutions.delete(executionKey);
   }
 }
 
 module.exports = {
   generateAndValidate,
+  executeRpaTest, // Exporta para uso no orchestrator
 };
 

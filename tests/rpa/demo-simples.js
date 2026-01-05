@@ -233,6 +233,6 @@ console.log('✨ Demonstração concluída!\n');
 console.log('📚 Próximos passos:');
 console.log('   1. Instale Playwright: npx playwright install chromium');
 console.log('   2. Execute testes: npm run test:rpa');
-console.log('   3. Veja exemplos em: tests/rpa/recordings/');
+console.log('   3. Veja exemplos em: tests/rpa/seeds/');
 console.log('   4. Leia documentação: tests/rpa/README.md\n');
 

@@ -642,6 +642,22 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /system/websocket - Informações detalhadas sobre conexões WebSocket
+  if (method === 'GET' && pathname === '/system/websocket') {
+    try {
+      const { getConnectionsInfo } = require('./services/websocketService');
+      const info = getConnectionsInfo();
+      sendJson(res, 200, info);
+    } catch (err) {
+      logger.error('Erro ao obter informações de WebSocket:', err);
+      sendJson(res, 500, { 
+        error: 'internal_error', 
+        message: err.message || 'Erro ao obter informações de WebSocket' 
+      });
+    }
+    return;
+  }
+
   // -----------------------------------------------------------------------
   // Admin - Limpeza de Cache de Rate Limiting
   // -----------------------------------------------------------------------
@@ -1260,9 +1276,32 @@ async function requestHandler(req, res) {
 
       const flow = ensureFlowHasMeta(body);
 
+      // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
+      // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
+      const isAiGenerated = flow.metadata?.generatedBy === 'ai' || flow.metadata?.generated === true;
+      if (isAiGenerated) {
+        const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+        try {
+          validateGeneratedPlanOrThrow(flow, 'chatbot');
+          logger.info('[POST /flows] Fluxo gerado por IA passou no gate de validação', {
+            flowId: flow.id,
+            flowName: flow.name
+          });
+        } catch (validationError) {
+          logger.error('[POST /flows] Gate de validação bloqueou fluxo gerado por IA', {
+            flowId: flow.id,
+            flowName: flow.name,
+            error: validationError.message
+          });
+          badRequest(res, `Fluxo gerado por IA não passou na validação obrigatória: ${validationError.message}`);
+          return;
+        }
+      }
+
       // Validação completa usando o validador da engine
       // ✅ NOTA: A validação é executada mas não bloqueia a criação do fluxo
       // O fluxo pode ser criado mesmo com erros de validação para permitir que o usuário corrija depois
+      // EXCEÇÃO: Fluxos gerados por IA já foram validados pelo gate acima
       const validationResult = validateFlow(flow);
       const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
 
@@ -1374,6 +1413,28 @@ async function requestHandler(req, res) {
       if (!structureValidation.valid) {
         badRequest(res, structureValidation.error || 'Estrutura do fluxo inválida');
         return;
+      }
+
+      // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
+      // Se o fluxo foi gerado por IA, deve passar pelo gate antes de ser atualizado
+      const isAiGenerated = merged.metadata?.generatedBy === 'ai' || merged.metadata?.generated === true;
+      if (isAiGenerated) {
+        const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+        try {
+          validateGeneratedPlanOrThrow(merged, 'chatbot');
+          logger.info('[PUT /flows/:id] Fluxo gerado por IA passou no gate de validação', {
+            flowId: id,
+            flowName: merged.name
+          });
+        } catch (validationError) {
+          logger.error('[PUT /flows/:id] Gate de validação bloqueou atualização de fluxo gerado por IA', {
+            flowId: id,
+            flowName: merged.name,
+            error: validationError.message
+          });
+          badRequest(res, `Fluxo gerado por IA não passou na validação obrigatória: ${validationError.message}`);
+          return;
+        }
       }
 
       // Validação completa usando o validador da engine
@@ -1957,13 +2018,19 @@ async function requestHandler(req, res) {
       // Salva o teste RPA em arquivo
       const fs = require('fs');
       const path = require('path');
-      const recordingsDir = path.join(__dirname, '../tests/rpa/recordings');
+      // UNIFICADO: Tudo salva em /seeds/
+      const seedsDir = path.join(__dirname, '../tests/rpa/seeds');
       
-      if (!fs.existsSync(recordingsDir)) {
-        fs.mkdirSync(recordingsDir, { recursive: true });
+      if (!fs.existsSync(seedsDir)) {
+        fs.mkdirSync(seedsDir, { recursive: true });
       }
 
-      const testFilePath = path.join(recordingsDir, `${rpaTest.id}.json`);
+      // Adiciona flag source: automatic
+      if (!rpaTest.source) {
+        rpaTest.source = 'automatic';
+      }
+
+      const testFilePath = path.join(seedsDir, `${rpaTest.id}.json`);
       fs.writeFileSync(testFilePath, JSON.stringify(rpaTest, null, 2), 'utf8');
 
       logger.info('Teste RPA salvo com sucesso', { testId: rpaTest.id, filePath: testFilePath });
@@ -2405,11 +2472,13 @@ async function requestHandler(req, res) {
         logger.error('[Webhook] Erro ao disparar webhook para ticket.created:', err);
       });
 
+      // Inclui ticket completo no evento WebSocket para evitar requisições HTTP no frontend
       emitEvent('ticket.created', {
         ticketId: ticket.id,
         queue: ticket.queue,
         phoneNumber: cleanPhone,
         agentId: req.agent.id,
+        ticket: ticket, // Ticket completo para atualização local sem requisição HTTP
       }, { tenantId });
 
       // Registra ação de auditoria
@@ -2643,6 +2712,18 @@ async function requestHandler(req, res) {
     const limit = urlObj.searchParams.get('limit');
     const offset = urlObj.searchParams.get('offset');
 
+    // Log para identificar origem das requisições
+    logger.debug('[Server] GET /tickets chamado', {
+      agentId: req.agent?.id,
+      username: req.agent?.username,
+      status,
+      queue,
+      limit,
+      offset,
+      userAgent: req.headers['user-agent']?.substring(0, 50),
+      referer: req.headers['referer']?.substring(0, 50),
+    });
+
     const result = listAllTickets({ 
       tenantId: req.tenantId, // Filtro por tenant
       status, 
@@ -2807,10 +2888,12 @@ async function requestHandler(req, res) {
         logger.error('[Webhook] Erro ao disparar webhook para ticket.assigned:', err);
       });
 
+      // Inclui ticket completo no evento WebSocket para evitar requisições HTTP no frontend
       emitEvent('ticket.assigned', {
         ticketId: id,
         assignedTo,
         assignedBy: req.agent.id,
+        ticket: updatedTicket, // Ticket completo para atualização local sem requisição HTTP
       }, { tenantId, agentId: assignedTo });
 
       // Registra ação de auditoria
@@ -2886,9 +2969,11 @@ async function requestHandler(req, res) {
       logger.error('[Webhook] Erro ao disparar webhook para ticket.closed:', err);
     });
 
+    // Inclui ticket completo no evento WebSocket para evitar requisições HTTP no frontend
     emitEvent('ticket.closed', {
       ticketId: id,
       closedBy: req.agent.id,
+      ticket: closedTicket, // Ticket completo para atualização local sem requisição HTTP
     }, { tenantId, agentId: closedTicket.assignedTo });
 
     // Registra ação de auditoria
@@ -3243,10 +3328,12 @@ async function requestHandler(req, res) {
         logger.error('[Webhook] Erro ao disparar webhook para ticket.message.sent:', err);
       });
 
+      // Inclui ticket completo no evento WebSocket para evitar requisições HTTP no frontend
       emitEvent('ticket.message.sent', {
         ticketId: id,
         agentId: req.agent.id,
         message,
+        ticket: ticket, // Ticket completo para atualização local sem requisição HTTP
       }, { tenantId, agentId: ticket.assignedTo });
 
       // Registra ação de auditoria
@@ -6766,6 +6853,9 @@ async function requestHandler(req, res) {
     continueExecution,
     nextStep,
     deleteRecording,
+    startManualRecording,
+    stopManualRecording,
+    getRecordingStatus,
   } = require('./services/rpaService');
 
   // GET /rpa/recordings - Lista gravações disponíveis
@@ -6778,7 +6868,7 @@ async function requestHandler(req, res) {
 
     try {
       const recordings = listRecordings();
-      sendJson(res, 200, recordings);
+      sendJson(res, 200, { recordings });
     } catch (error) {
       logger.error('Erro ao listar gravações RPA:', error);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar gravações RPA' });
@@ -6972,6 +7062,113 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // POST /rpa/record/start - Inicia gravação manual
+  if (method === 'POST' && pathname === '/rpa/record/start') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const seedName = body.seedName || body.name;
+      const initialUrl = body.initialUrl || body.url;
+
+      if (!seedName || seedName.trim() === '') {
+        badRequest(res, 'Nome do seed (seedName) é obrigatório');
+        return;
+      }
+
+      const result = await startManualRecording(seedName, initialUrl);
+      
+      if (!result.success) {
+        sendJson(res, 400, result);
+        return;
+      }
+
+      sendJson(res, 200, result);
+    } catch (error) {
+      logger.error('Erro ao iniciar gravação manual', error);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: error.message || 'Erro ao iniciar gravação manual',
+      });
+    }
+    return;
+  }
+
+  // POST /rpa/record/stop/:recordingId - Para gravação manual
+  if (method === 'POST' && pathname.startsWith('/rpa/record/stop/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const recordingId = pathname.split('/rpa/record/stop/')[1];
+      if (!recordingId) {
+        badRequest(res, 'ID da gravação é obrigatório');
+        return;
+      }
+
+      const result = await stopManualRecording(recordingId);
+      
+      if (!result.success) {
+        sendJson(res, 400, result);
+        return;
+      }
+
+      sendJson(res, 200, result);
+    } catch (error) {
+      logger.error('Erro ao parar gravação manual', error);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: error.message || 'Erro ao parar gravação manual',
+      });
+    }
+    return;
+  }
+
+  // GET /rpa/record/status/:recordingId - Obtém status da gravação manual
+  if (method === 'GET' && pathname.startsWith('/rpa/record/status/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const recordingId = pathname.split('/rpa/record/status/')[1];
+      if (!recordingId) {
+        badRequest(res, 'ID da gravação é obrigatório');
+        return;
+      }
+
+      const result = getRecordingStatus(recordingId);
+      
+      if (!result.success) {
+        sendJson(res, 404, result);
+        return;
+      }
+
+      sendJson(res, 200, result);
+    } catch (error) {
+      logger.error('Erro ao obter status da gravação', error);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: error.message || 'Erro ao obter status da gravação',
+      });
+    }
+    return;
+  }
+
   // POST /rpa/execution/:executionId/next - Executa apenas o próximo step
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/next')) {
     const authResult = requireAuth(req);
@@ -7089,6 +7286,84 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /tests/rpa/replay - Lista todos os arquivos de replay
+  if (method === 'GET' && pathname === '/tests/rpa/replay') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const replayDir = path.join(__dirname, '..', 'tests', 'rpa', 'replay');
+      
+      // Verifica se o diretório existe
+      if (!fs.existsSync(replayDir)) {
+        sendJson(res, 200, { files: [] });
+        return;
+      }
+
+      // Lista todos os arquivos JSON com detalhes adicionais
+      const files = fs.readdirSync(replayDir)
+        .filter(file => file.endsWith('.json'))
+        .map(file => {
+          const filePath = path.join(replayDir, file);
+          const stats = fs.statSync(filePath);
+          
+          // Tenta ler o conteúdo do arquivo para extrair mais detalhes
+          let details = {
+            filename: file,
+            size: stats.size,
+            modified: stats.mtime.toISOString(),
+            created: stats.birthtime.toISOString(),
+          };
+          
+          try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            const replayData = JSON.parse(content);
+            
+            // Extrai informações relevantes do replay
+            if (replayData.id) details.id = replayData.id;
+            if (replayData.recordingId) details.recordingId = replayData.recordingId;
+            if (replayData.startTime) details.startTime = replayData.startTime;
+            if (replayData.endTime) details.endTime = replayData.endTime;
+            if (replayData.mode) details.mode = replayData.mode;
+            if (replayData.result) details.result = replayData.result;
+            
+            // Conta ações e telas
+            if (Array.isArray(replayData.actions)) {
+              details.actionCount = replayData.actions.length;
+            }
+            if (Array.isArray(replayData.screens)) {
+              details.screenCount = replayData.screens.length;
+            }
+            if (Array.isArray(replayData.errors)) {
+              details.errorCount = replayData.errors.length;
+            }
+            
+            // Calcula duração se tiver startTime e endTime
+            if (replayData.startTime && replayData.endTime) {
+              const start = new Date(replayData.startTime);
+              const end = new Date(replayData.endTime);
+              details.duration = end - start; // em milissegundos
+            }
+          } catch (parseError) {
+            // Se não conseguir fazer parse, mantém apenas os dados básicos
+            logger.debug(`Não foi possível extrair detalhes do replay ${file}:`, parseError.message);
+          }
+          
+          return details;
+        })
+        .sort((a, b) => new Date(b.modified) - new Date(a.modified)); // Mais recentes primeiro
+
+      sendJson(res, 200, { files });
+    } catch (error) {
+      logger.error('Erro ao listar replays RPA:', error);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar replays' });
+    }
+    return;
+  }
+
   // GET /tests/rpa/replay/:filename - Serve arquivo de log/replay RPA
   if (method === 'GET' && pathname.startsWith('/tests/rpa/replay/')) {
     const authResult = requireAuth(req);
@@ -7132,6 +7407,48 @@ async function requestHandler(req, res) {
         logger.error('Erro ao servir log/replay RPA:', error);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro ao servir log/replay' });
       }
+    }
+    return;
+  }
+
+  // DELETE /tests/rpa/replay/:filename - Remove arquivo de replay RPA
+  if (method === 'DELETE' && pathname.startsWith('/tests/rpa/replay/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    try {
+      const filename = pathname.slice('/tests/rpa/replay/'.length);
+      
+      // Validação de segurança: apenas arquivos JSON e sem path traversal
+      if (!filename || filename.includes('..') || filename.includes('/') || !filename.endsWith('.json')) {
+        sendJson(res, 400, { error: 'invalid_filename', message: 'Nome de arquivo inválido' });
+        return;
+      }
+
+      const replayPath = path.join(__dirname, '..', 'tests', 'rpa', 'replay', filename);
+      
+      // Verifica se o arquivo existe
+      if (!fs.existsSync(replayPath)) {
+        sendJson(res, 404, { error: 'not_found', message: 'Replay não encontrado' });
+        return;
+      }
+
+      // Remove o arquivo
+      fs.unlinkSync(replayPath);
+      
+      logger.info(`Replay removido: ${filename}`);
+      
+      sendJson(res, 200, {
+        success: true,
+        deletedFilename: filename,
+        message: `Replay "${filename}" removido com sucesso`,
+      });
+    } catch (error) {
+      logger.error('Erro ao remover replay RPA:', error);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao remover replay' });
     }
     return;
   }
