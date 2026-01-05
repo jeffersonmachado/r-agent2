@@ -11,8 +11,8 @@
       ],
       "category": "saudacao",
       "usageCount": 0,
-      "createdAt": "2026-01-02T15:39:39.509Z",
-      "updatedAt": "2026-01-02T15:39:39.509Z",
+      "createdAt": "2026-01-05T00:54:55.436Z",
+      "updatedAt": "2026-01-05T00:54:55.436Z",
       "createdBy": null,
       "active": true
     },
@@ -27,8 +27,8 @@
       ],
       "category": "despedida",
       "usageCount": 0,
-      "createdAt": "2026-01-02T15:39:39.509Z",
-      "updatedAt": "2026-01-02T15:39:39.509Z",
+      "createdAt": "2026-01-05T00:54:55.436Z",
+      "updatedAt": "2026-01-05T00:54:55.436Z",
       "createdBy": null,
       "active": true
     },
@@ -42,56 +42,43 @@
       ],
       "category": "transferencia",
       "usageCount": 0,
-      "createdAt": "2026-01-02T15:39:39.509Z",
-      "updatedAt": "2026-01-02T15:39:39.509Z",
+      "createdAt": "2026-01-05T00:54:55.436Z",
+      "updatedAt": "2026-01-05T00:54:55.436Z",
       "createdBy": null,
       "active": true
     },
     {
       "id": "qr-004",
-      "title": "Aguardando Informações",
-      "message": "Estou verificando as informações. Por favor, aguarde um momento.",
+      "title": "Solicitando Informações",
+      "message": "Para que eu possa ajudá-lo melhor, preciso de algumas informações. Pode me informar?",
       "tags": [
-        "aguardando",
-        "verificando"
+        "informacao",
+        "dados",
+        "coleta"
       ],
-      "category": "informacao",
+      "category": "coleta",
       "usageCount": 0,
-      "createdAt": "2026-01-02T15:39:39.509Z",
-      "updatedAt": "2026-01-02T15:39:39.509Z",
+      "createdAt": "2026-01-05T00:54:55.436Z",
+      "updatedAt": "2026-01-05T00:54:55.436Z",
       "createdBy": null,
       "active": true
     },
     {
       "id": "qr-005",
       "title": "Problema Resolvido",
-      "message": "Problema resolvido! Há mais alguma coisa em que posso ajudá-lo?",
+      "message": "Fico feliz em saber que conseguimos resolver seu problema! Se precisar de mais alguma coisa, estou à disposição.",
       "tags": [
-        "resolvido",
-        "sucesso"
+        "resolucao",
+        "sucesso",
+        "satisfacao"
       ],
       "category": "resolucao",
       "usageCount": 0,
-      "createdAt": "2026-01-02T15:39:39.509Z",
-      "updatedAt": "2026-01-02T15:39:39.509Z",
-      "createdBy": null,
-      "active": true
-    },
-    {
-      "id": "qr-006",
-      "title": "Solicitar Mais Informações",
-      "message": "Para melhor atendê-lo, preciso de mais algumas informações. Pode me ajudar?",
-      "tags": [
-        "informacao",
-        "dados"
-      ],
-      "category": "informacao",
-      "usageCount": 0,
-      "createdAt": "2026-01-02T15:39:39.509Z",
-      "updatedAt": "2026-01-02T15:39:39.509Z",
+      "createdAt": "2026-01-05T00:54:55.436Z",
+      "updatedAt": "2026-01-05T00:54:55.436Z",
       "createdBy": null,
       "active": true
     }
   ],
-  "savedAt": "2026-01-02T15:39:39.509Z"
+  "savedAt": "2026-01-05T00:54:55.436Z"
 }

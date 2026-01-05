@@ -1,21 +1,11 @@
 [
   {
-    "token": "a8b61b23c37db82a6d6dc5e44fe3b518581699a50e06adedc4594691d7a4795b",
+    "token": "dba4bf550d8ba4a1491f1f368bad22ec880fa6f20044a0c351a6cb0d664ffd49",
     "agentId": "admin-001",
     "username": "admin",
-    "createdAt": "2026-01-04T19:13:46.705Z",
-    "expiresAt": "2026-01-05T19:13:46.705Z",
-    "lastActivityAt": "2026-01-04T19:32:26.147Z",
-    "ipAddress": "::1",
-    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
-  },
-  {
-    "token": "20fa689c961a8c5f4eca97556d33302639be38af8372a27d7722264bb8a9b401",
-    "agentId": "admin-001",
-    "username": "admin",
-    "createdAt": "2026-01-04T19:36:10.735Z",
-    "expiresAt": "2026-01-05T19:36:10.735Z",
-    "lastActivityAt": "2026-01-04T19:44:30.908Z",
+    "createdAt": "2026-01-05T00:55:59.021Z",
+    "expiresAt": "2026-01-06T00:55:59.021Z",
+    "lastActivityAt": "2026-01-05T01:21:28.558Z",
     "ipAddress": "::1",
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
   }

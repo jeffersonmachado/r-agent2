@@ -77,6 +77,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
     { resource: 'rag', action: 'index' },
+    { resource: 'rag', action: 'update' },
     { resource: 'rag', action: 'delete' },
     { resource: 'rag', action: 'admin' },
   ],
@@ -116,6 +117,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
     { resource: 'rag', action: 'index' },
+    { resource: 'rag', action: 'update' },
   ],
 
   agent: [

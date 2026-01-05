@@ -1,0 +1,140 @@
+{
+  "id": "test-flow-c9ec18b2-20260104T200145857Z",
+  "name": "IA - Teste RPA - sistema de atendimento",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-c9ec18b2",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-04T20:01:45.857Z",
+    "dependenciesResolved": true,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "Abrir página de chat e iniciar sessão de teste do fluxo"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "Aguardar processamento e validar entrega da mensagem 'Olá! Como posso ajudar?'"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "Validar término do fluxo"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "http://localhost:5173/chat",
+      "value": "",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173/chat"
+      },
+      "description": "Navegar para a página completa de chat (/chat) para testar o fluxo",
+      "critical": true,
+      "url": "http://localhost:5173"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Aguardar carregamento da página de chat (validação genérica via body)",
+      "critical": true
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Bem-vindo"
+      },
+      "description": "Validar que a mensagem do nó start ('Bem-vindo') foi apresentada/processada",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Aguardar processamento do próximo nó (message_1) de forma determinística",
+      "critical": true
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar que a mensagem do nó message_1 foi apresentada/processada",
+      "critical": true
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar término do fluxo (end_1) por estabilidade do estado final: última mensagem permanece e não há próximas mensagens obrigatórias",
+      "critical": true
+    }
+  ],
+  "asserts": [
+    {
+      "step": 1,
+      "type": "url",
+      "selector": "page",
+      "expected": "http://localhost:5173/chat",
+      "description": "Confirmar que o teste está na rota /chat"
+    },
+    {
+      "step": 2,
+      "type": "exists",
+      "selector": "body",
+      "expected": "true",
+      "description": "Confirmar que a página carregou (body presente)"
+    },
+    {
+      "step": 3,
+      "type": "text",
+      "selector": "body",
+      "expected": "Bem-vindo",
+      "description": "Confirmar execução do nó start_1 (mensagem de boas-vindas)"
+    },
+    {
+      "step": 5,
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Confirmar execução do nó message_1 (mensagem principal do fluxo)"
+    },
+    {
+      "step": 6,
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Confirmar que o fluxo terminou no end_1 sem exigir nova entrada do usuário"
+    }
+  ],
+  "filePath": "/opt/results/ria/r-agent2/tests/rpa/flows/test-flow-c9ec18b2-20260104T200145857Z.json"
+}

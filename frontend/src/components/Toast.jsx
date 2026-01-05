@@ -106,9 +106,15 @@ export function Toast({ message, type = 'info', duration = 6000, onClose }) {
             {icons[type]}
           </div>
           <div className="ml-3 w-0 flex-1 pt-0.5">
-            <p className={`text-sm font-medium ${styles.text}`}>
-              {message}
-            </p>
+            {typeof message === 'string' && message.includes('\n') ? (
+              <div className={`text-sm font-medium ${styles.text} whitespace-pre-line`}>
+                {message}
+              </div>
+            ) : (
+              <p className={`text-sm font-medium ${styles.text}`}>
+                {message}
+              </p>
+            )}
           </div>
           <div className="ml-4 flex flex-shrink-0">
             <button

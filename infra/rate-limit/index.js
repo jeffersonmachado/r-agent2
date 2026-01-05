@@ -276,11 +276,158 @@ async function enforceRateLimit(options) {
 /**
  * Limpa o cache de limiters, forçando recriação com políticas atualizadas.
  * Útil quando políticas são alteradas em config.json.
+ * 
+ * IMPORTANTE: Para limiters em memória (RateLimiterMemory), isso força
+ * a criação de novos limiters que começam do zero. Os limiters antigos
+ * ainda podem estar em uso até serem substituídos.
  */
 function clearLimitersCache() {
   const size = limitersCache.size;
+  
+  // Para limiters em memória, tenta resetar seus contadores internos
+  for (const [operationType, limiter] of limitersCache.entries()) {
+    // RateLimiterMemory tem uma propriedade _memoryStorage que contém os contadores
+    if (limiter && typeof limiter === 'object' && limiter._memoryStorage) {
+      try {
+        // Limpa o storage interno do limiter em memória
+        if (limiter._memoryStorage instanceof Map) {
+          limiter._memoryStorage.clear();
+        } else if (limiter._memoryStorage && typeof limiter._memoryStorage.clear === 'function') {
+          limiter._memoryStorage.clear();
+        }
+        logger.debug('[RateLimit] Limiter em memória resetado', { operationType });
+      } catch (err) {
+        logger.warn('[RateLimit] Erro ao resetar limiter em memória', { 
+          operationType, 
+          error: err.message 
+        });
+      }
+    }
+  }
+  
+  // Limpa o cache (força criação de novos limiters)
   limitersCache.clear();
   logger.info('[RateLimit] Cache de limiters limpo', { clearedCount: size });
+}
+
+/**
+ * Verifica o status do rate limit sem consumir pontos.
+ * Útil para verificar se uma operação seria permitida antes de executá-la.
+ * 
+ * @param {Object} options - Opções
+ * @param {string} options.userId - ID do usuário (ou sessão)
+ * @param {string} options.operationType - Tipo de operação
+ * @returns {Promise<{allowed: boolean, retryAfter?: number, remainingPoints?: number, totalPoints?: number}>}
+ */
+async function checkRateLimitStatus(options) {
+  const { userId, operationType } = options;
+
+  if (!userId) {
+    throw new Error('userId é obrigatório para rate limiting');
+  }
+
+  if (!operationType) {
+    throw new Error('operationType é obrigatório para rate limiting');
+  }
+
+  const policy = getPolicy(operationType);
+  if (!policy) {
+    logger.warn('[RateLimit] Política não encontrada, permitindo execução', { operationType });
+    return { allowed: true, remainingPoints: policy?.points || 1, totalPoints: policy?.points || 1 };
+  }
+
+  try {
+    const limiter = getLimiter(operationType);
+    
+    // Chave única por usuário e tipo de operação
+    const key = `${userId}:${operationType}`;
+
+    // Tenta obter informações sem consumir pontos
+    // Usa get() se disponível, senão tenta uma abordagem alternativa
+    let rateLimiterRes;
+    try {
+      // Tenta usar get() se o método existir
+      if (typeof limiter.get === 'function') {
+        rateLimiterRes = await limiter.get(key);
+      } else {
+        // Se get() não existir, tenta usar penalty(0) que não consome pontos
+        // Mas penalty() adiciona pontos, não é o que queremos
+        // Alternativa: consulta direta ao Redis se disponível
+        const redisClient = getRateLimitClient();
+        if (redisClient) {
+          // Consulta direta ao Redis para obter informações sem consumir
+          const redisKey = `rl:${operationType}:${key}`;
+          const data = await redisClient.get(redisKey);
+          if (data) {
+            const parsed = JSON.parse(data);
+            rateLimiterRes = {
+              remainingPoints: parsed.points || 0,
+              totalPoints: policy.points,
+              msBeforeNext: parsed.expire ? (parsed.expire - Date.now()) : 0,
+            };
+          } else {
+            rateLimiterRes = null;
+          }
+        } else {
+          // Sem Redis e sem get(), assume permitido (fail-open)
+          rateLimiterRes = null;
+        }
+      }
+    } catch (getError) {
+      // Se get() falhar, assume que não há registro
+      logger.debug('[RateLimit] Erro ao obter status (assumindo permitido)', {
+        error: getError.message,
+      });
+      rateLimiterRes = null;
+    }
+    
+    if (!rateLimiterRes) {
+      // Não há registro, então está permitido
+      return {
+        allowed: true,
+        remainingPoints: policy.points,
+        totalPoints: policy.points,
+      };
+    }
+
+    // Verifica se ainda há pontos disponíveis
+    const remainingPoints = rateLimiterRes.remainingPoints || 0;
+    const totalPoints = rateLimiterRes.totalPoints || policy.points;
+    const msBeforeNext = rateLimiterRes.msBeforeNext || 0;
+
+    if (remainingPoints > 0) {
+      return {
+        allowed: true,
+        remainingPoints,
+        totalPoints,
+        msBeforeNext,
+      };
+    } else {
+      // Sem pontos disponíveis, calcula retryAfter
+      const retryAfter = msBeforeNext > 0 
+        ? Math.ceil(msBeforeNext / 1000)
+        : policy.duration || 60;
+
+      return {
+        allowed: false,
+        retryAfter,
+        remainingPoints: 0,
+        totalPoints,
+      };
+    }
+  } catch (err) {
+    // Em caso de erro, assume que está permitido (fail-open)
+    logger.warn('[RateLimit] Erro ao verificar status, permitindo execução', {
+      error: err.message,
+      userId,
+      operationType,
+    });
+    return {
+      allowed: true,
+      remainingPoints: policy.points,
+      totalPoints: policy.points,
+    };
+  }
 }
 
 /**
@@ -322,6 +469,7 @@ async function clearRedisRateLimitKeys() {
 
 module.exports = {
   checkRateLimit,
+  checkRateLimitStatus,
   enforceRateLimit,
   createRateLimitError,
   getLimiter,

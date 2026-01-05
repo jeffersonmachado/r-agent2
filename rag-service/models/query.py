@@ -18,7 +18,7 @@ class QueryFilters(BaseModel):
 class QueryOptions(BaseModel):
     """Opções para consulta RAG."""
     topK: int = 5
-    minScore: float = 0.6
+    minScore: float = 0.5  # Reduzido de 0.6 para 0.5 para melhor captura de chunks relevantes
     maxTokens: int = 1000
 
 

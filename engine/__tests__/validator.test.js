@@ -58,6 +58,45 @@ describe('validator', () => {
       const errorCodes = result.errors.map(e => e.code);
       expect(errorCodes).toContain('MISSING_START_NODE');
     });
+
+    test('fluxo sem ações é inválido (apenas start, end e router)', () => {
+      const flow = {
+        tenantId,
+        id: 'flow-no-actions',
+        name: 'Fluxo sem ações',
+        version: 1,
+        nodes: [
+          { id: 'start', type: 'start', next: 'router1' },
+          { id: 'router1', type: 'router', config: { rules: [{ condition: { op: 'always' }, next: 'end' }] } },
+          { id: 'end', type: 'end' },
+        ],
+        metadata: {},
+      };
+
+      const result = validateFlow(flow);
+      expect(result.valid).toBe(false);
+      const errorCodes = result.errors.map(e => e.code);
+      expect(errorCodes).toContain('FLOW_WITHOUT_ACTIONS');
+    });
+
+    test('fluxo com apenas start e end é inválido (sem ações)', () => {
+      const flow = {
+        tenantId,
+        id: 'flow-start-end-only',
+        name: 'Fluxo apenas start e end',
+        version: 1,
+        nodes: [
+          { id: 'start', type: 'start', next: 'end' },
+          { id: 'end', type: 'end' },
+        ],
+        metadata: {},
+      };
+
+      const result = validateFlow(flow);
+      expect(result.valid).toBe(false);
+      const errorCodes = result.errors.map(e => e.code);
+      expect(errorCodes).toContain('FLOW_WITHOUT_ACTIONS');
+    });
   });
 
   describe('validateFlow - nós desconectados', () => {

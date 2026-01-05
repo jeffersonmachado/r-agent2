@@ -28,6 +28,7 @@ import { RpaTestPage } from './pages/RpaTestPage';
 import { ChatPage } from './pages/ChatPage';
 import { QaPage } from './pages/QaPage';
 import { GenerateSystemPage } from './pages/GenerateSystemPage';
+import { SystemStatusPage } from './pages/SystemStatusPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { useRouter } from './hooks/useRouter';
@@ -137,6 +138,7 @@ function AppWithAuth() {
   const isChat = currentPath === '/chat' || currentPath.startsWith('/chat');
   const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
   const isGenerateSystem = currentPath === '/generate-system' || currentPath.startsWith('/generate-system');
+  const isSystemStatus = currentPath === '/system-status' || currentPath.startsWith('/system-status');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
   // Todas as rotas requerem autenticação, exceto /login
@@ -147,7 +149,7 @@ function AppWithAuth() {
     const allRoutes = [
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isLogin
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isSystemStatus, isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -160,7 +162,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isLogin, isAuthenticated, navigate
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isChat, isQa, isGenerateSystem, isSystemStatus, isLogin, isAuthenticated, navigate
   ]);
 
   // Redireciona para /dashboard quando autenticado e está em rota de login
@@ -296,6 +298,8 @@ function AppWithAuth() {
         <QaPage />
       ) : isGenerateSystem ? (
         <GenerateSystemPage />
+      ) : isSystemStatus ? (
+        <SystemStatusPage />
       ) : null}
     </div>
   );

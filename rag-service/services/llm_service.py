@@ -34,22 +34,40 @@ def generate_response(prompt: str, max_tokens: int = 1000, temperature: float = 
     if settings.llm_provider == "openai" and OPENAI_AVAILABLE:
         api_key = settings.openai_api_key
         if not api_key:
-            raise ValueError("OpenAI API key não configurada")
+            logger.error("OpenAI API key não configurada. Verifique a variável de ambiente OPENAI_API_KEY ou llm_api_key nas configurações.")
+            raise ValueError("OpenAI API key não configurada. Configure OPENAI_API_KEY ou llm_api_key.")
         
-        client = OpenAI(api_key=api_key)
-        
-        response = client.chat.completions.create(
-            model=settings.llm_model,
-            messages=[
-                {"role": "system", "content": "Você é um assistente especializado em atendimento ao cliente."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
-        
-        return response.choices[0].message.content
+        try:
+            logger.debug(f"Chamando OpenAI: model={settings.llm_model}, max_tokens={max_tokens}, temperature={temperature}")
+            client = OpenAI(api_key=api_key)
+            
+            response = client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[
+                    {"role": "system", "content": "Você é um assistente especializado em atendimento ao cliente."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+            
+            response_text = response.choices[0].message.content
+            logger.debug(f"Resposta OpenAI recebida: {len(response_text)} caracteres")
+            
+            # Log de uso de tokens se disponível
+            if hasattr(response, 'usage'):
+                logger.debug(f"Tokens usados: {response.usage.total_tokens} (prompt: {response.usage.prompt_tokens}, completion: {response.usage.completion_tokens})")
+            
+            return response_text
+            
+        except Exception as e:
+            logger.error(f"Erro ao chamar OpenAI: {e}", exc_info=True)
+            # Re-lança a exceção para que o chamador possa tratar
+            raise
     else:
-        # Fallback: retorna mensagem indicando que LLM não está configurado
-        return "[LLM não configurado. Configure OPENAI_API_KEY ou ajuste llm_provider nas configurações.]"
+        error_msg = f"LLM provider '{settings.llm_provider}' não está disponível ou não foi configurado corretamente."
+        if not OPENAI_AVAILABLE:
+            error_msg += " Biblioteca 'openai' não está instalada."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
 

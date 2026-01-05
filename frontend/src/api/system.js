@@ -6,6 +6,34 @@ import logger from '../utils/logger';
  */
 
 /**
+ * Verifica o rate limit sem consumir pontos.
+ * 
+ * @param {Object} payload - Payload para determinar o tipo de operação
+ * @returns {Promise<{allowed: boolean, retryAfter?: number, remainingPoints?: number, totalPoints?: number}>}
+ */
+export function checkRateLimit(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return Promise.reject(new Error('checkRateLimit: payload é obrigatório'));
+  }
+
+  return fetchJson('/system/check-rate-limit', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    timeoutMs: 5000,
+  }).then(
+    (result) => {
+      logger.debug('Rate limit verificado', result);
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao verificar rate limit', error);
+      // Em caso de erro, assume que está permitido (fail-open)
+      return { allowed: true };
+    }
+  );
+}
+
+/**
  * Gera e valida sistema completo usando o orquestrador único.
  * 
  * @param {Object} payload - Payload completo conforme especificação

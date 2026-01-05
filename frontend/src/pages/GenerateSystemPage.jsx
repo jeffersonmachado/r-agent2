@@ -4,7 +4,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Input, Textarea } from '../styles/Input';
-import { generateAndValidate } from '../api/system';
+import { generateAndValidate, checkRateLimit } from '../api/system';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { uploadDocument } from '../api/ragDocuments';
 import { processFile } from '../utils/fileProcessor';
@@ -438,6 +438,27 @@ export function GenerateSystemPage() {
     });
 
     try {
+      // Verifica rate limit ANTES de processar arquivos
+      if (rateLimitUntil && rateLimitUntil > Date.now()) {
+        const remaining = Math.ceil((rateLimitUntil - Date.now()) / 1000);
+        const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
+        let message = `Limite de execuções atingido`;
+        if (operationType === 'BOOTSTRAP') {
+          message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
+        } else if (operationType === 'GENERATION_REAL') {
+          message += ` (modo Real: 5 execuções por minuto)`;
+        }
+        message += `. Tente novamente em ${remaining} segundos.`;
+        
+        setError(message);
+        showToast(message, 'error', 8000);
+        setExecuting(false);
+        return;
+      }
+
+      // Gera payload antes de processar arquivos
+      const payload = generatePayload();
+
       // ETAPA 0: Inferir categorias e fazer upload dos arquivos pendentes
       logger.info('[Execute] ETAPA 0: Processando arquivos pendentes');
       const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
@@ -529,7 +550,7 @@ export function GenerateSystemPage() {
         updatePipelineWithDetails({ filesInferred: true }, 'execute');
       }
 
-      const payload = generatePayload();
+      // Payload já foi gerado acima
       logger.info('[Execute] Payload gerado', {
         payload: {
           name: payload.name,
@@ -577,7 +598,17 @@ export function GenerateSystemPage() {
         const until = Date.now() + (retryAfter * 1000);
         setRateLimitUntil(until);
         setRateLimitSecondsRemaining(retryAfter);
-        const message = `Limite de execuções atingido. Tente novamente em ${retryAfter} segundos.`;
+        
+        // Mensagem mais detalhada baseada no tipo de operação
+        const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
+        let message = `Limite de execuções atingido`;
+        if (operationType === 'BOOTSTRAP') {
+          message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
+        } else if (operationType === 'GENERATION_REAL') {
+          message += ` (modo Real: 5 execuções por minuto)`;
+        }
+        message += `. Tente novamente em ${retryAfter} segundos.`;
+        
         setError(message);
         showToast(message, 'error', 8000);
       } else {
@@ -586,6 +617,33 @@ export function GenerateSystemPage() {
       }
     } finally {
       setExecuting(false);
+    }
+  };
+
+  // Limpa rate limit (apenas em desenvolvimento)
+  const clearRateLimit = async () => {
+    try {
+      logger.info('[RateLimit] Tentando limpar rate limit');
+      const response = await fetchJson('/admin/rate-limit/clear', {
+        method: 'POST',
+      });
+      
+      if (response.success) {
+        setRateLimitUntil(null);
+        setRateLimitSecondsRemaining(0);
+        setError(null);
+        showToast('Rate limit limpo com sucesso!', 'success');
+        logger.info('[RateLimit] Rate limit limpo com sucesso', response);
+      } else {
+        throw new Error(response.message || 'Erro ao limpar rate limit');
+      }
+    } catch (err) {
+      logger.error('[RateLimit] Erro ao limpar rate limit', err);
+      if (err.status === 403) {
+        showToast('Este recurso está disponível apenas em desenvolvimento', 'warning');
+      } else {
+        showToast(`Erro ao limpar rate limit: ${err.message || 'Erro desconhecido'}`, 'error');
+      }
     }
   };
 
@@ -1516,14 +1574,24 @@ export function GenerateSystemPage() {
           </Button>
           {rateLimitSecondsRemaining > 0 && (
             <div className="mt-3 p-4 bg-status-error/10 border border-status-error/30 rounded-lg">
-              <div className="flex items-center gap-2 text-status-error">
-                <span className="text-lg">⏱️</span>
-                <div>
-                  <p className="font-semibold">Limite de execuções atingido</p>
-                  <p className="text-sm mt-1">
-                    Aguarde <strong>{rateLimitSecondsRemaining}</strong> segundo{rateLimitSecondsRemaining !== 1 ? 's' : ''} antes de tentar novamente.
-                  </p>
+              <div className="flex items-center justify-between gap-2 text-status-error">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⏱️</span>
+                  <div>
+                    <p className="font-semibold">Limite de execuções atingido</p>
+                    <p className="text-sm mt-1">
+                      Aguarde <strong>{rateLimitSecondsRemaining}</strong> segundo{rateLimitSecondsRemaining !== 1 ? 's' : ''} antes de tentar novamente.
+                    </p>
+                  </div>
                 </div>
+                {import.meta.env.DEV && (
+                  <Button
+                    onClick={clearRateLimit}
+                    className="px-4 py-2 text-sm bg-status-warning hover:bg-status-warning/80 text-white"
+                  >
+                    Limpar (Dev)
+                  </Button>
+                )}
               </div>
             </div>
           )}

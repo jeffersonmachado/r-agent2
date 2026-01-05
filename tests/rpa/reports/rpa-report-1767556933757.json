@@ -1,0 +1,88 @@
+{
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "successRate": "100.00%"
+  },
+  "results": [
+    {
+      "recordingId": "test-flow-c9ec18b2-20260104T200145857Z",
+      "recordingName": "IA - Teste RPA - sistema de atendimento",
+      "success": true,
+      "stepsCount": 6,
+      "errorsCount": 0,
+      "duration": 4979
+    }
+  ],
+  "details": [
+    {
+      "recordingId": "test-flow-c9ec18b2-20260104T200145857Z",
+      "recordingName": "IA - Teste RPA - sistema de atendimento",
+      "success": true,
+      "steps": [
+        {
+          "step": 1,
+          "action": "navigate",
+          "selector": "http://localhost:5173/chat",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T20:02:10.404Z",
+          "duration": 2160
+        },
+        {
+          "step": 2,
+          "action": "wait",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T20:02:12.565Z",
+          "duration": 404
+        },
+        {
+          "step": 3,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T20:02:12.969Z",
+          "duration": 313
+        },
+        {
+          "step": 4,
+          "action": "wait",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T20:02:13.282Z",
+          "duration": 151
+        },
+        {
+          "step": 5,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T20:02:13.433Z",
+          "duration": 135
+        },
+        {
+          "step": 6,
+          "action": "assert",
+          "selector": "body",
+          "success": true,
+          "error": null,
+          "timestamp": "2026-01-04T20:02:13.568Z",
+          "duration": 148
+        }
+      ],
+      "errors": [],
+      "screenshots": [],
+      "startTime": "2026-01-04T20:02:08.750Z",
+      "replayId": "replay-1767556928750",
+      "replayPath": "/opt/results/ria/r-agent2/tests/rpa/replay/replay-test-flow-c9ec18b2-20260104T200145857Z-1767556933716.json",
+      "endTime": "2026-01-04T20:02:13.729Z",
+      "duration": 4979
+    }
+  ]
+}

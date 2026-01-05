@@ -10,9 +10,72 @@
  *   node scripts/clear-rate-limit.js --user admin-001
  */
 
-const { clearRedisRateLimitKeys } = require('../infra/rate-limit');
+const { clearRedisRateLimitKeys, clearLimitersCache } = require('../infra/rate-limit');
 const { getRateLimitClient } = require('../infra/redis/rateLimitClient');
 const logger = require('../api/utils/logger');
+const http = require('http');
+const config = require('../api/utils/config');
+
+/**
+ * Chama o endpoint da API para limpar cache de limiters em memória.
+ */
+async function clearCacheViaAPI() {
+  return new Promise((resolve, reject) => {
+    const API_PORT = Number(config.get('api.port', 3000));
+    const API_HOST = config.get('api.host', 'localhost');
+    
+    const options = {
+      hostname: API_HOST,
+      port: API_PORT,
+      path: '/admin/rate-limit/clear-cache',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 5000,
+    };
+
+    const req = http.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 200) {
+            const result = JSON.parse(data);
+            console.log('✅ Cache de limiters em memória limpo via API');
+            resolve(result);
+          } else {
+            // Não é um erro crítico, apenas avisa
+            console.log('⚠️  Não foi possível limpar cache via API (servidor pode não estar rodando)');
+            resolve(null);
+          }
+        } catch (err) {
+          // Não é um erro crítico
+          console.log('⚠️  Não foi possível limpar cache via API:', err.message);
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      // Não é um erro crítico se o servidor não estiver rodando
+      console.log('⚠️  Servidor não está rodando, pulando limpeza de cache via API');
+      resolve(null);
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      console.log('⚠️  Timeout ao limpar cache via API');
+      resolve(null);
+    });
+
+    req.end();
+  });
+}
 
 async function clearRateLimit(options = {}) {
   const { operationType, userId } = options;
@@ -72,7 +135,24 @@ async function clearRateLimit(options = {}) {
     console.log(`📋 Total de chaves no Redis: ${allKeys.length}`);
     
     if (allKeys.length === 0) {
-      console.log('✅ Nenhuma chave encontrada para limpar');
+      console.log('✅ Nenhuma chave encontrada no Redis para limpar');
+      
+      // Mesmo sem chaves no Redis, tenta limpar cache de limiters em memória
+      // (pode estar usando RateLimiterMemory)
+      console.log('\n🔄 Tentando limpar cache de limiters em memória...');
+      await clearCacheViaAPI();
+      
+      // Também limpa o cache localmente
+      try {
+        clearLimitersCache();
+        console.log('✅ Cache de limiters limpo localmente');
+      } catch (err) {
+        // Ignora erro
+      }
+      
+      console.log('\n💡 Dica: Se o rate limit ainda estiver bloqueando, o servidor pode estar usando');
+      console.log('   limiters em memória. Tente reiniciar o servidor ou aguarde o TTL expirar.');
+      
       return;
     }
 
@@ -167,6 +247,19 @@ async function clearRateLimit(options = {}) {
       }
       
       console.log(`✅ Limpas ${allFiltered.length} chave(s)`);
+      
+      // Tenta limpar cache de limiters em memória via API
+      console.log('\n🔄 Tentando limpar cache de limiters em memória...');
+      await clearCacheViaAPI();
+      
+      // Também limpa o cache localmente
+      try {
+        clearLimitersCache();
+        console.log('✅ Cache de limiters limpo localmente');
+      } catch (err) {
+        // Ignora erro
+      }
+      
       return;
     }
 
@@ -185,6 +278,19 @@ async function clearRateLimit(options = {}) {
       console.log(`🗑️  Deletando ${filtered.length} chave(s) do usuário ${userId}...`);
       await redisClient.del(...filtered);
       console.log(`✅ Limpas ${filtered.length} chave(s)`);
+      
+      // Tenta limpar cache de limiters em memória via API
+      console.log('\n🔄 Tentando limpar cache de limiters em memória...');
+      await clearCacheViaAPI();
+      
+      // Também limpa o cache localmente
+      try {
+        clearLimitersCache();
+        console.log('✅ Cache de limiters limpo localmente');
+      } catch (err) {
+        // Ignora erro
+      }
+      
       return;
     }
 
@@ -220,6 +326,19 @@ async function clearRateLimit(options = {}) {
     }
     
     console.log(`✅ Limpas ${rateLimitKeys.length} chave(s) de rate limiting`);
+    
+    // Tenta limpar cache de limiters em memória via API
+    console.log('\n🔄 Tentando limpar cache de limiters em memória...');
+    await clearCacheViaAPI();
+    
+    // Também limpa o cache localmente (se o módulo estiver carregado)
+    try {
+      clearLimitersCache();
+      console.log('✅ Cache de limiters limpo localmente');
+    } catch (err) {
+      // Ignora erro se não conseguir limpar localmente
+      console.log('⚠️  Não foi possível limpar cache localmente (normal se servidor não estiver rodando)');
+    }
   } catch (err) {
     console.error('❌ Erro ao limpar rate limit:', err.message);
     process.exit(1);

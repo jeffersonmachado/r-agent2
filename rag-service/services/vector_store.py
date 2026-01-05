@@ -121,22 +121,33 @@ class VectorStore:
         try:
             with open(self.metadata_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+                # Se FAISS não está disponível, precisa carregar vetores também
+                if not FAISS_AVAILABLE:
+                    self.vectors = []
+                
                 for chunk_id, chunk_data in data.items():
                     # Reconstrói Chunk a partir do JSON
                     from models.document import Chunk, ChunkMetadata, DocumentPermissions
+                    embedding = chunk_data.get('embedding')
                     chunk = Chunk(
                         id=chunk_data['id'],
                         documentId=chunk_data['documentId'],
                         tenantId=chunk_data['tenantId'],
                         content=chunk_data['content'],
-                        embedding=chunk_data.get('embedding'),
+                        embedding=embedding,
                         metadata=ChunkMetadata(**chunk_data['metadata']),
                         permissions=DocumentPermissions(**chunk_data['permissions'])
                     )
                     self.chunks[chunk_id] = chunk
+                    
+                    # Se FAISS não está disponível, adiciona embedding aos vetores
+                    if not FAISS_AVAILABLE and embedding:
+                        self.vectors.append(embedding)
         except Exception as e:
             logger.warning(f"Erro ao carregar metadados: {e}")
             self.chunks = {}
+            if not FAISS_AVAILABLE:
+                self.vectors = []
     
     def _save_metadata(self):
         """Salva metadados no arquivo."""

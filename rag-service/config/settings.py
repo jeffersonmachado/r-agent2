@@ -1,39 +1,111 @@
 """
 Configurações do serviço RAG.
+
+Lê configurações de api/data/config.json com fallback para variáveis de ambiente.
 """
 
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+import json
+from pathlib import Path
+
+
+def load_config_json() -> Optional[dict]:
+    """
+    Carrega configurações do config.json do Node.js.
+    
+    Tenta encontrar o arquivo em:
+    1. ../api/data/config.json (desenvolvimento)
+    2. ../../api/data/config.json (docker/compose)
+    3. ./api/data/config.json (alternativo)
+    """
+    base_paths = [
+        Path(__file__).parent.parent.parent / "api" / "data" / "config.json",
+        Path(__file__).parent.parent.parent.parent / "api" / "data" / "config.json",
+        Path(__file__).parent.parent / "api" / "data" / "config.json",
+        Path("/opt/results/ria/r-agent2/api/data/config.json"),  # Caminho absoluto
+    ]
+    
+    for config_path in base_paths:
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    rag_config = config.get('rag', {}).get('service', {})
+                    if rag_config:
+                        return rag_config
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"[Settings] Erro ao ler config.json de {config_path}: {e}")
+                continue
+    
+    return None
+
+
+# Carrega configuração do config.json uma vez no início
+_CONFIG_JSON = load_config_json()
 
 
 class Settings(BaseSettings):
     """Configurações da aplicação."""
     
     # Servidor
-    host: str = "0.0.0.0"
-    port: int = 8000
-    debug: bool = False
+    host: str = _CONFIG_JSON.get('host', '0.0.0.0') if _CONFIG_JSON else "0.0.0.0"
+    port: int = _CONFIG_JSON.get('port', 9000) if _CONFIG_JSON else 9000
+    debug: bool = _CONFIG_JSON.get('debug', False) if _CONFIG_JSON else False
     
     # Embeddings
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    embedding_dimension: int = 384
+    embedding_model: str = (
+        _CONFIG_JSON.get('embedding', {}).get('model', 'sentence-transformers/all-MiniLM-L6-v2')
+        if _CONFIG_JSON else "sentence-transformers/all-MiniLM-L6-v2"
+    )
+    embedding_dimension: int = (
+        _CONFIG_JSON.get('embedding', {}).get('dimension', 384)
+        if _CONFIG_JSON else 384
+    )
     
     # Chunking
-    chunk_size: int = 500
-    chunk_overlap: int = 50
-    chunk_strategy: str = "sentence"  # fixed_size | sentence | paragraph | semantic
+    chunk_size: int = (
+        _CONFIG_JSON.get('chunking', {}).get('size', 500)
+        if _CONFIG_JSON else 500
+    )
+    chunk_overlap: int = (
+        _CONFIG_JSON.get('chunking', {}).get('overlap', 50)
+        if _CONFIG_JSON else 50
+    )
+    chunk_strategy: str = (
+        _CONFIG_JSON.get('chunking', {}).get('strategy', 'sentence')
+        if _CONFIG_JSON else "sentence"
+    )
     
     # Vector Store
-    vector_store_type: str = "faiss"  # faiss | chroma | pinecone
-    vector_store_path: str = "./data/vector_store"
+    vector_store_type: str = (
+        _CONFIG_JSON.get('vectorStore', {}).get('type', 'faiss')
+        if _CONFIG_JSON else "faiss"
+    )
+    vector_store_path: str = (
+        _CONFIG_JSON.get('vectorStore', {}).get('path', './data/vector_store')
+        if _CONFIG_JSON else "./data/vector_store"
+    )
     
     # LLM
-    llm_provider: str = "openai"  # openai | anthropic
-    llm_model: str = "gpt-3.5-turbo"
+    llm_provider: str = (
+        _CONFIG_JSON.get('llm', {}).get('provider', 'openai')
+        if _CONFIG_JSON else "openai"
+    )
+    llm_model: str = (
+        _CONFIG_JSON.get('llm', {}).get('model', 'gpt-3.5-turbo')
+        if _CONFIG_JSON else "gpt-3.5-turbo"
+    )
     llm_api_key: Optional[str] = None
-    llm_max_tokens: int = 1000
-    llm_temperature: float = 0.7
+    llm_max_tokens: int = (
+        _CONFIG_JSON.get('llm', {}).get('maxTokens', 1000)
+        if _CONFIG_JSON else 1000
+    )
+    llm_temperature: float = (
+        _CONFIG_JSON.get('llm', {}).get('temperature', 0.7)
+        if _CONFIG_JSON else 0.7
+    )
     
     @property
     def openai_api_key(self) -> Optional[str]:
@@ -41,21 +113,41 @@ class Settings(BaseSettings):
         return self.llm_api_key or os.getenv("OPENAI_API_KEY")
     
     # RAG
-    default_top_k: int = 5
-    default_min_score: float = 0.6
+    default_top_k: int = (
+        _CONFIG_JSON.get('defaults', {}).get('topK', 6)
+        if _CONFIG_JSON else 6
+    )
+    default_min_score: float = (
+        _CONFIG_JSON.get('defaults', {}).get('minScore', 0.45)
+        if _CONFIG_JSON else 0.45
+    )
     
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        # Permite override via variáveis de ambiente (com precedência sobre config.json)
+        env_prefix = "RAG_"
+        case_sensitive = False
 
 
 _settings: Optional[Settings] = None
 
 
 def get_settings() -> Settings:
-    """Retorna instância singleton das configurações."""
+    """
+    Retorna instância singleton das configurações.
+    
+    Prioridade:
+    1. Variáveis de ambiente (RAG_*)
+    2. config.json (api/data/config.json)
+    3. Valores padrão
+    """
     global _settings
     if _settings is None:
         _settings = Settings()
+        # Log da fonte de configuração
+        if _CONFIG_JSON:
+            print("[Settings] Configurações carregadas de config.json")
+        else:
+            print("[Settings] Usando valores padrão e variáveis de ambiente")
     return _settings
-

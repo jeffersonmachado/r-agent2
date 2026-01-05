@@ -68,7 +68,7 @@ const { validateGenerationContract } = require('./utils/contractValidator');
 const { orchestrateGeneration } = require('./services/generationOrchestrator');
 const { registerGeneration, generateAuditReport } = require('./services/auditService');
 const { generateAndValidate } = require('./services/generate-and-validate');
-const { clearLimitersCache } = require('../infra/rate-limit');
+const { clearLimitersCache, clearRedisRateLimitKeys } = require('../infra/rate-limit');
 const { executeRpaFlowPipeline, previewRpaFlowPipeline } = require('./services/rpaFlowPipelineService');
 const { generateChatbotFlow } = require('../engine/ai/generateChatbotFlow');
 const { generateRpaTest } = require('../engine/ai/generateRpaTest');
@@ -152,8 +152,10 @@ const {
   updateDocument,
   deleteDocument,
   reindexDocument,
+  reindexAllNotIndexed,
   getDocumentsStats,
 } = require('./services/ragDocumentsService');
+const ragService = require('./services/ragService');
 const { parseMultipartFormData } = require('./utils/multipartParser');
 const {
   scrapeUrl,
@@ -624,6 +626,22 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /system/status - Dashboard de status de todos os serviços
+  if (method === 'GET' && pathname === '/system/status') {
+    try {
+      const { checkServicesStatus } = require('./services/systemStatusService');
+      const status = await checkServicesStatus();
+      sendJson(res, 200, status);
+    } catch (err) {
+      logger.error('Erro ao verificar status dos serviços:', err);
+      sendJson(res, 500, { 
+        error: 'internal_error', 
+        message: err.message || 'Erro ao verificar status dos serviços' 
+      });
+    }
+    return;
+  }
+
   // -----------------------------------------------------------------------
   // Admin - Limpeza de Cache de Rate Limiting
   // -----------------------------------------------------------------------
@@ -642,6 +660,36 @@ async function requestHandler(req, res) {
       sendJson(res, 500, {
         error: 'internal_error',
         message: err.message || 'Erro ao limpar cache',
+      });
+    }
+    return;
+  }
+
+  // POST /admin/rate-limit/clear - Limpa chaves de rate limiting no Redis (apenas desenvolvimento)
+  if (method === 'POST' && pathname === '/admin/rate-limit/clear') {
+    // Apenas em desenvolvimento
+    const nodeEnv = config.get('nodeEnv', 'development');
+    if (nodeEnv !== 'development') {
+      sendJson(res, 403, {
+        error: 'forbidden',
+        message: 'Este endpoint está disponível apenas em desenvolvimento',
+      });
+      return;
+    }
+
+    try {
+      const deletedCount = await clearRedisRateLimitKeys();
+      logger.info('[Admin] Rate limit do Redis limpo via endpoint', { deletedCount });
+      sendJson(res, 200, {
+        success: true,
+        message: `Rate limit limpo com sucesso. ${deletedCount} chave(s) removida(s).`,
+        deletedCount,
+      });
+    } catch (err) {
+      logger.error('[Admin] Erro ao limpar rate limit do Redis:', err);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: err.message || 'Erro ao limpar rate limit',
       });
     }
     return;
@@ -1574,6 +1622,56 @@ async function requestHandler(req, res) {
   // -----------------------------------------------------------------------
   // Sistema de Geração e Validação Único
   // -----------------------------------------------------------------------
+
+  // POST /system/check-rate-limit - Verifica rate limit sem consumir pontos
+  if (method === 'POST' && pathname === '/system/check-rate-limit') {
+    // Valida Content-Type para requisições com body
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body || typeof body !== 'object') {
+        badRequest(res, 'Body deve ser um objeto válido');
+        return;
+      }
+
+      // Obtém tenantId do agente autenticado se disponível
+      const authResult = requireAuth(req);
+      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      const userId = req.agent?.id || req.agent?.username || finalTenantId;
+
+      // Determina tipo de operação baseado no payload
+      const isBootstrap = body.bootstrap === true;
+      const isDryRun = body.executionMode === 'dry-run';
+      let operationType;
+      if (isBootstrap) {
+        operationType = 'BOOTSTRAP';
+      } else if (isDryRun) {
+        operationType = 'DRY_RUN';
+      } else {
+        operationType = 'GENERATION_REAL';
+      }
+
+      // Verifica rate limit sem consumir pontos
+      const { checkRateLimitStatus } = require('../infra/rate-limit');
+      const status = await checkRateLimitStatus({
+        userId,
+        operationType,
+      });
+
+      sendJson(res, 200, status);
+    } catch (err) {
+      logger.error('Erro ao verificar rate limit:', err);
+      sendJson(res, 500, { 
+        error: 'internal_error', 
+        message: err.message || 'Erro ao verificar rate limit' 
+      });
+    }
+    return;
+  }
 
   // POST /system/generate-and-validate
   if (method === 'POST' && pathname === '/system/generate-and-validate') {
@@ -3871,6 +3969,8 @@ async function requestHandler(req, res) {
   // GET /config - Lê a configuração atual
   if (method === 'GET' && pathname === '/config') {
     try {
+      // Recarrega a configuração do arquivo para garantir que está atualizada
+      config.reload();
       const configData = config.getAll();
       
       // Valida que configData é um objeto válido
@@ -6201,6 +6301,110 @@ async function requestHandler(req, res) {
     } catch (err) {
       logger.error('Erro ao reindexar documento:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/documents/reindex-all - Reindexa todos os documentos não indexados
+  if (method === 'POST' && pathname === '/rag/documents/reindex-all') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      let tenantId = null;
+      // Body é opcional - se fornecido, parseia
+      if (hasJsonContentType(req) && req.headers['content-length'] && parseInt(req.headers['content-length']) > 0) {
+        const body = await parseJsonBody(req);
+        tenantId = body?.tenantId || null;
+      }
+      
+      const result = await reindexAllNotIndexed(tenantId);
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'rag_documents_reindex_all',
+        resource: 'rag_documents',
+        resourceId: 'all',
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao reindexar documentos em lote:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/query - Faz uma pergunta ao sistema RAG
+  if (method === 'POST' && pathname === '/rag/query') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'query');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { query, tenantId, options = {} } = body;
+
+      if (!query || !query.trim()) {
+        sendJson(res, 400, { error: 'invalid_request', message: 'Query não pode ser vazia' });
+        return;
+      }
+
+      // Obtém tenantId do body ou do agente autenticado
+      const finalTenantId = tenantId || req.tenantId || defaultTenantId;
+
+      // Prepara filtros (pode ser expandido no futuro)
+      const filters = {
+        topK: options.topK || 6,  // Aumentado de 5 para 6 para melhor cobertura
+        minScore: options.minScore || 0.45,  // Reduzido de 0.5 para 0.45 para melhor taxa de sucesso
+        maxTokens: options.maxTokens || 1000,
+      };
+
+      const result = await ragService.queryRag(query, finalTenantId, {}, filters);
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'rag_query',
+        resource: 'rag',
+        resourceId: 'query',
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao consultar RAG:', err);
+      sendJson(res, 500, { 
+        error: 'internal_error', 
+        message: err.message,
+        success: false 
+      });
     }
     return;
   }

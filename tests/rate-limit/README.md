@@ -60,3 +60,6 @@ Os testes de rate limiting estão incluídos em:
 - Testes funcionam sem Redis (usam fallback em memória)
 - Timeouts configurados para evitar travamentos
 
+
+
+

@@ -7,7 +7,8 @@
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 
-const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000/rag');
+// URL padrão do serviço Python RAG (sem /rag no final, será adicionado no endpoint)
+const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000');
 
 /**
  * Analisa texto com NLP.
@@ -22,7 +23,8 @@ async function analyzeText(text, expand = true) {
       throw new Error('Texto não pode ser vazio');
     }
 
-    const url = `${RAG_SERVICE_URL}/analyze`;
+    // Constrói URL seguindo o mesmo padrão do ragService.js
+    const url = `${DEFAULT_RAG_SERVICE_URL}/rag/analyze`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {

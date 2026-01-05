@@ -67,7 +67,10 @@
     "rate-limit:clear:bootstrap": "node scripts/clear-rate-limit.js --operation BOOTSTRAP",
     "rate-limit:clear:generation": "node scripts/clear-rate-limit.js --operation GENERATION_REAL",
     "rate-limit:clear:dry-run": "node scripts/clear-rate-limit.js --operation DRY_RUN",
-    "rate-limit:clear-cache": "node scripts/clear-rate-limit-cache.js"
+    "rate-limit:clear-cache": "node scripts/clear-rate-limit-cache.js",
+    "analyze:rag-logs": "node scripts/analyze-rag-logs.js",
+    "optimize:rag-thresholds": "node scripts/optimize-rag-thresholds.js",
+    "monitor:rag": "node scripts/monitor-rag-performance.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",

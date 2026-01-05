@@ -314,6 +314,15 @@ function getStats() {
   };
 }
 
+/**
+ * Obtém o servidor WebSocket.
+ * 
+ * @returns {WebSocketServer|null}
+ */
+function getWebSocketServer() {
+  return wss;
+}
+
 module.exports = {
   initializeWebSocket,
   sendToClient,
@@ -321,5 +330,6 @@ module.exports = {
   sendToAgent,
   emitEvent,
   getStats,
+  getWebSocketServer,
 };
 

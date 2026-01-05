@@ -276,14 +276,18 @@ export function FlowEditorPage() {
               };
               setValidation(validationState);
               
+              const globalErrors = formattedErrors.filter(e => !e.nodeIds || e.nodeIds.length === 0);
               logger.info('Validação local de fallback falhou após carregar fluxo', {
                 errorCount: formattedErrors.length,
-                hasGlobalErrors: formattedErrors.some(e => !e.nodeIds || e.nodeIds.length === 0),
+                hasGlobalErrors: globalErrors.length > 0,
+                globalErrorCodes: globalErrors.map(e => e.code),
+                errorCodes: formattedErrors.map(e => e.code),
               });
               logger.debug('Detalhes da validação local', {
                 formattedErrors: formattedErrors.map(e => ({
                   code: e.code,
                   message: e.message,
+                  messageUi: e.messageUi,
                   nodeIds: e.nodeIds,
                 })),
               });

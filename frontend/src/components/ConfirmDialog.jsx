@@ -69,14 +69,14 @@ export function ConfirmDialog({
       showCloseButton={!disabled}
     >
       <div className="space-y-4">
-        {/* Mensagem */}
+        {/* Mensagem - sempre deve ter uma mensagem */}
         <div className="flex items-start gap-3">
           <span className="text-3xl flex-shrink-0">{style.icon}</span>
           <div className="flex-1">
             {typeof message === 'string' ? (
-              <p className="text-text-primary whitespace-pre-line">{message}</p>
+              <p className="text-text-primary whitespace-pre-line">{message || 'Tem certeza que deseja continuar?'}</p>
             ) : (
-              message
+              message || <p className="text-text-primary">Tem certeza que deseja continuar?</p>
             )}
           </div>
         </div>
@@ -122,17 +122,34 @@ export function useConfirmDialog() {
   });
   const resolveRef = React.useRef(null);
 
-  const confirm = React.useCallback((options) => {
+  const confirm = React.useCallback(function(options, messageParam) {
     return new Promise((resolve) => {
+      // Suporta API antiga: confirm(title, message) ou nova: confirm({ message, title, ... })
+      let message, title;
+      
+      if (typeof options === 'string') {
+        // API antiga: confirm(title, message)
+        title = options;
+        message = messageParam || 'Tem certeza que deseja continuar?';
+      } else if (options && typeof options === 'object') {
+        // API nova: confirm({ message, title, ... })
+        message = options.message?.trim() || options.message || 'Tem certeza que deseja continuar?';
+        title = options.title || 'Confirmação';
+      } else {
+        // Sem parâmetros: usa mensagem padrão
+        message = 'Tem certeza que deseja continuar?';
+        title = 'Confirmação';
+      }
+
       resolveRef.current = resolve;
       setConfig({
-        title: options.title || 'Confirmação',
-        message: options.message || '',
-        onConfirm: options.onConfirm || null,
-        onCancel: options.onCancel || null,
-        confirmLabel: options.confirmLabel || 'Confirmar',
-        cancelLabel: options.cancelLabel || 'Cancelar',
-        variant: options.variant || 'warning',
+        title: title,
+        message: message,
+        onConfirm: (options && typeof options === 'object' ? options.onConfirm : null) || null,
+        onCancel: (options && typeof options === 'object' ? options.onCancel : null) || null,
+        confirmLabel: (options && typeof options === 'object' ? options.confirmLabel : null) || 'Confirmar',
+        cancelLabel: (options && typeof options === 'object' ? options.cancelLabel : null) || 'Cancelar',
+        variant: (options && typeof options === 'object' ? options.variant : null) || 'warning',
       });
       setIsOpen(true);
     });

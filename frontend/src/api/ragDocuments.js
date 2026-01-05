@@ -133,6 +133,24 @@ export function reindexDocument(documentId) {
 }
 
 /**
+ * Reindexa todos os documentos não indexados.
+ * 
+ * @param {string} [tenantId] - ID do tenant (opcional)
+ * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
+ */
+export function reindexAllNotIndexed(tenantId = null) {
+  const body = tenantId ? { tenantId } : {};
+  
+  return fetchJson('/rag/documents/reindex-all', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+/**
  * Obtém estatísticas de documentos.
  * 
  * @param {string} [tenantId] - ID do tenant
@@ -147,6 +165,38 @@ export function getDocumentsStats(tenantId = null) {
 
   return fetchJson(url, {
     method: 'GET',
+  });
+}
+
+/**
+ * Faz uma pergunta ao sistema RAG e retorna documentos relacionados.
+ * 
+ * @param {string} query - Pergunta do usuário
+ * @param {string} [tenantId] - ID do tenant (opcional)
+ * @param {Object} [options] - Opções (topK, minScore, maxTokens)
+ * @returns {Promise<{success: boolean, response?: string, sources?: Array, confidence?: number, error?: string}>}
+ */
+export function queryRag(query, tenantId = null, options = {}) {
+  if (!query || !query.trim()) {
+    return Promise.reject(new Error('queryRag: query é obrigatório'));
+  }
+
+  const body = {
+    query: query.trim(),
+    ...(tenantId && { tenantId }),
+    options: {
+      topK: options.topK || 6,  // Aumentado de 5 para 6 para melhor cobertura
+      minScore: options.minScore || 0.45,  // Reduzido de 0.5 para 0.45 para melhor taxa de sucesso
+      maxTokens: options.maxTokens || 1000,
+    },
+  };
+
+  return fetchJson('/rag/query', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
   });
 }
 

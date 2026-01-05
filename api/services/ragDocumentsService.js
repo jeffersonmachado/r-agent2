@@ -356,6 +356,107 @@ async function reindexDocument(documentId) {
 }
 
 /**
+ * Reindexa todos os documentos não indexados.
+ * 
+ * @param {string} [tenantId] - ID do tenant (opcional)
+ * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
+ */
+async function reindexAllNotIndexed(tenantId = null) {
+  try {
+    let docs = Array.from(documents.values());
+    
+    // Filtra por tenant se fornecido
+    if (tenantId) {
+      docs = docs.filter(doc => doc.tenantId === tenantId);
+    }
+    
+    // Filtra apenas documentos não indexados
+    const notIndexedDocs = docs.filter(doc => !doc.indexed && doc.status === 'active' && doc.content);
+    
+    if (notIndexedDocs.length === 0) {
+      return {
+        success: true,
+        total: 0,
+        indexed: 0,
+        failed: 0,
+        errors: [],
+      };
+    }
+    
+    let indexed = 0;
+    let failed = 0;
+    const errors = [];
+    
+    logger.info(`[RAGDocuments] Iniciando reindexação em lote de ${notIndexedDocs.length} documentos`);
+    
+    // Verifica se o serviço RAG está disponível antes de começar
+    const ragService = require('./ragService');
+    const serviceUrl = ragService.getRagServiceUrl(tenantId);
+    const isAvailable = await ragService.isRagAvailable(tenantId);
+    if (!isAvailable) {
+      logger.error('[RAGDocuments] Serviço RAG não está disponível', { tenantId, serviceUrl });
+      return {
+        success: false,
+        total: notIndexedDocs.length,
+        indexed: 0,
+        failed: notIndexedDocs.length,
+        errors: [{
+          documentId: 'all',
+          title: 'Serviço RAG indisponível',
+          error: `O serviço RAG não está respondendo. Verifique se está rodando em ${serviceUrl}`,
+        }],
+      };
+    }
+    
+    // Reindexa cada documento
+    for (const doc of notIndexedDocs) {
+      try {
+        const result = await reindexDocument(doc.id);
+        if (result.success) {
+          indexed++;
+          logger.debug(`[RAGDocuments] Documento ${doc.id} reindexado com sucesso`);
+        } else {
+          failed++;
+          errors.push({
+            documentId: doc.id,
+            title: doc.title,
+            error: result.error || 'Erro desconhecido',
+          });
+          logger.warn(`[RAGDocuments] Falha ao reindexar documento ${doc.id}: ${result.error}`);
+        }
+      } catch (error) {
+        failed++;
+        errors.push({
+          documentId: doc.id,
+          title: doc.title,
+          error: error.message || 'Erro desconhecido',
+        });
+        logger.error(`[RAGDocuments] Erro ao reindexar documento ${doc.id}:`, error);
+      }
+    }
+    
+    logger.info(`[RAGDocuments] Reindexação em lote concluída: ${indexed} indexados, ${failed} falharam`);
+    
+    return {
+      success: true,
+      total: notIndexedDocs.length,
+      indexed,
+      failed,
+      errors,
+    };
+  } catch (error) {
+    logger.error('[RAGDocuments] Erro ao reindexar documentos em lote:', error);
+    return {
+      success: false,
+      total: 0,
+      indexed: 0,
+      failed: 0,
+      errors: [{ error: error.message }],
+    };
+  }
+}
+
+/**
  * Obtém estatísticas de documentos.
  * 
  * @param {string} tenantId - ID do tenant (opcional)
@@ -402,6 +503,7 @@ module.exports = {
   updateDocument,
   deleteDocument,
   reindexDocument,
+  reindexAllNotIndexed,
   getDocumentsStats,
   loadDocuments,
 };

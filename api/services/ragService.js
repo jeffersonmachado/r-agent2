@@ -12,9 +12,121 @@ const config = require('../utils/config');
 const logger = require('../utils/logger');
 const nlpService = require('./nlpService');
 
-// URL do serviço Python RAG
-const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000');
-const RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
+// URL padrão do serviço Python RAG
+const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000');
+const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
+
+/**
+ * Obtém a URL do serviço RAG para um tenant específico.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @returns {string} URL do serviço RAG
+ */
+function getRagServiceUrl(tenantId) {
+  if (!tenantId) {
+    return DEFAULT_RAG_SERVICE_URL;
+  }
+  
+  // Verifica se há configuração específica para o tenant
+  const ragConfig = config.get('rag', {});
+  const tenantsConfig = ragConfig.tenants || {};
+  const tenantConfig = tenantsConfig[tenantId];
+  
+  if (tenantConfig && tenantConfig.serviceUrl) {
+    return tenantConfig.serviceUrl;
+  }
+  
+  return DEFAULT_RAG_SERVICE_URL;
+}
+
+/**
+ * Obtém o timeout do serviço RAG para um tenant específico.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @returns {number} Timeout em milissegundos
+ */
+function getRagTimeout(tenantId) {
+  if (!tenantId) {
+    return DEFAULT_RAG_TIMEOUT;
+  }
+  
+  // Verifica se há configuração específica para o tenant
+  const ragConfig = config.get('rag', {});
+  const tenantsConfig = ragConfig.tenants || {};
+  const tenantConfig = tenantsConfig[tenantId];
+  
+  if (tenantConfig && tenantConfig.timeout) {
+    return parseInt(tenantConfig.timeout, 10);
+  }
+  
+  return DEFAULT_RAG_TIMEOUT;
+}
+
+/**
+ * Obtém a configuração de domínios RAG para um tenant específico.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @returns {Object} Configuração de domínios
+ */
+function getRagDomains(tenantId) {
+  const ragConfig = config.get('rag', {});
+  const tenantsConfig = ragConfig.tenants || {};
+  const tenantConfig = tenantsConfig[tenantId];
+  
+  if (tenantConfig && tenantConfig.domains) {
+    return tenantConfig.domains;
+  }
+  
+  // Retorna configuração padrão se não houver específica
+  return {
+    chatbot: {
+      sources: ['knowledge_base', 'product_docs', 'chat_upload'],
+      defaultCategory: 'general',
+      enabled: true,
+    },
+    rpa: {
+      sources: ['knowledge_base', 'product_docs'],
+      defaultCategory: 'rpa',
+      enabled: true,
+    },
+  };
+}
+
+/**
+ * Obtém a configuração de um domínio específico para um tenant.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @param {string} domain - Nome do domínio ('chatbot' ou 'rpa')
+ * @returns {Object|null} Configuração do domínio ou null se não encontrado
+ */
+function getRagDomainConfig(tenantId, domain) {
+  const domains = getRagDomains(tenantId);
+  return domains[domain] || null;
+}
+
+/**
+ * Verifica se um domínio está habilitado para um tenant.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @param {string} domain - Nome do domínio ('chatbot' ou 'rpa')
+ * @returns {boolean} true se habilitado
+ */
+function isRagDomainEnabled(tenantId, domain) {
+  const domainConfig = getRagDomainConfig(tenantId, domain);
+  return domainConfig ? domainConfig.enabled !== false : true;
+}
+
+/**
+ * Obtém as fontes permitidas para um domínio de um tenant.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @param {string} domain - Nome do domínio ('chatbot' ou 'rpa')
+ * @returns {string[]} Array de fontes permitidas
+ */
+function getRagDomainSources(tenantId, domain) {
+  const domainConfig = getRagDomainConfig(tenantId, domain);
+  return domainConfig ? (domainConfig.sources || []) : [];
+}
 
 /**
  * Faz requisição HTTP com timeout.
@@ -24,7 +136,7 @@ const RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout'
  * @param {number} timeout - Timeout em ms
  * @returns {Promise<Response>}
  */
-async function fetchWithTimeout(url, options = {}, timeout = RAG_TIMEOUT) {
+async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -91,8 +203,8 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         category: filters.category || null,
       },
       options: {
-        topK: filters.topK || 5,
-        minScore: filters.minScore || 0.6,
+        topK: filters.topK || 6,  // Aumentado de 5 para 6 para melhor cobertura
+        minScore: filters.minScore || 0.45,  // Reduzido de 0.5 para 0.45 para melhor captura de chunks relevantes
         maxTokens: filters.maxTokens || 1000,
       },
     };
@@ -103,8 +215,11 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       filters: requestBody.filters,
     });
 
+    const serviceUrl = getRagServiceUrl(tenantId);
+    const timeout = getRagTimeout(tenantId);
+    
     const response = await fetchWithTimeout(
-      `${RAG_SERVICE_URL}/rag/query`,
+      `${serviceUrl}/rag/query`,
       {
         method: 'POST',
         headers: {
@@ -112,7 +227,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         },
         body: JSON.stringify(requestBody),
       },
-      RAG_TIMEOUT
+      timeout
     );
 
     if (!response.ok) {
@@ -184,8 +299,14 @@ async function indexDocument(document, tenantId) {
       title: document.title,
     });
 
+    const serviceUrl = getRagServiceUrl(tenantId);
+    const timeout = getRagTimeout(tenantId);
+    const url = `${serviceUrl}/rag/index`;
+    
+    logger.debug('[RAGService] Chamando serviço RAG', { url, documentId: document.id, tenantId });
+
     const response = await fetchWithTimeout(
-      `${RAG_SERVICE_URL}/rag/index`,
+      url,
       {
         method: 'POST',
         headers: {
@@ -193,12 +314,25 @@ async function indexDocument(document, tenantId) {
         },
         body: JSON.stringify(requestBody),
       },
-      RAG_TIMEOUT * 2 // Indexação pode demorar mais
+      timeout * 2 // Indexação pode demorar mais
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`RAG service error: ${response.status} ${errorText}`);
+      const errorMessage = errorText || response.statusText || 'Erro desconhecido';
+      logger.error('[RAGService] Erro na resposta do serviço RAG', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        url,
+        documentId: document.id,
+      });
+      
+      if (response.status === 404) {
+        throw new Error(`Serviço RAG não encontrado. Verifique se o serviço está rodando em ${serviceUrl}. Erro: ${errorMessage}`);
+      }
+      
+      throw new Error(`RAG service error: ${response.status} ${errorMessage}`);
     }
 
     const result = await response.json();
@@ -228,10 +362,11 @@ async function indexDocument(document, tenantId) {
  *
  * @returns {Promise<boolean>}
  */
-async function isRagAvailable() {
+async function isRagAvailable(tenantId = null) {
   try {
+    const serviceUrl = getRagServiceUrl(tenantId);
     const response = await fetchWithTimeout(
-      `${RAG_SERVICE_URL}/rag/health`,
+      `${serviceUrl}/rag/health`,
       {
         method: 'GET',
       },
@@ -256,5 +391,11 @@ module.exports = {
   queryRag,
   indexDocument,
   isRagAvailable,
+  getRagServiceUrl,
+  getRagTimeout,
+  getRagDomains,
+  getRagDomainConfig,
+  isRagDomainEnabled,
+  getRagDomainSources,
 };
 

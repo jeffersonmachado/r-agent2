@@ -150,7 +150,7 @@ async function aiNodeHandler(node, state, input, deps = null) {
 
   // Verifica se RAG está habilitado e deve ser usado
   const useRag = config.useRag !== false && ragService && configService;
-  const ragMinConfidence = config.ragMinConfidence || 0.6;
+  const ragMinConfidence = config.ragMinConfidence || 0.45;  // Reduzido de 0.5 para 0.45 para melhorar taxa de sucesso
   const ragFallbackToDirect = config.ragFallbackToDirect !== false;
   const ragEnabled = configService && configService.get('rag.enabled', false);
 
@@ -177,7 +177,7 @@ async function aiNodeHandler(node, state, input, deps = null) {
         agentId: state.metadata?.agentId || null,
         productId: state.metadata?.productId || null,
         clientId: state.metadata?.clientId || null,
-        topK: config.ragTopK || 5,
+        topK: config.ragTopK || 6,  // Aumentado de 5 para 6 para melhor cobertura
         minScore: ragMinConfidence,
         maxTokens: config.ragMaxTokens || 1000,
       };

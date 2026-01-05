@@ -117,6 +117,8 @@ function addUiMessage(error) {
         return 'O nó start não pode ter entradas. Deve ser o único ponto de entrada do fluxo.';
       case 'END_HAS_OUTPUTS':
         return 'O nó end não pode ter saídas. Nós end devem ser folhas do fluxo (sem campo "next").';
+      case 'FLOW_WITHOUT_ACTIONS':
+        return 'O fluxo deve ter pelo menos um nó de ação (message, user_input, ai_task, set_variable, handoff, ai, fallback, api, options, etc.). Fluxos apenas com nós estruturais (start, end, router) são inválidos.';
       
       // Nó Message
       case 'MESSAGE_MISSING_CONFIG':
@@ -721,6 +723,21 @@ function validateSemanticRules(flow) {
         severity: 'error',
       }));
     }
+  }
+
+  // Valida que o fluxo tem pelo menos um nó de ação
+  // Nós estruturais: start, end, router (apenas roteiam, não executam ações)
+  // Nós de ação: todos os outros tipos (message, user_input, ai_task, set_variable, handoff, ai, fallback, api, options, etc.)
+  const structuralNodeTypes = ['start', 'end', 'router'];
+  const actionNodes = (flow.nodes || []).filter(n => n && n.type && !structuralNodeTypes.includes(n.type));
+  
+  if (actionNodes.length === 0) {
+    errors.push(addUiMessage({
+      code: 'FLOW_WITHOUT_ACTIONS',
+      message: 'O fluxo deve ter pelo menos um nó de ação (message, user_input, ai_task, set_variable, handoff, ai, fallback, api, options, etc.). Fluxos apenas com nós estruturais (start, end, router) são inválidos.',
+      nodeIds: [],
+      severity: 'error',
+    }));
   }
 
   return errors;

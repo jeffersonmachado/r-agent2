@@ -99,6 +99,17 @@ async def index_document(request: IndexRequest):
         vector_store = get_vector_store(document.tenantId)
         vector_store.add_chunks(chunks, embeddings)
         
+        # Validação: verifica se os chunks foram realmente adicionados
+        chunks_added = 0
+        for chunk in chunks:
+            if chunk.id in vector_store.chunks:
+                chunks_added += 1
+        
+        if chunks_added < len(chunks):
+            logger.warning(f"Alguns chunks não foram adicionados: {chunks_added}/{len(chunks)} para documento {document.id}")
+        
+        logger.info(f"Documento indexado: {document.id}, chunks criados: {len(chunks)}, chunks adicionados: {chunks_added}")
+        
         return IndexResponse(
             success=True,
             documentId=document.id,

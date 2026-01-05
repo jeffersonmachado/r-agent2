@@ -4,17 +4,14 @@
       "id": "dept-001",
       "name": "Atendimento Geral",
       "description": "Departamento de atendimento geral ao cliente",
-      "agentIds": [
-        "agent-001",
-        "agent-002"
-      ],
+      "agentIds": [],
       "queueNames": [
         "suporte"
       ],
       "color": "#3B82F6",
       "active": true,
-      "createdAt": "2026-01-02T15:39:39.507Z",
-      "updatedAt": "2026-01-02T15:39:39.507Z",
+      "createdAt": "2026-01-05T00:54:55.827Z",
+      "updatedAt": "2026-01-05T00:54:55.827Z",
       "createdBy": null
     },
     {
@@ -27,8 +24,8 @@
       ],
       "color": "#10B981",
       "active": true,
-      "createdAt": "2026-01-02T15:39:39.507Z",
-      "updatedAt": "2026-01-02T15:39:39.507Z",
+      "createdAt": "2026-01-05T00:54:55.827Z",
+      "updatedAt": "2026-01-05T00:54:55.827Z",
       "createdBy": null
     },
     {
@@ -41,24 +38,10 @@
       ],
       "color": "#F59E0B",
       "active": true,
-      "createdAt": "2026-01-02T15:39:39.507Z",
-      "updatedAt": "2026-01-02T15:39:39.507Z",
-      "createdBy": null
-    },
-    {
-      "id": "dept-004",
-      "name": "Financeiro",
-      "description": "Departamento financeiro",
-      "agentIds": [],
-      "queueNames": [
-        "financeiro"
-      ],
-      "color": "#EF4444",
-      "active": true,
-      "createdAt": "2026-01-02T15:39:39.507Z",
-      "updatedAt": "2026-01-02T15:39:39.507Z",
+      "createdAt": "2026-01-05T00:54:55.827Z",
+      "updatedAt": "2026-01-05T00:54:55.827Z",
       "createdBy": null
     }
   ],
-  "savedAt": "2026-01-02T15:39:39.507Z"
+  "savedAt": "2026-01-05T00:54:55.827Z"
 }
