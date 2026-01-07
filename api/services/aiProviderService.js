@@ -363,7 +363,6 @@ function initializeAiProviders() {
     }
 
     // Configura providers por tenant
-    const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
     const aiConfig = config.get('ai', {});
     const tenantConfig = aiConfig.tenants || {};
 
@@ -371,11 +370,8 @@ function initializeAiProviders() {
     const defaultProvider = aiConfig.defaultProvider || 'fallback';
     const defaultFallback = aiConfig.defaultFallback || 'fallback';
 
-    // Configura tenant padrão
-    setTenantAiConfig(defaultTenantId, {
-      primary: defaultProvider,
-      fallback: defaultFallback,
-    });
+    // Removido configuração padrão para 'tenant-demo'
+    // Cada tenant deve ter sua configuração explícita
 
     // Configura tenants específicos
     for (const [tenantId, tenantAiConfig] of Object.entries(tenantConfig)) {

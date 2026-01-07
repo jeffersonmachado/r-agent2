@@ -1,21 +1,11 @@
 [
   {
-    "token": "56c1863309f3f6a66b0dfa0b39f683e0d52aeb07405072f090cba3367df3a0a6",
-    "agentId": "admin-001",
-    "username": "admin",
-    "createdAt": "2026-01-07T15:45:38.523Z",
-    "expiresAt": "2026-01-08T15:45:38.523Z",
-    "lastActivityAt": "2026-01-07T15:54:08.490Z",
-    "ipAddress": "::1",
-    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
-  },
-  {
-    "token": "6dbd4caf7eb3f81e1bb731d2c2e7496c21f1529794c9a2a681d167c2219b3a4f",
-    "agentId": "admin-001",
-    "username": "admin",
-    "createdAt": "2026-01-07T15:54:27.103Z",
-    "expiresAt": "2026-01-08T15:54:27.103Z",
-    "lastActivityAt": "2026-01-07T15:54:57.316Z",
+    "token": "a2cdeb784b7c13e80a1508580dd3b09be8869055cc3060b4f69fb21124c188f1",
+    "agentId": "agent-1767810159923-o6zc65w",
+    "username": "systemadmin",
+    "createdAt": "2026-01-07T23:12:14.012Z",
+    "expiresAt": "2026-01-08T23:12:14.012Z",
+    "lastActivityAt": "2026-01-07T23:15:59.287Z",
     "ipAddress": "::1",
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
   }

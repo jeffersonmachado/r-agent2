@@ -72,24 +72,50 @@ describe('rbacService', () => {
     });
 
     test('deve verificar permissões específicas de cada role', () => {
+      const owner = { role: 'owner' };
       const admin = { role: 'admin' };
-      const supervisor = { role: 'supervisor' };
-      const agent = { role: 'agent' };
+      const manager = { role: 'manager' };
+      const operator = { role: 'operator' };
+      const auditor = { role: 'auditor' };
+      const readonly = { role: 'readonly' };
+      const supervisor = { role: 'supervisor' }; // Role antigo
+      const agent = { role: 'agent' }; // Role antigo
 
-      // Admin tem todas as permissões
+      // Owner tem todas as permissões + gestão de tenant
+      expect(hasPermission(owner, 'tenant', 'manage')).toBe(true);
+      expect(hasPermission(owner, 'tickets', 'list_all')).toBe(true);
+      expect(hasPermission(owner, 'rag', 'train')).toBe(true);
+
+      // Admin tem todas as permissões (exceto gestão de tenant)
       expect(hasPermission(admin, 'tickets', 'list_all')).toBe(true);
       expect(hasPermission(admin, 'queues', 'admin')).toBe(true);
       expect(hasPermission(admin, 'rag', 'admin')).toBe(true);
 
-      // Supervisor tem algumas permissões
-      expect(hasPermission(supervisor, 'tickets', 'list_all')).toBe(true);
-      expect(hasPermission(supervisor, 'queues', 'admin')).toBe(false);
-      expect(hasPermission(supervisor, 'rag', 'admin')).toBe(false);
+      // Manager (equivalente a supervisor antigo)
+      expect(hasPermission(manager, 'tickets', 'list_all')).toBe(true);
+      expect(hasPermission(manager, 'queues', 'admin')).toBe(false);
+      expect(hasPermission(manager, 'rag', 'admin')).toBe(false);
 
-      // Agent tem permissões limitadas
-      expect(hasPermission(agent, 'tickets', 'list_all')).toBe(false);
-      expect(hasPermission(agent, 'queues', 'admin')).toBe(false);
-      expect(hasPermission(agent, 'rag', 'admin')).toBe(false);
+      // Operator (equivalente a agent antigo)
+      expect(hasPermission(operator, 'tickets', 'list_all')).toBe(false);
+      expect(hasPermission(operator, 'queues', 'admin')).toBe(false);
+      expect(hasPermission(operator, 'rag', 'admin')).toBe(false);
+      expect(hasPermission(operator, 'rag', 'query')).toBe(true);
+
+      // Auditor - apenas leitura e auditoria
+      expect(hasPermission(auditor, 'audit', 'read')).toBe(true);
+      expect(hasPermission(auditor, 'audit', 'export')).toBe(true);
+      expect(hasPermission(auditor, 'tickets', 'create')).toBe(false);
+
+      // Readonly - apenas leitura básica
+      expect(hasPermission(readonly, 'tickets', 'read')).toBe(true);
+      expect(hasPermission(readonly, 'tickets', 'create')).toBe(false);
+
+      // Supervisor (role antigo) -> migra para manager
+      expect(hasPermission(supervisor, 'tickets', 'list_all')).toBe(true);
+
+      // Agent (role antigo) -> migra para operator
+      expect(hasPermission(agent, 'tickets', 'read')).toBe(true);
       expect(hasPermission(agent, 'rag', 'query')).toBe(true);
     });
 

@@ -55,7 +55,10 @@ async function resolveDependencies(flow, tenantId) {
   }
 
   if (!tenantId) {
-    tenantId = config.get('api.defaultTenantId', 'tenant-demo');
+    // Tenant deve ser fornecido explicitamente - não há mais fallback
+    if (!tenantId) {
+      throw new Error('Tenant ID é obrigatório para resolver dependências RPA');
+    }
   }
 
   logger.info('[RpaDependencyResolver] Iniciando resolução de dependências', {

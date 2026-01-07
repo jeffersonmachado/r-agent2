@@ -27,9 +27,15 @@ const config = require('../utils/config');
  * @property {string} email - Email do agente
  * @property {string} passwordHash - Hash da senha (bcrypt-like, usando SHA256 + salt)
  * @property {string} salt - Salt para hash da senha
- * @property {string} role - Papel do agente (admin, supervisor, agent)
+ * @property {string} role - Papel do agente (owner, admin, manager, operator, auditor, readonly)
  * @property {string} name - Nome completo do agente
  * @property {boolean} active - Se o agente está ativo
+ * @property {string} status - Status do usuário (pending, active, suspended, inactive)
+ * @property {boolean} mfaEnabled - Se MFA está habilitado
+ * @property {string|null} invitationToken - Token de convite (se pendente)
+ * @property {string|null} invitationExpiresAt - Data de expiração do convite
+ * @property {string|null} passwordResetToken - Token de reset de senha
+ * @property {string|null} passwordResetExpiresAt - Data de expiração do reset
  * @property {string} createdAt - Data de criação (ISO string)
  * @property {string} updatedAt - Data da última atualização (ISO string)
  * @property {string|null} lastLoginAt - Data do último login (ISO string)
@@ -144,25 +150,61 @@ function loadAgentsFromFile() {
 
     const data = fs.readFileSync(agentsFile, 'utf8');
     const agentsArray = JSON.parse(data);
-    const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
     let migrated = 0;
 
     if (Array.isArray(agentsArray)) {
       agents.clear();
       for (const agent of agentsArray) {
         if (agent && agent.id && agent.username) {
-          // Migração: adiciona tenantId se não existir
+          // Migração: adiciona tenantId se não existir (agora requerido - não há mais fallback)
           if (!agent.tenantId || typeof agent.tenantId !== 'string' || agent.tenantId.trim() === '') {
-            agent.tenantId = defaultTenantId;
+            // Agente sem tenantId não pode ser migrado - será ignorado ou requer correção manual
+            logger.warn(`[AuthService] Agente ${agent.id} (${agent.username}) sem tenantId - requer correção manual`);
+            continue; // Pula agente sem tenantId
+          }
+          
+          // Migração: adiciona campos SaaS se não existirem
+          if (!agent.status) {
+            agent.status = agent.active ? 'active' : 'inactive';
             migrated++;
           }
+          if (agent.mfaEnabled === undefined) {
+            agent.mfaEnabled = false;
+            migrated++;
+          }
+          if (!agent.invitationToken) {
+            agent.invitationToken = null;
+            migrated++;
+          }
+          if (!agent.invitationExpiresAt) {
+            agent.invitationExpiresAt = null;
+            migrated++;
+          }
+          if (!agent.passwordResetToken) {
+            agent.passwordResetToken = null;
+            migrated++;
+          }
+          if (!agent.passwordResetExpiresAt) {
+            agent.passwordResetExpiresAt = null;
+            migrated++;
+          }
+          
+          // Migra roles antigos
+          if (agent.role === 'supervisor') {
+            agent.role = 'manager';
+            migrated++;
+          } else if (agent.role === 'agent') {
+            agent.role = 'operator';
+            migrated++;
+          }
+          
           agents.set(agent.id, agent);
         }
       }
       logger.info(`[AuthService] Agentes carregados: ${agents.size} agente(s)`);
       if (migrated > 0) {
-        logger.info(`[AuthService] ${migrated} agente(s) migrado(s) para tenant padrão: ${defaultTenantId}`);
-        saveAgentsToFile(); // Salva com tenantId
+        logger.info(`[AuthService] ${migrated} campo(s) migrado(s) para formato SaaS`);
+        saveAgentsToFile(); // Salva com novos campos
       }
     }
   } catch (err) {
@@ -227,18 +269,30 @@ function createDefaultAdmin() {
 
   const { hash, salt } = hashPassword('admin123');
   const now = new Date().toISOString();
-  const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
+  // Removido defaultTenantId - admin deve ser criado com tenantId explícito
+  // Se não fornecido, retorna erro
+  const tenantId = config.get('api.defaultTenantId');
+  if (!tenantId) {
+    logger.warn('[AuthService] Não é possível criar admin padrão sem tenantId configurado');
+    return { success: false, error: 'TenantId é obrigatório para criar admin padrão' };
+  }
 
   const admin = {
     id: 'admin-001',
-    tenantId: defaultTenantId,
+    tenantId: tenantId,
     username: 'admin',
     email: 'admin@example.com',
     passwordHash: hash,
     salt,
-    role: 'admin',
+    role: 'owner', // Owner para o primeiro admin
     name: 'Administrador',
     active: true,
+    status: 'active',
+    mfaEnabled: false,
+    invitationToken: null,
+    invitationExpiresAt: null,
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
     createdAt: now,
     updatedAt: now,
     lastLoginAt: null,
@@ -246,7 +300,7 @@ function createDefaultAdmin() {
 
   agents.set(admin.id, admin);
   saveAgentsToFile();
-  logger.info(`[AuthService] Agente admin padrão criado (username: admin, password: admin123, tenantId: ${defaultTenantId})`);
+  logger.info(`[AuthService] Agente admin padrão criado (username: admin, password: admin123, tenantId: ${tenantId})`);
 }
 
 // Carrega dados ao iniciar o módulo
@@ -320,8 +374,17 @@ function createAgent({ tenantId, username, email, password, role = 'agent', name
     return { success: false, error: 'Senha deve ter pelo menos 6 caracteres' };
   }
 
-  if (!['admin', 'supervisor', 'agent'].includes(role)) {
-    return { success: false, error: 'Papel inválido. Use: admin, supervisor ou agent' };
+  // Valida role (suporta roles antigos e novos)
+  const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly', 'supervisor', 'agent'];
+  if (!validRoles.includes(role)) {
+    return { success: false, error: `Papel inválido. Use: ${validRoles.join(', ')}` };
+  }
+
+  // Migra roles antigos para novos
+  if (role === 'supervisor') {
+    role = 'manager'; // supervisor -> manager
+  } else if (role === 'agent') {
+    role = 'operator'; // agent -> operator
   }
 
   // Verifica se username já existe no mesmo tenant
@@ -349,6 +412,12 @@ function createAgent({ tenantId, username, email, password, role = 'agent', name
     role: role.trim(),
     name: name || username.trim(),
     active: true,
+    status: 'active',
+    mfaEnabled: false,
+    invitationToken: null,
+    invitationExpiresAt: null,
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
     createdAt: now,
     updatedAt: now,
     lastLoginAt: null,
@@ -680,10 +749,31 @@ function updateAgent(agentId, updates) {
   }
 
   if (updates.role !== undefined) {
-    if (!['admin', 'supervisor', 'agent'].includes(updates.role)) {
-      return { success: false, error: 'Papel inválido' };
+    const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly', 'supervisor', 'agent'];
+    if (!validRoles.includes(updates.role)) {
+      return { success: false, error: `Papel inválido. Use: ${validRoles.join(', ')}` };
     }
-    agent.role = updates.role;
+    // Migra roles antigos
+    let newRole = updates.role;
+    if (newRole === 'supervisor') {
+      newRole = 'manager';
+    } else if (newRole === 'agent') {
+      newRole = 'operator';
+    }
+    agent.role = newRole;
+  }
+
+  if (updates.status !== undefined) {
+    const validStatuses = ['pending', 'active', 'suspended', 'inactive'];
+    if (!validStatuses.includes(updates.status)) {
+      return { success: false, error: `Status inválido. Use: ${validStatuses.join(', ')}` };
+    }
+    agent.status = updates.status;
+    agent.active = updates.status === 'active';
+  }
+
+  if (updates.mfaEnabled !== undefined) {
+    agent.mfaEnabled = Boolean(updates.mfaEnabled);
   }
 
   if (updates.active !== undefined) {
@@ -821,7 +911,7 @@ function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown
       username: rpaUsername,
       email: 'rpa@automation.local',
       password: crypto.randomBytes(32).toString('hex'), // Senha aleatória (não será usada)
-      role: 'admin',
+      role: 'operator', // RPA Automation usa role operator
       name: 'RPA Automation',
     });
     
@@ -868,6 +958,244 @@ function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown
   return { success: true, token, agent: agentSafe };
 }
 
+/**
+ * Cria um convite para um novo usuário.
+ *
+ * @param {Object} params
+ * @param {string} params.tenantId - ID do tenant
+ * @param {string} params.email - Email do usuário
+ * @param {string} params.role - Papel (owner, admin, manager, operator, auditor, readonly)
+ * @param {string} [params.name] - Nome do usuário
+ * @returns {{success: boolean, invitationToken?: string, error?: string}}
+ */
+function inviteUser({ tenantId, email, role = 'operator', name }) {
+  if (!tenantId || !email) {
+    return { success: false, error: 'tenantId e email são obrigatórios' };
+  }
+
+  // Verifica se email já existe no tenant
+  for (const agent of agents.values()) {
+    if (agent.tenantId === tenantId && agent.email.toLowerCase() === email.toLowerCase()) {
+      return { success: false, error: 'Email já existe neste tenant' };
+    }
+  }
+
+  // Gera token de convite
+  const invitationToken = generateToken();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+  // Cria agente com status pending
+  const agentId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const agent = {
+    id: agentId,
+    tenantId: tenantId.trim(),
+    username: email.split('@')[0] + '-' + Date.now().toString(36).slice(2, 6), // Username temporário
+    email: email.trim().toLowerCase(),
+    passwordHash: '', // Será definido quando aceitar convite
+    salt: '',
+    role: role.trim(),
+    name: name || email.split('@')[0],
+    active: false,
+    status: 'pending',
+    mfaEnabled: false,
+    invitationToken,
+    invitationExpiresAt: expiresAt.toISOString(),
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    lastLoginAt: null,
+  };
+
+  agents.set(agentId, agent);
+  saveAgentsToFile();
+
+  logger.info(`[AuthService] Convite criado: ${email} (${tenantId})`);
+
+  return { success: true, invitationToken, agentId };
+}
+
+/**
+ * Aceita convite e define senha.
+ *
+ * @param {string} invitationToken - Token do convite
+ * @param {string} password - Nova senha
+ * @param {string} username - Nome de usuário escolhido
+ * @returns {{success: boolean, agent?: Agent, token?: string, error?: string}}
+ */
+function acceptInvitation(invitationToken, password, username) {
+  if (!invitationToken || !password || !username) {
+    return { success: false, error: 'Token, senha e username são obrigatórios' };
+  }
+
+  // Busca agente pelo token
+  let agent = null;
+  for (const a of agents.values()) {
+    if (a.invitationToken === invitationToken) {
+      agent = a;
+      break;
+    }
+  }
+
+  if (!agent) {
+    return { success: false, error: 'Convite inválido' };
+  }
+
+  // Verifica se expirou
+  if (agent.invitationExpiresAt) {
+    const expiresAt = new Date(agent.invitationExpiresAt);
+    if (new Date() > expiresAt) {
+      return { success: false, error: 'Convite expirado' };
+    }
+  }
+
+  // Verifica se username já existe no tenant
+  for (const a of agents.values()) {
+    if (a.tenantId === agent.tenantId && a.id !== agent.id && a.username.toLowerCase() === username.toLowerCase()) {
+      return { success: false, error: 'Username já existe neste tenant' };
+    }
+  }
+
+  // Define senha
+  const { hash, salt } = hashPassword(password);
+  agent.passwordHash = hash;
+  agent.salt = salt;
+  agent.username = username.trim();
+  agent.status = 'active';
+  agent.active = true;
+  agent.invitationToken = null;
+  agent.invitationExpiresAt = null;
+  agent.updatedAt = new Date().toISOString();
+
+  agents.set(agent.id, agent);
+  saveAgentsToFile();
+
+  // Cria sessão
+  const token = generateToken();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + TOKEN_EXPIRATION_HOURS * 60 * 60 * 1000);
+
+  const session = {
+    token,
+    agentId: agent.id,
+    username: agent.username,
+    createdAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    lastActivityAt: now.toISOString(),
+    ipAddress: 'unknown',
+    userAgent: 'unknown',
+  };
+
+  sessions.set(token, session);
+  saveSessionsToFile();
+
+  const { passwordHash, salt: _, ...agentSafe } = agent;
+
+  logger.info(`[AuthService] Convite aceito: ${agent.email} (${agent.id})`);
+
+  return { success: true, agent: agentSafe, token };
+}
+
+/**
+ * Solicita reset de senha.
+ *
+ * @param {string} email - Email do usuário
+ * @returns {{success: boolean, resetToken?: string, error?: string}}
+ */
+function requestPasswordReset(email) {
+  if (!email) {
+    return { success: false, error: 'Email é obrigatório' };
+  }
+
+  // Busca agente por email
+  let agent = null;
+  for (const a of agents.values()) {
+    if (a.email.toLowerCase() === email.toLowerCase()) {
+      agent = a;
+      break;
+    }
+  }
+
+  if (!agent) {
+    // Por segurança, não revela se email existe ou não
+    return { success: true, message: 'Se o email existir, um link de reset será enviado' };
+  }
+
+  // Gera token de reset
+  const resetToken = generateToken();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
+
+  agent.passwordResetToken = resetToken;
+  agent.passwordResetExpiresAt = expiresAt.toISOString();
+  agent.updatedAt = now.toISOString();
+
+  agents.set(agent.id, agent);
+  saveAgentsToFile();
+
+  logger.info(`[AuthService] Reset de senha solicitado: ${email}`);
+
+  // TODO: Enviar email com link de reset
+  return { success: true, resetToken, message: 'Link de reset enviado por email' };
+}
+
+/**
+ * Reseta senha usando token.
+ *
+ * @param {string} resetToken - Token de reset
+ * @param {string} newPassword - Nova senha
+ * @returns {{success: boolean, error?: string}}
+ */
+function resetPassword(resetToken, newPassword) {
+  if (!resetToken || !newPassword) {
+    return { success: false, error: 'Token e nova senha são obrigatórios' };
+  }
+
+  if (newPassword.length < 6) {
+    return { success: false, error: 'Senha deve ter pelo menos 6 caracteres' };
+  }
+
+  // Busca agente pelo token
+  let agent = null;
+  for (const a of agents.values()) {
+    if (a.passwordResetToken === resetToken) {
+      agent = a;
+      break;
+    }
+  }
+
+  if (!agent) {
+    return { success: false, error: 'Token de reset inválido' };
+  }
+
+  // Verifica se expirou
+  if (agent.passwordResetExpiresAt) {
+    const expiresAt = new Date(agent.passwordResetExpiresAt);
+    if (new Date() > expiresAt) {
+      return { success: false, error: 'Token de reset expirado' };
+    }
+  }
+
+  // Define nova senha
+  const { hash, salt } = hashPassword(newPassword);
+  agent.passwordHash = hash;
+  agent.salt = salt;
+  agent.passwordResetToken = null;
+  agent.passwordResetExpiresAt = null;
+  agent.updatedAt = new Date().toISOString();
+
+  agents.set(agent.id, agent);
+  saveAgentsToFile();
+
+  // Remove todas as sessões do agente (força novo login)
+  logoutAllSessions(agent.id);
+
+  logger.info(`[AuthService] Senha resetada: ${agent.email} (${agent.id})`);
+
+  return { success: true };
+}
+
 module.exports = {
   createAgent,
   login,
@@ -879,6 +1207,10 @@ module.exports = {
   getAgent,
   updateAgent,
   deleteAgent,
+  inviteUser,
+  acceptInvitation,
+  requestPasswordReset,
+  resetPassword,
   // Funções internas para testes
   _internal: {
     hashPassword,

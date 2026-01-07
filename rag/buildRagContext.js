@@ -48,7 +48,7 @@ function loadRagContract() {
  * @returns {Promise<{chunks: Array, sources: Array, success: boolean, error?: string}>}
  */
 async function buildRagContext(executionId, payload, options = {}) {
-  const tenantId = options.tenantId || 'tenant-demo';
+  const tenantId = options.tenantId; // Tenant deve ser fornecido explicitamente
   const useRag = options.useRag !== false && payload.useRag !== false;
   
   // Se RAG não está habilitado, retorna vazio mas sucesso

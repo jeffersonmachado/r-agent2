@@ -103,7 +103,7 @@ async function fetchRagContext({ executionId, tenantId, categories, query }) {
     throw new Error('Contrato RAG exige executionId, mas não foi fornecido');
   }
   
-  const tenant = tenantId || 'tenant-demo';
+  const tenant = tenantId; // Tenant deve ser fornecido explicitamente
   const cats = categories || inferCategories({ description: query });
   const minChunks = contract.rag?.grounding?.minChunks || 3;
   const mandatoryWhenEnabled = contract.rag?.grounding?.mandatoryWhenEnabled !== false;

@@ -35,6 +35,7 @@ export function TenantsPage() {
     site: '',
     ramo_atividade: '',
     objetivo: '',
+    plan: 'trial',
     active: true,
   });
   const [contextFormData, setContextFormData] = useState({
@@ -47,6 +48,7 @@ export function TenantsPage() {
   const [filters, setFilters] = useState({
     search: '',
     status: '',
+    plan: '',
   });
 
   const canManageTenants = currentAgent?.role === 'admin';
@@ -106,10 +108,16 @@ export function TenantsPage() {
 
     if (filters.status) {
       filtered = filtered.filter((tenant) => {
-        if (filters.status === 'active') return tenant.active === true;
-        if (filters.status === 'inactive') return tenant.active === false;
+        if (filters.status === 'active') return tenant.status === 'active' || tenant.active === true;
+        if (filters.status === 'suspended') return tenant.status === 'suspended';
+        if (filters.status === 'trial') return tenant.status === 'trial';
+        if (filters.status === 'terminated') return tenant.status === 'terminated';
         return true;
       });
+    }
+
+    if (filters.plan) {
+      filtered = filtered.filter((tenant) => tenant.plan === filters.plan);
     }
 
     return filtered;
@@ -120,7 +128,7 @@ export function TenantsPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ search: '', status: '' });
+    setFilters({ search: '', status: '', plan: '' });
   };
 
   const resetForm = () => {
@@ -129,6 +137,7 @@ export function TenantsPage() {
       site: '',
       ramo_atividade: '',
       objetivo: '',
+      plan: 'trial',
       active: true,
     });
     setEditingTenant(null);
@@ -145,6 +154,7 @@ export function TenantsPage() {
       site: tenant.site || '',
       ramo_atividade: tenant.ramo_atividade || '',
       objetivo: tenant.objetivo || '',
+      plan: tenant.plan || 'trial',
       active: tenant.active !== false,
     });
     setEditingTenant(tenant);
@@ -286,7 +296,7 @@ export function TenantsPage() {
           <span>🔍</span>
           <span>Filtros</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div>
             <label className="block mb-2 text-sm font-medium text-text-primary">
               Buscar
@@ -310,8 +320,27 @@ export function TenantsPage() {
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
             >
               <option value="">Todos</option>
+              <option value="trial">Trial</option>
               <option value="active">Ativo</option>
-              <option value="inactive">Inativo</option>
+              <option value="suspended">Suspenso</option>
+              <option value="terminated">Encerrado</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">
+              Plano
+            </label>
+            <select
+              value={filters.plan}
+              onChange={(e) => handleFilterChange('plan', e.target.value)}
+              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
+            >
+              <option value="">Todos</option>
+              <option value="free">Free</option>
+              <option value="trial">Trial</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
             </select>
           </div>
 
@@ -320,7 +349,7 @@ export function TenantsPage() {
               onClick={clearFilters}
               variant="secondary"
               className="w-full"
-              disabled={!filters.search && !filters.status}
+              disabled={!filters.search && !filters.status && !filters.plan}
             >
               Limpar Filtros
             </Button>
@@ -414,6 +443,24 @@ export function TenantsPage() {
                   className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all resize-none"
                 />
                 <p className="mt-1 text-xs text-text-secondary">Objetivo estratégico do cliente com o uso da plataforma</p>
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-medium text-text-primary">
+                  Plano *
+                </label>
+                <select
+                  value={formData.plan}
+                  onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
+                >
+                  <option value="free">Free</option>
+                  <option value="trial">Trial (14 dias)</option>
+                  <option value="pro">Pro</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+                <p className="mt-1 text-xs text-text-secondary">Plano inicial do tenant</p>
               </div>
 
               <div>
@@ -556,6 +603,9 @@ export function TenantsPage() {
                   Ramo de Atividade
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                  Plano
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
                   Status
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">
@@ -584,15 +634,35 @@ export function TenantsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${
-                      tenant.active 
-                        ? 'bg-status-success/20 text-status-success border border-status-success/30' 
-                        : 'bg-status-error/20 text-status-error border border-status-error/30'
+                      tenant.plan === 'enterprise' 
+                        ? 'bg-purple-500/20 text-purple-500 border border-purple-500/30'
+                        : tenant.plan === 'pro'
+                        ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+                        : tenant.plan === 'trial'
+                        ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
+                        : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
                     }`}>
-                      {tenant.active ? 'Ativo' : 'Inativo'}
+                      {tenant.plan ? tenant.plan.toUpperCase() : 'TRIAL'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${
+                      tenant.status === 'active' || (tenant.active && !tenant.status)
+                        ? 'bg-status-success/20 text-status-success border border-status-success/30' 
+                        : tenant.status === 'suspended'
+                        ? 'bg-status-error/20 text-status-error border border-status-error/30'
+                        : tenant.status === 'trial'
+                        ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
+                        : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
+                    }`}>
+                      {tenant.status === 'trial' ? 'Trial' : 
+                       tenant.status === 'suspended' ? 'Suspenso' :
+                       tenant.status === 'terminated' ? 'Encerrado' :
+                       tenant.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-2 justify-end flex-wrap">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -606,6 +676,67 @@ export function TenantsPage() {
                         onClick={() => handleEditContext(tenant)}
                       >
                         Contexto
+                      </Button>
+                      {tenant.status === 'suspended' ? (
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await tenantsApi.reactivateTenant(tenant.id);
+                              showToast('Tenant reativado com sucesso', 'success');
+                              await loadTenants();
+                            } catch (err) {
+                              showToast(err.body?.message || 'Erro ao reativar tenant', 'error');
+                            }
+                          }}
+                        >
+                          Reativar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="warning"
+                          size="sm"
+                          onClick={async () => {
+                            const confirmed = await confirm({
+                              title: 'Suspender Tenant',
+                              message: `Tem certeza que deseja suspender o tenant "${tenant.name}"?`,
+                              confirmLabel: 'Suspender',
+                              cancelLabel: 'Cancelar',
+                              variant: 'warning',
+                            });
+                            if (confirmed) {
+                              try {
+                                await tenantsApi.suspendTenant(tenant.id);
+                                showToast('Tenant suspenso com sucesso', 'success');
+                                await loadTenants();
+                              } catch (err) {
+                                showToast(err.body?.message || 'Erro ao suspender tenant', 'error');
+                              }
+                            }
+                          }}
+                        >
+                          Suspender
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          // TODO: Abrir modal para mudar plano
+                          const newPlan = prompt(`Mudar plano de "${tenant.name}"\n\nPlanos: free, trial, pro, enterprise\n\nNovo plano:`, tenant.plan || 'trial');
+                          if (newPlan && ['free', 'trial', 'pro', 'enterprise'].includes(newPlan)) {
+                            try {
+                              await tenantsApi.changeTenantPlan(tenant.id, newPlan);
+                              showToast('Plano alterado com sucesso', 'success');
+                              await loadTenants();
+                            } catch (err) {
+                              showToast(err.body?.message || 'Erro ao mudar plano', 'error');
+                            }
+                          }
+                        }}
+                      >
+                        Plano
                       </Button>
                       <Button
                         variant="danger"

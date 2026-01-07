@@ -11,6 +11,8 @@ import { TicketMaintenancePage } from './pages/TicketMaintenancePage';
 import { ConfigPage } from './pages/ConfigPage';
 import { AgentsPage } from './pages/AgentsPage';
 import { TenantsPage } from './pages/TenantsPage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
+import { OnboardingPage } from './pages/OnboardingPage';
 import { AuditPage } from './pages/AuditPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { QuickRepliesPage } from './pages/QuickRepliesPage';
@@ -126,6 +128,8 @@ function AppWithAuth() {
   const isConfig = currentPath === '/config' || currentPath.startsWith('/config');
   const isAgents = currentPath === '/agents' || currentPath.startsWith('/agents');
   const isTenants = currentPath === '/tenants' || currentPath.startsWith('/tenants');
+  const isSuperAdminPage = currentPath === '/super-admin' || currentPath.startsWith('/super-admin');
+  const isOnboarding = currentPath === '/onboarding' || currentPath.startsWith('/onboarding');
   const isAudit = currentPath === '/audit' || currentPath.startsWith('/audit');
   const isQuickReplies = currentPath === '/quick-replies' || currentPath.startsWith('/quick-replies');
   const isDepartments = currentPath === '/departments' || currentPath.startsWith('/departments');
@@ -158,30 +162,28 @@ function AppWithAuth() {
     if (loading) return;
     
     const allRoutes = [
-      isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isAudit,
+      isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
       if (isAuthenticated) {
-        navigate('/dashboard');
+        navigate('/support');
       } else {
         navigate('/login');
       }
     }
   }, [
-    isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isAudit,
+    isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
-  // Redireciona para /dashboard quando autenticado e está em rota de login
-  useEffect(() => {
-    if (isAuthenticated && (isLogin || currentPath === '/login')) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, isLogin, currentPath, navigate]);
+  // NÃO redireciona automaticamente quando autenticado na rota de login
+  // Deixa o componente Login fazer o redirecionamento após seleção do tenant (para super-admin)
+  // ou imediatamente (para outros usuários)
+  // useEffect removido para permitir que Login.jsx controle o redirecionamento
 
   // Atualiza o título do documento baseado na rota atual
   useEffect(() => {
@@ -282,6 +284,10 @@ function AppWithAuth() {
         <AgentsPage />
       ) : isTenants ? (
         <TenantsPage />
+      ) : isSuperAdminPage ? (
+        <SuperAdminPage />
+      ) : isOnboarding ? (
+        <OnboardingPage />
       ) : isAudit ? (
         <AuditPage />
       ) : isQuickReplies ? (

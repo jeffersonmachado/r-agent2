@@ -1072,7 +1072,7 @@ export const NODE_SCHEMAS = {
         label: 'Tenant ID (Opcional)',
         description: 'Filtrar fluxos por tenant',
         required: false,
-        placeholder: 'Ex.: tenant-demo',
+        placeholder: 'Ex.: tenant-abc123',
       },
       {
         key: 'nameFilter',

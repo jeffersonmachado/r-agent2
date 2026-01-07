@@ -260,7 +260,7 @@ async function executeRagContextBuilding(execution) {
       execution.executionId,
       execution.payload,
       {
-        tenantId: execution.options.tenantId || 'tenant-demo',
+        tenantId: execution.options.tenantId, // Tenant deve ser fornecido explicitamente
         useRag: true,
         sessionId: execution.options.sessionId || null,
         flowId: execution.options.flowId || null,

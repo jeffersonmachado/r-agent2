@@ -43,6 +43,15 @@ export function AuthProvider({ children }) {
       const result = await authApi.getCurrentAgent();
       setAgent(result.agent);
       setIsAuthenticated(true);
+      
+      // Atualiza informações do agente no localStorage (incluindo tenantId)
+      if (result.agent) {
+        try {
+          localStorage.setItem('auth_agent', JSON.stringify(result.agent));
+        } catch (err) {
+          logger.warn('Erro ao salvar informações do agente no localStorage:', err);
+        }
+      }
     } catch (err) {
       // Se for erro de conexão (servidor não acessível), não remove o token
       // Pode ser apenas o servidor iniciando
@@ -138,6 +147,21 @@ export function AuthProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Executa apenas uma vez no mount
 
+  /**
+   * Atualiza o agente diretamente (útil para atualizações locais sem buscar do servidor)
+   */
+  const updateAgent = useCallback((updatedAgent) => {
+    setAgent(updatedAgent);
+    setIsAuthenticated(!!updatedAgent);
+    if (updatedAgent) {
+      try {
+        localStorage.setItem('auth_agent', JSON.stringify(updatedAgent));
+      } catch (err) {
+        logger.warn('Erro ao salvar informações do agente no localStorage:', err);
+      }
+    }
+  }, []);
+
   const value = {
     agent,
     loading,
@@ -145,6 +169,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     reloadAgent: loadAgent,
+    updateAgent,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

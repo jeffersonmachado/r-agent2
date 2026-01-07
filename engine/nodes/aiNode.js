@@ -169,7 +169,7 @@ async function aiNodeHandler(node, state, input, deps = null) {
   if (useRag && ragEnabled && !outputSchema) {
     // RAG apenas para texto livre (não para JSON estruturado)
     try {
-      const tenantId = state.tenantId || 'tenant-demo';
+      const tenantId = state.tenantId; // Tenant deve ser fornecido no state
       
       // Prepara filtros (se disponíveis)
       const filters = {

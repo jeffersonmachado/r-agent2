@@ -112,7 +112,7 @@ export async function execute(task, input, config = {}, context = {}) {
         method: 'POST',
         body: JSON.stringify({
           prompt,
-          tenantId: context.tenantId || 'tenant-demo',
+          tenantId: context.tenantId, // Tenant deve ser fornecido no context
         }),
       });
       

@@ -917,8 +917,11 @@ export function GenerateSystemPage() {
       prompt += `- outros: Qualquer outro tipo de arquivo que não se encaixe nas categorias acima\n\n`;
       prompt += `Retorne APENAS o nome da categoria (uma das opções acima) em minúsculas, sem pontuação ou explicação adicional.`;
 
-      // Obtém tenantId do agente ou usa padrão
-      const tenantId = agent?.tenantId || 'tenant-demo';
+      // Obtém tenantId do agente (obrigatório)
+      const tenantId = agent?.tenantId;
+      if (!tenantId) {
+        throw new Error('Tenant ID é obrigatório para gerar categoria');
+      }
 
       // Chama a API de IA
       const response = await fetchJson('/api/ai/generate', {

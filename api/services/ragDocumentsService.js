@@ -147,7 +147,7 @@ async function createDocument(documentData, tenantId) {
     
     const document = {
       id: documentData.id || `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      tenantId: tenantId || documentData.tenantId || config.get('api.defaultTenantId', 'tenant-demo'),
+      tenantId: tenantId || documentData.tenantId || null, // Tenant deve ser fornecido explicitamente
       title: documentData.title || 'Sem título',
       content: documentData.content || '',
       metadata: {

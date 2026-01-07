@@ -9,6 +9,7 @@ import { useToast } from './Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
+import { getTenant } from '../api/tenants';
 
 /**
  * Menu de usuário fixo no canto superior direito
@@ -25,6 +26,7 @@ export function UserMenu() {
   const [activeTicketsCount, setActiveTicketsCount] = useState(0);
   const [agentStatus, setAgentStatus] = useState('online'); // online, busy, offline
   const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState(null);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
 
@@ -213,6 +215,31 @@ export function UserMenu() {
     websocketMetrics.setWebSocketStatus(wsConnected && wsAuthenticated);
   }, [wsConnected, wsAuthenticated]);
 
+  // Carrega informações do tenant
+  useEffect(() => {
+    if (!agent || !agent.tenantId) {
+      setTenantInfo(null);
+      return;
+    }
+
+    const loadTenantInfo = async () => {
+      try {
+        const result = await getTenant(agent.tenantId);
+        if (result && result.tenant) {
+          setTenantInfo(result.tenant);
+        } else {
+          setTenantInfo({ name: agent.tenantId, id: agent.tenantId });
+        }
+      } catch (err) {
+        logger.warn('Erro ao carregar informações do tenant', err);
+        // Fallback: usa tenantId como nome
+        setTenantInfo({ name: agent.tenantId, id: agent.tenantId });
+      }
+    };
+
+    loadTenantInfo();
+  }, [agent]);
+
   // Carrega tickets iniciais - apenas uma vez quando o agente é carregado
   // Polling removido - apenas WebSocket é usado para atualizações em tempo real
   useEffect(() => {
@@ -315,7 +342,18 @@ export function UserMenu() {
           )}
           <span className={getStatusClass()} title={getStatusText()}></span>
         </div>
-        <span className="user-name">{agent.name}</span>
+        <span 
+          className="user-name" 
+          title={
+            tenantInfo 
+              ? `Tenant: ${tenantInfo.name || agent.tenantId}\nTenant ID: ${agent.tenantId || 'N/A'}` 
+              : agent.tenantId 
+                ? `Tenant ID: ${agent.tenantId}` 
+                : ''
+          }
+        >
+          {agent.name}
+        </span>
         <span className={`user-menu-arrow ${isOpen ? 'open' : ''}`}>▼</span>
       </button>
 
@@ -342,6 +380,16 @@ export function UserMenu() {
                     {getStatusText()}
                   </span>
                 </div>
+                {tenantInfo && (
+                  <div className="user-menu-tenant" title={`Tenant: ${tenantInfo.name}\nTenant ID: ${agent.tenantId || 'N/A'}`}>
+                    🏢 {tenantInfo.name}
+                  </div>
+                )}
+                {!tenantInfo && agent.tenantId && (
+                  <div className="user-menu-tenant" title={`Tenant ID: ${agent.tenantId}`}>
+                    🏢 {agent.tenantId}
+                  </div>
+                )}
               </div>
             </div>
           </div>

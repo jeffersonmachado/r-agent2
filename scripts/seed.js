@@ -19,7 +19,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DATA_DIR = path.join(__dirname, '../api/data');
-const DEFAULT_TENANT_ID = 'tenant-demo';
+// Removido DEFAULT_TENANT_ID - tenant deve ser fornecido explicitamente via --tenant=ID
 
 // Cores para departamentos
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
@@ -127,7 +127,7 @@ function createAgents(tenantId) {
 function createTenants() {
   const tenants = [
     {
-      id: 'tenant-demo',
+      id: 'tenant-default',
       name: 'Tenant Demo',
       site: 'https://example.com',
       ramo_atividade: 'Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente',
@@ -167,7 +167,7 @@ function createTenants() {
 function createTenantContexts() {
   const contexts = [
     {
-      tenantId: 'tenant-demo',
+      tenantId: 'tenant-default',
       ramo_atividade: 'Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente',
       objetivo: 'Automatizar o atendimento ao cliente com IA, reduzindo tempo de resposta e melhorando a satisfação do cliente através de chatbots inteligentes e RPA',
       site_oficial: 'https://example.com',
@@ -804,7 +804,7 @@ function seed(tenantId = DEFAULT_TENANT_ID, reset = false) {
 
 // Parse argumentos
 const args = process.argv.slice(2);
-let tenantId = DEFAULT_TENANT_ID;
+let tenantId = null;
 let reset = false;
 
 for (const arg of args) {
@@ -813,14 +813,20 @@ for (const arg of args) {
   } else if (arg.startsWith('--tenant=')) {
     tenantId = arg.split('=')[1];
   } else if (arg === '--help' || arg === '-h') {
-    console.log('Uso: node scripts/seed.js [--reset] [--tenant=tenant-id]');
+    console.log('Uso: node scripts/seed.js [--reset] --tenant=tenant-id');
     console.log('');
     console.log('Opções:');
     console.log('  --reset          Sobrescreve dados existentes');
-    console.log('  --tenant=ID      Define o tenant ID (padrão: tenant-demo)');
+    console.log('  --tenant=ID      Define o tenant ID (OBRIGATÓRIO)');
     console.log('  --help, -h       Mostra esta ajuda');
     process.exit(0);
   }
+}
+
+if (!tenantId) {
+  console.error('❌ Erro: --tenant=ID é obrigatório');
+  console.error('   Use --help para ver as opções disponíveis');
+  process.exit(1);
 }
 
 // Executa seed

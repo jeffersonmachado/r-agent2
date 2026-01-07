@@ -66,3 +66,40 @@ export async function updateTenantContext(tenantId, contextData) {
   });
 }
 
+/**
+ * Suspende um tenant
+ */
+export async function suspendTenant(tenantId) {
+  return fetchJson(`/tenants/${encodeURIComponent(tenantId)}/suspend`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Reativa um tenant
+ */
+export async function reactivateTenant(tenantId) {
+  return fetchJson(`/tenants/${encodeURIComponent(tenantId)}/reactivate`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Muda plano de um tenant
+ */
+export async function changeTenantPlan(tenantId, plan) {
+  return fetchJson(`/tenants/${encodeURIComponent(tenantId)}/change-plan`, {
+    method: 'POST',
+    body: JSON.stringify({ plan }),
+  });
+}
+
+/**
+ * Obtém métricas de uso de um tenant
+ */
+export async function getTenantUsage(tenantId) {
+  return fetchJson(`/tenants/${encodeURIComponent(tenantId)}/usage`, {
+    method: 'GET',
+  });
+}
+

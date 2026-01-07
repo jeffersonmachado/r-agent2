@@ -5240,6 +5240,18 @@ div:has(svg[data-testid="connection"]) {
   box-shadow: 0 0 0 2px rgba(149, 165, 166, 0.3);
 }
 
+.user-menu-tenant {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .user-menu-details {
   flex: 1;
   min-width: 0;

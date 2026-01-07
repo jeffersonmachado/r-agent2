@@ -33,10 +33,18 @@ export function AgentsPage() {
     username: '',
     email: '',
     password: '',
-    role: 'agent',
+    role: 'operator', // 'agent' migra para 'operator'
     name: '',
     active: true,
   });
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showResetPasswordForm, setShowResetPasswordForm] = useState(false);
+  const [inviteFormData, setInviteFormData] = useState({
+    email: '',
+    role: 'operator',
+    name: '',
+  });
+  const [resetPasswordEmail, setResetPasswordEmail] = useState('');
   const [filters, setFilters] = useState({
     search: '',
     role: '',
@@ -110,7 +118,7 @@ export function AgentsPage() {
       username: '',
       email: '',
       password: '',
-      role: 'agent',
+      role: 'operator', // 'agent' migra para 'operator'
       name: '',
       active: true,
     });
@@ -178,7 +186,13 @@ export function AgentsPage() {
 
   const getRoleLabel = (role) => {
     const labels = {
+      owner: 'Proprietário',
       admin: 'Administrador',
+      manager: 'Gerente',
+      operator: 'Operador',
+      auditor: 'Auditor',
+      readonly: 'Somente Leitura',
+      // Compatibilidade com roles antigos
       supervisor: 'Supervisor',
       agent: 'Agente',
     };
@@ -227,9 +241,15 @@ export function AgentsPage() {
         <div className="support-controls">
           <Button 
             onClick={handleCreate} 
-            style={{ backgroundColor: '#25D366', color: 'white' }}
+            style={{ backgroundColor: '#25D366', color: 'white', marginRight: '10px' }}
           >
             ➕ Novo Agente
+          </Button>
+          <Button 
+            onClick={() => setShowInviteForm(true)} 
+            style={{ backgroundColor: '#6366f1', color: 'white' }}
+          >
+            ✉️ Convidar Usuário
           </Button>
         </div>
       </div>
@@ -264,7 +284,13 @@ export function AgentsPage() {
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
             >
               <option value="">Todos</option>
+              <option value="owner">Proprietário</option>
               <option value="admin">Administrador</option>
+              <option value="manager">Gerente</option>
+              <option value="operator">Operador</option>
+              <option value="auditor">Auditor</option>
+              <option value="readonly">Somente Leitura</option>
+              {/* Compatibilidade */}
               <option value="supervisor">Supervisor</option>
               <option value="agent">Agente</option>
             </select>
@@ -394,9 +420,14 @@ export function AgentsPage() {
                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                         className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
                       >
-                        <option value="agent">Agente</option>
-                        <option value="supervisor">Supervisor</option>
+                        <option value="operator">Operador</option>
+                        <option value="manager">Gerente</option>
                         <option value="admin">Administrador</option>
+                        <option value="auditor">Auditor</option>
+                        <option value="readonly">Somente Leitura</option>
+                        {/* Compatibilidade */}
+                        <option value="supervisor">Supervisor</option>
+                        <option value="agent">Agente</option>
                       </select>
                     </div>
 
@@ -485,6 +516,16 @@ export function AgentsPage() {
                         >
                           Editar
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setResetPasswordEmail(agent.email);
+                            setShowResetPasswordForm(true);
+                          }}
+                        >
+                          Reset Senha
+                        </Button>
                         {agent.id !== currentAgent?.id && (
                           <Button
                             variant="danger"
@@ -509,6 +550,146 @@ export function AgentsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Convite */}
+      {showInviteForm && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowInviteForm(false);
+              setInviteFormData({ email: '', role: 'operator', name: '' });
+            }
+          }}
+        >
+          <div 
+            className="bg-bg-elevated rounded-xl border border-border-default p-6 w-full max-w-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-text-primary mb-6">✉️ Convidar Usuário</h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await authApi.inviteUser({
+                  ...inviteFormData,
+                  tenantId: currentAgent?.tenantId,
+                });
+                showToast('Convite enviado com sucesso!', 'success');
+                setShowInviteForm(false);
+                setInviteFormData({ email: '', role: 'operator', name: '' });
+                await loadAgents();
+              } catch (err) {
+                showToast(err.body?.message || 'Erro ao enviar convite', 'error');
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-text-primary">Email *</label>
+                <input
+                  type="email"
+                  value={inviteFormData.email}
+                  onChange={(e) => setInviteFormData({ ...inviteFormData, email: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-text-primary">Nome</label>
+                <input
+                  type="text"
+                  value={inviteFormData.name}
+                  onChange={(e) => setInviteFormData({ ...inviteFormData, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-text-primary">Papel *</label>
+                <select
+                  value={inviteFormData.role}
+                  onChange={(e) => setInviteFormData({ ...inviteFormData, role: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
+                >
+                  <option value="operator">Operador</option>
+                  <option value="manager">Gerente</option>
+                  <option value="admin">Administrador</option>
+                  <option value="auditor">Auditor</option>
+                  <option value="readonly">Somente Leitura</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" variant="primary" className="flex-1">Enviar Convite</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowInviteForm(false);
+                    setInviteFormData({ email: '', role: 'operator', name: '' });
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reset de Senha */}
+      {showResetPasswordForm && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowResetPasswordForm(false);
+              setResetPasswordEmail('');
+            }
+          }}
+        >
+          <div 
+            className="bg-bg-elevated rounded-xl border border-border-default p-6 w-full max-w-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-text-primary mb-6">🔐 Reset de Senha</h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await authApi.requestPasswordReset(resetPasswordEmail);
+                showToast('Link de reset enviado por email!', 'success');
+                setShowResetPasswordForm(false);
+                setResetPasswordEmail('');
+              } catch (err) {
+                showToast(err.body?.message || 'Erro ao solicitar reset', 'error');
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-text-primary">Email *</label>
+                <input
+                  type="email"
+                  value={resetPasswordEmail}
+                  onChange={(e) => setResetPasswordEmail(e.target.value)}
+                  required
+                  placeholder="email@exemplo.com"
+                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
+                />
+                <p className="mt-1 text-xs text-text-secondary">Um link de reset será enviado para este email</p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" variant="primary" className="flex-1">Enviar Link</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowResetPasswordForm(false);
+                    setResetPasswordEmail('');
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ToastContainer />
       <ConfirmDialog />

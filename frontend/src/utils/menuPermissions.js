@@ -97,6 +97,25 @@ export const menuItems = [
     permission: { resource: 'agents', action: 'list_all' },
   },
   {
+    label: 'Tenants',
+    path: '/tenants',
+    icon: '🏢',
+    permission: { resource: 'tenant', action: 'read' },
+    roles: ['owner', 'admin'],
+  },
+  {
+    label: 'Super Admin',
+    path: '/super-admin',
+    icon: '🔐',
+    roles: ['super_admin'],
+  },
+  {
+    label: 'Onboarding',
+    path: '/onboarding',
+    icon: '🚀',
+    permission: { resource: 'tenant', action: 'read' },
+  },
+  {
     label: 'Auditoria',
     path: '/audit',
     icon: '📋',
@@ -132,13 +151,17 @@ export const menuItems = [
  * Mapeamento de permissões por papel (baseado no rbacService do backend).
  */
 const ROLE_PERMISSIONS = {
-  admin: [
+  owner: [
+    { resource: 'tenant', action: 'read' },
+    { resource: 'tenant', action: 'update' },
+    { resource: 'tenant', action: 'manage' },
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'list_all' },
     { resource: 'flows', action: 'read' },
     { resource: 'flows', action: 'update' },
     { resource: 'config', action: 'read' },
     { resource: 'agents', action: 'list_all' },
+    { resource: 'agents', action: 'invite' },
     { resource: 'audit', action: 'read' },
     { resource: 'quick_replies', action: 'read' },
     { resource: 'departments', action: 'read' },
@@ -150,6 +173,64 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'update' },
     { resource: 'rag', action: 'delete' },
   ],
+  admin: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'list_all' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'flows', action: 'update' },
+    { resource: 'config', action: 'read' },
+    { resource: 'agents', action: 'list_all' },
+    { resource: 'agents', action: 'invite' },
+    { resource: 'audit', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'bulk_messaging', action: 'read' },
+    { resource: 'reports', action: 'read' },
+    { resource: 'reports', action: 'export' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'update' },
+    { resource: 'rag', action: 'delete' },
+  ],
+  manager: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'list_all' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'config', action: 'read' },
+    { resource: 'agents', action: 'list_all' },
+    { resource: 'audit', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'bulk_messaging', action: 'read' },
+    { resource: 'reports', action: 'read' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'update' },
+  ],
+  operator: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'query' },
+  ],
+  auditor: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'list_all' },
+    { resource: 'audit', action: 'read' },
+    { resource: 'audit', action: 'export' },
+    { resource: 'reports', action: 'read' },
+  ],
+  readonly: [
+    { resource: 'tickets', action: 'read' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'query' },
+  ],
+  // Compatibilidade com roles antigos
   supervisor: [
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'list_all' },
@@ -188,7 +269,15 @@ export function hasPermission(agent, resource, action) {
     return false;
   }
 
-  const role = agent.role.toLowerCase();
+  let role = agent.role.toLowerCase();
+  
+  // Migra roles antigos
+  if (role === 'supervisor') {
+    role = 'manager';
+  } else if (role === 'agent') {
+    role = 'operator';
+  }
+
   const permissions = ROLE_PERMISSIONS[role] || [];
 
   return permissions.some(

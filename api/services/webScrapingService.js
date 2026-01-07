@@ -182,7 +182,7 @@ async function scrapeUrl(url, options = {}) {
     source = 'web_scraping',
     category = null,
     tags = [],
-    tenantId = 'tenant-demo',
+    tenantId = null, // Tenant deve ser fornecido explicitamente
   } = options;
 
   logger.info('[WebScraping] Iniciando scraping', { url });

@@ -11,7 +11,7 @@ jest.mock('../../utils/logger', () => ({
   warn: jest.fn(),
 }));
 jest.mock('../../utils/config', () => ({
-  get: jest.fn((key, defaultValue) => defaultValue || 'tenant-demo'),
+  get: jest.fn((key, defaultValue) => defaultValue || null), // Removido fallback para 'tenant-demo'
 }));
 
 const fs = require('fs');
@@ -56,7 +56,7 @@ describe('authService', () => {
       expect(result.agent).toBeDefined();
       expect(result.agent.username).toBe('testuser');
       expect(result.agent.email).toBe('test@example.com');
-      expect(result.agent.role).toBe('agent');
+      expect(result.agent.role).toBe('operator'); // 'agent' migra para 'operator'
       expect(result.agent).not.toHaveProperty('passwordHash');
       expect(result.agent).not.toHaveProperty('salt');
     });
@@ -117,7 +117,7 @@ describe('authService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.agent.role).toBe('agent');
+      expect(result.agent.role).toBe('operator'); // Role padrão 'agent' migra para 'operator'
     });
   });
 

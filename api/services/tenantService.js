@@ -27,8 +27,15 @@ const ragDocumentsService = require('./ragDocumentsService');
  * @property {string} ramo_atividade - Descrição textual do segmento de negócio (obrigatório)
  * @property {string} objetivo - Objetivo estratégico do cliente com o uso da plataforma (obrigatório)
  * @property {boolean} active - Se o tenant está ativo
+ * @property {string} status - Status do tenant (trial, active, suspended, terminated)
+ * @property {string} plan - Plano do tenant (free, trial, pro, enterprise)
+ * @property {Object} limits - Limites do plano (usuários, agentes_ia, execucoes_rpa, tokens_ia, etc.)
+ * @property {Object} settings - Configurações do tenant (json)
+ * @property {Object} branding - Branding personalizado (logo, cores, etc.)
  * @property {string} createdAt - Data de criação (ISO string)
  * @property {string} updatedAt - Data da última atualização (ISO string)
+ * @property {string|null} suspendedAt - Data de suspensão (ISO string)
+ * @property {string|null} trialExpiresAt - Data de expiração do trial (ISO string)
  */
 
 /**
@@ -99,6 +106,7 @@ function saveTenantsToFile() {
 
 /**
  * Carrega tenants do arquivo JSON.
+ * Migra tenants antigos para o novo formato SaaS.
  */
 function loadTenantsFromFile() {
   try {
@@ -113,16 +121,94 @@ function loadTenantsFromFile() {
 
     if (Array.isArray(tenantsArray)) {
       tenants.clear();
+      let migrated = 0;
       for (const tenant of tenantsArray) {
         if (tenant && tenant.id) {
+          // Migração: adiciona campos SaaS se não existirem
+          if (!tenant.status) {
+            tenant.status = tenant.active ? 'active' : 'suspended';
+            migrated++;
+          }
+          if (!tenant.plan) {
+            tenant.plan = 'trial';
+            migrated++;
+          }
+          if (!tenant.limits) {
+            tenant.limits = getDefaultLimits(tenant.plan || 'trial');
+            migrated++;
+          }
+          if (!tenant.settings) {
+            tenant.settings = {};
+            migrated++;
+          }
+          if (!tenant.branding) {
+            tenant.branding = {};
+            migrated++;
+          }
+          if (!tenant.trialExpiresAt && tenant.plan === 'trial') {
+            // Trial de 14 dias por padrão
+            const trialExpires = new Date();
+            trialExpires.setDate(trialExpires.getDate() + 14);
+            tenant.trialExpiresAt = trialExpires.toISOString();
+            migrated++;
+          }
           tenants.set(tenant.id, tenant);
         }
       }
       logger.info(`[TenantService] Tenants carregados: ${tenants.size} tenant(s)`);
+      if (migrated > 0) {
+        logger.info(`[TenantService] ${migrated} campo(s) migrado(s) para formato SaaS`);
+        saveTenantsToFile(); // Salva com novos campos
+      }
     }
   } catch (err) {
     logger.error('[TenantService] Erro ao carregar tenants:', err);
   }
+}
+
+/**
+ * Retorna limites padrão para um plano.
+ * 
+ * @param {string} plan - Plano (free, trial, pro, enterprise)
+ * @returns {Object} Limites do plano
+ */
+function getDefaultLimits(plan) {
+  const limitsByPlan = {
+    free: {
+      usuarios: 1,
+      agentes_ia: 1,
+      execucoes_rpa: 10,
+      tokens_ia: 10000,
+      documentos_rag: 10,
+      storage_mb: 100,
+    },
+    trial: {
+      usuarios: 3,
+      agentes_ia: 2,
+      execucoes_rpa: 50,
+      tokens_ia: 50000,
+      documentos_rag: 50,
+      storage_mb: 500,
+    },
+    pro: {
+      usuarios: 10,
+      agentes_ia: 5,
+      execucoes_rpa: 500,
+      tokens_ia: 500000,
+      documentos_rag: 500,
+      storage_mb: 5000,
+    },
+    enterprise: {
+      usuarios: -1, // Ilimitado
+      agentes_ia: -1,
+      execucoes_rpa: -1,
+      tokens_ia: -1,
+      documentos_rag: -1,
+      storage_mb: -1,
+    },
+  };
+  
+  return limitsByPlan[plan] || limitsByPlan.trial;
 }
 
 /**
@@ -275,9 +361,12 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
  * @param {string} params.site - URL oficial do cliente (obrigatório)
  * @param {string} params.ramo_atividade - Descrição do segmento de negócio (obrigatório)
  * @param {string} params.objetivo - Objetivo estratégico (obrigatório)
+ * @param {string} [params.plan] - Plano (free, trial, pro, enterprise) - padrão: trial
+ * @param {Object} [params.settings] - Configurações iniciais
+ * @param {Object} [params.branding] - Branding personalizado
  * @returns {{success: boolean, tenant?: Tenant, error?: string}}
  */
-function createTenant({ name, site, ramo_atividade, objetivo }) {
+function createTenant({ id, name, site, ramo_atividade, objetivo, plan = 'trial', settings = {}, branding = {} }) {
   // Validações
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return { success: false, error: 'Nome é obrigatório' };
@@ -299,6 +388,12 @@ function createTenant({ name, site, ramo_atividade, objetivo }) {
     return { success: false, error: 'Objetivo é obrigatório' };
   }
 
+  // Valida plano
+  const validPlans = ['free', 'trial', 'pro', 'enterprise'];
+  if (!validPlans.includes(plan)) {
+    return { success: false, error: `Plano inválido. Use: ${validPlans.join(', ')}` };
+  }
+
   // Verifica se já existe tenant com mesmo site
   for (const tenant of tenants.values()) {
     if (tenant.site.toLowerCase() === site.trim().toLowerCase()) {
@@ -308,7 +403,23 @@ function createTenant({ name, site, ramo_atividade, objetivo }) {
 
   // Cria tenant
   const now = new Date().toISOString();
-  const id = `tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  // Se id não foi fornecido, gera um automaticamente
+  const tenantId = id || `tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  
+  // Se id foi fornecido, verifica se já existe
+  if (id) {
+    if (tenants.has(id)) {
+      return { success: false, error: `Já existe um tenant com o ID: ${id}` };
+    }
+  }
+  
+  // Calcula expiração do trial se for trial
+  let trialExpiresAt = null;
+  if (plan === 'trial') {
+    const trialExpires = new Date();
+    trialExpires.setDate(trialExpires.getDate() + 14); // 14 dias
+    trialExpiresAt = trialExpires.toISOString();
+  }
 
   const tenant = {
     id,
@@ -317,22 +428,29 @@ function createTenant({ name, site, ramo_atividade, objetivo }) {
     ramo_atividade: ramo_atividade.trim(),
     objetivo: objetivo.trim(),
     active: true,
+    status: plan === 'trial' ? 'trial' : 'active',
+    plan: plan,
+    limits: getDefaultLimits(plan),
+    settings: settings || {},
+    branding: branding || {},
     createdAt: now,
     updatedAt: now,
+    suspendedAt: null,
+    trialExpiresAt: trialExpiresAt,
   };
 
-  tenants.set(id, tenant);
+  tenants.set(tenantId, tenant);
   saveTenantsToFile();
 
   // Cria/atualiza tenant_context automaticamente
-  syncTenantContext(id, ramo_atividade.trim(), objetivo.trim(), site.trim());
+  syncTenantContext(tenantId, ramo_atividade.trim(), objetivo.trim(), site.trim());
 
   // Indexa site como fonte institucional canônica (assíncrono, não bloqueia)
-  indexSiteAsInstitutionalSource(id, site.trim()).catch(err => {
+  indexSiteAsInstitutionalSource(tenantId, site.trim()).catch(err => {
     logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, err);
   });
 
-  logger.info(`[TenantService] Tenant criado: ${id} (${name})`);
+  logger.info(`[TenantService] Tenant criado: ${tenantId} (${name}), plano: ${plan}`);
 
   return { success: true, tenant };
 }
@@ -387,6 +505,64 @@ function updateTenant(tenantId, updates) {
 
   if (updates.active !== undefined) {
     tenant.active = Boolean(updates.active);
+    // Atualiza status baseado em active
+    if (!tenant.active && tenant.status !== 'terminated') {
+      tenant.status = 'suspended';
+      tenant.suspendedAt = new Date().toISOString();
+    } else if (tenant.active && tenant.status === 'suspended') {
+      tenant.status = tenant.plan === 'trial' ? 'trial' : 'active';
+      tenant.suspendedAt = null;
+    }
+  }
+
+  if (updates.status !== undefined) {
+    const validStatuses = ['trial', 'active', 'suspended', 'terminated'];
+    if (!validStatuses.includes(updates.status)) {
+      return { success: false, error: `Status inválido. Use: ${validStatuses.join(', ')}` };
+    }
+    tenant.status = updates.status;
+    if (updates.status === 'suspended' && !tenant.suspendedAt) {
+      tenant.suspendedAt = new Date().toISOString();
+    } else if (updates.status !== 'suspended') {
+      tenant.suspendedAt = null;
+    }
+    tenant.active = updates.status !== 'suspended' && updates.status !== 'terminated';
+  }
+
+  if (updates.plan !== undefined) {
+    const validPlans = ['free', 'trial', 'pro', 'enterprise'];
+    if (!validPlans.includes(updates.plan)) {
+      return { success: false, error: `Plano inválido. Use: ${validPlans.join(', ')}` };
+    }
+    tenant.plan = updates.plan;
+    tenant.limits = getDefaultLimits(updates.plan);
+    // Se mudou para trial, atualiza expiração
+    if (updates.plan === 'trial' && !tenant.trialExpiresAt) {
+      const trialExpires = new Date();
+      trialExpires.setDate(trialExpires.getDate() + 14);
+      tenant.trialExpiresAt = trialExpires.toISOString();
+    }
+  }
+
+  if (updates.limits !== undefined) {
+    if (typeof updates.limits !== 'object') {
+      return { success: false, error: 'Limites deve ser um objeto' };
+    }
+    tenant.limits = { ...tenant.limits, ...updates.limits };
+  }
+
+  if (updates.settings !== undefined) {
+    if (typeof updates.settings !== 'object') {
+      return { success: false, error: 'Configurações deve ser um objeto' };
+    }
+    tenant.settings = { ...tenant.settings, ...updates.settings };
+  }
+
+  if (updates.branding !== undefined) {
+    if (typeof updates.branding !== 'object') {
+      return { success: false, error: 'Branding deve ser um objeto' };
+    }
+    tenant.branding = { ...tenant.branding, ...updates.branding };
   }
 
   tenant.updatedAt = new Date().toISOString();
@@ -575,12 +751,113 @@ function updateTenantContext(tenantId, updates, options = {}) {
   return { success: true, context };
 }
 
+/**
+ * Suspende um tenant.
+ *
+ * @param {string} tenantId
+ * @returns {{success: boolean, tenant?: Tenant, error?: string}}
+ */
+function suspendTenant(tenantId) {
+  return updateTenant(tenantId, { status: 'suspended' });
+}
+
+/**
+ * Reativa um tenant.
+ *
+ * @param {string} tenantId
+ * @returns {{success: boolean, tenant?: Tenant, error?: string}}
+ */
+function reactivateTenant(tenantId) {
+  const tenant = tenants.get(tenantId);
+  if (!tenant) {
+    return { success: false, error: 'Tenant não encontrado' };
+  }
+  const status = tenant.plan === 'trial' ? 'trial' : 'active';
+  return updateTenant(tenantId, { status, active: true });
+}
+
+/**
+ * Faz upgrade/downgrade de plano.
+ *
+ * @param {string} tenantId
+ * @param {string} newPlan - Novo plano
+ * @returns {{success: boolean, tenant?: Tenant, error?: string}}
+ */
+function changePlan(tenantId, newPlan) {
+  return updateTenant(tenantId, { plan: newPlan });
+}
+
+/**
+ * Verifica se um tenant está ativo e não expirado.
+ *
+ * @param {string} tenantId
+ * @returns {{valid: boolean, error?: string}}
+ */
+function validateTenantStatus(tenantId) {
+  const tenant = tenants.get(tenantId);
+  if (!tenant) {
+    return { valid: false, error: 'Tenant não encontrado' };
+  }
+
+  if (tenant.status === 'terminated') {
+    return { valid: false, error: 'Tenant encerrado' };
+  }
+
+  if (tenant.status === 'suspended') {
+    return { valid: false, error: 'Tenant suspenso' };
+  }
+
+  // Verifica se trial expirou
+  if (tenant.status === 'trial' && tenant.trialExpiresAt) {
+    const expiresAt = new Date(tenant.trialExpiresAt);
+    const now = new Date();
+    if (now > expiresAt) {
+      // Auto-suspende trial expirado
+      updateTenant(tenantId, { status: 'suspended' });
+      return { valid: false, error: 'Trial expirado' };
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Obtém métricas de uso de um tenant.
+ *
+ * @param {string} tenantId
+ * @returns {Object} Métricas de uso
+ */
+function getTenantUsage(tenantId) {
+  const tenant = tenants.get(tenantId);
+  if (!tenant) {
+    return null;
+  }
+
+  // TODO: Implementar contagem real de uso
+  // Por enquanto retorna estrutura básica
+  return {
+    tenantId,
+    usuarios: 0, // TODO: contar usuários ativos
+    agentes_ia: 0, // TODO: contar agentes IA
+    execucoes_rpa: 0, // TODO: contar execuções RPA no período
+    tokens_ia: 0, // TODO: contar tokens IA no período
+    documentos_rag: 0, // TODO: contar documentos RAG
+    storage_mb: 0, // TODO: calcular storage usado
+    periodo: 'mensal',
+  };
+}
+
 module.exports = {
   createTenant,
   updateTenant,
   listTenants,
   getTenant,
   deleteTenant,
+  suspendTenant,
+  reactivateTenant,
+  changePlan,
+  validateTenantStatus,
+  getTenantUsage,
   getTenantContext,
   updateTenantContext,
   // Funções internas para testes
@@ -589,6 +866,9 @@ module.exports = {
     loadTenantsFromFile,
     saveTenantContextsToFile,
     loadTenantContextsFromFile,
+    getDefaultLimits,
+    clearTenants: () => tenants.clear(),
+    clearTenantContexts: () => tenantContexts.clear(),
   },
 };
 

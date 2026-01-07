@@ -63,11 +63,13 @@ process.on('beforeExit', () => {
 
 /**
  * Registra uma ação de auditoria.
+ * 
+ * REGRA: tenant_id é OBRIGATÓRIO. Se não fornecido, tenta obter do agente.
  *
  * @param {Object} params
  * @param {string} params.agentId - ID do agente
  * @param {string} params.username - Nome de usuário
- * @param {string} [params.tenantId] - ID do tenant (opcional, será extraído do agente se não fornecido)
+ * @param {string} params.tenantId - ID do tenant (OBRIGATÓRIO, será extraído do agente se não fornecido)
  * @param {string} params.action - Ação (login, logout, ticket_create, etc.)
  * @param {string} params.resource - Recurso (ticket, queue, agent, etc.)
  * @param {string|null} params.resourceId - ID do recurso (opcional)
@@ -82,25 +84,45 @@ function logAction({ agentId, username, tenantId = null, action, resource, resou
     try {
       const { getAgent } = require('./authService');
       const agent = getAgent(agentId);
-      if (agent) {
+      if (agent && agent.tenantId) {
         effectiveTenantId = agent.tenantId;
       }
     } catch (err) {
-      // Ignora erro se não conseguir obter agente
+      logger.warn('[AuditService] Erro ao obter tenantId do agente', { agentId, error: err.message });
     }
+  }
+
+  // Se ainda não tem tenantId, tenta obter do request (se disponível)
+  if (!effectiveTenantId && typeof req !== 'undefined' && req.tenantId) {
+    effectiveTenantId = req.tenantId;
+  }
+
+  // CRÍTICO: Se ainda não tem tenantId, registra como 'unknown' mas loga warning
+  if (!effectiveTenantId || effectiveTenantId === 'default') {
+    logger.warn('[AuditService] Ação de auditoria sem tenantId', {
+      agentId,
+      action,
+      resource,
+    });
+    effectiveTenantId = 'unknown';
   }
 
   const logEntry = {
     timestamp: new Date().toISOString(),
     agentId: agentId || 'system',
     username: username || 'system',
-    tenantId: effectiveTenantId || 'default',
+    tenantId: effectiveTenantId, // SEMPRE presente agora
     action,
     resource,
     resourceId,
     details,
     ipAddress,
     userAgent,
+    metadata: {
+      // Metadados adicionais para compliance
+      source: 'api',
+      version: '1.0',
+    },
   };
 
   auditLogs.push(logEntry);

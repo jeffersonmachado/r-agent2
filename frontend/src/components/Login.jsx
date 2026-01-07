@@ -8,11 +8,13 @@ import { useTheme } from '../styles/themeContext';
 import { useRouter } from '../hooks/useRouter';
 import { Button } from '../styles/Button';
 import { useToast } from './Toast';
+import { TenantSelectorModal } from './TenantSelectorModal';
 import logger from '../utils/logger';
 import { getStaticUrl } from '../utils';
+import { setToken } from '../api/auth';
 
 export function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, agent, updateAgent } = useAuth();
   const { theme, themeName, toggleTheme } = useTheme();
   const { navigate } = useRouter();
   const { showToast } = useToast();
@@ -21,13 +23,63 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState(null);
+  const [showTenantModal, setShowTenantModal] = useState(false);
+  const [loginResult, setLoginResult] = useState(null);
+  const [isSuperAdminLogin, setIsSuperAdminLogin] = useState(false);
 
-  // Redireciona automaticamente quando autenticado
+  // Redireciona automaticamente quando autenticado (exceto super-admin)
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/support');
+    if (isAuthenticated && agent && !showTenantModal) {
+      const isSuperAdmin = agent.role === 'super_admin' || (agent.role === 'owner' && agent.tenantId === 'system');
+      
+      logger.debug('[Login] useEffect - isAuthenticated:', isAuthenticated, 'agent:', agent, 'showTenantModal:', showTenantModal);
+      
+      if (!isSuperAdmin) {
+        // Se não é super-admin, redireciona normalmente
+        logger.debug('[Login] Redirecionando para /support (não é super-admin no useEffect)');
+        navigate('/support');
+      }
+      // Se for super-admin, o modal já foi aberto no handleSubmit
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, agent, navigate, showTenantModal]);
+
+  // Redireciona quando tenant for selecionado
+  const handleTenantSelected = async (tenant) => {
+    try {
+      console.log('[Login] Tenant selecionado:', tenant);
+      
+      // Atualiza o tenantId do agente
+      if (loginResult && loginResult.agent) {
+        const updatedAgent = {
+          ...loginResult.agent,
+          tenantId: tenant.id,
+        };
+        
+        console.log('[Login] Atualizando agente com novo tenantId:', updatedAgent);
+        
+        // Atualiza o agente no contexto de autenticação
+        updateAgent(updatedAgent);
+        
+        // Marca que não é mais login de super-admin (tenant foi selecionado)
+        setIsSuperAdminLogin(false);
+        
+        // Fecha o modal
+        setShowTenantModal(false);
+        
+        showToast(`Acessando tenant: ${tenant.name || tenant.id}`, 'success');
+        
+        // Aguarda um pouco para garantir que o estado foi atualizado antes de redirecionar
+        setTimeout(() => {
+          console.log('[Login] Redirecionando para /support após seleção do tenant');
+          navigate('/support');
+        }, 200);
+      }
+    } catch (err) {
+      console.error('[Login] Erro ao selecionar tenant:', err);
+      logger.error('Erro ao selecionar tenant', err);
+      showToast('Erro ao selecionar tenant', 'error');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,11 +87,43 @@ export function Login() {
     setLoading(true);
 
     try {
-      await login(username, password);
-      showToast('Login realizado com sucesso!', 'success');
-      // Reset loading imediatamente - o redirecionamento vai acontecer via useEffect
+      const result = await login(username, password);
+      setLoginResult(result);
+      
+      console.log('[Login] Resultado do login:', result);
+      console.log('[Login] Agente recebido:', result?.agent);
+      
+      // Verifica se é super-admin
+      const isSuperAdmin = result.agent && (
+        result.agent.role === 'super_admin' || 
+        (result.agent.role === 'owner' && result.agent.tenantId === 'system')
+      );
+      
+      console.log('[Login] É super-admin?', isSuperAdmin, {
+        role: result.agent?.role,
+        tenantId: result.agent?.tenantId,
+        agent: result.agent,
+      });
+      
+      if (isSuperAdmin) {
+        // Mostra modal de seleção de tenant
+        console.log('[Login] Abrindo modal de seleção de tenant');
+        setIsSuperAdminLogin(true);
+        setShowTenantModal(true);
+        console.log('[Login] showTenantModal definido como:', true);
+        showToast('Login realizado com sucesso! Selecione o tenant.', 'success');
+      } else {
+        // Redireciona normalmente (não é super-admin)
+        console.log('[Login] Redirecionando para /support (não é super-admin)');
+        setIsSuperAdminLogin(false);
+        showToast('Login realizado com sucesso!', 'success');
+        // Usa setTimeout para garantir que o estado foi atualizado
+        setTimeout(() => {
+          navigate('/support');
+        }, 100);
+      }
+      
       setLoading(false);
-      // O useEffect acima vai cuidar do redirecionamento quando isAuthenticated mudar
     } catch (err) {
       const errorMessage = err.body?.message || err.message || 'Erro ao fazer login';
       setError(errorMessage);
@@ -335,6 +419,26 @@ export function Login() {
           </div>
         </div>
       </div>
+
+      {/* Modal de seleção de tenant para super-admin */}
+      <TenantSelectorModal
+        isOpen={showTenantModal}
+        onSelect={handleTenantSelected}
+        onClose={() => {
+          console.log('[Login] Modal fechado sem selecionar tenant - fazendo logout');
+          setShowTenantModal(false);
+          setIsSuperAdminLogin(false);
+          // Se cancelar, faz logout
+          if (loginResult) {
+            setLoginResult(null);
+            // Remove token e agente
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_agent');
+            // Recarrega a página para voltar à tela de login
+            window.location.reload();
+          }
+        }}
+      />
     </div>
   );
 }

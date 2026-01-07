@@ -221,7 +221,7 @@ async function processWhatsAppMessage(message, value, deps) {
   const persistenceServices = require('../../engine/services/persistenceServices');
   
   // Obtém provider de IA para o tenant (para nós AI)
-  const tenantId = state.tenantId || config.get('api.defaultTenantId', 'tenant-demo');
+  const tenantId = state.tenantId; // Tenant deve ser fornecido no state
   const aiProvider = getAiProviderForTenant(tenantId);
   
   const result = await executeStep(state, compiledFlow, {

@@ -7,7 +7,20 @@
     "objetivo": "Aumentar vendas online e reduzir abandono de carrinho",
     "active": true,
     "createdAt": "2026-01-05T19:36:44.276Z",
-    "updatedAt": "2026-01-05T19:36:44.276Z"
+    "updatedAt": "2026-01-05T19:36:44.276Z",
+    "status": "active",
+    "plan": "trial",
+    "limits": {
+      "usuarios": 3,
+      "agentes_ia": 2,
+      "execucoes_rpa": 50,
+      "tokens_ia": 50000,
+      "documentos_rag": 50,
+      "storage_mb": 500
+    },
+    "settings": {},
+    "branding": {},
+    "trialExpiresAt": "2026-01-21T16:47:40.161Z"
   },
   {
     "id": "tenant-1767641804348-vz318dk",
@@ -17,6 +30,67 @@
     "objetivo": "Agilizar agendamentos e melhorar comunicação com pacientes",
     "active": true,
     "createdAt": "2026-01-05T19:36:44.348Z",
-    "updatedAt": "2026-01-05T19:36:44.348Z"
+    "updatedAt": "2026-01-05T19:36:44.348Z",
+    "status": "active",
+    "plan": "trial",
+    "limits": {
+      "usuarios": 3,
+      "agentes_ia": 2,
+      "execucoes_rpa": 50,
+      "tokens_ia": 50000,
+      "documentos_rag": 50,
+      "storage_mb": 500
+    },
+    "settings": {},
+    "branding": {},
+    "trialExpiresAt": "2026-01-21T16:47:40.161Z"
+  },
+  {
+    "id": "system",
+    "name": "Sistema",
+    "site": "https://sistema.com",
+    "ramo_atividade": "Sistema de Administração",
+    "objetivo": "Administração global do sistema",
+    "active": true,
+    "status": "active",
+    "plan": "enterprise",
+    "limits": {
+      "usuarios": -1,
+      "agentes_ia": -1,
+      "execucoes_rpa": -1,
+      "tokens_ia": -1,
+      "documentos_rag": -1,
+      "storage_mb": -1
+    },
+    "settings": {},
+    "branding": {},
+    "createdAt": "2026-01-07T18:22:39.913Z",
+    "updatedAt": "2026-01-07T18:22:39.913Z",
+    "suspendedAt": null,
+    "trialExpiresAt": null
+  },
+  {
+    "id": "tenant-demo",
+    "name": "Tenant Demo",
+    "site": "https://demo.example.com",
+    "ramo_atividade": "Tecnologia e Software - Plataforma de demonstração",
+    "objetivo": "Demonstração e desenvolvimento da plataforma",
+    "active": true,
+    "createdAt": "2026-01-05T00:54:55.433Z",
+    "updatedAt": "2026-01-07T20:41:16.524Z",
+    "status": "active",
+    "plan": "trial",
+    "limits": {
+      "usuarios": 3,
+      "agentes_ia": 2,
+      "execucoes_rpa": 50,
+      "tokens_ia": 50000,
+      "documentos_rag": 50,
+      "storage_mb": 500
+    },
+    "settings": {},
+    "branding": {},
+    "suspendedAt": null,
+    "trialExpiresAt": "2026-01-19T00:54:55.433Z"
   }
 ]

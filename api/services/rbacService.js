@@ -20,8 +20,99 @@
 
 /**
  * Definição de permissões por papel.
+ * 
+ * Roles:
+ * - owner: Proprietário do tenant (acesso total, pode gerenciar tenant)
+ * - admin: Administrador (acesso total, exceto gestão de tenant)
+ * - manager: Gerente (gerencia equipe e operações)
+ * - operator: Operador (operações do dia a dia)
+ * - auditor: Auditor (apenas leitura e auditoria)
+ * - readonly: Leitura apenas
+ * 
+ * Compatibilidade com roles antigos:
+ * - supervisor -> manager
+ * - agent -> operator
  */
 const ROLE_PERMISSIONS = {
+  owner: [
+    // Acesso total + gestão de tenant
+    { resource: 'tenant', action: 'read' },
+    { resource: 'tenant', action: 'update' },
+    { resource: 'tenant', action: 'manage' },
+    { resource: 'tenant', action: 'billing' },
+    // Tickets
+    { resource: 'tickets', action: 'create' },
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'update' },
+    { resource: 'tickets', action: 'delete' },
+    { resource: 'tickets', action: 'assign' },
+    { resource: 'tickets', action: 'close' },
+    { resource: 'tickets', action: 'list_all' },
+    // Filas
+    { resource: 'queues', action: 'create' },
+    { resource: 'queues', action: 'read' },
+    { resource: 'queues', action: 'update' },
+    { resource: 'queues', action: 'delete' },
+    { resource: 'queues', action: 'admin' },
+    { resource: 'queues', action: 'list_all' },
+    // Agentes
+    { resource: 'agents', action: 'create' },
+    { resource: 'agents', action: 'read' },
+    { resource: 'agents', action: 'update' },
+    { resource: 'agents', action: 'delete' },
+    { resource: 'agents', action: 'list_all' },
+    { resource: 'agents', action: 'invite' },
+    // Configuração
+    { resource: 'config', action: 'read' },
+    { resource: 'config', action: 'update' },
+    // Fluxos
+    { resource: 'flows', action: 'create' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'flows', action: 'update' },
+    { resource: 'flows', action: 'delete' },
+    { resource: 'flows', action: 'execute' },
+    // Relatórios
+    { resource: 'reports', action: 'read' },
+    { resource: 'reports', action: 'export' },
+    // Auditoria
+    { resource: 'audit', action: 'read' },
+    { resource: 'audit', action: 'export' },
+    // Respostas Rápidas
+    { resource: 'quick_replies', action: 'create' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'quick_replies', action: 'update' },
+    { resource: 'quick_replies', action: 'delete' },
+    // Departamentos
+    { resource: 'departments', action: 'create' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'departments', action: 'update' },
+    { resource: 'departments', action: 'delete' },
+    // Disparos em Massa
+    { resource: 'bulk_messaging', action: 'create' },
+    { resource: 'bulk_messaging', action: 'read' },
+    { resource: 'bulk_messaging', action: 'update' },
+    { resource: 'bulk_messaging', action: 'delete' },
+    // RAG
+    { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'query' },
+    { resource: 'rag', action: 'index' },
+    { resource: 'rag', action: 'update' },
+    { resource: 'rag', action: 'delete' },
+    { resource: 'rag', action: 'admin' },
+    { resource: 'rag', action: 'train' },
+    // RPA
+    { resource: 'rpa', action: 'create' },
+    { resource: 'rpa', action: 'read' },
+    { resource: 'rpa', action: 'update' },
+    { resource: 'rpa', action: 'delete' },
+    { resource: 'rpa', action: 'execute' },
+    // IA
+    { resource: 'ai', action: 'train' },
+    { resource: 'ai', action: 'execute' },
+    { resource: 'ai', action: 'configure' },
+  ],
+
   admin: [
     // Tickets
     { resource: 'tickets', action: 'create' },
@@ -126,7 +217,51 @@ const ROLE_PERMISSIONS = {
     { resource: 'dev', action: 'write' },
   ],
 
-  agent: [
+  manager: [
+    // Tickets
+    { resource: 'tickets', action: 'create' },
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'update' },
+    { resource: 'tickets', action: 'assign' },
+    { resource: 'tickets', action: 'close' },
+    { resource: 'tickets', action: 'list_all' },
+    // Filas
+    { resource: 'queues', action: 'read' },
+    { resource: 'queues', action: 'list_all' },
+    // Agentes
+    { resource: 'agents', action: 'read' },
+    { resource: 'agents', action: 'update' },
+    { resource: 'agents', action: 'list_all' },
+    // Configuração
+    { resource: 'config', action: 'read' },
+    // Fluxos
+    { resource: 'flows', action: 'read' },
+    { resource: 'flows', action: 'update' },
+    // Relatórios
+    { resource: 'reports', action: 'read' },
+    // Auditoria
+    { resource: 'audit', action: 'read' },
+    // Respostas Rápidas
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'quick_replies', action: 'update' },
+    // Departamentos
+    { resource: 'departments', action: 'read' },
+    // Disparos em Massa
+    { resource: 'bulk_messaging', action: 'read' },
+    // RAG
+    { resource: 'rag', action: 'create' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'query' },
+    { resource: 'rag', action: 'index' },
+    { resource: 'rag', action: 'update' },
+    // RPA
+    { resource: 'rpa', action: 'read' },
+    { resource: 'rpa', action: 'execute' },
+    // IA
+    { resource: 'ai', action: 'execute' },
+  ],
+
+  operator: [
     // Tickets (apenas próprios ou não atribuídos)
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'assign' }, // Pode atribuir para si mesmo
@@ -146,6 +281,51 @@ const ROLE_PERMISSIONS = {
     // RAG (consulta e leitura de documentos)
     { resource: 'rag', action: 'query' },
     { resource: 'rag', action: 'read' },
+    // RPA (apenas execução)
+    { resource: 'rpa', action: 'read' },
+    { resource: 'rpa', action: 'execute' },
+    // IA (apenas execução)
+    { resource: 'ai', action: 'execute' },
+  ],
+
+  auditor: [
+    // Apenas leitura e auditoria
+    { resource: 'tickets', action: 'read' },
+    { resource: 'tickets', action: 'list_all' },
+    { resource: 'queues', action: 'read' },
+    { resource: 'agents', action: 'read' },
+    { resource: 'agents', action: 'list_all' },
+    { resource: 'config', action: 'read' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'reports', action: 'read' },
+    { resource: 'audit', action: 'read' },
+    { resource: 'audit', action: 'export' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'bulk_messaging', action: 'read' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rpa', action: 'read' },
+  ],
+
+  readonly: [
+    // Apenas leitura básica
+    { resource: 'tickets', action: 'read' },
+    { resource: 'queues', action: 'read' },
+    { resource: 'agents', action: 'read' },
+    { resource: 'flows', action: 'read' },
+    { resource: 'quick_replies', action: 'read' },
+    { resource: 'departments', action: 'read' },
+    { resource: 'rag', action: 'read' },
+    { resource: 'rag', action: 'query' },
+  ],
+
+  // Compatibilidade com roles antigos
+  supervisor: [
+    // Mapeia para manager (definido acima)
+  ],
+
+  agent: [
+    // Mapeia para operator (definido acima)
   ],
 };
 
@@ -162,7 +342,15 @@ function hasPermission(agent, resource, action) {
     return false;
   }
 
-  const role = agent.role.toLowerCase();
+  let role = agent.role.toLowerCase();
+  
+  // Migra roles antigos
+  if (role === 'supervisor') {
+    role = 'manager';
+  } else if (role === 'agent') {
+    role = 'operator';
+  }
+
   const permissions = ROLE_PERMISSIONS[role] || [];
 
   return permissions.some(

@@ -118,7 +118,6 @@ function loadQueuesFromFile() {
     
     const data = fs.readFileSync(queuesFile, 'utf8');
     const parsed = JSON.parse(data);
-    const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
     let migratedTickets = 0;
     
     // Carrega tickets
@@ -126,10 +125,11 @@ function loadQueuesFromFile() {
       tickets.clear();
       for (const ticket of parsed.tickets) {
         if (ticket && ticket.id) {
-          // Migração: adiciona tenantId se não existir
+          // Migração: tickets sem tenantId não podem ser migrados automaticamente
           if (!ticket.tenantId || typeof ticket.tenantId !== 'string' || ticket.tenantId.trim() === '') {
-            ticket.tenantId = defaultTenantId;
-            migratedTickets++;
+            // Ticket sem tenantId requer correção manual - será ignorado
+            logger.warn(`[QueueService] Ticket ${ticket.id} sem tenantId - requer correção manual`);
+            continue; // Pula ticket sem tenantId
           }
           tickets.set(ticket.id, ticket);
         }
@@ -148,8 +148,8 @@ function loadQueuesFromFile() {
     
     logger.debug(`[QueueService] Dados carregados: ${tickets.size} ticket(s), ${queues.size} fila(s)`);
     if (migratedTickets > 0) {
-      logger.info(`[QueueService] ${migratedTickets} ticket(s) migrado(s) para tenant padrão: ${defaultTenantId}`);
-      saveQueuesToFile(); // Salva com tenantId
+      logger.warn(`[QueueService] ${migratedTickets} ticket(s) ignorado(s) por falta de tenantId`);
+      saveQueuesToFile(); // Salva sem os tickets ignorados
     }
   } catch (err) {
     logger.error('[QueueService] Erro ao carregar dados do arquivo', err);
@@ -198,7 +198,7 @@ function extractPhoneNumber(sessionId) {
  */
 function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {}, tags = [], category = null }) {
   // Valida tenantId ou usa padrão
-  const effectiveTenantId = tenantId || context.tenantId || config.get('api.defaultTenantId', 'tenant-demo');
+  const effectiveTenantId = tenantId || context.tenantId; // Tenant deve ser fornecido explicitamente
   
   if (!effectiveTenantId || typeof effectiveTenantId !== 'string' || effectiveTenantId.trim() === '') {
     throw new Error('tenantId é obrigatório para criar ticket');

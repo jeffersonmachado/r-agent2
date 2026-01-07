@@ -25,19 +25,46 @@ export function setToken(token) {
  */
 export function removeToken() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('auth_agent'); // Remove também as informações do agente
+}
+
+/**
+ * Obtém o tenantId do agente autenticado (armazenado no localStorage)
+ */
+export function getTenantId() {
+  try {
+    const agentData = localStorage.getItem('auth_agent');
+    if (agentData) {
+      const agent = JSON.parse(agentData);
+      return agent?.tenantId || null;
+    }
+  } catch {
+    // Ignora erros de parse
+  }
+  return null;
 }
 
 /**
  * Retorna os headers de autenticação para requisições HTTP
+ * Inclui automaticamente X-Tenant-Id quando disponível
  */
 export function getAuthHeaders() {
   const token = getToken();
   if (!token) {
     return {};
   }
-  return {
+  
+  const headers = {
     Authorization: `Bearer ${token}`,
   };
+  
+  // Adiciona X-Tenant-Id se disponível
+  const tenantId = getTenantId();
+  if (tenantId) {
+    headers['X-Tenant-Id'] = tenantId;
+  }
+  
+  return headers;
 }
 
 /**
@@ -52,6 +79,16 @@ export async function login(username, password) {
   // Salva o token se retornado pela API
   if (result.token) {
     setToken(result.token);
+  }
+  
+  // Salva informações do agente (incluindo tenantId) no localStorage
+  if (result.agent) {
+    try {
+      localStorage.setItem('auth_agent', JSON.stringify(result.agent));
+      console.log('[login] Agente salvo no localStorage:', result.agent);
+    } catch (err) {
+      console.warn('Erro ao salvar informações do agente:', err);
+    }
   }
   
   return result;
@@ -127,6 +164,46 @@ export async function updateAgent(id, data) {
 export async function deleteAgent(id) {
   return fetchJson(`/auth/agents/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+  });
+}
+
+/**
+ * Convida um novo usuário
+ */
+export async function inviteUser(data) {
+  return fetchJson('/auth/invite', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Aceita convite
+ */
+export async function acceptInvitation(invitationToken, password, username) {
+  return fetchJson('/auth/accept-invitation', {
+    method: 'POST',
+    body: JSON.stringify({ invitationToken, password, username }),
+  });
+}
+
+/**
+ * Solicita reset de senha
+ */
+export async function requestPasswordReset(email) {
+  return fetchJson('/auth/request-password-reset', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Reseta senha usando token
+ */
+export async function resetPassword(resetToken, newPassword) {
+  return fetchJson('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ resetToken, newPassword }),
   });
 }
 

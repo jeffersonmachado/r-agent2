@@ -30,6 +30,10 @@ const {
   getAgent,
   updateAgent,
   deleteAgent,
+  inviteUser,
+  acceptInvitation,
+  requestPasswordReset,
+  resetPassword,
 } = require('./services/authService');
 const {
   createTenant,
@@ -37,11 +41,32 @@ const {
   listTenants,
   getTenant,
   deleteTenant,
+  suspendTenant,
+  reactivateTenant,
+  changePlan,
+  getTenantUsage,
   getTenantContext,
   updateTenantContext,
 } = require('./services/tenantService');
 const { logAction, queryLogs, getAuditStats } = require('./services/auditService');
+const {
+  isSuperAdmin,
+  listAllTenants,
+  getTenantMetrics,
+  impersonateUser,
+  blockTenant,
+  unblockTenant,
+  adjustTenantPlan,
+} = require('./services/superAdminService');
+const {
+  getOnboardingStatus,
+  completeOnboardingStep,
+  startOnboarding,
+  createInitialTemplates,
+  completeOnboarding,
+} = require('./services/onboardingService');
 const { requireAuth, requirePermission } = require('./middleware/auth');
+const { tenantRateLimitMiddleware } = require('./middleware/tenantRateLimit');
 const { canAccessTicket, canModifyTicket } = require('./services/rbacService');
 const {
   listQueue,
@@ -193,7 +218,7 @@ const {
 const { validateInput, ValidationError, schemas } = require('./utils/inputValidator');
 
 const port = Number(config.get('api.port', 3000));
-const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
+// Removido defaultTenantId hardcoded - tenant deve ser sempre fornecido via req.tenantId
 
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, 'data');
@@ -544,7 +569,7 @@ function setCorsHeaders(res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
   
   // Security headers
@@ -633,11 +658,13 @@ function validateFlowStructure(rawFlow) {
  * @param {any} rawFlow
  * @returns {any}
  */
-function ensureFlowHasMeta(rawFlow) {
+function ensureFlowHasMeta(rawFlow, tenantId = null) {
   const flow = rawFlow && typeof rawFlow === 'object' ? { ...rawFlow } : {};
 
   if (!flow.tenantId || typeof flow.tenantId !== 'string' || flow.tenantId.trim() === '') {
-    flow.tenantId = defaultTenantId;
+    // Tenant deve ser fornecido - não há mais fallback para tenant-demo
+    // Se não vier, será definido pelo middleware de validação via req.tenantId
+    flow.tenantId = tenantId || null;
   } else {
     // Sanitiza tenantId
     flow.tenantId = flow.tenantId.trim();
@@ -763,6 +790,39 @@ async function requestHandler(req, res) {
       });
     }
     return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Rate Limiting por Tenant
+  // -----------------------------------------------------------------------
+  // Aplica rate limiting por tenant em todas as rotas (exceto rotas públicas acima)
+  // Rotas públicas: /health, /version, /system/status, /system/websocket, OPTIONS
+  // Rotas de autenticação não exigem tenant_id (login, reset, convites)
+  // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
+  const publicRoutes = ['/health', '/version', '/system/status', '/system/websocket'];
+  const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
+  const superAdminRoutes = pathname.startsWith('/super-admin');
+  
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+  const isAuthRoute = authRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+  const isSuperAdminRoute = superAdminRoutes;
+  
+  // Aplica rate limiting apenas em rotas que não são públicas, de auth ou super-admin
+  if (!isPublicRoute && !isAuthRoute && !isSuperAdminRoute && method !== 'OPTIONS') {
+    try {
+      const allowed = await tenantRateLimitMiddleware(req, res, sendJson);
+      if (!allowed) {
+        return; // Rate limit excedido, resposta já foi enviada
+      }
+    } catch (err) {
+      // Se rate limiting falhar, permite mas loga
+      logger.error('[Server] Erro no rate limiting por tenant', {
+        pathname,
+        method,
+        error: err.message,
+      });
+      // Continua processamento (fail-open em caso de erro)
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1132,8 +1192,14 @@ async function requestHandler(req, res) {
 
     const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length));
     
-    // Apenas admins podem ver qualquer tenant, outros só podem ver seu próprio tenant
-    if (req.agent.role !== 'admin' && req.tenantId !== tenantId) {
+    // Verifica se é super-admin (role super_admin OU owner do tenant system original)
+    // IMPORTANTE: Usa req.agent.tenantId (tenantId original do agente), não req.tenantId (que pode ter sido alterado)
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    
+    // Super-admin pode ver qualquer tenant
+    // Admin pode ver qualquer tenant
+    // Outros só podem ver seu próprio tenant (baseado no tenantId original do agente)
+    if (!isSuperAdminUser && req.agent.role !== 'admin' && req.agent.tenantId !== tenantId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver seu próprio tenant' });
       return;
     }
@@ -1273,8 +1339,11 @@ async function requestHandler(req, res) {
 
     const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
     
-    // Apenas admins podem ver qualquer contexto, outros só podem ver seu próprio contexto
-    if (req.agent.role !== 'admin' && req.tenantId !== tenantId) {
+    // Super-admin pode ver qualquer contexto
+    // Admin pode ver qualquer contexto
+    // Outros só podem ver seu próprio contexto
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser && req.agent.role !== 'admin' && req.agent.tenantId !== tenantId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver o contexto do seu próprio tenant' });
       return;
     }
@@ -1363,6 +1432,555 @@ async function requestHandler(req, res) {
         sendJson(res, 500, { error: 'internal_error' });
       }
     }
+    return;
+  }
+
+  // POST /tenants/:id/suspend - Suspende tenant (requer autenticação admin/owner)
+  if (method === 'POST' && pathname.includes('/suspend') && pathname.startsWith('/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/suspend', ''));
+    
+    // Apenas owner ou admin podem suspender
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem suspender tenants' });
+      return;
+    }
+
+    // Owner só pode suspender seu próprio tenant
+    if (req.agent.role === 'owner' && req.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode suspender seu próprio tenant' });
+      return;
+    }
+
+    const result = suspendTenant(tenantId);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error });
+      return;
+    }
+
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      tenantId: tenantId,
+      action: 'tenant_suspend',
+      resource: 'tenant',
+      resourceId: tenantId,
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, { tenant: result.tenant });
+    return;
+  }
+
+  // POST /tenants/:id/reactivate - Reativa tenant (requer autenticação admin/owner)
+  if (method === 'POST' && pathname.includes('/reactivate') && pathname.startsWith('/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/reactivate', ''));
+    
+    // Apenas owner ou admin podem reativar
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem reativar tenants' });
+      return;
+    }
+
+    const result = reactivateTenant(tenantId);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error });
+      return;
+    }
+
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      tenantId: tenantId,
+      action: 'tenant_reactivate',
+      resource: 'tenant',
+      resourceId: tenantId,
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, { tenant: result.tenant });
+    return;
+  }
+
+  // POST /tenants/:id/change-plan - Muda plano do tenant (requer autenticação admin/owner)
+  if (method === 'POST' && pathname.includes('/change-plan') && pathname.startsWith('/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/change-plan', ''));
+    
+    // Apenas owner ou admin podem mudar plano
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem mudar plano' });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body.plan) {
+        badRequest(res, 'Campo "plan" é obrigatório');
+        return;
+      }
+
+      const result = changePlan(tenantId, body.plan);
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        tenantId: tenantId,
+        action: 'tenant_change_plan',
+        resource: 'tenant',
+        resourceId: tenantId,
+        details: { newPlan: body.plan },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, { tenant: result.tenant });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao mudar plano do tenant:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // GET /tenants/:id/usage - Obtém métricas de uso do tenant
+  if (method === 'GET' && pathname.includes('/usage') && pathname.startsWith('/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/usage', ''));
+    
+    // Owner pode ver métricas do seu tenant, admin pode ver qualquer tenant
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem ver métricas' });
+      return;
+    }
+
+    // Super-admin pode ver métricas de qualquer tenant
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser && req.agent.role === 'owner' && req.agent.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver métricas do seu próprio tenant' });
+      return;
+    }
+
+    const usage = getTenantUsage(tenantId);
+    if (!usage) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { usage });
+    return;
+  }
+
+  // ============================================================================
+  // SUPER ADMIN ROUTES
+  // ============================================================================
+
+  // GET /super-admin/tenants - Lista todos os tenants (requer Super Admin)
+  if (method === 'GET' && pathname === '/super-admin/tenants') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar esta área' });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const filters = {
+        status: url.searchParams.get('status'),
+        plan: url.searchParams.get('plan'),
+        search: url.searchParams.get('search'),
+      };
+
+      const tenants = listAllTenants(filters);
+      sendJson(res, 200, { tenants });
+    } catch (err) {
+      logger.error('Erro ao listar tenants (Super Admin):', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /super-admin/tenants/:id/metrics - Obtém métricas detalhadas de um tenant
+  if (method === 'GET' && pathname.includes('/metrics') && pathname.startsWith('/super-admin/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar esta área' });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/super-admin/tenants/'.length).replace('/metrics', ''));
+    const metrics = getTenantMetrics(tenantId);
+
+    if (!metrics) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { metrics });
+    return;
+  }
+
+  // POST /super-admin/impersonate - Impersona um usuário
+  if (method === 'POST' && pathname === '/super-admin/impersonate') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode impersonar usuários' });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body.agentId) {
+        badRequest(res, 'Campo "agentId" é obrigatório');
+        return;
+      }
+
+      const result = impersonateUser(body.agentId, req.agent.id);
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        tenantId: 'system',
+        action: 'impersonate_user',
+        resource: 'agent',
+        resourceId: body.agentId,
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao impersonar usuário:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /super-admin/tenants/:id/block - Bloqueia um tenant
+  if (method === 'POST' && pathname.includes('/block') && pathname.startsWith('/super-admin/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode bloquear tenants' });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/super-admin/tenants/'.length).replace('/block', ''));
+
+    try {
+      const body = await parseJsonBody(req);
+      const reason = body.reason || 'Bloqueado por Super Admin';
+
+      const result = blockTenant(tenantId, reason, req.agent.id);
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+
+      sendJson(res, 200, { tenant: result.tenant });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao bloquear tenant:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /super-admin/tenants/:id/unblock - Desbloqueia um tenant
+  if (method === 'POST' && pathname.includes('/unblock') && pathname.startsWith('/super-admin/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode desbloquear tenants' });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/super-admin/tenants/'.length).replace('/unblock', ''));
+
+    const result = unblockTenant(tenantId, req.agent.id);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error });
+      return;
+    }
+
+    sendJson(res, 200, { tenant: result.tenant });
+    return;
+  }
+
+  // POST /super-admin/tenants/:id/adjust-plan - Ajusta plano de um tenant
+  if (method === 'POST' && pathname.includes('/adjust-plan') && pathname.startsWith('/super-admin/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode ajustar planos' });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/super-admin/tenants/'.length).replace('/adjust-plan', ''));
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body.plan) {
+        badRequest(res, 'Campo "plan" é obrigatório');
+        return;
+      }
+
+      const result = adjustTenantPlan(tenantId, body.plan, body.customLimits, req.agent.id);
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+
+      sendJson(res, 200, { tenant: result.tenant });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao ajustar plano:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // ============================================================================
+  // ONBOARDING ROUTES
+  // ============================================================================
+
+  // GET /onboarding/status - Obtém status de onboarding do tenant
+  if (method === 'GET' && pathname === '/onboarding/status') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!req.tenantId) {
+      sendJson(res, 403, { error: 'tenant_id_required' });
+      return;
+    }
+
+    const status = getOnboardingStatus(req.tenantId);
+    if (!status) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { onboarding: status });
+    return;
+  }
+
+  // POST /onboarding/start - Inicia processo de onboarding
+  if (method === 'POST' && pathname === '/onboarding/start') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!req.tenantId) {
+      sendJson(res, 403, { error: 'tenant_id_required' });
+      return;
+    }
+
+    // Apenas owner ou admin podem iniciar onboarding
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem iniciar onboarding' });
+      return;
+    }
+
+    const result = startOnboarding(req.tenantId);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error });
+      return;
+    }
+
+    sendJson(res, 200, result);
+    return;
+  }
+
+  // POST /onboarding/complete-step - Marca um step como completo
+  if (method === 'POST' && pathname === '/onboarding/complete-step') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!req.tenantId) {
+      sendJson(res, 403, { error: 'tenant_id_required' });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body.stepId) {
+        badRequest(res, 'Campo "stepId" é obrigatório');
+        return;
+      }
+
+      const result = completeOnboardingStep(req.tenantId, body.stepId);
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        tenantId: req.tenantId,
+        action: 'onboarding_step_complete',
+        resource: 'onboarding',
+        resourceId: body.stepId,
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao completar step de onboarding:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /onboarding/complete - Finaliza onboarding
+  if (method === 'POST' && pathname === '/onboarding/complete') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!req.tenantId) {
+      sendJson(res, 403, { error: 'tenant_id_required' });
+      return;
+    }
+
+    // Apenas owner ou admin podem finalizar onboarding
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem finalizar onboarding' });
+      return;
+    }
+
+    const result = completeOnboarding(req.tenantId);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error });
+      return;
+    }
+
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      tenantId: req.tenantId,
+      action: 'onboarding_complete',
+      resource: 'onboarding',
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, result);
+    return;
+  }
+
+  // POST /onboarding/create-templates - Cria templates iniciais
+  if (method === 'POST' && pathname === '/onboarding/create-templates') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!req.tenantId) {
+      sendJson(res, 403, { error: 'tenant_id_required' });
+      return;
+    }
+
+    // Apenas owner ou admin podem criar templates
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem criar templates' });
+      return;
+    }
+
+    const result = createInitialTemplates(req.tenantId);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error });
+      return;
+    }
+
+    sendJson(res, 200, result);
     return;
   }
 
@@ -1595,6 +2213,171 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // POST /auth/invite - Convida um novo usuário
+  if (method === 'POST' && pathname === '/auth/invite') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'agents', 'invite');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      // Garante que tenantId seja o mesmo do agente autenticado
+      body.tenantId = req.tenantId || body.tenantId;
+      
+      const result = inviteUser(body);
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        tenantId: req.tenantId,
+        action: 'user_invite',
+        resource: 'agent',
+        resourceId: result.agentId,
+        details: { email: body.email, role: body.role },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao convidar usuário:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/accept-invitation - Aceita convite
+  if (method === 'POST' && pathname === '/auth/accept-invitation') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body.invitationToken || !body.password || !body.username) {
+        badRequest(res, 'invitationToken, password e username são obrigatórios');
+        return;
+      }
+
+      const result = acceptInvitation(body.invitationToken, body.password, body.username);
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      // Salva token se retornado
+      if (result.token) {
+        res.setHeader('Set-Cookie', `auth_token=${result.token}; HttpOnly; Secure; SameSite=Strict`);
+      }
+
+      logAction({
+        agentId: result.agent?.id || 'system',
+        username: result.agent?.username || body.username,
+        tenantId: result.agent?.tenantId || 'unknown',
+        action: 'invitation_accepted',
+        resource: 'agent',
+        resourceId: result.agent?.id,
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao aceitar convite:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/request-password-reset - Solicita reset de senha
+  if (method === 'POST' && pathname === '/auth/request-password-reset') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body.email) {
+        badRequest(res, 'Email é obrigatório');
+        return;
+      }
+
+      const result = requestPasswordReset(body.email);
+      // Sempre retorna sucesso (por segurança, não revela se email existe)
+      sendJson(res, 200, { 
+        success: true, 
+        message: 'Se o email existir, um link de reset será enviado' 
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao solicitar reset de senha:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/reset-password - Reseta senha usando token
+  if (method === 'POST' && pathname === '/auth/reset-password') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body.resetToken || !body.newPassword) {
+        badRequest(res, 'resetToken e newPassword são obrigatórios');
+        return;
+      }
+
+      const result = resetPassword(body.resetToken, body.newPassword);
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      sendJson(res, 200, { success: true, message: 'Senha resetada com sucesso' });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao resetar senha:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
   // GET /audit/logs - Consulta logs de auditoria
   if (method === 'GET' && pathname === '/audit/logs') {
     const authResult = requireAuth(req);
@@ -1710,7 +2493,7 @@ async function requestHandler(req, res) {
         body.tenantId = req.tenantId; // Força tenantId do agente
       }
 
-      const flow = ensureFlowHasMeta(body);
+      const flow = ensureFlowHasMeta(body, req.tenantId);
 
       // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
       // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
@@ -1754,7 +2537,7 @@ async function requestHandler(req, res) {
       saveFlowsToFile(); // Salva no arquivo após criar
       
       // Dispara webhooks e WebSocket
-      const tenantId = req.tenantId || flow.tenantId || defaultTenantId;
+      const tenantId = req.tenantId || flow.tenantId;
       triggerWebhooks(tenantId, 'flow.created', {
         flowId: flow.id,
         flowName: flow.name,
@@ -1890,7 +2673,7 @@ async function requestHandler(req, res) {
       saveFlowsToFile(); // Salva no arquivo após atualizar
       
       // Dispara webhooks e WebSocket
-      const tenantId = req.tenantId || flow.tenantId || defaultTenantId;
+      const tenantId = req.tenantId || flow.tenantId;
       triggerWebhooks(tenantId, 'flow.updated', {
         flowId: flow.id,
         flowName: flow.name,
@@ -1945,7 +2728,7 @@ async function requestHandler(req, res) {
     saveFlowsToFile(); // Salva no arquivo após deletar
     
     // Dispara webhooks e WebSocket
-    const tenantId = req.tenantId || flow.tenantId || defaultTenantId;
+    const tenantId = req.tenantId || flow.tenantId;
     triggerWebhooks(tenantId, 'flow.deleted', {
       flowId: flow.id,
       flowName: flow.name,
@@ -2594,7 +3377,7 @@ async function requestHandler(req, res) {
         return;
       }
 
-      const tenantId = flow.tenantId || req.tenantId || 'tenant-demo';
+      const tenantId = flow.tenantId || req.tenantId;
       const resolution = await rpaDependencyResolver.resolveDependencies(flow, tenantId);
 
       sendJson(res, 200, resolution);
@@ -2902,7 +3685,7 @@ async function requestHandler(req, res) {
       }
 
       // Dispara webhooks e WebSocket
-      const tenantId = req.tenantId || defaultTenantId;
+      const tenantId = req.tenantId;
       triggerWebhooks(tenantId, 'ticket.created', {
         ticketId: ticket.id,
         queue: ticket.queue,
@@ -3319,7 +4102,7 @@ async function requestHandler(req, res) {
       }
 
       // Dispara webhooks e WebSocket
-      const tenantId = req.tenantId || defaultTenantId;
+      const tenantId = req.tenantId;
       triggerWebhooks(tenantId, 'ticket.assigned', {
         ticketId: id,
         assignedTo,
@@ -3401,7 +4184,7 @@ async function requestHandler(req, res) {
     }
 
     // Dispara webhooks e WebSocket
-    const tenantId = req.tenantId || defaultTenantId;
+    const tenantId = req.tenantId;
     triggerWebhooks(tenantId, 'ticket.closed', {
       ticketId: id,
       closedBy: req.agent.id,
@@ -3759,7 +4542,7 @@ async function requestHandler(req, res) {
       }
 
       // Dispara webhooks e WebSocket
-      const tenantId = req.tenantId || defaultTenantId;
+      const tenantId = req.tenantId;
       triggerWebhooks(tenantId, 'ticket.message.sent', {
         ticketId: id,
         agentId: req.agent.id,
@@ -3979,8 +4762,8 @@ async function requestHandler(req, res) {
         return;
       }
 
-      const effectiveTenantId = tenantId || defaultTenantId;
-      logger.debug('Usando tenant para IA', { effectiveTenantId, defaultTenantId });
+      const effectiveTenantId = tenantId || req.tenantId;
+      logger.debug('Usando tenant para IA', { effectiveTenantId });
 
       try {
         logger.debug('Gerando resposta de IA...', {
@@ -6608,7 +7391,7 @@ async function requestHandler(req, res) {
     try {
       const url = new URL(req.url || '/', 'http://localhost');
       const filters = {
-        tenantId: url.searchParams.get('tenantId') || defaultTenantId,
+        tenantId: url.searchParams.get('tenantId') || req.tenantId,
         source: url.searchParams.get('source') || null,
         category: url.searchParams.get('category') || null,
         productId: url.searchParams.get('productId') || null,
@@ -6642,7 +7425,7 @@ async function requestHandler(req, res) {
 
     try {
       const url = new URL(req.url || '/', 'http://localhost');
-      const tenantId = url.searchParams.get('tenantId') || defaultTenantId;
+      const tenantId = url.searchParams.get('tenantId') || req.tenantId;
       const stats = await getDocumentsStats(tenantId);
       sendJson(res, 200, stats);
     } catch (err) {
@@ -6704,7 +7487,7 @@ async function requestHandler(req, res) {
 
     try {
       const body = await parseJsonBody(req);
-      const tenantId = body.tenantId || defaultTenantId;
+      const tenantId = body.tenantId || req.tenantId;
       const result = await createDocument(body, tenantId);
 
       if (!result.success) {
@@ -6943,7 +7726,7 @@ async function requestHandler(req, res) {
       }
 
       // Obtém tenantId do body ou do agente autenticado
-      const finalTenantId = tenantId || req.tenantId || defaultTenantId;
+      const finalTenantId = tenantId || req.tenantId;
 
       // Prepara filtros (pode ser expandido no futuro)
       const filters = {
@@ -7183,8 +7966,8 @@ async function requestHandler(req, res) {
     }
 
     try {
-      const serviceUrl = ragService.getRagServiceUrl(req.tenantId || 'tenant-demo');
-      const timeout = ragService.getRagTimeout(req.tenantId || 'tenant-demo');
+      const serviceUrl = ragService.getRagServiceUrl(req.tenantId);
+      const timeout = ragService.getRagTimeout(req.tenantId);
 
       const response = await fetch(`${serviceUrl}/rag/learning/validation-rules`, {
         method: 'GET',
@@ -7290,7 +8073,7 @@ async function requestHandler(req, res) {
       // Obtém tenantId do agente autenticado ou do query param
       const queryParams = new URLSearchParams(req.url.split('?')[1] || '');
       const tenantIdParam = queryParams.get('tenantId');
-      const finalTenantId = tenantIdParam || req.tenantId || defaultTenantId;
+      const finalTenantId = tenantIdParam || req.tenantId;
 
       // Obtém configuração de domínios
       const domains = ragService.getRagDomains(finalTenantId);
@@ -7366,7 +8149,7 @@ async function requestHandler(req, res) {
         source: body.source || 'web_scraping',
         category: body.category,
         tags: body.tags || [],
-        tenantId: defaultTenantId,
+        tenantId: req.tenantId,
         userId,
         executionId,
       });
@@ -7433,7 +8216,7 @@ async function requestHandler(req, res) {
         source: body.source || 'web_scraping',
         category: body.category,
         tags: body.tags || [],
-        tenantId: defaultTenantId,
+        tenantId: req.tenantId,
       });
       logAction({
         agentId: req.agent.id,
@@ -7477,7 +8260,7 @@ async function requestHandler(req, res) {
       return;
     }
 
-    const webhooksList = listWebhooks(req.tenantId || defaultTenantId);
+    const webhooksList = listWebhooks(req.tenantId);
     sendJson(res, 200, { webhooks: webhooksList });
     return;
   }
@@ -7499,7 +8282,7 @@ async function requestHandler(req, res) {
     }
 
     // Verifica se pertence ao tenant do agente
-    if (webhook.tenantId !== (req.tenantId || defaultTenantId)) {
+      if (webhook.tenantId !== req.tenantId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado' });
       return;
     }
@@ -7533,7 +8316,7 @@ async function requestHandler(req, res) {
       // Usa tenantId do agente autenticado
       const webhookData = {
         ...body,
-        tenantId: body.tenantId || req.tenantId || defaultTenantId,
+        tenantId: body.tenantId || req.tenantId,
       };
 
       const result = createWebhook(webhookData);
@@ -7594,7 +8377,7 @@ async function requestHandler(req, res) {
       }
 
       // Verifica se pertence ao tenant do agente
-      if (existingWebhook.tenantId !== (req.tenantId || defaultTenantId)) {
+      if (existingWebhook.tenantId !== req.tenantId) {
         sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado' });
         return;
       }
@@ -7652,7 +8435,7 @@ async function requestHandler(req, res) {
     }
 
     // Verifica se pertence ao tenant do agente
-    if (existingWebhook.tenantId !== (req.tenantId || defaultTenantId)) {
+      if (existingWebhook.tenantId !== req.tenantId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado' });
       return;
     }
@@ -8830,7 +9613,6 @@ module.exports = {
     validateFlowStructure,
     flows,
     sessionEvents,
-    defaultTenantId,
   },
 };
 

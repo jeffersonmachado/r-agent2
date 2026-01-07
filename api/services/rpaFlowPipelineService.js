@@ -72,7 +72,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   };
 
   try {
-    const tenantId = flow.tenantId || 'tenant-demo';
+    const tenantId = flow.tenantId; // Tenant deve ser fornecido no flow
 
     // PASSO 1: Análise de dependências
     logger.info('[RpaFlowPipeline] Passo 1: Analisando dependências...');
@@ -283,7 +283,7 @@ async function saveRpaRecording(recording) {
  * Obtém preview do pipeline sem executar.
  */
 async function previewRpaFlowPipeline(flow, options = {}) {
-  const tenantId = flow.tenantId || 'tenant-demo';
+  const tenantId = flow.tenantId; // Tenant deve ser fornecido no flow
 
   // Apenas resolve dependências e converte para preview
   const dependencyResolution = await rpaDependencyResolver.resolveDependencies(flow, tenantId);

@@ -445,7 +445,7 @@ Gere palavras-chave novas que não estejam na lista acima.`;
         method: 'POST',
         body: JSON.stringify({
           prompt,
-          tenantId: 'tenant-demo', // TODO: obter do contexto
+          tenantId: null, // TODO: obter do contexto do agente autenticado
         }),
       });
 

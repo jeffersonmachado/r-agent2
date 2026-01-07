@@ -26,5 +26,19 @@
     ],
     "createdAt": "2026-01-05T19:36:44.353Z",
     "updatedAt": "2026-01-05T19:36:44.353Z"
+  },
+  {
+    "tenantId": "system",
+    "ramo_atividade": "Sistema de Administração",
+    "objetivo": "Administração global do sistema",
+    "site_oficial": "https://sistema.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-07T18:22:39.913Z",
+    "updatedAt": "2026-01-07T18:22:39.913Z"
   }
 ]

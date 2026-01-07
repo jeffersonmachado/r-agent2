@@ -12,9 +12,14 @@ const http = require('http');
 
 const dataDir = path.join(__dirname, '../api/data');
 const documentsFile = path.join(dataDir, 'rag_documents.json');
-const metadataFile = path.join(__dirname, '../rag-service/data/vector_store/tenant-demo.metadata.json');
 const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
-const TENANT_ID = process.env.TENANT_ID || 'tenant-demo';
+const TENANT_ID = process.env.TENANT_ID;
+if (!TENANT_ID) {
+  console.error('❌ Erro: TENANT_ID é obrigatório');
+  console.error('   Defina a variável de ambiente TENANT_ID');
+  process.exit(1);
+}
+const metadataFile = path.join(__dirname, '../rag-service/data/vector_store', `${TENANT_ID}.metadata.json`);
 
 async function cleanOrphanedDocuments() {
   try {
