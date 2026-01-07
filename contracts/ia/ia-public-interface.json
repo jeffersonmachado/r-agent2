@@ -13,12 +13,35 @@
         "description": "Input genérico (estrutura específica definida pela implementação)"
       },
       "output": {
-        "description": "Retorno seguindo o contrato IaGenerationResult definido em ia-generation-result.schema.json"
+        "description": "Retorno seguindo o contrato IaGenerationResult definido em ia-generation-result.schema.json",
+        "rag": {
+          "type": "object",
+          "required": ["used", "sources", "executionId"],
+          "properties": {
+            "used": {
+              "type": "boolean",
+              "description": "Indica se RAG foi usado na geração"
+            },
+            "executionId": {
+              "type": "string",
+              "description": "ID da execução que gerou o contexto RAG utilizado"
+            },
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Lista de fontes RAG utilizadas",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
       },
       "restrictions": [
         "test-only: planos gerados devem ter context.mode = 'test-only'",
         "no-side-effects: geração não persiste automaticamente",
-        "gate-required: todo plano deve passar pelo gate de validação"
+        "gate-required: todo plano deve passar pelo gate de validação",
+        "rag-required: se useRag=true, IA DEVE declarar uso de RAG e fontes"
       ]
     },
     "generateChatbotFlow": {
@@ -29,11 +52,34 @@
         "description": "Input genérico (estrutura específica definida pela implementação)"
       },
       "output": {
-        "description": "Retorno seguindo o contrato IaGenerationResult definido em ia-generation-result.schema.json"
+        "description": "Retorno seguindo o contrato IaGenerationResult definido em ia-generation-result.schema.json",
+        "rag": {
+          "type": "object",
+          "required": ["used", "sources", "executionId"],
+          "properties": {
+            "used": {
+              "type": "boolean",
+              "description": "Indica se RAG foi usado na geração"
+            },
+            "executionId": {
+              "type": "string",
+              "description": "ID da execução que gerou o contexto RAG utilizado"
+            },
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Lista de fontes RAG utilizadas",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
       },
       "restrictions": [
         "no-side-effects: geração não persiste automaticamente",
-        "gate-required: todo fluxo deve passar pelo gate de validação"
+        "gate-required: todo fluxo deve passar pelo gate de validação",
+        "rag-required: se useRag=true, IA DEVE declarar uso de RAG e fontes"
       ]
     }
   },

@@ -1,0 +1,43 @@
+{
+  "tenantId": "tenant-1767641645950-0654921",
+  "synonyms": {},
+  "queryPatterns": {
+    "successful": [],
+    "failed": [
+      {
+        "query": "Como posso fazer uma compra? posso fazer compra",
+        "success": false,
+        "confidence": 0.0,
+        "chunksFound": 0,
+        "timestamp": "2026-01-05T19:34:06.595065"
+      },
+      {
+        "query": "Quais são nossos produtos? item artigo mercadoria nossos produtos",
+        "success": false,
+        "confidence": 0.0,
+        "chunksFound": 0,
+        "timestamp": "2026-01-05T19:34:07.066762"
+      }
+    ]
+  },
+  "promptVariations": [],
+  "metrics": {
+    "totalQueries": 2,
+    "successfulQueries": 0,
+    "failedQueries": 2,
+    "avgConfidence": 0.0,
+    "lastUpdated": "2026-01-05T19:34:07.066705"
+  },
+  "config": {
+    "minScore": 0.45,
+    "topK": 6,
+    "chunkOverlap": 75
+  },
+  "learningCycles": {
+    "total": 0,
+    "lastCycle": null,
+    "cycles": []
+  },
+  "createdAt": "2026-01-05T19:34:06.594923",
+  "updatedAt": "2026-01-05T19:34:07.066838"
+}

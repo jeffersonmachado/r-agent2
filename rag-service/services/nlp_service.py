@@ -114,9 +114,13 @@ def extract_entities(text: str) -> Dict[str, List[str]]:
     return entities
 
 
-def analyze_intent(text: str) -> Tuple[Optional[str], float]:
+def analyze_intent(text: str, ramo_atividade: Optional[str] = None) -> Tuple[Optional[str], float]:
     """
     Analisa a intenção do texto.
+    
+    Args:
+        text: Texto a analisar
+        ramo_atividade: Ramo de atividade do tenant (opcional, usado como viés semântico fixo)
     
     Retorna: (intent, confidence)
     
@@ -128,8 +132,23 @@ def analyze_intent(text: str) -> Tuple[Optional[str], float]:
     - goodbye: Despedida
     - information: Busca de informação
     - support: Pedido de suporte
+    
+    NOTA: O ramo_atividade atua como viés semântico fixo para classificação de intenção.
+    NÃO é tratado como conhecimento factual, apenas como contexto para desambiguação semântica.
     """
     text_lower = text.lower()
+    
+    # Aplica viés semântico baseado no ramo_atividade (se disponível)
+    semantic_bias = {}
+    if ramo_atividade:
+        ramo_lower = ramo_atividade.lower()
+        # Aumenta confiança para intenções relacionadas ao ramo de atividade
+        if 'e-commerce' in ramo_lower or 'varejo' in ramo_lower or 'venda' in ramo_lower:
+            semantic_bias['request'] = 0.1  # Bônus para solicitações em e-commerce
+        elif 'saúde' in ramo_lower or 'clínica' in ramo_lower or 'médico' in ramo_lower:
+            semantic_bias['request'] = 0.1  # Bônus para solicitações em saúde
+        elif 'tecnologia' in ramo_lower or 'software' in ramo_lower:
+            semantic_bias['support'] = 0.1  # Bônus para suporte em tecnologia
     
     # Padrões de intenção
     intent_patterns = {
@@ -168,6 +187,10 @@ def analyze_intent(text: str) -> Tuple[Optional[str], float]:
         for pattern in patterns:
             matches = len(re.findall(pattern, text_lower))
             score += matches * 0.3
+        
+        # Aplica viés semântico se disponível
+        if intent in semantic_bias:
+            score += semantic_bias[intent]
         
         if score > 0:
             scores[intent] = score
@@ -216,14 +239,32 @@ def analyze_sentiment(text: str) -> Tuple[Optional[str], float]:
         return 'neutral', 0.5
 
 
-def expand_query(text: str, entities: Dict[str, List[str]]) -> str:
+def expand_query(text: str, entities: Dict[str, List[str]], tenant_id: Optional[str] = None) -> str:
     """
     Expande query com sinônimos e entidades relevantes.
     
-    Adiciona variações e termos relacionados para melhorar busca.
+    Usa sinônimos dinâmicos aprendidos do tenant quando disponível.
+    
+    Args:
+        text: Texto a expandir
+        entities: Entidades extraídas
+        tenant_id: ID do tenant para buscar sinônimos aprendidos (opcional)
     """
-    # Sinônimos comuns (pode ser expandido com dicionário)
-    synonyms = {
+    expanded_terms = [text]
+    text_lower = text.lower()
+    
+    # Tenta carregar sinônimos dinâmicos do tenant
+    dynamic_synonyms = {}
+    if tenant_id:
+        try:
+            from services.adaptive_learning import get_adaptive_learning_service
+            learning_service = get_adaptive_learning_service()
+            dynamic_synonyms = learning_service.get_synonyms(tenant_id)
+        except Exception as e:
+            logger.debug(f"Erro ao carregar sinônimos dinâmicos: {e}")
+    
+    # Sinônimos base (fallback se não houver aprendidos)
+    base_synonyms = {
         'preço': ['valor', 'custo', 'quanto custa'],
         'produto': ['item', 'artigo', 'mercadoria'],
         'pedido': ['compra', 'encomenda', 'solicitação'],
@@ -234,34 +275,51 @@ def expand_query(text: str, entities: Dict[str, List[str]]) -> str:
         'ajuda': ['suporte', 'assistência', 'socorro']
     }
     
-    expanded_terms = [text]
+    # Usa sinônimos dinâmicos se disponíveis, senão usa base
+    synonyms_to_use = dynamic_synonyms if dynamic_synonyms else base_synonyms
     
-    # Adiciona sinônimos
-    text_lower = text.lower()
-    for word, syns in synonyms.items():
+    # Adiciona sinônimos encontrados
+    for word, syns in synonyms_to_use.items():
         if word in text_lower:
-            expanded_terms.extend(syns)
+            if isinstance(syns, list):
+                expanded_terms.extend(syns)
+            elif isinstance(syns, str):
+                expanded_terms.append(syns)
     
     # Adiciona entidades relevantes
     if entities.get('keywords'):
         expanded_terms.extend(entities['keywords'][:3])  # Limita a 3 keywords
     
+    # Remove duplicatas mantendo ordem
+    seen = set()
+    unique_terms = []
+    for term in expanded_terms:
+        term_lower = term.lower()
+        if term_lower not in seen:
+            seen.add(term_lower)
+            unique_terms.append(term)
+    
     # Combina termos expandidos
-    expanded = ' '.join(expanded_terms)
+    expanded = ' '.join(unique_terms)
     
     return expanded
 
 
-def process_nlp(text: str, expand: bool = True) -> NLPResult:
+def process_nlp(text: str, expand: bool = True, tenant_id: Optional[str] = None, ramo_atividade: Optional[str] = None) -> NLPResult:
     """
     Processa texto completo com NLP.
     
     Args:
         text: Texto a processar
         expand: Se deve expandir query com sinônimos
+        tenant_id: ID do tenant para buscar sinônimos aprendidos (opcional)
+        ramo_atividade: Ramo de atividade do tenant (opcional, usado como viés semântico fixo)
     
     Returns:
         NLPResult com todos os dados processados
+    
+    NOTA: O ramo_atividade atua como viés semântico fixo para classificação de intenção.
+    NÃO é tratado como conhecimento factual, apenas como contexto para desambiguação semântica.
     """
     result = NLPResult()
     result.original_text = text
@@ -276,8 +334,8 @@ def process_nlp(text: str, expand: bool = True) -> NLPResult:
     # Extração de entidades
     result.entities = extract_entities(text)
     
-    # Análise de intenção
-    intent, intent_confidence = analyze_intent(text)
+    # Análise de intenção (com viés semântico do ramo_atividade se disponível)
+    intent, intent_confidence = analyze_intent(text, ramo_atividade=ramo_atividade)
     result.intent = intent
     result.confidence = intent_confidence
     
@@ -287,7 +345,7 @@ def process_nlp(text: str, expand: bool = True) -> NLPResult:
     
     # Expansão de query
     if expand:
-        result.expanded_query = expand_query(text, result.entities)
+        result.expanded_query = expand_query(text, result.entities, tenant_id)
     else:
         result.expanded_query = result.normalized_text
     

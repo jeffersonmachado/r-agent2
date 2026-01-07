@@ -9,6 +9,7 @@ import { useRouter } from '../hooks/useRouter';
 import { Button } from '../styles/Button';
 import { useToast } from './Toast';
 import logger from '../utils/logger';
+import { getStaticUrl } from '../utils';
 
 export function Login() {
   const { login, isAuthenticated } = useAuth();
@@ -140,7 +141,7 @@ export function Login() {
             boxShadow: `0 8px 16px ${theme.colors.accent.light}`,
           }}>
             <img 
-              src="/images/home_results_29.png" 
+              src={getStaticUrl("/images/home_results_29.png")} 
               alt="Results Logo" 
               style={{
                 width: '100%',

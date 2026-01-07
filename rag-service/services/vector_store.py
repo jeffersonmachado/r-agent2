@@ -38,6 +38,13 @@ def get_vector_store_path(tenant_id: str) -> Path:
     """
     settings = get_settings()
     base_path = Path(settings.vector_store_path)
+    
+    # Se o caminho é relativo, torna absoluto relativo ao diretório do serviço RAG
+    if not base_path.is_absolute():
+        # Tenta encontrar o diretório do serviço RAG
+        service_dir = Path(__file__).parent.parent
+        base_path = (service_dir / base_path).resolve()
+    
     base_path.mkdir(parents=True, exist_ok=True)
     return base_path / f"{tenant_id}.index"
 
@@ -54,6 +61,13 @@ def get_metadata_path(tenant_id: str) -> Path:
     """
     settings = get_settings()
     base_path = Path(settings.vector_store_path)
+    
+    # Se o caminho é relativo, torna absoluto relativo ao diretório do serviço RAG
+    if not base_path.is_absolute():
+        # Tenta encontrar o diretório do serviço RAG
+        service_dir = Path(__file__).parent.parent
+        base_path = (service_dir / base_path).resolve()
+    
     base_path.mkdir(parents=True, exist_ok=True)
     return base_path / f"{tenant_id}.metadata.json"
 
@@ -96,36 +110,91 @@ class VectorStore:
         self.index_path = get_vector_store_path(tenant_id)
         self.metadata_path = get_metadata_path(tenant_id)
         
+        logger.info(f"[VectorStore] Inicializando vector store", {
+            'tenantId': tenant_id,
+            'indexPath': str(self.index_path),
+            'metadataPath': str(self.metadata_path),
+            'indexExists': self.index_path.exists(),
+            'metadataExists': self.metadata_path.exists(),
+            'faissAvailable': FAISS_AVAILABLE
+        })
+        
         if FAISS_AVAILABLE:
             if self.index_path.exists():
+                logger.info(f"[VectorStore] Carregando índice FAISS existente", {
+                    'tenantId': tenant_id,
+                    'indexPath': str(self.index_path)
+                })
                 self.index = faiss.read_index(str(self.index_path))
+                logger.info(f"[VectorStore] Índice FAISS carregado", {
+                    'tenantId': tenant_id,
+                    'indexSize': self.index.ntotal,
+                    'dimension': self.index.d
+                })
             else:
                 # Cria índice vazio
+                logger.info(f"[VectorStore] Criando novo índice FAISS vazio", {
+                    'tenantId': tenant_id,
+                    'dimension': self.dimension
+                })
                 self.index = faiss.IndexFlatL2(self.dimension)
         else:
             # Fallback: armazenamento em memória simples
+            logger.info(f"[VectorStore] FAISS não disponível, usando fallback", {
+                'tenantId': tenant_id
+            })
             self.index = None
             self.vectors = []
         
         # Carrega metadados
         self.chunks: Dict[str, Chunk] = {}
         if self.metadata_path.exists():
+            logger.info(f"[VectorStore] Arquivo de metadados existe, carregando", {
+                'tenantId': tenant_id,
+                'metadataPath': str(self.metadata_path)
+            })
             self._load_metadata()
         else:
+            logger.info(f"[VectorStore] Arquivo de metadados não existe, usando memória", {
+                'tenantId': tenant_id
+            })
             if tenant_id not in _chunks_metadata:
                 _chunks_metadata[tenant_id] = {}
             self.chunks = _chunks_metadata[tenant_id]
+        
+        logger.info(f"[VectorStore] Vector store inicializado", {
+            'tenantId': tenant_id,
+            'chunksInMemory': len(self.chunks),
+            'indexSize': self.index.ntotal if FAISS_AVAILABLE and self.index else (len(self.vectors) if not FAISS_AVAILABLE else 0)
+        })
     
     def _load_metadata(self):
         """Carrega metadados do arquivo."""
         try:
+            logger.info(f"[VectorStore] Carregando metadados do arquivo", {
+                'tenantId': self.tenant_id,
+                'metadataPath': str(self.metadata_path),
+                'fileExists': self.metadata_path.exists()
+            })
+            
             with open(self.metadata_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # Se FAISS não está disponível, precisa carregar vetores também
-                if not FAISS_AVAILABLE:
-                    self.vectors = []
                 
-                for chunk_id, chunk_data in data.items():
+            logger.info(f"[VectorStore] Metadados carregados do arquivo", {
+                'tenantId': self.tenant_id,
+                'chunksInFile': len(data),
+                'metadataPath': str(self.metadata_path)
+            })
+            
+            # Se FAISS não está disponível, precisa carregar vetores também
+            if not FAISS_AVAILABLE:
+                self.vectors = []
+            
+            chunks_loaded = 0
+            document_ids = set()
+            
+            for chunk_id, chunk_data in data.items():
+                try:
                     # Reconstrói Chunk a partir do JSON
                     from models.document import Chunk, ChunkMetadata, DocumentPermissions
                     embedding = chunk_data.get('embedding')
@@ -139,12 +208,34 @@ class VectorStore:
                         permissions=DocumentPermissions(**chunk_data['permissions'])
                     )
                     self.chunks[chunk_id] = chunk
+                    document_ids.add(chunk.documentId)
+                    chunks_loaded += 1
                     
                     # Se FAISS não está disponível, adiciona embedding aos vetores
                     if not FAISS_AVAILABLE and embedding:
                         self.vectors.append(embedding)
+                except Exception as e:
+                    logger.warning(f"[VectorStore] Erro ao carregar chunk {chunk_id}", {
+                        'tenantId': self.tenant_id,
+                        'chunkId': chunk_id,
+                        'error': str(e)
+                    })
+                    continue
+            
+            logger.info(f"[VectorStore] Metadados carregados com sucesso", {
+                'tenantId': self.tenant_id,
+                'chunksLoaded': chunks_loaded,
+                'chunksInFile': len(data),
+                'documentCount': len(document_ids),
+                'chunksInMemory': len(self.chunks)
+            })
         except Exception as e:
-            logger.warning(f"Erro ao carregar metadados: {e}")
+            logger.error(f"[VectorStore] Erro ao carregar metadados", {
+                'tenantId': self.tenant_id,
+                'metadataPath': str(self.metadata_path),
+                'error': str(e),
+                'errorType': type(e).__name__
+            })
             self.chunks = {}
             if not FAISS_AVAILABLE:
                 self.vectors = []
@@ -152,8 +243,16 @@ class VectorStore:
     def _save_metadata(self):
         """Salva metadados no arquivo."""
         try:
+            logger.debug(f"[VectorStore] Preparando metadados para salvar", {
+                'tenantId': self.tenant_id,
+                'chunksCount': len(self.chunks),
+                'metadataPath': str(self.metadata_path)
+            })
+            
             data = {}
+            document_ids = set()
             for chunk_id, chunk in self.chunks.items():
+                document_ids.add(chunk.documentId)
                 data[chunk_id] = {
                     'id': chunk.id,
                     'documentId': chunk.documentId,
@@ -164,10 +263,43 @@ class VectorStore:
                     'permissions': chunk.permissions.dict()
                 }
             
+            logger.info(f"[VectorStore] Salvando {len(data)} chunks de {len(document_ids)} documentos", {
+                'tenantId': self.tenant_id,
+                'chunksCount': len(data),
+                'documentIds': list(document_ids),
+                'metadataPath': str(self.metadata_path)
+            })
+            
+            # Garante que o diretório existe
+            self.metadata_path.parent.mkdir(parents=True, exist_ok=True)
+            
             with open(self.metadata_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            # Verifica se o arquivo foi salvo
+            if self.metadata_path.exists():
+                file_size = self.metadata_path.stat().st_size
+                logger.info(f"[VectorStore] Metadados salvos com sucesso", {
+                    'tenantId': self.tenant_id,
+                    'metadataPath': str(self.metadata_path),
+                    'fileSize': file_size,
+                    'chunksCount': len(data),
+                    'documentCount': len(document_ids)
+                })
+            else:
+                logger.error(f"[VectorStore] Arquivo de metadados não foi criado", {
+                    'tenantId': self.tenant_id,
+                    'metadataPath': str(self.metadata_path)
+                })
         except Exception as e:
-            logger.error(f"Erro ao salvar metadados: {e}")
+            logger.error(f"[VectorStore] Erro ao salvar metadados", {
+                'tenantId': self.tenant_id,
+                'error': str(e),
+                'errorType': type(e).__name__,
+                'metadataPath': str(self.metadata_path),
+                'chunksCount': len(self.chunks)
+            })
+            raise
     
     def add_chunks(self, chunks: List[Chunk], embeddings: List[List[float]]):
         """
@@ -177,29 +309,110 @@ class VectorStore:
             chunks: Lista de chunks
             embeddings: Lista de embeddings correspondentes
         """
+        logger.info(f"[VectorStore] add_chunks chamado", {
+            'tenantId': self.tenant_id,
+            'chunksCount': len(chunks) if chunks else 0,
+            'embeddingsCount': len(embeddings) if embeddings else 0,
+            'chunksBefore': len(self.chunks),
+            'indexSizeBefore': self.index.ntotal if FAISS_AVAILABLE and self.index else len(self.vectors)
+        })
+        
         if not chunks or not embeddings:
+            logger.warning(f"[VectorStore] Chunks ou embeddings vazios", {
+                'tenantId': self.tenant_id,
+                'chunks': chunks is not None,
+                'embeddings': embeddings is not None
+            })
             return
         
         if len(chunks) != len(embeddings):
-            raise ValueError("Número de chunks e embeddings deve ser igual")
+            error_msg = f"Número de chunks ({len(chunks)}) e embeddings ({len(embeddings)}) deve ser igual"
+            logger.error(f"[VectorStore] {error_msg}", {
+                'tenantId': self.tenant_id,
+                'chunksCount': len(chunks),
+                'embeddingsCount': len(embeddings)
+            })
+            raise ValueError(error_msg)
         
         # Converte embeddings para numpy array
         embeddings_array = np.array(embeddings, dtype=np.float32)
+        logger.info(f"[VectorStore] Embeddings convertidos para numpy array", {
+            'tenantId': self.tenant_id,
+            'embeddingsShape': embeddings_array.shape,
+            'embeddingsDtype': embeddings_array.dtype
+        })
         
         if FAISS_AVAILABLE:
             # Adiciona ao índice FAISS
+            index_size_before = self.index.ntotal
+            logger.info(f"[VectorStore] Adicionando ao índice FAISS", {
+                'tenantId': self.tenant_id,
+                'indexSizeBefore': index_size_before,
+                'embeddingsToAdd': len(embeddings_array)
+            })
             self.index.add(embeddings_array)
+            index_size_after = self.index.ntotal
+            logger.info(f"[VectorStore] Adicionado ao índice FAISS", {
+                'tenantId': self.tenant_id,
+                'indexSizeBefore': index_size_before,
+                'indexSizeAfter': index_size_after,
+                'added': index_size_after - index_size_before
+            })
         else:
             # Fallback: armazenamento em memória
+            vectors_before = len(self.vectors)
+            logger.info(f"[VectorStore] Adicionando ao armazenamento em memória (FAISS não disponível)", {
+                'tenantId': self.tenant_id,
+                'vectorsBefore': vectors_before
+            })
             self.vectors.extend(embeddings)
+            vectors_after = len(self.vectors)
+            logger.info(f"[VectorStore] Adicionado ao armazenamento em memória", {
+                'tenantId': self.tenant_id,
+                'vectorsBefore': vectors_before,
+                'vectorsAfter': vectors_after,
+                'added': vectors_after - vectors_before
+            })
         
         # Adiciona metadados
+        chunks_before = len(self.chunks)
+        logger.info(f"[VectorStore] Adicionando chunks aos metadados", {
+            'tenantId': self.tenant_id,
+            'chunksBefore': chunks_before,
+            'chunksToAdd': len(chunks),
+            'chunkIds': [chunk.id for chunk in chunks],
+            'documentIds': list(set(chunk.documentId for chunk in chunks))
+        })
+        
         for chunk, embedding in zip(chunks, embeddings):
             chunk.embedding = embedding
             self.chunks[chunk.id] = chunk
         
+        chunks_after = len(self.chunks)
+        logger.info(f"[VectorStore] Chunks adicionados aos metadados", {
+            'tenantId': self.tenant_id,
+            'chunksBefore': chunks_before,
+            'chunksAfter': chunks_after,
+            'chunksAdded': chunks_after - chunks_before
+        })
+        
         # Salva
+        logger.info(f"[VectorStore] Salvando vector store", {
+            'tenantId': self.tenant_id,
+            'indexPath': str(self.index_path),
+            'metadataPath': str(self.metadata_path),
+            'totalChunks': len(self.chunks)
+        })
         self._save()
+        
+        # Verifica após salvar
+        stats_after_save = self.get_stats()
+        logger.info(f"[VectorStore] Vector store salvo e verificado", {
+            'tenantId': self.tenant_id,
+            'documentCount': stats_after_save.get('documentCount', 0),
+            'chunkCount': stats_after_save.get('chunkCount', 0),
+            'indexSize': stats_after_save.get('indexSize', 0)
+        })
     
     def search(self, query_embedding: List[float], top_k: int = 5, filters: Optional[Dict] = None) -> List[Chunk]:
         """
@@ -340,10 +553,61 @@ class VectorStore:
     
     def _save(self):
         """Salva índice e metadados."""
-        if FAISS_AVAILABLE and self.index.ntotal > 0:
-            faiss.write_index(self.index, str(self.index_path))
+        logger.info(f"[VectorStore] _save chamado", {
+            'tenantId': self.tenant_id,
+            'indexPath': str(self.index_path),
+            'metadataPath': str(self.metadata_path),
+            'chunksCount': len(self.chunks),
+            'faissAvailable': FAISS_AVAILABLE,
+            'indexNtotal': self.index.ntotal if FAISS_AVAILABLE and self.index else 0
+        })
         
-        self._save_metadata()
+        try:
+            if FAISS_AVAILABLE and self.index:
+                index_size = self.index.ntotal
+                logger.info(f"[VectorStore] Salvando índice FAISS", {
+                    'tenantId': self.tenant_id,
+                    'indexPath': str(self.index_path),
+                    'indexSize': index_size
+                })
+                if index_size > 0:
+                    faiss.write_index(self.index, str(self.index_path))
+                    logger.info(f"[VectorStore] Índice FAISS salvo com sucesso", {
+                        'tenantId': self.tenant_id,
+                        'indexPath': str(self.index_path),
+                        'indexSize': index_size
+                    })
+                else:
+                    logger.warn(f"[VectorStore] Índice FAISS vazio, não salvando", {
+                        'tenantId': self.tenant_id,
+                        'indexSize': index_size
+                    })
+            else:
+                logger.info(f"[VectorStore] FAISS não disponível, usando fallback", {
+                    'tenantId': self.tenant_id,
+                    'vectorsCount': len(self.vectors)
+                })
+            
+            logger.info(f"[VectorStore] Salvando metadados", {
+                'tenantId': self.tenant_id,
+                'metadataPath': str(self.metadata_path),
+                'chunksCount': len(self.chunks)
+            })
+            self._save_metadata()
+            logger.info(f"[VectorStore] Metadados salvos com sucesso", {
+                'tenantId': self.tenant_id,
+                'metadataPath': str(self.metadata_path),
+                'chunksCount': len(self.chunks)
+            })
+        except Exception as e:
+            logger.error(f"[VectorStore] Erro ao salvar vector store", {
+                'tenantId': self.tenant_id,
+                'error': str(e),
+                'errorType': type(e).__name__,
+                'indexPath': str(self.index_path),
+                'metadataPath': str(self.metadata_path)
+            })
+            raise
     
     def get_stats(self) -> Dict[str, Any]:
         """
@@ -354,9 +618,21 @@ class VectorStore:
         """
         document_ids = set(chunk.documentId for chunk in self.chunks.values())
         
-        return {
+        stats = {
             "documentCount": len(document_ids),
             "chunkCount": len(self.chunks),
             "indexSize": self.index.ntotal if FAISS_AVAILABLE and self.index else len(self.vectors)
         }
+        
+        logger.info(f"[VectorStore] get_stats chamado", {
+            'tenantId': self.tenant_id,
+            'documentCount': stats['documentCount'],
+            'chunkCount': stats['chunkCount'],
+            'indexSize': stats['indexSize'],
+            'chunksInMemory': len(self.chunks),
+            'indexExists': self.index_path.exists() if hasattr(self, 'index_path') else False,
+            'metadataExists': self.metadata_path.exists() if hasattr(self, 'metadata_path') else False
+        })
+        
+        return stats
 

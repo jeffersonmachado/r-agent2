@@ -1,0 +1,22 @@
+[
+  {
+    "id": "tenant-1767641804276-2vmy2jt",
+    "name": "Test Tenant E-commerce",
+    "site": "https://test-ecommerce.com",
+    "ramo_atividade": "E-commerce e Varejo Online - Venda de produtos físicos e digitais",
+    "objetivo": "Aumentar vendas online e reduzir abandono de carrinho",
+    "active": true,
+    "createdAt": "2026-01-05T19:36:44.276Z",
+    "updatedAt": "2026-01-05T19:36:44.276Z"
+  },
+  {
+    "id": "tenant-1767641804348-vz318dk",
+    "name": "Test Tenant Saúde",
+    "site": "https://test-saude.com",
+    "ramo_atividade": "Saúde e Bem-estar - Clínica médica especializada",
+    "objetivo": "Agilizar agendamentos e melhorar comunicação com pacientes",
+    "active": true,
+    "createdAt": "2026-01-05T19:36:44.348Z",
+    "updatedAt": "2026-01-05T19:36:44.348Z"
+  }
+]

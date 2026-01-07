@@ -16,6 +16,15 @@
 const { createEngineEvent } = require('../utils');
 const { executeAiTask } = require('../utils/aiTaskExecutor');
 
+// Importa tenantService apenas se estiver disponível (Node.js)
+let tenantService = null;
+try {
+  tenantService = require('../../api/services/tenantService');
+} catch (err) {
+  // tenantService não disponível (pode estar rodando em ambiente sem API)
+  tenantService = null;
+}
+
 /**
  * @typedef {import('../flowTypes').ConversationState} ConversationState
  * @typedef {import('../flowTypes').EngineStepOutput} EngineStepOutput
@@ -83,9 +92,32 @@ async function aiTaskNodeHandler(node, state, input, deps = null) {
   const inputText = input?.text || state.variables?.user_input || '';
 
   try {
+    // Carrega tenant_context se disponível (para usar ramo_atividade como viés semântico)
+    let tenantContext = null;
+    const tenantId = state.tenantId || nextState.tenantId;
+    if (tenantId && tenantService && tenantService.getTenantContext) {
+      try {
+        tenantContext = tenantService.getTenantContext(tenantId);
+        if (tenantContext && task === SUPPORTED_TASKS.intent_classification) {
+          // Log para debug (apenas em desenvolvimento)
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[aiTaskNode] Tenant context carregado para classificação de intenção:`, {
+              tenantId,
+              ramo_atividade: tenantContext.ramo_atividade?.substring(0, 50),
+            });
+          }
+        }
+      } catch (err) {
+        // Se falhar ao carregar tenant_context, continua sem ele (não bloqueia)
+        console.warn(`[aiTaskNode] Erro ao carregar tenant context:`, err.message);
+      }
+    }
+
     const context = {
       variables: nextState.variables,
       history: nextState.history || [],
+      tenantId: tenantId || null,
+      tenantContext: tenantContext || null,
     };
 
     // Executa tarefa de IA

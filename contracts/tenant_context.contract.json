@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Contrato de Tenant Context",
+  "description": "Contrato para contexto cognitivo do tenant, vinculado ao tenant_id. Estrutura persistida que contém informações contextuais usadas por RAG, chatbot e classificação de intenção",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["tenantId"],
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "description": "ID do tenant (chave única, vinculado ao tenant)",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "ramo_atividade": {
+      "type": "string",
+      "description": "Descrição do segmento de negócio. Atua como viés semântico fixo para classificação de intenção, priorização lexical e desambiguação semântica. NÃO é tratado como conhecimento factual nem como documento RAG",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "objetivo": {
+      "type": "string",
+      "description": "Objetivo estratégico do cliente. Orienta a escolha da melhor resposta quando há múltiplas respostas corretas. NUNCA pode distorcer fatos nem omitir informações relevantes. Apenas resolve empates estratégicos e orienta CTA quando apropriado",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "site_oficial": {
+      "type": "string",
+      "description": "URL oficial do cliente. Tratado como fonte institucional canônica (rag_source = 'site_institucional'). Usado para grounding e validação semântica das respostas. Nenhuma resposta pode contradizer explicitamente o site oficial",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "prioridade": {
+      "type": "string",
+      "description": "Prioridade do contexto",
+      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "default": "HIGH"
+    },
+    "escopo": {
+      "type": "array",
+      "description": "Escopos onde o contexto se aplica",
+      "items": {
+        "type": "string",
+        "enum": ["rag", "chatbot", "classificacao_intencao"]
+      },
+      "default": ["rag", "chatbot", "classificacao_intencao"],
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+  "rules": {
+    "isolamento": {
+      "description": "Nenhuma entidade (RAG, embeddings, fluxos, execuções, logs) pode existir sem tenant_id. Nenhum dado pode ser compartilhado entre tenants. Nenhum cache pode ser cross-tenant. Toda ação deve ser auditável com tenant_id."
+    },
+    "ordem_execucao_rag": {
+      "description": "A execução do RAG deve seguir exatamente esta ordem: 1) tenant_context, 2) system prompt, 3) busca vetorial, 4) re-ranking considerando objetivo, 5) resposta final"
+    },
+    "protecao_prompt_injection": {
+      "description": "O tenant_context NÃO pode ser fragmentado em chunks. NÃO pode ser alterado por mensagens do usuário. Deve ser carregado ANTES de qualquer busca vetorial e injetado no system prompt."
+    },
+    "uso_ramo_atividade": {
+      "description": "O ramo_atividade deve atuar como viés semântico fixo. Deve influenciar classificação de intenção, priorização lexical e desambiguação semântica. NÃO deve ser tratado como conhecimento factual nem como documento RAG."
+    },
+    "uso_objetivo": {
+      "description": "O objetivo deve orientar a escolha da melhor resposta quando houver múltiplas respostas corretas. O objetivo NUNCA pode distorcer fatos nem omitir informações relevantes. O objetivo apenas resolve empates estratégicos e orienta CTA quando apropriado."
+    },
+    "uso_site": {
+      "description": "O site deve ser tratado como fonte institucional canônica (rag_source = 'site_institucional'). Deve ser usado para grounding e validação semântica das respostas. Nenhuma resposta pode contradizer explicitamente o site oficial. Scraping e atualização automática só devem ocorrer se explicitamente habilitados."
+    }
+  }
+}
+

@@ -15,6 +15,43 @@ const { isRagAvailable, getRagServiceUrl } = require('./ragService');
 const { getWebSocketServer } = require('./websocketService');
 
 /**
+ * Extrai a porta de uma URL.
+ * 
+ * @param {string} urlString - URL completa
+ * @param {number} defaultPort - Porta padrão se não encontrar
+ * @returns {number} Porta extraída
+ */
+function extractPortFromUrl(urlString, defaultPort = null) {
+  if (!urlString) return defaultPort;
+  
+  // Primeiro tenta extrair porta manualmente (mais confiável)
+  const portMatch = urlString.match(/:(\d+)(?:\/|$)/);
+  if (portMatch) {
+    const extractedPort = parseInt(portMatch[1], 10);
+    if (!isNaN(extractedPort) && extractedPort > 0 && extractedPort <= 65535) {
+      return extractedPort;
+    }
+  }
+  
+  // Se não encontrou porta explícita, tenta parsear URL
+  try {
+    const url = new URL(urlString);
+    if (url.port) {
+      return parseInt(url.port, 10);
+    }
+    // Se não tiver porta explícita, retorna padrão baseado no protocolo
+    if (url.protocol === 'https:') return 443;
+    if (url.protocol === 'http:') return 80;
+    if (url.protocol === 'redis:') return 6379;
+    if (url.protocol === 'rediss:') return 6380;
+    return defaultPort;
+  } catch (urlErr) {
+    // Se falhar ao parsear URL, retorna defaultPort
+    return defaultPort;
+  }
+}
+
+/**
  * Verifica status do Redis.
  * 
  * @returns {Promise<{status: string, details?: any, error?: string}>}
@@ -30,9 +67,14 @@ async function checkRedisStatus() {
           const versionMatch = info.match(/redis_version:([^\r\n]+)/);
           const version = versionMatch ? versionMatch[1].trim() : 'unknown';
           
+          // Extrai a porta da URL do Redis
+          const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
+          const port = extractPortFromUrl(redisUrl, 6379);
+          
           return {
             status: 'healthy',
             details: {
+              port: port,
               version,
               status: client.status,
             },
@@ -40,9 +82,14 @@ async function checkRedisStatus() {
         } catch (infoErr) {
           // Se ping funcionou mas info falhou, ainda consideramos saudável
           logger.debug('[SystemStatus] Erro ao obter info do Redis, mas ping OK', { error: infoErr.message });
+          // Extrai a porta da URL do Redis
+          const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
+          const port = extractPortFromUrl(redisUrl, 6379);
+          
           return {
             status: 'healthy',
             details: {
+              port: port,
               version: 'unknown',
               status: client.status,
               note: 'Ping OK, mas info não disponível',
@@ -77,15 +124,28 @@ async function checkRedisStatus() {
       };
     }
     
+    // Tenta obter informações sobre a configuração do Redis
+    const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
+    
     return {
       status: 'unhealthy',
       error: 'Redis não disponível ou não conectado',
+      details: {
+        redisUrl: redisUrl,
+        hint: 'Verifique se o Redis está rodando e acessível na URL configurada',
+      },
     };
   } catch (err) {
     logger.error('[SystemStatus] Erro ao verificar Redis', { error: err.message });
+    const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
     return {
       status: 'unhealthy',
       error: err.message,
+      details: {
+        redisUrl: redisUrl,
+        errorType: 'verification_error',
+        hint: 'Erro ao verificar status do Redis',
+      },
     };
   }
 }
@@ -114,9 +174,13 @@ async function checkRagServiceStatus() {
         }
       } catch (err) {
         // Se não tiver fetch, retorna status básico
+        // Extrai a porta da URL do serviço RAG
+        const port = extractPortFromUrl(ragServiceUrl, 8000);
+        
         return {
           status: 'healthy',
           details: {
+            port: port,
             serviceUrl: ragServiceUrl,
             note: 'Detalhes não disponíveis (fetch não disponível)',
           },
@@ -136,9 +200,14 @@ async function checkRagServiceStatus() {
         
         if (response.ok) {
           const data = await response.json();
+          
+          // Extrai a porta da URL do serviço RAG
+          const port = extractPortFromUrl(ragServiceUrl, 8000);
+          
           return {
             status: 'healthy',
             details: {
+              port: port,
               vectorStore: data.vectorStore,
               embeddingModel: data.embeddingModel,
               indexedDocuments: data.indexedDocuments || 0,
@@ -151,23 +220,85 @@ async function checkRagServiceStatus() {
         logger.debug('[SystemStatus] Não foi possível obter detalhes do RAG', { error: fetchErr.message });
       }
       
+      // Extrai a porta da URL do serviço RAG
+      const port = extractPortFromUrl(ragServiceUrl, 8000);
+      
       return {
         status: 'healthy',
         details: {
+          port: port,
           serviceUrl: ragServiceUrl,
         },
       };
     }
     
+    // Tenta obter a URL do serviço para incluir na mensagem de erro
+    const ragServiceUrl = getRagServiceUrl();
+    
+    // Tenta fazer uma verificação mais detalhada do erro
+    let errorDetails = {
+      serviceUrl: ragServiceUrl,
+      error: 'Serviço RAG não disponível',
+    };
+    
+    try {
+      // Tenta fazer uma requisição para obter mais informações sobre o erro
+      const fetchFn = typeof global.fetch === 'function' ? global.fetch : require('node-fetch');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      
+      try {
+        const response = await fetchFn(`${ragServiceUrl}/rag/health`, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          errorDetails.error = `Serviço RAG retornou status HTTP ${response.status}`;
+          errorDetails.httpStatus = response.status;
+        }
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          errorDetails.error = 'Timeout ao conectar com serviço RAG';
+          errorDetails.errorType = 'timeout';
+        } else if (fetchErr.message && fetchErr.message.includes('ECONNREFUSED')) {
+          errorDetails.error = 'Conexão recusada - serviço RAG não está rodando';
+          errorDetails.errorType = 'connection_refused';
+        } else if (fetchErr.message && fetchErr.message.includes('ENOTFOUND')) {
+          errorDetails.error = `Host não encontrado: ${ragServiceUrl}`;
+          errorDetails.errorType = 'host_not_found';
+        } else {
+          errorDetails.error = `Erro ao conectar: ${fetchErr.message}`;
+          errorDetails.errorType = 'connection_error';
+        }
+      }
+    } catch (checkErr) {
+      // Se não conseguir fazer verificação adicional, mantém erro básico
+      logger.debug('[SystemStatus] Não foi possível obter detalhes do erro RAG', { error: checkErr.message });
+    }
+    
     return {
       status: 'unhealthy',
-      error: 'Serviço RAG não disponível',
+      error: errorDetails.error,
+      details: {
+        serviceUrl: errorDetails.serviceUrl,
+        errorType: errorDetails.errorType,
+        httpStatus: errorDetails.httpStatus,
+        hint: 'Verifique se o serviço RAG está rodando e acessível na URL configurada',
+      },
     };
   } catch (err) {
     logger.error('[SystemStatus] Erro ao verificar RAG Service', { error: err.message });
+    const ragServiceUrl = getRagServiceUrl();
     return {
       status: 'unhealthy',
       error: err.message,
+      details: {
+        serviceUrl: ragServiceUrl,
+        hint: 'Erro ao verificar status do serviço RAG',
+      },
     };
   }
 }
@@ -206,9 +337,13 @@ async function checkWebSocketStatus() {
       // Mas podemos verificar se há clientes conectados
       const serverStatus = connectedCount > 0 ? 'active' : 'idle';
       
+      // Obtém a porta da API (WebSocket usa a mesma porta)
+      const apiPort = config.get('api.port', 3000);
+      
       return {
         status: 'healthy',
         details: {
+          port: apiPort,
           connectedClients: connectedCount,
           serverStatus: serverStatus,
           clientsByState: {
@@ -224,12 +359,19 @@ async function checkWebSocketStatus() {
     return {
       status: 'unhealthy',
       error: 'Servidor WebSocket não inicializado',
+      details: {
+        hint: 'O servidor WebSocket pode não ter sido inicializado corretamente. Verifique os logs da API.',
+      },
     };
   } catch (err) {
     logger.error('[SystemStatus] Erro ao verificar WebSocket', { error: err.message });
     return {
       status: 'unhealthy',
       error: err.message,
+      details: {
+        errorType: 'verification_error',
+        hint: 'Erro ao verificar status do servidor WebSocket',
+      },
     };
   }
 }
@@ -265,9 +407,15 @@ async function checkApiServerStatus() {
     };
   } catch (err) {
     logger.error('[SystemStatus] Erro ao verificar API Server', { error: err.message });
+    const apiPort = config.get('api.port', 3000);
     return {
       status: 'unhealthy',
       error: err.message,
+      details: {
+        port: apiPort,
+        errorType: 'verification_error',
+        hint: 'Erro ao verificar status do servidor API',
+      },
     };
   }
 }

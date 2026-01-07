@@ -122,6 +122,86 @@ function createAgents(tenantId) {
 }
 
 /**
+ * Cria tenants iniciais
+ */
+function createTenants() {
+  const tenants = [
+    {
+      id: 'tenant-demo',
+      name: 'Tenant Demo',
+      site: 'https://example.com',
+      ramo_atividade: 'Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente',
+      objetivo: 'Automatizar o atendimento ao cliente com IA, reduzindo tempo de resposta e melhorando a satisfação do cliente através de chatbots inteligentes e RPA',
+      active: true,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      id: 'tenant-ecommerce',
+      name: 'E-commerce Store',
+      site: 'https://ecommerce-example.com',
+      ramo_atividade: 'E-commerce e Varejo Online - Venda de produtos físicos e digitais através de plataforma online',
+      objetivo: 'Melhorar a experiência de compra online, reduzir abandono de carrinho e aumentar conversão através de atendimento proativo e personalizado',
+      active: true,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      id: 'tenant-saude',
+      name: 'Clínica de Saúde',
+      site: 'https://clinica-saude-example.com',
+      ramo_atividade: 'Saúde e Bem-estar - Clínica médica especializada em atendimento ambulatorial e consultas',
+      objetivo: 'Agilizar agendamentos, fornecer informações sobre serviços e tratamentos, e melhorar a comunicação com pacientes através de assistente virtual',
+      active: true,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+  ];
+
+  return tenants;
+}
+
+/**
+ * Cria tenant contexts iniciais
+ */
+function createTenantContexts() {
+  const contexts = [
+    {
+      tenantId: 'tenant-demo',
+      ramo_atividade: 'Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente',
+      objetivo: 'Automatizar o atendimento ao cliente com IA, reduzindo tempo de resposta e melhorando a satisfação do cliente através de chatbots inteligentes e RPA',
+      site_oficial: 'https://example.com',
+      prioridade: 'HIGH',
+      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      tenantId: 'tenant-ecommerce',
+      ramo_atividade: 'E-commerce e Varejo Online - Venda de produtos físicos e digitais através de plataforma online',
+      objetivo: 'Melhorar a experiência de compra online, reduzir abandono de carrinho e aumentar conversão através de atendimento proativo e personalizado',
+      site_oficial: 'https://ecommerce-example.com',
+      prioridade: 'HIGH',
+      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      tenantId: 'tenant-saude',
+      ramo_atividade: 'Saúde e Bem-estar - Clínica médica especializada em atendimento ambulatorial e consultas',
+      objetivo: 'Agilizar agendamentos, fornecer informações sobre serviços e tratamentos, e melhorar a comunicação com pacientes através de assistente virtual',
+      site_oficial: 'https://clinica-saude-example.com',
+      prioridade: 'HIGH',
+      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
+      createdAt: now(),
+      updatedAt: now(),
+    },
+  ];
+
+  return contexts;
+}
+
+/**
  * Cria fluxos iniciais
  */
 function createFlows(tenantId) {
@@ -561,6 +641,26 @@ function seed(tenantId = DEFAULT_TENANT_ID, reset = false) {
     console.log('⚠️  Modo RESET: dados existentes serão sobrescritos');
   }
   
+  // Tenants
+  console.log('🏢 Criando tenants...');
+  const tenants = createTenants();
+  fs.writeFileSync(
+    path.join(DATA_DIR, 'tenants.json'),
+    JSON.stringify(tenants, null, 2),
+    'utf8'
+  );
+  console.log(`   ✅ ${tenants.length} tenant(s) criado(s)`);
+
+  // Tenant Contexts
+  console.log('🧠 Criando tenant contexts...');
+  const tenantContexts = createTenantContexts();
+  fs.writeFileSync(
+    path.join(DATA_DIR, 'tenant_contexts.json'),
+    JSON.stringify(tenantContexts, null, 2),
+    'utf8'
+  );
+  console.log(`   ✅ ${tenantContexts.length} contexto(s) criado(s)`);
+
   // Agentes
   console.log('👤 Criando agentes...');
   const agents = createAgents(tenantId);

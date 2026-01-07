@@ -241,32 +241,54 @@ function convertWrapperResultToFlowDefinition(wrapperResult, flowId, tenantId, f
 /**
  * Resolve contexto de conhecimento a partir de RAG e scraping.
  * 
+ * REGRAS OBRIGATÓRIAS:
+ * - Se options.ragContext está disponível (vindo do pipeline), USA ELE (obrigatório)
+ * - Se useRag=true mas não há ragContext, FALHA (não faz consulta nova)
+ * - Nunca faz fallback silencioso quando RAG é obrigatório
+ * 
  * @param {string} description - Descrição do fluxo
- * @param {Object} options - Opções (useRag, ragSources, useWebScraping, scrapingTargets, tenantId)
+ * @param {Object} options - Opções (useRag, ragContext, ragSources, useWebScraping, scrapingTargets, tenantId)
  * @returns {Promise<string>} - Contexto adicional para o prompt
  */
 async function resolveKnowledgeContext(description, options = {}) {
-  const { useRag, ragSources, useWebScraping, scrapingTargets, tenantId } = options;
+  const { useRag, ragContext, ragSources, useWebScraping, scrapingTargets, tenantId } = options;
   const contextParts = [];
 
   // RAG: conhecimento interno
-  if (useRag && ragSources && ragSources.length > 0) {
-    logger.info('Resolvendo contexto RAG', { ragSources, tenantId });
-    try {
-      const ragResult = await ragService.queryRag(description, tenantId || 'demo-tenant', {}, {
-        topK: 5,
-        minScore: 0.6,
+  if (useRag) {
+    // Se contexto RAG foi fornecido pelo pipeline, USA ELE (obrigatório)
+    if (ragContext && ragContext.enabled && ragContext.chunks && ragContext.chunks.length > 0) {
+      logger.info('[flowGeneratorService] Usando contexto RAG do pipeline', {
+        executionId: ragContext.executionId,
+        chunksCount: ragContext.chunks.length,
+        sourcesCount: ragContext.sources.length,
       });
       
-      if (ragResult.success && ragResult.response) {
-        contextParts.push(`\n## Conhecimento Interno (RAG):\n${ragResult.response}\n`);
-        logger.debug('Contexto RAG resolvido', { 
-          confidence: ragResult.confidence,
-          sourcesCount: ragResult.sources?.length || 0 
-        });
-      }
-    } catch (ragError) {
-      logger.warn('Erro ao resolver RAG, continuando sem contexto RAG', { error: ragError.message });
+      // Constrói contexto a partir dos chunks do pipeline
+      const ragContextParts = [];
+      ragContextParts.push(`\n## Conhecimento Interno (RAG) - Execution ID: ${ragContext.executionId || 'N/A'}:\n`);
+      
+      ragContext.chunks.forEach((chunk, index) => {
+        ragContextParts.push(`\n### Fonte ${index + 1} (${chunk.sourceFile || 'unknown'}):\n${chunk.content}\n`);
+      });
+      
+      ragContextParts.push(`\n### Fontes utilizadas:\n${ragContext.sources.map(s => `- ${s.documentId || s} (${s.chunksCount || 0} chunks)`).join('\n')}\n`);
+      
+      contextParts.push(ragContextParts.join('\n'));
+      
+      logger.debug('[flowGeneratorService] Contexto RAG do pipeline aplicado', {
+        chunksCount: ragContext.chunks.length,
+        sourcesCount: ragContext.sources.length,
+      });
+    } else {
+      // Se useRag=true mas não há contexto RAG, isso é um erro
+      const errorMsg = 'useRag=true mas contexto RAG não foi fornecido pelo pipeline. Etapa ragContextBuilt deve ser concluída antes.';
+      logger.error('[flowGeneratorService] Contexto RAG obrigatório ausente', {
+        useRag,
+        hasRagContext: !!ragContext,
+        ragContextEnabled: ragContext?.enabled,
+      });
+      throw new Error(errorMsg);
     }
   }
 

@@ -80,6 +80,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'update' },
     { resource: 'rag', action: 'delete' },
     { resource: 'rag', action: 'admin' },
+    // Desenvolvimento
+    { resource: 'dev', action: 'read' },
+    { resource: 'dev', action: 'write' },
   ],
 
   supervisor: [
@@ -118,6 +121,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'query' },
     { resource: 'rag', action: 'index' },
     { resource: 'rag', action: 'update' },
+    // Desenvolvimento
+    { resource: 'dev', action: 'read' },
+    { resource: 'dev', action: 'write' },
   ],
 
   agent: [

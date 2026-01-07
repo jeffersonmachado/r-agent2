@@ -42,6 +42,29 @@ def load_config_json() -> Optional[dict]:
     return None
 
 
+def load_full_config_json() -> Optional[dict]:
+    """
+    Carrega o config.json completo (não apenas a seção RAG).
+    """
+    base_paths = [
+        Path(__file__).parent.parent.parent / "api" / "data" / "config.json",
+        Path(__file__).parent.parent.parent.parent / "api" / "data" / "config.json",
+        Path(__file__).parent.parent / "api" / "data" / "config.json",
+        Path("/opt/results/ria/r-agent2/api/data/config.json"),  # Caminho absoluto
+    ]
+    
+    for config_path in base_paths:
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"[Settings] Erro ao ler config.json completo de {config_path}: {e}")
+                continue
+    
+    return None
+
+
 # Carrega configuração do config.json uma vez no início
 _CONFIG_JSON = load_config_json()
 

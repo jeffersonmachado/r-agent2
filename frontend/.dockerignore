@@ -1,0 +1,20 @@
+# Frontend .dockerignore
+
+node_modules/
+dist/
+coverage/
+test-results/
+*.log
+.env
+.env.local
+*.test.js
+*.spec.js
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+.git/
+*.md
+!README.md
+

@@ -861,8 +861,8 @@ function getNodeAction(node) {
   }
 }
 
-// Importa normalização de URLs do módulo utilitário
-const { normalizeRpaTestUrls } = require('../../tests/rpa/utils/urlNormalizer');
+// Importa normalização de URLs do módulo utilitário (versão da API, disponível em produção)
+const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
 
 /**
  * Corrige seletores inválidos comuns gerados pela IA.

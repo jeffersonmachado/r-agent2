@@ -1,6 +1,7 @@
 const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
 const { ActionRecorder } = require('../../tests/rpa/actionRecorder');
-const { normalizeRpaTestUrls } = require('../../tests/rpa/utils/urlNormalizer');
+// Usa versão de produção do normalizador, que vive em `api/utils`
+const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');

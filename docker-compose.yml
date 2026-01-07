@@ -23,10 +23,12 @@ services:
       RATE_LIMIT_SCRAPING_DURATION: ${RATE_LIMIT_SCRAPING_DURATION:-300}
       RATE_LIMIT_SCRAPING_RPS: ${RATE_LIMIT_SCRAPING_RPS:-3}
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
+      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:
       - redis
+      - rag-service
     restart: unless-stopped
 
   frontend:

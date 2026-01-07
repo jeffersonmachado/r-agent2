@@ -22,10 +22,20 @@ class QueryOptions(BaseModel):
     maxTokens: int = 1000
 
 
+class TenantContext(BaseModel):
+    """Contexto cognitivo do tenant."""
+    ramo_atividade: Optional[str] = None
+    objetivo: Optional[str] = None
+    site_oficial: Optional[str] = None
+    prioridade: Optional[str] = "HIGH"
+    escopo: Optional[List[str]] = None
+
+
 class QueryRequest(BaseModel):
     """Request de consulta RAG."""
     query: str
     tenantId: str
+    tenantContext: Optional[TenantContext] = None
     filters: Optional[QueryFilters] = None
     options: Optional[QueryOptions] = None
 

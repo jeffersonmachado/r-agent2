@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog } from './Dialog';
 import { Button } from '../styles/Button';
+import logger from '../utils/logger';
 
 /**
  * Componente de diálogo de confirmação usando Tailwind CSS.
@@ -29,12 +30,28 @@ export function ConfirmDialog({
 }) {
   const handleConfirm = () => {
     if (disabled) return;
+    
+    // Log quando o botão Confirmar é clicado no componente
+    logger.debug('✅ [CONFIRM] Botão "Confirmar" clicado (componente)', {
+      title,
+      message: typeof message === 'string' ? message.substring(0, 100) : 'ReactNode',
+      timestamp: new Date().toISOString()
+    });
+    
     onConfirm();
     onClose();
+    
+    logger.debug('📂 [CONFIRM] Modal fechado após confirmação (componente)');
   };
 
   const handleClose = () => {
     if (disabled) return;
+    
+    logger.debug('❌ [CONFIRM] Botão "Cancelar" clicado ou modal fechado (componente)', {
+      title,
+      timestamp: new Date().toISOString()
+    });
+    
     onClose();
   };
 
@@ -156,6 +173,13 @@ export function useConfirmDialog() {
   }, []);
 
   const handleConfirm = React.useCallback(() => {
+    // Log quando o botão Confirmar é clicado
+    logger.debug('✅ [CONFIRM] Botão "Confirmar" clicado no modal', {
+      title: config.title,
+      message: config.message,
+      timestamp: new Date().toISOString()
+    });
+    
     if (config.onConfirm) {
       config.onConfirm();
     }
@@ -164,9 +188,18 @@ export function useConfirmDialog() {
       resolveRef.current = null;
     }
     setIsOpen(false);
+    
+    // Log após fechar o modal
+    logger.debug('📂 [CONFIRM] Modal de confirmação fechado após confirmação');
   }, [config]);
 
   const handleClose = React.useCallback(() => {
+    // Log quando o botão Cancelar é clicado ou modal é fechado
+    logger.debug('❌ [CONFIRM] Modal de confirmação fechado (cancelado)', {
+      title: config.title,
+      timestamp: new Date().toISOString()
+    });
+    
     if (config.onCancel) {
       config.onCancel();
     }

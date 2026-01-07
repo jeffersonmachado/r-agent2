@@ -1,0 +1,33 @@
+[
+  {
+    "id": "tenant-demo",
+    "name": "Tenant Demo",
+    "site": "https://example.com",
+    "ramo_atividade": "Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente",
+    "objetivo": "Automatizar o atendimento ao cliente com IA, reduzindo tempo de resposta e melhorando a satisfação do cliente através de chatbots inteligentes e RPA",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "tenant-ecommerce",
+    "name": "E-commerce Store",
+    "site": "https://ecommerce-example.com",
+    "ramo_atividade": "E-commerce e Varejo Online - Venda de produtos físicos e digitais através de plataforma online",
+    "objetivo": "Melhorar a experiência de compra online, reduzir abandono de carrinho e aumentar conversão através de atendimento proativo e personalizado",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "tenant-saude",
+    "name": "Clínica de Saúde",
+    "site": "https://clinica-saude-example.com",
+    "ramo_atividade": "Saúde e Bem-estar - Clínica médica especializada em atendimento ambulatorial e consultas",
+    "objetivo": "Agilizar agendamentos, fornecer informações sobre serviços e tratamentos, e melhorar a comunicação com pacientes através de assistente virtual",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+]
+

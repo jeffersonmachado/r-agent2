@@ -552,6 +552,117 @@ const schemas = {
       },
     },
   },
+
+  createTenant: {
+    type: 'object',
+    fields: {
+      name: {
+        type: 'string',
+        required: true,
+        minLength: 1,
+        maxLength: 200,
+      },
+      site: {
+        type: 'url',
+        required: true,
+        allowedProtocols: ['http:', 'https:'],
+      },
+      ramo_atividade: {
+        type: 'string',
+        required: true,
+        minLength: 10,
+        maxLength: 500,
+      },
+      objetivo: {
+        type: 'string',
+        required: true,
+        minLength: 10,
+        maxLength: 500,
+      },
+      active: {
+        type: 'boolean',
+        required: false,
+        default: true,
+      },
+    },
+  },
+
+  updateTenant: {
+    type: 'object',
+    fields: {
+      name: {
+        type: 'string',
+        required: false,
+        minLength: 1,
+        maxLength: 200,
+      },
+      site: {
+        type: 'url',
+        required: false,
+        allowedProtocols: ['http:', 'https:'],
+      },
+      ramo_atividade: {
+        type: 'string',
+        required: false,
+        minLength: 10,
+        maxLength: 500,
+      },
+      objetivo: {
+        type: 'string',
+        required: false,
+        minLength: 10,
+        maxLength: 500,
+      },
+      active: {
+        type: 'boolean',
+        required: false,
+      },
+    },
+  },
+
+  updateTenantContext: {
+    type: 'object',
+    fields: {
+      ramo_atividade: {
+        type: 'string',
+        required: false,
+        minLength: 10,
+        maxLength: 500,
+      },
+      objetivo: {
+        type: 'string',
+        required: false,
+        minLength: 10,
+        maxLength: 500,
+      },
+      site_oficial: {
+        type: 'url',
+        required: false,
+        allowedProtocols: ['http:', 'https:'],
+      },
+      prioridade: {
+        type: 'string',
+        required: false,
+        pattern: /^(HIGH|MEDIUM|LOW)$/,
+      },
+      escopo: {
+        type: 'array',
+        required: false,
+        minLength: 1,
+        itemValidator: (item) => {
+          const validScopes = ['rag', 'chatbot', 'classificacao_intencao'];
+          if (!validScopes.includes(item)) {
+            throw new ValidationError(
+              `Escopo inválido: ${item}. Valores válidos: ${validScopes.join(', ')}`,
+              'escopo',
+              'INVALID_SCOPE'
+            );
+          }
+          return item;
+        },
+      },
+    },
+  },
 };
 
 module.exports = {

@@ -94,8 +94,17 @@ async function main() {
     results.frontend = { success: true, skipped: true };
   }
 
-  // 3. Testes do RAG Service (pytest)
-  logSection('3️⃣  TESTES DO RAG-SERVICE (pytest)');
+  // 3. Testes do RAG Service - Aprendizado Adaptativo
+  logSection('3️⃣  TESTES DO RAG-SERVICE - APRENDIZADO ADAPTATIVO');
+  results.ragService = runCommand(
+    'node scripts/test-rag-adaptive-learning.js',
+    'Executando testes de aprendizado adaptativo do RAG',
+    rootDir,
+    true  // Permite falha (serviço pode não estar rodando)
+  );
+
+  // 4. Testes do RAG Service (pytest)
+  logSection('4️⃣  TESTES DO RAG-SERVICE (pytest)');
   const ragServiceDir = path.join(rootDir, 'rag-service');
   if (fs.existsSync(ragServiceDir)) {
     // Verifica se há ambiente virtual
@@ -129,8 +138,8 @@ async function main() {
     results.ragService = { success: true, skipped: true };
   }
 
-  // 4. Testes RPA
-  logSection('4️⃣  TESTES RPA');
+  // 5. Testes RPA
+  logSection('5️⃣  TESTES RPA');
   results.rpa = runCommand(
     'npm run test:rpa',
     'Executando testes RPA',

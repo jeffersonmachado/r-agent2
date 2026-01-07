@@ -46,10 +46,12 @@ export function AuditPage() {
     try {
       setConversationsLoading(true);
       const result = await authApi.listConversations();
-      setConversations(result.conversations || []);
+      logger.debug('Conversas carregadas:', { count: result?.conversations?.length || 0, result });
+      setConversations(result?.conversations || []);
     } catch (err) {
       logger.error('Erro ao carregar conversas', err);
       showToast('Erro ao carregar conversas', 'error');
+      setConversations([]);
     } finally {
       setConversationsLoading(false);
     }
@@ -439,8 +441,16 @@ export function AuditPage() {
                   </div>
 
                   {conversations.length === 0 && (
-                    <div className="py-20 text-center text-text-secondary">
-                      Nenhuma conversa encontrada
+                    <div className="py-20 text-center">
+                      <div className="text-text-secondary mb-2">
+                        <p className="text-lg font-medium mb-2">Nenhuma conversa encontrada</p>
+                        <p className="text-sm">
+                          As conversas são armazenadas em memória e aparecerão aqui quando houver interações ativas com os fluxos.
+                        </p>
+                        <p className="text-sm mt-2">
+                          Nota: As conversas são limpas automaticamente após 24 horas de inatividade.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </>

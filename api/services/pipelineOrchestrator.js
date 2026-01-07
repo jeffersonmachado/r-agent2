@@ -32,8 +32,24 @@ const { saveFlowToFile, removeFlowFromFile } = require('./generationOrchestrator
  * @returns {Promise<{shouldContinue: boolean, error?: string}>}
  */
 async function advancePipeline(execution, onProgress = null) {
-  // Verifica se já está aprovado ou falhou
-  if (execution.status === 'approved' || execution.status === 'failed') {
+  // DETERMINISMO: Verifica se execução já foi persistida e tem decisão final
+  const { reuseDecision, hasFinalDecision } = require('./executionPersistence');
+  if (hasFinalDecision(execution.executionId)) {
+    const reused = reuseDecision(execution.executionId, execution);
+    if (reused) {
+      logger.info('[PipelineOrchestrator] Reutilizando decisão de execução anterior (determinismo)', {
+        executionId: execution.executionId,
+        status: execution.status,
+      });
+      if (onProgress) {
+        onProgress(toProgressFormat(execution));
+      }
+      return { shouldContinue: false };
+    }
+  }
+  
+  // Verifica se já está aprovado, falhou ou absteve
+  if (execution.status === 'approved' || execution.status === 'failed' || execution.status === 'abstained') {
     logger.debug('[PipelineOrchestrator] Pipeline já finalizado', {
       executionId: execution.executionId,
       status: execution.status,
@@ -49,7 +65,26 @@ async function advancePipeline(execution, onProgress = null) {
   const nextStage = getNextPendingStage(execution);
   if (!nextStage) {
     // Todas as etapas concluídas
-    updateStatus(execution, 'approved');
+    // Garante que autoridade de decisão está definida antes de aprovar
+    if (!execution.decisionAuthority) {
+      execution.decisionAuthority = {
+        type: 'system',
+        approvedBy: 'pipelineOrchestrator',
+      };
+    }
+    updateStatus(execution, 'approved', {
+      decisionAuthority: execution.decisionAuthority,
+    });
+    
+    // Persiste execução após decisão final
+    const { persistExecution } = require('./executionPersistence');
+    persistExecution(execution).catch(err => {
+      logger.error('[PipelineOrchestrator] Erro ao persistir execução', {
+        executionId: execution.executionId,
+        error: err.message,
+      });
+    });
+    
     if (onProgress) {
       onProgress(toProgressFormat(execution));
     }
@@ -113,6 +148,10 @@ async function executeStage(execution, stage, onProgress) {
 
     case 'contextBuilt':
       await executeContextBuilding(execution);
+      break;
+
+    case 'ragContextBuilt':
+      await executeRagContextBuilding(execution);
       break;
 
     case 'aiExecuted':
@@ -185,7 +224,170 @@ async function executeContextBuilding(execution) {
 }
 
 /**
+ * Executa construção de contexto RAG.
+ * 
+ * REGRAS OBRIGATÓRIAS:
+ * - Se useRag=true, DEVE construir contexto RAG válido
+ * - Se useRag=true e não houver evidência suficiente, SISTEMA ABSTEVE (não falha)
+ * - Se useRag=false, apenas marca como concluído
+ * - Abstenção é estado legítimo, não é falha
+ */
+async function executeRagContextBuilding(execution) {
+  if (isStageCompleted(execution, 'ragContextBuilt')) return;
+
+  const useRag = execution.payload.useRag !== false;
+  
+  // Se RAG não está habilitado, apenas marca como concluído
+  if (!useRag) {
+    logger.debug('[PipelineOrchestrator] RAG não habilitado, pulando construção de contexto RAG', {
+      executionId: execution.executionId,
+    });
+    updateStage(execution, 'ragContextBuilt', true);
+    return;
+  }
+
+  // Carrega builder de contexto RAG e validador de evidência
+  const { buildRagContext } = require('../../rag/buildRagContext');
+  const { validateEvidence } = require('./evidenceValidator');
+  
+  logger.info('[PipelineOrchestrator] Construindo contexto RAG', {
+    executionId: execution.executionId,
+  });
+
+  try {
+    // Constrói contexto RAG
+    const ragContext = await buildRagContext(
+      execution.executionId,
+      execution.payload,
+      {
+        tenantId: execution.options.tenantId || 'tenant-demo',
+        useRag: true,
+        sessionId: execution.options.sessionId || null,
+        flowId: execution.options.flowId || null,
+      }
+    );
+
+    if (!ragContext.success) {
+      // Falha ao construir contexto RAG = evidência insuficiente = abstenção
+      logger.warn(`[Decision][${execution.executionId}] status=abstained reason=RAG_REQUIRED_BUT_MISSING`, {
+        executionId: execution.executionId,
+        error: ragContext.error,
+      });
+      
+      updateStatus(execution, 'abstained', {
+        abstentionReason: {
+          code: 'RAG_REQUIRED_BUT_MISSING',
+          description: `Falha ao construir contexto RAG: ${ragContext.error || 'erro desconhecido'}`,
+        },
+        decisionAuthority: {
+          type: 'system',
+          approvedBy: 'evidenceValidator',
+        },
+        evidenceContext: {
+          available: false,
+          type: 'rag',
+          error: ragContext.error,
+        },
+      });
+      
+      // Persiste execução após decisão de abstenção
+      const { persistExecution } = require('./executionPersistence');
+      persistExecution(execution).catch(err => {
+        logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
+          executionId: execution.executionId,
+          error: err.message,
+        });
+      });
+      
+      updateStage(execution, 'ragContextBuilt', true);
+      return;
+    }
+
+    // Armazena contexto RAG no execution
+    execution.ragContext = ragContext;
+
+    // VALIDAÇÃO EPISTEMOLÓGICA: Verifica se há evidência suficiente
+    const evidenceValidation = validateEvidence(execution);
+    
+    if (!evidenceValidation.sufficient || evidenceValidation.shouldAbstain) {
+      // Evidência insuficiente = abstenção (não é falha, é decisão legítima)
+      logger.warn(`[Decision][${execution.executionId}] status=abstained reason=${evidenceValidation.code}`, {
+        executionId: execution.executionId,
+        reason: evidenceValidation.reason,
+        code: evidenceValidation.code,
+        details: evidenceValidation.details,
+      });
+      
+      updateStatus(execution, 'abstained', {
+        abstentionReason: {
+          code: evidenceValidation.code,
+          description: evidenceValidation.reason,
+        },
+        decisionAuthority: {
+          type: 'system',
+          approvedBy: 'evidenceValidator',
+        },
+        evidenceContext: {
+          available: true,
+          type: 'rag',
+          chunksCount: ragContext.chunks.length,
+          sourcesCount: ragContext.sources.length,
+          sufficient: false,
+          reason: evidenceValidation.reason,
+        },
+      });
+      
+      // Persiste execução após decisão de abstenção
+      const { persistExecution } = require('./executionPersistence');
+      persistExecution(execution).catch(err => {
+        logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
+          executionId: execution.executionId,
+          error: err.message,
+        });
+      });
+      
+      updateStage(execution, 'ragContextBuilt', true);
+      return;
+    }
+
+    // Evidência suficiente - continua pipeline
+    logger.info('[PipelineOrchestrator] Contexto RAG construído com sucesso e evidência validada', {
+      executionId: execution.executionId,
+      chunksCount: ragContext.chunks.length,
+      sourcesCount: ragContext.sources.length,
+      sources: ragContext.sources.map(s => s.documentId || s),
+    });
+    
+    // Log estruturado para auditoria
+    logger.info(`[Decision][${execution.executionId}] status=approved evidenceSources=${ragContext.sources.length}`, {
+      executionId: execution.executionId,
+      ragUsed: true,
+      chunksCount: ragContext.chunks.length,
+      sourcesCount: ragContext.sources.length,
+      sources: ragContext.sources.map(s => ({
+        documentId: s.documentId || s,
+        chunksCount: s.chunksCount || 0,
+      })),
+    });
+
+    updateStage(execution, 'ragContextBuilt', true);
+  } catch (error) {
+    logger.error('[PipelineOrchestrator] Erro ao construir contexto RAG', {
+      executionId: execution.executionId,
+      error: error.message,
+    });
+    throw error;
+  }
+}
+
+/**
  * Executa geração de IA e fluxo.
+ * 
+ * REGRAS OBRIGATÓRIAS:
+ * - Se useRag=true, DEVE ter contexto RAG válido (ragContextBuilt)
+ * - Se useRag=true e contexto RAG não estiver disponível, SISTEMA ABSTEVE (não executa IA)
+ * - IA NUNCA decide se há evidência - essa decisão é do sistema
+ * - Se sistema absteve, IA não executa
  */
 async function executeAIGeneration(execution) {
   if (isStageCompleted(execution, 'aiExecuted') && isStageCompleted(execution, 'flowGenerated')) {
@@ -193,6 +395,96 @@ async function executeAIGeneration(execution) {
   }
 
   const isDryRun = execution.payload.executionMode === 'dry-run';
+  const useRag = execution.payload.useRag !== false;
+  
+  // GATE EPISTEMOLÓGICO: Verifica se sistema absteve antes de executar IA
+  if (execution.status === 'abstained') {
+    logger.info(`[Decision][${execution.executionId}] status=abstained reason=${execution.abstentionReason?.code || 'UNKNOWN'} - IA não será executada`, {
+      executionId: execution.executionId,
+      reason: execution.abstentionReason?.code,
+      description: execution.abstentionReason?.description,
+    });
+    
+    // Marca etapas como concluídas (mas não executadas) devido à abstenção
+    updateStage(execution, 'aiExecuted', true);
+    updateStage(execution, 'flowGenerated', true);
+    return;
+  }
+  
+  // Validação obrigatória: se useRag=true, contexto RAG deve estar construído
+  if (useRag && !isStageCompleted(execution, 'ragContextBuilt')) {
+    logger.warn(`[Decision][${execution.executionId}] status=abstained reason=RAG_REQUIRED_BUT_MISSING - Contexto RAG não foi construído`, {
+      executionId: execution.executionId,
+    });
+    
+      updateStatus(execution, 'abstained', {
+        abstentionReason: {
+          code: 'RAG_REQUIRED_BUT_MISSING',
+          description: 'Contexto RAG não foi construído. Etapa ragContextBuilt é obrigatória quando useRag=true',
+        },
+        decisionAuthority: {
+          type: 'system',
+          approvedBy: 'pipelineOrchestrator',
+        },
+      });
+      
+      // Persiste execução após decisão de abstenção
+      const { persistExecution } = require('./executionPersistence');
+      persistExecution(execution).catch(err => {
+        logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
+          executionId: execution.executionId,
+          error: err.message,
+        });
+      });
+      
+      updateStage(execution, 'aiExecuted', true);
+      updateStage(execution, 'flowGenerated', true);
+      return;
+  }
+  
+  // Validação obrigatória: se useRag=true, contexto RAG deve estar disponível e com evidência suficiente
+  if (useRag) {
+    const { validateEvidence } = require('./evidenceValidator');
+    const evidenceValidation = validateEvidence(execution);
+    
+    if (!evidenceValidation.sufficient || evidenceValidation.shouldAbstain) {
+      logger.warn(`[Decision][${execution.executionId}] status=abstained reason=${evidenceValidation.code || 'INSUFFICIENT_EVIDENCE'} - Evidência insuficiente, IA não será executada`, {
+        executionId: execution.executionId,
+        reason: evidenceValidation.reason,
+        code: evidenceValidation.code,
+      });
+      
+      updateStatus(execution, 'abstained', {
+        abstentionReason: {
+          code: evidenceValidation.code || 'INSUFFICIENT_EVIDENCE',
+          description: evidenceValidation.reason || 'Evidência insuficiente para permitir resposta da IA',
+        },
+        decisionAuthority: {
+          type: 'system',
+          approvedBy: 'evidenceValidator',
+        },
+        evidenceContext: {
+          available: !!execution.ragContext,
+          type: 'rag',
+          sufficient: false,
+          reason: evidenceValidation.reason,
+        },
+      });
+      
+      // Persiste execução após decisão de abstenção
+      const { persistExecution } = require('./executionPersistence');
+      persistExecution(execution).catch(err => {
+        logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
+          executionId: execution.executionId,
+          error: err.message,
+        });
+      });
+      
+      updateStage(execution, 'aiExecuted', true);
+      updateStage(execution, 'flowGenerated', true);
+      return;
+    }
+  }
   
   if (isDryRun) {
     // Em dry-run, apenas marca como concluído
@@ -201,8 +493,24 @@ async function executeAIGeneration(execution) {
     return;
   }
 
+  // Prepara payload com contexto RAG explícito (OBRIGATÓRIO quando useRag=true)
+  const payloadWithRag = {
+    ...execution.payload,
+    ragContext: useRag && execution.ragContext ? {
+      enabled: true,
+      executionId: execution.executionId, // SEMPRE inclui executionId
+      chunks: execution.ragContext.chunks,
+      sources: execution.ragContext.sources,
+    } : {
+      enabled: false,
+      executionId: null,
+      chunks: [],
+      sources: [],
+    },
+  };
+
   // Executa geração
-  const generationResult = await orchestrateGeneration(execution.payload, {
+  const generationResult = await orchestrateGeneration(payloadWithRag, {
     tenantId: execution.options.tenantId || 'demo-tenant',
     dryRun: false,
   });
@@ -218,6 +526,32 @@ async function executeAIGeneration(execution) {
   // Armazena o fluxo no contexto
   execution.flow = generationResult.flowDefinition;
   execution.generationResult = generationResult;
+
+  // Log estruturado para auditoria RAG
+  if (useRag && execution.ragContext) {
+    const ragUsed = generationResult.ragUsed !== false;
+    const ragExecutionId = generationResult.ragExecutionId || execution.executionId;
+    const ragSources = generationResult.ragSources || execution.ragContext.sources.map(s => s.documentId || s);
+    
+    logger.info(`[IA][${execution.executionId}] ragUsed=${ragUsed} executionId=${ragExecutionId} sources=${ragSources.length}`, {
+      executionId: execution.executionId,
+      ragUsed,
+      ragExecutionId,
+      sourcesCount: ragSources.length,
+      sources: ragSources,
+      chunksCount: execution.ragContext.chunks.length,
+    });
+    
+    // Armazena informações de RAG no resultado para validação posterior
+    execution.generationResult = {
+      ...execution.generationResult,
+      rag: {
+        used: ragUsed,
+        executionId: ragExecutionId,
+        sources: ragSources,
+      },
+    };
+  }
 
   updateStage(execution, 'aiExecuted', true);
   updateStage(execution, 'flowGenerated', true);

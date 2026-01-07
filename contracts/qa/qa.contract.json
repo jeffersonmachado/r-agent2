@@ -58,6 +58,51 @@
           "default": "/tests/rpa/reports"
         }
       }
+    },
+    "rag": {
+      "description": "Configurações de validação RAG",
+      "requiredWhenEnabled": {
+        "type": "boolean",
+        "description": "Se true, RAG é obrigatório quando useRag=true",
+        "default": true
+      },
+      "minSources": {
+        "type": "number",
+        "description": "Quantidade mínima de fontes RAG requeridas",
+        "default": 3,
+        "minimum": 1
+      },
+      "validation": {
+        "description": "Regras de validação RAG",
+        "blockingOnFailure": {
+          "type": "boolean",
+          "description": "Se true, falha em validação RAG bloqueia pipeline",
+          "default": true
+        },
+        "checks": {
+          "type": "array",
+          "description": "Lista de checks obrigatórios",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ragContextBuilt",
+              "ragContextAvailable",
+              "minChunks",
+              "minSources",
+              "aiDeclaredUsage",
+              "aiDeclaredSources"
+            ]
+          },
+          "default": [
+            "ragContextBuilt",
+            "ragContextAvailable",
+            "minChunks",
+            "minSources",
+            "aiDeclaredUsage",
+            "aiDeclaredSources"
+          ]
+        }
+      }
     }
   },
   "additionalProperties": false

@@ -1,0 +1,236 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/rag/question-generation.contract.json",
+  "title": "Contrato de Geração de Perguntas RAG",
+  "description": "Define regras e padrões para geração automática de perguntas a partir de documentos RAG",
+  "version": "1.0.0",
+  "contractVersion": "1.0.0",
+  "lastUpdated": "2026-01-05T17:00:00.000Z",
+  "questionGeneration": {
+    "titleBased": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Habilita geração de perguntas baseadas no título",
+        "default": true
+      },
+      "minTitleLength": {
+        "type": "number",
+        "description": "Comprimento mínimo de palavras no título para gerar perguntas",
+        "default": 3,
+        "minimum": 1
+      },
+      "excludedWords": {
+        "type": "array",
+        "description": "Palavras a serem excluídas do título ao gerar perguntas",
+        "items": {
+          "type": "string"
+        },
+        "default": ["como", "para", "sobre", "guia", "manual", "documento", "arquivo"]
+      },
+      "templates": {
+        "type": "array",
+        "description": "Templates de perguntas baseadas no título. Use {{mainTopic}} como placeholder",
+        "items": {
+          "type": "string"
+        },
+        "default": ["O que é {{mainTopic}}?", "Como funciona {{mainTopic}}?"]
+      },
+      "maxQuestionsFromTitle": {
+        "type": "number",
+        "description": "Número máximo de perguntas geradas a partir do título",
+        "default": 2,
+        "minimum": 0
+      }
+    },
+    "keywordPatterns": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Habilita geração de perguntas baseadas em padrões de palavras-chave",
+        "default": true
+      },
+      "patterns": {
+        "type": "array",
+        "description": "Lista de padrões de palavras-chave e perguntas associadas",
+        "items": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "description": "Expressão regular para detectar palavras-chave no conteúdo"
+            },
+            "questions": {
+              "type": "array",
+              "description": "Lista de perguntas a serem geradas quando o padrão for encontrado",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["pattern", "questions"]
+        },
+        "default": [
+          {
+            "pattern": "senha|password",
+            "questions": ["Como resetar minha senha?", "Como alterar minha senha?", "Esqueci minha senha"]
+          },
+          {
+            "pattern": "conta|account",
+            "questions": ["Como criar uma conta?", "Como cancelar minha conta?", "Como fechar minha conta?"]
+          },
+          {
+            "pattern": "pagamento|payment|pagar",
+            "questions": ["Como fazer um pagamento?", "Quais são as formas de pagamento?", "Como pagar?"]
+          },
+          {
+            "pattern": "suporte|support|ajuda|help",
+            "questions": ["Como entrar em contato com o suporte?", "Onde posso obter ajuda?", "Preciso de ajuda"]
+          },
+          {
+            "pattern": "produto|product",
+            "questions": ["Quais produtos estão disponíveis?", "Como comprar um produto?", "Informações sobre produtos"]
+          },
+          {
+            "pattern": "ticket|chamado",
+            "questions": ["Como abrir um ticket?", "Como acompanhar meu ticket?", "Abrir chamado"]
+          },
+          {
+            "pattern": "configuração|config|settings",
+            "questions": ["Como configurar?", "Onde estão as configurações?", "Configurações do sistema"]
+          },
+          {
+            "pattern": "resetar|reset",
+            "questions": ["Como resetar?", "Resetar configurações"]
+          },
+          {
+            "pattern": "instalar|instalação",
+            "questions": ["Como instalar?", "Instruções de instalação"]
+          },
+          {
+            "pattern": "erro|error|problema",
+            "questions": ["Como resolver este problema?", "O que fazer quando ocorre erro?"]
+          }
+        ]
+      }
+    },
+    "contentBased": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Habilita geração de perguntas baseadas no conteúdo do documento",
+        "default": true
+      },
+      "minContentLength": {
+        "type": "number",
+        "description": "Comprimento mínimo do conteúdo para gerar perguntas",
+        "default": 50,
+        "minimum": 0
+      },
+      "actionVerbs": {
+        "type": "array",
+        "description": "Lista de verbos de ação que indicam instruções no conteúdo",
+        "items": {
+          "type": "string"
+        },
+        "default": ["acesse", "clique", "selecione", "digite", "insira", "configure", "ativar", "desativar"]
+      },
+      "sentenceFilters": {
+        "type": "object",
+        "description": "Filtros para processar sentenças do conteúdo",
+        "properties": {
+          "minLength": {
+            "type": "number",
+            "description": "Comprimento mínimo de uma sentença",
+            "default": 20
+          },
+          "maxLength": {
+            "type": "number",
+            "description": "Comprimento máximo de uma sentença",
+            "default": 150
+          }
+        },
+        "default": {
+          "minLength": 20,
+          "maxLength": 150
+        }
+      },
+      "maxSentencesToProcess": {
+        "type": "number",
+        "description": "Número máximo de sentenças a processar do conteúdo",
+        "default": 3,
+        "minimum": 1
+      },
+      "questionTemplate": {
+        "type": "string",
+        "description": "Template para perguntas baseadas em ações. Use {{action}} como placeholder",
+        "default": "Como {{action}}?"
+      },
+      "fallbackEnabled": {
+        "type": "boolean",
+        "description": "Habilita fallback para gerar perguntas quando não encontrar verbos de ação",
+        "default": true
+      },
+      "fallbackMaxSentences": {
+        "type": "number",
+        "description": "Número máximo de sentenças para fallback",
+        "default": 2,
+        "minimum": 0
+      },
+      "fallbackMinLength": {
+        "type": "number",
+        "description": "Comprimento mínimo para sentenças no fallback",
+        "default": 20
+      },
+      "fallbackMaxLength": {
+        "type": "number",
+        "description": "Comprimento máximo para sentenças no fallback",
+        "default": 100
+      }
+    },
+    "deduplication": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Habilita remoção de perguntas duplicadas ou muito similares",
+        "default": true
+      },
+      "similarityThreshold": {
+        "type": "number",
+        "description": "Threshold de similaridade (0-1) para considerar perguntas duplicadas",
+        "default": 0.8,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "normalizeForComparison": {
+        "type": "boolean",
+        "description": "Normaliza perguntas removendo pontuação antes de comparar",
+        "default": true
+      }
+    },
+    "limits": {
+      "maxQuestionsPerDocument": {
+        "type": "number",
+        "description": "Número máximo total de perguntas por documento",
+        "default": 5,
+        "minimum": 1
+      },
+      "maxQuestionsFromTitle": {
+        "type": "number",
+        "description": "Número máximo de perguntas geradas do título",
+        "default": 2,
+        "minimum": 0
+      },
+      "maxQuestionsFromKeywords": {
+        "type": "number",
+        "description": "Número máximo de perguntas geradas de palavras-chave",
+        "default": 10,
+        "minimum": 0
+      },
+      "maxQuestionsFromContent": {
+        "type": "number",
+        "description": "Número máximo de perguntas geradas do conteúdo",
+        "default": 5,
+        "minimum": 0
+      }
+    }
+  },
+  "additionalProperties": false
+}
+

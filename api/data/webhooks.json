@@ -1,0 +1,275 @@
+[
+  {
+    "id": "webhook-1767640715731-62af7e1d",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "f0897d39bf5aee254a6014c0d3907c14beab23a6d607bf479a322c93b86d5a4c",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:18:35.731Z",
+    "updatedAt": "2026-01-05T19:18:35.731Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641006229-3433363a",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "fea34e9fb06147bcc1c352847b0fb80521b289aba99783888b5a97437839c338",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:23:26.229Z",
+    "updatedAt": "2026-01-05T19:23:26.229Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641320113-28dbba63",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "40603a8aa2ec20a959ae08cdd5d3912fb64fad59ec1f9cbd1b42c92dbf94b9f6",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:28:40.113Z",
+    "updatedAt": "2026-01-05T19:28:40.113Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641386964-b7a0e9af",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "5c174acffd9caead86f745e38de856132ba53c48b1365548625dfe5359f6751c",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:29:46.964Z",
+    "updatedAt": "2026-01-05T19:29:46.964Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641536509-ea966b9f",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "8bdc0ca3caaedbda01928acf0caa20fd25aaa2e83d0c08768201cb325571bed7",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:32:16.509Z",
+    "updatedAt": "2026-01-05T19:32:16.509Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641642497-d6345849",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "11c8be5dbbad5bd77a7690fcf4e1d1edcd42aa5cfcfc5e00308415f84e0db387",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:34:02.497Z",
+    "updatedAt": "2026-01-05T19:34:02.497Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641699702-825c794d",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "74b4e4f0c12aceb654950e3a13407b22680f9281a175583530c50f11f4733c8c",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:34:59.702Z",
+    "updatedAt": "2026-01-05T19:34:59.702Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641723151-c27e10a2",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "96cd6d028eff550fedb1b344fc881cbf61489da8a7899c44385835f6a55e5afe",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:35:23.151Z",
+    "updatedAt": "2026-01-05T19:35:23.151Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641775926-79e2cf48",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "8cf3a260ac921cf348e607ebe065752f6e7e321005e2bf4d9c9f9435118ef58a",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:36:15.926Z",
+    "updatedAt": "2026-01-05T19:36:15.926Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641800246-62f02858",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "c0a6ef23ae56c2ad5f9be0316ffa9c6726eede4d4e55fecd990c6dede69882d9",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:36:40.246Z",
+    "updatedAt": "2026-01-05T19:36:40.246Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641819642-b3f8c18a",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "ee8b153cc738875bee8e8d07dac02e2e1797df32fd6b0ff323444dedbce84513",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:36:59.642Z",
+    "updatedAt": "2026-01-05T19:36:59.642Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641841160-87a2a999",
+    "tenantId": "other-tenant",
+    "url": "https://example.com/webhook2",
+    "events": [
+      "ticket.created"
+    ],
+    "secret": "c11d84da96fbb9c43a77d91d81a0faf8a78e16dd60c4ad13961f609a9dc61c0e",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:37:21.160Z",
+    "updatedAt": "2026-01-05T19:37:21.160Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  },
+  {
+    "id": "webhook-1767641843033-f7622432",
+    "tenantId": "tenant-test",
+    "url": "https://example.com/webhook",
+    "events": [
+      "ticket.assigned"
+    ],
+    "secret": "87df5b474fb6cac6281eebafa80c012c243ee54ab0cb716cb5ebb125b35411b6",
+    "active": true,
+    "timeout": 5000,
+    "retries": 3,
+    "headers": {},
+    "createdAt": "2026-01-05T19:37:23.033Z",
+    "updatedAt": "2026-01-05T19:37:23.033Z",
+    "stats": {
+      "totalCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "lastCallAt": null
+    }
+  }
+]

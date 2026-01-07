@@ -53,6 +53,8 @@ const ENV_TO_CONFIG_MAP = {
   'RATE_LIMIT_SCRAPING_PAGES': 'rateLimit.policies.scraping.pagesPerExecution',
   'RATE_LIMIT_SYSTEM_VALIDATE_POINTS': 'rateLimit.policies.systemValidate.points',
   'RATE_LIMIT_SYSTEM_VALIDATE_DURATION': 'rateLimit.policies.systemValidate.duration',
+  'RAG_SERVICE_URL': 'rag.serviceUrl',
+  'RAG_TIMEOUT': 'rag.timeout',
 };
 
 /**
@@ -115,8 +117,21 @@ function loadConfig() {
  */
 function get(path, defaultValue = undefined) {
   const config = loadConfig();
-  
-  // Tenta obter do JSON primeiro
+
+  // 1) Primeiro: variáveis de ambiente (override do JSON)
+  // Procura no mapeamento ENV_TO_CONFIG_MAP
+  for (const [envVar, configPath] of Object.entries(ENV_TO_CONFIG_MAP)) {
+    if (configPath === path && process.env[envVar] !== undefined) {
+      // Converte string para tipo apropriado
+      const envValue = process.env[envVar];
+      if (envValue === 'true') return true;
+      if (envValue === 'false') return false;
+      if (/^\d+$/.test(envValue)) return Number(envValue);
+      return envValue;
+    }
+  }
+
+  // 2) Se não houver env, tenta obter do JSON
   const parts = path.split('.');
   let value = config;
   
@@ -132,19 +147,6 @@ function get(path, defaultValue = undefined) {
   // Se encontrou no JSON, retorna
   if (value !== undefined) {
     return value;
-  }
-  
-  // Fallback: tenta process.env (compatibilidade)
-  // Procura no mapeamento primeiro
-  for (const [envVar, configPath] of Object.entries(ENV_TO_CONFIG_MAP)) {
-    if (configPath === path && process.env[envVar] !== undefined) {
-      // Converte string para tipo apropriado
-      const envValue = process.env[envVar];
-      if (envValue === 'true') return true;
-      if (envValue === 'false') return false;
-      if (/^\d+$/.test(envValue)) return Number(envValue);
-      return envValue;
-    }
   }
   
   // Se não encontrou, retorna defaultValue
@@ -211,13 +213,13 @@ function validateRedisConfig() {
   const errors = [];
   const config = loadConfig();
   
-  // Obtém a URL do Redis (com fallback para env vars)
-  // Primeiro tenta do config.json
-  let redisUrl = config?.rateLimit?.redis?.url;
+  // Obtém a URL do Redis
+  // IMPORTANTE: variáveis de ambiente têm prioridade sobre config.json
+  let redisUrl = process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL;
   
-  // Fallback para env vars
+  // Fallback para config.json se não houver env
   if (!redisUrl) {
-    redisUrl = process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL;
+    redisUrl = config?.rateLimit?.redis?.url;
   }
   
   // Verifica se está configurada

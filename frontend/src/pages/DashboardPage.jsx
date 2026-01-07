@@ -122,6 +122,16 @@ export function DashboardPage() {
       category: 'Administração',
     },
     {
+      id: 'tenants',
+      title: 'Tenants',
+      description: 'Gerencie tenants/clientes e contexto cognitivo',
+      icon: '🏢',
+      path: '/tenants',
+      color: 'bg-purple-500',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
       id: 'audit',
       title: 'Auditoria',
       description: 'Logs e histórico de ações',
@@ -237,7 +247,10 @@ export function DashboardPage() {
       
       const matchesCategory = !selectedCategory || feature.category === selectedCategory;
       
-      return matchesSearch && matchesCategory;
+      // Filtra por permissões (requiresAdmin)
+      const matchesPermissions = !feature.requiresAdmin || agent?.role === 'admin';
+      
+      return matchesSearch && matchesCategory && matchesPermissions;
     });
     
     // Ordena alfabeticamente por título

@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/evidence.contract.json",
+  "title": "Contrato de Evidência - Governança Epistemológica",
+  "description": "Define critérios formais para determinar se há evidência suficiente para permitir resposta da IA",
+  "version": "1.0.0",
+  "evidence": {
+    "types": {
+      "rag": {
+        "description": "Evidência proveniente de RAG (Retrieval Augmented Generation)",
+        "valid": true,
+        "requiresVerification": true
+      },
+      "scraping": {
+        "description": "Evidência proveniente de web scraping",
+        "valid": true,
+        "requiresVerification": true,
+        "requiresExplicitAuthorization": true
+      },
+      "none": {
+        "description": "Nenhuma evidência disponível",
+        "valid": false,
+        "requiresAbstention": true
+      }
+    },
+    "sufficiency": {
+      "rag": {
+        "minChunks": 3,
+        "minSources": 1,
+        "minConfidence": 0.45,
+        "requiresConsistency": true,
+        "description": "RAG deve retornar pelo menos minChunks chunks de pelo menos minSources fontes distintas com confidence >= minConfidence"
+      },
+      "scraping": {
+        "minTargets": 1,
+        "minSuccessRate": 0.8,
+        "requiresExplicitAuthorization": true,
+        "description": "Scraping deve ter pelo menos minTargets URLs com taxa de sucesso >= minSuccessRate e autorização explícita no contrato"
+      }
+    },
+    "inconsistency": {
+      "detection": {
+        "enabled": true,
+        "maxConfidenceVariance": 0.3,
+        "maxSourceDisagreement": 0.5,
+        "description": "Detecta inconsistências quando há grande variação de confidence ou desacordo entre fontes"
+      },
+      "action": "abstain",
+      "description": "Quando inconsistência é detectada, sistema deve abster"
+    },
+    "abstention": {
+      "reasons": {
+        "INSUFFICIENT_EVIDENCE": {
+          "code": "INSUFFICIENT_EVIDENCE",
+          "description": "Evidência insuficiente: não há chunks/fontes suficientes para garantir resposta fundamentada"
+        },
+        "INCONSISTENT_SOURCES": {
+          "code": "INCONSISTENT_SOURCES",
+          "description": "Fontes inconsistentes: há conflito entre fontes que impede resposta confiável"
+        },
+        "LOW_CONFIDENCE": {
+          "code": "LOW_CONFIDENCE",
+          "description": "Confiança baixa: confidence dos chunks está abaixo do mínimo exigido"
+        },
+        "MISSING_AUTHORIZATION": {
+          "code": "MISSING_AUTHORIZATION",
+          "description": "Autorização ausente: scraping requer autorização explícita no contrato"
+        },
+        "RAG_REQUIRED_BUT_MISSING": {
+          "code": "RAG_REQUIRED_BUT_MISSING",
+          "description": "RAG obrigatório mas ausente: useRag=true mas contexto RAG não foi construído"
+        }
+      },
+      "isLegitimateState": true,
+      "description": "Abstenção é um estado legítimo e rastreável. Sistema prefere não responder a responder sem evidência."
+    },
+    "invariants": {
+      "noResponseWithoutEvidence": {
+        "description": "Nenhuma resposta sem evidência verificável",
+        "enforced": true,
+        "blocking": true
+      },
+      "noExecutionWithoutExecutionId": {
+        "description": "Nenhuma execução sem executionId",
+        "enforced": true,
+        "blocking": true
+      },
+      "noApprovalWithoutEpistemologicalValidation": {
+        "description": "Nenhuma aprovação sem validação epistemológica",
+        "enforced": true,
+        "blocking": true
+      },
+      "noDecisionWithoutAuthority": {
+        "description": "Nenhuma decisão sem autoridade definida",
+        "enforced": true,
+        "blocking": true
+      },
+      "noSilentException": {
+        "description": "Nenhuma exceção silenciosa",
+        "enforced": true,
+        "blocking": true
+      },
+      "abstentionIsLegitimate": {
+        "description": "Abstenção é um estado legítimo e rastreável",
+        "enforced": true,
+        "blocking": false
+      }
+    }
+  }
+}
+

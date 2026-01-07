@@ -35,8 +35,8 @@ if check_port 3000; then
     echo -e "${YELLOW}Aviso: Porta 3000 já está em uso${NC}"
     echo -e "${YELLOW}Verificando se é a API do projeto...${NC}"
     
-    # Tenta encontrar o processo
-    API_PROCESS=$(ps aux | grep "node.*server.js" | grep -v grep | awk '{print $2}' | head -1)
+    # Tenta encontrar o processo (nodemon ou node direto)
+    API_PROCESS=$(ps aux | grep -E "(nodemon|node).*server.js" | grep -v grep | awk '{print $2}' | head -1)
     
     if [ -n "$API_PROCESS" ]; then
         echo -e "${GREEN}API já está rodando (PID: $API_PROCESS)${NC}"
@@ -50,9 +50,9 @@ if check_port 3000; then
         exit 1
     fi
 else
-    # Inicia a API em background
-    echo -e "${GREEN}Iniciando API na porta 3000...${NC}"
-    node api/server.js &
+    # Inicia a API com nodemon em background (para auto-reload)
+    echo -e "${GREEN}Iniciando API com nodemon na porta 3000...${NC}"
+    npx --yes nodemon api/server.js &
     API_PID=$!
     USE_EXISTING_API=false
     

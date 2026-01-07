@@ -94,6 +94,10 @@ const viteConfig = defineConfig({
       // Permite Fast Refresh para arquivos que exportam hooks customizados
       // junto com componentes (como Context Providers)
       fastRefresh: true,
+      // Usa JSX runtime automático mas garante compatibilidade
+      jsxRuntime: 'automatic',
+      // Garante que todas as exportações do React sejam incluídas
+      include: '**/*.{jsx,tsx}',
     }),
     // Plugin customizado para processar CommonJS do backend
     vitePluginCommonJS(),
@@ -277,6 +281,9 @@ const viteConfig = defineConfig({
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
       process.env.VITE_API_BASE_URL || config.frontend?.apiBaseUrl || ''
     ),
+    // Garante que DEV e MODE estejam definidos corretamente
+    'import.meta.env.DEV': JSON.stringify(process.env.NODE_ENV !== 'production'),
+    'import.meta.env.MODE': JSON.stringify(process.env.NODE_ENV === 'production' ? 'production' : 'development'),
   },
   // Configuração para SPA routing - todas as rotas devem retornar index.html
   // E para tratar arquivos CommonJS do backend
@@ -285,12 +292,28 @@ const viteConfig = defineConfig({
       output: {
         manualChunks: undefined,
       },
+      // Garante que React não seja externalizado
+      external: [],
+      // Força o Rollup a preservar todas as exportações do React
+      preserveEntrySignatures: 'strict',
+      // Plugin para garantir que React seja processado corretamente
+      plugins: [],
     },
+    // Configuração para garantir que o React seja incluído corretamente
     commonjsOptions: {
-      // Inclui arquivos CommonJS do backend para serem transformados
-      include: [/engine\/utils\/.*\.js$/],
+      // Inclui arquivos CommonJS do backend e todos os node_modules CommonJS
+      include: [/engine\/utils\/.*\.js$/, /node_modules\/.*/],
       transformMixedEsModules: true,
+      // Garante que todos os módulos CommonJS sejam processados corretamente
+      requireReturnsDefault: 'auto',
+      // Força transformação de CommonJS para ESM
+      strictRequires: true,
+      // Permite default exports de módulos CommonJS
+      defaultIsModuleExports: true,
     },
+    // Garante que todas as dependências sejam incluídas
+    target: 'esnext',
+    minify: 'esbuild',
   },
   // Resolve alias para importar módulos compartilhados do backend
   // Usa wrappers ES module no frontend que importam CommonJS
@@ -301,10 +324,15 @@ const viteConfig = defineConfig({
       '@shared/templateRenderer': join(__dirname, 'src', 'shared', 'templateRenderer.js'),
       '@shared/jsonSchemaValidator': join(__dirname, 'src', 'shared', 'jsonSchemaValidator.js'),
     },
+    // Força o Rollup a incluir todas as exportações do React
+    dedupe: ['react', 'react-dom'],
   },
   // Configuração para permitir importar CommonJS do backend
   optimizeDeps: {
     include: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
       join(__dirname, '..', 'engine', 'utils', 'aiTaskExecutor.js'),
       join(__dirname, '..', 'engine', 'utils', 'typeCompatibility.js'),
       join(__dirname, '..', 'engine', 'utils', 'templateRenderer.js'),
@@ -313,6 +341,8 @@ const viteConfig = defineConfig({
     esbuildOptions: {
       // Permite importar CommonJS e força processamento
       mainFields: ['module', 'main'],
+      // Garante que React seja processado corretamente
+      jsx: 'automatic',
     },
     // Força re-processamento quando os arquivos mudarem
     force: false,

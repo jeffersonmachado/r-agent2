@@ -1,0 +1,30 @@
+[
+  {
+    "tenantId": "tenant-1767641804276-2vmy2jt",
+    "ramo_atividade": "E-commerce e Varejo Online - Venda de produtos físicos e digitais",
+    "objetivo": "Aumentar vendas online e reduzir abandono de carrinho",
+    "site_oficial": "https://test-ecommerce.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-05T19:36:44.284Z",
+    "updatedAt": "2026-01-05T19:36:44.284Z"
+  },
+  {
+    "tenantId": "tenant-1767641804348-vz318dk",
+    "ramo_atividade": "Saúde e Bem-estar - Clínica médica especializada",
+    "objetivo": "Agilizar agendamentos e melhorar comunicação com pacientes",
+    "site_oficial": "https://test-saude.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-05T19:36:44.353Z",
+    "updatedAt": "2026-01-05T19:36:44.353Z"
+  }
+]

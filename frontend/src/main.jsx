@@ -10,6 +10,7 @@ import { SupportPage } from './pages/SupportPage';
 import { TicketMaintenancePage } from './pages/TicketMaintenancePage';
 import { ConfigPage } from './pages/ConfigPage';
 import { AgentsPage } from './pages/AgentsPage';
+import { TenantsPage } from './pages/TenantsPage';
 import { AuditPage } from './pages/AuditPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { QuickRepliesPage } from './pages/QuickRepliesPage';
@@ -124,6 +125,7 @@ function AppWithAuth() {
   const isMaintenance = currentPath === '/maintenance' || currentPath.startsWith('/maintenance');
   const isConfig = currentPath === '/config' || currentPath.startsWith('/config');
   const isAgents = currentPath === '/agents' || currentPath.startsWith('/agents');
+  const isTenants = currentPath === '/tenants' || currentPath.startsWith('/tenants');
   const isAudit = currentPath === '/audit' || currentPath.startsWith('/audit');
   const isQuickReplies = currentPath === '/quick-replies' || currentPath.startsWith('/quick-replies');
   const isDepartments = currentPath === '/departments' || currentPath.startsWith('/departments');
@@ -156,7 +158,7 @@ function AppWithAuth() {
     if (loading) return;
     
     const allRoutes = [
-      isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
+      isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin
     ];
@@ -169,7 +171,7 @@ function AppWithAuth() {
       }
     }
   }, [
-    isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isAudit,
+    isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
@@ -191,6 +193,7 @@ function AppWithAuth() {
       '/maintenance': '🔧 Manutenção de Tickets',
       '/config': '⚙️ Configuração do Sistema',
       '/agents': '👥 Gerenciamento de Agentes',
+      '/tenants': '🏢 Gerenciamento de Tenants',
       '/audit': '🔍 Auditoria',
       '/quick-replies': '⚡ Respostas Rápidas',
       '/departments': '🏢 Departamentos',
@@ -243,7 +246,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/audit'];
+  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -277,6 +280,8 @@ function AppWithAuth() {
         <ConfigPage />
       ) : isAgents ? (
         <AgentsPage />
+      ) : isTenants ? (
+        <TenantsPage />
       ) : isAudit ? (
         <AuditPage />
       ) : isQuickReplies ? (

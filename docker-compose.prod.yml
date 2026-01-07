@@ -1,0 +1,164 @@
+# Docker Compose para PRODUÇÃO
+# Uso: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    image: r-agent2-api:latest
+    container_name: r-agent2-api-prod
+    environment:
+      NODE_ENV: production
+      API_PORT: ${API_PORT:-3000}
+      DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID:-tenant-demo}
+      RATE_LIMIT_REDIS_URL: ${RATE_LIMIT_REDIS_URL:-redis://redis:6379}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # Políticas de rate limiting
+      RATE_LIMIT_DRY_RUN_POINTS: ${RATE_LIMIT_DRY_RUN_POINTS:-50}
+      RATE_LIMIT_DRY_RUN_DURATION: ${RATE_LIMIT_DRY_RUN_DURATION:-60}
+      RATE_LIMIT_GENERATION_POINTS: ${RATE_LIMIT_GENERATION_POINTS:-5}
+      RATE_LIMIT_GENERATION_DURATION: ${RATE_LIMIT_GENERATION_DURATION:-60}
+      RATE_LIMIT_BOOTSTRAP_POINTS: ${RATE_LIMIT_BOOTSTRAP_POINTS:-1}
+      RATE_LIMIT_BOOTSTRAP_DURATION: ${RATE_LIMIT_BOOTSTRAP_DURATION:-300}
+      RATE_LIMIT_SCRAPING_POINTS: ${RATE_LIMIT_SCRAPING_POINTS:-10}
+      RATE_LIMIT_SCRAPING_DURATION: ${RATE_LIMIT_SCRAPING_DURATION:-300}
+      RATE_LIMIT_SCRAPING_RPS: ${RATE_LIMIT_SCRAPING_RPS:-3}
+      RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
+      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
+      # Configurações adicionais de produção
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${API_PORT:-3001}:3000"
+    volumes:
+      # Persistência de dados
+      - api-data:/app/api/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - r-agent2-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  frontend:
+    image: r-agent2-frontend:latest
+    container_name: r-agent2-frontend-prod
+    environment:
+      NODE_ENV: production
+      # VITE_API_BASE_URL aponta para o backend atrás do prefixo /r-agent2/api
+      # Externo: https://results.com.br/r-agent2/api
+      # Interno (nginx): /api
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/r-agent2/api}
+    ports:
+      - "${FRONTEND_PORT:-8086}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
+    networks:
+      - r-agent2-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  rag-service:
+    image: r-agent2-rag-service:latest
+    container_name: r-agent2-rag-service-prod
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DEBUG: ${RAG_DEBUG:-false}
+      EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      CHUNK_SIZE: ${RAG_CHUNK_SIZE:-500}
+      CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-50}
+      CHUNK_STRATEGY: ${RAG_CHUNK_STRATEGY:-sentence}
+      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-faiss}
+      VECTOR_STORE_PATH: /app/data/vector_store
+      LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
+      LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "${RAG_PORT:-8002}:8000"
+    volumes:
+      - rag-vector-store:/app/data/vector_store
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - r-agent2-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/rag/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    container_name: r-agent2-redis-prod
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: always
+    networks:
+      - r-agent2-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+volumes:
+  rag-vector-store:
+    driver: local
+  redis-data:
+    driver: local
+  api-data:
+    driver: local
+
+networks:
+  r-agent2-network:
+    driver: bridge
+

@@ -31,6 +31,15 @@ const {
   updateAgent,
   deleteAgent,
 } = require('./services/authService');
+const {
+  createTenant,
+  updateTenant,
+  listTenants,
+  getTenant,
+  deleteTenant,
+  getTenantContext,
+  updateTenantContext,
+} = require('./services/tenantService');
 const { logAction, queryLogs, getAuditStats } = require('./services/auditService');
 const { requireAuth, requirePermission } = require('./middleware/auth');
 const { canAccessTicket, canModifyTicket } = require('./services/rbacService');
@@ -190,6 +199,7 @@ const defaultTenantId = config.get('api.defaultTenantId', 'tenant-demo');
 const dataDir = path.join(__dirname, 'data');
 const flowsFile = path.join(dataDir, 'flows.json');
 const configFile = path.join(dataDir, 'config.json');
+const conversationsFile = path.join(dataDir, 'conversations.json');
 
 /**
  * Detecta qual gerenciador de processo está sendo usado (PM2, nodemon, ou nenhum).
@@ -284,6 +294,98 @@ const sessionEvents = new Map();
 const SESSION_CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hora
 const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 horas
 
+// Debounce para evitar muitas escritas em disco
+let saveSessionEventsTimeout = null;
+const SAVE_DEBOUNCE_MS = 2000; // Salva após 2 segundos de inatividade
+
+/**
+ * Salva conversas (sessionEvents) no arquivo JSON.
+ * Usa debounce para evitar muitas escritas quando há muitas mensagens.
+ */
+function saveSessionEventsToFile() {
+  // Limpa timeout anterior se existir
+  if (saveSessionEventsTimeout) {
+    clearTimeout(saveSessionEventsTimeout);
+  }
+  
+  // Agenda salvamento após debounce
+  saveSessionEventsTimeout = setTimeout(() => {
+    try {
+      ensureDataDir();
+      const conversationsData = {};
+      for (const [sessionId, events] of sessionEvents.entries()) {
+        if (Array.isArray(events) && events.length > 0) {
+          conversationsData[sessionId] = events;
+        }
+      }
+      const data = JSON.stringify(conversationsData, null, 2);
+      fs.writeFileSync(conversationsFile, data, 'utf8');
+      logger.debug(`[Conversations] Conversas salvas: ${Object.keys(conversationsData).length} sessão(ões)`);
+    } catch (err) {
+      logger.error('[Conversations] Erro ao salvar conversas no arquivo:', err);
+    }
+    saveSessionEventsTimeout = null;
+  }, SAVE_DEBOUNCE_MS);
+}
+
+/**
+ * Salva conversas imediatamente (sem debounce).
+ * Usado quando é necessário garantir que os dados sejam salvos, como na limpeza.
+ */
+function saveSessionEventsToFileImmediate() {
+  // Limpa timeout se existir
+  if (saveSessionEventsTimeout) {
+    clearTimeout(saveSessionEventsTimeout);
+    saveSessionEventsTimeout = null;
+  }
+  
+  try {
+    ensureDataDir();
+    const conversationsData = {};
+    for (const [sessionId, events] of sessionEvents.entries()) {
+      if (Array.isArray(events) && events.length > 0) {
+        conversationsData[sessionId] = events;
+      }
+    }
+    const data = JSON.stringify(conversationsData, null, 2);
+    fs.writeFileSync(conversationsFile, data, 'utf8');
+    logger.debug(`[Conversations] Conversas salvas imediatamente: ${Object.keys(conversationsData).length} sessão(ões)`);
+  } catch (err) {
+    logger.error('[Conversations] Erro ao salvar conversas no arquivo:', err);
+  }
+}
+
+/**
+ * Carrega conversas (sessionEvents) do arquivo JSON.
+ */
+function loadSessionEventsFromFile() {
+  try {
+    ensureDataDir();
+    if (!fs.existsSync(conversationsFile)) {
+      logger.debug(`[Conversations] Arquivo de conversas não encontrado: ${conversationsFile}. Iniciando com dados vazios.`);
+      return;
+    }
+    
+    const data = fs.readFileSync(conversationsFile, 'utf8');
+    const conversationsData = JSON.parse(data);
+    
+    if (typeof conversationsData === 'object' && conversationsData !== null) {
+      sessionEvents.clear();
+      let loaded = 0;
+      for (const [sessionId, events] of Object.entries(conversationsData)) {
+        if (Array.isArray(events) && events.length > 0) {
+          sessionEvents.set(sessionId, events);
+          loaded++;
+        }
+      }
+      logger.info(`[Conversations] Carregadas ${loaded} conversa(s) do arquivo ${conversationsFile}`);
+    }
+  } catch (err) {
+    logger.error('[Conversations] Erro ao carregar conversas do arquivo:', err);
+    // Continua com Map vazio se houver erro
+  }
+}
+
 /**
  * Limpa sessões antigas do cache de eventos.
  */
@@ -309,6 +411,8 @@ function cleanupOldSessions() {
   }
   if (cleaned > 0) {
     logger.debug(`Limpeza de sessões: ${cleaned} sessão(ões) antiga(s) removida(s)`);
+    // Salva imediatamente após limpar (sem debounce)
+    saveSessionEventsToFileImmediate();
   }
 }
 
@@ -381,6 +485,9 @@ function saveFlowsToFile() {
 
 // Carrega fluxos do arquivo ao iniciar o servidor
 loadFlowsFromFile();
+
+// Carrega conversas do arquivo ao iniciar o servidor
+loadSessionEventsFromFile();
 
 // ---------------------------------------------------------------------------
 // Helpers HTTP básicos
@@ -927,6 +1034,335 @@ async function requestHandler(req, res) {
     }
 
     sendJson(res, 200, { agent: validation.agent });
+    return;
+  }
+
+  // ============================================
+  // TENANTS ENDPOINTS
+  // ============================================
+
+  // POST /tenants - Cria novo tenant (requer autenticação admin)
+  if (method === 'POST' && pathname === '/tenants') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Apenas admins podem criar tenants
+    if (req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem criar tenants' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      
+      // Valida entrada usando schema
+      const { validateInput, schemas } = require('./utils/inputValidator');
+      try {
+        validateInput(body, schemas.createTenant);
+      } catch (validationError) {
+        badRequest(res, validationError.message || 'Dados inválidos');
+        return;
+      }
+      
+      const result = createTenant(body);
+
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      // Registra ação de auditoria
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'tenant_create',
+        resource: 'tenant',
+        resourceId: result.tenant.id,
+        details: { tenantName: result.tenant.name },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 201, { tenant: result.tenant });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao criar tenant:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // GET /tenants - Lista tenants
+  if (method === 'GET' && pathname === '/tenants') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Apenas admins podem listar todos os tenants
+    if (req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem listar tenants' });
+      return;
+    }
+
+    const tenantsList = listTenants();
+    sendJson(res, 200, { tenants: tenantsList });
+    return;
+  }
+
+  // GET /tenants/:id - Obtém tenant específico
+  if (method === 'GET' && pathname.startsWith('/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length));
+    
+    // Apenas admins podem ver qualquer tenant, outros só podem ver seu próprio tenant
+    if (req.agent.role !== 'admin' && req.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver seu próprio tenant' });
+      return;
+    }
+
+    const tenant = getTenant(tenantId);
+    if (!tenant) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { tenant });
+    return;
+  }
+
+  // PUT /tenants/:id - Atualiza tenant
+  if (method === 'PUT' && pathname.startsWith('/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Apenas admins podem atualizar tenants
+    if (req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem atualizar tenants' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length));
+    const tenant = getTenant(tenantId);
+    
+    if (!tenant) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      
+      // Valida entrada usando schema
+      const { validateInput, schemas } = require('./utils/inputValidator');
+      try {
+        validateInput(body, schemas.updateTenant);
+      } catch (validationError) {
+        badRequest(res, validationError.message || 'Dados inválidos');
+        return;
+      }
+      
+      const result = updateTenant(tenantId, body);
+
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      // Registra ação de auditoria
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'tenant_update',
+        resource: 'tenant',
+        resourceId: tenantId,
+        details: { updatedFields: Object.keys(body) },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, { tenant: result.tenant });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao atualizar tenant:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // DELETE /tenants/:id - Remove tenant
+  if (method === 'DELETE' && pathname.startsWith('/tenants/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Apenas admins podem remover tenants
+    if (req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem remover tenants' });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length));
+    const tenant = getTenant(tenantId);
+    
+    if (!tenant) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    const result = deleteTenant(tenantId);
+
+    if (!result.success) {
+      badRequest(res, result.error);
+      return;
+    }
+
+    // Registra ação de auditoria
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      action: 'tenant_delete',
+      resource: 'tenant',
+      resourceId: tenantId,
+      details: { tenantName: tenant.name },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, { success: true });
+    return;
+  }
+
+  // GET /tenants/:id/context - Obtém contexto do tenant
+  if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/context')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
+    
+    // Apenas admins podem ver qualquer contexto, outros só podem ver seu próprio contexto
+    if (req.agent.role !== 'admin' && req.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver o contexto do seu próprio tenant' });
+      return;
+    }
+
+    const context = getTenantContext(tenantId);
+    if (!context) {
+      sendJson(res, 404, { error: 'tenant_context_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { context });
+    return;
+  }
+
+  // PUT /tenants/:id/context - Atualiza contexto do tenant
+  if (method === 'PUT' && pathname.startsWith('/tenants/') && pathname.endsWith('/context')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Apenas OWNER ou ADMIN podem atualizar contextos (proteção contra prompt injection)
+    // OWNER = proprietário do tenant (pode ser implementado como role específica ou validação adicional)
+    // Por enquanto, apenas ADMIN pode atualizar (OWNER pode ser adicionado quando necessário)
+    if (req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores (OWNER ou ADMIN) podem atualizar contextos' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
+    const tenant = getTenant(tenantId);
+    
+    if (!tenant) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      
+      // Valida entrada usando schema
+      const { validateInput, schemas } = require('./utils/inputValidator');
+      try {
+        validateInput(body, schemas.updateTenantContext);
+      } catch (validationError) {
+        badRequest(res, validationError.message || 'Dados inválidos');
+        return;
+      }
+      
+      // Passa informações do usuário para auditoria e validação
+      const result = updateTenantContext(tenantId, body, {
+        userRole: req.agent.role,
+        userId: req.agent.id,
+        username: req.agent.username,
+      });
+
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      // Registra ação de auditoria
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'tenant_context_update',
+        resource: 'tenant_context',
+        resourceId: tenantId,
+        details: { updatedFields: Object.keys(body) },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, { context: result.context });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao atualizar tenant context:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
     return;
   }
 
@@ -2110,6 +2546,8 @@ async function requestHandler(req, res) {
 
       if (sessionId) {
         sessionEvents.set(sessionId, Array.isArray(result.events) ? result.events : []);
+        // Salva conversas após adicionar eventos
+        saveSessionEventsToFile();
       }
 
       // Retorna resultado completo da simulação (SimulationResultUi)
@@ -2278,6 +2716,7 @@ async function requestHandler(req, res) {
     }
 
     try {
+      logger.debug(`[Conversations] Listando conversas. Total de sessões em memória: ${sessionEvents.size}`);
       const conversations = [];
       for (const [sessionId, events] of sessionEvents.entries()) {
         if (!Array.isArray(events) || events.length === 0) continue;
@@ -2314,6 +2753,7 @@ async function requestHandler(req, res) {
         return new Date(b.lastActivity) - new Date(a.lastActivity);
       });
 
+      logger.debug(`[Conversations] Retornando ${conversations.length} conversa(s)`);
       sendJson(res, 200, { conversations });
     } catch (err) {
       logger.error('[Conversations] Erro ao listar conversas:', err);
@@ -3635,6 +4075,7 @@ async function requestHandler(req, res) {
                 await processWhatsAppMessage(msg, value, {
                   flows,
                   sessionEvents,
+                  saveSessionEvents: saveSessionEventsToFile,
                 });
               }
             }
@@ -4082,6 +4523,43 @@ async function requestHandler(req, res) {
         error: 'Erro ao ler configuração',
         message: err.message || 'Erro desconhecido',
         stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
+    }
+    return;
+  }
+
+  // GET /api/data/rag_question_generation_rules.json - Serve regras de geração de perguntas (deprecated, use /contracts/rag/question-generation.rules.json)
+  // GET /contracts/rag/question-generation.rules.json - Serve regras de geração de perguntas
+  if (method === 'GET' && (pathname === '/api/data/rag_question_generation_rules.json' || pathname === '/contracts/rag/question-generation.rules.json')) {
+    try {
+      // Tenta carregar do contrato primeiro
+      const contractsDir = path.join(__dirname, '..', 'contracts');
+      const rulesFile = path.join(contractsDir, 'rag', 'question-generation.rules.json');
+      
+      // Fallback para o arquivo antigo em api/data
+      let fileToLoad = rulesFile;
+      if (!fs.existsSync(rulesFile)) {
+        const oldFile = path.join(dataDir, 'rag_question_generation_rules.json');
+        if (fs.existsSync(oldFile)) {
+          fileToLoad = oldFile;
+        }
+      }
+      
+      if (!fs.existsSync(fileToLoad)) {
+        sendJson(res, 404, { error: 'not_found', message: 'Arquivo de regras não encontrado' });
+        return;
+      }
+      
+      const rulesContent = fs.readFileSync(fileToLoad, 'utf8');
+      const rulesData = JSON.parse(rulesContent);
+      
+      setCorsHeaders(res);
+      sendJson(res, 200, rulesData);
+    } catch (err) {
+      logger.error('Erro ao servir regras de geração de perguntas:', err);
+      sendJson(res, 500, { 
+        error: 'Erro ao ler regras',
+        message: err.message || 'Erro desconhecido'
       });
     }
     return;
@@ -6165,7 +6643,7 @@ async function requestHandler(req, res) {
     try {
       const url = new URL(req.url || '/', 'http://localhost');
       const tenantId = url.searchParams.get('tenantId') || defaultTenantId;
-      const stats = getDocumentsStats(tenantId);
+      const stats = await getDocumentsStats(tenantId);
       sendJson(res, 200, stats);
     } catch (err) {
       logger.error('Erro ao obter estatísticas:', err);
@@ -6409,12 +6887,14 @@ async function requestHandler(req, res) {
     try {
       let tenantId = null;
       // Body é opcional - se fornecido, parseia
+      let includeInconsistent = false;
       if (hasJsonContentType(req) && req.headers['content-length'] && parseInt(req.headers['content-length']) > 0) {
         const body = await parseJsonBody(req);
         tenantId = body?.tenantId || null;
+        includeInconsistent = body?.includeInconsistent === true;
       }
       
-      const result = await reindexAllNotIndexed(tenantId);
+      const result = await reindexAllNotIndexed(tenantId, includeInconsistent);
 
       logAction({
         agentId: req.agent.id,
@@ -6486,11 +6966,368 @@ async function requestHandler(req, res) {
 
       sendJson(res, 200, result);
     } catch (err) {
-      logger.error('Erro ao consultar RAG:', err);
+      logger.error('Erro ao consultar RAG:', {
+        error: err.message,
+        stack: err.stack,
+        originalError: err.originalError?.message,
+      });
+      
+      // Melhora mensagens de erro para o usuário
+      let errorMessage = err.message || 'Erro desconhecido ao consultar RAG';
+      
+      // Se o erro original contém informações sobre o serviço não estar disponível
+      if (err.message && (err.message.includes('não está acessível') || err.message.includes('não encontrado'))) {
+        errorMessage = err.message;
+      } else if (err.originalError) {
+        errorMessage = err.originalError.message || errorMessage;
+      }
+      
+      sendJson(res, 500, { 
+        error: 'internal_error', 
+        message: errorMessage,
+        success: false 
+      });
+    }
+    return;
+  }
+
+  // GET /rag/learning/metrics/:tenantId - Obtém métricas de aprendizado
+  if (method === 'GET' && pathname.startsWith('/rag/learning/metrics/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/metrics/'.length));
+      const metrics = await ragService.getLearningMetrics(tenantId);
+      sendJson(res, 200, metrics);
+    } catch (err) {
+      logger.error('Erro ao obter métricas de aprendizado:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/learning/update-synonyms - Atualiza sinônimos baseado em documentos
+  if (method === 'POST' && pathname === '/rag/learning/update-synonyms') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { tenant_id, documents } = body;
+
+      if (!tenant_id || !documents) {
+        sendJson(res, 400, { error: 'invalid_request', message: 'tenant_id e documents são obrigatórios' });
+        return;
+      }
+
+      const result = await ragService.updateSynonymsFromDocuments(tenant_id, documents);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao atualizar sinônimos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/learning/trigger-learning/:tenantId - Dispara aprendizado completo
+  if (method === 'POST' && pathname.startsWith('/rag/learning/trigger-learning/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/trigger-learning/'.length));
+      const result = await ragService.triggerLearning(tenantId);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao disparar aprendizado:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /rag/learning/full-data/:tenantId - Obtém todos os dados de aprendizado
+  if (method === 'GET' && pathname.startsWith('/rag/learning/full-data/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/full-data/'.length));
+      const result = await ragService.getFullLearningData(tenantId);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao obter dados completos de aprendizado:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // PUT /rag/learning/synonyms - Atualiza sinônimo específico
+  if (method === 'PUT' && pathname === '/rag/learning/synonyms') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { tenant_id, term, synonyms } = body;
+
+      if (!tenant_id || !term || !synonyms) {
+        sendJson(res, 400, { error: 'invalid_request', message: 'tenant_id, term e synonyms são obrigatórios' });
+        return;
+      }
+
+      const result = await ragService.updateSynonym(tenant_id, term, synonyms);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao atualizar sinônimo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // DELETE /rag/learning/synonyms/:tenantId/:term - Remove sinônimo específico
+  if (method === 'DELETE' && pathname.startsWith('/rag/learning/synonyms/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'delete');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const parts = pathname.split('/').filter(p => p);
+      if (parts.length < 5) {
+        sendJson(res, 400, { error: 'invalid_request', message: 'Caminho inválido' });
+        return;
+      }
+
+      const tenantId = decodeURIComponent(parts[3]);
+      const term = decodeURIComponent(parts[4]);
+
+      const result = await ragService.deleteSynonym(tenantId, term);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao remover sinônimo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /rag/learning/validation-rules - Obtém regras de validação
+  if (method === 'GET' && pathname === '/rag/learning/validation-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const serviceUrl = ragService.getRagServiceUrl(req.tenantId || 'tenant-demo');
+      const timeout = ragService.getRagTimeout(req.tenantId || 'tenant-demo');
+
+      const response = await fetch(`${serviceUrl}/rag/learning/validation-rules`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`RAG learning service error: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao obter regras de validação:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/learning/validation-rules/adapt/:tenantId - Dispara adaptação de regras
+  if (method === 'POST' && pathname.startsWith('/rag/learning/validation-rules/adapt/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/validation-rules/adapt/'.length));
+      const serviceUrl = ragService.getRagServiceUrl(tenantId);
+      const timeout = ragService.getRagTimeout(tenantId);
+
+      const response = await fetch(`${serviceUrl}/rag/learning/validation-rules/adapt/${tenantId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`RAG learning service error: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao adaptar regras:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/learning/clean-invalid-queries/:tenantId - Remove queries inválidas
+  if (method === 'POST' && pathname.startsWith('/rag/learning/clean-invalid-queries/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/clean-invalid-queries/'.length));
+      const result = await ragService.cleanInvalidQueries(tenantId);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao limpar queries inválidas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /rag/domains - Obtém configuração de domínios RAG para o tenant
+  if (method === 'GET' && pathname === '/rag/domains') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      // Obtém tenantId do agente autenticado ou do query param
+      const queryParams = new URLSearchParams(req.url.split('?')[1] || '');
+      const tenantIdParam = queryParams.get('tenantId');
+      const finalTenantId = tenantIdParam || req.tenantId || defaultTenantId;
+
+      // Obtém configuração de domínios
+      const domains = ragService.getRagDomains(finalTenantId);
+      
+      // Adiciona informações detalhadas para cada domínio
+      const domainsInfo = {
+        tenantId: finalTenantId,
+        domains: {
+          chatbot: {
+            ...domains.chatbot,
+            enabled: ragService.isRagDomainEnabled(finalTenantId, 'chatbot'),
+            sources: ragService.getRagDomainSources(finalTenantId, 'chatbot'),
+          },
+          rpa: {
+            ...domains.rpa,
+            enabled: ragService.isRagDomainEnabled(finalTenantId, 'rpa'),
+            sources: ragService.getRagDomainSources(finalTenantId, 'rpa'),
+          },
+        },
+      };
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'rag_domains_read',
+        resource: 'rag_domains',
+        resourceId: finalTenantId,
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, domainsInfo);
+    } catch (err) {
+      logger.error('Erro ao obter configuração de domínios RAG:', err);
       sendJson(res, 500, { 
         error: 'internal_error', 
         message: err.message,
-        success: false 
       });
     }
     return;
@@ -7591,6 +8428,341 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // -----------------------------------------------------------------------
+  // Dev - Gerenciamento de Contratos, Prompts e RAG
+  // -----------------------------------------------------------------------
+
+  // GET /dev/files - Lista arquivos disponíveis (contratos, prompts)
+  if (method === 'GET' && pathname === '/dev/files') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'dev', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error || 'Sem permissão para acessar arquivos de desenvolvimento' });
+      return;
+    }
+
+    try {
+      const projectRoot = path.join(__dirname, '..');
+      const contractsDir = path.join(projectRoot, 'contracts');
+      const promptsDir = path.join(projectRoot, 'prompts');
+      const nodesDir = path.join(projectRoot, 'api/data/rag/chatbot');
+      
+      const files = {
+        contracts: [],
+        prompts: [],
+        nodes: [],
+        documents: {}, // Documentos organizados por categoria
+      };
+
+      // Lista contratos
+      if (fs.existsSync(contractsDir)) {
+        const listFiles = (dir, basePath = '') => {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            const relativePath = path.join(basePath, entry.name).replace(/\\/g, '/');
+            
+            if (entry.isDirectory()) {
+              listFiles(fullPath, relativePath);
+            } else if (entry.isFile() && (entry.name.endsWith('.json') || entry.name.endsWith('.md'))) {
+              files.contracts.push({
+                path: relativePath,
+                name: entry.name,
+                type: entry.name.endsWith('.json') ? 'json' : 'markdown',
+                size: fs.statSync(fullPath).size,
+              });
+            }
+          }
+        };
+        listFiles(contractsDir);
+      }
+
+      // Lista prompts
+      if (fs.existsSync(promptsDir)) {
+        const entries = fs.readdirSync(promptsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isFile() && entry.name.endsWith('.md')) {
+            const fullPath = path.join(promptsDir, entry.name);
+            files.prompts.push({
+              path: entry.name,
+              name: entry.name,
+              type: 'markdown',
+              size: fs.statSync(fullPath).size,
+            });
+          }
+        }
+      }
+
+      // Lista arquivos de nós (nodes, schema, rules, errors)
+      if (fs.existsSync(nodesDir)) {
+        const listNodeFiles = (dir, basePath = '') => {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            const relativePath = path.join(basePath, entry.name).replace(/\\/g, '/');
+            
+            if (entry.isDirectory()) {
+              // Inclui subdiretórios: nodes/, schema/, rules/, known_errors/
+              if (entry.name === 'nodes' || entry.name === 'schema' || entry.name === 'rules' || entry.name === 'known_errors') {
+                listNodeFiles(fullPath, relativePath);
+              }
+            } else if (entry.isFile() && entry.name.endsWith('.json')) {
+              files.nodes.push({
+                path: relativePath,
+                name: entry.name,
+                type: 'json',
+                size: fs.statSync(fullPath).size,
+              });
+            }
+          }
+        };
+        listNodeFiles(nodesDir);
+      }
+
+      // Lista documentos organizados do diretório "dev Documentos"
+      const documentsDir = path.join(projectRoot, 'dev Documentos');
+      if (fs.existsSync(documentsDir)) {
+        const categories = fs.readdirSync(documentsDir, { withFileTypes: true })
+          .filter(entry => entry.isDirectory() && entry.name.match(/^\d{2}_/))
+          .map(entry => entry.name)
+          .sort();
+        
+        for (const category of categories) {
+          const categoryDir = path.join(documentsDir, category);
+          const categoryFiles = [];
+          
+          const listCategoryFiles = (dir, basePath = '') => {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              const fullPath = path.join(dir, entry.name);
+              const relativePath = basePath ? path.join(basePath, entry.name).replace(/\\/g, '/') : entry.name;
+              
+              if (entry.isDirectory()) {
+                listCategoryFiles(fullPath, relativePath);
+              } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                const stats = fs.statSync(fullPath);
+                categoryFiles.push({
+                  path: relativePath,
+                  name: entry.name,
+                  type: 'markdown',
+                  size: stats.size,
+                  modified: stats.mtime.toISOString(),
+                });
+              }
+            }
+          };
+          
+          listCategoryFiles(categoryDir);
+          if (categoryFiles.length > 0) {
+            files.documents[category] = categoryFiles;
+          }
+        }
+      }
+
+      sendJson(res, 200, files);
+    } catch (err) {
+      logger.error('[Dev] Erro ao listar arquivos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao listar arquivos' });
+    }
+    return;
+  }
+
+  // GET /dev/files/:type/:path - Lê conteúdo de um arquivo
+  if (method === 'GET' && pathname.startsWith('/dev/files/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'dev', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error || 'Sem permissão para ler arquivos de desenvolvimento' });
+      return;
+    }
+
+    try {
+      const parts = pathname.split('/').filter(p => p);
+      // parts: ['dev', 'files', 'type', 'path...']
+      if (parts.length < 4) {
+        badRequest(res, 'Caminho inválido. Use /dev/files/:type/:path');
+        return;
+      }
+
+      const type = parts[2]; // 'contracts', 'prompts', 'nodes' ou 'documents'
+      const filePath = parts.slice(3).join('/'); // resto do caminho
+
+      if (type !== 'contracts' && type !== 'prompts' && type !== 'nodes' && type !== 'documents') {
+        badRequest(res, 'Tipo inválido. Use "contracts", "prompts", "nodes" ou "documents"');
+        return;
+      }
+
+      const projectRoot = path.join(__dirname, '..');
+      let baseDir;
+      if (type === 'contracts') {
+        baseDir = path.join(projectRoot, 'contracts');
+      } else if (type === 'prompts') {
+        baseDir = path.join(projectRoot, 'prompts');
+      } else if (type === 'nodes') {
+        baseDir = path.join(projectRoot, 'api/data/rag/chatbot');
+      } else if (type === 'documents') {
+        // Para documents, o caminho é: categoria/arquivo.md
+        const categoryPath = parts[3]; // categoria (ex: 01_Analises)
+        const fileName = parts.slice(4).join('/'); // nome do arquivo
+        baseDir = path.join(projectRoot, 'dev Documentos', categoryPath);
+        filePath = fileName; // Atualiza filePath para o nome do arquivo
+      }
+      
+      const fullPath = path.join(baseDir, filePath);
+      
+      // Validação de segurança: garante que o caminho está dentro do diretório base
+      const normalizedPath = path.normalize(fullPath);
+      const normalizedBase = path.normalize(baseDir);
+      if (!normalizedPath.startsWith(normalizedBase)) {
+        badRequest(res, 'Caminho inválido: tentativa de acesso fora do diretório permitido');
+        return;
+      }
+
+      if (!fs.existsSync(normalizedPath)) {
+        sendJson(res, 404, { error: 'not_found', message: 'Arquivo não encontrado' });
+        return;
+      }
+
+      const content = fs.readFileSync(normalizedPath, 'utf8');
+      const stats = fs.statSync(normalizedPath);
+      
+      sendJson(res, 200, {
+        path: filePath,
+        type: type,
+        content: content,
+        size: stats.size,
+        modified: stats.mtime.toISOString(),
+      });
+    } catch (err) {
+      logger.error('[Dev] Erro ao ler arquivo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao ler arquivo' });
+    }
+    return;
+  }
+
+  // PUT /dev/files/:type/:path - Salva conteúdo de um arquivo
+  if (method === 'PUT' && pathname.startsWith('/dev/files/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'dev', 'write');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error || 'Sem permissão para editar arquivos de desenvolvimento' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const parts = pathname.split('/').filter(p => p);
+      if (parts.length < 4) {
+        badRequest(res, 'Caminho inválido. Use /dev/files/:type/:path');
+        return;
+      }
+
+      const type = parts[2];
+      const filePath = parts.slice(3).join('/');
+
+      if (type !== 'contracts' && type !== 'prompts' && type !== 'nodes' && type !== 'documents') {
+        badRequest(res, 'Tipo inválido. Use "contracts", "prompts", "nodes" ou "documents"');
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      if (!body.content || typeof body.content !== 'string') {
+        badRequest(res, 'Campo "content" (string) é obrigatório');
+        return;
+      }
+
+      const projectRoot = path.join(__dirname, '..');
+      let baseDir;
+      let filePathToUse = filePath;
+      
+      if (type === 'contracts') {
+        baseDir = path.join(projectRoot, 'contracts');
+      } else if (type === 'prompts') {
+        baseDir = path.join(projectRoot, 'prompts');
+      } else if (type === 'nodes') {
+        baseDir = path.join(projectRoot, 'api/data/rag/chatbot');
+      } else if (type === 'documents') {
+        // Para documents, o caminho é: categoria/arquivo.md
+        const categoryPath = parts[3]; // categoria (ex: 01_Analises)
+        const fileName = parts.slice(4).join('/'); // nome do arquivo
+        baseDir = path.join(projectRoot, 'dev Documentos', categoryPath);
+        filePathToUse = fileName; // Atualiza filePath para o nome do arquivo
+      }
+      
+      const fullPath = path.join(baseDir, filePathToUse);
+      
+      // Validação de segurança
+      const normalizedPath = path.normalize(fullPath);
+      const normalizedBase = path.normalize(baseDir);
+      if (!normalizedPath.startsWith(normalizedBase)) {
+        badRequest(res, 'Caminho inválido: tentativa de acesso fora do diretório permitido');
+        return;
+      }
+
+      // Cria diretório se não existir
+      const dir = path.dirname(normalizedPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Valida JSON se for arquivo JSON
+      if (normalizedPath.endsWith('.json')) {
+        try {
+          JSON.parse(body.content);
+        } catch (jsonErr) {
+          badRequest(res, `JSON inválido: ${jsonErr.message}`);
+          return;
+        }
+      }
+
+      // Salva arquivo
+      fs.writeFileSync(normalizedPath, body.content, 'utf8');
+      
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'update',
+        resource: 'dev_file',
+        resourceId: `${type}/${filePath}`,
+        details: { type, path: filePath },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      const stats = fs.statSync(normalizedPath);
+      sendJson(res, 200, {
+        success: true,
+        path: filePath,
+        type: type,
+        size: stats.size,
+        modified: stats.mtime.toISOString(),
+      });
+    } catch (err) {
+      logger.error('[Dev] Erro ao salvar arquivo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao salvar arquivo' });
+    }
+    return;
+  }
+
   // Qualquer outro endpoint: 404 genérico
   notFound(res);
 }
@@ -7618,6 +8790,23 @@ function createServer() {
 }
 
 const server = createServer();
+
+// Salva conversas antes de encerrar o servidor
+process.on('SIGINT', () => {
+  logger.info('[Conversations] Encerrando servidor, salvando conversas...');
+  saveSessionEventsToFileImmediate();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  logger.info('[Conversations] Encerrando servidor, salvando conversas...');
+  saveSessionEventsToFileImmediate();
+  process.exit(0);
+});
+
+process.on('beforeExit', () => {
+  saveSessionEventsToFileImmediate();
+});
 
 if (require.main === module) {
   // Limpa cache de limiters na inicialização para garantir que novas políticas sejam aplicadas

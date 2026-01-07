@@ -28,17 +28,54 @@ const DEFAULT_TIMEOUT_MS = 15000;
  * @returns {string}
  */
 function buildUrl(path) {
-  // Fallback explícito documentado para evitar que requisições sejam resolvidas
-  // implicitamente pelo browser para a origem do Vite (porta 5173)
-  // Este valor deve corresponder a api.data.config.json > frontend.apiBaseUrl
-  const DEFAULT_BASE_URL = 'http://localhost:3000';
-  
-  const base = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
+  const base = import.meta.env.VITE_API_BASE_URL;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  let basePath = '';
+
+  // Quando rodando atrás de um prefixo (ex: /r-agent2), garante que as
+  // chamadas vão para /r-agent2/config, /r-agent2/health, etc.
+  if (typeof window !== 'undefined') {
+    try {
+      // Usa href completo para escapar de qualquer getter customizado de pathname
+      const url = new URL(window.location.href);
+      const rawPath = url.pathname || window.location.pathname || '/';
+      const match = rawPath.match(/^\/([^/]+)(\/|$)/);
+      if (match && match[1]) {
+        basePath = `/${match[1]}`;
+      }
+    } catch {
+      const fallbackMatch = window.location.pathname && window.location.pathname.match(/^\/([^/]+)(\/|$)/);
+      if (fallbackMatch && fallbackMatch[1]) {
+        basePath = `/${fallbackMatch[1]}`;
+      }
+    }
+  }
   
-  // Sempre constrói URL absoluta
-  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-  return `${normalizedBase}${normalizedPath}`;
+  // Se VITE_API_BASE_URL estiver definido, usa URL absoluta
+  if (base && base.trim()) {
+    const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+    return `${normalizedBase}${normalizedPath}`;
+  }
+  
+  // Se estiver vazio, detecta ambiente em runtime (não em build time)
+  // Verifica se está rodando no Vite (porta 5173) ou localhost
+  if (typeof window !== 'undefined') {
+    const isViteDev = window.location.port === '5173' || 
+                      (window.location.hostname === 'localhost' && window.location.port !== '80' && window.location.port !== '443' && !window.location.port.includes('8086'));
+    
+    if (isViteDev) {
+      // Desenvolvimento: usa localhost:3000
+      return `http://localhost:3000${normalizedPath}`;
+    }
+  }
+  
+  // Produção ou quando servido via nginx/Apache: usa URL relativa
+  // ajustada com o prefixo (ex: /r-agent2) quando existir.
+  if (basePath && !normalizedPath.startsWith(basePath + '/')) {
+    return `${basePath}${normalizedPath}`;
+  }
+
+  return normalizedPath;
 }
 
 /**
@@ -206,9 +243,15 @@ export async function fetchJson(path, init) {
       
       // "Failed to fetch" geralmente significa que a API não está acessível
       // Mas pode ser apenas o servidor iniciando, então não logamos como erro crítico
-      if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
+      const isConnectionError = err.message === 'Failed to fetch' || 
+                                err.message.includes('fetch') ||
+                                err.message.includes('ERR_CONNECTION_REFUSED') ||
+                                err.message.includes('NetworkError');
+      
+      if (isConnectionError) {
         // Para rotas de autenticação/health na inicialização, usa debug em vez de error
         const isInitializationRoute = path === '/auth/me' || path === '/health';
+        
         if (isInitializationRoute) {
           logger.debug('API não acessível (inicialização)', { 
             method: init?.method || 'GET',
@@ -224,6 +267,10 @@ export async function fetchJson(path, init) {
             hint: 'Verifique se a API está acessível no caminho configurado',
           });
         }
+        
+        // Adiciona flag para indicar erro de conexão
+        err.connectionRefused = true;
+        err.status = 0;
       } else {
         logger.error('Request failed', { 
           method: init?.method || 'GET',

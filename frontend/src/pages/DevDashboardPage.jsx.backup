@@ -1,0 +1,2626 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { fetchJson } from '../api/client';
+import logger from '../utils/logger';
+import { LogViewer } from '../components/LogViewer';
+import { useTheme } from '../styles/themeContext';
+import { NavigationLink } from '../components/NavigationLink';
+
+/**
+ * Dashboard de Desenvolvimento
+ * 
+ * Funcionalidades:
+ * - Status dos serviços em tempo real
+ * - Logs do sistema
+ * - Métricas de performance
+ * - Informações do ambiente
+ * - Ferramentas de desenvolvimento
+ * - Status de rate limiting
+ * - Conexões WebSocket
+ */
+export function DevDashboardPage() {
+  const { theme } = useTheme();
+  const [activeTab, setActiveTab] = useState('status');
+  const [systemStatus, setSystemStatus] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+  const [envInfo, setEnvInfo] = useState(null);
+  const [rateLimitStatus, setRateLimitStatus] = useState(null);
+  const [wsConnections, setWsConnections] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(5000);
+  const [showLogs, setShowLogs] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
+  
+  // Estados para Contratos, Prompts, Nós e Documentos
+  const [devFiles, setDevFiles] = useState({ contracts: [], prompts: [], nodes: [], documents: {} });
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileContent, setFileContent] = useState('');
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileSaving, setFileSaving] = useState(false);
+  const [fileError, setFileError] = useState(null);
+  const [jsonData, setJsonData] = useState(null); // Dados JSON parseados para formulário
+
+  // Função auxiliar para formatar tempo em minutos para texto legível
+  const formatTime = (minutes) => {
+    if (!minutes || minutes === 0) return 'N/A';
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hours}h ${mins}min`;
+  };
+
+  // Função auxiliar para formatar número com separador de milhar
+  const formatNumber = (num) => {
+    if (num === null || num === undefined) return '0';
+    return num.toLocaleString('pt-BR');
+  };
+
+  // Função para buscar status do sistema
+  const fetchSystemStatus = async () => {
+    try {
+      const data = await fetchJson('/system/status', {
+        method: 'GET',
+        timeoutMs: 5000,
+      });
+      setSystemStatus(data);
+      setLastUpdate(new Date());
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao buscar status', err);
+    }
+  };
+
+  // Função para buscar métricas
+  const fetchMetrics = async () => {
+    try {
+      // Tenta buscar métricas se o endpoint existir
+      const data = await fetchJson('/analytics/metrics', {
+        method: 'GET',
+        timeoutMs: 5000,
+      }).catch(() => null);
+      setMetrics(data);
+    } catch (err) {
+      // Endpoint pode não existir, ignora silenciosamente
+      logger.debug('[DevDashboard] Métricas não disponíveis', err);
+    }
+  };
+
+  // Função para buscar informações do ambiente
+  const fetchEnvInfo = async () => {
+    try {
+      const data = await fetchJson('/version', {
+        method: 'GET',
+        timeoutMs: 5000,
+      });
+      setEnvInfo(data);
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao buscar info do ambiente', err);
+    }
+  };
+
+  // Função para buscar status de rate limit
+  const fetchRateLimitStatus = async () => {
+    try {
+      // Verifica rate limit para diferentes operações
+      const operations = ['BOOTSTRAP', 'GENERATION_REAL', 'DRY_RUN'];
+      const statuses = {};
+      
+      for (const op of operations) {
+        try {
+          const result = await fetchJson('/system/check-rate-limit', {
+            method: 'POST',
+            body: JSON.stringify({
+              bootstrap: op === 'BOOTSTRAP',
+              executionMode: op === 'DRY_RUN' ? 'dry-run' : 'real',
+            }),
+            timeoutMs: 5000,
+          });
+          statuses[op] = result;
+        } catch (err) {
+          statuses[op] = { error: err.message };
+        }
+      }
+      
+      setRateLimitStatus(statuses);
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao buscar rate limit', err);
+    }
+  };
+
+  // Função para buscar conexões WebSocket
+  const fetchWsConnections = async () => {
+    try {
+      const data = await fetchJson('/system/websocket', {
+        method: 'GET',
+        timeoutMs: 5000,
+      });
+      setWsConnections(data);
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao buscar conexões WebSocket', err);
+      setWsConnections(null);
+    }
+  };
+
+  // Função para atualizar tudo
+  const refreshAll = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchSystemStatus(),
+      fetchMetrics(),
+      fetchEnvInfo(),
+      fetchRateLimitStatus(),
+      fetchWsConnections(),
+    ]);
+    setLoading(false);
+  };
+
+  // Função para buscar lista de arquivos
+  const fetchDevFiles = async () => {
+    try {
+      const data = await fetchJson('/dev/files', {
+        method: 'GET',
+        timeoutMs: 5000,
+      });
+      setDevFiles(data);
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao buscar arquivos', err);
+    }
+  };
+
+  // Função para formatar JSON
+  const formatJSON = (content) => {
+    try {
+      const parsed = JSON.parse(content);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return content; // Retorna original se não for JSON válido
+    }
+  };
+
+  // Função para escapar HTML
+  const escapeHTML = (str) => {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  // Função para renderizar formulário JSON recursivo
+  const renderJsonForm = (data, path = '', onUpdate, rootPath = '') => {
+    if (data === null || data === undefined) {
+      return (
+        <div key={path} className="p-3 rounded" style={{ backgroundColor: theme.colors.bg.secondary }}>
+          <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text.secondary }}>
+            {path || 'Valor'}
+          </label>
+          <input
+            type="text"
+            value="null"
+            disabled
+            className="w-full p-2 rounded"
+            style={{
+              backgroundColor: theme.colors.bg.tertiary,
+              border: `1px solid ${theme.colors.border.default}`,
+              color: theme.colors.text.tertiary,
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (Array.isArray(data)) {
+      return (
+        <div key={path} className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">📋</span>
+            <label className="font-semibold" style={{ color: theme.colors.text.primary }}>
+              {path || 'Array'}
+            </label>
+            <span className="text-xs px-2 py-1 rounded" style={{ 
+              backgroundColor: theme.colors.bg.tertiary,
+              color: theme.colors.text.tertiary
+            }}>
+              {data.length} item{data.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {data.map((item, index) => (
+            <div key={index} className="ml-4 p-3 rounded border-l-2" style={{ 
+              borderColor: theme.colors.border.default,
+              backgroundColor: theme.colors.bg.secondary
+            }}>
+              <div className="text-xs mb-2 font-medium" style={{ color: theme.colors.text.secondary }}>
+                Item {index + 1}
+              </div>
+              {renderJsonForm(item, `${path}[${index}]`, (newValue, itemPath) => {
+                const newData = [...data];
+                newData[index] = newValue;
+                onUpdate(newData, rootPath || path);
+              }, rootPath || path)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (typeof data === 'object') {
+      return (
+        <div key={path} className="space-y-4">
+          {path && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">📦</span>
+              <label className="font-semibold text-base" style={{ color: theme.colors.text.primary }}>
+                {path}
+              </label>
+            </div>
+          )}
+          {Object.entries(data).map(([key, value]) => {
+            const currentPath = path ? `${path}.${key}` : key;
+            
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+              return (
+                <div key={key} className="ml-2 p-4 rounded-lg border" style={{ 
+                  borderColor: theme.colors.border.default,
+                  backgroundColor: theme.colors.bg.secondary
+                }}>
+                  {renderJsonForm(value, currentPath, (newValue, valuePath) => {
+                    const newData = { ...data };
+                    newData[key] = newValue;
+                    onUpdate(newData, rootPath || currentPath);
+                  }, rootPath || currentPath)}
+                </div>
+              );
+            } else if (Array.isArray(value)) {
+              return (
+                <div key={key} className="ml-2">
+                  {renderJsonForm(value, currentPath, (newValue, valuePath) => {
+                    const newData = { ...data };
+                    newData[key] = newValue;
+                    onUpdate(newData, rootPath || currentPath);
+                  }, rootPath || currentPath)}
+                </div>
+              );
+            } else {
+              return (
+                <div key={key} className="mb-3">
+                  <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text.primary }}>
+                    {key}
+                    {typeof value === 'string' && value.length > 100 && (
+                      <span className="ml-2 text-xs" style={{ color: theme.colors.text.tertiary }}>
+                        ({value.length} caracteres)
+                      </span>
+                    )}
+                  </label>
+                  {typeof value === 'boolean' ? (
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={(e) => {
+                          const newData = { ...data };
+                          newData[key] = e.target.checked;
+                          onUpdate(newData, rootPath || currentPath);
+                        }}
+                        className="w-5 h-5"
+                        style={{ accentColor: theme.colors.accent.primary }}
+                      />
+                      <span className="text-sm" style={{ color: theme.colors.text.secondary }}>
+                        {value ? '✅ Ativado' : '❌ Desativado'}
+                      </span>
+                    </label>
+                  ) : typeof value === 'number' ? (
+                    <input
+                      type="number"
+                      value={value}
+                      onChange={(e) => {
+                        const newData = { ...data };
+                        newData[key] = parseFloat(e.target.value) || 0;
+                        onUpdate(newData, rootPath || currentPath);
+                      }}
+                      className="w-full p-2 rounded"
+                      style={{
+                        backgroundColor: theme.colors.bg.secondary,
+                        border: `1px solid ${theme.colors.border.default}`,
+                        color: theme.colors.text.primary,
+                      }}
+                    />
+                  ) : (
+                    <textarea
+                      value={String(value)}
+                      onChange={(e) => {
+                        const newData = { ...data };
+                        newData[key] = e.target.value;
+                        onUpdate(newData, rootPath || currentPath);
+                      }}
+                      rows={typeof value === 'string' && value.length > 100 ? 4 : 1}
+                      className="w-full p-2 rounded resize-none"
+                      style={{
+                        backgroundColor: theme.colors.bg.secondary,
+                        border: `1px solid ${theme.colors.border.default}`,
+                        color: theme.colors.text.primary,
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            }
+          })}
+        </div>
+      );
+    }
+
+    // Valores primitivos
+    return (
+      <div key={path} className="p-3 rounded" style={{ backgroundColor: theme.colors.bg.secondary }}>
+        <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text.secondary }}>
+          {path || 'Valor'}
+        </label>
+        <input
+          type="text"
+          value={String(data)}
+          onChange={(e) => onUpdate(e.target.value)}
+          className="w-full p-2 rounded"
+          style={{
+            backgroundColor: theme.colors.bg.tertiary,
+            border: `1px solid ${theme.colors.border.default}`,
+            color: theme.colors.text.primary,
+          }}
+        />
+      </div>
+    );
+  };
+
+  // Função para renderizar JSON com syntax highlighting básico
+  const formatJSONContent = (content) => {
+    if (!content) return '';
+    
+    try {
+      // Tenta formatar o JSON
+      const formatted = formatJSON(content);
+      const isDark = theme.name === 'dark';
+      
+      // Cores para syntax highlighting
+      const colors = {
+        key: isDark ? '#79b8ff' : '#0066cc',
+        string: isDark ? '#9ecbff' : '#008000',
+        number: isDark ? '#79b8ff' : '#0000ff',
+        boolean: isDark ? '#ffab70' : '#0000ff',
+        null: isDark ? '#ffab70' : '#808080',
+        punctuation: isDark ? '#d4d4d4' : '#000000',
+      };
+
+      // Processa o JSON formatado linha por linha para aplicar cores
+      const lines = formatted.split('\n');
+      const highlighted = lines.map(line => {
+        // Escapa HTML primeiro
+        let escaped = escapeHTML(line);
+        
+        // Aplica cores - chaves (antes do :)
+        escaped = escaped.replace(/(&quot;[^&]*&quot;)\s*:/g, (match, key) => {
+          return `<span style="color: ${colors.key}">${key}</span>:`;
+        });
+        
+        // Valores string (depois do :)
+        escaped = escaped.replace(/:\s*(&quot;[^&]*&quot;)/g, (match, value) => {
+          return `: <span style="color: ${colors.string}">${value}</span>`;
+        });
+        
+        // Números
+        escaped = escaped.replace(/:\s*(\d+\.?\d*)/g, (match, value) => {
+          return `: <span style="color: ${colors.number}">${value}</span>`;
+        });
+        
+        // Booleanos
+        escaped = escaped.replace(/:\s*(true|false)/g, (match, value) => {
+          return `: <span style="color: ${colors.boolean}">${value}</span>`;
+        });
+        
+        // Null
+        escaped = escaped.replace(/:\s*(null)/g, (match, value) => {
+          return `: <span style="color: ${colors.null}">${value}</span>`;
+        });
+        
+        // Pontuação (chaves, colchetes)
+        escaped = escaped.replace(/([{}[\]])/g, (match) => {
+          return `<span style="color: ${colors.punctuation}">${match}</span>`;
+        });
+        
+        return escaped;
+      });
+      
+      return highlighted.join('<br/>');
+    } catch {
+      // Se não conseguir formatar, retorna o conteúdo original escapado
+      return escapeHTML(content).replace(/\n/g, '<br/>');
+    }
+  };
+
+  // Função para verificar se é JSON
+  const isJSON = (content) => {
+    try {
+      JSON.parse(content);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Função para carregar conteúdo de um arquivo
+  const loadFileContent = async (type, filePath) => {
+    setFileLoading(true);
+    setFileError(null);
+    try {
+      const data = await fetchJson(`/dev/files/${type}/${filePath}`, {
+        method: 'GET',
+        timeoutMs: 10000,
+      });
+      // Formata JSON automaticamente
+      const formattedContent = filePath.endsWith('.json') && isJSON(data.content)
+        ? formatJSON(data.content)
+        : data.content;
+      setFileContent(formattedContent);
+      setSelectedFile({ type, path: filePath, ...data });
+      
+      // Se for JSON, faz parse para o formulário
+      if (filePath.endsWith('.json') && isJSON(data.content)) {
+        try {
+          setJsonData(JSON.parse(data.content));
+        } catch {
+          setJsonData(null);
+        }
+      } else {
+        setJsonData(null);
+      }
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao carregar arquivo', err);
+      setFileError(err.message || 'Erro ao carregar arquivo');
+    } finally {
+      setFileLoading(false);
+    }
+  };
+
+  // Função para atualizar JSON a partir do formulário
+  const updateJsonFromForm = (newData) => {
+    try {
+      setJsonData(newData);
+      const jsonString = JSON.stringify(newData, null, 2);
+      setFileContent(jsonString);
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao converter formulário para JSON', err);
+      setFileError('Erro ao converter dados do formulário');
+    }
+  };
+
+  // Função para atualizar jsonData completo quando um valor aninhado muda
+  // Simplificada: quando onUpdate é chamado, ele já retorna o objeto completo atualizado
+  const updateJsonDataFromPath = (path, newData) => {
+    // newData já é o objeto completo atualizado, então apenas atualiza
+    updateJsonFromForm(newData);
+  };
+
+  // Função para salvar arquivo
+  const saveFile = async () => {
+    if (!selectedFile) return;
+    
+    setFileSaving(true);
+    setFileError(null);
+    try {
+      // Se temos jsonData, usa ele, senão usa fileContent
+      const contentToSave = jsonData 
+        ? JSON.stringify(jsonData, null, 2)
+        : fileContent;
+      
+      await fetchJson(`/dev/files/${selectedFile.type}/${selectedFile.path}`, {
+        method: 'PUT',
+        body: JSON.stringify({ content: contentToSave }),
+        timeoutMs: 10000,
+      });
+      // Recarrega o arquivo para atualizar metadata
+      await loadFileContent(selectedFile.type, selectedFile.path);
+      alert('Arquivo salvo com sucesso!');
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao salvar arquivo', err);
+      setFileError(err.message || 'Erro ao salvar arquivo');
+      alert('Erro ao salvar arquivo: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setFileSaving(false);
+    }
+  };
+
+  // Busca inicial
+  useEffect(() => {
+    refreshAll();
+    if (activeTab === 'contracts-prompts' || activeTab === 'documents' || activeTab === 'nodes') {
+      fetchDevFiles();
+    }
+  }, [activeTab]);
+
+  // Polling removido - apenas atualização manual via botão "Atualizar"
+  // O usuário pode clicar no botão para atualizar os dados quando necessário
+  // useEffect removido para eliminar requisições HTTP periódicas
+
+  // Função para obter cor do status baseado no tema
+  const getStatusColor = (status) => {
+    const isDark = theme.name === 'dark';
+    switch (status) {
+      case 'healthy':
+        return isDark 
+          ? 'text-status-success bg-status-success/10 border-status-success/30'
+          : 'text-status-success bg-green-50 border-green-200';
+      case 'degraded':
+        return isDark
+          ? 'text-status-warning bg-status-warning/10 border-status-warning/30'
+          : 'text-status-warning bg-yellow-50 border-yellow-200';
+      case 'unhealthy':
+        return isDark
+          ? 'text-status-error bg-status-error/10 border-status-error/30'
+          : 'text-status-error bg-red-50 border-red-200';
+      default:
+        return isDark
+          ? 'text-text-secondary bg-bg-elevated border-border-default'
+          : 'text-text-secondary bg-gray-50 border-gray-200';
+    }
+  };
+
+  // Função para obter ícone do status
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'healthy':
+        return '✓';
+      case 'degraded':
+        return '⚠';
+      case 'unhealthy':
+        return '✗';
+      default:
+        return '?';
+    }
+  };
+
+  // Função para limpar cache de rate limit
+  const clearRateLimitCache = async () => {
+    try {
+      const result = await fetchJson('/admin/rate-limit/clear-cache', {
+        method: 'POST',
+        timeoutMs: 5000,
+      });
+      await fetchRateLimitStatus();
+      logger.info('[DevDashboard] Cache de rate limit limpo', result);
+      alert('Cache de rate limit limpo com sucesso!');
+    } catch (err) {
+      logger.error('[DevDashboard] Erro ao limpar cache', err);
+      alert('Erro ao limpar cache: ' + (err.message || 'Erro desconhecido'));
+    }
+  };
+
+  const tabs = [
+    { id: 'status', label: '📊 Status', icon: '📊' },
+    { id: 'features', label: '🚀 Funcionalidades', icon: '🚀' },
+    { id: 'metrics', label: '📈 Métricas', icon: '📈' },
+    { id: 'environment', label: '⚙️ Ambiente', icon: '⚙️' },
+    { id: 'rate-limit', label: '🚦 Rate Limit', icon: '🚦' },
+    { id: 'websocket', label: '🔌 WebSocket', icon: '🔌' },
+    { id: 'contracts-prompts', label: '📋 Contratos', icon: '📋' },
+    { id: 'documents', label: '📚 Documentos', icon: '📚' },
+    { id: 'nodes', label: '🔧 Nós dos Fluxos', icon: '🔧' },
+    { id: 'tools', label: '🛠️ Ferramentas', icon: '🛠️' },
+  ];
+
+  // Funcionalidades APENAS de desenvolvimento/testes RPA
+  const devFeatures = [
+    {
+      id: 'rpa-test',
+      title: 'Execução de Testes RPA',
+      description: 'Execute testes RPA automatizados (apenas desenvolvimento)',
+      icon: '🚀',
+      path: '/rpa-test',
+      color: 'bg-orange-600',
+      category: 'RPA',
+    },
+    {
+      id: 'rpa-replays',
+      title: 'Replays RPA',
+      description: 'Visualize e analise replays de execuções RPA (apenas desenvolvimento)',
+      icon: '📋',
+      path: '/rpa-replays',
+      color: 'bg-pink-600',
+      category: 'RPA',
+    },
+  ];
+
+  return (
+    <>
+      <style>{`
+        .dev-dashboard-scroll::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .dev-dashboard-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .dev-dashboard-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(156, 163, 175, 0.3);
+          border-radius: 4px;
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+        .dev-dashboard-scroll::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(156, 163, 175, 0.5);
+        }
+        .dev-dashboard-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+        }
+      `}</style>
+      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: theme.colors.bg.primary }}>
+        <div className="flex-1 overflow-y-auto dev-dashboard-scroll">
+          <div className="p-8">
+            <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
+              🛠️ Dashboard de Desenvolvimento
+            </h1>
+            <p style={{ color: theme.colors.text.secondary }}>
+              Ferramentas e informações úteis para desenvolvedores
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowLogs(true)}
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ 
+                backgroundColor: theme.colors.accent.primary,
+                color: '#ffffff'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = theme.colors.accent.hover}
+              onMouseLeave={(e) => e.target.style.backgroundColor = theme.colors.accent.primary}
+            >
+              📋 Ver Logs
+            </button>
+            <button
+              onClick={refreshAll}
+              disabled={loading}
+              className="px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                backgroundColor: loading ? theme.colors.text.tertiary : theme.colors.status.info,
+                color: '#ffffff'
+              }}
+              onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = theme.colors.status.info)}
+              onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = theme.colors.status.info)}
+            >
+              {loading ? '⏳ Atualizando...' : '🔄 Atualizar'}
+            </button>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-sm" style={{ color: theme.colors.text.secondary }}>Auto-atualizar</span>
+            </label>
+            {autoRefresh && (
+              <select
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                className="px-3 py-2 rounded-lg text-sm"
+                style={{ 
+                  backgroundColor: theme.colors.bg.secondary,
+                  border: `1px solid ${theme.colors.border.default}`,
+                  color: theme.colors.text.primary
+                }}
+              >
+                <option value={5000}>5s</option>
+                <option value={10000}>10s</option>
+                <option value={30000}>30s</option>
+                <option value={60000}>1min</option>
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/* Última atualização */}
+        {lastUpdate && (
+          <div className="mb-4 text-sm" style={{ color: theme.colors.text.tertiary }}>
+            Última atualização: {lastUpdate.toLocaleTimeString('pt-BR')}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="mb-6" style={{ borderBottom: `1px solid ${theme.colors.border.default}` }}>
+          <div className="flex gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="px-4 py-2 font-medium transition-colors"
+                style={{
+                  color: activeTab === tab.id ? theme.colors.accent.primary : theme.colors.text.secondary,
+                  borderBottom: activeTab === tab.id ? `2px solid ${theme.colors.accent.primary}` : '2px solid transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.target.style.color = theme.colors.text.primary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.target.style.color = theme.colors.text.secondary;
+                  }
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Conteúdo das tabs */}
+        <div className="rounded-lg p-6" style={{ 
+          backgroundColor: theme.colors.bg.elevated,
+          border: `1px solid ${theme.colors.border.default}`,
+          boxShadow: theme.name === 'dark' ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}>
+          {/* Tab: Funcionalidades */}
+          {activeTab === 'features' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>
+                Funcionalidades de Desenvolvimento
+              </h2>
+              <p className="mb-6" style={{ color: theme.colors.text.secondary }}>
+                Acesse ferramentas de desenvolvimento, testes e geração de código.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {devFeatures.map((feature) => (
+                  <NavigationLink
+                    key={feature.id}
+                    to={feature.path}
+                    className="block"
+                  >
+                    <div 
+                      className="rounded-lg border hover:shadow-lg transition-all p-4 cursor-pointer h-full"
+                      style={{ 
+                        backgroundColor: theme.colors.bg.secondary,
+                        borderColor: theme.colors.border.default,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = theme.colors.border.hover;
+                        e.currentTarget.style.backgroundColor = theme.colors.bg.hover;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = theme.colors.border.default;
+                        e.currentTarget.style.backgroundColor = theme.colors.bg.secondary;
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className={`${feature.color} w-10 h-10 rounded-lg flex items-center justify-center text-xl`}>
+                          {feature.icon}
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded" style={{ 
+                          color: theme.colors.text.tertiary,
+                          backgroundColor: theme.colors.bg.tertiary
+                        }}>
+                          {feature.category}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-semibold mb-1" style={{ color: theme.colors.text.primary }}>
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
+                        {feature.description}
+                      </p>
+                    </div>
+                  </NavigationLink>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Status */}
+          {activeTab === 'status' && systemStatus && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Status dos Serviços</h2>
+              
+              {/* Status Geral */}
+              <div className={`mb-6 p-6 rounded-lg border-2 ${getStatusColor(systemStatus.overall.status)}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl font-bold">
+                        {getStatusIcon(systemStatus.overall.status)}
+                      </span>
+                      <h3 className="text-xl font-bold">
+                        Status Geral: {systemStatus.overall.status.toUpperCase()}
+                      </h3>
+                    </div>
+                    <p className="text-sm">
+                      {systemStatus.overall.healthy} de {systemStatus.overall.total} serviços saudáveis (
+                      {systemStatus.overall.percentage}%)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de Serviços */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(systemStatus.services).map(([key, service]) => (
+                  <div
+                    key={key}
+                    className={`p-4 rounded-lg border-2 ${getStatusColor(service.status)}`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl font-bold">
+                            {getStatusIcon(service.status)}
+                          </span>
+                          <h3 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>{service.name}</h3>
+                        </div>
+                        <p className="text-sm mb-2" style={{ color: theme.colors.text.secondary }}>{service.description}</p>
+                        <div className="inline-block px-2 py-1 rounded-full text-xs font-medium border" style={{ 
+                          backgroundColor: theme.colors.bg.secondary,
+                          borderColor: theme.colors.border.default,
+                          color: theme.colors.text.primary
+                        }}>
+                          {service.status.toUpperCase()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Detalhes */}
+                    {service.details && (
+                      <div className="mt-3 text-sm space-y-1">
+                        {Object.entries(service.details).map(([key, value]) => (
+                          <div key={key}>
+                            <span className="font-medium" style={{ color: theme.colors.text.primary }}>{key}:</span>{' '}
+                            <span style={{ color: theme.colors.text.secondary }}>
+                              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Erro */}
+                    {service.error && (
+                      <div className="mt-2 p-2 rounded text-sm" style={{ 
+                        backgroundColor: theme.colors.status.error + '20',
+                        border: `1px solid ${theme.colors.status.error}40`,
+                        color: theme.colors.status.error
+                      }}>
+                        <strong>Erro:</strong> {service.error}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Métricas */}
+          {activeTab === 'metrics' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Métricas de Performance</h2>
+              {metrics ? (
+                <div className="space-y-6">
+                  {/* Métricas Gerais */}
+                  {metrics.general && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text.primary }}>
+                        📊 Visão Geral
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Total de Tickets</div>
+                          <div className="text-3xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatNumber(metrics.general.totalTickets || 0)}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tickets Abertos</div>
+                          <div className="text-3xl font-bold" style={{ color: theme.colors.status.warning }}>
+                            {formatNumber(metrics.general.openTickets || 0)}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tickets Fechados</div>
+                          <div className="text-3xl font-bold" style={{ color: theme.colors.status.success }}>
+                            {formatNumber(metrics.general.closedTickets || 0)}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Em Andamento</div>
+                          <div className="text-3xl font-bold" style={{ color: theme.colors.status.info }}>
+                            {formatNumber(metrics.general.inProgressTickets || 0)}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Aguardando</div>
+                          <div className="text-3xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatNumber(metrics.general.waitingTickets || 0)}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Total de Mensagens</div>
+                          <div className="text-3xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatNumber(metrics.general.totalMessages || 0)}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tempo Médio de Resolução</div>
+                          <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatTime(metrics.general.avgResolutionTime)}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tempo Médio de Primeira Resposta</div>
+                          <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatTime(metrics.general.avgFirstResponseTime)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Métricas por Agente */}
+                  {metrics.agents && metrics.agents.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text.primary }}>
+                        👥 Performance por Agente
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: theme.colors.bg.secondary }}>
+                              <th className="p-3 text-left font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Agente
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Total de Tickets
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Fechados
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Abertos
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Mensagens
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Tempo Médio Resolução
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {metrics.agents.map((agent, idx) => (
+                              <tr key={agent.agentId || idx} style={{ backgroundColor: idx % 2 === 0 ? theme.colors.bg.primary : theme.colors.bg.secondary }}>
+                                <td className="p-3 font-medium" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {agent.agentName || agent.agentId}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(agent.totalTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.status.success, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(agent.closedTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.status.warning, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(agent.openTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(agent.totalMessages || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatTime(agent.avgResolutionTime)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Métricas por Departamento */}
+                  {metrics.departments && metrics.departments.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text.primary }}>
+                        🏢 Performance por Departamento
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: theme.colors.bg.secondary }}>
+                              <th className="p-3 text-left font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Departamento
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Total de Tickets
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Fechados
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Abertos
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Mensagens
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Tempo Médio Resolução
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {metrics.departments.map((dept, idx) => (
+                              <tr key={dept.departmentId || idx} style={{ backgroundColor: idx % 2 === 0 ? theme.colors.bg.primary : theme.colors.bg.secondary }}>
+                                <td className="p-3 font-medium" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {dept.departmentName || dept.departmentId}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(dept.totalTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.status.success, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(dept.closedTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.status.warning, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(dept.openTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(dept.totalMessages || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatTime(dept.avgResolutionTime)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Métricas por Fila */}
+                  {metrics.queues && metrics.queues.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text.primary }}>
+                        📋 Performance por Fila
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: theme.colors.bg.secondary }}>
+                              <th className="p-3 text-left font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Fila
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Total de Tickets
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Fechados
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Abertos
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Mensagens
+                              </th>
+                              <th className="p-3 text-center font-semibold" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                Tempo Médio Resolução
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {metrics.queues.map((queue, idx) => (
+                              <tr key={queue.queueName || idx} style={{ backgroundColor: idx % 2 === 0 ? theme.colors.bg.primary : theme.colors.bg.secondary }}>
+                                <td className="p-3 font-medium" style={{ color: theme.colors.text.primary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {queue.queueName || 'N/A'}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(queue.totalTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.status.success, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(queue.closedTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.status.warning, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(queue.openTickets || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatNumber(queue.totalMessages || 0)}
+                                </td>
+                                <td className="p-3 text-center" style={{ color: theme.colors.text.secondary, border: `1px solid ${theme.colors.border.default}` }}>
+                                  {formatTime(queue.avgResolutionTime)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timestamp */}
+                  {metrics.timestamp && (
+                    <div className="text-sm text-center" style={{ color: theme.colors.text.tertiary }}>
+                      Última atualização: {new Date(metrics.timestamp).toLocaleString('pt-BR')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8" style={{ color: theme.colors.text.tertiary }}>
+                  Métricas não disponíveis. Verifique se o endpoint /analytics/metrics está disponível.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: Ambiente */}
+          {activeTab === 'environment' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Informações do Ambiente</h2>
+              {envInfo ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary }}>
+                      <div className="font-semibold mb-2" style={{ color: theme.colors.text.primary }}>Nome da Aplicação</div>
+                      <div style={{ color: theme.colors.text.secondary }}>{envInfo.name || 'N/A'}</div>
+                    </div>
+                    <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary }}>
+                      <div className="font-semibold mb-2" style={{ color: theme.colors.text.primary }}>Ambiente</div>
+                      <div style={{ color: theme.colors.text.secondary }}>{envInfo.env || 'N/A'}</div>
+                    </div>
+                  </div>
+                  
+                  {systemStatus?.services?.apiServer?.details && (
+                    <div className="mt-4">
+                      <h3 className="text-lg font-semibold mb-2" style={{ color: theme.colors.text.primary }}>Detalhes da API</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary }}>
+                          <div className="font-semibold mb-2" style={{ color: theme.colors.text.primary }}>Uptime</div>
+                          <div style={{ color: theme.colors.text.secondary }}>
+                            {systemStatus.services.apiServer.details.uptimeFormatted || 'N/A'}
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary }}>
+                          <div className="font-semibold mb-2" style={{ color: theme.colors.text.primary }}>Versão do Node</div>
+                          <div style={{ color: theme.colors.text.secondary }}>
+                            {systemStatus.services.apiServer.details.nodeVersion || 'N/A'}
+                          </div>
+                        </div>
+                        {systemStatus.services.apiServer.details.memory && (
+                          <>
+                            <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary }}>
+                              <div className="font-semibold mb-2" style={{ color: theme.colors.text.primary }}>Memória Heap Usada</div>
+                              <div style={{ color: theme.colors.text.secondary }}>
+                                {systemStatus.services.apiServer.details.memory.heapUsed} MB
+                              </div>
+                            </div>
+                            <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary }}>
+                              <div className="font-semibold mb-2" style={{ color: theme.colors.text.primary }}>Memória Heap Total</div>
+                              <div style={{ color: theme.colors.text.secondary }}>
+                                {systemStatus.services.apiServer.details.memory.heapTotal} MB
+                              </div>
+                            </div>
+                            <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary }}>
+                              <div className="font-semibold mb-2" style={{ color: theme.colors.text.primary }}>RSS</div>
+                              <div style={{ color: theme.colors.text.secondary }}>
+                                {systemStatus.services.apiServer.details.memory.rss} MB
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8" style={{ color: theme.colors.text.tertiary }}>
+                  Carregando informações do ambiente...
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: Rate Limit */}
+          {activeTab === 'rate-limit' && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>Status de Rate Limiting</h2>
+                <button
+                  onClick={clearRateLimitCache}
+                  className="px-4 py-2 rounded-lg transition-colors"
+                  style={{ 
+                    backgroundColor: theme.colors.status.warning,
+                    color: '#ffffff'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  🗑️ Limpar Cache
+                </button>
+              </div>
+              {rateLimitStatus ? (
+                <div className="space-y-4">
+                  {Object.entries(rateLimitStatus).map(([operation, status]) => (
+                    <div key={operation} className="p-4 rounded-lg" style={{ 
+                      border: `1px solid ${theme.colors.border.default}`,
+                      backgroundColor: theme.colors.bg.secondary
+                    }}>
+                      <h3 className="font-semibold text-lg mb-2" style={{ color: theme.colors.text.primary }}>{operation}</h3>
+                      {status.error ? (
+                        <div style={{ color: theme.colors.status.error }}>Erro: {status.error}</div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Permitido</div>
+                            <div className="font-semibold" style={{ 
+                              color: status.allowed ? theme.colors.status.success : theme.colors.status.error
+                            }}>
+                              {status.allowed ? '✓ Sim' : '✗ Não'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Pontos Restantes</div>
+                            <div className="font-semibold" style={{ color: theme.colors.text.primary }}>
+                              {status.remainingPoints ?? 'N/A'} / {status.totalPoints ?? 'N/A'}
+                            </div>
+                          </div>
+                          {status.retryAfter && (
+                            <div>
+                              <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Retry After</div>
+                              <div className="font-semibold" style={{ color: theme.colors.text.primary }}>{status.retryAfter}s</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8" style={{ color: theme.colors.text.tertiary }}>
+                  Carregando status de rate limit...
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: WebSocket */}
+          {activeTab === 'websocket' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Conexões WebSocket</h2>
+              {wsConnections ? (
+                <div className="space-y-6">
+                  {/* Status do Servidor */}
+                  <div className="p-4 rounded-lg" style={{ 
+                    backgroundColor: theme.colors.bg.secondary,
+                    border: `1px solid ${theme.colors.border.default}`
+                  }}>
+                    <h3 className="text-lg font-semibold mb-3" style={{ color: theme.colors.text.primary }}>Servidor</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Status</div>
+                        <div className="font-semibold" style={{ 
+                          color: wsConnections.server?.initialized ? '#10b981' : '#ef4444'
+                        }}>
+                          {wsConnections.server?.initialized ? '✓ Inicializado' : '✗ Não inicializado'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Path</div>
+                        <div className="font-semibold" style={{ color: theme.colors.text.primary }}>
+                          {wsConnections.server?.path || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Estatísticas */}
+                  {wsConnections.stats && (
+                    <div className="p-4 rounded-lg" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `1px solid ${theme.colors.border.default}`
+                    }}>
+                      <h3 className="text-lg font-semibold mb-3" style={{ color: theme.colors.text.primary }}>Estatísticas</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Total de Clientes</div>
+                          <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatNumber(wsConnections.stats.totalClients || 0)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Autenticados</div>
+                          <div className="text-2xl font-bold" style={{ color: '#10b981' }}>
+                            {formatNumber(wsConnections.stats.authenticatedClients || 0)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Não Autenticados</div>
+                          <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>
+                            {formatNumber(wsConnections.stats.unauthenticatedClients || 0)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tenants Únicos</div>
+                          <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatNumber(wsConnections.stats.uniqueTenants || 0)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Agentes Únicos</div>
+                          <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
+                            {formatNumber(wsConnections.stats.uniqueAgents || 0)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lista de Conexões */}
+                  {wsConnections.connections && wsConnections.connections.length > 0 ? (
+                    <div className="p-4 rounded-lg" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `1px solid ${theme.colors.border.default}`
+                    }}>
+                      <h3 className="text-lg font-semibold mb-3" style={{ color: theme.colors.text.primary }}>
+                        Conexões Ativas ({wsConnections.connections.length})
+                      </h3>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {wsConnections.connections.map((conn) => (
+                          <div 
+                            key={conn.id}
+                            className="p-3 rounded border" 
+                            style={{ 
+                              backgroundColor: theme.colors.bg.primary,
+                              borderColor: theme.colors.border.default
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-mono text-sm" style={{ color: theme.colors.text.primary }}>
+                                {conn.id}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span 
+                                  className="px-2 py-1 rounded text-xs font-semibold"
+                                  style={{ 
+                                    backgroundColor: conn.state === 'OPEN' ? '#10b98120' : '#f59e0b20',
+                                    color: conn.state === 'OPEN' ? '#10b981' : '#f59e0b'
+                                  }}
+                                >
+                                  {conn.state}
+                                </span>
+                                {conn.authenticated && (
+                                  <span 
+                                    className="px-2 py-1 rounded text-xs font-semibold"
+                                    style={{ 
+                                      backgroundColor: '#3b82f620',
+                                      color: '#3b82f6'
+                                    }}
+                                  >
+                                    Autenticado
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                              {conn.username && (
+                                <div>
+                                  <span style={{ color: theme.colors.text.secondary }}>Usuário: </span>
+                                  <span style={{ color: theme.colors.text.primary }}>{conn.username}</span>
+                                </div>
+                              )}
+                              {conn.tenantId && (
+                                <div>
+                                  <span style={{ color: theme.colors.text.secondary }}>Tenant: </span>
+                                  <span style={{ color: theme.colors.text.primary }}>{conn.tenantId}</span>
+                                </div>
+                              )}
+                              <div>
+                                <span style={{ color: theme.colors.text.secondary }}>Uptime: </span>
+                                <span style={{ color: theme.colors.text.primary }}>
+                                  {Math.floor(conn.uptime / 60)}m {conn.uptime % 60}s
+                                </span>
+                              </div>
+                              <div>
+                                <span style={{ color: theme.colors.text.secondary }}>Conectado: </span>
+                                <span style={{ color: theme.colors.text.primary }}>
+                                  {new Date(conn.connectedAt).toLocaleTimeString('pt-BR')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-lg text-center" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `1px solid ${theme.colors.border.default}`,
+                      color: theme.colors.text.tertiary
+                    }}>
+                      Nenhuma conexão ativa no momento
+                    </div>
+                  )}
+
+                  {/* Timestamp */}
+                  {wsConnections.timestamp && (
+                    <div className="text-sm text-center" style={{ color: theme.colors.text.tertiary }}>
+                      Última atualização: {new Date(wsConnections.timestamp).toLocaleString('pt-BR')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8" style={{ color: theme.colors.text.tertiary }}>
+                  Informações de WebSocket não disponíveis. O endpoint pode não estar implementado.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: Contratos */}
+          {activeTab === 'contracts-prompts' && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
+                  📋 Contratos
+                </h2>
+                <p className="text-base mb-4" style={{ color: theme.colors.text.secondary }}>
+                  Gerencie os contratos de interface e estruturas de dados do sistema. 
+                  Estes arquivos definem como os componentes se comunicam e quais estruturas são esperadas.
+                </p>
+                <button
+                  onClick={fetchDevFiles}
+                  className="px-4 py-2 rounded-lg transition-colors"
+                  style={{ 
+                    backgroundColor: theme.colors.status.info,
+                    color: '#ffffff'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  🔄 Atualizar Lista
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Lista de Arquivos - Cards Visuais */}
+                <div className="lg:col-span-1">
+                  {/* Seção Contratos */}
+                  <div className="rounded-lg p-5" style={{ 
+                    backgroundColor: theme.colors.bg.secondary,
+                    border: `2px solid ${theme.colors.border.default}`,
+                    boxShadow: theme.name === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="text-3xl">📋</div>
+                      <div>
+                        <h3 className="font-bold text-lg" style={{ color: theme.colors.text.primary }}>
+                          Contratos
+                        </h3>
+                        <p className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                          Definem interfaces e estruturas de dados
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                      {devFiles.contracts.length === 0 ? (
+                        <div className="text-center py-4" style={{ color: theme.colors.text.tertiary }}>
+                          <p className="text-sm">Nenhum contrato encontrado</p>
+                        </div>
+                      ) : (
+                        devFiles.contracts.map((file) => {
+                          const isSelected = selectedFile?.type === 'contracts' && selectedFile?.path === file.path;
+                          const getFileInfo = (name) => {
+                            if (name.includes('generation.interface')) return { icon: '⚙️', desc: 'Interface de geração de fluxos', color: '#3b82f6' };
+                            if (name.includes('ia-generation-result')) return { icon: '🤖', desc: 'Schema de resultado de geração IA', color: '#8b5cf6' };
+                            if (name.includes('ia-public-interface')) return { icon: '🔌', desc: 'Interface pública de IA', color: '#8b5cf6' };
+                            if (name.includes('qa-result')) return { icon: '✅', desc: 'Schema de resultado de QA', color: '#10b981' };
+                            if (name.includes('qa.contract')) return { icon: '📊', desc: 'Contrato de QA', color: '#10b981' };
+                            if (name.includes('system.bootstrap')) return { icon: '🚀', desc: 'Configuração de inicialização', color: '#f59e0b' };
+                            if (name.includes('versions')) return { icon: '📌', desc: 'Controle de versões', color: '#6b7280' };
+                            return { icon: '📄', desc: 'Contrato de sistema', color: '#6b7280' };
+                          };
+                          const info = getFileInfo(file.name);
+                          return (
+                            <button
+                              key={`contracts-${file.path}`}
+                              onClick={() => loadFileContent('contracts', file.path)}
+                              className="w-full text-left p-4 rounded-lg transition-all"
+                              style={{
+                                backgroundColor: isSelected
+                                  ? info.color + '15'
+                                  : theme.colors.bg.primary,
+                                border: `2px solid ${isSelected ? info.color : theme.colors.border.default}`,
+                                boxShadow: isSelected ? `0 0 0 3px ${info.color}30` : 'none',
+                                transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = info.color;
+                                  e.currentTarget.style.backgroundColor = info.color + '10';
+                                  e.currentTarget.style.transform = 'scale(1.01)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = theme.colors.border.default;
+                                  e.currentTarget.style.backgroundColor = theme.colors.bg.primary;
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                }
+                              }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="text-2xl">{info.icon}</div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-sm mb-1" style={{ color: theme.colors.text.primary }}>
+                                    {file.name}
+                                  </div>
+                                  <div className="text-xs mb-2" style={{ color: theme.colors.text.secondary }}>
+                                    {info.desc}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                                      backgroundColor: theme.colors.bg.tertiary,
+                                      color: theme.colors.text.tertiary
+                                    }}>
+                                      {(file.size / 1024).toFixed(2)} KB
+                                    </span>
+                                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                                      backgroundColor: info.color + '20',
+                                      color: info.color
+                                    }}>
+                                      {file.type === 'json' ? 'JSON' : 'Markdown'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Editor - Visual Melhorado */}
+                <div className="lg:col-span-2">
+                  {selectedFile ? (
+                    <div className="rounded-lg" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `2px solid ${theme.colors.border.default}`,
+                      boxShadow: theme.name === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: '600px',
+                      maxHeight: '800px'
+                    }}>
+                      {/* Header do Editor - Melhorado */}
+                      <div className="p-5 border-b" style={{ 
+                        borderColor: theme.colors.border.default,
+                        backgroundColor: theme.colors.bg.primary
+                      }}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="text-3xl">
+                                {selectedFile.type === 'contracts' ? '📋' : '✨'}
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-xl mb-1" style={{ color: theme.colors.text.primary }}>
+                                  {selectedFile.path.split('/').pop()}
+                                </h3>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-sm px-3 py-1 rounded-full" style={{ 
+                                    backgroundColor: selectedFile.type === 'contracts' ? '#3b82f620' : '#8b5cf620',
+                                    color: selectedFile.type === 'contracts' ? '#3b82f6' : '#8b5cf6',
+                                    fontWeight: '500'
+                                  }}>
+                                    {selectedFile.type === 'contracts' ? '📄 Contrato' : '✍️ Prompt de IA'}
+                                  </span>
+                                  {selectedFile.modified && (
+                                    <span className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                                      📅 Modificado: {new Date(selectedFile.modified).toLocaleString('pt-BR')}
+                                    </span>
+                                  )}
+                                  <span className="text-xs" style={{ color: theme.colors.text.tertiary }}>
+                                    📊 {(selectedFile.size / 1024).toFixed(2)} KB
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            {selectedFile.path.includes('/') && (
+                              <div className="text-xs mt-2" style={{ color: theme.colors.text.secondary }}>
+                                📁 {selectedFile.path}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={saveFile}
+                            disabled={fileSaving || fileLoading}
+                            className="px-6 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                            style={{ 
+                              backgroundColor: fileSaving || fileLoading
+                                ? theme.colors.text.tertiary
+                                : theme.colors.status.success,
+                              color: '#ffffff',
+                              boxShadow: !fileSaving && !fileLoading ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!fileSaving && !fileLoading) {
+                                e.target.style.transform = 'translateY(-1px)';
+                                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!fileSaving && !fileLoading) {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+                              }
+                            }}
+                          >
+                            {fileSaving ? '⏳ Salvando...' : '💾 Salvar Alterações'}
+                          </button>
+                          {selectedFile.type === 'contracts' && selectedFile.path.endsWith('.json') && (
+                            <div className="text-xs px-3 py-1.5 rounded" style={{ 
+                              backgroundColor: theme.colors.status.info + '20',
+                              color: theme.colors.status.info
+                            }}>
+                              ⚠️ JSON será validado antes de salvar
+                            </div>
+                          )}
+                        </div>
+                        {fileError && (
+                          <div className="mt-3 p-3 rounded-lg text-sm flex items-center gap-2" style={{ 
+                            backgroundColor: theme.colors.status.error + '20',
+                            border: `1px solid ${theme.colors.status.error}40`,
+                            color: theme.colors.status.error
+                          }}>
+                            <span>❌</span>
+                            <span>{fileError}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Área de Edição - Formulário ou Editor */}
+                      <div className="flex-1 p-5 overflow-auto" style={{ 
+                        backgroundColor: theme.colors.bg.primary,
+                        maxHeight: 'calc(800px - 200px)'
+                      }}>
+                        {fileLoading ? (
+                          <div className="text-center py-12" style={{ color: theme.colors.text.tertiary }}>
+                            <div className="text-4xl mb-4">⏳</div>
+                            <p className="text-lg">Carregando arquivo...</p>
+                          </div>
+                        ) : selectedFile.path.endsWith('.json') && jsonData ? (
+                          // Formulário para JSON
+                          <div className="space-y-6">
+                            {renderJsonForm(jsonData, '', (newData, currentPath = '') => {
+                              // Se não há path específico, atualiza tudo
+                              if (!currentPath) {
+                                updateJsonFromForm(newData);
+                              } else {
+                                updateJsonDataFromPath(currentPath, newData);
+                              }
+                            }, '')}
+                          </div>
+                        ) : (
+                          // Editor de texto para Markdown ou JSON não parseável
+                          <textarea
+                            value={fileContent}
+                            onChange={(e) => {
+                              const newContent = e.target.value;
+                              setFileContent(newContent);
+                            }}
+                            className="w-full font-mono text-sm p-4 rounded-lg resize-none"
+                            style={{
+                              backgroundColor: theme.name === 'dark' ? '#1a1a1a' : '#ffffff',
+                              border: `2px solid ${theme.colors.border.default}`,
+                              color: theme.colors.text.primary,
+                              fontFamily: '"Fira Code", "Consolas", "Monaco", "Courier New", monospace',
+                              fontSize: '0.875rem',
+                              lineHeight: '1.6',
+                              minHeight: '500px',
+                              tabSize: 2,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                            spellCheck={false}
+                            placeholder="Conteúdo do arquivo aparecerá aqui..."
+                          />
+                        )}
+                      </div>
+
+                      {/* Footer com Dicas */}
+                      <div className="p-4 border-t text-xs" style={{ 
+                        borderColor: theme.colors.border.default,
+                        backgroundColor: theme.colors.bg.primary
+                      }}>
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <span style={{ color: theme.colors.text.secondary }}>
+                            💡 <strong>Dica:</strong> {selectedFile.type === 'contracts' 
+                              ? 'Contratos definem a estrutura de dados. Alterações podem afetar a compatibilidade do sistema.'
+                              : 'Prompts orientam o comportamento da IA. Teste as alterações antes de usar em produção.'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg p-12 text-center" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `2px dashed ${theme.colors.border.default}`,
+                      minHeight: '600px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <div className="text-6xl mb-4">📝</div>
+                      <h3 className="text-2xl font-bold mb-3" style={{ color: theme.colors.text.primary }}>
+                        Nenhum arquivo selecionado
+                      </h3>
+                      <p className="text-base mb-2" style={{ color: theme.colors.text.secondary }}>
+                        Selecione um arquivo da lista ao lado para visualizar e editar
+                      </p>
+                      <p className="text-sm" style={{ color: theme.colors.text.tertiary }}>
+                        Você pode editar contratos JSON diretamente aqui usando campos de formulário
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Documentos */}
+          {activeTab === 'documents' && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
+                  📚 Documentos
+                </h2>
+                <p className="text-base mb-4" style={{ color: theme.colors.text.secondary }}>
+                  Gerencie os prompts de IA e documentação do sistema. 
+                  Estes arquivos orientam o comportamento da IA e documentam as funcionalidades.
+                </p>
+                <button
+                  onClick={fetchDevFiles}
+                  className="px-4 py-2 rounded-lg transition-colors"
+                  style={{ 
+                    backgroundColor: theme.colors.status.info,
+                    color: '#ffffff'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  🔄 Atualizar Lista
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Lista de Arquivos - Cards Visuais */}
+                <div className="lg:col-span-1">
+                  <div className="space-y-4 max-h-[800px] overflow-y-auto">
+                    {/* Seção Documentos Organizados por Categoria */}
+                    {devFiles.documents && Object.keys(devFiles.documents).length > 0 && (
+                      <div className="rounded-lg p-5 mb-4" style={{ 
+                    backgroundColor: theme.colors.bg.secondary,
+                    border: `2px solid ${theme.colors.border.default}`,
+                    boxShadow: theme.name === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="text-3xl">📚</div>
+                      <div>
+                        <h3 className="font-bold text-lg" style={{ color: theme.colors.text.primary }}>
+                              Documentos Organizados
+                        </h3>
+                        <p className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                              Documentação por categoria
+                        </p>
+                      </div>
+                    </div>
+                        <div className="space-y-2">
+                          {Object.entries(devFiles.documents).map(([category, files]) => {
+                            const categoryName = category.replace(/^\d{2}_/, '').replace(/_/g, ' ');
+                            const isExpanded = expandedCategories[category] !== false;
+                            const categoryIcons = {
+                              'Analises': '📊',
+                              'Implementacoes': '🔧',
+                              'Resumos Relatorios': '📄',
+                              'Testes': '🧪',
+                              'RPA': '🤖',
+                              'RAG': '🔍',
+                              'Guias Tutoriais': '📖',
+                              'Documentacao API': '🔌',
+                              'Configuracao': '⚙️',
+                              'Politicas Governanca': '🛡️',
+                              'Prompts': '💬',
+                              'Frontend': '🎨',
+                              'Servicos': '🔄',
+                              'Infraestrutura': '🏗️',
+                              'Regras Projeto': '📜',
+                              'Outros': '📦',
+                            };
+                            const icon = categoryIcons[categoryName] || '📁';
+                            
+                            return (
+                              <div key={category} className="mb-3">
+                                <button
+                                  onClick={() => setExpandedCategories(prev => ({
+                                    ...prev,
+                                    [category]: !isExpanded
+                                  }))}
+                                  className="w-full text-left p-3 rounded-lg transition-all flex items-center justify-between"
+                                  style={{
+                                    backgroundColor: theme.colors.bg.primary,
+                                    border: `1px solid ${theme.colors.border.default}`,
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xl">{icon}</span>
+                                    <div>
+                                      <div className="font-semibold text-sm" style={{ color: theme.colors.text.primary }}>
+                                        {categoryName}
+                                      </div>
+                                      <div className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                                        {files.length} arquivo{files.length !== 1 ? 's' : ''}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <span className="text-lg" style={{ color: theme.colors.text.secondary }}>
+                                    {isExpanded ? '▼' : '▶'}
+                                  </span>
+                                </button>
+                                {isExpanded && (
+                                  <div className="mt-2 ml-4 space-y-2">
+                                    {files.map((file) => {
+                                      const isSelected = selectedFile?.type === 'documents' && 
+                                        selectedFile?.path === `${category}/${file.path}`;
+                                      return (
+                                        <button
+                                          key={`${category}-${file.path}`}
+                                          onClick={() => loadFileContent('documents', `${category}/${file.path}`)}
+                                          className="w-full text-left p-3 rounded-lg transition-all"
+                                          style={{
+                                            backgroundColor: isSelected
+                                              ? theme.colors.status.info + '20'
+                                              : theme.colors.bg.primary,
+                                            border: `1px solid ${isSelected ? theme.colors.status.info : theme.colors.border.default}`,
+                                            transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            if (!isSelected) {
+                                              e.currentTarget.style.borderColor = theme.colors.status.info;
+                                              e.currentTarget.style.backgroundColor = theme.colors.status.info + '10';
+                                            }
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            if (!isSelected) {
+                                              e.currentTarget.style.borderColor = theme.colors.border.default;
+                                              e.currentTarget.style.backgroundColor = theme.colors.bg.primary;
+                                            }
+                                          }}
+                                        >
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-sm">📄</span>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-xs mb-1" style={{ color: theme.colors.text.primary }}>
+                                                {file.name}
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-xs px-2 py-0.5 rounded" style={{ 
+                                                  backgroundColor: theme.colors.bg.tertiary,
+                                                  color: theme.colors.text.tertiary
+                                                }}>
+                                                  {(file.size / 1024).toFixed(2)} KB
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Seção Prompts (mantida para compatibilidade) */}
+                    <div className="rounded-lg p-5" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `2px solid ${theme.colors.border.default}`,
+                      boxShadow: theme.name === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="text-3xl">💬</div>
+                        <div>
+                          <h3 className="font-bold text-lg" style={{ color: theme.colors.text.primary }}>
+                            Prompts
+                          </h3>
+                          <p className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                            Prompts de IA
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      {devFiles.prompts.length === 0 ? (
+                        <div className="text-center py-4" style={{ color: theme.colors.text.tertiary }}>
+                            <p className="text-sm">Nenhum prompt encontrado</p>
+                        </div>
+                      ) : (
+                        devFiles.prompts.map((file) => {
+                          const isSelected = selectedFile?.type === 'prompts' && selectedFile?.path === file.path;
+                          const getPromptInfo = (name) => {
+                            if (name.includes('rag.guardrails')) return { icon: '🛡️', desc: 'Regras de segurança para geração controlada', color: '#ef4444' };
+                            if (name.includes('chatbot.generator')) return { icon: '💬', desc: 'Geração de fluxos de chatbot', color: '#3b82f6' };
+                            if (name.includes('rpa.generator')) return { icon: '🤖', desc: 'Geração de testes RPA automatizados', color: '#f59e0b' };
+                            if (name.includes('cursor.execution')) return { icon: '⚡', desc: 'Regras de execução no Cursor IDE', color: '#8b5cf6' };
+                            if (name.includes('README')) return { icon: '📖', desc: 'Documentação dos prompts', color: '#6b7280' };
+                            return { icon: '📝', desc: 'Documento de sistema', color: '#6b7280' };
+                          };
+                          const info = getPromptInfo(file.name);
+                          return (
+                            <button
+                              key={`prompts-${file.path}`}
+                              onClick={() => loadFileContent('prompts', file.path)}
+                              className="w-full text-left p-4 rounded-lg transition-all"
+                              style={{
+                                backgroundColor: isSelected
+                                  ? info.color + '15'
+                                  : theme.colors.bg.primary,
+                                border: `2px solid ${isSelected ? info.color : theme.colors.border.default}`,
+                                boxShadow: isSelected ? `0 0 0 3px ${info.color}30` : 'none',
+                                transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = info.color;
+                                  e.currentTarget.style.backgroundColor = info.color + '10';
+                                  e.currentTarget.style.transform = 'scale(1.01)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = theme.colors.border.default;
+                                  e.currentTarget.style.backgroundColor = theme.colors.bg.primary;
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                }
+                              }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="text-2xl">{info.icon}</div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-sm mb-1" style={{ color: theme.colors.text.primary }}>
+                                    {file.name}
+                                  </div>
+                                  <div className="text-xs mb-2" style={{ color: theme.colors.text.secondary }}>
+                                    {info.desc}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                                      backgroundColor: theme.colors.bg.tertiary,
+                                      color: theme.colors.text.tertiary
+                                    }}>
+                                      {(file.size / 1024).toFixed(2)} KB
+                                    </span>
+                                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                                      backgroundColor: '#8b5cf620',
+                                      color: '#8b5cf6'
+                                    }}>
+                                      Markdown
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Editor - Mesmo componente usado na aba de contratos */}
+                <div className="lg:col-span-2">
+                  {selectedFile ? (
+                    <div className="rounded-lg" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `2px solid ${theme.colors.border.default}`,
+                      boxShadow: theme.name === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: '600px',
+                      maxHeight: '800px'
+                    }}>
+                      {/* Header do Editor - Mesmo da aba de contratos */}
+                      <div className="p-5 border-b" style={{ 
+                        borderColor: theme.colors.border.default,
+                        backgroundColor: theme.colors.bg.primary
+                      }}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="text-3xl">📚</div>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-xl mb-1" style={{ color: theme.colors.text.primary }}>
+                                  {selectedFile.path.split('/').pop()}
+                                </h3>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-sm px-3 py-1 rounded-full" style={{ 
+                                    backgroundColor: '#8b5cf620',
+                                    color: '#8b5cf6',
+                                    fontWeight: '500'
+                                  }}>
+                                    📚 Documento Markdown
+                                  </span>
+                                  {selectedFile.modified && (
+                                    <span className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                                      📅 Modificado: {new Date(selectedFile.modified).toLocaleString('pt-BR')}
+                                    </span>
+                                  )}
+                                  <span className="text-xs" style={{ color: theme.colors.text.tertiary }}>
+                                    📊 {(selectedFile.size / 1024).toFixed(2)} KB
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            {selectedFile.path.includes('/') && (
+                              <div className="text-xs mt-2" style={{ color: theme.colors.text.secondary }}>
+                                📁 {selectedFile.path}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={saveFile}
+                            disabled={fileSaving || fileLoading}
+                            className="px-6 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                            style={{ 
+                              backgroundColor: fileSaving || fileLoading
+                                ? theme.colors.text.tertiary
+                                : theme.colors.status.success,
+                              color: '#ffffff',
+                              boxShadow: !fileSaving && !fileLoading ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!fileSaving && !fileLoading) {
+                                e.target.style.transform = 'translateY(-1px)';
+                                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!fileSaving && !fileLoading) {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+                              }
+                            }}
+                          >
+                            {fileSaving ? '⏳ Salvando...' : '💾 Salvar Alterações'}
+                          </button>
+                        </div>
+                        {fileError && (
+                          <div className="mt-3 p-3 rounded-lg text-sm flex items-center gap-2" style={{ 
+                            backgroundColor: theme.colors.status.error + '20',
+                            border: `1px solid ${theme.colors.status.error}40`,
+                            color: theme.colors.status.error
+                          }}>
+                            <span>❌</span>
+                            <span>{fileError}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Área de Edição - Editor de texto para Markdown */}
+                      <div className="flex-1 p-5 overflow-auto" style={{ 
+                        backgroundColor: theme.colors.bg.primary,
+                        maxHeight: 'calc(800px - 200px)'
+                      }}>
+                        {fileLoading ? (
+                          <div className="text-center py-12" style={{ color: theme.colors.text.tertiary }}>
+                            <div className="text-4xl mb-4">⏳</div>
+                            <p className="text-lg">Carregando arquivo...</p>
+                          </div>
+                        ) : (
+                          <textarea
+                            value={fileContent}
+                            onChange={(e) => {
+                              const newContent = e.target.value;
+                              setFileContent(newContent);
+                            }}
+                            className="w-full font-mono text-sm p-4 rounded-lg resize-none"
+                            style={{
+                              backgroundColor: theme.name === 'dark' ? '#1a1a1a' : '#ffffff',
+                              border: `2px solid ${theme.colors.border.default}`,
+                              color: theme.colors.text.primary,
+                              fontFamily: '"Fira Code", "Consolas", "Monaco", "Courier New", monospace',
+                              fontSize: '0.875rem',
+                              lineHeight: '1.6',
+                              minHeight: '500px',
+                              tabSize: 2,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                            spellCheck={false}
+                            placeholder="Conteúdo do documento aparecerá aqui..."
+                          />
+                        )}
+                      </div>
+
+                      {/* Footer com Dicas */}
+                      <div className="p-4 border-t text-xs" style={{ 
+                        borderColor: theme.colors.border.default,
+                        backgroundColor: theme.colors.bg.primary
+                      }}>
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <span style={{ color: theme.colors.text.secondary }}>
+                            💡 <strong>Dica:</strong> Documentos Markdown orientam o comportamento da IA. Teste as alterações antes de usar em produção.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg p-12 text-center" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `2px dashed ${theme.colors.border.default}`,
+                      minHeight: '600px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <div className="text-6xl mb-4">📚</div>
+                      <h3 className="text-2xl font-bold mb-3" style={{ color: theme.colors.text.primary }}>
+                        Nenhum documento selecionado
+                      </h3>
+                      <p className="text-base mb-2" style={{ color: theme.colors.text.secondary }}>
+                        Selecione um documento da lista ao lado para visualizar e editar
+                      </p>
+                      <p className="text-sm" style={{ color: theme.colors.text.tertiary }}>
+                        Você pode editar prompts e documentação Markdown diretamente aqui
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Nós dos Fluxos */}
+          {activeTab === 'nodes' && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
+                  🔧 Nós dos Fluxos
+                </h2>
+                <p className="text-base mb-4" style={{ color: theme.colors.text.secondary }}>
+                  Gerencie as definições de nós, schemas, regras e erros conhecidos dos fluxos de chatbot. 
+                  Estes arquivos definem quais tipos de nós estão disponíveis e como eles se comportam.
+                </p>
+                <button
+                  onClick={fetchDevFiles}
+                  className="px-4 py-2 rounded-lg transition-colors"
+                  style={{ 
+                    backgroundColor: theme.colors.status.info,
+                    color: '#ffffff'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  🔄 Atualizar Lista
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Lista de Arquivos - Cards Visuais */}
+                <div className="lg:col-span-1">
+                  {/* Seção Nós */}
+                  <div className="rounded-lg p-5" style={{ 
+                    backgroundColor: theme.colors.bg.secondary,
+                    border: `2px solid ${theme.colors.border.default}`,
+                    boxShadow: theme.name === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="text-3xl">🔧</div>
+                      <div>
+                        <h3 className="font-bold text-lg" style={{ color: theme.colors.text.primary }}>
+                          Definições de Nós
+                        </h3>
+                        <p className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                          Tipos, schemas, regras e erros
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                      {devFiles.nodes.length === 0 ? (
+                        <div className="text-center py-4" style={{ color: theme.colors.text.tertiary }}>
+                          <p className="text-sm">Nenhum arquivo de nós encontrado</p>
+                        </div>
+                      ) : (
+                        devFiles.nodes.map((file) => {
+                          const isSelected = selectedFile?.type === 'nodes' && selectedFile?.path === file.path;
+                          const getNodeFileInfo = (name, path) => {
+                            if (path.includes('nodes/node.types')) return { icon: '🔧', desc: 'Tipos de nós disponíveis (core e system)', color: '#3b82f6', category: 'Tipos' };
+                            if (path.includes('schema/flow.schema')) return { icon: '📐', desc: 'Schema JSON dos fluxos', color: '#8b5cf6', category: 'Schema' };
+                            if (path.includes('rules/connection.rules')) return { icon: '🔗', desc: 'Regras de conexão entre nós', color: '#10b981', category: 'Regras' };
+                            if (path.includes('known_errors/flow.errors')) return { icon: '⚠️', desc: 'Erros conhecidos dos fluxos', color: '#f59e0b', category: 'Erros' };
+                            return { icon: '📄', desc: 'Arquivo de configuração de nós', color: '#6b7280', category: 'Outros' };
+                          };
+                          const info = getNodeFileInfo(file.name, file.path);
+                          return (
+                            <button
+                              key={`nodes-${file.path}`}
+                              onClick={() => loadFileContent('nodes', file.path)}
+                              className="w-full text-left p-4 rounded-lg transition-all"
+                              style={{
+                                backgroundColor: isSelected
+                                  ? info.color + '15'
+                                  : theme.colors.bg.primary,
+                                border: `2px solid ${isSelected ? info.color : theme.colors.border.default}`,
+                                boxShadow: isSelected ? `0 0 0 3px ${info.color}30` : 'none',
+                                transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = info.color;
+                                  e.currentTarget.style.backgroundColor = info.color + '10';
+                                  e.currentTarget.style.transform = 'scale(1.01)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = theme.colors.border.default;
+                                  e.currentTarget.style.backgroundColor = theme.colors.bg.primary;
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                }
+                              }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="text-2xl">{info.icon}</div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-sm mb-1" style={{ color: theme.colors.text.primary }}>
+                                    {file.name}
+                                  </div>
+                                  <div className="text-xs mb-2" style={{ color: theme.colors.text.secondary }}>
+                                    {info.desc}
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                                      backgroundColor: theme.colors.bg.tertiary,
+                                      color: theme.colors.text.tertiary
+                                    }}>
+                                      {(file.size / 1024).toFixed(2)} KB
+                                    </span>
+                                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                                      backgroundColor: info.color + '20',
+                                      color: info.color
+                                    }}>
+                                      {info.category}
+                                    </span>
+                                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                                      backgroundColor: '#8b5cf620',
+                                      color: '#8b5cf6'
+                                    }}>
+                                      JSON
+                                    </span>
+                                  </div>
+                                  {file.path.includes('/') && (
+                                    <div className="text-xs mt-1" style={{ color: theme.colors.text.tertiary }}>
+                                      📁 {file.path}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Editor - Mesmo componente usado na aba de contratos */}
+                <div className="lg:col-span-2">
+                  {selectedFile ? (
+                    <div className="rounded-lg" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `2px solid ${theme.colors.border.default}`,
+                      boxShadow: theme.name === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: '600px',
+                      maxHeight: '800px'
+                    }}>
+                      {/* Header do Editor */}
+                      <div className="p-5 border-b" style={{ 
+                        borderColor: theme.colors.border.default,
+                        backgroundColor: theme.colors.bg.primary
+                      }}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="text-3xl">🔧</div>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-xl mb-1" style={{ color: theme.colors.text.primary }}>
+                                  {selectedFile.path.split('/').pop()}
+                                </h3>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-sm px-3 py-1 rounded-full" style={{ 
+                                    backgroundColor: '#3b82f620',
+                                    color: '#3b82f6',
+                                    fontWeight: '500'
+                                  }}>
+                                    🔧 Definição de Nós
+                                  </span>
+                                  {selectedFile.modified && (
+                                    <span className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                                      📅 Modificado: {new Date(selectedFile.modified).toLocaleString('pt-BR')}
+                                    </span>
+                                  )}
+                                  <span className="text-xs" style={{ color: theme.colors.text.tertiary }}>
+                                    📊 {(selectedFile.size / 1024).toFixed(2)} KB
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            {selectedFile.path.includes('/') && (
+                              <div className="text-xs mt-2" style={{ color: theme.colors.text.secondary }}>
+                                📁 {selectedFile.path}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={saveFile}
+                            disabled={fileSaving || fileLoading}
+                            className="px-6 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                            style={{ 
+                              backgroundColor: fileSaving || fileLoading
+                                ? theme.colors.text.tertiary
+                                : theme.colors.status.success,
+                              color: '#ffffff',
+                              boxShadow: !fileSaving && !fileLoading ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!fileSaving && !fileLoading) {
+                                e.target.style.transform = 'translateY(-1px)';
+                                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!fileSaving && !fileLoading) {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+                              }
+                            }}
+                          >
+                            {fileSaving ? '⏳ Salvando...' : '💾 Salvar Alterações'}
+                          </button>
+                          <div className="text-xs px-3 py-1.5 rounded" style={{ 
+                            backgroundColor: theme.colors.status.info + '20',
+                            color: theme.colors.status.info
+                          }}>
+                            ⚠️ JSON será validado antes de salvar
+                          </div>
+                        </div>
+                        {fileError && (
+                          <div className="mt-3 p-3 rounded-lg text-sm flex items-center gap-2" style={{ 
+                            backgroundColor: theme.colors.status.error + '20',
+                            border: `1px solid ${theme.colors.status.error}40`,
+                            color: theme.colors.status.error
+                          }}>
+                            <span>❌</span>
+                            <span>{fileError}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Área de Edição - Formulário ou Editor */}
+                      <div className="flex-1 p-5 overflow-auto" style={{ 
+                        backgroundColor: theme.colors.bg.primary,
+                        maxHeight: 'calc(800px - 200px)'
+                      }}>
+                        {fileLoading ? (
+                          <div className="text-center py-12" style={{ color: theme.colors.text.tertiary }}>
+                            <div className="text-4xl mb-4">⏳</div>
+                            <p className="text-lg">Carregando arquivo...</p>
+                          </div>
+                        ) : selectedFile.path.endsWith('.json') && jsonData ? (
+                          // Formulário para JSON
+                          <div className="space-y-6">
+                            {renderJsonForm(jsonData, '', (newData, currentPath = '') => {
+                              // Se não há path específico, atualiza tudo
+                              if (!currentPath) {
+                                updateJsonFromForm(newData);
+                              } else {
+                                updateJsonDataFromPath(currentPath, newData);
+                              }
+                            }, '')}
+                          </div>
+                        ) : (
+                          // Editor de texto para Markdown ou JSON não parseável
+                          <textarea
+                            value={fileContent}
+                            onChange={(e) => {
+                              const newContent = e.target.value;
+                              setFileContent(newContent);
+                            }}
+                            className="w-full font-mono text-sm p-4 rounded-lg resize-none"
+                            style={{
+                              backgroundColor: theme.name === 'dark' ? '#1a1a1a' : '#ffffff',
+                              border: `2px solid ${theme.colors.border.default}`,
+                              color: theme.colors.text.primary,
+                              fontFamily: '"Fira Code", "Consolas", "Monaco", "Courier New", monospace',
+                              fontSize: '0.875rem',
+                              lineHeight: '1.6',
+                              minHeight: '500px',
+                              tabSize: 2,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                            spellCheck={false}
+                            placeholder="Conteúdo do arquivo aparecerá aqui..."
+                          />
+                        )}
+                      </div>
+
+                      {/* Footer com Dicas */}
+                      <div className="p-4 border-t text-xs" style={{ 
+                        borderColor: theme.colors.border.default,
+                        backgroundColor: theme.colors.bg.primary
+                      }}>
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <span style={{ color: theme.colors.text.secondary }}>
+                            💡 <strong>Dica:</strong> Definições de nós controlam quais tipos de nós estão disponíveis nos fluxos. Alterações podem afetar a geração de fluxos pela IA.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg p-12 text-center" style={{ 
+                      backgroundColor: theme.colors.bg.secondary,
+                      border: `2px dashed ${theme.colors.border.default}`,
+                      minHeight: '600px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <div className="text-6xl mb-4">🔧</div>
+                      <h3 className="text-2xl font-bold mb-3" style={{ color: theme.colors.text.primary }}>
+                        Nenhum arquivo selecionado
+                      </h3>
+                      <p className="text-base mb-2" style={{ color: theme.colors.text.secondary }}>
+                        Selecione um arquivo da lista ao lado para visualizar e editar
+                      </p>
+                      <p className="text-sm" style={{ color: theme.colors.text.tertiary }}>
+                        Você pode editar definições de nós, schemas, regras e erros conhecidos diretamente aqui
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Ferramentas */}
+          {activeTab === 'tools' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Ferramentas de Desenvolvimento</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg" style={{ 
+                  border: `1px solid ${theme.colors.border.default}`,
+                  backgroundColor: theme.colors.bg.secondary
+                }}>
+                  <h3 className="font-semibold text-lg mb-2" style={{ color: theme.colors.text.primary }}>🔄 Limpar Cache de Rate Limit</h3>
+                  <p className="text-sm mb-3" style={{ color: theme.colors.text.secondary }}>
+                    Limpa o cache de rate limiting, útil para testes e desenvolvimento.
+                  </p>
+                  <button
+                    onClick={clearRateLimitCache}
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      backgroundColor: theme.colors.status.warning,
+                      color: '#ffffff'
+                    }}
+                    onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                  >
+                    Limpar Cache
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-lg" style={{ 
+                  border: `1px solid ${theme.colors.border.default}`,
+                  backgroundColor: theme.colors.bg.secondary
+                }}>
+                  <h3 className="font-semibold text-lg mb-2" style={{ color: theme.colors.text.primary }}>📋 Visualizar Logs</h3>
+                  <p className="text-sm mb-3" style={{ color: theme.colors.text.secondary }}>
+                    Abre o visualizador de logs do sistema em tempo real.
+                  </p>
+                  <button
+                    onClick={() => setShowLogs(true)}
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      backgroundColor: theme.colors.accent.primary,
+                      color: '#ffffff'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = theme.colors.accent.hover}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = theme.colors.accent.primary}
+                  >
+                    Abrir Logs
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-lg" style={{ 
+                  border: `1px solid ${theme.colors.border.default}`,
+                  backgroundColor: theme.colors.bg.secondary
+                }}>
+                  <h3 className="font-semibold text-lg mb-2" style={{ color: theme.colors.text.primary }}>🔄 Atualizar Tudo</h3>
+                  <p className="text-sm mb-3" style={{ color: theme.colors.text.secondary }}>
+                    Força atualização de todos os dados do dashboard.
+                  </p>
+                  <button
+                    onClick={refreshAll}
+                    disabled={loading}
+                    className="px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    style={{ 
+                      backgroundColor: loading ? theme.colors.text.tertiary : theme.colors.status.info,
+                      color: '#ffffff'
+                    }}
+                    onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = theme.colors.status.info)}
+                    onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = theme.colors.status.info)}
+                  >
+                    {loading ? 'Atualizando...' : 'Atualizar'}
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-lg" style={{ 
+                  border: `1px solid ${theme.colors.border.default}`,
+                  backgroundColor: theme.colors.bg.secondary
+                }}>
+                  <h3 className="font-semibold text-lg mb-2" style={{ color: theme.colors.text.primary }}>📊 Status dos Serviços</h3>
+                  <p className="text-sm mb-3" style={{ color: theme.colors.text.secondary }}>
+                    Visualiza o status detalhado de todos os serviços.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('status')}
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      backgroundColor: theme.colors.status.success,
+                      color: '#ffffff'
+                    }}
+                    onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                  >
+                    Ver Status
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        {/* Modal de Logs */}
+        {showLogs && (
+          <LogViewer onClose={() => setShowLogs(false)} />
+        )}
+      </div>
+    </>
+  );
+}
+

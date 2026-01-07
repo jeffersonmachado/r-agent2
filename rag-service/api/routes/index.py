@@ -93,22 +93,84 @@ async def index_document(request: IndexRequest):
         
         # Gera embeddings em batch
         chunk_texts = [chunk.content for chunk in chunks]
+        logger.info(f"[INDEX] Gerando embeddings para {len(chunks)} chunks do documento {document.id}", {
+            'documentId': document.id,
+            'tenantId': document.tenantId,
+            'chunksCount': len(chunks),
+            'chunkTextsLength': [len(text) for text in chunk_texts]
+        })
+        
         embeddings = generate_embeddings_batch(chunk_texts)
+        logger.info(f"[INDEX] Embeddings gerados: {len(embeddings)} embeddings", {
+            'documentId': document.id,
+            'embeddingsCount': len(embeddings),
+            'embeddingDimensions': [len(emb) for emb in embeddings] if embeddings else []
+        })
         
         # Adiciona ao vector store
+        logger.info(f"[INDEX] Obtendo vector store para tenant {document.tenantId}", {
+            'documentId': document.id,
+            'tenantId': document.tenantId
+        })
         vector_store = get_vector_store(document.tenantId)
+        
+        # Verifica estado antes de adicionar
+        stats_before = vector_store.get_stats()
+        logger.info(f"[INDEX] Vector store ANTES de adicionar chunks", {
+            'documentId': document.id,
+            'tenantId': document.tenantId,
+            'documentCountBefore': stats_before.get('documentCount', 0),
+            'chunkCountBefore': stats_before.get('chunkCount', 0),
+            'indexSizeBefore': stats_before.get('indexSize', 0)
+        })
+        
+        logger.info(f"[INDEX] Adicionando {len(chunks)} chunks ao vector store", {
+            'documentId': document.id,
+            'tenantId': document.tenantId,
+            'chunksCount': len(chunks),
+            'embeddingsCount': len(embeddings),
+            'chunkIds': [chunk.id for chunk in chunks]
+        })
+        
         vector_store.add_chunks(chunks, embeddings)
+        
+        # Verifica estado após adicionar
+        stats_after = vector_store.get_stats()
+        logger.info(f"[INDEX] Vector store APÓS adicionar chunks", {
+            'documentId': document.id,
+            'tenantId': document.tenantId,
+            'documentCountAfter': stats_after.get('documentCount', 0),
+            'chunkCountAfter': stats_after.get('chunkCount', 0),
+            'indexSizeAfter': stats_after.get('indexSize', 0),
+            'documentCountDelta': stats_after.get('documentCount', 0) - stats_before.get('documentCount', 0),
+            'chunkCountDelta': stats_after.get('chunkCount', 0) - stats_before.get('chunkCount', 0)
+        })
         
         # Validação: verifica se os chunks foram realmente adicionados
         chunks_added = 0
+        chunks_not_found = []
         for chunk in chunks:
             if chunk.id in vector_store.chunks:
                 chunks_added += 1
+            else:
+                chunks_not_found.append(chunk.id)
         
         if chunks_added < len(chunks):
-            logger.warning(f"Alguns chunks não foram adicionados: {chunks_added}/{len(chunks)} para documento {document.id}")
+            logger.warning(f"[INDEX] Alguns chunks não foram adicionados: {chunks_added}/{len(chunks)} para documento {document.id}", {
+                'documentId': document.id,
+                'tenantId': document.tenantId,
+                'chunksAdded': chunks_added,
+                'chunksTotal': len(chunks),
+                'chunksNotFound': chunks_not_found
+            })
         
-        logger.info(f"Documento indexado: {document.id}, chunks criados: {len(chunks)}, chunks adicionados: {chunks_added}")
+        logger.info(f"[INDEX] Documento indexado: {document.id}, chunks criados: {len(chunks)}, chunks adicionados: {chunks_added}", {
+            'documentId': document.id,
+            'tenantId': document.tenantId,
+            'chunksCreated': len(chunks),
+            'chunksAdded': chunks_added,
+            'vectorStoreStats': stats_after
+        })
         
         return IndexResponse(
             success=True,

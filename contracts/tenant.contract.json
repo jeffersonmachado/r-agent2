@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Contrato de Tenant",
+  "description": "Contrato para criação e atualização de tenants em arquitetura SaaS multi-tenant",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["name", "site", "ramo_atividade", "objetivo"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do tenant/cliente",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "site": {
+      "type": "string",
+      "description": "URL oficial do cliente (obrigatório). Deve ser uma URL válida (http:// ou https://)",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "ramo_atividade": {
+      "type": "string",
+      "description": "Descrição clara e específica do segmento de negócio (obrigatório). Não é tratado como documento, mas como contexto cognitivo para viés semântico",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "objetivo": {
+      "type": "string",
+      "description": "Objetivo estratégico do cliente ao usar a plataforma (obrigatório). Orienta escolha de resposta e re-ranking sem distorcer fatos",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "active": {
+      "type": "boolean",
+      "description": "Se o tenant está ativo",
+      "default": true
+    }
+  },
+  "additionalProperties": false
+}
+

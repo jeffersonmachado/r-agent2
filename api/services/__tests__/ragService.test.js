@@ -16,6 +16,7 @@ let mockFetchResponse = {
 };
 
 global.fetch = jest.fn((url, options) => {
+  // Retorna o mockFetchResponse atualizado
   return Promise.resolve(mockFetchResponse);
 });
 
@@ -39,7 +40,7 @@ describe('ragService', () => {
       text: async () => '',
       status: 200,
     };
-    process.env.RAG_SERVICE_URL = 'http://localhost:8000';
+    process.env.RAG_SERVICE_URL = 'http://localhost:9000';
     process.env.RAG_TIMEOUT = '5000';
   });
 
@@ -57,7 +58,7 @@ describe('ragService', () => {
       const result = await ragService.isRagAvailable();
       expect(result).toBe(true);
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/rag/health',
+        'http://localhost:9000/rag/health',
         expect.objectContaining({ method: 'GET' })
       );
     });
@@ -110,12 +111,12 @@ describe('ragService', () => {
         },
       };
 
-      mockFetchResponse = {
+      fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
         text: async () => JSON.stringify(mockResponse),
         status: 200,
-      };
+      });
 
       const result = await ragService.queryRag(
         'Como resetar minha senha?',
@@ -148,7 +149,7 @@ describe('ragService', () => {
     });
 
     it('deve enviar filtros corretamente', async () => {
-      mockFetchResponse = {
+      fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -158,7 +159,7 @@ describe('ragService', () => {
         }),
         text: async () => '{}',
         status: 200,
-      };
+      });
 
       await ragService.queryRag('query', 'tenant-001', {}, {
         roles: ['admin'],
@@ -178,12 +179,12 @@ describe('ragService', () => {
     });
 
     it('deve tratar erro do serviço RAG', async () => {
-      mockFetchResponse = {
+      fetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         text: async () => 'Internal Server Error',
         json: async () => ({}),
-      };
+      });
 
       await expect(
         ragService.queryRag('query', 'tenant-001')
@@ -232,7 +233,7 @@ describe('ragService', () => {
       expect(result.documentId).toBe('doc-001');
       expect(result.chunksCreated).toBe(3);
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/rag/index',
+        'http://localhost:9000/rag/index',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

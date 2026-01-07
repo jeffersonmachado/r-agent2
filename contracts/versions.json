@@ -35,6 +35,22 @@
           }
         }
       ]
+    },
+    "rag": {
+      "versions": [
+        {
+          "version": "1.0.0",
+          "active": true,
+          "files": [
+            "contracts/rag/question-generation.contract.json",
+            "contracts/rag/question-generation.rules.json"
+          ],
+          "meta": {
+            "createdAt": "2026-01-05T17:00:00Z",
+            "description": "Versão inicial do contrato de geração de perguntas RAG"
+          }
+        }
+      ]
     }
   },
   "qa": {

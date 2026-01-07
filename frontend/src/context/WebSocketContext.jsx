@@ -28,11 +28,47 @@ export function WebSocketProvider({ children }) {
 
   // Constrói URL do WebSocket
   const getWebSocketUrl = useCallback(() => {
-    const DEFAULT_BASE_URL = 'http://localhost:3000';
-    const base = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
-    const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-    const wsBase = normalizedBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
-    return `${wsBase}/ws`;
+    const base = import.meta.env.VITE_API_BASE_URL;
+    let basePath = '';
+
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        const rawPath = url.pathname || window.location.pathname || '/';
+        const match = rawPath.match(/^\/([^/]+)(\/|$)/);
+        if (match && match[1]) {
+          basePath = `/${match[1]}`;
+        }
+      } catch {
+        const fallbackMatch = window.location.pathname && window.location.pathname.match(/^\/([^/]+)(\/|$)/);
+        if (fallbackMatch && fallbackMatch[1]) {
+          basePath = `/${fallbackMatch[1]}`;
+        }
+      }
+    }
+    
+    // Se VITE_API_BASE_URL estiver definido, usa URL absoluta
+    if (base && base.trim()) {
+      const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+      const wsBase = normalizedBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+      return `${wsBase}/ws`;
+    }
+    
+    // Se estiver vazio, detecta ambiente em runtime
+    if (typeof window !== 'undefined') {
+      const isViteDev = window.location.port === '5173' || 
+                        (window.location.hostname === 'localhost' && window.location.port !== '80' && window.location.port !== '443' && !window.location.port.includes('8086'));
+      
+      if (isViteDev) {
+        // Desenvolvimento: usa localhost:3000
+        return 'ws://localhost:3000/ws';
+      }
+    }
+    
+    // Produção ou quando servido via nginx/Apache: usa URL relativa com prefixo (/r-agent2/ws)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsPath = `${basePath}/ws`.replace('//', '/');
+    return `${protocol}//${window.location.host}${wsPath}`;
   }, []);
 
   // Envia mensagem via WebSocket
@@ -187,7 +223,8 @@ export function WebSocketProvider({ children }) {
             logger.error('[WebSocketContext] Erro ao enviar autenticação', err);
           }
         } else {
-          logger.warn('[WebSocketContext] Sem token para autenticação');
+          // Usa debug ao invés de warn - é esperado não ter token antes do login
+          logger.debug('[WebSocketContext] Sem token para autenticação (usuário não autenticado ainda)');
         }
 
         // Inicia ping/pong

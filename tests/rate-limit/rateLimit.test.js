@@ -9,7 +9,7 @@
  */
 
 const { getPolicy, getScrapingDomainPolicy } = require('../../infra/rate-limit/policies');
-const { checkRateLimit, enforceRateLimit, createRateLimitError } = require('../../infra/rate-limit');
+const { checkRateLimit, enforceRateLimit, createRateLimitError, clearLimitersCache } = require('../../infra/rate-limit');
 const { checkScrapingRateLimit, enforceScrapingRateLimit } = require('../../infra/rate-limit/scraping');
 const { getRateLimitClient, isRedisAvailable, closeRateLimitClient } = require('../../infra/redis/rateLimitClient');
 const config = require('../../api/utils/config');
@@ -75,6 +75,11 @@ describe('Rate Limiting', () => {
   });
 
   describe('Rate Limiting Engine', () => {
+    beforeEach(() => {
+      // Limpa cache de limiters antes de cada teste para garantir isolamento
+      clearLimitersCache();
+    });
+
     test('deve criar erro padronizado de rate limit', () => {
       const error = createRateLimitError(120);
       expect(error.code).toBe('RATE_LIMIT_EXCEEDED');
@@ -102,64 +107,66 @@ describe('Rate Limiting', () => {
     }, 10000);
 
     test('deve bloquear quando excede rate limit', async () => {
+      // Limpa cache antes do teste
+      clearLimitersCache();
+      
       const userId = `test-user-limit-${Date.now()}-${Math.random()}`;
-      const operationType = 'BOOTSTRAP'; // Apenas 1 ponto
+      const operationType = 'BOOTSTRAP';
+      
+      // Verifica a política
+      const policy = getPolicy(operationType);
+      expect(policy).toBeDefined();
+      const maxPoints = policy.points;
 
-      // Primeira execução deve passar (ou pode já estar bloqueada se limite for 0)
-      const firstResult = await checkRateLimit({
+      // Consome todos os pontos disponíveis
+      for (let i = 0; i < maxPoints; i++) {
+        const result = await checkRateLimit({
+          userId,
+          operationType,
+        });
+        expect(result.allowed).toBe(true);
+      }
+
+      // Agora que todos os pontos foram consumidos, a próxima execução deve bloquear
+      const blockedResult = await checkRateLimit({
         userId,
         operationType,
       });
       
-      // Se a primeira passou, a segunda deve bloquear
-      if (firstResult.allowed) {
-        const secondResult = await checkRateLimit({
-          userId,
-          operationType,
-        });
-        expect(secondResult.allowed).toBe(false);
-        expect(secondResult.retryAfter).toBeDefined();
-        expect(secondResult.retryAfter).toBeGreaterThan(0);
-      } else {
-        // Se já foi bloqueada na primeira, está funcionando corretamente
-        expect(firstResult.retryAfter).toBeDefined();
-      }
+      expect(blockedResult.allowed).toBe(false);
+      expect(blockedResult.retryAfter).toBeDefined();
+      expect(blockedResult.retryAfter).toBeGreaterThan(0);
     }, 15000);
 
     test('deve lançar erro ao aplicar rate limit excedido', async () => {
+      // Limpa cache antes do teste
+      clearLimitersCache();
+      
       const userId = `test-user-enforce-${Date.now()}-${Math.random()}`;
       const operationType = 'BOOTSTRAP';
 
-      // Verifica se Redis está disponível primeiro
-      const redisAvailable = await isRedisAvailable();
-      if (!redisAvailable) {
-        console.warn('Redis não disponível, pulando teste de enforce');
-        return;
-      }
+      // Verifica a política
+      const policy = getPolicy(operationType);
+      expect(policy).toBeDefined();
+      const maxPoints = policy.points;
 
-      try {
-        // Primeira execução deve passar
-        await enforceRateLimit({
+      // Consome todos os pontos disponíveis
+      for (let i = 0; i < maxPoints; i++) {
+        const result = await enforceRateLimit({
           userId,
           operationType,
         });
-
-        // Segunda execução deve lançar erro
-        await expect(
-          enforceRateLimit({
-            userId,
-            operationType,
-          })
-        ).rejects.toThrow('RATE_LIMIT_EXCEEDED');
-      } catch (error) {
-        // Se a primeira já falhou, está funcionando (limite muito restritivo)
-        if (error.code === 'RATE_LIMIT_EXCEEDED') {
-          expect(error.retryAfter).toBeDefined();
-        } else {
-          throw error;
-        }
+        expect(result.allowed).toBe(true);
       }
-    }, 10000);
+
+      // Agora que todos os pontos foram consumidos, a próxima execução deve lançar erro
+      await expect(
+        enforceRateLimit({
+          userId,
+          operationType,
+        })
+      ).rejects.toThrow('RATE_LIMIT_EXCEEDED');
+    }, 15000);
   });
 
   describe('Scraping Rate Limiting', () => {

@@ -127,10 +127,10 @@ function createInitialState(flow, sessionId, from) {
  *
  * @param {any} message - Objeto de mensagem do webhook do WhatsApp (value.messages[i])
  * @param {any} value - Objeto "value" completo do webhook (contém metadata da conversation)
- * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]> }} deps
+ * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void }} deps
  */
 async function processWhatsAppMessage(message, value, deps) {
-  const { flows, sessionEvents } = deps;
+  const { flows, sessionEvents, saveSessionEvents } = deps;
 
   const from = message.from; // número do usuário (ex.: "5511999999999")
   const text = message.text && message.text.body ? String(message.text.body) : '';
@@ -244,6 +244,15 @@ async function processWhatsAppMessage(message, value, deps) {
   // Guarda eventos para replay
   const existingEvents = sessionEvents.get(sessionId) || [];
   sessionEvents.set(sessionId, existingEvents.concat(result.events || []));
+  
+  // Salva conversas após adicionar eventos (se função de salvamento fornecida)
+  if (saveSessionEvents && typeof saveSessionEvents === 'function') {
+    try {
+      saveSessionEvents();
+    } catch (err) {
+      logger.error('[MessageProcessor] Erro ao salvar conversas:', err);
+    }
+  }
 
   // Verifica se a sessão está em atendimento humano (após execução)
   const isInHumanHandoff = result.state.metadata && result.state.metadata.status === 'waiting_human';

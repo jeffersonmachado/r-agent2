@@ -20,6 +20,7 @@
     "api/data/rag_audit.json",
     "api/data/rag_documents.json",
     "api/data/rag_prompts.json",
+    "api/data/rag_validation_rules.json",
     "api/data/sessions.json",
     "api/data/webhooks.json",
     "api/data/test/**/*.json"

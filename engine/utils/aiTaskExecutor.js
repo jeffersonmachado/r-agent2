@@ -30,15 +30,20 @@ const SUPPORTED_TASKS = {
  *
  * @param {string} input - Texto de entrada do usuário
  * @param {Object} config - Configuração do nó (allowedOutputs, fallback, confidenceThreshold, keywords)
+ * @param {Object} [context] - Contexto adicional (tenantContext com ramo_atividade para viés semântico)
  * @returns {Promise<{value: string, confidence: number}>}
  */
-async function executeIntentClassification(input, config) {
+async function executeIntentClassification(input, config, context = {}) {
   const text = String(input || '').toLowerCase().trim();
   const allowedOutputs = Array.isArray(config.allowedOutputs) ? config.allowedOutputs : [];
   const fallback = config.fallback || 'desconhecido';
   const confidenceThreshold = typeof config.confidenceThreshold === 'number' 
     ? config.confidenceThreshold 
     : 0.75;
+
+  // Obtém tenant_context se disponível (para usar ramo_atividade como viés semântico)
+  const tenantContext = context.tenantContext || null;
+  const ramoAtividade = tenantContext?.ramo_atividade || null;
 
   // Palavras-chave padrão (fallback se não configuradas)
   const defaultKeywordMap = {
@@ -82,6 +87,32 @@ async function executeIntentClassification(input, config) {
     }
   }
 
+  // Aplica viés semântico baseado no ramo_atividade (se disponível)
+  // O ramo_atividade atua como viés semântico fixo para classificação de intenção
+  // NÃO é tratado como conhecimento factual, apenas como contexto para desambiguação
+  let semanticBias = 0.0;
+  if (ramoAtividade) {
+    const ramoLower = ramoAtividade.toLowerCase();
+    // Aumenta confiança para intenções relacionadas ao ramo de atividade
+    // Exemplo: se ramo é "e-commerce", aumenta confiança para "comprar"
+    if (ramoLower.includes('e-commerce') || ramoLower.includes('varejo') || ramoLower.includes('venda')) {
+      // Bônus para intenções de compra em e-commerce
+      if (normalizedKeywords.comprar) {
+        semanticBias = 0.1; // Bônus de 10% para comprar
+      }
+    } else if (ramoLower.includes('saúde') || ramoLower.includes('clínica') || ramoLower.includes('médico')) {
+      // Bônus para intenções de agendamento em saúde
+      if (normalizedKeywords.agendar || normalizedKeywords.consulta) {
+        semanticBias = 0.1;
+      }
+    } else if (ramoLower.includes('tecnologia') || ramoLower.includes('software')) {
+      // Bônus para intenções de suporte em tecnologia
+      if (normalizedKeywords.suporte) {
+        semanticBias = 0.1;
+      }
+    }
+  }
+
   for (const [intent, keywords] of Object.entries(normalizedKeywords)) {
     // Verifica se a intenção está nas saídas permitidas (se allowedOutputs estiver definido)
     if (allowedOutputs.length > 0 && !allowedOutputs.includes(intent)) {
@@ -104,6 +135,11 @@ async function executeIntentClassification(input, config) {
           } else {
             confidence = Math.min(0.9, keyword.length / Math.max(text.length, 1));
           }
+        }
+        
+        // Aplica viés semântico se a intenção corresponde ao ramo de atividade
+        if (semanticBias > 0 && intent === bestMatch) {
+          confidence = Math.min(1.0, confidence + semanticBias);
         }
         
         if (confidence > bestConfidence) {
@@ -257,7 +293,7 @@ async function executeAssistedResponse(input, config, context) {
  * @param {string} task - Tipo de tarefa (intent_classification, entity_extraction, etc.)
  * @param {string} input - Input para a tarefa (geralmente texto)
  * @param {Object} config - Configuração do nó ai_task
- * @param {Object} [context] - Contexto adicional (variáveis, histórico)
+ * @param {Object} [context] - Contexto adicional (variáveis, histórico, tenantContext)
  * @returns {Promise<Object>} Resultado estruturado da tarefa
  */
 async function executeAiTask(task, input, config = {}, context = {}) {
@@ -273,7 +309,7 @@ async function executeAiTask(task, input, config = {}, context = {}) {
   // Executa a tarefa específica
   switch (task) {
     case SUPPORTED_TASKS.intent_classification:
-      return executeIntentClassification(input, config);
+      return executeIntentClassification(input, config, context);
 
     case SUPPORTED_TASKS.entity_extraction:
       return executeEntityExtraction(input, config);

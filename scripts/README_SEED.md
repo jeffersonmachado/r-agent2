@@ -30,6 +30,25 @@ node scripts/seed.js --help
 
 ## O que é criado
 
+### 🏢 Tenants (3)
+- **tenant-demo**: Tenant Demo (Tecnologia e Software)
+- **tenant-ecommerce**: E-commerce Store (E-commerce e Varejo Online)
+- **tenant-saude**: Clínica de Saúde (Saúde e Bem-estar)
+
+Cada tenant possui:
+- Site oficial (URL)
+- Ramo de atividade (descrição do segmento)
+- Objetivo estratégico
+- Contexto cognitivo (tenant_context) para RAG
+
+### 🧠 Tenant Contexts (3)
+Contextos cognitivos criados automaticamente para cada tenant:
+- Ramo de atividade
+- Objetivo estratégico
+- Site oficial
+- Prioridade: HIGH
+- Escopo: ["rag", "chatbot", "classificacao_intencao"]
+
 ### 👤 Agentes (4)
 - **admin** (admin@example.com) - Senha: `admin123`
 - **supervisor** (supervisor@example.com) - Senha: `supervisor123`
@@ -70,6 +89,8 @@ node scripts/seed.js --help
 - Webhook de notificações (exemplo)
 
 ### 📁 Arquivos Criados
+- `tenants.json` - Tenants/clientes do sistema
+- `tenant_contexts.json` - Contextos cognitivos dos tenants
 - `agents.json` - Agentes do sistema
 - `flows.json` - Fluxos de conversa
 - `queues.json` - Filas e tickets
@@ -103,9 +124,12 @@ node scripts/seed.js --help
 ## Notas
 
 - Por padrão, o seed **não sobrescreve** dados existentes. Use `--reset` para forçar.
-- Todos os dados são criados para o tenant `tenant-demo` por padrão.
+- **Tenants são criados sempre** (não dependem do parâmetro `--tenant`).
+- **Tenant contexts são criados automaticamente** para cada tenant.
+- Todos os **outros dados** (agentes, fluxos, etc.) são criados para o tenant especificado (padrão: `tenant-demo`).
 - As senhas são hasheadas usando SHA256 + salt.
 - Os IDs são gerados automaticamente com timestamp.
+- Os sites dos tenants são **automaticamente indexados** como fonte institucional canônica (se web scraping estiver disponível).
 
 ## Exemplos
 
@@ -121,6 +145,19 @@ node scripts/seed.js --tenant=tenant-novo
 
 ### Verificar dados criados
 ```bash
+# Listar todos os arquivos JSON
 ls -la api/data/*.json
+
+# Ver tenants criados
+cat api/data/tenants.json | jq
+
+# Ver tenant contexts
+cat api/data/tenant_contexts.json | jq
 ```
+
+## 📚 Documentação Adicional
+
+Para mais detalhes sobre tenants e contexto cognitivo, consulte:
+- [Como Usar o Seed de Tenants](../docs/SEED_TENANTS.md)
+- [Tenant Context e Integração com RAG](../docs/TENANT_CONTEXT_RAG.md)
 

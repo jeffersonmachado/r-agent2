@@ -21,7 +21,7 @@ export function SystemStatusPage() {
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(5000); // 5 segundos
+  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 segundos
 
   // Função para buscar status
   const fetchStatus = async () => {
@@ -36,9 +36,94 @@ export function SystemStatusPage() {
       logger.debug('[SystemStatus] Status atualizado', data);
     } catch (err) {
       logger.error('[SystemStatus] Erro ao buscar status', err);
-      const errorMessage = err.message || 'Erro ao buscar status dos serviços';
-      setError(errorMessage);
-      showToast(errorMessage, 'error');
+      
+      // Se a API não está respondendo, cria um status de erro
+      const errName = err.name || '';
+      const errMessage = err.message || '';
+      const errString = `${errName} ${errMessage}`.toLowerCase();
+      
+      // Verifica se é erro de conexão (flag adicionada pelo client.js)
+      const isConnectionRefused = err.connectionRefused === true;
+      
+      const isTimeout = errName === 'AbortError' || 
+                       errString.includes('timeout') || 
+                       errString.includes('aborted') ||
+                       errString.includes('signal is aborted');
+      const isConnectionError = isConnectionRefused ||
+                               errString.includes('failed to fetch') ||
+                               errString.includes('networkerror') ||
+                               errString.includes('econnrefused') ||
+                               errString.includes('network request failed') ||
+                               errString.includes('connection refused');
+      const isServiceUnavailable = err.status === 503;
+      
+      if (isTimeout || isConnectionError || isServiceUnavailable) {
+        // API não está respondendo - mostra status de erro com informações de portas
+        const errorStatus = {
+          timestamp: new Date().toISOString(),
+          services: {
+            apiServer: {
+              name: 'API Server',
+              description: 'Servidor principal da API (Node.js)',
+              status: 'unhealthy',
+              error: err.status === 503 ? 'Serviço temporariamente indisponível (503)' : 'API não está respondendo',
+              details: {
+                port: 3000,
+                errorType: isTimeout ? 'timeout' : err.status === 503 ? 'service_unavailable' : 'connection_error',
+                httpStatus: err.status || null,
+                hint: 'A API pode estar parada ou indisponível. Verifique se o servidor está rodando na porta 3000.',
+              },
+            },
+            ragService: {
+              name: 'RAG Service',
+              description: 'Serviço de Retrieval-Augmented Generation (Python/FastAPI)',
+              status: 'unknown',
+              error: 'Não foi possível verificar - API indisponível',
+              details: {
+                port: 8000,
+                hint: 'Não é possível verificar o status do RAG Service enquanto a API estiver indisponível. Porta padrão: 8000.',
+              },
+            },
+            redis: {
+              name: 'Redis',
+              description: 'Cache e rate limiting',
+              status: 'unknown',
+              error: 'Não foi possível verificar - API indisponível',
+              details: {
+                port: 6379,
+                hint: 'Não é possível verificar o status do Redis enquanto a API estiver indisponível. Porta padrão: 6379.',
+              },
+            },
+            webSocket: {
+              name: 'WebSocket',
+              description: 'Conexões em tempo real',
+              status: 'unknown',
+              error: 'Não foi possível verificar - API indisponível',
+              details: {
+                port: 'Mesma porta da API (3000)',
+                hint: 'Não é possível verificar o status do WebSocket enquanto a API estiver indisponível. Usa a mesma porta da API.',
+              },
+            },
+          },
+          overall: {
+            status: 'unhealthy',
+            healthy: 0,
+            total: 4,
+            percentage: 0,
+          },
+        };
+        
+        setStatus(errorStatus);
+        setLastUpdate(new Date());
+        const errorMessage = 'API não está respondendo. Não é possível verificar o status dos serviços.';
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
+      } else {
+        // Outro tipo de erro
+        const errorMessage = err.message || 'Erro ao buscar status dos serviços';
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -69,6 +154,8 @@ export function SystemStatusPage() {
         return 'text-status-warning bg-status-warning/10 border-status-warning/30';
       case 'unhealthy':
         return 'text-status-error bg-status-error/10 border-status-error/30';
+      case 'unknown':
+        return 'text-text-secondary bg-bg-secondary border-border-default';
       default:
         return 'text-text-secondary bg-bg-secondary border-border-default';
     }
@@ -83,6 +170,8 @@ export function SystemStatusPage() {
         return '⚠';
       case 'unhealthy':
         return '✗';
+      case 'unknown':
+        return '?';
       default:
         return '?';
     }

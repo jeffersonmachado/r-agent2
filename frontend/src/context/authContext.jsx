@@ -56,9 +56,25 @@ export function AuthProvider({ children }) {
         logger.debug('Servidor não acessível ao carregar agente (pode estar iniciando)', err);
         // Não remove o token - pode ser apenas uma falha temporária
       } else {
-        // Para outros erros (401, 403, etc), remove o token
-        logger.warn('Erro ao carregar agente autenticado', err);
-        authApi.removeToken();
+        // Para outros erros (401, 403, etc)
+        // Se for 401 e não houver token, é esperado (página carregada sem autenticação)
+        const status = err.status || err.body?.status;
+        const hasToken = authApi.getToken();
+        
+        if (status === 401 && !hasToken) {
+          // Erro 401 sem token é esperado - usuário ainda não fez login
+          logger.debug('Não autenticado (esperado se não houver token)');
+        } else if (status === 401 && hasToken) {
+          // Erro 401 com token significa que a sessão expirou ou é inválida
+          logger.warn('Sessão inválida ou expirada', err);
+          authApi.removeToken();
+        } else {
+          // Outros erros (403, 500, etc)
+          logger.warn('Erro ao carregar agente autenticado', err);
+          if (status === 403) {
+            authApi.removeToken();
+          }
+        }
       }
       
       setAgent(null);
@@ -75,8 +91,20 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (username, password) => {
     try {
       const result = await authApi.login(username, password);
+      // Garante que o token foi salvo antes de definir o estado
+      // O authApi.login já salva o token, mas vamos garantir que está disponível
+      const token = authApi.getToken();
+      if (!token && result.token) {
+        // Se por algum motivo o token não foi salvo, salva agora
+        authApi.setToken(result.token);
+      }
+      
+      // Define o agente e estado de autenticação diretamente do resultado do login
+      // Não precisamos recarregar do servidor, pois já temos os dados
       setAgent(result.agent);
       setIsAuthenticated(true);
+      setLoading(false);
+      
       return result;
     } catch (err) {
       logger.error('Erro ao fazer login', err);

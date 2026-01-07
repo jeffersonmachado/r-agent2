@@ -1,0 +1,25 @@
+{
+  "contractVersion": "1.0.0",
+  "rag": {
+    "enabledByDefault": false,
+    "requiresExecutionId": true,
+    "chunking": {
+      "maxTokens": 512,
+      "overlap": 64,
+      "strategyByCategory": {
+        "tabelas_preco": "table-aware",
+        "imagens": "ocr+caption",
+        "default": "semantic"
+      }
+    },
+    "embedding": {
+      "model": "text-embedding-3-large",
+      "version": "v1"
+    },
+    "grounding": {
+      "mandatoryWhenEnabled": true,
+      "minChunks": 3
+    }
+  }
+}
+

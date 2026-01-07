@@ -20,6 +20,7 @@ const logger = require('../utils/logger');
  * @property {boolean} payloadValid - Payload validado
  * @property {boolean} contractValid - Contrato validado
  * @property {boolean} contextBuilt - Contexto montado
+ * @property {boolean} ragContextBuilt - Contexto RAG construído (obrigatório quando useRag=true)
  * @property {boolean} aiExecuted - IA executada
  * @property {boolean} flowGenerated - Fluxo gerado
  * @property {boolean} seedGenerated - Seed gerado
@@ -30,12 +31,15 @@ const logger = require('../utils/logger');
 /**
  * @typedef {Object} PipelineExecution
  * @property {string} executionId - ID único da execução
- * @property {"idle" | "running" | "approved" | "failed"} status - Status da execução
+ * @property {"idle" | "running" | "abstained" | "approved" | "failed"} status - Status da execução
  * @property {PipelineStages} stages - Estados das etapas
  * @property {Object} payload - Payload original
  * @property {Object} options - Opções da execução
  * @property {number} createdAt - Timestamp de criação
  * @property {number} updatedAt - Timestamp da última atualização
+ * @property {Object} [abstentionReason] - Motivo formal da abstenção (se status=abstained)
+ * @property {Object} [decisionAuthority] - Autoridade que tomou a decisão
+ * @property {Object} [evidenceContext] - Contexto de evidência usado na decisão
  */
 
 /**
@@ -57,6 +61,7 @@ function createExecutionContext(payload, options = {}) {
       payloadValid: false,
       contractValid: false,
       contextBuilt: false,
+      ragContextBuilt: false,
       aiExecuted: false,
       flowGenerated: false,
       seedGenerated: false,
@@ -67,6 +72,11 @@ function createExecutionContext(payload, options = {}) {
     options,
     createdAt: now,
     updatedAt: now,
+    // Autoridade de decisão inicial (sistema é autoridade padrão)
+    decisionAuthority: {
+      type: 'system',
+      approvedBy: 'pipelineExecutionContext',
+    },
   };
 
   logger.info('[PipelineContext] Contexto criado', {
@@ -127,17 +137,34 @@ function updateStage(execution, stage, value) {
  * Atualiza o status geral da execução.
  * 
  * @param {PipelineExecution} execution - Contexto da execução
- * @param {"idle" | "running" | "approved" | "failed"} status - Novo status
+ * @param {"idle" | "running" | "abstained" | "approved" | "failed"} status - Novo status
+ * @param {Object} [metadata] - Metadados adicionais (abstentionReason, decisionAuthority, etc)
  */
-function updateStatus(execution, status) {
+function updateStatus(execution, status, metadata = {}) {
   const previousStatus = execution.status;
   execution.status = status;
   execution.updatedAt = Date.now();
+
+  // Armazena metadados de abstenção se aplicável
+  if (status === 'abstained' && metadata.abstentionReason) {
+    execution.abstentionReason = metadata.abstentionReason;
+  }
+
+  // Armazena autoridade de decisão se fornecida
+  if (metadata.decisionAuthority) {
+    execution.decisionAuthority = metadata.decisionAuthority;
+  }
+
+  // Armazena contexto de evidência se fornecido
+  if (metadata.evidenceContext) {
+    execution.evidenceContext = metadata.evidenceContext;
+  }
 
   logger.info('[PipelineContext] Status atualizado', {
     executionId: execution.executionId,
     previousStatus,
     newStatus: status,
+    ...(status === 'abstained' && metadata.abstentionReason ? { reason: metadata.abstentionReason.code } : {}),
   });
 }
 
@@ -164,6 +191,7 @@ function getNextPendingStage(execution) {
     'payloadValid',
     'contractValid',
     'contextBuilt',
+    'ragContextBuilt',
     'aiExecuted',
     'flowGenerated',
     'seedGenerated',

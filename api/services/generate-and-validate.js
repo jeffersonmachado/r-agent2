@@ -396,6 +396,43 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
 
     // Se chegou aqui, todas as etapas foram concluídas
     if (execution.status === 'approved') {
+      // BLOCO 4.5: Validação obrigatória de RAG
+      const useRag = execution.payload?.useRag !== false;
+      if (useRag) {
+        logger.info(`[Pipeline][${execution.executionId}] BLOCO 4.5: Validando uso de RAG no gate obrigatório`);
+        const { validateRagExecution } = require('../../qa/ragRuntimeQA');
+        try {
+          const ragValidation = validateRagExecution(execution, execution.generationResult);
+          if (!ragValidation.valid) {
+            const errorMsg = `Validação RAG falhou: ${ragValidation.errors.join('; ')}`;
+            logger.error(`[Pipeline][${execution.executionId}] BLOCO 4.5: Gate de RAG bloqueou execução`, {
+              errors: ragValidation.errors,
+              warnings: ragValidation.warnings,
+            });
+            result.errors.push(...ragValidation.errors);
+            if (ragValidation.warnings.length > 0) {
+              result.warnings = result.warnings || [];
+              result.warnings.push(...ragValidation.warnings);
+            }
+            result.motivo = 'Validação RAG falhou - execução não pode ser aprovada sem grounding válido';
+            
+            updateStatus(execution, 'failed');
+            return result;
+          }
+          logger.info(`[Pipeline][${execution.executionId}] BLOCO 4.5: Validação RAG passou no gate`, {
+            warnings: ragValidation.warnings,
+          });
+        } catch (ragError) {
+          logger.error(`[Pipeline][${execution.executionId}] BLOCO 4.5: Erro na validação RAG`, {
+            error: ragError.message,
+          });
+          result.errors.push(`Erro na validação RAG: ${ragError.message}`);
+          result.motivo = 'Erro na validação RAG';
+          updateStatus(execution, 'failed');
+          return result;
+        }
+      }
+      
       // BLOCO 5: Validação obrigatória do fluxo gerado
       if (execution.flow) {
         // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA

@@ -136,10 +136,13 @@ export function reindexDocument(documentId) {
  * Reindexa todos os documentos não indexados.
  * 
  * @param {string} [tenantId] - ID do tenant (opcional)
+ * @param {boolean} [includeInconsistent=false] - Se true, também reindexa documentos marcados como indexados mas que podem não estar no vector store
  * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
  */
-export function reindexAllNotIndexed(tenantId = null) {
-  const body = tenantId ? { tenantId } : {};
+export function reindexAllNotIndexed(tenantId = null, includeInconsistent = false) {
+  const body = {};
+  if (tenantId) body.tenantId = tenantId;
+  if (includeInconsistent) body.includeInconsistent = true;
   
   return fetchJson('/rag/documents/reindex-all', {
     method: 'POST',
@@ -197,6 +200,160 @@ export function queryRag(query, tenantId = null, options = {}) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Obtém a configuração de domínios RAG para um tenant.
+ * 
+ * @param {string} [tenantId] - ID do tenant (opcional)
+ * @returns {Promise<Object>} Configuração de domínios
+ */
+export function getRagDomains(tenantId = null) {
+  const params = new URLSearchParams();
+  if (tenantId) params.append('tenantId', tenantId);
+
+  const query = params.toString();
+  const url = `/rag/domains${query ? `?${query}` : ''}`;
+
+  return fetchJson(url, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Atualiza sinônimos aprendidos baseado em documentos.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @param {Array} documents - Lista de documentos
+ * @returns {Promise<Object>} Resultado da atualização
+ */
+export function updateSynonymsFromDocuments(tenantId, documents) {
+  if (!tenantId) {
+    return Promise.reject(new Error('updateSynonymsFromDocuments: tenantId é obrigatório'));
+  }
+
+  return fetchJson('/rag/learning/update-synonyms', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      documents: documents.map(doc => ({
+        id: doc.id,
+        title: doc.title || '',
+        content: doc.content || '',
+        metadata: doc.metadata || {},
+      })),
+    }),
+  });
+}
+
+/**
+ * Obtém métricas de aprendizado para um tenant.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @returns {Promise<Object>} Métricas de aprendizado
+ */
+export function getLearningMetrics(tenantId) {
+  if (!tenantId) {
+    return Promise.reject(new Error('getLearningMetrics: tenantId é obrigatório'));
+  }
+
+  return fetchJson(`/rag/learning/metrics/${tenantId}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Dispara processo de aprendizado completo para um tenant.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @returns {Promise<Object>} Resultado do aprendizado
+ */
+export function triggerLearning(tenantId) {
+  if (!tenantId) {
+    return Promise.reject(new Error('triggerLearning: tenantId é obrigatório'));
+  }
+
+  return fetchJson(`/rag/learning/trigger-learning/${tenantId}`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Obtém todos os dados de aprendizado para um tenant.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @returns {Promise<Object>} Dados completos de aprendizado
+ */
+export function getFullLearningData(tenantId) {
+  if (!tenantId) {
+    return Promise.reject(new Error('getFullLearningData: tenantId é obrigatório'));
+  }
+
+  return fetchJson(`/rag/learning/full-data/${tenantId}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Atualiza sinônimos de um termo específico.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @param {string} term - Termo principal
+ * @param {Array<string>} synonyms - Lista de sinônimos
+ * @returns {Promise<Object>} Resultado da atualização
+ */
+export function updateSynonym(tenantId, term, synonyms) {
+  if (!tenantId || !term) {
+    return Promise.reject(new Error('updateSynonym: tenantId e term são obrigatórios'));
+  }
+
+  return fetchJson('/rag/learning/synonyms', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      term,
+      synonyms: Array.isArray(synonyms) ? synonyms : [synonyms],
+    }),
+  });
+}
+
+/**
+ * Remove um sinônimo específico.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @param {string} term - Termo a remover
+ * @returns {Promise<Object>} Resultado da remoção
+ */
+export function deleteSynonym(tenantId, term) {
+  if (!tenantId || !term) {
+    return Promise.reject(new Error('deleteSynonym: tenantId e term são obrigatórios'));
+  }
+
+  return fetchJson(`/rag/learning/synonyms/${tenantId}/${encodeURIComponent(term)}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Remove queries inválidas do histórico de aprendizado.
+ * 
+ * @param {string} tenantId - ID do tenant
+ * @returns {Promise<Object>} Resultado da limpeza
+ */
+export function cleanInvalidQueries(tenantId) {
+  if (!tenantId) {
+    return Promise.reject(new Error('cleanInvalidQueries: tenantId é obrigatório'));
+  }
+
+  return fetchJson(`/rag/learning/clean-invalid-queries/${tenantId}`, {
+    method: 'POST',
   });
 }
 

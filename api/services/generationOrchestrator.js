@@ -56,6 +56,26 @@ function loadGenerationContract() {
 }
 
 /**
+ * Carrega o contrato RAG.
+ * 
+ * @returns {Object|null} Contrato RAG ou null
+ */
+function loadRagContract() {
+  try {
+    const contractPath = path.join(__dirname, '..', '..', 'contracts', 'rag.contract.json');
+    if (!fs.existsSync(contractPath)) {
+      logger.warn('[orchestrateGeneration] Contrato RAG não encontrado');
+      return null;
+    }
+    const content = fs.readFileSync(contractPath, 'utf8');
+    return JSON.parse(content);
+  } catch (err) {
+    logger.error('[orchestrateGeneration] Erro ao carregar contrato RAG', err);
+    return null;
+  }
+}
+
+/**
  * Resolve contexto de conhecimento (RAG e Scraping).
  * 
  * @param {string} description - Descrição do fluxo
@@ -318,7 +338,7 @@ function removeFlowFromFile(flowId) {
 async function executeAndValidateRpa(rpaTest, options = {}) {
   try {
     // Normaliza URLs no teste antes de converter (garante que ações navigate tenham URL)
-    const { normalizeRpaTestUrls } = require('../../tests/rpa/utils/urlNormalizer');
+    const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
     normalizeRpaTestUrls(rpaTest);
     
     // Converte teste em gravação
@@ -523,14 +543,44 @@ async function orchestrateGeneration(payload, options = {}) {
 
     // Passo 3: Gera fluxo usando IA
     logger.info('Gerando fluxo por IA', { descriptionLength: payload.description.length });
-    const flow = await generateFlowFromDescription(payload.description, {
+    
+    // Prepara opções com contexto RAG do pipeline (se disponível)
+    const generationOptions = {
       tenantId,
       flowName: payload.name,
       useRag: payload.useRag,
       ragSources: payload.ragSources,
       useWebScraping: payload.useWebScraping,
       scrapingTargets: payload.scrapingTargets,
-    });
+    };
+    
+    // Se contexto RAG foi fornecido pelo pipeline, usa ele (obrigatório quando useRag=true)
+    if (payload.ragContext && payload.ragContext.enabled) {
+      generationOptions.ragContext = {
+        enabled: true,
+        executionId: payload.ragContext.executionId || options.executionId || null,
+        chunks: payload.ragContext.chunks || [],
+        sources: payload.ragContext.sources || [],
+      };
+      
+      logger.info('[orchestrateGeneration] Usando contexto RAG do pipeline', {
+        executionId: generationOptions.ragContext.executionId,
+        chunksCount: generationOptions.ragContext.chunks.length,
+        sourcesCount: generationOptions.ragContext.sources.length,
+      });
+      
+      // Validação obrigatória: se useRag=true, deve ter chunks suficientes
+      const contract = loadRagContract();
+      const minChunks = contract?.rag?.grounding?.minChunks || 3;
+      if (generationOptions.ragContext.chunks.length < minChunks) {
+        throw new Error(`Contexto RAG do pipeline tem apenas ${generationOptions.ragContext.chunks.length} chunks, mínimo requerido: ${minChunks}`);
+      }
+    } else if (payload.useRag) {
+      // Se useRag=true mas não há contexto RAG, isso é um erro
+      throw new Error('useRag=true mas contexto RAG não foi fornecido pelo pipeline. Etapa ragContextBuilt deve ser concluída antes.');
+    }
+    
+    const flow = await generateFlowFromDescription(payload.description, generationOptions);
 
     // Valida fluxo gerado
     const flowValidation = validateFlow(flow);
@@ -660,6 +710,24 @@ async function orchestrateGeneration(payload, options = {}) {
       duration,
     });
 
+    // Prepara informações de RAG para o resultado (obrigatório quando useRag=true)
+    const ragInfo = {
+      used: false,
+      executionId: null,
+      sources: [],
+    };
+    
+    if (payload.useRag && payload.ragContext && payload.ragContext.enabled) {
+      ragInfo.used = true;
+      ragInfo.executionId = payload.ragContext.executionId || options.executionId || null;
+      ragInfo.sources = payload.ragContext.sources.map(s => s.documentId || s);
+      
+      logger.info('[orchestrateGeneration] RAG utilizado na geração', {
+        executionId: ragInfo.executionId,
+        sourcesCount: ragInfo.sources.length,
+      });
+    }
+
     return {
       success: true,
       flowDefinition: flow,
@@ -673,6 +741,10 @@ async function orchestrateGeneration(payload, options = {}) {
         bootstrap: bootstrapValidation || null,
       },
       bootstrap: payload.bootstrap || false,
+      // Informações de RAG (obrigatórias quando useRag=true)
+      ragUsed: ragInfo.used,
+      ragExecutionId: ragInfo.executionId,
+      ragSources: ragInfo.sources,
     };
   } catch (err) {
     logger.error('Erro na orquestração de geração', {
