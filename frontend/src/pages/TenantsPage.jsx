@@ -9,6 +9,7 @@ import * as tenantsApi from '../api/tenants';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { PlanSelectionModal } from '../components/PlanSelectionModal';
 import logger from '../utils/logger';
 
 export function TenantsPage() {
@@ -28,8 +29,10 @@ export function TenantsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showContextForm, setShowContextForm] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState(null);
   const [editingContextTenantId, setEditingContextTenantId] = useState(null);
+  const [planChangeTenant, setPlanChangeTenant] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     site: '',
@@ -51,7 +54,10 @@ export function TenantsPage() {
     plan: '',
   });
 
-  const canManageTenants = currentAgent?.role === 'admin';
+  // Apenas super-admin (role super_admin OU owner do tenant system) pode gerenciar tenants
+  const isSuperAdmin = currentAgent?.role === 'super_admin' || 
+                       (currentAgent?.role === 'owner' && currentAgent?.tenantId === 'system');
+  const canManageTenants = isSuperAdmin;
 
   useEffect(() => {
     if (isAuthenticated && canManageTenants) {
@@ -249,7 +255,7 @@ export function TenantsPage() {
         </div>
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 text-center">
           <p className="text-text-secondary">
-            Você não tem permissão para gerenciar tenants. Apenas administradores podem acessar esta página.
+            Você não tem permissão para gerenciar tenants. Apenas super-admins podem acessar esta página.
           </p>
         </div>
       </div>
@@ -722,18 +728,9 @@ export function TenantsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={async () => {
-                          // TODO: Abrir modal para mudar plano
-                          const newPlan = prompt(`Mudar plano de "${tenant.name}"\n\nPlanos: free, trial, pro, enterprise\n\nNovo plano:`, tenant.plan || 'trial');
-                          if (newPlan && ['free', 'trial', 'pro', 'enterprise'].includes(newPlan)) {
-                            try {
-                              await tenantsApi.changeTenantPlan(tenant.id, newPlan);
-                              showToast('Plano alterado com sucesso', 'success');
-                              await loadTenants();
-                            } catch (err) {
-                              showToast(err.body?.message || 'Erro ao mudar plano', 'error');
-                            }
-                          }
+                        onClick={() => {
+                          setPlanChangeTenant(tenant);
+                          setShowPlanModal(true);
                         }}
                       >
                         Plano
@@ -759,6 +756,31 @@ export function TenantsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Seleção de Plano */}
+      {showPlanModal && planChangeTenant && (
+        <PlanSelectionModal
+          isOpen={showPlanModal}
+          onClose={() => {
+            setShowPlanModal(false);
+            setPlanChangeTenant(null);
+          }}
+          currentPlan={planChangeTenant.plan || 'trial'}
+          tenantName={planChangeTenant.name}
+          onSelectPlan={async (newPlan) => {
+            try {
+              await tenantsApi.changeTenantPlan(planChangeTenant.id, newPlan);
+              showToast('Plano alterado com sucesso', 'success');
+              await loadTenants();
+            } catch (err) {
+              const errorMessage = err.body?.message || err.message || 'Erro ao alterar plano';
+              showToast(errorMessage, 'error');
+              logger.error('Erro ao alterar plano', err);
+              throw err;
+            }
+          }}
+        />
+      )}
 
       <ToastContainer />
       <ConfirmDialog />

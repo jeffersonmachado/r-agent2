@@ -9,6 +9,7 @@ import * as superAdminApi from '../api/superAdmin';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { PlanSelectionModal } from '../components/PlanSelectionModal';
 import logger from '../utils/logger';
 
 export function SuperAdminPage() {
@@ -21,6 +22,8 @@ export function SuperAdminPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [metrics, setMetrics] = useState(null);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [planChangeTenant, setPlanChangeTenant] = useState(null);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -97,17 +100,9 @@ export function SuperAdminPage() {
     }
   };
 
-  const handleAdjustPlan = async (tenant) => {
-    const newPlan = prompt(`Ajustar plano de "${tenant.name}"\n\nPlanos: free, trial, pro, enterprise\n\nNovo plano:`, tenant.plan || 'trial');
-    if (newPlan && ['free', 'trial', 'pro', 'enterprise'].includes(newPlan)) {
-      try {
-        await superAdminApi.adjustTenantPlan(tenant.id, newPlan);
-        showToast('Plano ajustado com sucesso', 'success');
-        await loadTenants();
-      } catch (err) {
-        showToast(err.body?.message || 'Erro ao ajustar plano', 'error');
-      }
-    }
+  const handleAdjustPlan = (tenant) => {
+    setPlanChangeTenant(tenant);
+    setShowPlanModal(true);
   };
 
   const handleImpersonate = async (tenant) => {
@@ -337,6 +332,31 @@ export function SuperAdminPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Modal de Seleção de Plano */}
+      {showPlanModal && planChangeTenant && (
+        <PlanSelectionModal
+          isOpen={showPlanModal}
+          onClose={() => {
+            setShowPlanModal(false);
+            setPlanChangeTenant(null);
+          }}
+          currentPlan={planChangeTenant.plan || 'trial'}
+          tenantName={planChangeTenant.name}
+          onSelectPlan={async (newPlan) => {
+            try {
+              await superAdminApi.adjustTenantPlan(planChangeTenant.id, newPlan);
+              showToast('Plano ajustado com sucesso', 'success');
+              await loadTenants();
+            } catch (err) {
+              const errorMessage = err.body?.message || err.message || 'Erro ao ajustar plano';
+              showToast(errorMessage, 'error');
+              logger.error('Erro ao ajustar plano', err);
+              throw err;
+            }
+          }}
+        />
       )}
 
       <ToastContainer />
