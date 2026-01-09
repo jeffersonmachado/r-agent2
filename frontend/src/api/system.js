@@ -16,6 +16,18 @@ export function checkRateLimit(payload) {
     return Promise.reject(new Error('checkRateLimit: payload é obrigatório'));
   }
 
+  // Em desenvolvimento, rate limit é desativado
+  const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development';
+  if (isDevelopment) {
+    logger.debug('[RateLimit] Rate limit desativado em desenvolvimento');
+    return Promise.resolve({
+      allowed: true,
+      remainingPoints: 999999,
+      totalPoints: 999999,
+      retryAfter: 0,
+    });
+  }
+
   return fetchJson('/system/check-rate-limit', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -59,6 +71,45 @@ export function checkRateLimit(payload) {
  * @param {Function} onProgress - Callback para atualizar progresso do pipeline
  * @returns {Promise<any>}
  */
+/**
+ * Tenta fazer uma requisição com retry automático em caso de erro de conexão.
+ * Útil quando o servidor pode estar reiniciando (ex: nodemon).
+ */
+async function fetchWithRetry(path, init, maxRetries = 3, retryDelay = 1000) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fetchJson(path, init);
+    } catch (error) {
+      lastError = error;
+      
+      // Se não for erro de conexão, não tenta novamente
+      const isConnectionError = error.connectionRefused || 
+                                error.status === 0 || 
+                                error.message === 'Failed to fetch' ||
+                                error.message?.includes('ERR_CONNECTION_REFUSED');
+      
+      if (!isConnectionError || attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Log do retry
+      logger.warn(`Tentativa ${attempt}/${maxRetries} falhou, tentando novamente em ${retryDelay}ms...`, {
+        path,
+        error: error.message,
+        attempt,
+        maxRetries
+      });
+      
+      // Aguarda antes de tentar novamente (backoff exponencial)
+      await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+    }
+  }
+  
+  throw lastError;
+}
+
 export function generateAndValidate(payload, onProgress = null) {
   if (!payload || typeof payload !== 'object') {
     return Promise.reject(new Error('generateAndValidate: payload é obrigatório'));
@@ -85,7 +136,12 @@ export function generateAndValidate(payload, onProgress = null) {
     });
   }
 
-  return fetchJson('/system/generate-and-validate', {
+  // Em modo real, usa retry para lidar com reinicializações do servidor
+  const fetchFn = payload.executionMode === 'real' 
+    ? (path, init) => fetchWithRetry(path, init, 3, 2000) // 3 tentativas, 2s, 4s, 6s
+    : fetchJson;
+
+  return fetchFn('/system/generate-and-validate', {
     method: 'POST',
     body: JSON.stringify(payload),
     // Timeout aumentado para 180 segundos pois o processo completo pode demorar

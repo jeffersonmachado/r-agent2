@@ -10,6 +10,7 @@ import { uploadDocument } from '../api/ragDocuments';
 import { processFile } from '../utils/fileProcessor';
 import { fetchJson } from '../api/client';
 import { Dialog } from '../components/Dialog';
+import * as tenantsApi from '../api/tenants';
 import logger from '../utils/logger';
 
 /**
@@ -20,24 +21,42 @@ import logger from '../utils/logger';
  */
 export function GenerateSystemPage() {
   const { isAuthenticated, loading: authLoading, agent } = useAuth();
-  const { navigate } = useRouter();
+  const { navigate, currentPath } = useRouter();
   const { showToast, ToastContainer } = useToast();
+
+  // Detecta se está no modo de geração de tenant
+  const isTenantMode = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('mode') === 'tenant';
+  }, [currentPath]);
+
+  // Ajusta o comportamento quando está no modo tenant
+  useEffect(() => {
+    if (isTenantMode) {
+      // No modo tenant, ativa web scraping por padrão para obter informações do site
+      // Mas permite que o usuário configure tudo conforme necessário
+      if (!useWebScraping && scrapingTargets.length === 0) {
+        setUseWebScraping(true);
+      }
+    }
+  }, [isTenantMode]);
 
   // BLOCO 1 - Intenção do Usuário
   const [generateFlow, setGenerateFlow] = useState(false);
   const [generateRpa, setGenerateRpa] = useState(false);
   const [generateSeed, setGenerateSeed] = useState(false);
   const [executeFullValidation, setExecuteFullValidation] = useState(true);
-  const [bootstrap, setBootstrap] = useState(false);
+  const [bootstrap, setBootstrap] = useState(true);
 
   // BLOCO 2 - Fonte de Conhecimento da IA
-  const [useRag, setUseRag] = useState(false);
+  const [useRag, setUseRag] = useState(true);
   const [ragSources, setRagSources] = useState({
-    flows: false,
-    qa: false,
-    docs: false,
+    flows: true,
+    qa: true,
+    docs: true,
   });
-  const [useWebScraping, setUseWebScraping] = useState(false);
+  const [useWebScraping, setUseWebScraping] = useState(true);
   const [scrapingTargets, setScrapingTargets] = useState(['']);
   
   // Upload de arquivos para RAG
@@ -63,6 +82,7 @@ export function GenerateSystemPage() {
 
   // BLOCO 5 - Pipeline Visível
   const [pipelineStatus, setPipelineStatus] = useState({
+    descriptionSuggested: false,
     filesInferred: false,
     payloadValid: false,
     contractValid: false,
@@ -77,6 +97,7 @@ export function GenerateSystemPage() {
   
   // Estado detalhado do pipeline com timestamps e mensagens
   const [pipelineDetails, setPipelineDetails] = useState({
+    descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
     filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
     payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
     contractValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -113,38 +134,55 @@ export function GenerateSystemPage() {
     const timestamp = new Date().toISOString();
     logger.debug(`[Pipeline] Atualização recebida de ${source}`, { statusUpdate, timestamp });
     
+    // Prepara atualização de status simples (booleanos) baseado nos objetos de detalhes
+    const statusUpdateSimple = {};
+    const detailsUpdate = {};
+    
+    Object.keys(statusUpdate).forEach(key => {
+      const value = statusUpdate[key];
+      if (value === true) {
+        statusUpdateSimple[key] = true;
+        detailsUpdate[key] = {
+          status: 'completed',
+          timestamp: timestamp,
+          message: getStepMessage(key, 'completed'),
+          progress: 100,
+        };
+      } else if (value === false) {
+        statusUpdateSimple[key] = false;
+        detailsUpdate[key] = {
+          status: 'pending',
+          timestamp: null,
+          message: null,
+          progress: 0,
+        };
+      } else if (typeof value === 'object' && value !== null) {
+        // Se for um objeto com detalhes
+        const status = value.status || 'pending';
+        // Atualiza status simples: true apenas se completed, false caso contrário
+        statusUpdateSimple[key] = status === 'completed';
+        detailsUpdate[key] = {
+          status: status,
+          timestamp: value.timestamp || timestamp,
+          message: value.message || getStepMessage(key, status),
+          progress: value.progress !== undefined ? value.progress : (status === 'completed' ? 100 : 0),
+        };
+      }
+    });
+    
     // Atualiza status simples
-    setPipelineStatus(prev => ({ ...prev, ...statusUpdate }));
+    setPipelineStatus(prev => ({ ...prev, ...statusUpdateSimple }));
     
     // Atualiza detalhes com timestamps e mensagens
     setPipelineDetails(prev => {
       const updated = { ...prev };
-      Object.keys(statusUpdate).forEach(key => {
+      Object.keys(detailsUpdate).forEach(key => {
         if (updated[key]) {
-          const value = statusUpdate[key];
-          if (value === true) {
-            updated[key] = {
-              status: 'completed',
-              timestamp: timestamp,
-              message: getStepMessage(key, 'completed'),
-              progress: 100,
-            };
-            logger.info(`[Pipeline] Etapa ${key} concluída`, { timestamp, source });
-          } else if (value === false) {
-            updated[key] = {
-              status: 'pending',
-              timestamp: null,
-              message: null,
-              progress: 0,
-            };
-          } else if (typeof value === 'object' && value !== null) {
-            // Se for um objeto com detalhes
-            updated[key] = {
-              status: value.status || (value === true ? 'completed' : 'pending'),
-              timestamp: value.timestamp || timestamp,
-              message: value.message || getStepMessage(key, value.status || 'completed'),
-              progress: value.progress || (value === true ? 100 : 0),
-            };
+          updated[key] = detailsUpdate[key];
+          if (detailsUpdate[key].status === 'completed') {
+            logger.info(`[Pipeline] Etapa ${key} concluída`, { timestamp: detailsUpdate[key].timestamp, source });
+          } else if (detailsUpdate[key].status === 'error') {
+            logger.error(`[Pipeline] Etapa ${key} falhou`, { timestamp: detailsUpdate[key].timestamp, source, message: detailsUpdate[key].message });
           }
         }
       });
@@ -153,8 +191,19 @@ export function GenerateSystemPage() {
   };
   
   // Função auxiliar para obter mensagens de cada etapa
+  // Verifica se precisa sugerir descrição
+  const needsDescriptionSuggestion = useMemo(() => {
+    // Mostra a etapa de sugestão sempre no modo dry-run
+    return executionMode === 'dry-run';
+  }, [executionMode]);
+
   const getStepMessage = (step, status) => {
     const messages = {
+      descriptionSuggested: {
+        completed: 'Descrição sugerida pela IA',
+        in_progress: 'Sugerindo descrição com IA...',
+        error: 'Erro ao sugerir descrição',
+      },
       filesInferred: {
         completed: 'Arquivos processados e indexados no RAG',
         in_progress: 'Processando e indexando arquivos...',
@@ -240,6 +289,11 @@ export function GenerateSystemPage() {
       if (scrapingTargets.length === 0 || scrapingTargets[0] === '') {
         setScrapingTargets(['']);
       }
+    } else {
+      // Quando bootstrap não está ativo, todas as opções do BLOCO 2 devem estar marcadas
+      setUseRag(true);
+      setRagSources({ flows: true, qa: true, docs: true });
+      setUseWebScraping(true);
     }
   }, [bootstrap]);
 
@@ -283,12 +337,36 @@ export function GenerateSystemPage() {
 
   // Função para obter mensagem de erro de validação
   const getValidationError = useMemo(() => {
-    // Nome e descrição obrigatórios
+    // Nome obrigatório (tanto no modo tenant quanto normal)
     if (!name.trim() || name.trim().length < 3) {
       return 'O nome deve ter pelo menos 3 caracteres';
     }
-    if (!description.trim() || description.trim().length < 10) {
-      return 'A descrição deve ter pelo menos 10 caracteres';
+    
+    // No modo tenant, descrição é obrigatória apenas no modo execução real
+    if (isTenantMode) {
+      if (executionMode === 'real') {
+        // No modo real, descrição é obrigatória
+        if (!description || !description.trim()) {
+          return 'A descrição do tenant é obrigatória no modo execução real';
+        }
+        if (description.trim().length < 10) {
+          return `A descrição do tenant deve ter pelo menos 10 caracteres (atual: ${description.trim().length})`;
+        }
+      } else if (executionMode === 'dry-run' && description.trim() && description.trim().length < 10) {
+        // No dry-run, se preencheu mas está muito curta, avisa
+        return `A descrição do tenant deve ter pelo menos 10 caracteres (atual: ${description.trim().length})`;
+      }
+      // No dry-run, se estiver vazia, não é erro (será sugerida pela IA)
+    } else {
+      // Descrição obrigatória apenas no modo execução real (modo normal)
+      if (executionMode === 'real') {
+        if (!description.trim() || description.trim().length < 10) {
+          return 'A descrição deve ter pelo menos 10 caracteres (obrigatória no modo execução real)';
+        }
+      } else if (executionMode === 'dry-run' && description.trim() && description.trim().length < 10) {
+        // No dry-run, se preencheu mas está muito curta, avisa
+        return 'A descrição deve ter pelo menos 10 caracteres';
+      }
     }
 
     // Se bootstrap, precisa de scraping
@@ -334,7 +412,7 @@ export function GenerateSystemPage() {
     }
 
     return null;
-  }, [name, description, bootstrap, useRag, ragSources, useWebScraping, scrapingTargets, validationStatus]);
+  }, [isTenantMode, name, description, bootstrap, useRag, ragSources, useWebScraping, scrapingTargets, validationStatus, executionMode]);
 
   // Validação completa do formulário
   const isValid = useMemo(() => {
@@ -395,12 +473,699 @@ export function GenerateSystemPage() {
   const handleExecute = async () => {
     if (!isValid || executing) return;
 
+    // Se estiver no modo tenant, primeiro cria o tenant, depois gera artefatos se solicitado
+    if (isTenantMode) {
+      // Validação do nome (sempre obrigatório)
+      if (!name || !name.trim() || name.trim().length < 3) {
+        showToast('Por favor, preencha o nome do tenant (mínimo 3 caracteres)', 'error');
+        return;
+      }
+      // Validação da descrição (obrigatória apenas no modo real)
+      if (executionMode === 'real') {
+        if (!description || !description.trim() || description.trim().length < 10) {
+          showToast('Por favor, preencha a descrição do tenant (mínimo 10 caracteres) - obrigatória no modo execução real', 'error');
+          return;
+        }
+      } else if (description.trim() && description.trim().length < 10) {
+        // No dry-run, se preencheu mas está muito curta, avisa
+        showToast('A descrição do tenant deve ter pelo menos 10 caracteres', 'error');
+        return;
+      }
+      // No dry-run, se descrição estiver vazia, será sugerida pela IA
+
+      setExecuting(true);
+      setError(null);
+      setResult(null);
+      
+      // Reseta pipeline status
+      const resetStatus = {
+        descriptionSuggested: false,
+        filesInferred: false,
+        payloadValid: false,
+        contractValid: false,
+        contextBuilt: false,
+        aiExecuted: false,
+        flowGenerated: false,
+        seedGenerated: false,
+        rpaGenerated: false,
+        rpaExecuted: false,
+        approved: false,
+      };
+      setPipelineStatus(resetStatus);
+      
+      // Reseta pipeline details
+      setPipelineDetails({
+        descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        contractValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        contextBuilt: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        aiExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        flowGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        seedGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        rpaGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        rpaExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        approved: { status: 'pending', timestamp: null, message: null, progress: 0 },
+      });
+      
+      // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
+      if (executionMode === 'dry-run') {
+        // Se descrição está vazia, executa a sugestão
+        if (!description || !description.trim()) {
+          try {
+            // ETAPA 1: Processa web scraping ANTES de sugerir descrição (se houver URLs)
+            const validUrls = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
+            
+            if (useWebScraping && validUrls.length > 0) {
+              updatePipelineWithDetails({ 
+                filesInferred: { status: 'in_progress', progress: 0, message: `Processando web scraping de ${validUrls.length} URL(s)...` }
+              }, 'web-scraping');
+              
+              logger.info('[Pipeline] Processando web scraping antes de sugerir descrição', { 
+                urlsCount: validUrls.length,
+                urls: validUrls 
+              });
+              
+              try {
+                // Processa web scraping em batch
+                const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    urls: validUrls,
+                    autoIndex: true, // Indexa automaticamente no RAG
+                    source: 'web_scraping',
+                    category: 'general',
+                    tenantId: agent?.tenantId || 'tenant-demo',
+                  }),
+                });
+                
+                if (scrapingResponse && Array.isArray(scrapingResponse.results)) {
+                  const successCount = scrapingResponse.results.filter(r => r.success).length;
+                  logger.info('[Pipeline] Web scraping processado', { 
+                    total: validUrls.length,
+                    success: successCount,
+                    failed: validUrls.length - successCount
+                  });
+                  
+                  updatePipelineWithDetails({ 
+                    filesInferred: { 
+                      status: 'completed', 
+                      progress: 100, 
+                      message: `Web scraping concluído: ${successCount}/${validUrls.length} URL(s) processada(s) e indexadas`,
+                      timestamp: new Date().toISOString()
+                    }
+                  }, 'web-scraping');
+                  
+                  // Aguarda um pouco para garantir que o conteúdo foi indexado
+                  // Aumenta o tempo de espera para garantir que a indexação foi concluída
+                  logger.info('[Pipeline] Aguardando indexação completar...', { 
+                    waitTime: 2000 
+                  });
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                  logger.warn('[Pipeline] Resposta de web scraping inválida', scrapingResponse);
+                }
+              } catch (scrapingError) {
+                logger.error('[Pipeline] Erro ao processar web scraping', scrapingError);
+                updatePipelineWithDetails({ 
+                  filesInferred: { 
+                    status: 'error', 
+                    progress: 0, 
+                    message: 'Erro ao processar web scraping. Continuando sem conteúdo...',
+                    timestamp: new Date().toISOString()
+                  }
+                }, 'web-scraping-error');
+                // Continua mesmo se web scraping falhar
+              }
+            }
+            
+            // ETAPA 2: Sugere descrição usando conteúdo indexado (arquivos + web scraping)
+            updatePipelineWithDetails({ 
+              descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição com IA usando conteúdo indexado...' }
+            }, 'description-suggestion');
+            
+            // Chama API para sugerir descrição (que agora consulta RAG automaticamente)
+            const suggestionResponse = await fetchJson('/system/suggest-description', {
+              method: 'POST',
+              body: JSON.stringify({ 
+                prompt: `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`,
+                name: name.trim(),
+                tenantId: agent?.tenantId || 'tenant-demo',
+                urls: validUrls // Envia URLs para referência
+              }),
+            });
+            
+            if (suggestionResponse?.suggestion) {
+              // Atualiza a descrição com a sugestão
+              const suggestedDescription = suggestionResponse.suggestion.trim();
+              setDescription(suggestedDescription);
+              
+              updatePipelineWithDetails({ 
+                descriptionSuggested: { 
+                  status: 'completed', 
+                  progress: 100, 
+                  message: 'Descrição sugerida pela IA e aplicada automaticamente',
+                  timestamp: new Date().toISOString()
+                }
+              }, 'description-suggestion');
+              
+              logger.info('[Pipeline] Descrição sugerida e aplicada', { 
+                suggestedLength: suggestedDescription.length 
+              });
+            } else {
+              throw new Error('A IA não retornou uma descrição sugerida');
+            }
+          } catch (suggestionError) {
+            logger.error('[Pipeline] Erro ao sugerir descrição', suggestionError);
+            updatePipelineWithDetails({ 
+              descriptionSuggested: { 
+                status: 'error', 
+                progress: 0, 
+                message: 'Erro ao sugerir descrição. Continuando sem descrição...',
+                timestamp: new Date().toISOString()
+              }
+            }, 'description-suggestion');
+            // Continua mesmo se a sugestão falhar
+          }
+        } else {
+          // Descrição já preenchida, marca como concluída (não precisa sugerir)
+          updatePipelineWithDetails({ 
+            descriptionSuggested: { 
+              status: 'completed', 
+              progress: 100, 
+              message: 'Descrição já fornecida pelo usuário',
+              timestamp: new Date().toISOString()
+            }
+          }, 'description-suggestion');
+        }
+      }
+
+      try {
+        // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
+        let finalDescription = description.trim();
+        
+        if (executionMode === 'dry-run') {
+          // Se descrição está vazia, executa a sugestão
+          if (!description.trim()) {
+          try {
+            // ETAPA 0: Processa arquivos pendentes ANTES de sugerir descrição (se houver arquivos)
+            const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
+            if (pendingFiles.length > 0) {
+              logger.info('[TenantMode] Processando arquivos pendentes antes de sugerir descrição', {
+                pendingFilesCount: pendingFiles.length,
+                files: pendingFiles.map(f => ({ id: f.id, name: f.name })),
+              });
+              
+              updatePipelineWithDetails({ 
+                filesInferred: { status: 'in_progress', progress: 0, message: `Processando ${pendingFiles.length} arquivo(s) antes de sugerir descrição...` }
+              }, 'file-processing');
+              
+              // Processa arquivos em paralelo para acelerar
+              const fileProcessingPromises = pendingFiles.map(async (fileObj, index) => {
+                try {
+                  logger.debug(`[TenantMode] Processando arquivo ${index + 1}/${pendingFiles.length}`, {
+                    fileName: fileObj.name,
+                    fileId: fileObj.id,
+                  });
+                  
+                  // Atualiza progresso
+                  const progress = Math.round(((index + 1) / pendingFiles.length) * 100);
+                  setPipelineDetails(prev => ({
+                    ...prev,
+                    filesInferred: {
+                      status: 'in_progress',
+                      timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
+                      message: `Processando arquivo ${index + 1}/${pendingFiles.length}: ${fileObj.name}`,
+                      progress: progress,
+                    },
+                  }));
+                  
+                  // Infere categoria
+                  logger.debug(`[TenantMode] Inferindo categoria para arquivo ${fileObj.name}`);
+                  const inferredCategory = await inferFileCategoryWithAI(fileObj.file);
+                  logger.info(`[TenantMode] Categoria inferida: ${inferredCategory}`, {
+                    fileName: fileObj.name,
+                    category: inferredCategory,
+                  });
+                  
+                  // Atualiza a categoria do arquivo no estado
+                  setUploadedFiles(prev => prev.map(f => 
+                    f.id === fileObj.id ? { ...f, category: inferredCategory } : f
+                  ));
+                  
+                  // Cria uma cópia do objeto com a categoria inferida para usar no upload
+                  const fileObjWithCategory = {
+                    ...fileObj,
+                    category: inferredCategory,
+                  };
+                  
+                  // Faz upload imediatamente após inferir
+                  logger.debug(`[TenantMode] Fazendo upload do arquivo ${fileObj.name}`);
+                  await handleFileUpload(fileObjWithCategory);
+                  logger.info(`[TenantMode] Upload concluído para arquivo ${fileObj.name}`);
+                } catch (error) {
+                  logger.error(`[TenantMode] Erro ao processar arquivo ${fileObj.name}`, {
+                    error: error.message,
+                    stack: error.stack,
+                    fileId: fileObj.id,
+                  });
+                  // Marca como erro no estado
+                  setUploadedFiles(prev => prev.map(f => 
+                    f.id === fileObj.id 
+                      ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' } 
+                      : f
+                  ));
+                }
+              });
+              
+              // Aguarda todos os arquivos serem processados
+              await Promise.all(fileProcessingPromises);
+              
+              logger.info('[TenantMode] Todos os arquivos processados antes de sugerir descrição', {
+                totalFiles: uploadedFiles.length,
+                processedFiles: pendingFiles.length,
+                successFiles: uploadedFiles.filter(f => f.status === 'success').length,
+                errorFiles: uploadedFiles.filter(f => f.status === 'error').length,
+              });
+              
+              updatePipelineWithDetails({ 
+                filesInferred: { 
+                  status: 'completed', 
+                  progress: 100, 
+                  message: `${pendingFiles.length} arquivo(s) processado(s) e indexado(s) no RAG`,
+                  timestamp: new Date().toISOString()
+                }
+              }, 'file-processing');
+              
+              // Aguarda um pouco para garantir que o conteúdo foi indexado no RAG
+              logger.info('[TenantMode] Aguardando indexação dos arquivos completar...', { 
+                waitTime: 2000 
+              });
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
+            // ETAPA 1: Processa web scraping ANTES de sugerir descrição (se houver URLs)
+            const validUrls = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
+            
+            if (useWebScraping && validUrls.length > 0) {
+              updatePipelineWithDetails({ 
+                filesInferred: { status: 'in_progress', progress: 0, message: `Processando web scraping de ${validUrls.length} URL(s)...` }
+              }, 'web-scraping');
+              
+              logger.info('[TenantMode] Processando web scraping antes de sugerir descrição', { 
+                urlsCount: validUrls.length,
+                urls: validUrls 
+              });
+              
+              try {
+                // Processa web scraping em batch
+                const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    urls: validUrls,
+                    autoIndex: true, // Indexa automaticamente no RAG
+                    source: 'web_scraping',
+                    category: 'general',
+                    tenantId: agent?.tenantId || 'system',
+                  }),
+                });
+                
+                if (scrapingResponse && Array.isArray(scrapingResponse.results)) {
+                  const successCount = scrapingResponse.results.filter(r => r.success).length;
+                  const duplicateCount = scrapingResponse.results.filter(r => r.success && r.isDuplicate).length;
+                  const newCount = successCount - duplicateCount;
+                  
+                  logger.info('[TenantMode] Web scraping processado', { 
+                    total: validUrls.length,
+                    success: successCount,
+                    new: newCount,
+                    duplicates: duplicateCount,
+                    failed: validUrls.length - successCount
+                  });
+                  
+                  let message = `Web scraping concluído: ${successCount}/${validUrls.length} URL(s) processada(s)`;
+                  if (duplicateCount > 0) {
+                    message += ` (${newCount} nova(s), ${duplicateCount} duplicada(s) - usando existente)`;
+                  } else {
+                    message += ` e indexada(s)`;
+                  }
+                  
+                  updatePipelineWithDetails({ 
+                    filesInferred: { 
+                      status: 'completed', 
+                      progress: 100, 
+                      message: message,
+                      timestamp: new Date().toISOString()
+                    }
+                  }, 'web-scraping');
+                  
+                  // Aguarda um pouco para garantir que o conteúdo foi indexado
+                  // Aumenta o tempo de espera para garantir que a indexação foi concluída
+                  logger.info('[Pipeline] Aguardando indexação completar...', { 
+                    waitTime: 2000 
+                  });
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                  logger.warn('[TenantMode] Resposta de web scraping inválida', scrapingResponse);
+                }
+              } catch (scrapingError) {
+                logger.error('[TenantMode] Erro ao processar web scraping', scrapingError);
+                updatePipelineWithDetails({ 
+                  filesInferred: { 
+                    status: 'error', 
+                    progress: 0, 
+                    message: 'Erro ao processar web scraping. Continuando sem conteúdo...',
+                    timestamp: new Date().toISOString()
+                  }
+                }, 'web-scraping-error');
+                // Continua mesmo se web scraping falhar
+              }
+            }
+            
+            // ETAPA 2: Sugere descrição usando conteúdo indexado (arquivos + web scraping)
+            updatePipelineWithDetails({ 
+              descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição do tenant com IA usando conteúdo indexado...' }
+            }, 'description-suggestion');
+            
+            // Prepara prompt melhorado que considera URLs de scraping se disponíveis
+            let promptText;
+            
+            if (validUrls.length > 0) {
+              // Se houver URLs, instrui a IA a usar o conteúdo real do site
+              promptText = `Com base no nome do tenant "${name.trim()}" e no conteúdo do site ${validUrls[0]}, sugira uma descrição detalhada e completa para este tenant. 
+
+IMPORTANTE: 
+- Use APENAS informações reais do site fornecido
+- Não invente informações que não estejam no site
+- Se o site não estiver acessível ou não tiver informações suficientes, seja cauteloso e mencione apenas o que é evidente
+- A descrição deve explicar o tipo de empresa, ramo de atividade e objetivos baseado no conteúdo real do site
+
+Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
+            } else {
+              // Sem URLs, usa prompt mais cauteloso
+              promptText = `Com base no nome do tenant "${name.trim()}", sugira uma descrição detalhada e completa para este tenant. 
+
+IMPORTANTE: 
+- Seja cauteloso e não invente informações específicas
+- Use apenas inferências genéricas baseadas no nome
+- A descrição deve ser genérica e mencionar que mais informações são necessárias
+- Explique o tipo de empresa, ramo de atividade e objetivos de forma genérica
+
+Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
+            }
+            
+            // Chama API para sugerir descrição do tenant
+            const suggestionResponse = await fetchJson('/system/suggest-description', {
+              method: 'POST',
+              body: JSON.stringify({ 
+                prompt: promptText,
+                name: name.trim(),
+                tenantId: agent?.tenantId || 'system',
+                urls: validUrls // Envia URLs para possível uso futuro no backend
+              }),
+            });
+            
+            if (suggestionResponse?.suggestion) {
+              finalDescription = suggestionResponse.suggestion.trim();
+              setDescription(finalDescription);
+              
+              updatePipelineWithDetails({ 
+                descriptionSuggested: { 
+                  status: 'completed', 
+                  progress: 100, 
+                  message: 'Descrição do tenant sugerida pela IA e aplicada automaticamente',
+                  timestamp: new Date().toISOString()
+                }
+              }, 'description-suggestion');
+              
+              logger.info('[TenantMode] Descrição sugerida e aplicada', { 
+                suggestedLength: finalDescription.length 
+              });
+            } else {
+              // Se não conseguir sugerir, usa o nome como base
+              finalDescription = `Empresa chamada ${name.trim()}. Gere uma descrição completa do tenant baseada neste nome.`;
+              updatePipelineWithDetails({ 
+                descriptionSuggested: { 
+                  status: 'completed', 
+                  progress: 100, 
+                  message: 'Usando nome como base para descrição',
+                  timestamp: new Date().toISOString()
+                }
+              }, 'description-suggestion');
+            }
+          } catch (suggestionError) {
+            logger.error('[TenantMode] Erro ao sugerir descrição', suggestionError);
+            updatePipelineWithDetails({ 
+              descriptionSuggested: { 
+                status: 'error', 
+                progress: 0, 
+                message: 'Erro ao sugerir descrição. Usando nome como base...',
+                timestamp: new Date().toISOString()
+              }
+            }, 'description-suggestion');
+            // Usa o nome como base se a sugestão falhar
+            finalDescription = `Empresa chamada ${name.trim()}. Gere uma descrição completa do tenant baseada neste nome.`;
+          }
+          } else {
+            // Descrição já preenchida, marca como concluída (não precisa sugerir)
+            updatePipelineWithDetails({ 
+              descriptionSuggested: { 
+                status: 'completed', 
+                progress: 100, 
+                message: 'Descrição já fornecida pelo usuário',
+                timestamp: new Date().toISOString()
+              }
+            }, 'description-suggestion');
+          }
+        } else {
+          finalDescription = description.trim();
+        }
+        
+        // Gera tenant por IA usando a descrição (sugerida ou fornecida)
+        updatePipelineWithDetails({ 
+          aiExecuted: { status: 'in_progress', progress: 0, message: 'Executando IA para gerar tenant...' }
+        }, 'tenant-generation');
+        
+        const generateResult = await tenantsApi.generateTenantByAI(finalDescription);
+        
+        if (generateResult.tenant) {
+          // Marca IA como concluída com sucesso
+          updatePipelineWithDetails({ 
+            aiExecuted: { 
+              status: 'completed', 
+              progress: 100, 
+              message: 'IA executada com sucesso',
+              timestamp: new Date().toISOString()
+            }
+          }, 'tenant-generation');
+          // Cria o tenant automaticamente (usa nome do formulário se fornecido)
+          const tenantData = {
+            ...generateResult.tenant,
+            name: name.trim() || generateResult.tenant.name, // Permite sobrescrever o nome gerado
+            plan: 'trial',
+            active: true,
+          };
+          
+          const createdTenant = await tenantsApi.createTenant(tenantData);
+          updatePipelineWithDetails({ payloadValid: true }, 'tenant-creation');
+          
+          // Se o usuário selecionou gerar fluxo/RPA/seed, executa a geração completa
+          if (generateFlow || generateRpa || generateSeed) {
+            showToast('Tenant criado! Iniciando geração de artefatos...', 'success');
+            
+            // Gera payload para criação de artefatos
+            const payload = generatePayload();
+            // Atualiza o nome do tenant no payload
+            payload.name = name.trim();
+            payload.tenantId = createdTenant.tenant.id;
+            
+            // Arquivos já foram processados antes da sugestão de descrição
+            // Não precisa processar novamente aqui
+            logger.info('[TenantMode] Arquivos já processados antes da sugestão de descrição', {
+              totalFiles: uploadedFiles.length,
+              filesByStatus: {
+                pending: uploadedFiles.filter(f => f.status === 'pending').length,
+                uploading: uploadedFiles.filter(f => f.status === 'uploading').length,
+                success: uploadedFiles.filter(f => f.status === 'success').length,
+                error: uploadedFiles.filter(f => f.status === 'error').length,
+              },
+            });
+            
+            // Em modo real, verifica se o servidor está disponível antes de executar
+            // e aguarda um pouco para evitar problemas com reinicializações do servidor (nodemon)
+            if (executionMode === 'real') {
+              try {
+                logger.info('[TenantMode] Verificando saúde do servidor antes de executar em modo real...');
+                await fetchJson('/health', {
+                  method: 'GET',
+                  timeoutMs: 5000,
+                });
+                logger.info('[TenantMode] Servidor está disponível, aguardando 2s para garantir estabilidade...');
+                // Aguarda um pouco para evitar problemas com reinicializações do servidor (nodemon)
+                // que podem ocorrer após criação de tenant
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                logger.info('[TenantMode] Prosseguindo com execução');
+              } catch (healthError) {
+                logger.error('[TenantMode] Servidor não está disponível', healthError);
+                const errorMessage = 'Servidor não está respondendo. Verifique se o servidor está rodando e tente novamente.';
+                setError(errorMessage);
+                showToast(errorMessage, 'error', 10000);
+                updatePipelineWithDetails({ 
+                  aiExecuted: { 
+                    status: 'error', 
+                    progress: 0, 
+                    message: 'Servidor não está disponível',
+                    timestamp: new Date().toISOString()
+                  }
+                }, 'server-unavailable');
+                setExecuting(false);
+                return;
+              }
+            }
+            
+            // Executa geração de artefatos
+            const response = await generateAndValidate(payload, (status) => {
+              updatePipelineWithDetails(status, 'callback');
+            });
+            
+            setResult({
+              success: true,
+              tenant: createdTenant.tenant,
+              generated: true,
+              ...response,
+            });
+            
+            if (response.success) {
+              showToast('Tenant e artefatos criados com sucesso!', 'success');
+            } else {
+              showToast('Tenant criado, mas houve problemas na geração de artefatos', 'warning');
+            }
+          } else {
+            // Apenas cria o tenant, sem gerar artefatos
+            // Mas ainda processa arquivos se houver (para indexar no RAG)
+            const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
+            if (pendingFiles.length > 0) {
+              logger.info('[TenantMode] Processando arquivos pendentes (sem gerar artefatos)', {
+                pendingFilesCount: pendingFiles.length,
+                files: pendingFiles.map(f => ({ id: f.id, name: f.name })),
+              });
+              
+              // Processa arquivos em background (não bloqueia a criação do tenant)
+              (async () => {
+                for (let i = 0; i < pendingFiles.length; i++) {
+                  const fileObj = pendingFiles[i];
+                  try {
+                    logger.debug(`[TenantMode] Processando arquivo ${i + 1}/${pendingFiles.length}`, {
+                      fileName: fileObj.name,
+                      fileId: fileObj.id,
+                    });
+                    
+                    // Infere categoria
+                    const inferredCategory = await inferFileCategoryWithAI(fileObj.file);
+                    logger.info(`[TenantMode] Categoria inferida: ${inferredCategory}`, {
+                      fileName: fileObj.name,
+                      category: inferredCategory,
+                    });
+                    
+                    // Atualiza a categoria do arquivo no estado
+                    setUploadedFiles(prev => prev.map(f => 
+                      f.id === fileObj.id ? { ...f, category: inferredCategory } : f
+                    ));
+                    
+                    // Cria uma cópia do objeto com a categoria inferida para usar no upload
+                    const fileObjWithCategory = {
+                      ...fileObj,
+                      category: inferredCategory,
+                    };
+                    
+                    // Faz upload imediatamente após inferir
+                    logger.debug(`[TenantMode] Fazendo upload do arquivo ${fileObj.name}`);
+                    await handleFileUpload(fileObjWithCategory);
+                    logger.info(`[TenantMode] Upload concluído para arquivo ${fileObj.name}`);
+                  } catch (error) {
+                    logger.error(`[TenantMode] Erro ao processar arquivo ${fileObj.name}`, {
+                      error: error.message,
+                      stack: error.stack,
+                      fileId: fileObj.id,
+                    });
+                    // Marca como erro no estado
+                    setUploadedFiles(prev => prev.map(f => 
+                      f.id === fileObj.id 
+                        ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' } 
+                        : f
+                    ));
+                  }
+                }
+                
+                logger.info('[TenantMode] Todos os arquivos processados (sem gerar artefatos)', {
+                  totalFiles: uploadedFiles.length,
+                  processedFiles: pendingFiles.length,
+                  successFiles: uploadedFiles.filter(f => f.status === 'success').length,
+                  errorFiles: uploadedFiles.filter(f => f.status === 'error').length,
+                });
+              })();
+            }
+            
+            setResult({
+              success: true,
+              tenant: createdTenant.tenant,
+              generated: true,
+            });
+            
+            showToast('Tenant criado com sucesso!', 'success');
+            
+            // Navega de volta para a página de tenants após 2 segundos
+            setTimeout(() => {
+              navigate('/tenants');
+            }, 2000);
+          }
+        } else {
+          throw new Error('A IA não retornou dados válidos');
+        }
+      } catch (err) {
+        logger.error('[TenantMode] Erro ao gerar/criar tenant', err);
+        
+        // Marca IA como erro no pipeline
+        updatePipelineWithDetails({ 
+          aiExecuted: { 
+            status: 'error', 
+            progress: 0, 
+            message: 'Erro na execução da IA',
+            timestamp: new Date().toISOString()
+          }
+        }, 'tenant-generation-error');
+        
+        // Extrai mensagem de erro de forma mais robusta
+        let errorMessage = 'Erro ao gerar tenant por IA';
+        
+        if (err.body) {
+          errorMessage = err.body.message || err.body.details || err.body.error || errorMessage;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        // Mensagens mais amigáveis para erros comuns
+        if (errorMessage.includes('Nenhum provider de IA configurado')) {
+          errorMessage = 'Provider de IA não configurado. Configure um provider de IA no sistema antes de usar esta funcionalidade.';
+        } else if (errorMessage.includes('Provider de IA não disponível')) {
+          errorMessage = 'Nenhum provider de IA está disponível. Verifique a configuração de IA no sistema.';
+        }
+        
+        setError(errorMessage);
+        showToast(errorMessage, 'error', 8000); // Aumenta duração para 8 segundos para erros importantes
+      } finally {
+        setExecuting(false);
+      }
+      return;
+    }
+
     setExecuting(true);
     setError(null);
     setResult(null);
     
     // Reseta pipeline status
     const resetStatus = {
+      descriptionSuggested: false,
       filesInferred: false,
       payloadValid: false,
       contractValid: false,
@@ -416,6 +1181,7 @@ export function GenerateSystemPage() {
     
     // Reseta pipeline details
     setPipelineDetails({
+      descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
       filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
       payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
       contractValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -427,6 +1193,60 @@ export function GenerateSystemPage() {
       rpaExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
       approved: { status: 'pending', timestamp: null, message: null, progress: 0 },
     });
+    
+    // Se precisa sugerir descrição, executa essa etapa primeiro
+    if (needsDescriptionSuggestion && !isTenantMode) {
+      try {
+        updatePipelineWithDetails({ 
+          descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição com IA...' }
+        }, 'description-suggestion');
+        
+        // Gera descrição sugerida usando IA via API
+        const suggestionPrompt = `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
+        
+        // Chama API para sugerir descrição
+        const suggestionResponse = await fetchJson('/system/suggest-description', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            prompt: suggestionPrompt,
+            name: name.trim(),
+            tenantId: agent?.tenantId || 'tenant-demo'
+          }),
+        });
+        
+        if (suggestionResponse?.suggestion) {
+          // Atualiza a descrição com a sugestão
+          const suggestedDescription = suggestionResponse.suggestion.trim();
+          setDescription(suggestedDescription);
+          
+          updatePipelineWithDetails({ 
+            descriptionSuggested: { 
+              status: 'completed', 
+              progress: 100, 
+              message: 'Descrição sugerida pela IA e aplicada automaticamente',
+              timestamp: new Date().toISOString()
+            }
+          }, 'description-suggestion');
+          
+          logger.info('[Pipeline] Descrição sugerida e aplicada', { 
+            suggestedLength: suggestedDescription.length 
+          });
+        } else {
+          throw new Error('A IA não retornou uma descrição sugerida');
+        }
+      } catch (suggestionError) {
+        logger.error('[Pipeline] Erro ao sugerir descrição', suggestionError);
+        updatePipelineWithDetails({ 
+          descriptionSuggested: { 
+            status: 'error', 
+            progress: 0, 
+            message: 'Erro ao sugerir descrição. Continuando sem descrição...',
+            timestamp: new Date().toISOString()
+          }
+        }, 'description-suggestion');
+        // Continua mesmo se a sugestão falhar
+      }
+    }
     
     logger.info('[Execute] Iniciando execução do pipeline', {
       name,
@@ -587,10 +1407,23 @@ export function GenerateSystemPage() {
           }
         }
         
-        logger.info('[Execute] ETAPA 0 concluída: Todos os arquivos processados');
+        logger.info('[Execute] ETAPA 0 concluída: Todos os arquivos processados', {
+          totalFiles: uploadedFiles.length,
+          processedFiles: pendingFiles.length,
+          successFiles: uploadedFiles.filter(f => f.status === 'success').length,
+          errorFiles: uploadedFiles.filter(f => f.status === 'error').length,
+        });
         updatePipelineWithDetails({ filesInferred: true }, 'execute');
       } else {
-        logger.info('[Execute] ETAPA 0: Nenhum arquivo pendente, pulando etapa');
+        logger.info('[Execute] ETAPA 0: Nenhum arquivo pendente, pulando etapa', {
+          totalFiles: uploadedFiles.length,
+          filesByStatus: {
+            pending: uploadedFiles.filter(f => f.status === 'pending').length,
+            uploading: uploadedFiles.filter(f => f.status === 'uploading').length,
+            success: uploadedFiles.filter(f => f.status === 'success').length,
+            error: uploadedFiles.filter(f => f.status === 'error').length,
+          },
+        });
         // Se não há arquivos pendentes, marca como concluído
         updatePipelineWithDetails({ filesInferred: true }, 'execute');
       }
@@ -610,6 +1443,37 @@ export function GenerateSystemPage() {
       // Atualiza pipeline em tempo real
       logger.debug('[Execute] Atualizando status: payloadValid = true');
       updatePipelineWithDetails({ payloadValid: true }, 'execute');
+      
+      // Em modo real, verifica se o servidor está disponível antes de executar
+      // e aguarda um pouco para evitar problemas com reinicializações do servidor (nodemon)
+      if (executionMode === 'real') {
+        try {
+          logger.info('[Execute] Verificando saúde do servidor antes de executar em modo real...');
+          await fetchJson('/health', {
+            method: 'GET',
+            timeoutMs: 5000,
+          });
+          logger.info('[Execute] Servidor está disponível, aguardando 2s para garantir estabilidade...');
+          // Aguarda um pouco para evitar problemas com reinicializações do servidor (nodemon)
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          logger.info('[Execute] Prosseguindo com execução');
+        } catch (healthError) {
+          logger.error('[Execute] Servidor não está disponível', healthError);
+          const errorMessage = 'Servidor não está respondendo. Verifique se o servidor está rodando e tente novamente.';
+          setError(errorMessage);
+          showToast(errorMessage, 'error', 10000);
+          updatePipelineWithDetails({ 
+            aiExecuted: { 
+              status: 'error', 
+              progress: 0, 
+              message: 'Servidor não está disponível',
+              timestamp: new Date().toISOString()
+            }
+          }, 'server-unavailable');
+          setExecuting(false);
+          return;
+        }
+      }
       
       logger.info('[Execute] Chamando generateAndValidate');
       const response = await generateAndValidate(payload, (status) => {
@@ -668,8 +1532,36 @@ export function GenerateSystemPage() {
         setError(message);
         showToast(message, 'error', 10000); // Aumenta duração para 10 segundos
       } else {
-        setError(err.message || 'Erro desconhecido');
-        showToast(`Erro: ${err.message || 'Erro desconhecido'}`, 'error');
+        // Marca IA como erro no pipeline se estiver em progresso
+        const currentAiStatus = pipelineDetails.aiExecuted?.status;
+        if (currentAiStatus === 'in_progress' || currentAiStatus === 'pending') {
+          updatePipelineWithDetails({ 
+            aiExecuted: { 
+              status: 'error', 
+              progress: 0, 
+              message: 'Erro na execução da IA',
+              timestamp: new Date().toISOString()
+            }
+          }, 'execute-error');
+        }
+        
+        // Trata erros de conexão de forma mais clara
+        if (err.connectionRefused || err.status === 0 || err.message === 'Failed to fetch') {
+          const errorMessage = 'Servidor não está respondendo. Verifique se o servidor está rodando e tente novamente.';
+          setError(errorMessage);
+          showToast(errorMessage, 'error', 10000);
+          updatePipelineWithDetails({ 
+            aiExecuted: { 
+              status: 'error', 
+              progress: 0, 
+              message: 'Servidor não está disponível',
+              timestamp: new Date().toISOString()
+            }
+          }, 'server-unavailable');
+        } else {
+          setError(err.message || 'Erro desconhecido');
+          showToast(`Erro: ${err.message || 'Erro desconhecido'}`, 'error');
+        }
       }
     } finally {
       setExecuting(false);
@@ -723,7 +1615,16 @@ export function GenerateSystemPage() {
   // Upload de arquivos para RAG
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    if (files.length === 0) {
+      logger.warn('[FileSelect] Nenhum arquivo selecionado');
+      return;
+    }
+
+    logger.info('[FileSelect] Arquivos selecionados', {
+      filesCount: files.length,
+      fileNames: files.map(f => f.name),
+      fileSizes: files.map(f => f.size),
+    });
 
     // Adiciona arquivos à lista de upload inicialmente com categoria temporária
     const newFiles = files.map(file => ({
@@ -736,9 +1637,16 @@ export function GenerateSystemPage() {
       error: null,
     }));
 
+    logger.info('[FileSelect] Arquivos adicionados à lista de upload', {
+      newFilesCount: newFiles.length,
+      totalFilesCount: uploadedFiles.length + newFiles.length,
+      fileIds: newFiles.map(f => f.id),
+    });
+
     setUploadedFiles([...uploadedFiles, ...newFiles]);
     
     // Não faz inferência nem upload automaticamente - será feito ao clicar em Executar
+    logger.debug('[FileSelect] Arquivos adicionados, aguardando execução para processar');
   };
 
   const handleFileUpload = async (fileObj) => {
@@ -780,10 +1688,11 @@ export function GenerateSystemPage() {
 
         // Log do conteúdo extraído
         if (extractedContent) {
-          logger.debug(`Conteúdo extraído do arquivo ${fileObj.name}`, {
-            contentLength: extractedContent.length,
-            preview: extractedContent.substring(0, 200),
-          });
+        logger.info(`[FileUpload] Conteúdo extraído do arquivo ${fileObj.name}`, {
+          contentLength: extractedContent.length,
+          preview: extractedContent.substring(0, 200),
+          hasContent: extractedContent && extractedContent.length > 0,
+        });
         }
       } catch (processError) {
         logger.warn('Erro ao processar arquivo, tentando fallback', {
@@ -806,18 +1715,46 @@ export function GenerateSystemPage() {
         }
         
         // Se não conseguiu extrair conteúdo, usa placeholder
-        if (!extractedContent) {
+        if (!extractedContent || extractedContent.trim().length === 0) {
+          logger.warn('[FileUpload] Conteúdo extraído está vazio, usando placeholder', {
+            fileName: fileObj.name,
+            fileType: fileObj.file.type,
+            extractedContentLength: extractedContent?.length || 0,
+          });
           extractedContent = `[Arquivo: ${fileObj.name} - Tipo: ${fileObj.file.type}]\n\nNão foi possível extrair conteúdo automaticamente.`;
+        }
+        
+        // Valida que o conteúdo extraído tem tamanho mínimo
+        if (extractedContent.trim().length < 10) {
+          logger.warn('[FileUpload] Conteúdo extraído muito curto, pode não ser indexado corretamente', {
+            fileName: fileObj.name,
+            contentLength: extractedContent.trim().length,
+            contentPreview: extractedContent.substring(0, 100),
+          });
         }
       }
 
+      // Obtém tenantId do agente (obrigatório para indexação correta)
+      const tenantId = agent?.tenantId || 'system';
+      
+      logger.info('[FileUpload] Preparando upload para RAG', {
+        fileName: fileObj.name,
+        tenantId,
+        hasExtractedContent: !!extractedContent,
+        extractedContentLength: extractedContent?.length || 0,
+        autoIndex: true,
+      });
+      
       // Faz upload do arquivo processado com conteúdo extraído
       const result = await uploadDocument(processedFile, {
+        tenantId: tenantId, // Passa tenantId explicitamente
         category: fileObj.category,
         tags: [fileObj.category, 'generate-system'],
         metadata: {
           uploadedFrom: 'generate-system',
           originalFileName: fileObj.name,
+          fileName: fileObj.name, // Nome do arquivo para verificação de duplicação
+          fileSize: fileObj.file.size, // Tamanho para verificação de duplicação
           isImage: isImage,
           isPdf: isPdf,
           isText: isText,
@@ -825,6 +1762,16 @@ export function GenerateSystemPage() {
         },
         autoIndex: true, // Indexa automaticamente no RAG
       });
+      
+      logger.info('[FileUpload] Upload concluído', {
+        fileName: fileObj.name,
+        documentId: result.document?.id || result.id,
+        isDuplicate: result.isDuplicate || false,
+        success: !!result,
+      });
+
+      // Verifica se é duplicata
+      const isDuplicate = result.isDuplicate || false;
 
       // Atualiza status para success com preview se disponível
       setUploadedFiles(prev => prev.map(f => 
@@ -836,11 +1783,20 @@ export function GenerateSystemPage() {
               preview: preview,
               progress: 100,
               extractedContent: extractedContent, // Salva conteúdo extraído para exibição
+              isDuplicate: isDuplicate, // Marca se é duplicata
             } 
           : f
       ));
 
-      showToast(`Arquivo "${fileObj.name}" processado e indexado no RAG com sucesso!`, 'success');
+      if (isDuplicate) {
+        showToast(`Arquivo "${fileObj.name}" já existe no RAG. Usando documento existente.`, 'info', 5000);
+        logger.info('[FileUpload] Arquivo duplicado detectado', {
+          fileName: fileObj.name,
+          documentId: result.document?.id || result.id,
+        });
+      } else {
+        showToast(`Arquivo "${fileObj.name}" processado e indexado no RAG com sucesso!`, 'success');
+      }
     } catch (error) {
       logger.error('Erro ao fazer upload do arquivo:', error);
       
@@ -1122,49 +2078,74 @@ export function GenerateSystemPage() {
     <div className="support-page">
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>🎯 Gerar Sistema / Fluxo / RPA / Seed</h1>
+          <h1>{isTenantMode ? '🤖 Criar Tenant por IA' : '🎯 Gerar Sistema / Fluxo / RPA / Seed'}</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
-          Esta é a única tela que gera, valida, executa e decide. Nada fora dessa tela é considerado válido.
+          {isTenantMode 
+            ? 'Crie um tenant baseado em uma empresa real. Configure todos os blocos conforme necessário para gerar o tenant e seus artefatos (fluxo, RPA, seed).'
+            : 'Esta é a única tela que gera, valida, executa e decide. Nada fora dessa tela é considerado válido.'}
         </p>
+        {isTenantMode && (
+          <div className="bg-status-info/10 border border-status-info/30 rounded-lg p-4 mb-4">
+            <p className="text-sm text-text-primary">
+              <strong>💡 Modo de Geração de Tenant:</strong>
+            </p>
+            <ul className="mt-2 text-xs text-text-secondary list-disc list-inside space-y-1">
+              <li>Preencha o nome e a descrição do tenant (empresa real)</li>
+              <li>Configure as fontes de conhecimento (RAG e/ou Web Scraping) para obter informações da empresa</li>
+              <li>Selecione quais artefatos deseja gerar (Fluxo, RPA, Seed)</li>
+              <li>A IA irá gerar os dados do tenant e, se solicitado, os artefatos configurados</li>
+              <li>O tenant será criado automaticamente após a geração</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">
 
         {/* BLOCO 1 - Intenção do Usuário */}
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 1 — Intenção do Usuário</h2>
-          <div className="flex flex-col gap-3">
-            <label className="flex items-center gap-2 cursor-pointer text-text-primary">
-              <input
-                type="checkbox"
-                checked={generateFlow}
-                onChange={(e) => setGenerateFlow(e.target.checked)}
-                disabled={bootstrap}
-                className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
-              />
-              <span>Gerar Fluxo</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-text-primary">
-              <input
-                type="checkbox"
-                checked={generateRpa}
-                onChange={(e) => setGenerateRpa(e.target.checked)}
-                disabled={bootstrap}
-                className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
-              />
-              <span>Gerar Teste RPA</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-text-primary">
-              <input
-                type="checkbox"
-                checked={generateSeed}
-                onChange={(e) => setGenerateSeed(e.target.checked)}
-                disabled={bootstrap}
-                className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
-              />
-              <span>Gerar Seed</span>
-            </label>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 1 — Intenção do Usuário</h2>
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2 cursor-pointer text-text-primary">
+                <input
+                  type="checkbox"
+                  checked={bootstrap}
+                  onChange={(e) => setBootstrap(e.target.checked)}
+                  className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
+                />
+                <span className="font-bold">Gerar tudo do zero (Bootstrap)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-text-primary">
+                <input
+                  type="checkbox"
+                  checked={generateFlow}
+                  onChange={(e) => setGenerateFlow(e.target.checked)}
+                  disabled={bootstrap}
+                  className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
+                />
+                <span>Gerar Fluxo</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-text-primary">
+                <input
+                  type="checkbox"
+                  checked={generateRpa}
+                  onChange={(e) => setGenerateRpa(e.target.checked)}
+                  disabled={bootstrap}
+                  className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
+                />
+                <span>Gerar Teste RPA</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-text-primary">
+                <input
+                  type="checkbox"
+                  checked={generateSeed}
+                  onChange={(e) => setGenerateSeed(e.target.checked)}
+                  disabled={bootstrap}
+                  className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
+                />
+                <span>Gerar Seed</span>
+              </label>
             <label className="flex items-center gap-2 cursor-pointer text-text-primary">
               <input
                 type="checkbox"
@@ -1174,16 +2155,7 @@ export function GenerateSystemPage() {
               />
               <span>Executar Validação Completa</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer text-text-primary">
-              <input
-                type="checkbox"
-                checked={bootstrap}
-                onChange={(e) => setBootstrap(e.target.checked)}
-                className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
-              />
-              <span className="font-bold">Gerar tudo do zero (Bootstrap)</span>
-            </label>
-          </div>
+            </div>
           {bootstrap && (
             <div className="mt-4 p-3 bg-status-warning/10 border border-status-warning/30 rounded-lg text-status-warning">
               ⚠️ Modo Bootstrap ativo: Fluxo, RPA e Seed serão gerados automaticamente. RAG desativado.
@@ -1331,7 +2303,13 @@ export function GenerateSystemPage() {
                               <span className="text-xs text-status-warning animate-pulse">⏳ Enviando...</span>
                             )}
                             {fileObj.status === 'success' && (
-                              <span className="text-xs text-status-success">✓ Indexado</span>
+                              <>
+                                {fileObj.isDuplicate ? (
+                                  <span className="text-xs text-status-warning">⚠ Duplicado (usando existente)</span>
+                                ) : (
+                                  <span className="text-xs text-status-success">✓ Indexado</span>
+                                )}
+                              </>
                             )}
                             {fileObj.status === 'error' && (
                               <span className="text-xs text-status-error">✗ Erro</span>
@@ -1419,29 +2397,54 @@ export function GenerateSystemPage() {
 
         {/* Dados Básicos */}
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-4">Dados Básicos</h2>
+          <h2 className="text-xl font-semibold text-text-primary mb-4">
+            {isTenantMode ? 'Descrição do Tenant' : 'Dados Básicos'}
+          </h2>
           <div className="mb-4">
             <label className="block mb-2 font-semibold text-text-primary">
-              Nome do Sistema/Fluxo
+              {isTenantMode ? 'Nome do Tenant' : 'Nome do Sistema/Fluxo'}
             </label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Sistema de Atendimento"
+              placeholder={isTenantMode ? "Ex: Empresa XYZ" : "Ex: Sistema de Atendimento"}
               className="w-full"
             />
           </div>
           <div>
             <label className="block mb-2 font-semibold text-text-primary">
-              Descrição
+              {isTenantMode 
+                ? (executionMode === 'real' ? 'Descrição do Tenant *' : 'Descrição do Tenant (opcional no modo dry-run)')
+                : executionMode === 'real' 
+                  ? 'Descrição *' 
+                  : 'Descrição (opcional no modo dry-run)'}
             </label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva o sistema, fluxo ou funcionalidade que deseja gerar..."
+              placeholder={isTenantMode 
+                ? "Ex: Uma empresa de e-commerce que vende produtos de tecnologia e quer automatizar o atendimento ao cliente para reduzir tempo de resposta e aumentar a satisfação dos clientes."
+                : executionMode === 'dry-run' && !description.trim()
+                  ? "💡 No modo dry-run, a descrição é opcional. Se deixar em branco, a IA irá sugerir uma descrição baseada no nome e nas fontes de conhecimento selecionadas. Descreva o sistema, fluxo ou funcionalidade que deseja gerar..."
+                  : "Descreva o sistema, fluxo ou funcionalidade que deseja gerar..."}
               rows={5}
               className="w-full"
             />
+            {isTenantMode && (
+              <p className="mt-2 text-xs text-text-secondary">
+                💡 Seja específico! Inclua informações sobre o ramo de atividade, tipo de negócio e objetivos.
+              </p>
+            )}
+            {executionMode === 'dry-run' && !description.trim() && (
+              <p className="mt-2 text-xs text-status-info bg-status-info/10 border border-status-info/30 rounded-lg p-2">
+                💡 <strong>Modo Dry-Run:</strong> A descrição é opcional. Se deixar em branco, a IA irá sugerir uma descrição automaticamente baseada no {isTenantMode ? 'nome do tenant' : 'nome do sistema'} e nas fontes de conhecimento selecionadas.
+              </p>
+            )}
+            {executionMode === 'real' && (
+              <p className="mt-2 text-xs text-text-secondary">
+                ⚠️ <strong>Modo Execução Real:</strong> A descrição é obrigatória e deve ter pelo menos 10 caracteres.
+              </p>
+            )}
           </div>
         </div>
 
@@ -1492,6 +2495,7 @@ export function GenerateSystemPage() {
             </select>
           </div>
         </div>
+        )}
 
         {/* BLOCO 4 - Validações Automáticas */}
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
@@ -1525,6 +2529,7 @@ export function GenerateSystemPage() {
           <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 5 — Pipeline Visível</h2>
           <div className="flex flex-col gap-3">
             {[
+              ...(needsDescriptionSuggestion ? [{ key: 'descriptionSuggested', label: 'Sugerir descrição' }] : []),
               { key: 'filesInferred', label: 'Arquivos inferidos e indexados' },
               { key: 'payloadValid', label: 'Payload válido' },
               { key: 'contractValid', label: 'Contrato válido' },

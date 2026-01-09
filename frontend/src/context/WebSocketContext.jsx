@@ -85,6 +85,35 @@ export function WebSocketProvider({ children }) {
     return false;
   }, []);
 
+  // Tenta autenticar o WebSocket com o token atual
+  const authenticateWebSocket = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+
+    const token = getToken();
+    if (!token) {
+      logger.debug('[WebSocketContext] Sem token para autenticação');
+      return false;
+    }
+
+    // Se já está autenticado, não precisa autenticar novamente
+    if (authenticated) {
+      logger.debug('[WebSocketContext] Já autenticado, ignorando nova tentativa');
+      return true;
+    }
+
+    try {
+      logger.debug('[WebSocketContext] Enviando autenticação...');
+      wsRef.current.send(JSON.stringify({ type: 'auth', token }));
+      logger.debug('[WebSocketContext] Mensagem de autenticação enviada');
+      return true;
+    } catch (err) {
+      logger.error('[WebSocketContext] Erro ao enviar autenticação', err);
+      return false;
+    }
+  }, [authenticated]);
+
   // Atualiza subscriptions quando handlers mudam
   const updateSubscriptions = useCallback(() => {
     if (!authenticated || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -211,12 +240,12 @@ export function WebSocketProvider({ children }) {
         setConnected(true);
         reconnectAttemptsRef.current = 0;
 
-        // Autentica com token - envia diretamente usando a referência do WebSocket
+        // Tenta autenticar se houver token disponível
+        // Se não houver token, será autenticado quando o usuário fizer login
         const token = getToken();
         if (token) {
           try {
-            logger.debug('[WebSocketContext] Enviando autenticação...');
-            // Envia diretamente usando ws para evitar problemas de timing com wsRef.current
+            logger.debug('[WebSocketContext] Enviando autenticação na conexão...');
             ws.send(JSON.stringify({ type: 'auth', token }));
             logger.debug('[WebSocketContext] Mensagem de autenticação enviada');
           } catch (err) {
@@ -256,7 +285,14 @@ export function WebSocketProvider({ children }) {
               setAuthenticated(true);
               // As subscriptions serão atualizadas pelo useEffect que observa 'authenticated'
             } else {
-              logger.error('[WebSocketContext] Falha na autenticação', data.message || data);
+              // Se não há token, é esperado (usuário ainda não fez login)
+              const hasToken = getToken();
+              if (!hasToken) {
+                logger.debug('[WebSocketContext] Falha na autenticação (sem token - esperado antes do login)', data.message || data);
+              } else {
+                // Se há token mas falhou, é um erro real
+                logger.error('[WebSocketContext] Falha na autenticação', data.message || data);
+              }
               setAuthenticated(false);
             }
             return;
@@ -343,11 +379,19 @@ export function WebSocketProvider({ children }) {
         };
         
         const reasonText = closeReasons[event.code] || `Código desconhecido: ${event.code}`;
+        
+        // Detecta se foi fechamento devido a reinicialização do servidor (nodemon)
+        const isServerRestart = event.code === 1006 || event.code === 1012 || !event.wasClean;
+        
         logger.info('[WebSocketContext] Desconectado', { 
           code: event.code, 
           reason: event.reason || reasonText,
           url,
-          hint: event.code === 1006 ? 'Servidor pode não estar rodando ou não estar acessível. Verifique se o servidor está ativo em ' + url.replace('ws://', 'http://').replace('wss://', 'https://').replace('/ws', '') : undefined
+          wasClean: event.wasClean,
+          isServerRestart,
+          hint: isServerRestart 
+            ? 'Servidor pode estar reiniciando (nodemon). Reconectando automaticamente...' 
+            : (event.code === 1006 ? 'Servidor pode não estar rodando ou não estar acessível. Verifique se o servidor está ativo em ' + url.replace('ws://', 'http://').replace('wss://', 'https://').replace('/ws', '') : undefined)
         });
         isConnectingRef.current = false;
         setConnected(false);
@@ -365,14 +409,29 @@ export function WebSocketProvider({ children }) {
           return;
         }
 
-        // Reconecta se não foi fechamento intencional (código 1000 = fechamento normal)
+        // Reconecta se não foi fechamento intencional
+        // Para reinicializações do servidor (nodemon), usa delay menor e verifica saúde do servidor
         if (event.code !== 1000) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          // Para reinicializações do servidor, aguarda um pouco mais para dar tempo do servidor reiniciar
+          const baseDelay = isServerRestart ? 3000 : 1000;
+          const delay = Math.min(baseDelay * Math.pow(1.5, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current++;
 
-          logger.info(`[WebSocketContext] Reconectando em ${delay}ms (tentativa ${reconnectAttemptsRef.current})`);
+          logger.info(`[WebSocketContext] Reconectando em ${Math.round(delay)}ms (tentativa ${reconnectAttemptsRef.current})${isServerRestart ? ' - servidor reiniciando' : ''}`);
 
-          reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeoutRef.current = setTimeout(async () => {
+            // Para reinicializações do servidor, verifica saúde antes de reconectar
+            if (isServerRestart && reconnectAttemptsRef.current <= 3) {
+              const isHealthy = await checkServerHealth();
+              if (!isHealthy) {
+                logger.debug('[WebSocketContext] Servidor ainda não está pronto, aguardando mais um pouco...');
+                // Aguarda mais um pouco e tenta novamente
+                reconnectTimeoutRef.current = setTimeout(() => {
+                  connectRef.current();
+                }, 2000);
+                return;
+              }
+            }
             connectRef.current();
           }, delay);
         }
@@ -478,6 +537,62 @@ export function WebSocketProvider({ children }) {
       return () => clearTimeout(timeoutId);
     }
   }, [authenticated, updateSubscriptions]);
+
+  // Observa mudanças no token e tenta autenticar o WebSocket quando conectado
+  useEffect(() => {
+    if (!connected || authenticated) {
+      return;
+    }
+
+    // Verifica se há token disponível
+    const token = getToken();
+    if (token) {
+      // Aguarda um pouco para garantir que a conexão está estável
+      const timeoutId = setTimeout(() => {
+        authenticateWebSocket();
+      }, 200);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [connected, authenticated, authenticateWebSocket]);
+
+  // Observa mudanças no localStorage para detectar quando o token é salvo (após login)
+  useEffect(() => {
+    if (!connected) {
+      return;
+    }
+
+    const handleStorageChange = (e) => {
+      // Se o token foi salvo e não estamos autenticados, tenta autenticar
+      if (e.key === 'auth_token' && e.newValue && !authenticated) {
+        logger.debug('[WebSocketContext] Token detectado no localStorage (outra aba), tentando autenticar...');
+        setTimeout(() => {
+          authenticateWebSocket();
+        }, 200);
+      }
+    };
+
+    // Escuta mudanças no localStorage (incluindo de outras abas)
+    window.addEventListener('storage', handleStorageChange);
+
+    // Verifica periodicamente se o token mudou (para a mesma aba - após login)
+    // Isso é necessário porque o evento 'storage' só dispara em outras abas
+    const checkTokenInterval = setInterval(() => {
+      if (!connected || authenticated) {
+        return;
+      }
+      
+      const token = getToken();
+      if (token) {
+        logger.debug('[WebSocketContext] Token detectado (mesma aba), tentando autenticar...');
+        authenticateWebSocket();
+      }
+    }, 500); // Verifica a cada 500ms (mais frequente para detectar login rápido)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(checkTokenInterval);
+    };
+  }, [connected, authenticated, authenticateWebSocket]);
 
   const value = {
     connected,
