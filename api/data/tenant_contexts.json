@@ -11,7 +11,7 @@
       "classificacao_intencao"
     ],
     "createdAt": "2026-01-05T19:36:44.284Z",
-    "updatedAt": "2026-01-05T19:36:44.284Z"
+    "updatedAt": "2026-01-07T23:45:55.127Z"
   },
   {
     "tenantId": "tenant-1767641804348-vz318dk",
@@ -40,5 +40,411 @@
     ],
     "createdAt": "2026-01-07T18:22:39.913Z",
     "updatedAt": "2026-01-07T18:22:39.913Z"
+  },
+  {
+    "tenantId": "test-tenant",
+    "ramo_atividade": "Tecnologia e Software",
+    "objetivo": "Testar funcionalidades do sistema",
+    "site_oficial": "https://teste.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T01:44:19.438Z",
+    "updatedAt": "2026-01-09T01:44:19.438Z"
+  },
+  {
+    "tenantId": "tenant-1767929563738-7dn3gz2",
+    "ramo_atividade": "A Studiooly atua no segmento de serviços criativos e digitais, com foco em design, branding e comunicação para fortalecer a presença de marcas no mercado. Oferece desde a estratégia de identidade e posicionamento (tom de voz, diretrizes visuais e materiais institucionais) até a produção de entregáveis para campanhas e canais digitais, como peças para redes sociais, apresentações, landing pages e materiais promocionais.",
+    "objetivo": "O tenant tem como objetivo representar a operação digital da Studiooly, centralizando portfólio, serviços, cases e informações institucionais para reforçar credibilidade e posicionamento. A plataforma será usada para captação e qualificação de leads, facilitação do contato e contratação, além de sustentar ações recorrentes de marketing e relacionamento com clientes.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T03:32:43.740Z",
+    "updatedAt": "2026-01-09T03:32:43.740Z"
+  },
+  {
+    "tenantId": "tenant-1767929893162-ho6lvgj",
+    "ramo_atividade": "A Studiooly atua no segmento de serviços criativos e digitais, oferecendo soluções de design e comunicação voltadas à construção e evolução de marcas. Seu trabalho abrange branding e identidade visual (posicionamento, tom de voz, diretrizes e materiais institucionais) e a produção de entregáveis para campanhas e presença online, como criativos para redes sociais, apresentações, landing pages e materiais promocionais. Atende de pequenos negócios a empresas em expansão que buscam comunicação consistente, moderna e orientada a resultados.",
+    "objetivo": "O tenant terá como objetivo representar a operação digital da Studiooly, centralizando informações institucionais, portfólio e oferta de serviços em um único ambiente. A plataforma será usada para captar e qualificar leads, facilitar o contato e a contratação, e fortalecer o relacionamento com clientes com fluxos de comunicação e acompanhamento. Além disso, sustentará ações contínuas de marketing e posicionamento, evidenciando cases, credibilidade e resultados.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T03:38:13.164Z",
+    "updatedAt": "2026-01-09T03:38:13.164Z"
+  },
+  {
+    "tenantId": "tenant-1767930263334-79ckdlg",
+    "ramo_atividade": "A Studiooly atua no segmento de serviços criativos e digitais, com foco em design, branding e comunicação para construção e fortalecimento de marcas. Seu trabalho abrange desde a estratégia de marca (posicionamento, tom de voz, diretrizes visuais e materiais institucionais) até a produção de entregáveis para campanhas e presença online, como peças para redes sociais, apresentações, landing pages e materiais promocionais. Atende de pequenos negócios a empresas em expansão que buscam comunicação profissional, consistente e orientada a resultados.",
+    "objetivo": "O tenant tem como objetivo representar a operação digital da Studiooly, centralizando informações institucionais, portfólio e apresentação de serviços em um único ambiente. A plataforma será usada para gerar e qualificar leads, facilitar contato e contratação, e fortalecer a credibilidade por meio de cases e resultados. Também dará suporte a ações contínuas de marketing e posicionamento de marca, mantendo a comunicação alinhada e consistente.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T03:44:23.336Z",
+    "updatedAt": "2026-01-09T03:44:23.336Z"
+  },
+  {
+    "tenantId": "tenant-1767930547672-0f0qinn",
+    "ramo_atividade": "A Studiooly atua no segmento de serviços criativos e digitais, oferecendo design e comunicação voltados à construção e fortalecimento de marcas. Seu trabalho abrange branding e identidade visual (posicionamento, tom de voz, diretrizes e materiais institucionais) e a produção de entregáveis para campanhas e presença online, como criativos para redes sociais, apresentações, landing pages e peças promocionais. Atende de pequenos negócios a empresas em expansão, com foco em consistência, estética e resultados de negócio.",
+    "objetivo": "O tenant servirá como a base da operação digital da Studiooly para divulgar portfólio, apresentar serviços e demonstrar credibilidade por meio de cases e resultados. A plataforma será usada para captação e qualificação de leads, centralização de informações institucionais e facilitação do contato e contratação. Também sustentará ações contínuas de marketing e posicionamento, apoiando o relacionamento com clientes ao longo do tempo.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T03:49:07.674Z",
+    "updatedAt": "2026-01-09T03:49:07.674Z"
+  },
+  {
+    "tenantId": "tenant-1767930622397-sakr151",
+    "ramo_atividade": "A partir do nome “Studio Oly”, trata-se provavelmente de um estúdio/negócio de serviços criativos e/ou de atendimento ao público sob a marca Studio Oly. Sem acesso ao conteúdo do site, não é possível confirmar com segurança o segmento exato (por exemplo, estética, design, fotografia ou outros serviços). Portanto, o ramo de atividade específico permanece indeterminado até validação adicional.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para estruturar e automatizar processos de relacionamento com clientes, como captação de leads, atendimento inicial, agendamentos e follow-ups. Também pode empregar fluxos automatizados para centralizar solicitações, organizar demandas e reduzir tarefas repetitivas, melhorando a eficiência operacional sem depender de atendimento manual contínuo.",
+    "site_oficial": "https://studiooly.com.br/",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T03:50:22.399Z",
+    "updatedAt": "2026-01-09T03:50:22.399Z"
+  },
+  {
+    "tenantId": "tenant-1767932606829-vmjgn8e",
+    "ramo_atividade": "Não há informações suficientes no contexto fornecido para descrever com precisão o ramo de atividade da empresa. Com base apenas no domínio, é possível apenas inferir que se trata de uma marca chamada “Studio Oly”, sem detalhes verificáveis sobre seus produtos, serviços, público-alvo ou segmento de mercado. É necessário acessar conteúdo adicional do site ou materiais institucionais para caracterizar o setor de atuação.",
+    "objetivo": "Sem dados sobre a operação do tenant, não é possível definir um objetivo estratégico específico com a plataforma de automação com IA. De forma genérica, o tenant poderia usar a plataforma para automatizar rotinas operacionais e de atendimento, padronizar processos e melhorar a eficiência por meio de fluxos inteligentes. Para detalhar objetivos (ex.: captação de leads, suporte, vendas, marketing ou backoffice), são necessárias informações adicionais sobre as prioridades do negócio.",
+    "site_oficial": "https://studiooly.com.br/",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T04:23:26.831Z",
+    "updatedAt": "2026-01-09T04:23:26.831Z"
+  },
+  {
+    "tenantId": "tenant-1767933022883-n58n3n4",
+    "ramo_atividade": "A Studiooly aparenta ser uma marca/empresa com presença institucional online, potencialmente voltada à oferta de serviços profissionais ou produtos digitais relacionados a um estúdio (ex.: criação, design, produção ou consultoria). Sem acesso ao conteúdo do site, não é possível confirmar o segmento exato, então esta descrição assume um posicionamento genérico de serviços criativos/tecnológicos associados ao nome e ao domínio.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para padronizar e acelerar processos operacionais e de atendimento, como captação e qualificação de leads, respostas automáticas e organização de solicitações. Além disso, centralizar fluxos de trabalho (ex.: formulários, CRM, automações de e-mail/WhatsApp e geração de conteúdo) para ganhar eficiência, reduzir tarefas manuais e melhorar a consistência da comunicação com clientes.",
+    "site_oficial": "https://studiooly.com.br/",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T04:30:22.885Z",
+    "updatedAt": "2026-01-09T04:30:22.885Z"
+  },
+  {
+    "tenantId": "tenant-1767933372756-2sgtiw1",
+    "ramo_atividade": "A Studiooly aparenta atuar no segmento criativo associado a um estúdio, possivelmente oferecendo serviços relacionados a produção e/ou criação (ex.: design, conteúdo, audiovisual ou branding). Como não foi possível verificar o conteúdo do site neste contexto, o ramo exato, os serviços e o público-alvo não podem ser confirmados. Recomenda-se validar páginas institucionais (Sobre, Serviços e Contato) para detalhar corretamente a atuação.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para estruturar e padronizar processos de atendimento e operações, reduzindo tarefas manuais e aumentando a eficiência. Também pode empregar automações para gestão de leads, respostas a solicitações, geração de propostas e acompanhamento de projetos, centralizando dados e métricas para tomada de decisão. Após validação do negócio no site, o objetivo pode ser refinado conforme o fluxo principal (captação, produção e entrega).",
+    "site_oficial": "https://studiooly.com.br/",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T04:36:12.758Z",
+    "updatedAt": "2026-01-09T04:36:12.758Z"
+  },
+  {
+    "tenantId": "tenant-1767933769258-7v3p6y3",
+    "ramo_atividade": "A Studiooly aparenta ser um estúdio ou empresa cuja marca está associada ao conceito de “studio”, possivelmente voltada a serviços criativos, produção ou desenvolvimento de projetos. Sem acesso verificável ao conteúdo do site, não é possível confirmar com precisão o segmento (por exemplo, design, audiovisual, marketing ou tecnologia), nem o portfólio e o público-alvo atendido. Recomenda-se validar as seções institucionais do site para caracterização completa e baseada em informações confirmadas.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para estruturar e automatizar processos operacionais e de atendimento, reduzindo trabalho manual e aumentando a consistência das entregas. Empregar fluxos automatizados para captação e qualificação de leads, gestão de solicitações, comunicação com clientes e organização de demandas, permitindo maior eficiência e escala. Após validação do ramo e serviços no site, os fluxos e integrações podem ser ajustados para refletir com precisão a operação e os objetivos do tenant.",
+    "site_oficial": "https://studiooly.com.br/",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T04:42:49.260Z",
+    "updatedAt": "2026-01-09T04:42:49.260Z"
+  },
+  {
+    "tenantId": "tenant-1767934074830-muvob9x",
+    "ramo_atividade": "O Studio Oly é um estúdio de movimento e bem-estar que oferece atividades voltadas ao condicionamento físico, saúde e qualidade de vida, com foco na integração entre corpo e mente. Atua com serviços e planos para diferentes perfis de alunos, promovendo rotinas de treino, práticas corporais e acompanhamento orientado em um ambiente de studio. Também mantém presença digital com galeria, parcerias e canais de contato para relacionamento com clientes.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para centralizar e automatizar o atendimento (site, redes sociais, e-mail e WhatsApp/telefone), respondendo dúvidas sobre serviços, planos, horários, valores e localização. Pretende automatizar a captação e qualificação de leads, o agendamento de aulas/avaliações, lembretes e follow-ups, além de apoiar campanhas de marketing e retenção de alunos com comunicações personalizadas.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T04:47:54.832Z",
+    "updatedAt": "2026-01-09T04:47:54.832Z"
+  },
+  {
+    "tenantId": "tenant-1767934415931-l0k82z7",
+    "ramo_atividade": "Studio de bem-estar e condicionamento físico focado em atividades que valorizam o movimento, integrando práticas para desenvolvimento corporal e mental. Oferece serviços e planos de contratação, além de conteúdo institucional e divulgação de aulas, parcerias e eventos por meio de site e redes sociais. Atua no atendimento ao público local, com suporte a contatos por telefone, e-mail e referência de localização via Google Maps.",
+    "objetivo": "Utilizar a plataforma para automatizar o atendimento e a captação de alunos, centralizando contatos vindos do site, redes sociais e canais diretos em um único fluxo. Implementar assistentes de IA para responder dúvidas sobre serviços, planos, horários e localização, além de qualificar leads e encaminhar agendamentos. Automatizar campanhas e comunicações recorrentes (boas-vindas, lembretes, renovações e reativação) para aumentar conversões e retenção.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T04:53:35.933Z",
+    "updatedAt": "2026-01-09T04:53:35.933Z"
+  },
+  {
+    "tenantId": "tenant-1767934676010-tgiq0xl",
+    "ramo_atividade": "Estúdio de atividades corporais e bem-estar focado em práticas de movimento, condicionamento físico e integração corpo-mente. Oferece serviços e planos para alunos com diferentes objetivos, com suporte de conteúdos visuais (galeria) e ações de parcerias para ampliar a comunidade e a divulgação.",
+    "objetivo": "Usar a plataforma SaaS de automação com IA para captar e qualificar interessados vindos do site e redes sociais, automatizando atendimento via WhatsApp/telefone e formulários de contato. Também pretende centralizar gestão de leads, agendamentos e conversões para planos, além de nutrir relacionamento com alunos e parceiros por campanhas e mensagens personalizadas.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T04:57:56.012Z",
+    "updatedAt": "2026-01-09T04:57:56.012Z"
+  },
+  {
+    "tenantId": "tenant-1767934924814-gczlupp",
+    "ramo_atividade": "Estúdio de bem-estar focado em práticas de movimento e saúde, integrando corpo e mente por meio de atividades e atendimentos presenciais. Oferece serviços e planos de contratação para diferentes perfis de alunos, além de divulgar o espaço e experiências por meio de galeria e parcerias.",
+    "objetivo": "Usar a plataforma SaaS de automação com IA para captar e qualificar leads vindos do site e das redes sociais, automatizando respostas, agendamentos e esclarecimento de dúvidas sobre serviços e planos. Centralizar o atendimento via WhatsApp/telefone e outros canais, reduzir tempo de resposta e aumentar conversões e retenção com comunicações personalizadas e lembretes automatizados.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:02:04.816Z",
+    "updatedAt": "2026-01-09T05:02:04.816Z"
+  },
+  {
+    "tenantId": "tenant-1767935313440-o8a4qj9",
+    "ramo_atividade": "Estúdio de bem-estar e atividades corporais voltado a práticas de movimento que integram corpo e mente. Oferece modalidades e atendimentos organizados em serviços e planos, com conteúdos institucionais e de relacionamento como galeria e parcerias, atendendo pessoas que buscam saúde, condicionamento e transformação por meio do movimento.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para captar e qualificar leads vindos do site e das redes sociais, automatizando atendimento via WhatsApp/telefone e agendamentos de aulas/avaliações. Também pretende automatizar o acompanhamento de alunos, comunicação de planos e campanhas, e organizar o funil de conversão e o relacionamento com parceiros com base em dados e interações.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:08:33.442Z",
+    "updatedAt": "2026-01-09T05:08:33.442Z"
+  },
+  {
+    "tenantId": "tenant-1767935559059-ptrkmbb",
+    "ramo_atividade": "Estúdio voltado a atividades corporais e práticas de movimento, oferecendo treinos e serviços orientados ao desenvolvimento físico e ao bem-estar. Atua com planos para diferentes perfis de alunos, mantendo presença digital com galeria de conteúdos e parcerias para ampliar a oferta e a comunidade. A proposta integra corpo e mente por meio do movimento em um ambiente focado em saúde e qualidade de vida.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para captar e qualificar leads vindos do site e redes sociais, automatizando atendimento via WhatsApp e formulários de contato. Pretende organizar e automatizar o processo de vendas de planos (informações, comparação, matrícula e agendamento de aulas), além de enviar comunicações e campanhas personalizadas para retenção de alunos. Também busca centralizar dados de atendimento, medir desempenho de campanhas e melhorar a experiência do cliente com respostas rápidas e consistentes.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:12:39.061Z",
+    "updatedAt": "2026-01-09T05:12:39.061Z"
+  },
+  {
+    "tenantId": "tenant-1767935801026-ihghuxe",
+    "ramo_atividade": "Estúdio de atividades corporais e bem-estar focado em práticas de movimento integradas, com proposta de transformação e equilíbrio entre corpo e mente. Oferece serviços e planos estruturados, além de conteúdo institucional, galeria e parcerias para ampliar a experiência e a comunidade em torno do cuidado físico e mental.",
+    "objetivo": "Usar a plataforma SaaS de automação com IA para organizar e divulgar serviços e planos, automatizando captação e atendimento de leads via site e redes sociais (Facebook/Instagram) e integrando contato por WhatsApp/telefone. Também pretende centralizar informações do estúdio (sobre nós, galeria, parcerias e localização no Google Maps) e otimizar agendamentos, comunicação e acompanhamento de clientes para aumentar conversão e retenção.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:16:41.028Z",
+    "updatedAt": "2026-01-09T05:16:41.028Z"
+  },
+  {
+    "tenantId": "tenant-1767936096378-aj2kxs8",
+    "ramo_atividade": "Estúdio especializado em atividades de movimento e práticas corporais voltadas ao desenvolvimento físico e mental, oferecendo serviços estruturados em modalidades e planos. Atua como um espaço integrado para treinos e experiências que promovem bem-estar, condicionamento e consciência corporal, com suporte de comunicação digital e atendimento ao público.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para centralizar e otimizar o relacionamento com potenciais alunos e clientes, automatizando captação, agendamentos, dúvidas frequentes e atendimento via canais digitais. Também pretende impulsionar a conversão de planos e serviços por meio de campanhas automatizadas, acompanhamento de leads e integração com redes sociais e canais de contato.",
+    "site_oficial": "https://exemplo.com",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:21:36.380Z",
+    "updatedAt": "2026-01-09T05:21:36.380Z"
+  },
+  {
+    "tenantId": "tenant-1767936515401-83qp4tt",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar que integra treinamento funcional/crossfit, aulas de balé e serviços de fisioterapia em um único espaço. Atua com oferta de planos recorrentes e pacotes semestrais/anuais, organizados por frequência semanal e horários, além de relacionamento com alunos via canais digitais e presença em redes sociais.",
+    "objetivo": "Usar a plataforma SaaS de automação com IA para centralizar captação e atendimento de leads, esclarecendo dúvidas sobre serviços, planos, valores e horários de aulas de forma automática e consistente. Automatizar o fluxo de matrícula e pós-venda via WhatsApp (coleta de identificação do aluno, recebimento/validação de comprovantes, confirmação de pagamento e agendamento), além de gerar relatórios de demanda e desempenho por modalidade e plano.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:28:35.403Z",
+    "updatedAt": "2026-01-09T05:28:35.403Z"
+  },
+  {
+    "tenantId": "tenant-1767936616301-5d43zsp",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar que integra modalidades como treinamento funcional/crossfit, balé e fisioterapia em um único espaço. Atua com oferta de aulas e atendimentos voltados à melhora de condicionamento, performance, saúde e reabilitação, estruturando planos por frequência semanal e períodos (mensal, semestral e anual).",
+    "objetivo": "Usar a plataforma SaaS de automação com IA para organizar e automatizar a jornada do aluno, desde o primeiro contato (WhatsApp e redes sociais) até matrícula, escolha de planos, confirmação de pagamento e envio de comprovantes. Também pretende centralizar agendamentos/horários, atendimento recorrente, divulgação de serviços e captação de leads, com mensagens automáticas e relatórios para acompanhar conversão e retenção.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:30:16.303Z",
+    "updatedAt": "2026-01-09T05:30:16.303Z"
+  },
+  {
+    "tenantId": "tenant-1767937354711-el05837",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar que integra modalidades de treino e saúde em um único local, incluindo Crossfit/treinamento funcional, balé e fisioterapia. Oferece planos recorrentes (mensal, semestral e anual) com valores por frequência semanal, além de pacotes de sessões de fisioterapia, com atendimento e suporte ao aluno por canais digitais e presenciais.",
+    "objetivo": "Usar a plataforma SaaS de automação com IA para centralizar e automatizar o atendimento via WhatsApp/telefone, captação de leads e agendamentos de aulas e sessões de fisioterapia. Também pretende automatizar a gestão de planos e renovações, envio e validação de comprovantes, comunicação recorrente com alunos e acompanhamento da jornada do cliente para aumentar retenção e eficiência operacional.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:42:34.713Z",
+    "updatedAt": "2026-01-09T05:42:34.713Z"
+  },
+  {
+    "tenantId": "tenant-1767937379618-k1way43",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar que integra modalidades de treino (Crossfit/treinamento funcional), aulas (como balé) e atendimento em fisioterapia. Oferece planos recorrentes (mensal, semestral e anual) com diferentes frequências semanais, além de pacotes de sessões de fisioterapia, com suporte ao aluno via WhatsApp/telefone e presença em redes sociais.",
+    "objetivo": "Centralizar e automatizar o atendimento e a comunicação com alunos via WhatsApp e outros canais, incluindo envio/validação de comprovantes e orientação de matrícula. Automatizar a gestão e divulgação de planos, valores e pacotes, reduzindo o trabalho operacional e melhorando a experiência do aluno com respostas rápidas, acompanhamento e lembretes.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:42:59.621Z",
+    "updatedAt": "2026-01-09T05:42:59.621Z"
+  },
+  {
+    "tenantId": "tenant-1767937719016-1ttxq31",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar que oferece modalidades como Crossfit, treinamento funcional e balé, com planos mensais e horários definidos. Também presta serviços de fisioterapia, com venda por sessão e pacotes, integrando treinamento e cuidados corporais em um único espaço focado em saúde, performance e qualidade de vida.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para captar e qualificar leads, automatizar atendimentos via WhatsApp e redes sociais, e orientar clientes sobre planos, horários, valores e serviços. Centralizar o suporte, coleta de dados do aluno e recebimento/validação de comprovantes, além de agilizar agendamentos, renovações e comunicação recorrente com alunos.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:48:39.019Z",
+    "updatedAt": "2026-01-09T05:48:39.019Z"
+  },
+  {
+    "tenantId": "tenant-1767937741523-mpt7jc2",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar que oferece modalidades de treino e condicionamento, com foco em performance, saúde e qualidade de vida. Atua com aulas e programas como Crossfit e Treinamento Funcional com horários definidos, além de aulas de Balé com planos específicos. Complementa o portfólio com serviços de Fisioterapia, comercializados por sessão e por pacotes, integrando movimento e cuidado corporal em um único espaço.",
+    "objetivo": "Usar a plataforma SaaS de automação com IA para centralizar o atendimento e os agendamentos de aulas/serviços, automatizando respostas no WhatsApp e redes sociais sobre horários, planos, valores e disponibilidade. Automatizar o processo comercial e de suporte (captação de leads, envio de instruções de pagamento, coleta de nome completo e comprovante, confirmações e lembretes), reduzindo trabalho manual e aumentando conversão e retenção de alunos. Gerar insights sobre demanda por modalidades e eficácia de campanhas/parcerias para otimizar oferta de planos e ocupação das turmas.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:49:01.525Z",
+    "updatedAt": "2026-01-09T05:49:01.525Z"
+  },
+  {
+    "tenantId": "tenant-1767938039289-kl9cjz9",
+    "ramo_atividade": "Estúdio de movimento e bem-estar focado em atividades físicas e cuidado corporal, oferecendo aulas e atendimentos como treinamento funcional/crossfit, balé e fisioterapia. Comercializa planos de aulas por diferentes frequências e presta serviços avulsos e pacotes, com atendimento e relacionamento via canais digitais e presenciais.",
+    "objetivo": "Usar a plataforma para automatizar a captação e conversão de interessados em planos e serviços, integrando atendimento por WhatsApp, redes sociais e formulários do site. Também pretende organizar o funil de vendas, responder dúvidas com IA, gerir solicitações de agendamento e acompanhar o relacionamento com alunos para aumentar adesão e retenção.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:53:59.291Z",
+    "updatedAt": "2026-01-09T05:53:59.291Z"
+  },
+  {
+    "tenantId": "tenant-1767938054571-av3h1kz",
+    "ramo_atividade": "Estúdio de movimento e bem-estar focado em condicionamento físico, prática corporal e cuidado integral, reunindo atividades como treinamento funcional/crossfit, balé e serviços de fisioterapia. Comercializa planos de aulas e atendimentos avulsos ou em pacotes, com diferentes frequências e formatos de adesão. Atua também com relacionamento por canais digitais e presenciais, apoiado por redes sociais e localização em mapa.",
+    "objetivo": "Utilizar a plataforma de automação com IA para captar e qualificar leads, responder dúvidas e orientar a escolha de planos e serviços (aulas e fisioterapia) de forma rápida e personalizada. Automatizar agendamentos, confirmações, lembretes e acompanhamento de alunos via WhatsApp/telefone, reduzindo esforço operacional e aumentando conversão e retenção. Centralizar o atendimento e a comunicação de campanhas, parcerias e atualizações de horários para melhorar a experiência do aluno.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:54:14.573Z",
+    "updatedAt": "2026-01-09T05:54:14.573Z"
+  },
+  {
+    "tenantId": "tenant-1767938080610-oh60vtl",
+    "ramo_atividade": "Estúdio de movimento e bem-estar focado em atividades físicas e cuidado corporal, oferecendo aulas e atendimentos presenciais. Atua com modalidades como treinamento funcional/crossfit, balé e serviços de fisioterapia, com opções de planos recorrentes e pacotes por sessão, além de suporte ao aluno via canais digitais.",
+    "objetivo": "Utilizar a plataforma SaaS de automação com IA para captar e qualificar leads, automatizar atendimentos via WhatsApp e outros canais, e acelerar a conversão em planos e pacotes (aulas e fisioterapia). Também busca organizar a jornada do aluno (agendamentos, lembretes, follow-ups, renovação de planos e reativação) e centralizar informações de contato e campanhas para aumentar retenção e ocupação das turmas.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T05:54:40.612Z",
+    "updatedAt": "2026-01-09T05:54:40.612Z"
+  },
+  {
+    "tenantId": "tenant-1767938408992-y3tdoae",
+    "ramo_atividade": "O Studiooly é um estúdio de atividades físicas e bem-estar que oferece modalidades como crossfit, treino funcional, balé e serviços de fisioterapia. Atua com atendimento local, disponibilizando horários de aulas, planos por frequência e pacotes de sessões, com foco em acompanhar a evolução física e promover qualidade de vida integrando corpo e mente.",
+    "objetivo": "Usar a plataforma de automação com IA para captar e converter visitantes em alunos, automatizando o atendimento via WhatsApp e outros canais com respostas sobre horários, planos, valores e modalidades. Também pretende padronizar o envio e validação de comprovantes, coletar dados do aluno, agilizar agendamentos e nutrir leads com comunicações personalizadas para aumentar matrículas e retenção.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T06:00:08.994Z",
+    "updatedAt": "2026-01-09T06:00:08.994Z"
+  },
+  {
+    "tenantId": "tenant-1767938458055-lgvnt0u",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar com foco em treino funcional e crossfit, além de modalidades como balé e serviços de fisioterapia. Atua de forma local, oferecendo turmas com horários definidos, planos por frequência e pacotes de atendimento, combinando condicionamento físico, saúde e reabilitação em um único espaço.",
+    "objetivo": "Automatizar a captação e conversão de visitantes em alunos, respondendo dúvidas sobre modalidades, horários, planos e valores em canais como WhatsApp e redes sociais. Centralizar o atendimento com IA para triagem, agendamento e follow-up, além de coletar dados do aluno e orientar o envio de comprovante de pagamento, reduzindo o trabalho manual e aumentando as matrículas.",
+    "site_oficial": "https://studiooly.com.br",
+    "prioridade": "HIGH",
+    "escopo": [
+      "rag",
+      "chatbot",
+      "classificacao_intencao"
+    ],
+    "createdAt": "2026-01-09T06:00:58.057Z",
+    "updatedAt": "2026-01-09T06:00:58.057Z"
   }
 ]

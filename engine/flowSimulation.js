@@ -24,6 +24,7 @@ const {
   handoffNodeHandler,
   endNodeHandler,
   optionsNodeHandler,
+  subflowNodeHandler,
 } = require('./nodes/basicNodes');
 const { aiNodeHandler } = require('./nodes/aiNode');
 const { aiTaskNodeHandler } = require('./nodes/aiTaskNode');
@@ -134,6 +135,8 @@ function createSimulationRegistry() {
   registry.register('format_date', formatDateNodeHandler);
   registry.register('random_number', randomNumberNodeHandler);
   registry.register('get_user_info', getUserInfoNodeHandler);
+  // Nó de subfluxo
+  registry.register('subflow', subflowNodeHandler);
   // Nó de API
   const { apiNodeHandler } = require('./nodes/apiNode');
   registry.register('api', apiNodeHandler);
@@ -219,6 +222,9 @@ async function simulateFlow(flow, options) {
     const result = await executeStep(before, compiled, {
       registry,
       input: execInput,
+      deps: {
+        registry, // Passa registry para handlers que precisam (ex: subflow)
+      },
     });
 
     const step = {

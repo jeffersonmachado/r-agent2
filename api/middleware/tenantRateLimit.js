@@ -46,6 +46,12 @@ const RATE_LIMITS_BY_PLAN = {
  * @returns {Promise<boolean>} true se permitido, false se bloqueado
  */
 async function tenantRateLimitMiddleware(req, res, sendJson) {
+  // Em desenvolvimento, rate limit é desativado
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  if (nodeEnv === 'development') {
+    logger.debug('[TenantRateLimit] Rate limit desativado em desenvolvimento');
+    return true;
+  }
   // Rotas de autenticação e super-admin não exigem tenant_id
   // (serão tratadas antes de chegar aqui no server.js)
   // Valida tenant primeiro

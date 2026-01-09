@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script para iniciar API e Frontend juntos em desenvolvimento
+# Script para iniciar API, Frontend e RAG Service juntos em desenvolvimento
 
 # Cores para output
 GREEN='\033[0;32m'
@@ -24,11 +24,17 @@ check_port() {
 # Função para limpar processos ao sair
 cleanup() {
     echo -e "\n${BLUE}Parando servidores...${NC}"
-    kill $API_PID $FRONTEND_PID 2>/dev/null
+    kill $API_PID $FRONTEND_PID $RAG_PID 2>/dev/null
     exit
 }
 
 trap cleanup SIGINT SIGTERM
+
+# Detecta diretório do projeto
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+RAG_SERVICE_DIR="${RAG_SERVICE_DIR:-$PROJECT_ROOT/rag-service}"
+RAG_PORT=8000
 
 # Verifica se a porta 3000 está em uso
 if check_port 3000; then
@@ -81,6 +87,73 @@ elif [ -f "api/data/config.json" ]; then
     fi
 fi
 
+# Verifica se a porta 8000 (RAG) está em uso
+if check_port $RAG_PORT; then
+    echo -e "${YELLOW}Aviso: Porta $RAG_PORT (RAG) já está em uso${NC}"
+    echo -e "${YELLOW}Verificando se é o RAG service do projeto...${NC}"
+    
+    # Tenta encontrar o processo uvicorn
+    RAG_PROCESS=$(ps aux | grep "uvicorn main:app" | grep -v grep | awk '{print $2}' | head -1)
+    
+    if [ -n "$RAG_PROCESS" ]; then
+        echo -e "${GREEN}RAG Service já está rodando (PID: $RAG_PROCESS)${NC}"
+        echo -e "${BLUE}Usando RAG Service existente...${NC}"
+        RAG_PID=$RAG_PROCESS
+        USE_EXISTING_RAG=true
+    else
+        echo -e "${RED}Erro: Porta $RAG_PORT está em uso por outro processo${NC}"
+        echo -e "${YELLOW}Execute: lsof -ti:$RAG_PORT | xargs kill${NC}"
+        exit 1
+    fi
+else
+    # Inicia o RAG Service
+    echo -e "${GREEN}Iniciando RAG Service na porta $RAG_PORT...${NC}"
+    
+    # Navega para o diretório do serviço RAG
+    cd "$RAG_SERVICE_DIR"
+    
+    # Verifica se há um ambiente virtual
+    if [ -d "venv" ]; then
+        echo -e "${BLUE}Usando ambiente virtual do RAG service...${NC}"
+        UVICORN_CMD="venv/bin/uvicorn"
+    elif command -v uvicorn &> /dev/null; then
+        echo -e "${BLUE}Usando uvicorn do sistema...${NC}"
+        UVICORN_CMD="uvicorn"
+    else
+        echo -e "${RED}Erro: uvicorn não encontrado!${NC}"
+        echo -e "${YELLOW}Instale as dependências: cd $RAG_SERVICE_DIR && pip install -r requirements.txt${NC}"
+        cd "$PROJECT_ROOT"
+        exit 1
+    fi
+    
+    # Inicia o RAG service em background com reload
+    $UVICORN_CMD main:app --reload --host 0.0.0.0 --port $RAG_PORT > /tmp/rag-service-dev.log 2>&1 &
+    RAG_PID=$!
+    USE_EXISTING_RAG=false
+    
+    # Volta para o diretório raiz
+    cd "$PROJECT_ROOT"
+    
+    # Aguarda um pouco para o RAG service iniciar
+    sleep 3
+    
+    # Verifica se o RAG service está rodando
+    if ! kill -0 $RAG_PID 2>/dev/null; then
+        echo -e "${RED}Erro: RAG Service não iniciou corretamente${NC}"
+        echo -e "${YELLOW}Verifique os logs: tail -f /tmp/rag-service-dev.log${NC}"
+        exit 1
+    fi
+    
+    # Testa o endpoint de health
+    sleep 2
+    if curl -s http://localhost:$RAG_PORT/rag/health > /dev/null 2>&1; then
+        echo -e "${GREEN}RAG Service iniciado com sucesso!${NC}"
+    else
+        echo -e "${YELLOW}Aviso: RAG Service iniciado mas ainda não está respondendo${NC}"
+        echo -e "${YELLOW}Verifique os logs: tail -f /tmp/rag-service-dev.log${NC}"
+    fi
+fi
+
 # Inicia o frontend
 echo -e "${GREEN}Iniciando Frontend na porta ${FRONTEND_PORT}...${NC}"
 cd frontend
@@ -91,13 +164,19 @@ cd ..
 echo -e "${BLUE}Servidores iniciados!${NC}"
 echo -e "${GREEN}API: http://localhost:3000${NC}"
 echo -e "${GREEN}Frontend: http://localhost:${FRONTEND_PORT}${NC}"
+echo -e "${GREEN}RAG Service: http://localhost:$RAG_PORT${NC}"
 
-if [ "$USE_EXISTING_API" = true ]; then
-    echo -e "${YELLOW}Aviso: API já estava rodando. Não será parada ao pressionar Ctrl+C${NC}"
-    echo -e "${BLUE}Pressione Ctrl+C para parar apenas o frontend${NC}"
+if [ "$USE_EXISTING_API" = true ] || [ "$USE_EXISTING_RAG" = true ]; then
+    if [ "$USE_EXISTING_API" = true ]; then
+        echo -e "${YELLOW}Aviso: API já estava rodando. Não será parada ao pressionar Ctrl+C${NC}"
+    fi
+    if [ "$USE_EXISTING_RAG" = true ]; then
+        echo -e "${YELLOW}Aviso: RAG Service já estava rodando. Não será parado ao pressionar Ctrl+C${NC}"
+    fi
+    echo -e "${BLUE}Pressione Ctrl+C para parar os servidores iniciados por este script${NC}"
     wait $FRONTEND_PID
 else
-    echo -e "${BLUE}Pressione Ctrl+C para parar ambos os servidores${NC}"
+    echo -e "${BLUE}Pressione Ctrl+C para parar todos os servidores${NC}"
     wait
 fi
 

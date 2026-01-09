@@ -236,11 +236,35 @@ async function scrapeUrl(url, options = {}) {
     // Indexa no RAG se solicitado
     let indexed = false;
     let chunksCreated = 0;
+    let isDuplicate = false;
 
     if (autoIndex) {
       try {
         const result = await ragDocumentsService.createDocument(document, tenantId);
         if (result.success && result.document) {
+          // Verifica se é duplicata
+          if (result.isDuplicate) {
+            isDuplicate = true;
+            logger.info('[WebScraping] Documento duplicado detectado, usando existente', {
+              url,
+              existingDocumentId: result.existingDocument.id,
+              existingTitle: result.existingDocument.title,
+            });
+            
+            // Retorna documento existente
+            return {
+              success: true,
+              documentId: result.existingDocument.id,
+              title: result.existingDocument.title,
+              content: result.existingDocument.content,
+              metadata: result.existingDocument.metadata,
+              indexed: result.existingDocument.indexed || false,
+              chunksCreated: result.existingDocument.chunksCount || 0,
+              isDuplicate: true,
+              message: 'Documento já existe (mesma URL), usando documento existente',
+            };
+          }
+          
           indexed = result.document.indexed || false;
           chunksCreated = result.document.chunksCount || 0;
           logger.info('[WebScraping] Documento indexado automaticamente', {
@@ -267,6 +291,7 @@ async function scrapeUrl(url, options = {}) {
       metadata,
       indexed,
       chunksCreated,
+      isDuplicate: isDuplicate || false,
     };
   } catch (error) {
     logger.error('[WebScraping] Erro ao raspar URL', {

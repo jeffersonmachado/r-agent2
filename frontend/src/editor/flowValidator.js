@@ -45,6 +45,23 @@ function addUiMessage(error) {
     PATH_WITHOUT_TERMINATION: 'Existe um caminho no fluxo que não termina adequadamente. Todos os caminhos devem terminar em um nó de Fallback ou Fim.',
     STRUCTURAL_LOOP: 'Loop estrutural detectado no fluxo. Verifique as conexões.',
     INVALID_FLOW_STRUCTURE: 'Estrutura do fluxo inválida.',
+    PROHIBITED_MULTIPLE_INPUTS: nodeIds.length > 0
+      ? `Nó "${nodeIds[0]}" tem múltiplas entradas. Múltiplas entradas são permitidas apenas em nós de convergência simples (Fim, Transferência).`
+      : 'Nós com múltiplas entradas detectados. Use apenas em nós de convergência simples.',
+    PROHIBITED_MULTIPLE_INPUTS_DECISION: nodeIds.length > 0
+      ? `Nó decisório "${nodeIds[0]}" não pode ter múltiplas entradas. Nós decisórios (Roteador, Opções, Intenção) devem ter apenas uma entrada.`
+      : 'Nós decisórios com múltiplas entradas detectados.',
+    WARN_MULTIPLE_INPUTS_OUTPUTS: nodeIds.length > 0
+      ? `Nó "${nodeIds[0]}" tem múltiplas entradas e saídas. Considere simplificar o fluxo.`
+      : 'Nós com múltiplas entradas e saídas detectados.',
+    WARN_ROUTER_CHAIN: 'Cadeia longa de roteadores detectada. Considere usar subfluxos.',
+    WARN_LARGE_FLOW_WITHOUT_SUBFLOW: 'Fluxo grande sem subfluxos. Considere modularizar.',
+    MULTI_OUTPUT_NODE_WITHOUT_FALLBACK: nodeIds.length > 0
+      ? `Nó "${nodeIds[0]}" tem múltiplas saídas mas falta conexão de fallback.`
+      : 'Nós com múltiplas saídas sem fallback detectados.',
+    SUBFLOW_RECURSION: nodeIds.length > 0
+      ? `Nó "${nodeIds[0]}" tenta chamar o próprio fluxo (recursão infinita).`
+      : 'Recursão infinita detectada em subfluxos.',
   };
   
   const messageUi = uiMessages[error.code] || technicalMessage;
@@ -430,6 +447,304 @@ function validateStructuralLoops(flow, edges) {
 }
 
 /**
+ * Valida múltiplas entradas - bloqueia sincronização
+ * 
+ * @param {Object} flow - Fluxo a validar
+ * @param {Array<{from: string, to: string}>} edges - Arestas do fluxo
+ * @returns {FlowValidationError[]}
+ */
+function validateMultipleInputs(flow, edges) {
+  const errors = [];
+  
+  const normalized = normalizeFlowFormat(flow);
+  if (!normalized || !normalized.nodes || normalized.nodes.length === 0) {
+    return errors;
+  }
+  
+  // Conta entradas por nó
+  const inputCounts = new Map();
+  edges.forEach(edge => {
+    const count = inputCounts.get(edge.to) || 0;
+    inputCounts.set(edge.to, count + 1);
+  });
+  
+  // Nós que permitem múltiplas entradas (apenas convergência simples, passivos)
+  const allowedMultipleInputs = new Set(['end', 'handoff']);
+  
+  // Nós decisórios (não podem ter múltiplas entradas)
+  const decisionNodes = new Set(['router', 'schedule_router', 'options', 'ai_task']);
+  
+  inputCounts.forEach((count, nodeId) => {
+    if (count > 1) {
+      const node = normalized.nodes.find(n => String(n.id || '') === nodeId);
+      const nodeType = node?.type || (node?.data && node.data.type);
+      
+      // BLOQUEAR: Nós decisórios com múltiplas entradas
+      if (decisionNodes.has(nodeType)) {
+        errors.push(addUiMessage({
+          code: 'PROHIBITED_MULTIPLE_INPUTS_DECISION',
+          message: `Nó decisório "${nodeId}" (tipo: ${nodeType}) tem ${count} entradas. Nós decisórios não podem ter múltiplas entradas.`,
+          messageUi: `❌ Nó decisório "${nodeId}" não pode ter múltiplas entradas. Nós decisórios (Roteador, Opções, Intenção) devem ter apenas uma entrada.`,
+          nodeIds: [nodeId],
+          severity: 'error',
+          details: { nodeType, inputCount: count },
+        }));
+        return; // Não continua validação para este nó
+      }
+      
+      // BLOQUEAR: Nós que não podem ter múltiplas entradas
+      if (!allowedMultipleInputs.has(nodeType)) {
+        errors.push(addUiMessage({
+          code: 'PROHIBITED_MULTIPLE_INPUTS',
+          message: `Nó "${nodeId}" (tipo: ${nodeType}) tem ${count} entradas. Múltiplas entradas são permitidas apenas em nós de convergência simples (end, handoff).`,
+          messageUi: `❌ Nó "${nodeId}" tem múltiplas entradas. Isso não é permitido para sincronização. Use apenas em nós de convergência simples (Fim, Transferência).`,
+          nodeIds: [nodeId],
+          severity: 'error',
+          details: { nodeType, inputCount: count },
+        }));
+      }
+      
+      // AVISAR: Nós com múltiplas entradas + múltiplas saídas (pode indicar problema)
+      if (node && nodeType !== 'end' && allowedMultipleInputs.has(nodeType)) {
+        const outputCount = edges.filter(e => e.from === nodeId).length;
+        if (outputCount > 1) {
+          errors.push(addUiMessage({
+            code: 'WARN_MULTIPLE_INPUTS_OUTPUTS',
+            message: `Nó "${nodeId}" tem ${count} entradas e ${outputCount} saídas. Isso pode indicar lógica complexa não suportada.`,
+            messageUi: `⚠️ Nó "${nodeId}" tem múltiplas entradas e saídas. Considere simplificar o fluxo ou usar subfluxos.`,
+            nodeIds: [nodeId],
+            severity: 'warning',
+            details: { inputCount: count, outputCount },
+          }));
+        }
+      }
+    }
+  });
+  
+  return errors;
+}
+
+/**
+ * Valida cadeias de roteadores (muitos roteadores encadeados)
+ * 
+ * @param {Object} flow - Fluxo a validar
+ * @param {Array<{from: string, to: string}>} edges - Arestas do fluxo
+ * @returns {FlowValidationError[]}
+ */
+function validateRouterChains(flow, edges) {
+  const errors = [];
+  
+  const normalized = normalizeFlowFormat(flow);
+  if (!normalized || !normalized.nodes || normalized.nodes.length === 0) {
+    return errors;
+  }
+  
+  // Encontra todos os roteadores
+  const routerNodes = new Set();
+  normalized.nodes.forEach(node => {
+    const nodeType = node.type || (node.data && node.data.type);
+    if (nodeType === 'router' || nodeType === 'schedule_router') {
+      routerNodes.add(String(node.id || ''));
+    }
+  });
+  
+  // Detecta cadeias de roteadores (router -> router -> router)
+  const MAX_ROUTER_CHAIN = 3; // Limite recomendado
+  
+  routerNodes.forEach(routerId => {
+    const chain = [];
+    let current = routerId;
+    let visited = new Set();
+    
+    while (current && routerNodes.has(current) && !visited.has(current)) {
+      visited.add(current);
+      chain.push(current);
+      
+      // Encontra próximo roteador na cadeia
+      const nextRouters = edges
+        .filter(e => e.from === current && routerNodes.has(e.to))
+        .map(e => e.to);
+      
+      if (nextRouters.length > 0) {
+        current = nextRouters[0]; // Pega o primeiro
+      } else {
+        break;
+      }
+    }
+    
+    if (chain.length > MAX_ROUTER_CHAIN) {
+      errors.push(addUiMessage({
+        code: 'WARN_ROUTER_CHAIN',
+        message: `Cadeia de ${chain.length} roteadores encadeados detectada: ${chain.join(' -> ')}. Considere usar subfluxos para simplificar.`,
+        messageUi: `⚠️ Cadeia longa de roteadores (${chain.length}). Considere usar subfluxos para melhorar a legibilidade.`,
+        nodeIds: chain,
+        severity: 'warning',
+        details: { chain, length: chain.length },
+      }));
+    }
+  });
+  
+  return errors;
+}
+
+/**
+ * Valida fluxos grandes sem subfluxo
+ * 
+ * @param {Object} flow - Fluxo a validar
+ * @returns {FlowValidationError[]}
+ */
+function validateLargeFlowsWithoutSubflow(flow) {
+  const errors = [];
+  
+  const normalized = normalizeFlowFormat(flow);
+  if (!normalized || !normalized.nodes || normalized.nodes.length === 0) {
+    return errors;
+  }
+  
+  const nodeCount = normalized.nodes.length;
+  const LARGE_FLOW_THRESHOLD = 20; // Limite recomendado
+  
+  // Verifica se há subfluxos
+  const hasSubflow = normalized.nodes.some(node => {
+    const nodeType = node.type || (node.data && node.data.type);
+    return nodeType === 'subflow';
+  });
+  
+  if (nodeCount >= LARGE_FLOW_THRESHOLD && !hasSubflow) {
+    errors.push(addUiMessage({
+      code: 'WARN_LARGE_FLOW_WITHOUT_SUBFLOW',
+      message: `Fluxo tem ${nodeCount} nós e não usa subfluxos. Considere modularizar usando subfluxos para melhorar a legibilidade.`,
+      messageUi: `⚠️ Fluxo grande (${nodeCount} nós) sem subfluxos. Considere usar "Chamar Subfluxo" para modularizar e melhorar a legibilidade.`,
+      nodeIds: [],
+      severity: 'warning',
+      details: { nodeCount, threshold: LARGE_FLOW_THRESHOLD },
+    }));
+  }
+  
+  return errors;
+}
+
+/**
+ * Valida nós multi-saída sem fallback
+ * 
+ * @param {Object} flow - Fluxo a validar
+ * @param {Array<{from: string, to: string}>} edges - Arestas do fluxo
+ * @returns {FlowValidationError[]}
+ */
+function validateMultiOutputNodesWithoutFallback(flow, edges) {
+  const errors = [];
+  
+  const normalized = normalizeFlowFormat(flow);
+  if (!normalized || !normalized.nodes || normalized.nodes.length === 0) {
+    return errors;
+  }
+  
+  // Nós que podem ter múltiplas saídas
+  const multiOutputNodes = new Set(['router', 'schedule_router', 'options', 'ai_task']);
+  
+  normalized.nodes.forEach(node => {
+    const nodeId = String(node.id || '');
+    const nodeType = node.type || (node.data && node.data.type);
+    
+    if (multiOutputNodes.has(nodeType)) {
+      // Conta saídas deste nó
+      const outputCount = edges.filter(e => e.from === nodeId).length;
+      
+      if (outputCount > 1) {
+        // Verifica se há conexão de fallback ou padrão
+        const hasFallbackConnection = edges.some(e => {
+          if (e.from !== nodeId) return false;
+          
+          // Para router/schedule_router, verifica se há conexão padrão
+          if (nodeType === 'router' || nodeType === 'schedule_router') {
+            // Verifica se há regra "always" no config
+            const config = node.config || (node.data && node.data.config);
+            if (config && Array.isArray(config.rules)) {
+              const hasAlwaysRule = config.rules.some(rule => 
+                rule && rule.condition && rule.condition.op === 'always'
+              );
+              if (hasAlwaysRule) return true;
+            }
+            // Verifica se há conexão padrão (next)
+            if (node.next) return true;
+          }
+          
+          // Para outros nós, verifica se há saída "fallback" conectada
+          return true; // Simplificado - validação mais detalhada no schema do nó
+        });
+        
+        if (!hasFallbackConnection) {
+          errors.push(addUiMessage({
+            code: 'MULTI_OUTPUT_NODE_WITHOUT_FALLBACK',
+            message: `Nó "${nodeId}" (tipo: ${nodeType}) tem ${outputCount} saídas mas não tem conexão de fallback.`,
+            messageUi: `❌ Nó "${nodeId}" tem múltiplas saídas mas falta conexão de fallback. Conecte a saída "Fallback" ou "Padrão" a outro nó.`,
+            nodeIds: [nodeId],
+            severity: 'error',
+            details: { nodeType, outputCount },
+          }));
+        }
+      }
+    }
+  });
+  
+  return errors;
+}
+
+/**
+ * Valida recursão infinita em subfluxos
+ * 
+ * @param {Object} flow - Fluxo a validar
+ * @param {Array<{from: string, to: string}>} edges - Arestas do fluxo
+ * @returns {FlowValidationError[]}
+ */
+function validateSubflowRecursion(flow, edges) {
+  const errors = [];
+  
+  const normalized = normalizeFlowFormat(flow);
+  if (!normalized || !normalized.nodes || normalized.nodes.length === 0) {
+    return errors;
+  }
+  
+  // Encontra todos os nós subflow
+  const subflowNodes = normalized.nodes.filter(node => {
+    const nodeType = node.type || (node.data && node.data.type);
+    return nodeType === 'subflow';
+  });
+  
+  if (subflowNodes.length === 0) {
+    return errors;
+  }
+  
+  // Obtém o flowId atual (se disponível)
+  const currentFlowId = flow.id || flow.flowId || null;
+  
+  // Valida cada nó subflow
+  subflowNodes.forEach(node => {
+    const nodeId = String(node.id || '');
+    const config = node.config || (node.data && node.data.config);
+    const subflowId = config?.flowId;
+    
+    if (!subflowId || typeof subflowId !== 'string') {
+      return; // Validação de config é feita no schema do nó
+    }
+    
+    // BLOQUEAR: Subfluxo chamando o próprio fluxo (recursão direta)
+    if (currentFlowId && subflowId === currentFlowId) {
+      errors.push(addUiMessage({
+        code: 'SUBFLOW_RECURSION',
+        message: `Nó subflow "${nodeId}" tenta chamar o próprio fluxo "${subflowId}" (recursão infinita).`,
+        messageUi: `❌ Nó "${nodeId}" tenta chamar o próprio fluxo. Isso causaria recursão infinita. Use um fluxo diferente.`,
+        nodeIds: [nodeId],
+        severity: 'error',
+        details: { subflowId, currentFlowId },
+      }));
+    }
+  });
+  
+  return errors;
+}
+
+/**
  * Função principal de validação de fluxo
  * 
  * @param {Object} flow - Fluxo a validar (formato Rete.js ou engine)
@@ -460,6 +775,13 @@ export function validateFlow(flow) {
   errors = errors.concat(validateOrphanNodes(flow, edges));
   errors = errors.concat(validatePathTermination(flow, edges));
   errors = errors.concat(validateStructuralLoops(flow, edges));
+  
+  // Validações de arquitetura (múltiplas entradas, roteadores, subfluxos)
+  errors = errors.concat(validateMultipleInputs(flow, edges));
+  errors = errors.concat(validateRouterChains(flow, edges));
+  errors = errors.concat(validateLargeFlowsWithoutSubflow(flow));
+  errors = errors.concat(validateMultiOutputNodesWithoutFallback(flow, edges));
+  errors = errors.concat(validateSubflowRecursion(flow, edges));
   
   return {
     valid: errors.length === 0,

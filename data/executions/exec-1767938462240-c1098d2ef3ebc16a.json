@@ -1,0 +1,28 @@
+{
+  "executionId": "exec-1767938462240-c1098d2ef3ebc16a",
+  "status": "approved",
+  "payload": {
+    "name": "studiooly",
+    "description": "O Studiooly (studiooly.com.br) é um estúdio voltado à prática de atividades físicas e bem-estar, com proposta de “onde o movimento transforma corpo e mente em um só lugar”. O site apresenta uma estrutura com seções como Home, Sobre nós, Serviços, Planos, Contato, Galeria e Parcerias, além de links para redes sociais (Facebook e Instagram). Entre os serviços e modalidades exibidos estão aulas/treinos de crossfit e funcional (com horários divulgados), balé (com opções de frequência semanal) e aten",
+    "useRag": false
+  },
+  "decisionAuthority": {
+    "type": "system",
+    "approvedBy": "pipelineExecutionContext"
+  },
+  "stages": {
+    "filesInferred": true,
+    "payloadValid": true,
+    "contractValid": true,
+    "contextBuilt": true,
+    "ragContextBuilt": true,
+    "aiExecuted": true,
+    "flowGenerated": true,
+    "seedGenerated": true,
+    "rpaGenerated": true,
+    "rpaExecuted": true
+  },
+  "createdAt": 1767938462240,
+  "updatedAt": 1767938488261,
+  "ragContext": null
+}

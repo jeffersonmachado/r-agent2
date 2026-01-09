@@ -11,21 +11,64 @@ import json
 from pathlib import Path
 
 
+def find_project_root(start_path: Optional[Path] = None) -> Optional[Path]:
+    """
+    Encontra o diretório raiz do projeto procurando por arquivos marcadores.
+    
+    Procura por: package.json, docker-compose.yml, docker-compose.prod.yml
+    """
+    if start_path is None:
+        start_path = Path(__file__).resolve()
+    else:
+        start_path = Path(start_path).resolve()
+    
+    current = start_path
+    # Se start_path é um arquivo, começa do diretório pai
+    if current.is_file():
+        current = current.parent
+    
+    # Procura pelo diretório raiz (máximo 10 níveis acima)
+    markers = ['package.json', 'docker-compose.yml', 'docker-compose.prod.yml']
+    for _ in range(10):
+        for marker in markers:
+            if (current / marker).exists():
+                return current
+        if current.parent == current:  # Chegou na raiz do sistema
+            break
+        current = current.parent
+    
+    return None
+
+
 def load_config_json() -> Optional[dict]:
     """
     Carrega configurações do config.json do Node.js.
     
     Tenta encontrar o arquivo em:
-    1. ../api/data/config.json (desenvolvimento)
-    2. ../../api/data/config.json (docker/compose)
-    3. ./api/data/config.json (alternativo)
+    1. Diretório raiz do projeto detectado automaticamente
+    2. Caminhos relativos ao arquivo atual (desenvolvimento)
+    3. Variável de ambiente PROJECT_ROOT
     """
-    base_paths = [
+    # Tenta encontrar o diretório raiz do projeto
+    project_root = find_project_root()
+    if project_root is None:
+        # Fallback para variável de ambiente
+        project_root = os.getenv("PROJECT_ROOT")
+        if project_root:
+            project_root = Path(project_root)
+    
+    base_paths = []
+    
+    # Adiciona caminho baseado no diretório raiz detectado
+    if project_root:
+        base_paths.append(project_root / "api" / "data" / "config.json")
+    
+    # Adiciona caminhos relativos (para desenvolvimento)
+    base_paths.extend([
         Path(__file__).parent.parent.parent / "api" / "data" / "config.json",
         Path(__file__).parent.parent.parent.parent / "api" / "data" / "config.json",
         Path(__file__).parent.parent / "api" / "data" / "config.json",
-        Path("/opt/results/ria/r-agent2/api/data/config.json"),  # Caminho absoluto
-    ]
+    ])
     
     for config_path in base_paths:
         if config_path.exists():
@@ -46,12 +89,26 @@ def load_full_config_json() -> Optional[dict]:
     """
     Carrega o config.json completo (não apenas a seção RAG).
     """
-    base_paths = [
+    # Tenta encontrar o diretório raiz do projeto
+    project_root = find_project_root()
+    if project_root is None:
+        # Fallback para variável de ambiente
+        project_root = os.getenv("PROJECT_ROOT")
+        if project_root:
+            project_root = Path(project_root)
+    
+    base_paths = []
+    
+    # Adiciona caminho baseado no diretório raiz detectado
+    if project_root:
+        base_paths.append(project_root / "api" / "data" / "config.json")
+    
+    # Adiciona caminhos relativos (para desenvolvimento)
+    base_paths.extend([
         Path(__file__).parent.parent.parent / "api" / "data" / "config.json",
         Path(__file__).parent.parent.parent.parent / "api" / "data" / "config.json",
         Path(__file__).parent.parent / "api" / "data" / "config.json",
-        Path("/opt/results/ria/r-agent2/api/data/config.json"),  # Caminho absoluto
-    ]
+    ])
     
     for config_path in base_paths:
         if config_path.exists():

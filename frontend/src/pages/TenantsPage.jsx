@@ -286,12 +286,20 @@ export function TenantsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🏢 Gerenciamento de Tenants</h1>
         </div>
-        <div className="support-controls">
+        <div className="support-controls" style={{ display: 'flex', gap: '10px' }}>
           <Button 
             onClick={handleCreate} 
             style={{ backgroundColor: '#25D366', color: 'white' }}
           >
             ➕ Novo Tenant
+          </Button>
+          <Button 
+            onClick={() => {
+              navigate('/generate-system?mode=tenant');
+            }}
+            style={{ backgroundColor: '#8B5CF6', color: 'white' }}
+          >
+            🤖 Criar por IA
           </Button>
         </div>
       </div>

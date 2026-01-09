@@ -110,6 +110,12 @@ export const menuItems = [
     roles: ['super_admin'],
   },
   {
+    label: 'Dev Dashboard',
+    path: '/dev',
+    icon: '🛠️',
+    roles: ['super_admin'],
+  },
+  {
     label: 'Onboarding',
     path: '/onboarding',
     icon: '🚀',
@@ -286,6 +292,38 @@ export function hasPermission(agent, resource, action) {
 }
 
 /**
+ * Verifica se um agente é Super Admin.
+ * Mesma lógica do backend: role 'super_admin' OU owner do tenant 'system'
+ *
+ * @param {Object} agent - Agente autenticado
+ * @returns {boolean}
+ */
+export function isSuperAdmin(agent) {
+  if (!agent) return false;
+  
+  // Super Admin pode ser:
+  // 1. Role 'super_admin'
+  // 2. Owner do tenant 'system' (verifica tenantId original se disponível, ou atual)
+  // 3. Username 'systemadmin' com role 'owner' (para quando tenantId foi alterado temporariamente)
+  if (agent.role === 'super_admin') {
+    return true;
+  }
+  
+  // Verifica tenantId original (preservado quando systemadmin escolhe outro tenant)
+  const originalTenantId = agent.originalTenantId || agent.tenantId;
+  if (agent.role === 'owner' && originalTenantId === 'system') {
+    return true;
+  }
+  
+  // Fallback: verifica se é o systemadmin pelo username
+  if (agent.role === 'owner' && agent.username === 'systemadmin') {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Filtra itens do menu baseado nas permissões do agente.
  *
  * @param {Object} agent - Agente autenticado
@@ -300,6 +338,14 @@ export function getVisibleMenuItems(agent) {
     // Se o item tem restrição de roles, verifica primeiro
     if (item.roles && Array.isArray(item.roles)) {
       const agentRole = agent.role?.toLowerCase();
+      
+      // Para itens com role 'super_admin', verifica usando função isSuperAdmin
+      // (que inclui owner do tenant 'system')
+      if (item.roles.includes('super_admin')) {
+        return isSuperAdmin(agent);
+      }
+      
+      // Para outros roles, verifica normalmente
       if (!item.roles.includes(agentRole)) {
         return false;
       }

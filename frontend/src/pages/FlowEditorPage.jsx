@@ -30,11 +30,13 @@ import { NavigationLink } from '../components/NavigationLink';
 import { FallbackEventsViewer } from '../components/FallbackEventsViewer';
 import { getNodeSchema } from '../editor/nodeSchemas';
 import { useWebSocketContext } from '../context/WebSocketContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export function FlowEditorPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
   const { themeName } = useTheme();
+  const isMobile = useIsMobile();
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -42,6 +44,14 @@ export function FlowEditorPage() {
       navigate('/login');
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // Adiciona classe ao body quando estiver no editor para estilizar UserMenu como flutuante
+  useEffect(() => {
+    document.body.classList.add('flow-editor-active');
+    return () => {
+      document.body.classList.remove('flow-editor-active');
+    };
+  }, []);
 
   if (authLoading) {
     return (
@@ -92,7 +102,10 @@ export function FlowEditorPage() {
   const [replay, setReplay] = useState(null);
   const [loadingReplay, setLoadingReplay] = useState(false);
   const [replayError, setReplayError] = useState(null);
-  const [replayCollapsed, setReplayCollapsed] = useState(false);
+  const [replayCollapsed, setReplayCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
 
   // WebSocket para atualizações em tempo real
   const handleWebSocketEvent = useCallback((event, data, fullMessage) => {
@@ -180,13 +193,30 @@ export function FlowEditorPage() {
   }, [error, showToast]);
   
   // Estados para colapso e larguras (EXATAMENTE como no modelo)
-  const [paletteCollapsed, setPaletteCollapsed] = useState(false);
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  // Em mobile, inicia recolhido
+  const [paletteCollapsed, setPaletteCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
   
   // Estados para colapso vertical dos painéis do painel direito
-  const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
-  const [validationCollapsed, setValidationCollapsed] = useState(true); // Inicia colapsada (tamanho mínimo)
-  const [simulationCollapsed, setSimulationCollapsed] = useState(true); // Inicia colapsada (tamanho mínimo)
+  // Em mobile, inicia recolhido
+  const [propertiesCollapsed, setPropertiesCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
+  const [validationCollapsed, setValidationCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth < 768;
+  }); // Em mobile, inicia colapsada
+  const [simulationCollapsed, setSimulationCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth < 768;
+  }); // Em mobile, inicia colapsada
   
   const [paletteWidth, setPaletteWidth] = useState(() => {
     const saved = localStorage.getItem('paletteWidth');
@@ -621,6 +651,12 @@ export function FlowEditorPage() {
       
       // Atualiza config do nó
       node.data.config = { ...node.data.config, ...newConfig };
+      
+      // ✅ Atualiza inputs/outputs dinamicamente para nós com sockets dinâmicos
+      // (router, schedule_router, options, ai_task/intent_list, keywords)
+      if (editorRef.current.updateNodeIO) {
+        editorRef.current.updateNodeIO(nodeId);
+      }
       
       // Se o editor tem updateNodeIO, atualiza inputs/outputs dinamicamente
       // Isso é necessário para nós com outputs dinâmicos (router, schedule_router)
@@ -1263,29 +1299,6 @@ export function FlowEditorPage() {
         minimapVisible={false}
         currentZoom={1}
       >
-        <button className="btn-base" onClick={() => setShowTemplateSelector(true)}>
-          <span className="icon icon-plus"></span>
-          <span>Novo</span>
-        </button>
-        <button className="btn-base" onClick={() => setShowFlowGenerator(true)} title="Gerar fluxo com IA">
-          <span className="icon icon-ai"></span>
-          <span>Gerar com IA</span>
-        </button>
-        <FlowSelector
-          onFlowSelected={handleFlowSelected}
-          currentFlowId={currentFlow?.id}
-          refreshTrigger={flowListRefreshTrigger}
-        />
-        {currentFlow?.id && (
-          <button className="btn-base" onClick={handleDeleteClick}>
-            <span className="icon icon-delete"></span>
-            <span>Remover</span>
-          </button>
-        )}
-        <button className="btn-base" onClick={() => setShowLogViewer(true)}>
-          <span className="icon icon-logs"></span>
-          <span>Logs</span>
-        </button>
         {/* Indicador de status WebSocket */}
         {isAuthenticated && (
           <div 
@@ -1310,6 +1323,29 @@ export function FlowEditorPage() {
             </span>
           </div>
         )}
+        <button className="btn-base" onClick={() => setShowTemplateSelector(true)}>
+          <span className="icon icon-plus"></span>
+          <span>Novo</span>
+        </button>
+        <FlowSelector
+          onFlowSelected={handleFlowSelected}
+          currentFlowId={currentFlow?.id}
+          refreshTrigger={flowListRefreshTrigger}
+        />
+        <button className="btn-base" onClick={() => setShowFlowGenerator(true)} title="Gerar fluxo com IA">
+          <span className="icon icon-ai"></span>
+          <span>Gerar com IA</span>
+        </button>
+        {currentFlow?.id && (
+          <button className="btn-base" onClick={handleDeleteClick}>
+            <span className="icon icon-delete"></span>
+            <span>Remover</span>
+          </button>
+        )}
+        <button className="btn-base" onClick={() => setShowLogViewer(true)}>
+          <span className="icon icon-logs"></span>
+          <span>Logs</span>
+        </button>
         <ThemeSelector />
       </Toolbar>
 
@@ -1421,13 +1457,34 @@ export function FlowEditorPage() {
             {rightPanelCollapsed ? (
               <>
                 {/* Modo colapsado - textos verticais */}
-                <div className="flex-1 p-2 section-container flex items-center justify-center vertical">
+                <div 
+                  className="flex-1 p-2 section-container flex items-center justify-center vertical cursor-pointer hover:bg-bg-secondary transition-colors"
+                  onClick={() => {
+                    setRightPanelCollapsed(false);
+                    setPropertiesCollapsed(false);
+                  }}
+                  title="Clique para expandir Propriedades"
+                >
                   Propriedades
                 </div>
-                <div className="flex-1 p-2 section-container flex items-center justify-center vertical">
+                <div 
+                  className="flex-1 p-2 section-container flex items-center justify-center vertical cursor-pointer hover:bg-bg-secondary transition-colors"
+                  onClick={() => {
+                    setRightPanelCollapsed(false);
+                    setValidationCollapsed(false);
+                  }}
+                  title="Clique para expandir Validação"
+                >
                   Validação
                 </div>
-                <div className="flex-1 p-2 flex items-center justify-center vertical">
+                <div 
+                  className="flex-1 p-2 flex items-center justify-center vertical cursor-pointer hover:bg-bg-secondary transition-colors"
+                  onClick={() => {
+                    setRightPanelCollapsed(false);
+                    setSimulationCollapsed(false);
+                  }}
+                  title="Clique para expandir Simulação"
+                >
                   Simulação
                 </div>
               </>

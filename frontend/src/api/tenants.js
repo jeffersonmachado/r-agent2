@@ -103,3 +103,13 @@ export async function getTenantUsage(tenantId) {
   });
 }
 
+/**
+ * Gera dados de tenant por IA baseado em uma descrição
+ */
+export async function generateTenantByAI(description) {
+  return fetchJson('/tenants/generate-by-ai', {
+    method: 'POST',
+    body: JSON.stringify({ description }),
+  });
+}
+

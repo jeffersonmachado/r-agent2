@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: ./api/Dockerfile
+    image: r-agent2-api:latest
     container_name: chatbot-api
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -35,6 +36,9 @@ services:
     build:
       context: ./frontend
       dockerfile: ./Dockerfile
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/r-agent2/}
+    image: r-agent2-frontend:latest
     container_name: chatbot-frontend
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -50,6 +54,7 @@ services:
     build:
       context: ./rag-service
       dockerfile: ./Dockerfile
+    image: r-agent2-rag-service:latest
     container_name: chatbot-rag-service
     environment:
       HOST: 0.0.0.0
@@ -71,7 +76,10 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    build:
+      context: ./redis
+      dockerfile: ./Dockerfile
+    image: r-agent2-redis:latest
     container_name: chatbot-redis
     ports:
       - "${REDIS_PORT:-6379}:6379"

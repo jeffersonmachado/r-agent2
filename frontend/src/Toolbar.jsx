@@ -137,12 +137,12 @@ export function Toolbar({
           const extraGroup = toolbar.querySelector('.toolbar-group-extra');
           const toolsGroup = toolbar.querySelector('.toolbar-group-utils');
           
-          // Ordem de prioridade: file > main > search > zoom > edit > tools > extra (extra contém Logs)
+          // Ordem de prioridade: tools > file > main > search > zoom > edit > extra (extra contém Logs)
           let usedWidth = 0;
           const newVisible = { file: true, main: true, zoom: true, edit: true, search: true, extra: true, tools: true };
           
           // Temporariamente mostra todos os grupos para medir
-          const groups = [fileGroup, mainGroup, searchGroup, zoomGroup, editGroup, toolsGroup, extraGroup].filter(Boolean);
+          const groups = [toolsGroup, fileGroup, mainGroup, searchGroup, zoomGroup, editGroup, extraGroup].filter(Boolean);
           const originalDisplays = groups.map(g => {
             const computed = window.getComputedStyle(g).display;
             return computed === 'none' ? '' : g.style.display;
@@ -156,8 +156,18 @@ export function Toolbar({
           // Força reflow para garantir que as medidas estão atualizadas
           void toolbar.offsetHeight;
           
-          // File group (prioridade máxima - Novo, Abrir, Remover, Salvar)
-          if (fileGroup) {
+          // Tools group (prioridade máxima - Tema e outros) - primeiro na toolbar
+          if (toolsGroup) {
+            const width = toolsGroup.offsetWidth + TAILWIND_PX_2; // gap-2
+            if (usedWidth + width <= availableForGroups) {
+              usedWidth += width;
+            } else {
+              newVisible.tools = false;
+            }
+          }
+          
+          // File group (prioridade alta - Novo, Abrir, Remover, Salvar)
+          if (fileGroup && newVisible.tools) {
             const width = fileGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
               usedWidth += width;
@@ -167,7 +177,7 @@ export function Toolbar({
           }
           
           // Main group (Validar, Simular)
-          if (mainGroup && newVisible.file) {
+          if (mainGroup && newVisible.tools && newVisible.file) {
             const width = mainGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
               usedWidth += width;
@@ -177,7 +187,7 @@ export function Toolbar({
           }
           
           // Search group
-          if (searchGroup && newVisible.file) {
+          if (searchGroup && newVisible.tools && newVisible.file) {
             const width = searchGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
               usedWidth += width;
@@ -187,7 +197,7 @@ export function Toolbar({
           }
           
           // Zoom group
-          if (zoomGroup && newVisible.file) {
+          if (zoomGroup && newVisible.tools && newVisible.file) {
             const width = zoomGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             if (usedWidth + width <= availableForGroups) {
               usedWidth += width;
@@ -197,7 +207,7 @@ export function Toolbar({
           }
           
           // Edit group - com histerese para evitar alternância
-          if (editGroup && newVisible.file) {
+          if (editGroup && newVisible.tools && newVisible.file) {
             const width = editGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             const isCurrentlyVisible = visibleItems.edit;
             // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
@@ -210,22 +220,8 @@ export function Toolbar({
             }
           }
           
-          // Tools group (Tema e outros) - prioridade maior que extra
-          if (toolsGroup && newVisible.file) {
-            const width = toolsGroup.offsetWidth + TAILWIND_PX_2; // gap-2
-            const isCurrentlyVisible = visibleItems.tools;
-            // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
-            // Isso evita alternância quando o espaço está no limite
-            const threshold = isCurrentlyVisible ? availableForGroups + TAILWIND_PX_4 : availableForGroups;
-            if (usedWidth + width <= threshold) {
-              usedWidth += width;
-            } else {
-              newVisible.tools = false;
-            }
-          }
-          
           // Extra group (Importar, Exportar, Template, Logs) - menor prioridade, com histerese para evitar alternância
-          if (extraGroup && newVisible.file) {
+          if (extraGroup && newVisible.tools && newVisible.file) {
             const width = extraGroup.offsetWidth + TAILWIND_PX_2; // gap-2
             const isCurrentlyVisible = visibleItems.extra;
             // Se já está visível, precisa de menos espaço para continuar (histerese de gap-4 = 16px)
@@ -489,21 +485,97 @@ export function Toolbar({
     return hasDeleteIcon || hasRemoveText;
   });
   
-  // Children do grupo file (Novo, Gerar com IA, FlowSelector, Remover - excluindo Logs explicitamente)
-  const fileGroupChildren = childrenArray.filter((child, index) => {
-    // Primeiros 3 children (Novo, Gerar com IA, FlowSelector) sempre vão para file
-    if (index < 3 && child !== logsButton) return true;
-    // Botão Remover também vai para file
-    if (child === removeButton) return true;
-    // Logs nunca vai para file
-    return false;
-  });
+  // Identifica botões específicos de forma estável (não por índice)
+  // Usa useMemo para evitar recálculos desnecessários
+  const { newButton, flowSelector, generateAIButton } = React.useMemo(() => {
+    const newBtn = childrenArray.find(child => {
+      if (!React.isValidElement(child)) return false;
+      // Verifica se é um botão (pode ser 'button' ou componente Button)
+      const isButton = child.type === 'button' || 
+                      child.type?.displayName === 'button' ||
+                      child.props?.className?.includes('btn-base');
+      
+      if (isButton) {
+        const childChildren = React.Children.toArray(child.props?.children || []);
+        const hasPlusIcon = childChildren.some(c => 
+          React.isValidElement(c) && 
+          (c.props?.className?.includes('icon-plus') || c.props?.className?.includes('icon icon-plus'))
+        );
+        const hasNovoText = childChildren.some(c => 
+          typeof c === 'string' && c.trim() === 'Novo'
+        );
+        return hasPlusIcon || hasNovoText;
+      }
+      return false;
+    });
+    
+    const flowSel = childrenArray.find(child => {
+      if (!React.isValidElement(child)) return false;
+      // FlowSelector pode ser identificado pelo tipo ou pela prop onFlowSelected
+      return child.props?.onFlowSelected !== undefined || 
+             child.type?.name === 'FlowSelector' ||
+             (child.type?.displayName && child.type.displayName.includes('FlowSelector'));
+    });
+    
+    const genAI = childrenArray.find(child => {
+      if (!React.isValidElement(child)) return false;
+      // Verifica se é um botão (pode ser 'button' ou componente Button)
+      const isButton = child.type === 'button' || 
+                      child.type?.displayName === 'button' ||
+                      child.props?.className?.includes('btn-base');
+      
+      if (isButton) {
+        const childChildren = React.Children.toArray(child.props?.children || []);
+        const hasAIIcon = childChildren.some(c => 
+          React.isValidElement(c) && 
+          (c.props?.className?.includes('icon-ai') || c.props?.className?.includes('icon icon-ai'))
+        );
+        const hasAIText = childChildren.some(c => 
+          typeof c === 'string' && (c.includes('Gerar com IA') || c.trim() === 'Gerar com IA')
+        );
+        const hasAITitle = child.props?.title?.includes('Gerar fluxo com IA') || 
+                          child.props?.title?.includes('Gerar com IA');
+        return hasAIIcon || hasAIText || hasAITitle;
+      }
+      return false;
+    });
+    
+    return { newButton: newBtn, flowSelector: flowSel, generateAIButton: genAI };
+  }, [childrenArray]);
+  
+  // Ordena os botões na ordem correta: Novo, FlowSelector, Gerar com IA, Remover
+  // Usa uma ordem fixa para evitar mudanças constantes
+  const fileGroupChildren = React.useMemo(() => {
+    const ordered = [
+      newButton,
+      flowSelector,
+      generateAIButton,
+      removeButton
+    ].filter(Boolean); // Remove undefined/null
+    
+    // Garante que a ordem seja sempre a mesma, mesmo se alguns botões não existirem
+    return ordered;
+  }, [newButton, flowSelector, generateAIButton, removeButton]);
 
   return (
     <div ref={toolbarRef} className="toolbar">
+      {visibleItems.tools && (
+        <div className="toolbar-group toolbar-group-utils">
+          {childrenArray.filter(child => 
+            child !== logsButton && 
+            !fileGroupChildren.includes(child) &&
+            !navigationButtons.includes(child)
+          )} {/* Tema e outros (excluindo Logs, file group e botões de navegação) */}
+        </div>
+      )}
+
+      {visibleItems.tools && (visibleItems.file || visibleItems.main || visibleItems.zoom || visibleItems.edit || visibleItems.search || visibleItems.extra || hasMoreItems) && <div className="toolbar-separator"></div>}
+
       {visibleItems.file && (
         <div className="toolbar-group toolbar-group-file">
-          {fileGroupChildren}
+          {fileGroupChildren.map((child, idx) => 
+            React.isValidElement(child) ? React.cloneElement(child, { key: `file-${idx}` }) : null
+          )}
           {onSave && (
             <button className="btn-base" onClick={onSave} title="Salvar fluxo">
               <span className="icon icon-save"></span>
@@ -519,7 +591,7 @@ export function Toolbar({
         </div>
       )}
 
-      {visibleItems.file && (visibleItems.main || visibleItems.zoom || visibleItems.edit || visibleItems.search || visibleItems.extra || hasMoreItems) && <div className="toolbar-separator"></div>}
+      {(visibleItems.tools || visibleItems.file) && (visibleItems.main || visibleItems.zoom || visibleItems.edit || visibleItems.search || visibleItems.extra || hasMoreItems) && <div className="toolbar-separator"></div>}
 
       {visibleItems.main && (
         <div className="toolbar-group toolbar-group-main">
@@ -670,19 +742,7 @@ export function Toolbar({
         </div>
       )}
 
-      {visibleItems.extra && (visibleItems.tools || hasMoreItems) && <div className="toolbar-separator"></div>}
-
-      {visibleItems.tools && (
-        <div className="toolbar-group toolbar-group-utils">
-          {childrenArray.filter(child => 
-            child !== logsButton && 
-            !fileGroupChildren.includes(child) &&
-            !navigationButtons.includes(child)
-          )} {/* Tema e outros (excluindo Logs, file group e botões de navegação) */}
-        </div>
-      )}
-
-      {visibleItems.tools && hasMoreItems && <div className="toolbar-separator"></div>}
+      {visibleItems.extra && hasMoreItems && <div className="toolbar-separator"></div>}
 
       {visibleItems.extra && hasMoreItems && <div className="toolbar-separator"></div>}
 

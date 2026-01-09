@@ -1,5 +1,5 @@
 import React from 'react';
-import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, OptionsField, ScheduleRouterField } from './components/PropertyField';
+import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, OptionsField, RouterField, ScheduleRouterField } from './components/PropertyField';
 import { getNodeSchema, getNodeProperties } from './editor/nodeSchemas';
 
 /**
@@ -308,6 +308,28 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
               );
             }
 
+            if (prop.type === 'router') {
+              return (
+                <RouterField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={value}
+                  onChange={(newValue) => updateConfigField(prop.key, newValue)}
+                  availableNodes={availableNodes}
+                  required={prop.required}
+                  error={validationErrors.find((err) => 
+                    (err.code === 'ROUTER_MISSING_RULES' || 
+                     err.code === 'ROUTER_EMPTY_RULES' ||
+                     err.code === 'ROUTER_INVALID_RULE' ||
+                     err.code === 'ROUTER_RULE_MISSING_CONDITION' ||
+                     err.code === 'ROUTER_RULE_MISSING_NEXT') && 
+                    typeof err === 'object' && err.nodeIds?.includes(id)
+                  )?.messageUi}
+                />
+              );
+            }
+
             if (prop.type === 'schedule_router') {
               return (
                 <ScheduleRouterField
@@ -327,14 +349,63 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
           
           {/* Ajuda adicional para router */}
           {type === 'router' && (
-            <div className="p-3 rounded-md bg-bg-tertiary/30 border border-border-default/30">
-              <div className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium mb-1.5">
-                Operadores de Condição
+            <div className="p-3 rounded-md bg-bg-tertiary/30 border border-border-default/30 space-y-3">
+              <div>
+                <div className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium mb-1.5">
+                  Operadores Permitidos
+                </div>
+                <div className="text-[10px] text-text-secondary space-y-1">
+                  <div><code className="text-accent-primary">"op": "always"</code> - Sempre verdadeiro (fallback)</div>
+                  <div><code className="text-accent-primary">"op": "equals"</code> - Igualdade simples (===)</div>
+                </div>
               </div>
-              <div className="text-[10px] text-text-secondary space-y-1">
-                <div><code className="text-accent-primary">"op": "always"</code> - Sempre verdadeiro (fallback)</div>
-                <div><code className="text-accent-primary">"op": "contains"</code> - Verifica se variável contém valor</div>
-                <div><code className="text-accent-primary">"op": "equals"</code> - Verifica igualdade exata</div>
+              <div className="pt-2 border-t border-border-default/30">
+                <div className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium mb-1.5">
+                  ⚠️ O Roteador NÃO Calcula
+                </div>
+                <div className="text-[10px] text-text-secondary space-y-1">
+                  <div>❌ Proibido: <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code> regex, parsing</div>
+                  <div>✅ Normalize antes: números → faixas, datas → períodos, objetos → propriedades achatadas</div>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-border-default/30">
+                <div className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium mb-1.5">
+                  📋 Padrão de Normalização
+                </div>
+                <div className="text-[10px] text-text-secondary space-y-1">
+                  <div><strong>STRING:</strong> categoria / intenção</div>
+                  <div><strong>NUMBER:</strong> faixa categórica ("baixo", "medio", "alto")</div>
+                  <div><strong>DATE:</strong> período ("hoje", "passado", "futuro") ou schedule_router</div>
+                  <div><strong>ARRAY:</strong> estado ("vazia", "possui_itens")</div>
+                  <div><strong>OBJECT:</strong> propriedades achatadas (user_role em vez de user.role)</div>
+                  <div><strong>NULL:</strong> flag explícita (campo_existe: true/false)</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ajuda adicional para set_variable */}
+          {type === 'set_variable' && (
+            <div className="p-3 rounded-md bg-bg-tertiary/30 border border-border-default/30 space-y-3">
+              <div>
+                <div className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium mb-1.5">
+                  ✅ Uso Correto
+                </div>
+                <div className="text-[10px] text-text-secondary space-y-1">
+                  <div>• Atribuição simples: <code>{"{"}"nome": "João"{"}"}</code></div>
+                  <div>• Normalização categórica: <code>{"{"}"faixa_valor": "alto"{"}"}</code></div>
+                  <div>• Valores literais: strings, números, objetos simples</div>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-border-default/30">
+                <div className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium mb-1.5">
+                  ⚠️ O Nó Variável NÃO Calcula
+                </div>
+                <div className="text-[10px] text-text-secondary space-y-1">
+                  <div>❌ Proibido: <code>+</code> <code>-</code> <code>*</code> <code>/</code> cálculos</div>
+                  <div>❌ Proibido: <code>?</code> <code>:</code> ternário, if/else, lógica condicional</div>
+                  <div>✅ Use para: normalizar dados categóricos antes do Roteador</div>
+                </div>
               </div>
             </div>
           )}

@@ -133,6 +133,7 @@
  * @property {Function} persistence.listQueues - Lista todas as filas (() => Promise<Array<string>>)
  * @property {Function} persistence.getConfig - Obtém configuração do sistema (() => Promise<Object>)
  * @property {Function} persistence.getConfigValue - Obtém valor específico da config ((path: string, defaultValue?: any) => Promise<any>)
+ * @property {import('./nodeRegistry').NodeRegistry} [registry] - Registro de handlers de nós (opcional, para subfluxos)
  */
 
 /**

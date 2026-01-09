@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
+import { isSuperAdmin } from '../utils/menuPermissions';
 
 export function AgentsPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -51,7 +52,8 @@ export function AgentsPage() {
     status: '',
   });
 
-  const canManageAgents = currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor';
+  // Verifica se pode gerenciar agentes: super-admin, admin ou supervisor
+  const canManageAgents = isSuperAdmin(currentAgent) || currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor';
 
   useEffect(() => {
     loadAgents();

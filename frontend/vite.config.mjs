@@ -43,6 +43,16 @@ function frontendRoutesPlugin() {
                           url.startsWith('/api') ||
                           url.startsWith('/metrics') ||
                           url.startsWith('/auth') ||
+                          url.startsWith('/system') ||
+                          url.startsWith('/tenants') ||
+                          url.startsWith('/rag') ||
+                          url.startsWith('/super-admin') ||
+                          url.startsWith('/onboarding') ||
+                          url.startsWith('/admin') ||
+                          url.startsWith('/dev') ||
+                          url.startsWith('/analytics') ||
+                          url.startsWith('/export') ||
+                          url.startsWith('/conversations') ||
                           (url.startsWith('/rpa/') && url !== '/rpa-test') || // /rpa/recordings é API, mas /rpa-test é página
                           (url.startsWith('/web-scraping/') && url !== '/web-scraping') || // /web-scraping/scrape é API
                           (url.startsWith('/audit/') && url !== '/audit'); // /audit/logs, /audit/stats são API
@@ -89,6 +99,7 @@ try {
 
 // Configuração mínima do Vite para o frontend React.
 const viteConfig = defineConfig({
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     react({
       // Permite Fast Refresh para arquivos que exportam hooks customizados
@@ -187,6 +198,56 @@ const viteConfig = defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '^/system': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/tenants': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/rag': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/super-admin': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/onboarding': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/admin': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/dev': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/analytics': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/export': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/conversations': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
       '^/rpa': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
@@ -280,6 +341,9 @@ const viteConfig = defineConfig({
   define: {
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
       process.env.VITE_API_BASE_URL || config.frontend?.apiBaseUrl || ''
+    ),
+    'import.meta.env.VITE_BASE_PATH': JSON.stringify(
+      process.env.VITE_BASE_PATH || ''
     ),
     // Garante que DEV e MODE estejam definidos corretamente
     'import.meta.env.DEV': JSON.stringify(process.env.NODE_ENV !== 'production'),

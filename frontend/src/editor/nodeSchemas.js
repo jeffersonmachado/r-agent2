@@ -236,7 +236,7 @@ export const NODE_SCHEMAS = {
     label: 'Roteador',
     icon: '🔀',
     color: '#F5A623',
-    description: 'Roteia o fluxo baseado em condições e regras definidas.',
+    description: 'Roteia o fluxo baseado em igualdade simples (===). O Roteador NÃO calcula: apenas decide por comparação categórica. Normalize dados antes do Roteador (números → faixas, datas → períodos).',
     inputs: [
       {
         key: 'in',
@@ -270,8 +270,6 @@ export const NODE_SCHEMAS = {
               label = 'Sempre';
             } else if (rule.condition.op === 'equals') {
               label = `Igual a "${rule.condition.value}"`;
-            } else if (rule.condition.op === 'contains') {
-              label = `Contém "${rule.condition.value}"`;
             } else if (rule.condition.var) {
               label = `${rule.condition.var} ${rule.condition.op}`;
             }
@@ -297,28 +295,10 @@ export const NODE_SCHEMAS = {
     properties: [
       {
         key: 'rules',
-        type: 'json',
+        type: 'router',
         label: 'Quais são as regras para decidir o caminho?',
-        description: 'Configure as regras que determinam para onde o fluxo vai. Cada regra verifica uma condição e, se for verdadeira, direciona para um nó específico. As regras são verificadas na ordem que você colocar. Use "always" na última regra para um caminho padrão.',
+        description: 'Configure as regras que determinam para onde o fluxo vai. O Roteador usa apenas igualdade simples (===) contra valores categóricos. Normalize dados antes: números → faixas ("baixo", "medio", "alto"), datas → períodos ("hoje", "passado", "futuro"), objetos → propriedades achatadas. Use "always" na última regra para fallback.',
         required: true,
-        placeholder: `[
-  {
-    "condition": {
-      "op": "contains",
-      "var": "user_message",
-      "value": "suporte"
-    },
-    "next": "node-suporte"
-  },
-  {
-    "condition": {
-      "op": "always"
-    },
-    "next": "node-default"
-  }
-]`,
-        rows: 10,
-        expectedType: 'array',
       },
     ],
     validate(node) {
@@ -344,6 +324,22 @@ export const NODE_SCHEMAS = {
           nodeIds: [nodeId],
         });
       } else {
+        // Valida que há pelo menos uma regra com "always" (fallback) ou conexão padrão
+        const hasAlwaysRule = node.config.rules.some(rule => 
+          rule && rule.condition && rule.condition.op === 'always'
+        );
+        const hasDefaultConnection = node.next && (
+          (typeof node.next === 'string' && node.next.trim() !== '') ||
+          (Array.isArray(node.next) && node.next.some(n => n && typeof n === 'string' && n.trim() !== ''))
+        );
+        if (!hasAlwaysRule && !hasDefaultConnection) {
+          errors.push({
+            code: 'ROUTER_MISSING_FALLBACK',
+            message: `Nó roteador "${nodeId}" deve ter uma regra com operador "always" (fallback) ou uma conexão padrão.`,
+            messageUi: `Adicione uma regra com operador "Sempre (fallback)" ou conecte a saída "Padrão" a outro nó.`,
+            nodeIds: [nodeId],
+          });
+        }
         // Valida cada regra
         for (let i = 0; i < node.config.rules.length; i += 1) {
           const rule = node.config.rules[i];
@@ -366,18 +362,109 @@ export const NODE_SCHEMAS = {
             });
           } else {
             const op = rule.condition.op;
-            const validOps = ['always', 'equals', 'contains'];
-            if (!op || !validOps.includes(op)) {
+            const validOps = ['always', 'equals'];
+            const deprecatedOps = ['contains']; // Operadores deprecados (compatibilidade retroativa)
+            const prohibitedOps = ['>', '<', '>=', '<=', 'gt', 'lt', 'gte', 'lte', 'greater', 'less', 'greaterThan', 'lessThan'];
+            
+            // BLOQUEAR: Operadores proibidos (matemáticos, comparações complexas)
+            if (prohibitedOps.includes(op) || op?.includes('>') || op?.includes('<')) {
               errors.push({
-                code: 'ROUTER_INVALID_OPERATOR',
-                message: `Regra ${i + 1} do roteador "${nodeId}" tem operador inválido. Use: ${validOps.join(', ')}.`,
+                code: 'ROUTER_PROHIBITED_OPERATOR',
+                message: `Regra ${i + 1} do roteador "${nodeId}" usa operador proibido "${op}". O Roteador NÃO calcula: use apenas igualdade simples (===).`,
+                messageUi: `Operador "${op}" não permitido. O Roteador só aceita igualdade simples. Normalize dados antes (ex: números → faixas como "alto", "baixo").`,
                 nodeIds: [nodeId],
+                severity: 'error',
                 details: {
                   ruleIndex: i,
                   operator: op,
                   validOperators: validOps,
                 },
               });
+            }
+            
+            // AVISAR: Operadores deprecados (compatibilidade retroativa)
+            if (deprecatedOps.includes(op)) {
+              errors.push({
+                code: 'ROUTER_DEPRECATED_OPERATOR',
+                message: `Regra ${i + 1} do roteador "${nodeId}" usa operador deprecado "${op}". Migre para "equals" com normalização prévia.`,
+                messageUi: `⚠️ Operador "${op}" está deprecado. Use "Igual a" (equals) e normalize dados antes do Roteador (ex: classifique texto em categorias).`,
+                nodeIds: [nodeId],
+                severity: 'warning',
+                details: {
+                  ruleIndex: i,
+                  operator: op,
+                  validOperators: validOps,
+                },
+              });
+            }
+            
+            // BLOQUEAR: Operadores inválidos (não está na lista permitida ou deprecada)
+            if (!op || (!validOps.includes(op) && !deprecatedOps.includes(op))) {
+              errors.push({
+                code: 'ROUTER_INVALID_OPERATOR',
+                message: `Regra ${i + 1} do roteador "${nodeId}" tem operador inválido "${op}". Use apenas: ${validOps.join(', ')}.`,
+                messageUi: `Operador inválido. Use apenas "Igual a" (equals) ou "Sempre" (always para fallback).`,
+                nodeIds: [nodeId],
+                severity: 'error',
+                details: {
+                  ruleIndex: i,
+                  operator: op,
+                  validOperators: validOps,
+                },
+              });
+            }
+            
+            // AVISAR: Comparações que podem precisar de normalização
+            if (op === 'equals' && rule.condition.value) {
+              const value = rule.condition.value;
+              // Detecta números brutos
+              if (!isNaN(Number(value)) && value.trim() !== '' && !isNaN(parseFloat(value))) {
+                errors.push({
+                  code: 'ROUTER_WARN_NUMBER_COMPARISON',
+                  message: `Regra ${i + 1} do roteador "${nodeId}" compara com número "${value}". Considere normalizar para categoria (ex: "alto", "medio", "baixo") antes do Roteador.`,
+                  messageUi: `⚠️ Comparando com número "${value}". Normalize antes: crie variável categórica (ex: faixa_valor = "alto") e compare com ela.`,
+                  nodeIds: [nodeId],
+                  severity: 'warning',
+                  details: {
+                    ruleIndex: i,
+                    value: value,
+                  },
+                });
+              }
+              
+              // Detecta datas (formato ISO ou comum)
+              if (typeof value === 'string' && (
+                /^\d{4}-\d{2}-\d{2}/.test(value) || 
+                /^\d{2}\/\d{2}\/\d{4}/.test(value) ||
+                /^\d{2}-\d{2}-\d{4}/.test(value)
+              )) {
+                errors.push({
+                  code: 'ROUTER_WARN_DATE_COMPARISON',
+                  message: `Regra ${i + 1} do roteador "${nodeId}" compara com data "${value}". Considere normalizar para período (ex: "hoje", "passado", "futuro") antes do Roteador.`,
+                  messageUi: `⚠️ Comparando com data "${value}". Normalize antes: crie variável categórica (ex: periodo = "hoje") e compare com ela.`,
+                  nodeIds: [nodeId],
+                  severity: 'warning',
+                  details: {
+                    ruleIndex: i,
+                    value: value,
+                  },
+                });
+              }
+              
+              // Detecta acesso a propriedades profundas (ex: user.role)
+              if (rule.condition.var && rule.condition.var.includes('.')) {
+                errors.push({
+                  code: 'ROUTER_WARN_DEEP_ACCESS',
+                  message: `Regra ${i + 1} do roteador "${nodeId}" acessa propriedade profunda "${rule.condition.var}". Considere achatá-la antes (ex: user_role em vez de user.role).`,
+                  messageUi: `⚠️ Acesso profundo "${rule.condition.var}". Aplaine antes: crie variável achatada (ex: user_role) e compare com ela.`,
+                  nodeIds: [nodeId],
+                  severity: 'warning',
+                  details: {
+                    ruleIndex: i,
+                    variable: rule.condition.var,
+                  },
+                });
+              }
             }
 
             if (op !== 'always' && (!rule.condition.var || typeof rule.condition.var !== 'string')) {
@@ -418,13 +505,42 @@ export const NODE_SCHEMAS = {
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    // Outputs são gerados dinamicamente baseados em config.allowedOutputs (intent_list)
     outputs: [
       {
-        key: 'out',
-        label: 'Próximo',
+        key: 'fallback',
+        label: 'Fallback',
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    /**
+     * Gera outputs dinâmicos baseados nas intenções configuradas
+     * @param {Object} node - Nó completo
+     * @returns {Array} Array de outputs
+     */
+    getOutputs(node) {
+      const outputs = [];
+      
+      // Adiciona uma saída para cada intenção permitida (apenas para intent_classification)
+      if (node.config && node.config.task === 'intent_classification' && Array.isArray(node.config.allowedOutputs)) {
+        node.config.allowedOutputs.forEach((intent) => {
+          outputs.push({
+            key: `intent_${intent}`,
+            label: intent,
+            socketName: DEFAULT_SOCKET_NAME,
+          });
+        });
+      }
+      
+      // Sempre adiciona saída de fallback
+      outputs.push({
+        key: 'fallback',
+        label: 'Fallback',
+        socketName: DEFAULT_SOCKET_NAME,
+      });
+      
+      return outputs;
+    },
     properties: [
       {
         key: 'task',
@@ -534,6 +650,20 @@ export const NODE_SCHEMAS = {
           });
         }
 
+        // Valida que há conexão de fallback
+        const hasFallbackConnection = node.next && (
+          (typeof node.next === 'string' && node.next.trim() !== '') ||
+          (Array.isArray(node.next) && node.next.some(n => n && typeof n === 'string' && n.trim() !== ''))
+        );
+        if (!hasFallbackConnection) {
+          errors.push({
+            code: 'AI_TASK_MISSING_FALLBACK_CONNECTION',
+            message: `Nó de intenção "${nodeId}" deve ter uma conexão de fallback.`,
+            messageUi: `Conecte a saída "Fallback" a outro nó para quando nenhuma intenção for reconhecida.`,
+            nodeIds: [nodeId],
+          });
+        }
+
         // confidenceThreshold deve ser um número válido entre 0 e 1
         if (config.confidenceThreshold !== undefined) {
           if (typeof config.confidenceThreshold !== 'number') {
@@ -573,7 +703,7 @@ export const NODE_SCHEMAS = {
     label: 'Variável',
     icon: '📝',
     color: '#7B68EE',
-    description: 'Define ou atualiza o valor de variáveis do fluxo.',
+    description: 'Define ou atualiza o valor de variáveis do fluxo. Apenas atribuição simples: NÃO calcula, NÃO faz lógica condicional. Use para normalizar dados categóricos antes do Roteador.',
     inputs: [
       {
         key: 'in',
@@ -593,11 +723,13 @@ export const NODE_SCHEMAS = {
         key: 'assignments',
         type: 'json',
         label: 'Quais variáveis você quer criar ou atualizar?',
-        description: 'Digite um objeto JSON onde cada nome é uma variável e o valor é o que você quer guardar nela. Exemplo: {"nome_usuario": "João", "contador": 5}. Você pode usar texto, números ou objetos.',
+        description: 'Digite um objeto JSON onde cada nome é uma variável e o valor é o que você quer guardar nela. Apenas atribuição simples: valores literais, strings, números ou objetos. NÃO use cálculos (+, -, *, /) ou lógica condicional (?, if/else). Use para normalizar dados categóricos antes do Roteador.',
         required: true,
         placeholder: `{
   "nome_usuario": "João",
-  "contador": 0,
+  "tipo_texto": "email",
+  "faixa_valor": "alto",
+  "periodo": "hoje",
   "status": "ativo"
 }`,
         rows: 8,
@@ -623,7 +755,7 @@ export const NODE_SCHEMAS = {
           nodeIds: [nodeId],
         });
       } else {
-        // Valida nomes de variáveis
+        // Valida nomes de variáveis e detecta cálculos/lógica
         for (const varName of Object.keys(node.config.assignments)) {
           const validationError = validateVariableName(varName, nodeId);
           if (validationError) {
@@ -635,6 +767,83 @@ export const NODE_SCHEMAS = {
               nodeIds: [nodeId],
               details: { variable: varName },
             });
+          }
+          
+          // Valida o valor atribuído
+          const value = node.config.assignments[varName];
+          const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
+          
+          // BLOQUEAR: Detecta cálculos matemáticos
+          const mathOperators = ['+', '-', '*', '/', '%', '**', 'Math.', 'parseInt', 'parseFloat'];
+          const hasMath = mathOperators.some(op => valueStr.includes(op));
+          if (hasMath) {
+            errors.push({
+              code: 'SET_VARIABLE_PROHIBITED_CALCULATION',
+              message: `Nó de variável "${nodeId}" tenta fazer cálculo na variável "${varName}". O nó Variável NÃO calcula: apenas atribui valores simples.`,
+              messageUi: `❌ Cálculo detectado em "${varName}". O nó Variável não faz cálculos. Normalize dados antes (ex: números → faixas como "alto", "baixo") e atribua a categoria.`,
+              nodeIds: [nodeId],
+              severity: 'error',
+              details: { variable: varName, value: valueStr },
+            });
+          }
+          
+          // BLOQUEAR: Detecta lógica condicional (ternário, if/else)
+          const conditionalPatterns = [
+            /\?.*:/,  // Ternário: condition ? a : b
+            /if\s*\(/i,  // if(
+            /else\s*{/i,  // else {
+            /switch\s*\(/i,  // switch(
+            /case\s+.*:/i,  // case:
+          ];
+          const hasConditional = conditionalPatterns.some(pattern => pattern.test(valueStr));
+          if (hasConditional) {
+            errors.push({
+              code: 'SET_VARIABLE_PROHIBITED_LOGIC',
+              message: `Nó de variável "${nodeId}" tenta usar lógica condicional na variável "${varName}". O nó Variável NÃO faz lógica: apenas atribui valores simples.`,
+              messageUi: `❌ Lógica condicional detectada em "${varName}". O nó Variável não faz lógica. Use o Roteador para decisões baseadas em igualdade simples.`,
+              nodeIds: [nodeId],
+              severity: 'error',
+              details: { variable: varName, value: valueStr },
+            });
+          }
+          
+          // AVISAR: Detecta comparações (pode indicar tentativa de cálculo)
+          const comparisonOperators = ['>', '<', '>=', '<=', '==', '!='];
+          const hasComparison = comparisonOperators.some(op => {
+            // Evita falsos positivos em strings que contêm esses símbolos
+            if (typeof value === 'string' && !value.includes('{{')) {
+              return valueStr.includes(op);
+            }
+            return false;
+          });
+          if (hasComparison) {
+            errors.push({
+              code: 'SET_VARIABLE_WARN_COMPARISON',
+              message: `Nó de variável "${nodeId}" parece usar comparação na variável "${varName}". Considere normalizar antes e usar o Roteador para decisões.`,
+              messageUi: `⚠️ Comparação detectada em "${varName}". Normalize antes: crie variável categórica (ex: faixa_valor = "alto") e use o Roteador para decidir.`,
+              nodeIds: [nodeId],
+              severity: 'warning',
+              details: { variable: varName, value: valueStr },
+            });
+          }
+          
+          // AVISAR: Detecta números brutos que podem precisar normalização
+          if (typeof value === 'number' && valueStr.length > 0) {
+            // Se o nome da variável sugere que será usado no Roteador
+            const routerRelatedNames = ['valor', 'preco', 'quantidade', 'total', 'numero', 'count', 'score', 'rating'];
+            const mightNeedNormalization = routerRelatedNames.some(name => 
+              varName.toLowerCase().includes(name)
+            );
+            if (mightNeedNormalization) {
+              errors.push({
+                code: 'SET_VARIABLE_WARN_NUMBER_FOR_ROUTER',
+                message: `Nó de variável "${nodeId}" define número "${value}" na variável "${varName}". Se for usar no Roteador, normalize para categoria primeiro (ex: "alto", "medio", "baixo").`,
+                messageUi: `⚠️ Número "${value}" em "${varName}". Se usar no Roteador, normalize antes: crie variável categórica (ex: faixa_${varName} = "alto") e compare com ela.`,
+                nodeIds: [nodeId],
+                severity: 'warning',
+                details: { variable: varName, value: value },
+              });
+            }
           }
         }
       }
@@ -1294,6 +1503,79 @@ export const NODE_SCHEMAS = {
     properties: [],
     validate(node) {
       const errors = [];
+      return errors;
+    },
+  },
+
+  subflow: {
+    type: 'subflow',
+    label: 'Chamar Subfluxo',
+    icon: '📦',
+    color: '#3498DB',
+    description: 'Chama outro fluxo como subfluxo. O subfluxo é executado completamente e retorna ao fluxo principal. Dados são compartilhados via contexto flat. Sem recursão, sem paralelismo.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'flowId',
+        type: 'text',
+        label: 'ID do Subfluxo',
+        description: 'ID do fluxo que será chamado como subfluxo. O subfluxo deve ter nó Início e nó Fim. Dados retornam via contexto compartilhado.',
+        required: true,
+        placeholder: 'Ex.: flow-123',
+      },
+      {
+        key: 'timeout',
+        type: 'number',
+        label: 'Timeout (opcional)',
+        description: 'Tempo máximo em milissegundos para execução do subfluxo. Se não preencher, usa o padrão do sistema.',
+        required: false,
+        placeholder: '30000',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'SUBFLOW_MISSING_CONFIG',
+          message: `Nó de subfluxo "${nodeId}" deve ter um campo "config" com "flowId".`,
+          nodeIds: [nodeId],
+        });
+      } else if (!node.config.flowId || typeof node.config.flowId !== 'string' || node.config.flowId.trim() === '') {
+        errors.push({
+          code: 'SUBFLOW_MISSING_FLOW_ID',
+          message: `Nó de subfluxo "${nodeId}" deve ter "config.flowId" (string não vazia).`,
+          messageUi: `Preencha o campo "ID do Subfluxo" com o ID do fluxo a ser chamado.`,
+          nodeIds: [nodeId],
+        });
+      }
+      
+      // Valida timeout se fornecido
+      if (node.config && node.config.timeout !== undefined) {
+        const timeout = Number(node.config.timeout);
+        if (isNaN(timeout) || timeout < 0 || timeout > 300000) {
+          errors.push({
+            code: 'SUBFLOW_INVALID_TIMEOUT',
+            message: `Nó de subfluxo "${nodeId}" tem timeout inválido (deve ser entre 0 e 300000ms).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      
       return errors;
     },
   },
@@ -2097,13 +2379,43 @@ export const NODE_SCHEMAS = {
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    // Outputs são gerados dinamicamente baseados em config.options
     outputs: [
       {
-        key: 'out',
-        label: 'Próximo',
+        key: 'fallback',
+        label: 'Fallback',
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
+    /**
+     * Gera outputs dinâmicos baseados nas opções configuradas
+     * @param {Object} node - Nó completo
+     * @returns {Array} Array de outputs
+     */
+    getOutputs(node) {
+      const outputs = [];
+      
+      // Adiciona uma saída para cada opção
+      if (node.config && Array.isArray(node.config.options)) {
+        node.config.options.forEach((option, index) => {
+          const label = option.label || option.id || `Opção ${index + 1}`;
+          outputs.push({
+            key: `option_${option.id || index}`,
+            label: label,
+            socketName: DEFAULT_SOCKET_NAME,
+          });
+        });
+      }
+      
+      // Sempre adiciona saída de fallback
+      outputs.push({
+        key: 'fallback',
+        label: 'Fallback',
+        socketName: DEFAULT_SOCKET_NAME,
+      });
+      
+      return outputs;
+    },
     properties: [
       {
         key: 'message',
@@ -2202,6 +2514,19 @@ export const NODE_SCHEMAS = {
           nodeIds: [nodeId],
         });
       } else {
+        // Valida que há conexão de fallback
+        const hasFallbackConnection = node.next && (
+          (typeof node.next === 'string' && node.next.trim() !== '') ||
+          (Array.isArray(node.next) && node.next.some(n => n && typeof n === 'string' && n.trim() !== ''))
+        );
+        if (!hasFallbackConnection) {
+          errors.push({
+            code: 'OPTIONS_MISSING_FALLBACK',
+            message: `Nó de opções "${nodeId}" deve ter uma conexão de fallback.`,
+            messageUi: `Conecte a saída "Fallback" a outro nó para quando nenhuma opção corresponder.`,
+            nodeIds: [nodeId],
+          });
+        }
         // Valida cada opção
         for (let i = 0; i < config.options.length; i += 1) {
           const option = config.options[i];

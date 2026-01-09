@@ -33,9 +33,14 @@ section() {
 DEPLOY_HOST="${DEPLOY_HOST:-10.10.2.30}"
 SSH_PASSWORD="${SSH_PASSWORD:-resu100gabao}"
 
+# Detecta diretório do projeto automaticamente
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 REMOTE_HOST="${DEPLOY_HOST}"
 REMOTE_USER="${DEPLOY_USER:-root}"
-REMOTE_DIR="${DEPLOY_DIR:-/opt/results/ria/r-agent2}"
+# Usa DEPLOY_DIR se definido, senão usa o diretório do projeto atual
+REMOTE_DIR="${DEPLOY_DIR:-$PROJECT_ROOT}"
 TEMP_DIR="/tmp/r-agent2-deploy-$$"
 
 # Exporta SSHPASS com valor padrão se não estiver definido
@@ -212,10 +217,10 @@ done
 
 # Deploy no servidor
 section "Fazendo Deploy no Servidor"
-DEPLOY_SCRIPT=$(cat <<'EOF'
+DEPLOY_SCRIPT=$(cat <<EOF
 #!/bin/bash
 set -e
-cd /opt/results/ria/r-agent2
+cd ${REMOTE_DIR}
 
 echo "=== Parando Containers Existentes ==="
 docker-compose -f docker-compose.prod.yml down || true

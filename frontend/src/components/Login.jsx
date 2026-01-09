@@ -53,6 +53,7 @@ export function Login() {
         const updatedAgent = {
           ...loginResult.agent,
           tenantId: tenant.id,
+          originalTenantId: loginResult.agent.tenantId, // Preserva o tenantId original para verificação de super-admin
         };
         
         console.log('[Login] Atualizando agente com novo tenantId:', updatedAgent);
@@ -414,7 +415,7 @@ export function Login() {
                 padding: '2px 6px',
                 borderRadius: '4px',
                 color: theme.colors.accent.primary,
-              }}>admin123</code>
+              }}>Admin123!</code>
             </div>
           </div>
         </div>

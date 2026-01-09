@@ -348,35 +348,45 @@ async function userInputNodeHandler(node, state, input) {
  * Decisão importante:
  * - Para manter segurança e simplicidade, evitamos eval().
  * - Implementamos um conjunto mínimo de operadores declarativos.
+ * - APENAS igualdade simples (===) e always são permitidos.
  *
  * Formato suportado (exemplos):
- * - { op: "always" }
- * - { op: "contains", var: "user_message", value: "suporte" }
- * - { op: "equals", var: "intent", value: "support" }
+ * - { op: "always" } - Sempre verdadeiro (fallback)
+ * - { op: "equals", var: "intent", value: "support" } - Igualdade simples
+ *
+ * PROIBIDO:
+ * - Operadores matemáticos: > < >= <=
+ * - Operadores de string: contains, regex
+ * - Acesso profundo: obj.prop (deve ser achatado antes)
  */
 function evaluateCondition(condition, state) {
   if (!condition || typeof condition !== 'object') return false;
 
   const op = condition.op || 'always';
 
-  if (op === 'always') return true;
-
-  if (op === 'contains') {
-    const varName = condition.var;
-    const value = condition.value;
-    if (!varName) return false;
-    const variableValue = String(state.variables[varName] ?? '');
-    return variableValue.toLowerCase().includes(String(value ?? '').toLowerCase());
+  // Operadores permitidos: apenas 'always' e 'equals'
+  const validOps = ['always', 'equals'];
+  if (!validOps.includes(op)) {
+    // Operador inválido: retorna false e loga erro
+    const logger = require('../../api/utils/logger');
+    logger.warn('Router: operador proibido detectado', {
+      operator: op,
+      validOperators: validOps,
+      condition,
+    });
+    return false;
   }
+
+  if (op === 'always') return true;
 
   if (op === 'equals') {
     const varName = condition.var;
     if (!varName) return false;
     const variableValue = state.variables[varName];
+    // Igualdade estrita (===)
     return variableValue === condition.value;
   }
 
-  // Outras operações podem ser adicionadas aqui de forma segura.
   return false;
 }
 
@@ -390,6 +400,58 @@ function evaluateCondition(condition, state) {
 async function routerNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   const rules = (node.config && Array.isArray(node.config.rules) ? node.config.rules : []);
+
+  // Valida regras antes de executar (segurança)
+  const validOps = ['always', 'equals'];
+  for (let i = 0; i < rules.length; i += 1) {
+    const rule = rules[i];
+    if (!rule || typeof rule !== 'object') {
+      const error = new Error(`Router node "${node.id}" tem regra ${i + 1} inválida.`);
+      // @ts-ignore
+      error.code = 'ENGINE_ROUTER_INVALID_RULE';
+      // @ts-ignore
+      error.type = 'flow';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+    
+    const condition = rule.condition;
+    if (!condition || typeof condition !== 'object') {
+      const error = new Error(`Router node "${node.id}" tem condição inválida na regra ${i + 1}.`);
+      // @ts-ignore
+      error.code = 'ENGINE_ROUTER_INVALID_CONDITION';
+      // @ts-ignore
+      error.type = 'flow';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+    
+    const op = condition.op;
+    if (!op || !validOps.includes(op)) {
+      const error = new Error(`Router node "${node.id}" tem operador proibido "${op}" na regra ${i + 1}. Use apenas: ${validOps.join(', ')}.`);
+      // @ts-ignore
+      error.code = 'ENGINE_ROUTER_PROHIBITED_OPERATOR';
+      // @ts-ignore
+      error.type = 'flow';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+    
+    // Detecta acesso profundo (obj.prop)
+    if (op === 'equals' && condition.var && condition.var.includes('.')) {
+      const error = new Error(`Router node "${node.id}" tenta acessar propriedade profunda "${condition.var}" na regra ${i + 1}. Aplaine antes (ex: user_role em vez de user.role).`);
+      // @ts-ignore
+      error.code = 'ENGINE_ROUTER_DEEP_ACCESS';
+      // @ts-ignore
+      error.type = 'flow';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+  }
 
   let chosenNext = null;
   let matchedRule = null;
@@ -915,6 +977,314 @@ async function optionsNodeHandler(node, state, input, deps = null) {
   return result;
 }
 
+/**
+ * Nó "subflow"
+ * - Chama outro fluxo como subfluxo.
+ * - O subfluxo é executado completamente até chegar ao nó "end".
+ * - Dados são compartilhados via contexto flat (variáveis).
+ * - Sem recursão, sem paralelismo.
+ *
+ * config:
+ * - flowId: string (obrigatório) - ID do fluxo a ser chamado
+ * - timeout: number (opcional) - Timeout em milissegundos
+ *
+ * Regras:
+ * - Previne recursão infinita (subfluxo não pode chamar o fluxo principal)
+ * - Executa subfluxo até chegar ao end
+ * - Variáveis são compartilhadas (flat)
+ * - Retorna ao fluxo principal após execução
+ */
+async function subflowNodeHandler(node, state, input, deps = null) {
+  const nextState = cloneState(state);
+  
+  // Valida configuração
+  if (!node.config || typeof node.config !== 'object' || !node.config.flowId || typeof node.config.flowId !== 'string') {
+    const error = new Error(`Subflow node "${node.id}" deve ter "config.flowId" válido.`);
+    // @ts-ignore
+    error.code = 'ENGINE_SUBFLOW_INVALID_CONFIG';
+    // @ts-ignore
+    error.type = 'data';
+    // @ts-ignore
+    error.nodeId = node.id;
+    throw error;
+  }
+
+  const subflowId = node.config.flowId;
+  const timeout = node.config.timeout || 30000; // 30 segundos padrão
+  const mainFlowId = state.flowId;
+
+  // Previne recursão infinita: subfluxo não pode chamar o fluxo principal
+  if (subflowId === mainFlowId) {
+    const error = new Error(`Subflow node "${node.id}" tenta chamar o próprio fluxo principal (recursão infinita).`);
+    // @ts-ignore
+    error.code = 'ENGINE_SUBFLOW_RECURSION';
+    // @ts-ignore
+    error.type = 'flow';
+    // @ts-ignore
+    error.nodeId = node.id;
+    throw error;
+  }
+
+  // Previne recursão via pilha de chamadas
+  const callStack = state.metadata?.subflowCallStack || [];
+  if (callStack.includes(subflowId)) {
+    const error = new Error(`Subflow node "${node.id}" cria recursão: ${callStack.join(' -> ')} -> ${subflowId}`);
+    // @ts-ignore
+    error.code = 'ENGINE_SUBFLOW_RECURSION';
+    // @ts-ignore
+    error.type = 'flow';
+    // @ts-ignore
+    error.nodeId = node.id;
+    throw error;
+  }
+
+  // Valida que deps está disponível
+  if (!deps || !deps.persistence || !deps.persistence.getFlow) {
+    const error = new Error(`Subflow node "${node.id}" requer dependências de persistência para carregar o subfluxo.`);
+    // @ts-ignore
+    error.code = 'ENGINE_SUBFLOW_MISSING_DEPS';
+    // @ts-ignore
+    error.type = 'system';
+    // @ts-ignore
+    error.nodeId = node.id;
+    throw error;
+  }
+
+  try {
+    // Carrega o subfluxo
+    const subflowDefinition = await deps.persistence.getFlow(subflowId);
+    if (!subflowDefinition) {
+      const error = new Error(`Subfluxo "${subflowId}" não encontrado.`);
+      // @ts-ignore
+      error.code = 'ENGINE_SUBFLOW_NOT_FOUND';
+      // @ts-ignore
+      error.type = 'data';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+
+    // Valida que o subfluxo tem nó start e end
+    const hasStart = subflowDefinition.nodes && subflowDefinition.nodes.some(n => 
+      (n.type || (n.data && n.data.type)) === 'start'
+    );
+    const hasEnd = subflowDefinition.nodes && subflowDefinition.nodes.some(n => 
+      (n.type || (n.data && n.data.type)) === 'end'
+    );
+
+    if (!hasStart) {
+      const error = new Error(`Subfluxo "${subflowId}" não tem nó "start".`);
+      // @ts-ignore
+      error.code = 'ENGINE_SUBFLOW_INVALID';
+      // @ts-ignore
+      error.type = 'data';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+
+    if (!hasEnd) {
+      const error = new Error(`Subfluxo "${subflowId}" não tem nó "end".`);
+      // @ts-ignore
+      error.code = 'ENGINE_SUBFLOW_INVALID';
+      // @ts-ignore
+      error.type = 'data';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+
+    // Compila o subfluxo
+    const { getOrCompileFlow } = require('../compiledFlowCache');
+    const compiledSubflow = getOrCompileFlow(subflowDefinition);
+
+    // Prepara estado do subfluxo (compartilha variáveis, mas muda flowId)
+    const subflowState = {
+      ...nextState,
+      flowId: subflowId,
+      flowVersion: compiledSubflow.version,
+      // Mantém variáveis compartilhadas (flat)
+      variables: { ...nextState.variables },
+      // Adiciona à pilha de chamadas
+      metadata: {
+        ...nextState.metadata,
+        subflowCallStack: [...callStack, mainFlowId],
+        subflowParent: mainFlowId,
+        subflowParentNode: node.id,
+      },
+    };
+
+    // Encontra nó start do subfluxo
+    const startNode = compiledSubflow.nodes.find(n => n.type === 'start');
+    if (!startNode) {
+      const error = new Error(`Subfluxo "${subflowId}" não tem nó "start" válido.`);
+      // @ts-ignore
+      error.code = 'ENGINE_SUBFLOW_INVALID';
+      // @ts-ignore
+      error.type = 'data';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+
+    // Inicia execução do subfluxo a partir do start
+    subflowState.currentNodeId = startNode.id;
+
+    // Executa subfluxo até chegar ao end
+    const { executeStep } = require('../executeStep');
+    
+    // Obtém registry das dependências (adicionado pelo runner)
+    const registry = deps?.registry;
+    if (!registry) {
+      const error = new Error(`Subflow node "${node.id}" requer registry nas dependências.`);
+      // @ts-ignore
+      error.code = 'ENGINE_SUBFLOW_MISSING_REGISTRY';
+      // @ts-ignore
+      error.type = 'system';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+
+    // Executa subfluxo com limite de passos para prevenir loops infinitos
+    const MAX_SUBFLOW_STEPS = 100;
+    let currentSubflowState = subflowState;
+    let stepCount = 0;
+    const allSubflowEvents = [];
+
+    const startTime = Date.now();
+
+    while (currentSubflowState.currentNodeId && stepCount < MAX_SUBFLOW_STEPS) {
+      // Verifica timeout
+      if (Date.now() - startTime > timeout) {
+        const error = new Error(`Subfluxo "${subflowId}" excedeu timeout de ${timeout}ms.`);
+        // @ts-ignore
+        error.code = 'ENGINE_SUBFLOW_TIMEOUT';
+        // @ts-ignore
+        error.type = 'system';
+        // @ts-ignore
+        error.nodeId = node.id;
+        throw error;
+      }
+
+      // Executa um passo do subfluxo
+      const stepResult = await executeStep(
+        compiledSubflow,
+        currentSubflowState,
+        {
+          registry,
+          input: stepCount === 0 ? input : undefined, // Passa input apenas no primeiro passo
+          deps,
+        }
+      );
+
+      stepCount++;
+      currentSubflowState = stepResult.state;
+      allSubflowEvents.push(...stepResult.events);
+
+      // Verifica se chegou ao end
+      const currentNode = compiledSubflow.nodes.find(n => n.id === currentSubflowState.currentNodeId);
+      if (currentNode && currentNode.type === 'end') {
+        // Subfluxo terminou
+        break;
+      }
+
+      // Se não há nó atual, subfluxo terminou
+      if (!currentSubflowState.currentNodeId) {
+        break;
+      }
+    }
+
+    if (stepCount >= MAX_SUBFLOW_STEPS) {
+      const error = new Error(`Subfluxo "${subflowId}" excedeu limite de ${MAX_SUBFLOW_STEPS} passos (possível loop infinito).`);
+      // @ts-ignore
+      error.code = 'ENGINE_SUBFLOW_MAX_STEPS';
+      // @ts-ignore
+      error.type = 'flow';
+      // @ts-ignore
+      error.nodeId = node.id;
+      throw error;
+    }
+
+    // Retorna ao fluxo principal
+    // Restaura flowId original, mas mantém variáveis atualizadas
+    const finalState = {
+      ...currentSubflowState,
+      flowId: mainFlowId,
+      flowVersion: state.flowVersion, // Mantém versão do fluxo principal
+      currentNodeId: node.next || null, // Próximo nó do fluxo principal
+      metadata: {
+        ...currentSubflowState.metadata,
+        subflowCallStack: callStack, // Remove da pilha
+        subflowParent: undefined,
+        subflowParentNode: undefined,
+      },
+    };
+
+    /** @type {EngineStepOutput} */
+    const result = {
+      nextState: finalState,
+      events: [
+        createEngineEvent({
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+          type: 'SUBFLOW_CALLED',
+          payload: {
+            subflowId,
+            stepCount,
+            completed: true,
+          },
+        }),
+        ...allSubflowEvents.map(event => ({
+          ...event,
+          // Marca eventos como sendo do subfluxo
+          flowId: state.flowId, // Mantém flowId principal para rastreamento
+          metadata: {
+            ...event.metadata,
+            subflowId,
+            subflowParent: mainFlowId,
+          },
+        })),
+      ],
+      output: {
+        type: 'subflow',
+        subflowId,
+        stepCount,
+        completed: true,
+      },
+    };
+
+    return result;
+  } catch (err) {
+    // Em caso de erro, retorna ao fluxo principal
+    const errorEvent = createEngineEvent({
+      sessionId: state.sessionId,
+      flowId: state.flowId,
+      nodeId: node.id,
+      type: 'ERROR',
+      payload: {
+        message: err.message || String(err),
+        operation: 'subflow',
+        subflowId,
+      },
+    });
+
+    return {
+      nextState: {
+        ...nextState,
+        currentNodeId: node.next || null, // Continua no fluxo principal mesmo com erro
+      },
+      events: [errorEvent],
+      output: {
+        type: 'subflow',
+        subflowId,
+        error: err.message || String(err),
+      },
+    };
+  }
+}
+
 module.exports = {
   startNodeHandler,
   messageNodeHandler,
@@ -925,6 +1295,7 @@ module.exports = {
   handoffNodeHandler,
   endNodeHandler,
   optionsNodeHandler,
+  subflowNodeHandler,
 };
 
 

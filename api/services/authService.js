@@ -261,13 +261,13 @@ function loadSessionsFromFile() {
 }
 
 /**
- * Cria agente admin padrão (username: admin, password: admin123).
+ * Cria agente admin padrão (username: admin, password: Admin123!).
  * Apenas se não existir nenhum agente.
  */
 function createDefaultAdmin() {
   if (agents.size > 0) return;
 
-  const { hash, salt } = hashPassword('admin123');
+  const { hash, salt } = hashPassword('Admin123!');
   const now = new Date().toISOString();
   // Removido defaultTenantId - admin deve ser criado com tenantId explícito
   // Se não fornecido, retorna erro
@@ -300,7 +300,7 @@ function createDefaultAdmin() {
 
   agents.set(admin.id, admin);
   saveAgentsToFile();
-  logger.info(`[AuthService] Agente admin padrão criado (username: admin, password: admin123, tenantId: ${tenantId})`);
+  logger.info(`[AuthService] Agente admin padrão criado (username: admin, password: Admin123!, tenantId: ${tenantId})`);
 }
 
 // Carrega dados ao iniciar o módulo

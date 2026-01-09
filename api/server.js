@@ -453,6 +453,156 @@ startAutoCleanup(TICKET_CLEANUP_INTERVAL_HOURS, TICKET_MAX_AGE_DAYS);
 // Inicializa providers de IA
 initializeAiProviders();
 
+/**
+ * Inicializa o sistema criando o tenant 'system' e o usuário 'systemadmin' se não existirem.
+ * Esta função é executada automaticamente na primeira inicialização do servidor.
+ */
+async function initializeSystemAdmin() {
+  // Log imediato para debug
+  console.log('[Init] initializeSystemAdmin() chamada');
+  logger.info('[Init] initializeSystemAdmin() chamada');
+  console.log('[Init] ========================================');
+  logger.info('[Init] ========================================');
+  console.log('[Init] Iniciando initializeSystemAdmin()...');
+  logger.info('[Init] Iniciando initializeSystemAdmin()...');
+  try {
+    // Garante que o diretório de dados existe
+    ensureDataDir();
+    
+    // Aguarda um pequeno delay para garantir que os módulos foram totalmente carregados
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Recarrega dados para garantir que temos a versão mais recente
+    const authService = require('./services/authService');
+    const tenantService = require('./services/tenantService');
+    tenantService._internal.loadTenantsFromFile();
+    authService._internal.loadAgentsFromFile();
+    
+    // Aguarda mais um pouco para garantir que os dados foram carregados
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Verifica se o tenant 'system' existe
+    logger.info('[Init] Verificando tenant "system"...');
+    let systemTenant = getTenant('system');
+    
+    if (!systemTenant) {
+      logger.info('[Init] Tenant "system" não existe. Criando...');
+      const tenantResult = createTenant({
+        id: 'system',
+        name: 'Sistema',
+        site: 'https://sistema.com',
+        ramo_atividade: 'Sistema de Administração',
+        objetivo: 'Administração global do sistema',
+        plan: 'enterprise',
+      });
+
+      if (!tenantResult.success) {
+        logger.error('[Init] ❌ Erro ao criar tenant system:', tenantResult.error);
+        logger.error('[Init] Detalhes:', JSON.stringify(tenantResult, null, 2));
+        // Tenta continuar mesmo se houver erro ao criar tenant
+      } else {
+        systemTenant = tenantResult.tenant;
+        logger.info('[Init] ✅ Tenant "system" criado com sucesso');
+        // Recarrega tenants após criar
+        tenantService._internal.loadTenantsFromFile();
+      }
+    } else {
+      logger.info('[Init] ✅ Tenant "system" já existe');
+    }
+
+    // Verifica se o agente 'systemadmin' existe
+    logger.info('[Init] Verificando se systemadmin existe...');
+    
+    // Recarrega agentes para garantir que temos a versão mais recente
+    authService._internal.loadAgentsFromFile();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    const allAgents = listAgents(); // Lista todos os agentes
+    const systemAgents = listAgents('system'); // Lista agentes do tenant system
+    logger.info('[Init] Total de agentes carregados:', allAgents.length);
+    logger.info('[Init] Agentes do tenant system:', systemAgents.length);
+    
+    const systemAdminExists = allAgents.some(agent => 
+      agent.username && agent.username.toLowerCase() === 'systemadmin'
+    ) || systemAgents.some(agent => 
+      agent.username && agent.username.toLowerCase() === 'systemadmin'
+    );
+
+    if (!systemAdminExists) {
+      logger.info('[Init] systemadmin não encontrado. Criando agente super admin...');
+      
+      // Garante que o tenant 'system' existe antes de criar o agente
+      if (!systemTenant) {
+        logger.warn('[Init] ⚠️  Tenant "system" não existe. Tentando criar novamente...');
+        const tenantResult = createTenant({
+          id: 'system',
+          name: 'Sistema',
+          site: 'https://sistema.com',
+          ramo_atividade: 'Sistema de Administração',
+          objetivo: 'Administração global do sistema',
+          plan: 'enterprise',
+        });
+        if (tenantResult.success) {
+          systemTenant = tenantResult.tenant;
+          tenantService._internal.loadTenantsFromFile();
+          logger.info('[Init] ✅ Tenant "system" criado na segunda tentativa');
+        }
+      }
+      
+      if (systemTenant || getTenant('system')) {
+        const agentResult = createAgent({
+          tenantId: 'system',
+          username: 'systemadmin',
+          email: 'systemadmin@exemplo.com',
+          password: 'Admin123!',
+          role: 'owner',
+          name: 'Administrador do Sistema',
+        });
+
+        if (agentResult.success) {
+          logger.info('[Init] ✅ Super Admin criado com sucesso!');
+          logger.info('[Init] 📋 Credenciais: username=systemadmin, password=Admin123!');
+          logger.info('[Init] ID do agente:', agentResult.agent?.id);
+          
+          // Recarrega agentes após criar
+          authService._internal.loadAgentsFromFile();
+        } else {
+          // Se já existe, apenas loga como debug (não é erro)
+          if (agentResult.error && agentResult.error.includes('já existe')) {
+            logger.info('[Init] ℹ️  Super Admin já existe (erro: já existe)');
+          } else {
+            logger.error('[Init] ❌ Erro ao criar super admin!');
+            logger.error('[Init] Erro:', agentResult.error);
+            logger.error('[Init] Detalhes completos:', JSON.stringify(agentResult, null, 2));
+            
+            // Tenta verificar novamente após o erro
+            authService._internal.loadAgentsFromFile();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const allAgentsAfter = listAgents();
+            const existsAfter = allAgentsAfter.some(agent => 
+              agent.username && agent.username.toLowerCase() === 'systemadmin'
+            );
+            if (existsAfter) {
+              logger.info('[Init] ✅ Super Admin foi criado (verificado após erro)');
+            }
+          }
+        }
+      } else {
+        logger.error('[Init] ❌ Não foi possível criar systemadmin: tenant "system" não existe');
+      }
+    } else {
+      logger.info('[Init] ✅ Super Admin já existe (encontrado nos agentes carregados)');
+    }
+    logger.info('[Init] ========================================');
+  } catch (error) {
+    logger.error('[Init] ❌❌❌ ERRO CRÍTICO ao inicializar systemadmin ❌❌❌');
+    logger.error('[Init] Erro:', error);
+    logger.error('[Init] Stack:', error.stack);
+    logger.error('[Init] ========================================');
+    // Não interrompe a inicialização do servidor se houver erro
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Persistência em arquivo JSON
 // ---------------------------------------------------------------------------
@@ -808,7 +958,11 @@ async function requestHandler(req, res) {
   const isSuperAdminRoute = superAdminRoutes;
   
   // Aplica rate limiting apenas em rotas que não são públicas, de auth ou super-admin
-  if (!isPublicRoute && !isAuthRoute && !isSuperAdminRoute && method !== 'OPTIONS') {
+  // Em desenvolvimento, rate limit é desativado
+  const nodeEnv = config.get('nodeEnv', process.env.NODE_ENV || 'development');
+  const isDevelopment = nodeEnv === 'development';
+  
+  if (!isPublicRoute && !isAuthRoute && !isSuperAdminRoute && method !== 'OPTIONS' && !isDevelopment) {
     try {
       const allowed = await tenantRateLimitMiddleware(req, res, sendJson);
       if (!allowed) {
@@ -823,6 +977,9 @@ async function requestHandler(req, res) {
       });
       // Continua processamento (fail-open em caso de erro)
     }
+  } else if (isDevelopment && !isPublicRoute && !isAuthRoute && !isSuperAdminRoute && method !== 'OPTIONS') {
+    // Em desenvolvimento, loga mas não bloqueia
+    logger.debug('[Server] Rate limit desativado em desenvolvimento', { pathname, method });
   }
 
   // -----------------------------------------------------------------------
@@ -1109,9 +1266,10 @@ async function requestHandler(req, res) {
       return;
     }
 
-    // Apenas admins podem criar tenants
-    if (req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem criar tenants' });
+    // Apenas super-admin pode criar tenants
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem criar tenants' });
       return;
     }
 
@@ -1163,6 +1321,315 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // POST /tenants/generate-by-ai - Gera tenant por IA
+  if (method === 'POST' && pathname === '/tenants/generate-by-ai') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Apenas super-admin pode gerar tenants por IA
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem gerar tenants por IA' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { description } = body;
+
+      if (!description || typeof description !== 'string' || description.trim().length === 0) {
+        badRequest(res, 'Descrição é obrigatória');
+        return;
+      }
+
+      // Usa tenant 'system' para geração por IA
+      const systemTenantId = 'system';
+      
+      // Prompt para gerar dados do tenant
+      const prompt = `Você é um assistente especializado em criar perfis de tenants para uma plataforma SaaS de automação com IA.
+
+Com base na seguinte descrição, gere um JSON válido com os dados do tenant:
+
+Descrição: ${description}
+
+Gere um JSON com a seguinte estrutura:
+{
+  "name": "Nome do Tenant",
+  "site": "https://exemplo.com",
+  "ramo_atividade": "Descrição detalhada do ramo de atividade (2-3 frases)",
+  "objetivo": "Objetivo estratégico do tenant com a plataforma (2-3 frases)"
+}
+
+Regras:
+- O nome deve ser claro e profissional
+- O site deve ser uma URL válida (use https://exemplo.com se não houver site específico)
+- O ramo_atividade deve descrever o segmento de negócio de forma detalhada
+- O objetivo deve explicar como o tenant pretende usar a plataforma
+
+Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
+
+      logger.info('[Tenants] Gerando tenant por IA', { description: description.substring(0, 100) });
+
+      const aiResult = await generateAiResponse(prompt, systemTenantId, {});
+      const aiText = aiResult.text || '';
+
+      // Tenta extrair JSON da resposta da IA
+      let tenantData;
+      try {
+        // Remove markdown code blocks se existirem
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          tenantData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('JSON não encontrado na resposta');
+        }
+      } catch (parseError) {
+        logger.error('[Tenants] Erro ao parsear resposta da IA', { 
+          aiText, 
+          error: parseError.message 
+        });
+        sendJson(res, 500, { 
+          error: 'Erro ao processar resposta da IA',
+          details: 'A IA não retornou um JSON válido. Tente novamente com uma descrição mais detalhada.'
+        });
+        return;
+      }
+
+      // Valida dados gerados
+      if (!tenantData.name || !tenantData.ramo_atividade || !tenantData.objetivo) {
+        sendJson(res, 500, { 
+          error: 'Dados incompletos',
+          details: 'A IA não gerou todos os campos necessários. Tente novamente.'
+        });
+        return;
+      }
+
+      // Garante que o site existe
+      if (!tenantData.site) {
+        tenantData.site = 'https://exemplo.com';
+      }
+
+      // Valida entrada usando schema
+      const { validateInput, schemas } = require('./utils/inputValidator');
+      try {
+        validateInput(tenantData, schemas.createTenant);
+      } catch (validationError) {
+        badRequest(res, `Dados gerados inválidos: ${validationError.message}`);
+        return;
+      }
+
+      logger.info('[Tenants] Tenant gerado por IA com sucesso', { 
+        name: tenantData.name,
+        site: tenantData.site 
+      });
+
+      sendJson(res, 200, { 
+        tenant: tenantData,
+        generated: true
+      });
+    } catch (err) {
+      logger.error('[Tenants] Erro ao gerar tenant por IA:', err);
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        sendJson(res, 500, { 
+          error: 'internal_error',
+          message: err.message || 'Erro ao gerar tenant por IA'
+        });
+      }
+    }
+    return;
+  }
+
+  // POST /system/suggest-description - Sugere descrição usando IA
+  if (method === 'POST' && pathname === '/system/suggest-description') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { prompt, name, tenantId, urls } = body;
+
+      if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+        badRequest(res, 'Prompt é obrigatório');
+        return;
+      }
+
+      const tenantIdForAI = tenantId || req.agent?.tenantId || 'tenant-demo';
+      
+      logger.info('[System] Sugerindo descrição por IA', { 
+        name: name || 'N/A',
+        tenantId: tenantIdForAI,
+        hasUrls: Array.isArray(urls) && urls.length > 0
+      });
+
+      // Primeiro, consulta RAG para obter conteúdo indexado sobre o tenant/sistema
+      let ragContext = '';
+      try {
+        // Constrói query mais específica baseada no nome e URLs
+        let ragQuery = '';
+        if (name && Array.isArray(urls) && urls.length > 0) {
+          // Se tem nome e URLs, busca por conteúdo relacionado ao nome e às URLs
+          const urlDomains = urls.map(url => {
+            try {
+              const urlObj = new URL(url);
+              return urlObj.hostname.replace('www.', '');
+            } catch {
+              return url;
+            }
+          }).filter(Boolean);
+          ragQuery = `${name} ${urlDomains.join(' ')} informações sobre serviços produtos`;
+        } else if (name) {
+          // Se tem apenas nome, busca por informações sobre o nome
+          ragQuery = `Informações sobre ${name} serviços produtos empresa negócio`;
+        } else if (Array.isArray(urls) && urls.length > 0) {
+          // Se tem apenas URLs, busca por conteúdo das URLs
+          const urlDomains = urls.map(url => {
+            try {
+              const urlObj = new URL(url);
+              return urlObj.hostname.replace('www.', '');
+            } catch {
+              return url;
+            }
+          }).filter(Boolean);
+          ragQuery = `${urlDomains.join(' ')} informações conteúdo site`;
+        } else {
+          ragQuery = 'Informações sobre o sistema ou tenant';
+        }
+        
+        logger.debug('[System] Consultando RAG para obter contexto', { 
+          query: ragQuery, 
+          tenantId: tenantIdForAI,
+          name,
+          urlsCount: Array.isArray(urls) ? urls.length : 0
+        });
+        
+        const ragResult = await ragService.queryRag(ragQuery, tenantIdForAI, {}, {
+          topK: 10, // Aumenta para pegar mais contexto
+          minScore: 0.25, // Score ainda mais baixo para pegar mais contexto
+          maxTokens: 3000, // Mais tokens para ter mais informações
+        });
+        
+        if (ragResult.success) {
+          // Prioriza sources se disponíveis, senão usa response
+          if (ragResult.sources && ragResult.sources.length > 0) {
+            // Extrai conteúdo relevante dos chunks retornados
+            // Sources podem ter: content, text, chunk, excerpt, ou similar
+            const relevantChunks = ragResult.sources
+              .filter(s => {
+                const score = s.score || s.relevance_score || s.similarity || 0;
+                return score >= 0.25; // Score mais baixo para pegar mais contexto
+              })
+              .slice(0, 8) // Aumenta para 8 chunks mais relevantes
+              .map(s => {
+                // O campo correto é 'excerpt' conforme o modelo Source do Python
+                // Mas também tenta outros campos para compatibilidade
+                const content = s.excerpt || s.content || s.text || s.chunk || s.snippet || '';
+                return content;
+              })
+              .filter(c => c && c.trim() && c.length > 20); // Filtra conteúdos muito curtos
+            
+            if (relevantChunks.length > 0) {
+              ragContext = `\n\nCONTEXTO EXTRAÍDO DOS ARQUIVOS INDEXADOS:\n${relevantChunks.join('\n\n---\n\n')}\n\n`;
+              logger.info('[System] Contexto RAG obtido com sucesso', { 
+                chunksCount: relevantChunks.length,
+                totalLength: ragContext.length,
+                sourcesCount: ragResult.sources.length,
+                avgChunkLength: Math.round(relevantChunks.reduce((sum, c) => sum + c.length, 0) / relevantChunks.length)
+              });
+            } else {
+              logger.debug('[System] RAG retornou sources mas sem conteúdo extraível suficiente', { 
+                sourcesCount: ragResult.sources.length,
+                sampleSource: ragResult.sources[0] ? Object.keys(ragResult.sources[0]) : [],
+                sampleContent: ragResult.sources[0] ? (ragResult.sources[0].content || ragResult.sources[0].text || '').substring(0, 100) : ''
+              });
+            }
+          }
+          
+          // Se não conseguiu extrair contexto dos sources mas há uma resposta gerada, usa ela
+          if (!ragContext && ragResult.response && ragResult.response.trim()) {
+            ragContext = `\n\nINFORMAÇÕES EXTRAÍDAS DOS ARQUIVOS INDEXADOS:\n${ragResult.response}\n\n`;
+            logger.info('[System] Usando resposta RAG como contexto (sources não disponíveis)', { 
+              responseLength: ragResult.response.length 
+            });
+          }
+        } else {
+          logger.debug('[System] RAG não retornou resultados ou está vazio', { 
+            success: ragResult.success,
+            sourcesCount: ragResult.sources?.length || 0,
+            hasResponse: !!ragResult.response,
+            error: ragResult.error
+          });
+        }
+      } catch (ragError) {
+        logger.warn('[System] Erro ao consultar RAG (continuando sem contexto)', { 
+          error: ragError.message 
+        });
+        // Continua sem contexto RAG se houver erro
+      }
+
+      // Monta prompt final com contexto RAG se disponível
+      let finalPrompt = prompt;
+      
+      if (ragContext) {
+        // Se há contexto RAG, usa ele como fonte principal
+        finalPrompt = `${prompt}\n\n${ragContext}\n\nIMPORTANTE: Use APENAS as informações do contexto extraído dos arquivos indexados acima. Não invente informações que não estejam no contexto. Se o contexto não contiver informações suficientes, seja cauteloso e mencione apenas o que está disponível.`;
+      } else if (Array.isArray(urls) && urls.length > 0) {
+        // Se não há RAG mas há URLs, menciona as URLs (mas não acessa diretamente)
+        finalPrompt = `${prompt}\n\nURLs do site para referência: ${urls.join(', ')}\n\nIMPORTANTE: Use apenas informações que foram indexadas dos arquivos enviados ou do web scraping desses sites. Não invente informações.`;
+      } else {
+        // Sem RAG nem URLs, instrui a ser muito cauteloso
+        finalPrompt = `${prompt}\n\nIMPORTANTE: Não há conteúdo indexado disponível. Seja muito cauteloso e não invente informações específicas. Use apenas inferências genéricas baseadas no nome.`;
+      }
+
+      const aiResult = await generateAiResponse(finalPrompt, tenantIdForAI, {});
+      const suggestedDescription = aiResult.text || '';
+
+      if (!suggestedDescription.trim()) {
+        sendJson(res, 500, { 
+          error: 'Erro ao processar resposta da IA',
+          details: 'A IA não retornou uma descrição sugerida.'
+        });
+        return;
+      }
+
+      logger.info('[System] Descrição sugerida com sucesso', { 
+        length: suggestedDescription.length 
+      });
+
+      sendJson(res, 200, { 
+        suggestion: suggestedDescription.trim()
+      });
+    } catch (err) {
+      logger.error('[System] Erro ao sugerir descrição:', err);
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        sendJson(res, 500, { 
+          error: 'internal_error',
+          message: err.message || 'Erro ao sugerir descrição por IA'
+        });
+      }
+    }
+    return;
+  }
+
   // GET /tenants - Lista tenants
   if (method === 'GET' && pathname === '/tenants') {
     const authResult = requireAuth(req);
@@ -1171,14 +1638,84 @@ async function requestHandler(req, res) {
       return;
     }
 
-    // Apenas admins podem listar todos os tenants
-    if (req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem listar tenants' });
+    // Apenas super-admin pode listar todos os tenants
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem listar tenants' });
       return;
     }
 
     const tenantsList = listTenants();
     sendJson(res, 200, { tenants: tenantsList });
+    return;
+  }
+
+  // GET /tenants/:id/context - Obtém contexto do tenant (deve vir ANTES da rota genérica /tenants/:id)
+  if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/context')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
+    
+    // Verifica se o tenant existe primeiro
+    const tenant = getTenant(tenantId);
+    if (!tenant) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+    
+    // Super-admin pode ver qualquer contexto
+    // Admin pode ver qualquer contexto
+    // Outros só podem ver seu próprio contexto
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser && req.agent.role !== 'admin' && req.agent.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver o contexto do seu próprio tenant' });
+      return;
+    }
+
+    const context = getTenantContext(tenantId);
+    if (!context) {
+      sendJson(res, 404, { error: 'tenant_context_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { context });
+    return;
+  }
+
+  // GET /tenants/:id/usage - Obtém métricas de uso do tenant (deve vir ANTES da rota genérica /tenants/:id)
+  if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/usage')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/usage', ''));
+    
+    // Owner pode ver métricas do seu tenant, admin pode ver qualquer tenant
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem ver métricas' });
+      return;
+    }
+
+    // Super-admin pode ver métricas de qualquer tenant
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser && req.agent.role === 'owner' && req.agent.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver métricas do seu próprio tenant' });
+      return;
+    }
+
+    const usage = getTenantUsage(tenantId);
+    if (!usage) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    sendJson(res, 200, { usage });
     return;
   }
 
@@ -1214,6 +1751,83 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // PUT /tenants/:id/context - Atualiza contexto do tenant (deve vir ANTES da rota genérica /tenants/:id)
+  if (method === 'PUT' && pathname.startsWith('/tenants/') && pathname.endsWith('/context')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Apenas OWNER ou ADMIN podem atualizar contextos (proteção contra prompt injection)
+    // Apenas super-admin pode atualizar contextos de tenants
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem atualizar contextos de tenants' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
+    const tenant = getTenant(tenantId);
+    
+    if (!tenant) {
+      sendJson(res, 404, { error: 'tenant_not_found' });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      
+      // Valida entrada usando schema
+      const { validateInput, schemas } = require('./utils/inputValidator');
+      try {
+        validateInput(body, schemas.updateTenantContext);
+      } catch (validationError) {
+        badRequest(res, validationError.message || 'Dados inválidos');
+        return;
+      }
+      
+      // Passa informações do usuário para auditoria e validação
+      const result = updateTenantContext(tenantId, body, {
+        userRole: req.agent.role,
+        userId: req.agent.id,
+        username: req.agent.username,
+      });
+
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      // Registra ação de auditoria
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'tenant_context_update',
+        resource: 'tenant_context',
+        resourceId: tenantId,
+        details: { updatedFields: Object.keys(body) },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, { context: result.context });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao atualizar tenant context:', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
   // PUT /tenants/:id - Atualiza tenant
   if (method === 'PUT' && pathname.startsWith('/tenants/')) {
     const authResult = requireAuth(req);
@@ -1222,9 +1836,10 @@ async function requestHandler(req, res) {
       return;
     }
 
-    // Apenas admins podem atualizar tenants
-    if (req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem atualizar tenants' });
+    // Apenas super-admin pode atualizar tenants
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem atualizar tenants' });
       return;
     }
 
@@ -1329,111 +1944,7 @@ async function requestHandler(req, res) {
     return;
   }
 
-  // GET /tenants/:id/context - Obtém contexto do tenant
-  if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/context')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
 
-    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
-    
-    // Super-admin pode ver qualquer contexto
-    // Admin pode ver qualquer contexto
-    // Outros só podem ver seu próprio contexto
-    const isSuperAdminUser = isSuperAdmin(req.agent);
-    if (!isSuperAdminUser && req.agent.role !== 'admin' && req.agent.tenantId !== tenantId) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver o contexto do seu próprio tenant' });
-      return;
-    }
-
-    const context = getTenantContext(tenantId);
-    if (!context) {
-      sendJson(res, 404, { error: 'tenant_context_not_found' });
-      return;
-    }
-
-    sendJson(res, 200, { context });
-    return;
-  }
-
-  // PUT /tenants/:id/context - Atualiza contexto do tenant
-  if (method === 'PUT' && pathname.startsWith('/tenants/') && pathname.endsWith('/context')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    // Apenas OWNER ou ADMIN podem atualizar contextos (proteção contra prompt injection)
-    // OWNER = proprietário do tenant (pode ser implementado como role específica ou validação adicional)
-    // Por enquanto, apenas ADMIN pode atualizar (OWNER pode ser adicionado quando necessário)
-    if (req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores (OWNER ou ADMIN) podem atualizar contextos' });
-      return;
-    }
-
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-
-    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
-    const tenant = getTenant(tenantId);
-    
-    if (!tenant) {
-      sendJson(res, 404, { error: 'tenant_not_found' });
-      return;
-    }
-
-    try {
-      const body = await parseJsonBody(req);
-      
-      // Valida entrada usando schema
-      const { validateInput, schemas } = require('./utils/inputValidator');
-      try {
-        validateInput(body, schemas.updateTenantContext);
-      } catch (validationError) {
-        badRequest(res, validationError.message || 'Dados inválidos');
-        return;
-      }
-      
-      // Passa informações do usuário para auditoria e validação
-      const result = updateTenantContext(tenantId, body, {
-        userRole: req.agent.role,
-        userId: req.agent.id,
-        username: req.agent.username,
-      });
-
-      if (!result.success) {
-        badRequest(res, result.error);
-        return;
-      }
-
-      // Registra ação de auditoria
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'tenant_context_update',
-        resource: 'tenant_context',
-        resourceId: tenantId,
-        details: { updatedFields: Object.keys(body) },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
-
-      sendJson(res, 200, { context: result.context });
-    } catch (err) {
-      if (err instanceof SyntaxError) {
-        badRequest(res, 'JSON inválido no corpo da requisição');
-      } else {
-        logger.error('Erro ao atualizar tenant context:', err);
-        sendJson(res, 500, { error: 'internal_error' });
-      }
-    }
-    return;
-  }
 
   // POST /tenants/:id/suspend - Suspende tenant (requer autenticação admin/owner)
   if (method === 'POST' && pathname.includes('/suspend') && pathname.startsWith('/tenants/')) {
@@ -1568,38 +2079,6 @@ async function requestHandler(req, res) {
     return;
   }
 
-  // GET /tenants/:id/usage - Obtém métricas de uso do tenant
-  if (method === 'GET' && pathname.includes('/usage') && pathname.startsWith('/tenants/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/usage', ''));
-    
-    // Owner pode ver métricas do seu tenant, admin pode ver qualquer tenant
-    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem ver métricas' });
-      return;
-    }
-
-    // Super-admin pode ver métricas de qualquer tenant
-    const isSuperAdminUser = isSuperAdmin(req.agent);
-    if (!isSuperAdminUser && req.agent.role === 'owner' && req.agent.tenantId !== tenantId) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver métricas do seu próprio tenant' });
-      return;
-    }
-
-    const usage = getTenantUsage(tenantId);
-    if (!usage) {
-      sendJson(res, 404, { error: 'tenant_not_found' });
-      return;
-    }
-
-    sendJson(res, 200, { usage });
-    return;
-  }
 
   // ============================================================================
   // SUPER ADMIN ROUTES
@@ -2106,14 +2585,16 @@ async function requestHandler(req, res) {
       return;
     }
 
-    // Valida tenant
-    if (req.tenantId && agent.tenantId !== req.tenantId) {
+    // Valida tenant - super-admin pode editar agentes de qualquer tenant
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser && req.tenantId && agent.tenantId !== req.tenantId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Agente não pertence ao seu tenant' });
       return;
     }
     
     // Agent pode atualizar apenas próprio perfil (com restrições), admin/supervisor podem atualizar qualquer um do mesmo tenant
-    if (req.agent.role !== 'admin' && req.agent.role !== 'supervisor' && req.agent.id !== agentId) {
+    // Super-admin pode atualizar qualquer agente
+    if (!isSuperAdminUser && req.agent.role !== 'admin' && req.agent.role !== 'supervisor' && req.agent.id !== agentId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Você só pode atualizar seu próprio perfil' });
       return;
     }
@@ -5278,37 +5759,50 @@ async function requestHandler(req, res) {
   // -----------------------------------------------------------------------
 
   // GET /config - Lê a configuração atual
+  // IMPORTANTE: Só responde com JSON se for uma requisição de API
+  // Se for uma requisição de navegação (Accept: text/html), deixa cair no catch-all para servir o frontend
   if (method === 'GET' && pathname === '/config') {
-    try {
-      // Recarrega a configuração do arquivo para garantir que está atualizada
-      config.reload();
-      const configData = config.getAll();
-      
-      // Valida que configData é um objeto válido
-      if (!configData || typeof configData !== 'object' || Array.isArray(configData)) {
-        throw new Error('Configuração retornada não é um objeto válido');
-      }
-      
-      sendJson(res, 200, configData);
-    } catch (err) {
-      // Usa console.error como fallback caso logger falhe
+    const acceptHeader = req.headers.accept || '';
+    const isApiRequest = acceptHeader.includes('application/json') || 
+                         !acceptHeader.includes('text/html');
+    
+    if (!isApiRequest) {
+      // É uma requisição de navegação, deixa cair no catch-all para servir o frontend
+      // Não retorna aqui, continua para o catch-all
+    } else {
+      // É uma requisição de API, responde com JSON
       try {
-        logger.error('Erro ao ler configuração:', err);
-      } catch (logErr) {
-        // Fallback: usa console.error se logger falhar
-        // eslint-disable-next-line no-console
-        console.error('Erro ao ler configuração:', err);
-        // eslint-disable-next-line no-console
-        console.error('Erro ao logar erro:', logErr);
+        // Recarrega a configuração do arquivo para garantir que está atualizada
+        config.reload();
+        const configData = config.getAll();
+        
+        // Valida que configData é um objeto válido
+        if (!configData || typeof configData !== 'object' || Array.isArray(configData)) {
+          throw new Error('Configuração retornada não é um objeto válido');
+        }
+        
+        sendJson(res, 200, configData);
+      } catch (err) {
+        // Usa console.error como fallback caso logger falhe
+        try {
+          logger.error('Erro ao ler configuração:', err);
+        } catch (logErr) {
+          // Fallback: usa console.error se logger falhar
+          // eslint-disable-next-line no-console
+          console.error('Erro ao ler configuração:', err);
+          // eslint-disable-next-line no-console
+          console.error('Erro ao logar erro:', logErr);
+        }
+        
+        sendJson(res, 500, { 
+          error: 'Erro ao ler configuração',
+          message: err.message || 'Erro desconhecido',
+          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
       }
-      
-      sendJson(res, 500, { 
-        error: 'Erro ao ler configuração',
-        message: err.message || 'Erro desconhecido',
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-      });
+      return;
     }
-    return;
+    // Se não for requisição de API, continua para o catch-all (não retorna aqui)
   }
 
   // GET /api/data/rag_question_generation_rules.json - Serve regras de geração de perguntas (deprecated, use /contracts/rag/question-generation.rules.json)
@@ -7409,6 +7903,40 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /rag/deduplication/stats - Estatísticas de deduplicação
+  if (method === 'GET' && pathname === '/rag/deduplication/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      const tenantId = url.searchParams.get('tenantId') || req.tenantId;
+      
+      if (!tenantId) {
+        sendJson(res, 400, { error: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { getDeduplicationStats } = require('./services/ragDeduplicationService');
+      const stats = getDeduplicationStats(tenantId);
+
+      sendJson(res, 200, stats);
+    } catch (err) {
+      logger.error('Erro ao obter estatísticas de deduplicação:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
   // GET /rag/documents/stats - Estatísticas de documentos
   if (method === 'GET' && pathname === '/rag/documents/stats') {
     const authResult = requireAuth(req);
@@ -7492,6 +8020,22 @@ async function requestHandler(req, res) {
 
       if (!result.success) {
         sendJson(res, 400, { error: 'creation_failed', message: result.error });
+        return;
+      }
+
+      // Se é duplicata, retorna 200 (OK) ao invés de 201 (Created)
+      if (result.isDuplicate) {
+        logger.info('[RAGDocuments] Documento duplicado detectado no endpoint', {
+          documentId: result.document.id,
+          tenantId,
+          isDuplicate: true
+        });
+        
+        sendJson(res, 200, {
+          ...result.document,
+          isDuplicate: true,
+          message: result.existingDocument ? 'Documento já existe (duplicado detectado)' : 'Documento duplicado',
+        });
         return;
       }
 
@@ -9216,6 +9760,7 @@ async function requestHandler(req, res) {
   // -----------------------------------------------------------------------
 
   // GET /dev/files - Lista arquivos disponíveis (contratos, prompts)
+  // Apenas super-admin pode acessar
   if (method === 'GET' && pathname === '/dev/files') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
@@ -9223,9 +9768,10 @@ async function requestHandler(req, res) {
       return;
     }
 
-    const permResult = requirePermission(req, 'dev', 'read');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error || 'Sem permissão para acessar arquivos de desenvolvimento' });
+    // Verifica se é super-admin
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem acessar arquivos de desenvolvimento' });
       return;
     }
 
@@ -9356,6 +9902,7 @@ async function requestHandler(req, res) {
   }
 
   // GET /dev/files/:type/:path - Lê conteúdo de um arquivo
+  // Apenas super-admin pode acessar
   if (method === 'GET' && pathname.startsWith('/dev/files/')) {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
@@ -9363,9 +9910,10 @@ async function requestHandler(req, res) {
       return;
     }
 
-    const permResult = requirePermission(req, 'dev', 'read');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error || 'Sem permissão para ler arquivos de desenvolvimento' });
+    // Verifica se é super-admin
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem ler arquivos de desenvolvimento' });
       return;
     }
 
@@ -9434,6 +9982,7 @@ async function requestHandler(req, res) {
   }
 
   // PUT /dev/files/:type/:path - Salva conteúdo de um arquivo
+  // Apenas super-admin pode acessar
   if (method === 'PUT' && pathname.startsWith('/dev/files/')) {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
@@ -9441,9 +9990,10 @@ async function requestHandler(req, res) {
       return;
     }
 
-    const permResult = requirePermission(req, 'dev', 'write');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error || 'Sem permissão para editar arquivos de desenvolvimento' });
+    // Verifica se é super-admin
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem editar arquivos de desenvolvimento' });
       return;
     }
 
@@ -9546,6 +10096,68 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // -----------------------------------------------------------------------
+  // Frontend SPA - Serve index.html para rotas do frontend
+  // -----------------------------------------------------------------------
+  // Para requisições GET que não são de API, serve o frontend (SPA routing)
+  // Isso permite que rotas como /login, /support, etc. funcionem corretamente
+  // IMPORTANTE: Também serve para POST/PUT/DELETE de rotas do frontend que não são de API
+  // para evitar que formulários HTML padrão causem 404
+  const isFrontendRoute = !pathname.startsWith('/api') && 
+      !pathname.startsWith('/auth') && 
+      !pathname.startsWith('/health') &&
+      !pathname.startsWith('/version') &&
+      !pathname.startsWith('/system') &&
+      !pathname.startsWith('/metrics') &&
+      !pathname.startsWith('/tickets') &&
+      !pathname.startsWith('/queues') &&
+      !pathname.startsWith('/flows') &&
+      !pathname.startsWith('/replay') &&
+      !pathname.startsWith('/templates') &&
+      !pathname.startsWith('/server') &&
+      !pathname.startsWith('/tests') &&
+      !pathname.startsWith('/rpa') &&
+      !pathname.startsWith('/web-scraping') &&
+      !pathname.startsWith('/audit') &&
+      !pathname.startsWith('/onboarding') &&
+      !pathname.startsWith('/tenants') &&
+      !pathname.startsWith('/super-admin') &&
+      !pathname.startsWith('/conversations') &&
+      !pathname.startsWith('/rag') &&
+      // /config pode ser rota do frontend ou API
+      // Se for GET /config com Accept: application/json, já foi tratado pela rota de API acima
+      // Se for GET /config com Accept: text/html (navegação), serve o frontend
+      !(pathname === '/config' && req.headers.accept && req.headers.accept.includes('application/json')) &&
+      !(pathname.startsWith('/config/') && pathname !== '/config') && // Exclui subcaminhos de /config (como /config/validate-*)
+      !pathname.startsWith('/dev') &&
+      !pathname.includes('.'); // Não serve HTML para arquivos estáticos (que têm extensão)
+  
+  if (isFrontendRoute) {
+    // Para GET, sempre serve o index.html (SPA routing)
+    // Para outros métodos (POST, PUT, DELETE), também serve o index.html para evitar 404
+    // quando formulários HTML padrão fazem submit sem JavaScript
+    if (method === 'GET' || (method === 'POST' && !req.headers['content-type']?.includes('application/json'))) {
+      try {
+        const frontendIndexPath = path.join(__dirname, '..', 'frontend', 'index.html');
+        
+        // Verifica se o arquivo existe
+        if (fs.existsSync(frontendIndexPath)) {
+          logger.debug('[Server] Servindo index.html do frontend para rota:', pathname);
+          const html = fs.readFileSync(frontendIndexPath, 'utf8');
+          res.writeHead(200, {
+            'Content-Type': 'text/html; charset=utf-8',
+          });
+          res.end(html);
+          return;
+        } else {
+          logger.warn('[Server] index.html do frontend não encontrado em:', frontendIndexPath);
+        }
+      } catch (err) {
+        logger.error('[Server] Erro ao servir index.html do frontend:', err);
+      }
+    }
+  }
+
   // Qualquer outro endpoint: 404 genérico
   notFound(res);
 }
@@ -9574,6 +10186,35 @@ function createServer() {
 
 const server = createServer();
 
+// Inicialização automática do systemadmin quando o módulo é carregado
+// Isso garante que o systemadmin seja criado mesmo se o servidor for iniciado de outra forma
+let initializationPromise = null;
+async function startInitialization() {
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+  
+  initializationPromise = (async () => {
+    console.log('[Init] Iniciando inicialização automática do systemadmin...');
+    logger.info('[Init] Iniciando inicialização automática do systemadmin...');
+    
+    // Aguarda um pouco para garantir que todos os módulos foram carregados
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    try {
+      await initializeSystemAdmin();
+      console.log('[Init] ✅ Inicialização automática concluída');
+      logger.info('[Init] ✅ Inicialização automática concluída');
+    } catch (error) {
+      console.error('[Init] ❌ Erro na inicialização automática:', error);
+      logger.error('[Init] ❌ Erro na inicialização automática:', error);
+      throw error;
+    }
+  })();
+  
+  return initializationPromise;
+}
+
 // Salva conversas antes de encerrar o servidor
 process.on('SIGINT', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
@@ -9591,12 +10232,48 @@ process.on('beforeExit', () => {
   saveSessionEventsToFileImmediate();
 });
 
+// Log para debug - verificar se o módulo está sendo executado como main
+console.log('[Server] server.js carregado, require.main === module:', require.main === module);
+console.log('[Server] require.main:', require.main?.filename);
+console.log('[Server] __filename:', __filename);
+
 if (require.main === module) {
+  console.log('[Server] ✅ Bloco if (require.main === module) executado');
   // Limpa cache de limiters na inicialização para garantir que novas políticas sejam aplicadas
   clearLimitersCache();
   
-  server.listen(port, () => {
-    logger.info(`API server listening on http://0.0.0.0:${port}`);
+  // Inicializa o systemadmin automaticamente na primeira inicialização
+  // Usa a função startInitialization() que garante que só executa uma vez
+  console.log('[Server] Iniciando servidor...');
+  logger.info('[Server] Iniciando servidor...');
+  console.log('[Server] Aguardando inicialização do systemadmin...');
+  logger.info('[Server] Aguardando inicialização do systemadmin...');
+  
+  startInitialization().then(() => {
+    console.log('[Server] ✅ Inicialização concluída, iniciando servidor...');
+    logger.info('[Server] ✅ Inicialização concluída, iniciando servidor...');
+    server.listen(port, () => {
+      console.log(`API server listening on http://0.0.0.0:${port}`);
+      logger.info(`API server listening on http://0.0.0.0:${port}`);
+    });
+  }).catch((error) => {
+    console.error('[Server] ❌ Erro ao inicializar systemadmin, mas continuando inicialização do servidor');
+    console.error('[Server] Erro:', error);
+    console.error('[Server] Stack:', error.stack);
+    logger.error('[Server] ❌ Erro ao inicializar systemadmin, mas continuando inicialização do servidor');
+    logger.error('[Server] Erro:', error);
+    logger.error('[Server] Stack:', error.stack);
+    server.listen(port, () => {
+      console.log(`API server listening on http://0.0.0.0:${port}`);
+      logger.info(`API server listening on http://0.0.0.0:${port}`);
+    });
+  });
+} else {
+  console.log('[Server] ⚠️  Bloco if (require.main === module) NÃO executado - servidor não será iniciado automaticamente');
+  // Mesmo assim, inicia a inicialização em background
+  startInitialization().catch(err => {
+    console.error('[Server] Erro na inicialização em background:', err);
+    logger.error('[Server] Erro na inicialização em background:', err);
   });
 }
 

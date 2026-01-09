@@ -100,6 +100,11 @@ async function runStep(flow, state, registry, input, deps = null) {
   const nodeDeps = deps || {
     persistence: persistenceServices,
   };
+  
+  // Adiciona registry às dependências se disponível (para subfluxos)
+  if (registry && !nodeDeps.registry) {
+    nodeDeps.registry = registry;
+  }
 
   // Log de entrada no nó
   const enterEvent = createEngineEvent({

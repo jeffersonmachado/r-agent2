@@ -64,8 +64,9 @@ function buildUrl(path) {
                       (window.location.hostname === 'localhost' && window.location.port !== '80' && window.location.port !== '443' && !window.location.port.includes('8086'));
     
     if (isViteDev) {
-      // Desenvolvimento: usa localhost:3000
-      return `http://localhost:3000${normalizedPath}`;
+      // Desenvolvimento: usa URL relativa para que o proxy do Vite funcione
+      // O proxy do Vite redireciona para http://localhost:3000 automaticamente
+      return normalizedPath;
     }
   }
   

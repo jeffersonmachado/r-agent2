@@ -4,7 +4,11 @@
 
 set -e
 
-RAG_SERVICE_DIR="/opt/results/ria/r-agent2/rag-service"
+# Detecta diretório do projeto automaticamente
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Usa RAG_SERVICE_DIR se definido, senão detecta automaticamente
+RAG_SERVICE_DIR="${RAG_SERVICE_DIR:-$PROJECT_ROOT/rag-service}"
 RAG_PORT=8000
 
 echo "🔄 Reiniciando serviço RAG..."

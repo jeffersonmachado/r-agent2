@@ -799,6 +799,190 @@ export function OptionsField({
 }
 
 /**
+ * Campo para configurar regras do roteador
+ */
+export function RouterField({
+  label,
+  description,
+  value,
+  onChange,
+  availableNodes = [],
+  required = false,
+  error,
+}) {
+  const rules = Array.isArray(value) ? value : [];
+  
+  // Operadores permitidos: apenas igualdade simples (===)
+  // PROIBIDO: > < >= <=, regex, parsing, lógica complexa
+  const validOperators = [
+    { value: 'always', label: 'Sempre (fallback)' },
+    { value: 'equals', label: 'Igual a (===)' },
+  ];
+
+  const addRule = () => {
+    const newRule = {
+      condition: {
+        op: 'equals',
+        var: '',
+        value: '',
+      },
+      next: '',
+    };
+    onChange([...rules, newRule]);
+  };
+
+  const updateRule = (index, field, newValue) => {
+    const updated = [...rules];
+    if (field.startsWith('condition.')) {
+      const conditionField = field.replace('condition.', '');
+      updated[index] = {
+        ...updated[index],
+        condition: {
+          ...updated[index].condition,
+          [conditionField]: newValue,
+        },
+      };
+    } else {
+      updated[index] = {
+        ...updated[index],
+        [field]: newValue,
+      };
+    }
+    onChange(updated);
+  };
+
+  const removeRule = (index) => {
+    const updated = rules.filter((_, i) => i !== index);
+    onChange(updated);
+  };
+
+  return (
+    <PropertyField label={label} description={description} required={required} error={error}>
+      <div className="space-y-4">
+        {/* Botão para adicionar nova regra */}
+        <button
+          type="button"
+          onClick={addRule}
+          className="w-full px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+        >
+          <span>+</span>
+          <span>Adicionar Regra</span>
+        </button>
+
+        {/* Lista de regras configuradas */}
+        {rules.length > 0 ? (
+          <div className="space-y-4">
+            {rules.map((rule, index) => (
+              <div
+                key={index}
+                className="p-4 bg-bg-secondary border border-border-default rounded-lg space-y-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-text-primary">
+                    Regra {index + 1}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => removeRule(index)}
+                    className="px-2 py-1 text-xs text-status-error hover:bg-status-error/10 rounded transition-colors"
+                    title="Remover regra"
+                  >
+                    ✕ Remover
+                  </button>
+                </div>
+
+                {/* Operador da condição */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    Operador *
+                  </label>
+                  <select
+                    value={rule.condition?.op || 'equals'}
+                    onChange={(e) => updateRule(index, 'condition.op', e.target.value)}
+                    className="w-full px-4 py-3 text-[14px] font-inherit text-text-primary bg-bg-secondary rounded-lg outline-none transition-all duration-fast border input-base"
+                  >
+                    {validOperators.map((op) => (
+                      <option key={op.value} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Variável (não exibido para 'always') */}
+                {rule.condition?.op !== 'always' && (
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                      Variável *
+                    </label>
+                    <Input
+                      type="text"
+                      value={rule.condition?.var || ''}
+                      onChange={(e) => updateRule(index, 'condition.var', e.target.value)}
+                      placeholder="Ex: user_message, nome_usuario"
+                      className="w-full font-mono"
+                    />
+                    <p className="text-xs text-text-tertiary mt-1">
+                      Nome da variável categórica a ser verificada. Use apenas letras, números e underscore.
+                      <br />
+                      <span className="text-status-warning font-medium">⚠️ Importante:</span> Normalize dados antes do Roteador (ex: números → faixas, datas → períodos).
+                    </p>
+                  </div>
+                )}
+
+                {/* Valor (não exibido para 'always') */}
+                {rule.condition?.op !== 'always' && (
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                      Valor *
+                    </label>
+                    <Input
+                      type="text"
+                      value={rule.condition?.value || ''}
+                      onChange={(e) => updateRule(index, 'condition.value', e.target.value)}
+                      placeholder="Ex: suporte, João, 123"
+                      className="w-full"
+                    />
+                    <p className="text-xs text-text-tertiary mt-1">
+                      Valor categórico para comparação de igualdade (===). 
+                      <br />
+                      <span className="text-status-warning font-medium">⚠️ O Roteador NÃO calcula:</span> Use valores categóricos (ex: "alto", "baixo", "admin") em vez de números ou datas brutas.
+                    </p>
+                  </div>
+                )}
+
+                {/* Próximo nó (combobox) */}
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1.5 font-medium">
+                    Próximo nó *
+                  </label>
+                  <select
+                    value={rule.next || ''}
+                    onChange={(e) => updateRule(index, 'next', e.target.value)}
+                    className="w-full px-4 py-3 text-[14px] font-inherit text-text-primary bg-bg-secondary rounded-lg outline-none transition-all duration-fast border input-base"
+                  >
+                    <option value="">Selecione um nó...</option>
+                    {availableNodes.map((node) => (
+                      <option key={node.id} value={node.id}>
+                        {node.label || node.type} ({node.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-text-tertiary italic text-center py-4">
+            Nenhuma regra configurada ainda. Clique em "Adicionar Regra" para começar.
+          </p>
+        )}
+      </div>
+    </PropertyField>
+  );
+}
+
+/**
  * Campo para configurar horários do roteador por horário
  */
 export function ScheduleRouterField({

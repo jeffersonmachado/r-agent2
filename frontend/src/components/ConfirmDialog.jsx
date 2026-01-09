@@ -28,6 +28,17 @@ export function ConfirmDialog({
   variant = 'warning',
   disabled = false,
 }) {
+  const cancelButtonRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (isOpen && cancelButtonRef.current) {
+      // Pequeno delay para garantir que o modal está totalmente renderizado
+      setTimeout(() => {
+        cancelButtonRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen]);
+
   const handleConfirm = () => {
     if (disabled) return;
     
@@ -101,6 +112,7 @@ export function ConfirmDialog({
         {/* Botões */}
         <div className="flex justify-end gap-3 pt-4 border-t border-border-default">
           <Button
+            ref={cancelButtonRef}
             onClick={handleClose}
             variant="secondary"
             className="flex items-center gap-2"

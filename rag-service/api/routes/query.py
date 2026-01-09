@@ -9,6 +9,7 @@ from services.vector_store import get_vector_store
 from services.llm_service import generate_response
 from services.nlp_service import process_nlp, improve_query_for_rag, expand_query
 from services.adaptive_learning import get_adaptive_learning_service
+from services.deduplication_service import filter_chunks_for_retrieval
 from config.settings import get_settings
 from typing import Optional, Any
 import logging
@@ -334,6 +335,64 @@ async def query_rag(request: QueryRequest):
         if chunks_filtered > 0:
             logger.debug(f"Chunks filtrados por min_score: {chunks_filtered} removidos")
         
+        # ETAPA 8: Filtra chunks para eliminar duplicatas e garantir diversidade
+        # Converte chunks para formato de dicionário para filtro
+        chunks_dict = []
+        for chunk in chunks:
+            # Extrai metadados do chunk
+            chunk_metadata = getattr(chunk, 'metadata', None) if hasattr(chunk, 'metadata') else None
+            
+            # Tenta obter source_id de várias fontes
+            source_id = None
+            if chunk_metadata:
+                source_id = getattr(chunk_metadata, 'source_id', None)
+                if not source_id and hasattr(chunk_metadata, 'source'):
+                    source_id = getattr(chunk_metadata, 'source')
+            
+            # Se ainda não encontrou, usa document_id como fallback
+            if not source_id:
+                source_id = chunk.documentId
+            
+            # Determina se está ativo
+            active = True
+            if chunk_metadata:
+                active = getattr(chunk_metadata, 'active', True)
+                if active is None:
+                    active = True
+            
+            chunk_dict = {
+                'id': chunk.id,
+                'document_id': chunk.documentId,
+                'content': chunk.content,
+                'score': chunk.score or 0.0,
+                'similarity': chunk.score or 0.0,
+                'metadata': {
+                    'tenant_id': request.tenantId,
+                    'source_id': source_id,
+                    'active': active,
+                    'chunk_id': chunk.id,
+                    'document_id': chunk.documentId,
+                }
+            }
+            chunks_dict.append(chunk_dict)
+        
+        # Aplica filtros de deduplicação: remove inativos, máximo 1 por source_id
+        filtered_chunks_dict = filter_chunks_for_retrieval(request.tenantId, chunks_dict)
+        
+        # Reconstrói objetos Chunk a partir dos filtrados
+        # Mapeia IDs dos chunks filtrados
+        filtered_chunk_ids = {chunk_dict['id'] for chunk_dict in filtered_chunks_dict}
+        chunks = [chunk for chunk in chunks if chunk.id in filtered_chunk_ids]
+        
+        logger.debug(
+            f"Chunks filtrados após deduplicação: {len(chunks)} de {chunks_before_filter} original",
+            extra={
+                'tenant_id': request.tenantId,
+                'original_count': chunks_before_filter,
+                'filtered_count': len(chunks),
+            }
+        )
+        
         # FALLBACK INTELIGENTE: Se não encontrou chunks, tenta com minScore reduzido
         if not chunks and min_score > 0.3:
             fallback_min_score = max(0.3, min_score * 0.8)  # Reduz 20% mas não abaixo de 0.3
@@ -410,12 +469,43 @@ async def query_rag(request: QueryRequest):
         # Prepara sources (mesmo se não houver chunks suficientes, pode retornar os encontrados)
         sources = []
         for chunk in chunks:
+            # Extrai metadados do chunk para deduplicação
+            chunk_metadata = getattr(chunk, 'metadata', None) if hasattr(chunk, 'metadata') else None
+            
+            # Tenta obter source_id de várias fontes
+            source_id = None
+            if chunk_metadata:
+                source_id = getattr(chunk_metadata, 'source_id', None)
+                if not source_id and hasattr(chunk_metadata, 'source'):
+                    source_id = getattr(chunk_metadata, 'source')
+            
+            # Se ainda não encontrou, usa document_id como fallback
+            if not source_id:
+                source_id = chunk.documentId
+            
+            # Determina se está ativo
+            active = True
+            if chunk_metadata:
+                active = getattr(chunk_metadata, 'active', True)
+                if active is None:
+                    active = True
+            
+            # Cria metadados para o Source
+            source_metadata = {
+                'tenant_id': request.tenantId,
+                'source_id': source_id,
+                'active': active,
+                'chunk_id': chunk.id,
+                'document_id': chunk.documentId,
+            }
+            
             sources.append(Source(
                 chunkId=chunk.id,
                 documentId=chunk.documentId,
-                title=f"Chunk {chunk.metadata.chunkIndex + 1}",  # Título será melhorado quando tivermos documento
+                title=f"Chunk {chunk.metadata.chunkIndex + 1}" if chunk_metadata and hasattr(chunk_metadata, 'chunkIndex') else f"Chunk {chunk.id[:8]}",
                 score=chunk.score or 0.0,
-                excerpt=chunk.content[:200] + "..." if len(chunk.content) > 200 else chunk.content
+                excerpt=chunk.content[:200] + "..." if len(chunk.content) > 200 else chunk.content,
+                metadata=source_metadata
             ))
         
         if not chunks:

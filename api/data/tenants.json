@@ -7,16 +7,16 @@
     "objetivo": "Aumentar vendas online e reduzir abandono de carrinho",
     "active": true,
     "createdAt": "2026-01-05T19:36:44.276Z",
-    "updatedAt": "2026-01-05T19:36:44.276Z",
+    "updatedAt": "2026-01-07T23:45:55.126Z",
     "status": "active",
-    "plan": "trial",
+    "plan": "enterprise",
     "limits": {
-      "usuarios": 3,
-      "agentes_ia": 2,
-      "execucoes_rpa": 50,
-      "tokens_ia": 50000,
-      "documentos_rag": 50,
-      "storage_mb": 500
+      "usuarios": -1,
+      "agentes_ia": -1,
+      "execucoes_rpa": -1,
+      "tokens_ia": -1,
+      "documentos_rag": -1,
+      "storage_mb": -1
     },
     "settings": {},
     "branding": {},
@@ -92,5 +92,50 @@
     "branding": {},
     "suspendedAt": null,
     "trialExpiresAt": "2026-01-19T00:54:55.433Z"
+  },
+  {
+    "id": "test-tenant",
+    "name": "Tenant de Teste",
+    "site": "https://teste.com",
+    "ramo_atividade": "Tecnologia e Software",
+    "objetivo": "Testar funcionalidades do sistema",
+    "active": true,
+    "createdAt": "2026-01-09T01:44:19.435Z",
+    "updatedAt": "2026-01-09T01:44:19.436Z",
+    "status": "active",
+    "plan": "enterprise",
+    "limits": {
+      "usuarios": -1,
+      "agentes_ia": -1,
+      "execucoes_rpa": -1,
+      "tokens_ia": -1,
+      "documentos_rag": -1,
+      "storage_mb": -1
+    },
+    "settings": {},
+    "branding": {}
+  },
+  {
+    "name": "studiooly",
+    "site": "https://studiooly.com.br",
+    "ramo_atividade": "Estúdio de atividades físicas e bem-estar com foco em treino funcional e crossfit, além de modalidades como balé e serviços de fisioterapia. Atua de forma local, oferecendo turmas com horários definidos, planos por frequência e pacotes de atendimento, combinando condicionamento físico, saúde e reabilitação em um único espaço.",
+    "objetivo": "Automatizar a captação e conversão de visitantes em alunos, respondendo dúvidas sobre modalidades, horários, planos e valores em canais como WhatsApp e redes sociais. Centralizar o atendimento com IA para triagem, agendamento e follow-up, além de coletar dados do aluno e orientar o envio de comprovante de pagamento, reduzindo o trabalho manual e aumentando as matrículas.",
+    "active": true,
+    "status": "trial",
+    "plan": "trial",
+    "limits": {
+      "usuarios": 3,
+      "agentes_ia": 2,
+      "execucoes_rpa": 50,
+      "tokens_ia": 50000,
+      "documentos_rag": 50,
+      "storage_mb": 500
+    },
+    "settings": {},
+    "branding": {},
+    "createdAt": "2026-01-09T06:00:58.055Z",
+    "updatedAt": "2026-01-09T06:00:58.055Z",
+    "suspendedAt": null,
+    "trialExpiresAt": "2026-01-23T06:00:58.055Z"
   }
 ]

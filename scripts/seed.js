@@ -69,7 +69,7 @@ function createAgents(tenantId) {
       tenantId,
       username: 'admin',
       email: 'admin@example.com',
-      ...hashPassword('admin123'),
+      ...hashPassword('Admin123!'),
       role: 'admin',
       name: 'Administrador',
       active: true,
@@ -793,7 +793,7 @@ function seed(tenantId = DEFAULT_TENANT_ID, reset = false) {
   console.log('\n🔑 Credenciais padrão:');
   console.log('   Admin:');
   console.log('     Username: admin');
-  console.log('     Password: admin123');
+  console.log('     Password: Admin123!');
   console.log('   Supervisor:');
   console.log('     Username: supervisor');
   console.log('     Password: supervisor123');

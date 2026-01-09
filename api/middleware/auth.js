@@ -24,6 +24,7 @@
 
 const { validateToken } = require('../services/authService');
 const { hasPermission } = require('../services/rbacService');
+const { isSuperAdmin } = require('../services/superAdminService');
 
 /**
  * Extrai token do header Authorization.
@@ -66,7 +67,19 @@ function requireAuth(req) {
   req.agent = validation.agent;
   req.session = validation.session;
   req.token = token;
-  req.tenantId = validation.agent.tenantId || null; // Extrai tenantId do agente
+  
+  // Para super-admin, permite usar X-Tenant-Id header para acessar diferentes tenants
+  // Caso contrário, usa o tenantId do agente autenticado
+  if (isSuperAdmin(validation.agent)) {
+    const headerTenantId = req.headers['x-tenant-id'];
+    if (headerTenantId && headerTenantId.trim()) {
+      req.tenantId = headerTenantId.trim();
+    } else {
+      req.tenantId = validation.agent.tenantId || null;
+    }
+  } else {
+    req.tenantId = validation.agent.tenantId || null; // Extrai tenantId do agente
+  }
 
   return { valid: true, agent: validation.agent, session: validation.session };
 }

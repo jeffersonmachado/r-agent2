@@ -3,6 +3,12 @@ import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
 import { formatJSON, isJSON } from '../utils/devDashboardUtils';
 
+// Função para detectar se está em mobile
+const isMobileScreen = () => {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < 768;
+};
+
 /**
  * Hook customizado para gerenciar estado e lógica do DevDashboard
  */
@@ -21,7 +27,10 @@ export function useDevDashboard() {
   
   // Estados para Contratos, Prompts, Nós e Documentos
   const [devFiles, setDevFiles] = useState({ contracts: [], prompts: [], nodes: [], documents: {} });
-  const [expandedCategories, setExpandedCategories] = useState({});
+  // Em mobile, todas as categorias começam recolhidas (false)
+  const [expandedCategories, setExpandedCategories] = useState(() => {
+    return isMobileScreen() ? {} : {};
+  });
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileContent, setFileContent] = useState('');
   const [fileLoading, setFileLoading] = useState(false);

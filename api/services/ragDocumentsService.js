@@ -10,18 +10,30 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
-const ragService = require('./ragService');
 const config = require('../utils/config');
+const ragDeduplicationService = require('./ragDeduplicationService');
 
-// Valida que o ragService foi carregado corretamente
-if (!ragService || typeof ragService.indexDocument !== 'function') {
-  logger.error('[RAGDocuments] ERRO CRÍTICO: ragService não foi carregado corretamente', {
-    ragServiceType: typeof ragService,
-    ragServiceKeys: ragService ? Object.keys(ragService) : 'null',
-    hasIndexDocument: ragService && 'indexDocument' in ragService,
-    indexDocumentType: ragService && typeof ragService.indexDocument
-  });
-  throw new Error('ragService não foi carregado corretamente. Verifique se o módulo api/services/ragService.js existe e exporta indexDocument.');
+// Lazy loading do ragService para evitar dependência circular
+let ragService = null;
+function getRagService() {
+  if (!ragService) {
+    try {
+      ragService = require('./ragService');
+      if (!ragService || typeof ragService.indexDocument !== 'function') {
+        logger.error('[RAGDocuments] ERRO CRÍTICO: ragService não foi carregado corretamente', {
+          ragServiceType: typeof ragService,
+          ragServiceKeys: ragService ? Object.keys(ragService) : 'null',
+          hasIndexDocument: ragService && 'indexDocument' in ragService,
+          indexDocumentType: ragService && typeof ragService.indexDocument
+        });
+        throw new Error('ragService não foi carregado corretamente. Verifique se o módulo api/services/ragService.js existe e exporta indexDocument.');
+      }
+    } catch (error) {
+      logger.error('[RAGDocuments] Erro ao carregar ragService:', error);
+      throw error;
+    }
+  }
+  return ragService;
 }
 
 const dataDir = path.join(__dirname, '../data');
@@ -135,19 +147,253 @@ function getDocument(documentId) {
 }
 
 /**
+ * Encontra um documento por URL (para evitar duplicação).
+ * 
+ * @param {string} url - URL do documento
+ * @param {string} tenantId - ID do tenant
+ * @returns {Object|null} Documento existente ou null
+ */
+function findDocumentByUrl(url, tenantId) {
+  if (!url) return null;
+  
+  const normalizedUrl = url.trim().toLowerCase();
+  
+  for (const doc of documents.values()) {
+    // Verifica se é do mesmo tenant
+    if (tenantId && doc.tenantId !== tenantId) continue;
+    
+    // Verifica se tem a mesma URL no metadata
+    const docUrl = doc.metadata?.url;
+    if (docUrl && docUrl.trim().toLowerCase() === normalizedUrl) {
+      return doc;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Encontra um documento por nome de arquivo (para evitar duplicação de uploads).
+ * 
+ * @param {string} fileName - Nome do arquivo
+ * @param {string} tenantId - ID do tenant
+ * @param {number} fileSize - Tamanho do arquivo em bytes (opcional, para verificação adicional)
+ * @returns {Object|null} Documento existente ou null
+ */
+function findDocumentByFileName(fileName, tenantId, fileSize = null) {
+  if (!fileName) return null;
+  
+  const normalizedFileName = fileName.trim().toLowerCase();
+  
+  for (const doc of documents.values()) {
+    // Verifica se é do mesmo tenant
+    if (tenantId && doc.tenantId !== tenantId) continue;
+    
+    // Verifica se tem o mesmo nome de arquivo no metadata
+    const docFileName = doc.metadata?.fileName;
+    if (docFileName && docFileName.trim().toLowerCase() === normalizedFileName) {
+      // Se fileSize foi fornecido, também verifica o tamanho para maior precisão
+      if (fileSize !== null && doc.metadata?.fileSize) {
+        if (doc.metadata.fileSize === fileSize) {
+          return doc;
+        }
+        // Se tamanho é diferente, não é o mesmo arquivo
+        continue;
+      }
+      return doc;
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Cria um novo documento.
  * 
  * @param {Object} documentData - Dados do documento
  * @param {string} tenantId - ID do tenant
- * @returns {Promise<{success: boolean, document: Object, error?: string}>}
+ * @param {Object} options - Opções (skipDuplicateCheck: boolean)
+ * @returns {Promise<{success: boolean, document: Object, error?: string, isDuplicate?: boolean, existingDocument?: Object}>}
  */
-async function createDocument(documentData, tenantId) {
+async function createDocument(documentData, tenantId, options = {}) {
   try {
+    const finalTenantId = tenantId || documentData.tenantId || null;
+    
+    // Verifica duplicação se não foi desabilitado
+    if (!options.skipDuplicateCheck) {
+      // Verifica por URL (web scraping)
+      if (documentData.metadata?.url) {
+        const existingDoc = findDocumentByUrl(documentData.metadata.url, finalTenantId);
+        if (existingDoc) {
+          logger.info('[RAGDocuments] Documento duplicado encontrado (mesma URL)', {
+            url: documentData.metadata.url,
+            existingDocumentId: existingDoc.id,
+            existingTitle: existingDoc.title,
+            tenantId: finalTenantId,
+            indexed: existingDoc.indexed || false
+          });
+          
+          // Se o documento existente não está indexado e autoIndex está ativo, indexa agora
+          if (documentData.autoIndex !== false && !existingDoc.indexed) {
+            logger.info('[RAGDocuments] Documento duplicado não está indexado, indexando agora...', {
+              documentId: existingDoc.id,
+              tenantId: finalTenantId
+            });
+            
+            try {
+              // Garante que o documento tem content_hash nos metadados antes de indexar
+              if (!existingDoc.metadata?.content_hash && existingDoc.content) {
+                const contentHash = await ragDeduplicationService.generateContentHash(existingDoc.content);
+                existingDoc.metadata = {
+                  ...existingDoc.metadata,
+                  content_hash: contentHash,
+                };
+                documents.set(existingDoc.id, existingDoc);
+                saveDocuments();
+              }
+              
+              const ragServiceInstance = getRagService();
+              const indexResult = await ragServiceInstance.indexDocument(existingDoc, finalTenantId);
+              
+              if (indexResult.success) {
+                existingDoc.indexed = true;
+                existingDoc.indexedAt = new Date().toISOString();
+                existingDoc.chunksCount = indexResult.chunksCreated || 0;
+                documents.set(existingDoc.id, existingDoc);
+                saveDocuments();
+                
+                logger.info('[RAGDocuments] Documento duplicado indexado com sucesso', {
+                  documentId: existingDoc.id,
+                  chunksCreated: indexResult.chunksCreated
+                });
+              } else {
+                logger.warn('[RAGDocuments] Indexação do documento duplicado retornou success=false', {
+                  documentId: existingDoc.id,
+                  error: indexResult.error,
+                  isDuplicate: indexResult.isDuplicate
+                });
+              }
+            } catch (indexError) {
+              logger.error('[RAGDocuments] Erro ao indexar documento duplicado', {
+                error: indexError.message,
+                stack: indexError.stack,
+                documentId: existingDoc.id,
+                tenantId: finalTenantId
+              });
+            }
+          }
+          
+          // Retorna documento existente sem criar duplicata
+          return {
+            success: true,
+            document: existingDoc,
+            isDuplicate: true,
+            existingDocument: existingDoc,
+          };
+        }
+      }
+      
+      // Verifica por nome de arquivo (uploads)
+      if (documentData.metadata?.fileName) {
+        const existingDoc = findDocumentByFileName(
+          documentData.metadata.fileName, 
+          finalTenantId,
+          documentData.metadata.fileSize
+        );
+        if (existingDoc) {
+          logger.info('[RAGDocuments] Documento duplicado encontrado (mesmo arquivo)', {
+            fileName: documentData.metadata.fileName,
+            fileSize: documentData.metadata.fileSize,
+            existingDocumentId: existingDoc.id,
+            existingTitle: existingDoc.title,
+            tenantId: finalTenantId,
+            indexed: existingDoc.indexed || false
+          });
+          
+          // Se o documento existente não está indexado e autoIndex está ativo, indexa agora
+          if (documentData.autoIndex !== false && !existingDoc.indexed) {
+            logger.info('[RAGDocuments] Documento duplicado (arquivo) não está indexado, indexando agora...', {
+              documentId: existingDoc.id,
+              tenantId: finalTenantId,
+              fileName: documentData.metadata.fileName
+            });
+            
+            try {
+              // Garante que o documento tem content_hash nos metadados antes de indexar
+              if (!existingDoc.metadata?.content_hash && existingDoc.content) {
+                const contentHash = await ragDeduplicationService.generateContentHash(existingDoc.content);
+                existingDoc.metadata = {
+                  ...existingDoc.metadata,
+                  content_hash: contentHash,
+                };
+                documents.set(existingDoc.id, existingDoc);
+                saveDocuments();
+              }
+              
+              const ragServiceInstance = getRagService();
+              const indexResult = await ragServiceInstance.indexDocument(existingDoc, finalTenantId);
+              
+              if (indexResult.success) {
+                existingDoc.indexed = true;
+                existingDoc.indexedAt = new Date().toISOString();
+                existingDoc.chunksCount = indexResult.chunksCreated || 0;
+                documents.set(existingDoc.id, existingDoc);
+                saveDocuments();
+                
+                logger.info('[RAGDocuments] Documento duplicado (arquivo) indexado com sucesso', {
+                  documentId: existingDoc.id,
+                  chunksCreated: indexResult.chunksCreated
+                });
+              } else {
+                logger.warn('[RAGDocuments] Indexação do documento duplicado (arquivo) retornou success=false', {
+                  documentId: existingDoc.id,
+                  error: indexResult.error,
+                  isDuplicate: indexResult.isDuplicate
+                });
+              }
+            } catch (indexError) {
+              logger.error('[RAGDocuments] Erro ao indexar documento duplicado (arquivo)', {
+                error: indexError.message,
+                stack: indexError.stack,
+                documentId: existingDoc.id,
+                tenantId: finalTenantId
+              });
+            }
+          }
+          
+          // Retorna documento existente sem criar duplicata
+          return {
+            success: true,
+            document: existingDoc,
+            isDuplicate: true,
+            existingDocument: existingDoc,
+          };
+        }
+      }
+    }
+    
     const now = new Date().toISOString();
     
+    // Gera ID do documento primeiro
+    const documentId = documentData.id || `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // ETAPA 3: Gera metadados obrigatórios para deduplicação
+    // Para uploads, usa fileName como source_id para agrupar versões do mesmo arquivo
+    // Para outros, usa o documentId como source_id
+    const sourceId = documentData.metadata?.source_id || 
+                     (documentData.metadata?.fileName ? `file:${documentData.metadata.fileName}` : documentId);
+    const currentVersion = ragDeduplicationService.getCurrentSourceVersion(finalTenantId, sourceId);
+    const sourceVersion = documentData.metadata?.source_version || (currentVersion + 1);
+    
+    // Gera content_hash se ainda não foi gerado
+    let contentHash = documentData.metadata?.content_hash;
+    if (!contentHash && documentData.content) {
+      contentHash = await ragDeduplicationService.generateContentHash(documentData.content);
+    }
+    
     const document = {
-      id: documentData.id || `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      tenantId: tenantId || documentData.tenantId || null, // Tenant deve ser fornecido explicitamente
+      id: documentId,
+      tenantId: finalTenantId,
       title: documentData.title || 'Sem título',
       content: documentData.content || '',
       metadata: {
@@ -157,9 +403,17 @@ async function createDocument(documentData, tenantId) {
         clientId: documentData.metadata?.clientId || null,
         tags: documentData.metadata?.tags || [],
         author: documentData.metadata?.author || null,
+        url: documentData.metadata?.url || null, // Preserva URL para verificação de duplicação
+        fileName: documentData.metadata?.fileName || null, // Preserva fileName para verificação de duplicação
+        fileSize: documentData.metadata?.fileSize || null, // Preserva fileSize para verificação de duplicação
+        // Metadados obrigatórios para deduplicação
+        source_id: sourceId,
+        source_version: sourceVersion,
+        content_hash: contentHash,
+        tenant_id: finalTenantId,
         createdAt: now,
         updatedAt: now,
-        version: 1,
+        version: sourceVersion, // Usa source_version como version
       },
       permissions: {
         roles: documentData.permissions?.roles || null,
@@ -177,17 +431,62 @@ async function createDocument(documentData, tenantId) {
     // Indexa automaticamente se solicitado
     if (documentData.autoIndex !== false) {
       try {
-        const indexResult = await ragService.indexDocument(document, document.tenantId);
+        logger.info('[RAGDocuments] Indexando documento automaticamente', {
+          documentId: document.id,
+          tenantId: document.tenantId,
+          title: document.title,
+          contentLength: document.content?.length || 0,
+          url: document.metadata?.url,
+          fileName: document.metadata?.fileName,
+          sourceId: document.metadata?.source_id,
+          sourceVersion: document.metadata?.source_version,
+          contentHash: document.metadata?.content_hash ? document.metadata.content_hash.substring(0, 16) + '...' : null
+        });
+        
+        const ragServiceInstance = getRagService();
+        const indexResult = await ragServiceInstance.indexDocument(document, document.tenantId);
+        
         if (indexResult.success) {
           document.indexed = true;
           document.indexedAt = new Date().toISOString();
           document.chunksCount = indexResult.chunksCreated || 0;
+          documents.set(document.id, document);
           saveDocuments();
+          
+          logger.info('[RAGDocuments] Documento indexado com sucesso', {
+            documentId: document.id,
+            tenantId: document.tenantId,
+            chunksCreated: indexResult.chunksCreated,
+            isDuplicate: indexResult.isDuplicate || false,
+            sourceId: document.metadata?.source_id,
+            sourceVersion: document.metadata?.source_version
+          });
+        } else {
+          logger.warn('[RAGDocuments] Indexação retornou success=false', {
+            documentId: document.id,
+            tenantId: document.tenantId,
+            error: indexResult.error,
+            isDuplicate: indexResult.isDuplicate || false,
+            chunksCreated: indexResult.chunksCreated || 0
+          });
         }
       } catch (indexError) {
-        logger.warn('[RAGDocuments] Erro ao indexar documento automaticamente:', indexError.message);
+        logger.error('[RAGDocuments] Erro ao indexar documento automaticamente', {
+          error: indexError.message,
+          stack: indexError.stack,
+          documentId: document.id,
+          tenantId: document.tenantId,
+          title: document.title,
+          contentLength: document.content?.length || 0
+        });
         // Não falha a criação se a indexação falhar
       }
+    } else {
+      logger.debug('[RAGDocuments] Auto-indexação desabilitada para documento', {
+        documentId: document.id,
+        tenantId: document.tenantId,
+        autoIndex: documentData.autoIndex
+      });
     }
 
     return {
@@ -1034,6 +1333,8 @@ async function cleanOrphanedDocuments(tenantId = null, orphanedDocumentIds = [])
 module.exports = {
   listDocuments,
   getDocument,
+  findDocumentByUrl,
+  findDocumentByFileName,
   createDocument,
   updateDocument,
   deleteDocument,

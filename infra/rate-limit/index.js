@@ -188,6 +188,16 @@ function getLimiter(operationType) {
  * @returns {Promise<{allowed: boolean, retryAfter?: number, remainingPoints?: number, totalPoints?: number}>}
  */
 async function checkRateLimit(options) {
+  // Em desenvolvimento, rate limit é desativado
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  if (nodeEnv === 'development') {
+    return {
+      allowed: true,
+      remainingPoints: 999999,
+      totalPoints: 999999,
+      retryAfter: 0,
+    };
+  }
   const { userId, operationType } = options;
 
   if (!userId) {

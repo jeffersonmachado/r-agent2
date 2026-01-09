@@ -144,6 +144,13 @@ function getExecutionLimiter(executionId) {
 async function checkScrapingRateLimit(options) {
   const { url, executionId, userId } = options;
 
+  // Desativa rate limit em desenvolvimento
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  if (nodeEnv === 'development') {
+    logger.debug('[RateLimit:Scraping] Rate limit desativado em desenvolvimento', { url, executionId });
+    return { allowed: true };
+  }
+
   if (!url) {
     throw new Error('URL é obrigatória');
   }

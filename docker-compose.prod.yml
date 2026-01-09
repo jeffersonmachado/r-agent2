@@ -52,6 +52,11 @@ services:
           memory: 512M
 
   frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/r-agent2/}
     image: r-agent2-frontend:latest
     container_name: r-agent2-frontend-prod
     environment:
@@ -125,7 +130,10 @@ services:
           memory: 1G
 
   redis:
-    image: redis:7-alpine
+    build:
+      context: ./redis
+      dockerfile: ./Dockerfile
+    image: r-agent2-redis:latest
     container_name: r-agent2-redis-prod
     ports:
       - "${REDIS_PORT:-6380}:6379"

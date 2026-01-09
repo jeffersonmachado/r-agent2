@@ -43,6 +43,14 @@ class ChunkMetadata(BaseModel):
     startChar: int
     endChar: int
     tokenCount: int
+    # Campos de deduplicação (opcionais)
+    source_id: Optional[str] = None
+    source_version: Optional[int] = None
+    content_hash: Optional[str] = None
+    semantic_hash: Optional[str] = None
+    chunk_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    active: Optional[bool] = True
 
 
 class Chunk(BaseModel):

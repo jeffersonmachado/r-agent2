@@ -1605,6 +1605,7 @@
 
 /* Botão de colapso com setas via CSS (SVG inline) */
 .collapse-btn {
+  color: inherit;
   position: relative;
   min-width: 24px;
   min-height: 24px;
@@ -1613,16 +1614,9 @@
   justify-content: center;
   font-size: 0;
   line-height: 0;
-}
-
-.collapse-btn {
-  color: inherit;
-  position: relative;
-  min-width: 24px;
-  min-height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
 }
 
 .collapse-btn::before {
@@ -1647,6 +1641,12 @@
   opacity: 1;
 }
 
+/* Hover consistente para todos os botões de colapso com seta */
+.collapse-btn-horizontal:hover,
+.collapse-btn-vertical:hover {
+  background-color: var(--color-bg-hover);
+}
+
 /* Seta para direita quando colapsado */
 .collapse-btn.collapsed::before {
   mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 0 L9 6 L3 12 Z'/%3E%3C/svg%3E");
@@ -1664,6 +1664,7 @@
   color: inherit;
   font-size: 0;
   line-height: 0;
+  cursor: pointer;
 }
 
 .collapse-btn-horizontal::before {
@@ -1718,6 +1719,7 @@
   color: inherit;
   font-size: 0;
   line-height: 0;
+  cursor: pointer;
 }
 
 .collapse-btn-vertical::before {
@@ -4981,6 +4983,48 @@ div:has(svg[data-testid="connection"]) {
   top: 12px;
   right: 12px;
   z-index: 1000;
+}
+
+/* UserMenu flutuante e arrastável quando estiver no editor de fluxo */
+body.flow-editor-active .user-menu-container {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: fixed;
+  left: auto;
+}
+
+body.flow-editor-active .user-menu-button {
+  background-color: rgba(31, 31, 31, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(42, 42, 42, 0.3);
+  border: 1px solid rgba(42, 42, 42, 0.5);
+}
+
+body.flow-editor-active .user-menu-button.draggable {
+  user-select: none;
+}
+
+body.flow-editor-active .user-menu-button.drag-mode-active {
+  cursor: move;
+  cursor: grab;
+  box-shadow: 0 4px 12px rgba(94, 106, 210, 0.4), 0 0 0 2px rgba(94, 106, 210, 0.3);
+  border-color: rgba(94, 106, 210, 0.5);
+}
+
+body.flow-editor-active .user-menu-button.drag-mode-active:active {
+  cursor: grabbing;
+}
+
+body.flow-editor-active .user-menu-button:hover {
+  background-color: rgba(37, 37, 37, 0.9);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(42, 42, 42, 0.4);
+}
+
+body.flow-editor-active .user-menu-dropdown {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background-color: rgba(31, 31, 31, 0.95);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(42, 42, 42, 0.3);
+  border: 1px solid rgba(42, 42, 42, 0.5);
 }
 
 .user-menu-button {

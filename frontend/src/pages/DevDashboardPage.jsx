@@ -2,6 +2,7 @@ import React from 'react';
 import { LogViewer } from '../components/LogViewer';
 import { useTheme } from '../styles/themeContext';
 import { useDevDashboard } from '../hooks/useDevDashboard';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { DevDashboardHeader } from '../components/DevDashboard/DevDashboardHeader';
 import { DevDashboardTabs } from '../components/DevDashboard/DevDashboardTabs';
 import { FeaturesTab } from '../components/DevDashboard/FeaturesTab';
@@ -527,7 +528,10 @@ export function DevDashboardPage() {
                               <div className="space-y-2">
                                 {Object.entries(devFiles.documents).map(([category, files]) => {
                                   const categoryName = category.replace(/^\d{2}_/, '').replace(/_/g, ' ');
-                                  const isExpanded = expandedCategories[category] !== false;
+                                  // Em mobile, quando não está definido, considera como false (recolhido)
+                                  const isExpanded = isMobile 
+                                    ? expandedCategories[category] === true
+                                    : expandedCategories[category] !== false;
                                   const icon = getCategoryIcon(categoryName);
                                   
                                   return (

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script para build das imagens Docker
-# Uso: ./scripts/docker-build.sh [--all|--api|--frontend|--rag]
+# Uso: ./scripts/docker-build.sh [--all|--api|--frontend|--rag|--redis]
 
 set -e
 
@@ -57,10 +57,13 @@ build_service() {
             docker build -t r-agent2-api:latest -f api/Dockerfile .
             ;;
         frontend)
-            docker build -t r-agent2-frontend:latest -f frontend/Dockerfile ./frontend
+            docker build --build-arg VITE_BASE_PATH=/r-agent2/ -t r-agent2-frontend:latest -f frontend/Dockerfile ./frontend
             ;;
         rag)
             docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile ./rag-service
+            ;;
+        redis)
+            docker build -t r-agent2-redis:latest -f redis/Dockerfile ./redis
             ;;
         *)
             error "Serviço desconhecido: $service"
@@ -77,6 +80,7 @@ if [ $# -eq 0 ] || [ "$1" == "--all" ]; then
     build_service api
     build_service frontend
     build_service rag
+    build_service redis
     info "Todas as imagens foram construídas com sucesso!"
 elif [ "$1" == "--api" ]; then
     build_service api
@@ -84,9 +88,11 @@ elif [ "$1" == "--frontend" ]; then
     build_service frontend
 elif [ "$1" == "--rag" ]; then
     build_service rag
+elif [ "$1" == "--redis" ]; then
+    build_service redis
 else
     error "Argumento inválido: $1"
-    echo "Uso: $0 [--all|--api|--frontend|--rag]"
+    echo "Uso: $0 [--all|--api|--frontend|--rag|--redis]"
     exit 1
 fi
 

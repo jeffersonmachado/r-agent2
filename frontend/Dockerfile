@@ -3,19 +3,24 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copia arquivos de dependências primeiro (otimização de cache)
-COPY frontend/package.json frontend/package-lock.json* ./
+# Copia engine primeiro para /app/engine/ (caminho absoluto)
+# O código do frontend usa ../../../engine/ que resolve para /app/engine/
+COPY engine/ /app/engine/
+
+# Copia arquivos de dependências do frontend (otimização de cache)
+COPY frontend/package.json frontend/package-lock.json* ./frontend/
 
 # Instala todas as dependências (incluindo devDependencies para build)
+WORKDIR /app/frontend
 RUN npm ci && \
     npm cache clean --force
 
-# Copia código fonte do frontend e arquivos necessários do projeto
-COPY frontend/ ./frontend/
-COPY engine/ ./engine/
+# Copia código fonte do frontend
+COPY frontend/ ./
 
-# Muda para o diretório do frontend
-WORKDIR /app/frontend
+# Aceita VITE_BASE_PATH como argumento de build
+ARG VITE_BASE_PATH=/r-agent2/
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
 
 # Build da aplicação em modo produção
 # Garante que NODE_ENV=production para que as variáveis de ambiente sejam definidas corretamente

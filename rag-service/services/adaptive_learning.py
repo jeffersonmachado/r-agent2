@@ -11,6 +11,7 @@ Responsabilidades:
 import json
 import re
 import logging
+import os
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 from collections import defaultdict, Counter
@@ -23,15 +24,66 @@ logger = logging.getLogger(__name__)
 LEARNING_DATA_PATH = Path("./data/adaptive_learning")
 LEARNING_DATA_PATH.mkdir(parents=True, exist_ok=True)
 
+def find_project_root(start_path: Optional[Path] = None) -> Optional[Path]:
+    """
+    Encontra o diretório raiz do projeto procurando por arquivos marcadores.
+    
+    Procura por: package.json, docker-compose.yml, docker-compose.prod.yml
+    """
+    if start_path is None:
+        start_path = Path(__file__).resolve()
+    else:
+        start_path = Path(start_path).resolve()
+    
+    current = start_path
+    # Se start_path é um arquivo, começa do diretório pai
+    if current.is_file():
+        current = current.parent
+    
+    # Procura pelo diretório raiz (máximo 10 níveis acima)
+    markers = ['package.json', 'docker-compose.yml', 'docker-compose.prod.yml']
+    for _ in range(10):
+        for marker in markers:
+            if (current / marker).exists():
+                return current
+        if current.parent == current:  # Chegou na raiz do sistema
+            break
+        current = current.parent
+    
+    return None
+
+
 # Caminho para regras de validação
-VALIDATION_RULES_PATH = Path("../api/data/rag_validation_rules.json")
-# Tenta caminhos alternativos
-if not VALIDATION_RULES_PATH.exists():
-    VALIDATION_RULES_PATH = Path("../../api/data/rag_validation_rules.json")
-if not VALIDATION_RULES_PATH.exists():
-    VALIDATION_RULES_PATH = Path("./api/data/rag_validation_rules.json")
-if not VALIDATION_RULES_PATH.exists():
-    VALIDATION_RULES_PATH = Path("/opt/results/ria/r-agent2/api/data/rag_validation_rules.json")
+# Tenta encontrar o diretório raiz do projeto
+project_root = find_project_root()
+if project_root is None:
+    # Fallback para variável de ambiente
+    project_root_env = os.getenv("PROJECT_ROOT")
+    if project_root_env:
+        project_root = Path(project_root_env)
+
+VALIDATION_RULES_PATH = None
+
+# Tenta caminhos baseados no diretório raiz detectado
+if project_root:
+    candidate = project_root / "api" / "data" / "rag_validation_rules.json"
+    if candidate.exists():
+        VALIDATION_RULES_PATH = candidate
+
+# Se não encontrou, tenta caminhos relativos
+if VALIDATION_RULES_PATH is None or not VALIDATION_RULES_PATH.exists():
+    for rel_path in [
+        Path("../api/data/rag_validation_rules.json"),
+        Path("../../api/data/rag_validation_rules.json"),
+        Path("./api/data/rag_validation_rules.json"),
+    ]:
+        if rel_path.exists():
+            VALIDATION_RULES_PATH = rel_path
+            break
+
+# Se ainda não encontrou, usa None (será tratado no código que usa)
+if VALIDATION_RULES_PATH is None or not VALIDATION_RULES_PATH.exists():
+    VALIDATION_RULES_PATH = None
 
 
 class AdaptiveLearningService:
@@ -120,7 +172,7 @@ class AdaptiveLearningService:
     
     def load_validation_rules(self) -> Dict:
         """Carrega regras de validação do arquivo JSON."""
-        if VALIDATION_RULES_PATH.exists():
+        if VALIDATION_RULES_PATH is not None and VALIDATION_RULES_PATH.exists():
             try:
                 with open(VALIDATION_RULES_PATH, 'r', encoding='utf-8') as f:
                     self.validation_rules = json.load(f)
@@ -161,7 +213,13 @@ class AdaptiveLearningService:
         if not self.validation_rules:
             return
         
+        if VALIDATION_RULES_PATH is None:
+            logger.warning("Caminho de regras de validação não configurado. Não é possível salvar.")
+            return
+        
         try:
+            # Garante que o diretório existe
+            VALIDATION_RULES_PATH.parent.mkdir(parents=True, exist_ok=True)
             self.validation_rules["lastUpdated"] = datetime.utcnow().isoformat()
             with open(VALIDATION_RULES_PATH, 'w', encoding='utf-8') as f:
                 json.dump(self.validation_rules, f, indent=2, ensure_ascii=False)

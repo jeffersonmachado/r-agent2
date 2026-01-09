@@ -1,14 +1,19 @@
 {
-  "timestamp": "2026-01-07T19:21:06.989Z",
+  "timestamp": "2026-01-09T06:02:27.872Z",
   "summary": {
-    "total": 7,
-    "passed": 7,
+    "total": 8,
+    "passed": 8,
     "failed": 0,
     "success": true
   },
   "tests": [
     {
       "name": "example-test",
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "test-flow-0d7fafdd-20260109T060109.000Z",
       "success": true,
       "error": null
     },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/authContext';
+import { useRouter } from '../hooks/useRouter';
 import { NavigationLink } from './NavigationLink';
 import { Button } from '../styles/Button';
 import { getVisibleMenuItems } from '../utils/menuPermissions';
@@ -9,6 +10,7 @@ import { useToast } from './Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
+import { redirectToLogin } from '../utils';
 import { getTenant } from '../api/tenants';
 
 /**
@@ -21,16 +23,28 @@ import { getTenant } from '../api/tenants';
  */
 export function UserMenu() {
   const { agent, logout } = useAuth();
+  const { navigate } = useRouter();
   const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTicketsCount, setActiveTicketsCount] = useState(0);
   const [agentStatus, setAgentStatus] = useState('online'); // online, busy, offline
   const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
   const [tenantInfo, setTenantInfo] = useState(null);
+  const [isInEditor, setIsInEditor] = useState(false);
+  const [position, setPosition] = useState({ top: 12, right: 12 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragModeEnabled, setDragModeEnabled] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
+  const hasMovedRef = useRef(false);
+  const positionRef = useRef({ top: 12, right: 12 });
+  const clickBlockedRef = useRef(false);
+  const dragModeTimeoutRef = useRef(null);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
+  const containerRef = useRef(null);
 
-  // Fecha o dropdown ao clicar fora
+  // Fecha o dropdown ao clicar fora e desativa modo de arrasto
   useEffect(() => {
     function handleClickOutside(event) {
       if (
@@ -40,16 +54,23 @@ export function UserMenu() {
         !buttonRef.current.contains(event.target)
       ) {
         setIsOpen(false);
+        // Desativa modo de arrasto ao clicar fora
+        if (dragModeEnabled) {
+          setDragModeEnabled(false);
+          if (dragModeTimeoutRef.current) {
+            clearTimeout(dragModeTimeoutRef.current);
+          }
+        }
       }
     }
 
-    if (isOpen) {
+    if (isOpen || dragModeEnabled) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, dragModeEnabled]);
 
   // Fecha o dropdown ao pressionar ESC
   useEffect(() => {
@@ -66,6 +87,147 @@ export function UserMenu() {
       };
     }
   }, [isOpen]);
+
+  // Detecta se está no editor de fluxo e carrega posição salva
+  useEffect(() => {
+    const checkEditor = () => {
+      const inEditor = document.body.classList.contains('flow-editor-active');
+      setIsInEditor(inEditor);
+      
+      if (inEditor) {
+        // Carrega posição salva do localStorage
+        const savedPosition = localStorage.getItem('userMenuPosition');
+        if (savedPosition) {
+          try {
+            const { top, right } = JSON.parse(savedPosition);
+            const pos = { top, right };
+            setPosition(pos);
+            positionRef.current = pos;
+          } catch (e) {
+            logger.warn('Erro ao carregar posição do UserMenu', e);
+          }
+        }
+      } else {
+        // Desativa modo de arrasto ao sair do editor
+        setDragModeEnabled(false);
+      }
+    };
+
+    checkEditor();
+    // Observa mudanças na classe do body
+    const observer = new MutationObserver(checkEditor);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    
+    return () => {
+      observer.disconnect();
+      if (dragModeTimeoutRef.current) {
+        clearTimeout(dragModeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handler de duplo clique para ativar modo de arrasto
+  const handleDoubleClick = useCallback((e) => {
+    if (!isInEditor) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Ativa modo de arrasto
+    setDragModeEnabled(true);
+    
+    // Desativa após 3 segundos de inatividade
+    if (dragModeTimeoutRef.current) {
+      clearTimeout(dragModeTimeoutRef.current);
+    }
+    dragModeTimeoutRef.current = setTimeout(() => {
+      setDragModeEnabled(false);
+    }, 3000);
+    
+    // Mostra feedback visual (opcional - pode adicionar uma classe CSS)
+    logger.debug('[UserMenu] Modo de arrasto ativado');
+  }, [isInEditor]);
+
+  // Handlers de drag
+  const handleMouseDown = useCallback((e) => {
+    if (!isInEditor || !dragModeEnabled) return;
+    
+    setHasMoved(false);
+    hasMovedRef.current = false;
+    setIsDragging(true);
+    clickBlockedRef.current = false;
+    
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      // Calcula offset baseado na posição atual do mouse em relação ao botão
+      // Offset X: distância do mouse até o canto direito do botão
+      // Offset Y: distância do mouse até o topo do botão
+      const offsetX = rect.right - e.clientX;
+      const offsetY = e.clientY - rect.top;
+      
+      setDragOffset({
+        x: offsetX,
+        y: offsetY
+      });
+    }
+  }, [isInEditor, dragModeEnabled]);
+
+  useEffect(() => {
+    if (!isDragging || !isInEditor) return;
+
+    const handleMouseMove = (e) => {
+      // Se moveu mais de 5px, considera como arrasto
+      if (!hasMovedRef.current) {
+        const movedDistance = Math.abs(e.movementX) + Math.abs(e.movementY);
+        if (movedDistance > 5) {
+          setHasMoved(true);
+          hasMovedRef.current = true;
+          clickBlockedRef.current = true;
+        }
+      }
+      
+      if (hasMovedRef.current || clickBlockedRef.current) {
+        // Calcula nova posição baseada na posição do mouse
+        // newRight = window.innerWidth - (mouseX + offsetX)
+        // newTop = mouseY - offsetY
+        const newRight = window.innerWidth - (e.clientX + dragOffset.x);
+        const newTop = e.clientY - dragOffset.y;
+        
+        // Limita aos limites da tela (deixa margem de 50px)
+        const maxRight = window.innerWidth - 50;
+        const maxTop = window.innerHeight - 50;
+        
+        const newPosition = {
+          top: Math.max(0, Math.min(newTop, maxTop)),
+          right: Math.max(0, Math.min(newRight, maxRight))
+        };
+        
+        setPosition(newPosition);
+        positionRef.current = newPosition;
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (hasMoved || clickBlockedRef.current) {
+        // Salva posição no localStorage apenas se houve movimento
+        localStorage.setItem('userMenuPosition', JSON.stringify(positionRef.current));
+        // Bloqueia o click por um breve momento após soltar
+        setTimeout(() => {
+          clickBlockedRef.current = false;
+        }, 100);
+      }
+      setIsDragging(false);
+      setHasMoved(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset, isInEditor]);
 
   // Função para carregar tickets ativos e atualizar status
   const loadActiveTickets = useCallback(async () => {
@@ -270,7 +432,8 @@ export function UserMenu() {
 
   const handleLogout = async () => {
     await logout();
-    window.location.href = '/login';
+    // Usa função utilitária robusta para garantir redirect correto em dev e produção
+    redirectToLogin();
   };
 
   const handleLogoutAll = async () => {
@@ -287,7 +450,8 @@ export function UserMenu() {
       );
       // Aguarda um pouco antes de redirecionar para mostrar o toast
       setTimeout(() => {
-        window.location.href = '/login';
+        // Usa função utilitária robusta para garantir redirect correto em dev e produção
+        redirectToLogin();
       }, 1000);
     } catch (err) {
       logger.error('Erro ao fazer logout de todas as sessões', err);
@@ -323,11 +487,27 @@ export function UserMenu() {
   };
 
   return (
-    <div className="user-menu-container">
+    <div 
+      ref={containerRef}
+      className="user-menu-container"
+      style={isInEditor ? {
+        top: `${position.top}px`,
+        right: `${position.right}px`,
+        left: 'auto'
+      } : {}}
+    >
       <button
         ref={buttonRef}
-        className="user-menu-button"
-        onClick={() => setIsOpen(!isOpen)}
+        className={`user-menu-button ${isInEditor ? 'draggable' : ''} ${dragModeEnabled ? 'drag-mode-active' : ''}`}
+        onDoubleClick={handleDoubleClick}
+        onMouseDown={handleMouseDown}
+        onClick={(e) => {
+          // Só abre o menu se não houve movimento (não estava arrastando)
+          // O modo de arrasto só afeta se pode arrastar, não bloqueia o clique normal
+          if (!clickBlockedRef.current && !hasMovedRef.current && !isDragging) {
+            setIsOpen(!isOpen);
+          }
+        }}
         aria-label="Menu do usuário"
         aria-expanded={isOpen}
       >
@@ -437,4 +617,7 @@ export function UserMenu() {
     </div>
   );
 }
+
+// Export default também para compatibilidade
+export default UserMenu;
 

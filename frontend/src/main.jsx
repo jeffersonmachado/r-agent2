@@ -118,7 +118,7 @@ function App() {
 
 function AppWithAuth() {
   const { currentPath, navigate } = useRouter();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, agent } = useAuth();
 
   // Determina qual página renderizar baseado na URL
   const isDashboard = currentPath === '/' || currentPath === '/dashboard';
@@ -152,6 +152,10 @@ function AppWithAuth() {
   const isSystemStatus = currentPath === '/system-status' || currentPath.startsWith('/system-status');
   const isDevDashboard = currentPath === '/dev' || currentPath === '/dev-dashboard' || currentPath.startsWith('/dev');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
+
+  // Verifica se é Super Admin (mesma lógica do backend)
+  const isSuperAdmin = agent?.role === 'super_admin' || 
+    (agent?.role === 'owner' && agent?.tenantId === 'system');
 
   // Todas as rotas requerem autenticação, exceto /login
   const publicRoutes = []; // Nenhuma rota pública além de /login
@@ -329,7 +333,30 @@ function AppWithAuth() {
       ) : isSystemStatus ? (
         <SystemStatusPage />
       ) : isDevDashboard ? (
-        <DevDashboardPage />
+        // Rota /dev só é acessível por super-admin
+        isSuperAdmin ? (
+          <DevDashboardPage />
+        ) : (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Acesso Negado</h2>
+            <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+              Apenas super-admins podem acessar o Dashboard de Desenvolvimento.
+            </p>
+            <button
+              onClick={() => navigate('/support')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+              }}
+            >
+              Voltar para Atendimento
+            </button>
+          </div>
+        )
       ) : null}
     </div>
   );

@@ -50,9 +50,36 @@ export function useRouter() {
   const navigate = useCallback((path) => {
     // Adiciona o prefixo base path se necessário
     const basePath = getBasePath();
-    const fullPath = basePath && !path.startsWith(basePath) 
-      ? `${basePath}${path.startsWith('/') ? path : `/${path}`}`
-      : path;
+    
+    // Garante que o path comece com /
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    
+    // Constrói o fullPath com o prefixo se necessário
+    let fullPath;
+    if (basePath) {
+      // Se temos um basePath, sempre adiciona ao path
+      // Remove o basePath do path se já estiver presente para evitar duplicação
+      let pathWithoutBase = normalizedPath;
+      if (normalizedPath.startsWith(basePath)) {
+        pathWithoutBase = normalizedPath.substring(basePath.length);
+        // Garante que comece com / se não estiver vazio
+        if (pathWithoutBase && !pathWithoutBase.startsWith('/')) {
+          pathWithoutBase = `/${pathWithoutBase}`;
+        }
+        // Se ficou vazio após remover o basePath, usa /
+        if (!pathWithoutBase) {
+          pathWithoutBase = '/';
+        }
+      }
+      fullPath = `${basePath}${pathWithoutBase}`;
+    } else {
+      fullPath = normalizedPath;
+    }
+    
+    // Log para debug (pode ser removido em produção)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[useRouter] navigate:', { path, basePath, fullPath });
+    }
     
     // Atualiza a URL sem recarregar a página
     window.history.pushState({}, '', fullPath);

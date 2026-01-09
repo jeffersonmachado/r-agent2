@@ -19,6 +19,7 @@ const {
   handoffNodeHandler,
   endNodeHandler,
   optionsNodeHandler,
+  subflowNodeHandler,
 } = require('../../engine/nodes/basicNodes');
 const { aiNodeHandler } = require('../../engine/nodes/aiNode');
 const { aiTaskNodeHandler } = require('../../engine/nodes/aiTaskNode');
@@ -91,6 +92,8 @@ function createNodeRegistry() {
   registry.register('api', apiNodeHandler);
   // Nó de fallback
   registry.register('fallback', fallbackNodeHandler);
+  // Nó de subfluxo
+  registry.register('subflow', subflowNodeHandler);
   return registry;
 }
 
@@ -235,6 +238,7 @@ async function processWhatsAppMessage(message, value, deps) {
     },
     deps: {
       persistence: persistenceServices,
+      registry, // Passa registry para handlers que precisam (ex: subflow)
     },
   });
 

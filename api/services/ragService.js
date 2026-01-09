@@ -11,7 +11,16 @@
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 const nlpService = require('./nlpService');
-const { getTenantContext } = require('./tenantService');
+const ragDeduplicationService = require('./ragDeduplicationService');
+
+// Lazy loading do tenantService para evitar dependência circular
+let tenantService = null;
+function getTenantService() {
+  if (!tenantService) {
+    tenantService = require('./tenantService');
+  }
+  return tenantService;
+}
 
 // URL padrão do serviço Python RAG
 const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000');
@@ -212,7 +221,8 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     // Carrega tenant_context para injetar contexto cognitivo
     let tenantContext = null;
     try {
-      tenantContext = getTenantContext(tenantId);
+      const tenantServiceInstance = getTenantService();
+      tenantContext = tenantServiceInstance.getTenantContext(tenantId);
       if (tenantContext) {
         logger.debug('[RAGService] Tenant context carregado', {
           tenantId,
@@ -330,14 +340,48 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       success: result.success,
       confidence: result.confidence,
       chunksFound: result.metadata?.chunksFound || 0,
+      sourcesCount: result.sources?.length || 0,
+      hasResponse: !!result.response,
+      error: result.error,
     });
+    
+    // Log detalhado se não encontrou chunks
+    if (!result.success || (result.metadata?.chunksFound || 0) === 0) {
+      logger.warn('[RAGService] Nenhum chunk encontrado na busca RAG', {
+        tenantId,
+        query: query.substring(0, 100),
+        success: result.success,
+        chunksFound: result.metadata?.chunksFound || 0,
+        sourcesCount: result.sources?.length || 0,
+        error: result.error,
+        response: result.response ? result.response.substring(0, 200) : null,
+      });
+    }
+
+    // ETAPA 7: Filtra chunks para eliminar duplicatas e garantir diversidade
+    let filteredSources = result.sources || [];
+    
+    if (Array.isArray(filteredSources) && filteredSources.length > 0) {
+      // Aplica filtros de deduplicação: remove inativos, máximo 1 por source_id
+      filteredSources = ragDeduplicationService.filterChunksForRetrieval(tenantId, filteredSources);
+      
+      logger.debug('[RAGService] Chunks filtrados após deduplicação', {
+        tenantId,
+        originalCount: (result.sources || []).length,
+        filteredCount: filteredSources.length,
+      });
+    }
 
     return {
       success: result.success,
       response: result.response,
-      sources: result.sources || [],
+      sources: filteredSources, // Usa sources filtrados
       confidence: result.confidence || 0.0,
-      metadata: result.metadata || {},
+      metadata: {
+        ...result.metadata,
+        originalChunksCount: (result.sources || []).length,
+        filteredChunksCount: filteredSources.length,
+      },
       error: result.error || null,
     };
   } catch (error) {
@@ -390,23 +434,74 @@ async function indexDocument(document, tenantId) {
   }
 
   try {
+    // ETAPA 1: Normalização de conteúdo
+    const normalizedContent = ragDeduplicationService.normalizeContent(document.content);
+    
+    // ETAPA 2: Geração de content_hash
+    const contentHash = await ragDeduplicationService.generateContentHash(normalizedContent);
+    
+    // ETAPA 3: Verificação de duplicidade estrutural
+    const sourceId = document.metadata?.source_id || document.id;
+    const structuralCheck = ragDeduplicationService.checkStructuralDuplicate(tenantId, contentHash, sourceId);
+    
+    if (structuralCheck.isDuplicate) {
+      logger.info('[RAGService] Documento duplicado estruturalmente detectado, descartando ingestão', {
+        documentId: document.id,
+        tenantId,
+        contentHash: contentHash.substring(0, 16) + '...',
+        existingChunkId: structuralCheck.existingChunk?.chunk_id,
+        existingDocumentId: structuralCheck.existingChunk?.document_id,
+      });
+
+      // Retorna sucesso mas sem criar novos chunks
+      return {
+        success: true,
+        documentId: structuralCheck.existingChunk?.document_id || document.id,
+        chunksCreated: 0,
+        isDuplicate: true,
+        reason: 'structural_duplicate',
+        message: 'Documento duplicado estruturalmente (mesmo conteúdo), usando documento existente',
+      };
+    }
+
+    // ETAPA 4: Determina source_version
+    const currentVersion = ragDeduplicationService.getCurrentSourceVersion(tenantId, sourceId);
+    const sourceVersion = document.metadata?.source_version || (currentVersion + 1);
+
+    // Se é nova versão, desativa versões anteriores
+    if (sourceVersion > currentVersion) {
+      ragDeduplicationService.deactivatePreviousVersions(tenantId, sourceId, sourceVersion);
+    }
+
+    // ETAPA 5: Prepara metadados obrigatórios
+    const enhancedMetadata = {
+      ...document.metadata,
+      source_id: sourceId,
+      source_version: sourceVersion,
+      content_hash: contentHash,
+      tenant_id: tenantId,
+    };
+
     const requestBody = {
       document: {
         id: document.id,
         tenantId,
         title: document.title || 'Sem título',
-        content: document.content,
-        metadata: document.metadata || {},
+        content: normalizedContent, // Usa conteúdo normalizado
+        metadata: enhancedMetadata,
         permissions: document.permissions || {},
         status: document.status || 'active',
       },
     };
 
-    logger.info('[RAGService] Indexando documento', {
+    logger.info('[RAGService] Indexando documento (após verificação de duplicidade)', {
       documentId: document.id,
       tenantId,
       title: document.title,
-      contentLength: document.content?.length || 0,
+      contentLength: normalizedContent.length,
+      contentHash: contentHash.substring(0, 16) + '...',
+      sourceId,
+      sourceVersion,
     });
 
     const serviceUrl = getRagServiceUrl(tenantId);
@@ -467,12 +562,59 @@ async function indexDocument(document, tenantId) {
 
     const result = await response.json();
 
+    // ETAPA 6: Após indexação, registra chunks nos índices de deduplicação
+    // Nota: O serviço Python já faz deduplicação internamente, mas precisamos
+    // registrar no Node.js para que o filtro de recuperação funcione corretamente
+    // Como não temos os semantic_hashes individuais dos chunks do Python,
+    // registramos o documento como um único registro representativo
+    if (result.success && result.chunksCreated > 0) {
+      try {
+        // Gera chunk_id determinístico para o documento completo
+        const chunkId = ragDeduplicationService.generateChunkId(document.id, '', 0);
+        
+        // Gera semantic_hash baseado no content_hash (placeholder até termos embeddings reais)
+        // Isso permite que o registro funcione, mas a deduplicação semântica real
+        // acontece no Python durante a indexação
+        const semanticHash = ragDeduplicationService.generateContentHashSync(
+          contentHash + document.id + tenantId
+        );
+        
+        const chunkMetadata = {
+          chunk_id: chunkId,
+          document_id: document.id,
+          source_id: sourceId || document.id,
+          source_version: sourceVersion || 1,
+          content_hash: contentHash || '',
+          semantic_hash: semanticHash,
+          active: true,
+          created_at: new Date().toISOString(),
+        };
+
+        ragDeduplicationService.registerChunk(tenantId, chunkMetadata, null);
+        
+        logger.debug('[RAGService] Chunk registrado nos índices de deduplicação', {
+          tenantId,
+          chunkId: chunkId.substring(0, 16) + '...',
+          documentId: document.id,
+          chunksCreated: result.chunksCreated,
+        });
+      } catch (dedupError) {
+        logger.warn('[RAGService] Erro ao registrar chunk na deduplicação (não bloqueia indexação)', {
+          error: dedupError.message,
+          documentId: document.id,
+          tenantId,
+        });
+      }
+    }
+
     logger.info('[RAGService] Documento indexado com sucesso', {
       documentId: result.documentId,
       chunksCreated: result.chunksCreated,
       success: result.success,
       tenantId,
-      result: result
+      contentHash: contentHash.substring(0, 16) + '...',
+      sourceId,
+      sourceVersion,
     });
     
     // Verifica vector store após indexação
@@ -508,6 +650,10 @@ async function indexDocument(document, tenantId) {
       documentId: result.documentId,
       chunksCreated: result.chunksCreated || 0,
       error: result.error || null,
+      isDuplicate: false, // Já foi verificado antes, então não é duplicata
+      contentHash: contentHash ? contentHash.substring(0, 16) + '...' : null,
+      sourceId: sourceId || document.id,
+      sourceVersion: sourceVersion || 1,
     };
   } catch (error) {
     logger.error('[RAGService] Erro ao indexar documento', {

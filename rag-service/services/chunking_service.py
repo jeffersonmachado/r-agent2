@@ -7,6 +7,7 @@ import logging
 from typing import List
 from models.document import Document, Chunk, ChunkMetadata, DocumentPermissions
 from config.settings import get_settings
+from services.deduplication_service import generate_chunk_id
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +46,11 @@ def chunk_document_fixed_size(document: Document, chunk_size: int, overlap: int)
                 chunk_content = content[start:start + last_break + 1]
                 end = start + last_break + 1
         
+        # Gera chunk_id determinístico
+        chunk_deterministic_id = generate_chunk_id(document.id, '', chunk_index)
+        
         chunk = Chunk(
-            id=f"{document.id}-chunk-{chunk_index}",
+            id=chunk_deterministic_id,  # Usa ID determinístico
             documentId=document.id,
             tenantId=document.tenantId,
             content=chunk_content.strip(),
@@ -98,8 +102,12 @@ def chunk_document_sentence(document: Document) -> List[Chunk]:
             chunk_content = ' '.join(current_chunk)
             end_char = start_char + len(chunk_content)
             
+            # Gera chunk_id determinístico
+            section_title = ''  # Pode ser melhorado para detectar seções
+            chunk_deterministic_id = generate_chunk_id(document.id, section_title, chunk_index)
+            
             chunk = Chunk(
-                id=f"{document.id}-chunk-{chunk_index}",
+                id=chunk_deterministic_id,  # Usa ID determinístico
                 documentId=document.id,
                 tenantId=document.tenantId,
                 content=chunk_content,
@@ -224,7 +232,9 @@ def chunk_document_paragraph(document: Document) -> List[Chunk]:
             )
             # Ajusta índices e posições
             for sub_chunk in sub_chunks:
-                sub_chunk.id = f"{document.id}-chunk-{chunk_index}"
+                # Gera chunk_id determinístico para sub-chunk
+                chunk_deterministic_id = generate_chunk_id(document.id, '', chunk_index)
+                sub_chunk.id = chunk_deterministic_id
                 sub_chunk.metadata.chunkIndex = chunk_index
                 sub_chunk.metadata.startChar = start_char
                 start_char = sub_chunk.metadata.endChar
@@ -238,8 +248,12 @@ def chunk_document_paragraph(document: Document) -> List[Chunk]:
             chunk_content = '\n\n'.join(current_chunk)
             end_char = start_char + len(chunk_content)
             
+            # Gera chunk_id determinístico
+            section_title = ''  # Pode ser melhorado para detectar seções
+            chunk_deterministic_id = generate_chunk_id(document.id, section_title, chunk_index)
+            
             chunk = Chunk(
-                id=f"{document.id}-chunk-{chunk_index}",
+                id=chunk_deterministic_id,  # Usa ID determinístico
                 documentId=document.id,
                 tenantId=document.tenantId,
                 content=chunk_content,
@@ -266,8 +280,12 @@ def chunk_document_paragraph(document: Document) -> List[Chunk]:
         chunk_content = '\n\n'.join(current_chunk)
         end_char = start_char + len(chunk_content)
         
+        # Gera chunk_id determinístico
+        section_title = ''  # Pode ser melhorado para detectar seções
+        chunk_deterministic_id = generate_chunk_id(document.id, section_title, chunk_index)
+        
         chunk = Chunk(
-            id=f"{document.id}-chunk-{chunk_index}",
+            id=chunk_deterministic_id,  # Usa ID determinístico
             documentId=document.id,
             tenantId=document.tenantId,
             content=chunk_content,

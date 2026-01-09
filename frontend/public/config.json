@@ -1,0 +1,5 @@
+{
+  "basePath": "/r-agent2/",
+  "apiBaseUrl": "https://www.results.com.br/r-agent2/api",
+  "wsUrl": "wss://www.results.com.br/r-agent2/ws"
+}

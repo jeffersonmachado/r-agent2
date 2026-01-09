@@ -413,6 +413,7 @@ export async function uploadDocument(file, options = {}) {
         const documentData = {
           title: title,
           content: documentContent,
+          tenantId: options.tenantId || null, // Passa tenantId se fornecido
           metadata: {
             source: 'upload',
             category: options.category || null,
@@ -424,6 +425,14 @@ export async function uploadDocument(file, options = {}) {
           },
           autoIndex: options.autoIndex !== false,
         };
+        
+        logger.debug('Criando documento via uploadDocument', {
+          fileName,
+          title,
+          contentLength: documentContent.length,
+          tenantId: documentData.tenantId,
+          autoIndex: documentData.autoIndex,
+        });
         
         const result = await createDocument(documentData);
         resolve(result);

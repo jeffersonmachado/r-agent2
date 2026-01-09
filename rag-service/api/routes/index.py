@@ -8,10 +8,22 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
 
-from models.document import Document, DocumentMetadata, DocumentPermissions
+from models.document import Document, DocumentMetadata, DocumentPermissions, ChunkMetadata
 from services.chunking_service import chunk_document
 from services.embedding_service import generate_embeddings_batch
 from services.vector_store import get_vector_store
+from services.deduplication_service import (
+    normalize_content,
+    generate_content_hash,
+    generate_chunk_id,
+    generate_semantic_hash,
+    normalize_embedding,
+    check_structural_duplicate,
+    check_semantic_duplicate,
+    register_chunk,
+    deactivate_previous_versions,
+    get_current_source_version,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,18 +81,58 @@ async def index_document(request: IndexRequest):
             agents=doc_data.get('permissions', {}).get('agents')
         )
         
-        # Cria documento
+        # ETAPA 1: Normalização de conteúdo
+        normalized_content = normalize_content(doc_data['content'])
+        
+        # ETAPA 2: Geração de content_hash
+        content_hash = generate_content_hash(normalized_content)
+        
+        # ETAPA 3: Verificação de duplicidade estrutural
+        tenant_id = doc_data['tenantId']
+        document_id = doc_data['id']
+        source_id = doc_data.get('metadata', {}).get('source_id') or document_id
+        structural_check = check_structural_duplicate(tenant_id, content_hash, source_id)
+        
+        if structural_check.get('is_duplicate'):
+            logger.info(
+                f"[INDEX] Documento duplicado estruturalmente detectado, descartando ingestão",
+                extra={
+                    'document_id': document_id,
+                    'tenant_id': tenant_id,
+                    'content_hash': content_hash[:16] + '...',
+                    'existing_chunk_id': structural_check.get('existing_chunk', {}).get('chunk_id'),
+                    'existing_document_id': structural_check.get('existing_chunk', {}).get('document_id'),
+                }
+            )
+            
+            # Retorna sucesso mas sem criar novos chunks
+            return IndexResponse(
+                success=True,
+                documentId=structural_check.get('existing_chunk', {}).get('document_id') or document_id,
+                chunksCreated=0,
+                error=None
+            )
+        
+        # ETAPA 4: Determina source_version
+        current_version = get_current_source_version(tenant_id, source_id)
+        source_version = doc_data.get('metadata', {}).get('source_version') or (current_version + 1)
+        
+        # Se é nova versão, desativa versões anteriores
+        if source_version > current_version:
+            deactivate_previous_versions(tenant_id, source_id, source_version)
+        
+        # ETAPA 5: Cria documento com conteúdo normalizado
         document = Document(
-            id=doc_data['id'],
-            tenantId=doc_data['tenantId'],
+            id=document_id,
+            tenantId=tenant_id,
             title=doc_data.get('title', 'Sem título'),
-            content=doc_data['content'],
+            content=normalized_content,  # Usa conteúdo normalizado
             metadata=metadata,
             permissions=permissions,
             status=doc_data.get('status', 'active')
         )
         
-        # Chunking
+        # ETAPA 6: Chunking determinístico
         chunks = chunk_document(document)
         
         if not chunks:
@@ -90,6 +142,25 @@ async def index_document(request: IndexRequest):
                 chunksCreated=0,
                 error="Nenhum chunk criado (documento vazio?)"
             )
+        
+        # Atualiza chunks com metadados obrigatórios e chunk_id determinístico
+        for idx, chunk in enumerate(chunks):
+            # Gera chunk_id determinístico
+            section_title = getattr(chunk.metadata, 'sectionTitle', '') if hasattr(chunk.metadata, 'sectionTitle') else ''
+            chunk_deterministic_id = generate_chunk_id(document_id, section_title, idx)
+            chunk.id = chunk_deterministic_id
+            
+            # Adiciona metadados obrigatórios ao chunk usando dict para Pydantic
+            metadata_dict = chunk.metadata.dict() if hasattr(chunk.metadata, 'dict') else chunk.metadata.__dict__
+            metadata_dict['source_id'] = source_id
+            metadata_dict['source_version'] = source_version
+            metadata_dict['content_hash'] = generate_content_hash(chunk.content)
+            metadata_dict['tenant_id'] = tenant_id
+            metadata_dict['chunk_id'] = chunk_deterministic_id
+            metadata_dict['active'] = True
+            
+            # Atualiza metadata do chunk
+            chunk.metadata = ChunkMetadata(**metadata_dict)
         
         # Gera embeddings em batch
         chunk_texts = [chunk.content for chunk in chunks]
@@ -107,7 +178,77 @@ async def index_document(request: IndexRequest):
             'embeddingDimensions': [len(emb) for emb in embeddings] if embeddings else []
         })
         
-        # Adiciona ao vector store
+        # ETAPA 7: Verificação de duplicidade semântica e registro de chunks
+        valid_chunks = []
+        valid_embeddings = []
+        duplicate_count = 0
+        
+        for chunk, embedding in zip(chunks, embeddings):
+            # Normaliza embedding
+            normalized_emb = normalize_embedding(embedding)
+            semantic_hash = generate_semantic_hash(normalized_emb)
+            
+            # Verifica duplicidade semântica
+            semantic_check = check_semantic_duplicate(
+                tenant_id,
+                normalized_emb,
+                semantic_hash,
+                source_id
+            )
+            
+            if semantic_check.get('is_duplicate'):
+                duplicate_count += 1
+                logger.info(
+                    f"[INDEX] Chunk duplicado semanticamente detectado, descartando",
+                    extra={
+                        'document_id': document_id,
+                        'chunk_id': chunk.id[:16] + '...',
+                        'tenant_id': tenant_id,
+                        'similarity': semantic_check.get('similarity'),
+                        'existing_chunk_id': semantic_check.get('existing_chunk', {}).get('chunk_id'),
+                    }
+                )
+                continue  # Descarta chunk duplicado
+            
+            # Registra chunk nos índices de deduplicação
+            chunk_content_hash = getattr(chunk.metadata, 'content_hash', None) or generate_content_hash(chunk.content)
+            chunk_metadata = {
+                'chunk_id': chunk.id,
+                'document_id': document_id,
+                'source_id': source_id,
+                'source_version': source_version,
+                'content_hash': chunk_content_hash,
+                'semantic_hash': semantic_hash,
+                'active': True,
+                'created_at': datetime.utcnow().isoformat(),
+            }
+            
+            register_chunk(tenant_id, chunk_metadata, normalized_emb)
+            
+            valid_chunks.append(chunk)
+            valid_embeddings.append(embedding)
+        
+        if duplicate_count > 0:
+            logger.info(
+                f"[INDEX] {duplicate_count} chunk(s) duplicado(s) descartado(s) de {len(chunks)} total",
+                extra={
+                    'document_id': document_id,
+                    'tenant_id': tenant_id,
+                    'duplicate_count': duplicate_count,
+                    'total_chunks': len(chunks),
+                    'valid_chunks': len(valid_chunks),
+                }
+            )
+        
+        if not valid_chunks:
+            return IndexResponse(
+                success=True,
+                documentId=document.id,
+                chunksCreated=0,
+                error=f"Todos os {len(chunks)} chunks eram duplicados semânticos"
+            )
+        
+        # Adiciona ao vector store apenas chunks válidos (não duplicados)
         logger.info(f"[INDEX] Obtendo vector store para tenant {document.tenantId}", {
             'documentId': document.id,
             'tenantId': document.tenantId
@@ -124,15 +265,7 @@ async def index_document(request: IndexRequest):
             'indexSizeBefore': stats_before.get('indexSize', 0)
         })
         
-        logger.info(f"[INDEX] Adicionando {len(chunks)} chunks ao vector store", {
-            'documentId': document.id,
-            'tenantId': document.tenantId,
-            'chunksCount': len(chunks),
-            'embeddingsCount': len(embeddings),
-            'chunkIds': [chunk.id for chunk in chunks]
-        })
-        
-        vector_store.add_chunks(chunks, embeddings)
+        vector_store.add_chunks(valid_chunks, valid_embeddings)
         
         # Verifica estado após adicionar
         stats_after = vector_store.get_stats()
@@ -149,33 +282,38 @@ async def index_document(request: IndexRequest):
         # Validação: verifica se os chunks foram realmente adicionados
         chunks_added = 0
         chunks_not_found = []
-        for chunk in chunks:
+        for chunk in valid_chunks:
             if chunk.id in vector_store.chunks:
                 chunks_added += 1
             else:
                 chunks_not_found.append(chunk.id)
         
-        if chunks_added < len(chunks):
-            logger.warning(f"[INDEX] Alguns chunks não foram adicionados: {chunks_added}/{len(chunks)} para documento {document.id}", {
+        if chunks_added < len(valid_chunks):
+            logger.warning(f"[INDEX] Alguns chunks não foram adicionados: {chunks_added}/{len(valid_chunks)} para documento {document.id}", {
                 'documentId': document.id,
                 'tenantId': document.tenantId,
                 'chunksAdded': chunks_added,
-                'chunksTotal': len(chunks),
+                'chunksTotal': len(valid_chunks),
                 'chunksNotFound': chunks_not_found
             })
         
-        logger.info(f"[INDEX] Documento indexado: {document.id}, chunks criados: {len(chunks)}, chunks adicionados: {chunks_added}", {
+        logger.info(f"[INDEX] Documento indexado: {document.id}, chunks criados: {len(chunks)}, duplicados descartados: {duplicate_count}, chunks válidos: {len(valid_chunks)}, chunks adicionados: {chunks_added}", {
             'documentId': document.id,
             'tenantId': document.tenantId,
             'chunksCreated': len(chunks),
+            'duplicateCount': duplicate_count,
+            'validChunks': len(valid_chunks),
             'chunksAdded': chunks_added,
+            'contentHash': content_hash[:16] + '...',
+            'sourceId': source_id,
+            'sourceVersion': source_version,
             'vectorStoreStats': stats_after
         })
         
         return IndexResponse(
             success=True,
             documentId=document.id,
-            chunksCreated=len(chunks)
+            chunksCreated=chunks_added  # Retorna apenas chunks realmente adicionados
         )
     
     except HTTPException:

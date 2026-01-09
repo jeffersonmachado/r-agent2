@@ -33,7 +33,11 @@ export function FlowTestChat({ flow, onSizeChange }) {
   const { theme, themeName } = useTheme();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [showExecutionLog, setShowExecutionLog] = useState(true);
+  const [showExecutionLog, setShowExecutionLog] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    // Em telas pequenas (ex: smartphone), inicia recolhido
+    return window.innerWidth >= 768;
+  });
   const [executionLogWidth, setExecutionLogWidth] = useState(400);
   const [aiTasksEnabled, setAiTasksEnabled] = useState(true);
   const [copiedMessage, setCopiedMessage] = useState(false);
@@ -1297,7 +1301,11 @@ export function FlowTestChat({ flow, onSizeChange }) {
               </div>
             ) : (
               // Modo colapsado - textos verticais, EXATAMENTE como o painel direito
-              <div className="flex-1 p-2 section-container flex items-center justify-center vertical">
+              <div
+                className="flex-1 p-2 section-container flex items-center justify-center vertical cursor-pointer hover:bg-bg-secondary transition-colors"
+                onClick={() => setShowExecutionLog(true)}
+                title="Clique para expandir Execução do Fluxo"
+              >
                 Execução do Fluxo
               </div>
             )}

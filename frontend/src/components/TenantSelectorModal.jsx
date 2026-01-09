@@ -17,6 +17,14 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
   const [loading, setLoading] = useState(true);
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [error, setError] = useState('');
+  const [filterText, setFilterText] = useState('');
+
+  // Limpa o filtro quando o modal é fechado
+  useEffect(() => {
+    if (!isOpen) {
+      setFilterText('');
+    }
+  }, [isOpen]);
 
   // Carrega lista de tenants
   useEffect(() => {
@@ -120,12 +128,37 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
     console.log('[TenantSelectorModal] Estado do modal mudou:', { isOpen, tenantsCount: tenants.length });
   }, [isOpen, tenants.length]);
 
+  // Limpa seleção se o tenant selecionado não estiver mais visível após filtro
+  useEffect(() => {
+    if (selectedTenantId && filterText.trim()) {
+      const searchTerm = filterText.toLowerCase().trim();
+      const selectedTenant = tenants.find(t => t.id === selectedTenantId);
+      if (selectedTenant) {
+        const tenantName = (selectedTenant.name || '').toLowerCase();
+        const tenantId = (selectedTenant.id || '').toLowerCase();
+        const isVisible = tenantName.includes(searchTerm) || tenantId.includes(searchTerm);
+        if (!isVisible) {
+          setSelectedTenantId(null);
+        }
+      }
+    }
+  }, [filterText, selectedTenantId, tenants]);
+
   if (!isOpen) {
     return null;
   }
 
   console.log('[TenantSelectorModal] Renderizando modal, isOpen:', isOpen, 'tenants:', tenants.length);
   const isDark = theme.themeName === 'dark';
+
+  // Filtra tenants baseado no texto de busca
+  const filteredTenants = tenants.filter(tenant => {
+    if (!filterText.trim()) return true;
+    const searchTerm = filterText.toLowerCase().trim();
+    const tenantName = (tenant.name || '').toLowerCase();
+    const tenantId = (tenant.id || '').toLowerCase();
+    return tenantName.includes(searchTerm) || tenantId.includes(searchTerm);
+  });
 
   const modalContent = (
     <div
@@ -201,6 +234,35 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
             overflowY: 'auto',
           }}
         >
+          {/* Campo de filtro */}
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              type="text"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              placeholder="🔍 Filtrar por nome ou ID..."
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                background: theme.colors.bg.primary,
+                border: `1px solid ${theme.colors.border.default}`,
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: theme.colors.text.primary,
+                boxSizing: 'border-box',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.accent.primary;
+                e.currentTarget.style.boxShadow = `0 0 0 3px ${theme.colors.accent.light}`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.border.default;
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+          </div>
           {error && (
             <div
               style={{
@@ -239,6 +301,20 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
               <div style={{ marginBottom: '12px' }}>📭</div>
               <div>Nenhum tenant encontrado</div>
             </div>
+          ) : filteredTenants.length === 0 ? (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: theme.colors.text.secondary,
+              }}
+            >
+              <div style={{ marginBottom: '12px' }}>🔍</div>
+              <div>Nenhum tenant encontrado com "{filterText}"</div>
+              <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.7 }}>
+                Tente outro termo de busca
+              </div>
+            </div>
           ) : (
             <div
               style={{
@@ -247,7 +323,7 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
                 gap: '8px',
               }}
             >
-              {tenants.map((tenant) => {
+              {filteredTenants.map((tenant) => {
                 const isSelected = selectedTenantId === tenant.id;
                 const isSystem = tenant.id === 'system';
 
@@ -389,7 +465,7 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
           </Button>
           <Button
             onClick={handleSelect}
-            disabled={loading || !selectedTenantId}
+            disabled={loading || !selectedTenantId || filteredTenants.length === 0}
           >
             {loading ? 'Carregando...' : 'Acessar'}
           </Button>

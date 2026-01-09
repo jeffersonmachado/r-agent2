@@ -47,6 +47,7 @@ class Source(BaseModel):
     title: str
     score: float
     excerpt: str
+    metadata: Optional[Dict[str, Any]] = None  # Metadados para deduplicação
 
 
 class QueryMetadata(BaseModel):

@@ -14,10 +14,19 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
 const webScrapingService = require('./webScrapingService');
-const ragDocumentsService = require('./ragDocumentsService');
+
+// Lazy loading do ragDocumentsService para evitar dependência circular
+let ragDocumentsService = null;
+function getRagDocumentsService() {
+  if (!ragDocumentsService) {
+    ragDocumentsService = require('./ragDocumentsService');
+  }
+  return ragDocumentsService;
+}
 
 /**
  * @typedef {Object} Tenant
@@ -61,6 +70,8 @@ const tenantContexts = new Map();
 const dataDir = path.join(__dirname, '..', 'data');
 const tenantsFile = path.join(dataDir, 'tenants.json');
 const tenantContextsFile = path.join(dataDir, 'tenant_contexts.json');
+// Diretório raiz do projeto (para executar scripts auxiliares)
+const projectRoot = path.join(__dirname, '..', '..');
 
 /**
  * Garante que o diretório de dados existe.
@@ -68,6 +79,139 @@ const tenantContextsFile = path.join(dataDir, 'tenant_contexts.json');
 function ensureDataDir() {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
+  }
+}
+
+/**
+ * Verifica se existem dados do tenant-demo (agentes, fluxos, etc.)
+ * 
+ * @returns {boolean} true se existirem dados, false caso contrário
+ */
+function hasDemoTenantData() {
+  const DEMO_TENANT_ID = 'tenant-demo';
+  
+  try {
+    let hasAgents = false;
+    let hasFlows = false;
+    
+    // Verifica agentes
+    const agentsFile = path.join(dataDir, 'agents.json');
+    if (fs.existsSync(agentsFile)) {
+      const agents = JSON.parse(fs.readFileSync(agentsFile, 'utf8'));
+      if (Array.isArray(agents)) {
+        hasAgents = agents.some(a => a.tenantId === DEMO_TENANT_ID);
+        if (hasAgents) {
+          const count = agents.filter(a => a.tenantId === DEMO_TENANT_ID).length;
+          logger.info(`[TenantService] Encontrados ${count} agente(s) do tenant-demo`);
+        }
+      }
+    }
+    
+    // Verifica fluxos
+    const flowsFile = path.join(dataDir, 'flows.json');
+    if (fs.existsSync(flowsFile)) {
+      const flows = JSON.parse(fs.readFileSync(flowsFile, 'utf8'));
+      if (Array.isArray(flows)) {
+        hasFlows = flows.some(f => f.tenantId === DEMO_TENANT_ID);
+        if (hasFlows) {
+          const count = flows.filter(f => f.tenantId === DEMO_TENANT_ID).length;
+          logger.info(`[TenantService] Encontrados ${count} fluxo(s) do tenant-demo`);
+        }
+      }
+    }
+    
+    // Se não encontrou agentes nem fluxos, considera que não há dados
+    const hasData = hasAgents || hasFlows;
+    if (!hasData) {
+      logger.info('[TenantService] Nenhum dado encontrado para tenant-demo (agentes ou fluxos)');
+    }
+    return hasData;
+  } catch (err) {
+    logger.warn('[TenantService] Erro ao verificar dados do tenant-demo:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Executa o seed do tenant-demo em background
+ */
+function runDemoTenantSeed() {
+  try {
+    logger.info('[TenantService] Iniciando seed completo para tenant-demo via scripts/seed-tenant-demo.js...');
+    const seedProcess = spawn('node', ['scripts/seed-tenant-demo.js'], {
+      cwd: projectRoot,
+      stdio: 'ignore',
+      detached: true,
+    });
+
+    seedProcess.on('error', (err) => {
+      logger.error('[TenantService] Erro ao iniciar seed para tenant-demo:', {
+        error: err.message,
+      });
+    });
+
+    // Não bloqueia o boot da API; apenas logamos quando terminar, se possível
+    seedProcess.unref();
+  } catch (err) {
+    logger.error('[TenantService] Exceção ao disparar seed para tenant-demo:', {
+      error: err.message,
+    });
+  }
+}
+
+/**
+ * Garante que o tenant de demonstração (`tenant-demo`) exista e tenha dados.
+ * 
+ * Este tenant é usado como ambiente de demonstração e desenvolvimento.
+ * Se não existir no arquivo de tenants, é criado automaticamente com
+ * dados padrão seguros.
+ * Se existir mas não tiver dados (agentes, fluxos, etc.), executa o seed.
+ */
+function ensureDemoTenantExists() {
+  const DEMO_TENANT_ID = 'tenant-demo';
+  let tenantCreated = false;
+
+  logger.info('[TenantService] Verificando tenant-demo e seus dados...');
+
+  // Verifica se o tenant existe
+  if (!tenants.has(DEMO_TENANT_ID)) {
+    logger.info('[TenantService] Tenant de demonstração não encontrado. Criando tenant-demo padrão...');
+
+    const result = createTenant({
+      id: DEMO_TENANT_ID,
+      name: 'Tenant Demo',
+      site: 'https://demo.example.com',
+      ramo_atividade: 'Tecnologia e Software - Plataforma de demonstração',
+      objetivo: 'Demonstração e desenvolvimento da plataforma',
+      plan: 'trial',
+      settings: {},
+      branding: {},
+    });
+
+    if (!result.success) {
+      logger.error('[TenantService] Falha ao criar tenant-demo padrão:', {
+        error: result.error,
+      });
+      return; // Não continua se não conseguiu criar o tenant
+    }
+    
+    logger.info('[TenantService] Tenant-demo criado automaticamente com sucesso.');
+    tenantCreated = true;
+  } else {
+    logger.info('[TenantService] Tenant-demo já existe.');
+  }
+
+  // Verifica se existem dados do tenant-demo
+  const hasData = hasDemoTenantData();
+  if (!hasData) {
+    logger.info('[TenantService] Dados do tenant-demo não encontrados. Executando seed...');
+    runDemoTenantSeed();
+  } else if (tenantCreated) {
+    // Se o tenant foi criado agora, sempre executa o seed para garantir dados iniciais
+    logger.info('[TenantService] Tenant-demo recém-criado. Executando seed para popular dados iniciais...');
+    runDemoTenantSeed();
+  } else {
+    logger.info('[TenantService] Tenant-demo e seus dados já existem. Nenhuma ação necessária.');
   }
 }
 
@@ -257,6 +401,8 @@ function loadTenantContextsFromFile() {
 // Carrega dados ao iniciar o módulo
 loadTenantsFromFile();
 loadTenantContextsFromFile();
+// Garante que o tenant de demonstração sempre exista
+ensureDemoTenantExists();
 
 /**
  * Cria ou atualiza o tenant_context automaticamente quando um tenant é criado/atualizado.
@@ -302,7 +448,13 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
 
   try {
     // Verifica se já existe documento com este site para este tenant
-    const existingDocs = ragDocumentsService.listDocuments({
+    const ragDocsService = getRagDocumentsService();
+    if (!ragDocsService) {
+      logger.error('[TenantService] ragDocumentsService não foi carregado corretamente');
+      return;
+    }
+    
+    const existingDocs = ragDocsService.listDocuments({
       tenantId,
       source: 'site_institucional',
     });
@@ -331,7 +483,8 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
 
     if (scrapeResult.success && scrapeResult.documentId) {
       // Atualiza metadados do documento para marcar como fonte institucional canônica
-      const updateResult = await ragDocumentsService.updateDocument(scrapeResult.documentId, {
+      const ragDocsService = getRagDocumentsService();
+      const updateResult = await ragDocsService.updateDocument(scrapeResult.documentId, {
         metadata: {
           source: 'site_institucional',
           site_oficial: site,
