@@ -1,402 +1,508 @@
 /**
- * Serviço de autenticação de agentes.
+ * Serviço de autenticação de agentes (PostgreSQL-first).
  *
- * Responsabilidades:
- * - Gerenciar agentes (criar, listar, atualizar)
- * - Autenticação (login/logout)
- * - Gerenciamento de sessões com tokens
- * - Validação de tokens
- * - Persistência em PostgreSQL
+ * Objetivo:
+ * - Remover dependência de arquivos JSON (`api/data/agents.json`, `api/data/sessions.json`)
+ * - Persistir usuários e sessões no PostgreSQL
+ * - Manter `validateToken()` síncrono via cache em memória (necessário pelo middleware)
  *
- * Persistência:
- * - Agentes: PostgreSQL (tabela users/agents)
- * - Sessões: PostgreSQL (tabela sessions)
- * 
- * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
+ * Observação:
+ * - `initialize()` deve ser chamado após conectar/migrar o banco (server.js já faz init global).
  */
 
-const fs = require('fs');
-const path = require('path');
+'use strict';
+
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
 
-/**
- * @typedef {Object} Agent
- * @property {string} id - ID único do agente
- * @property {string} tenantId - ID do tenant (obrigatório)
- * @property {string} username - Nome de usuário (único)
- * @property {string} email - Email do agente
- * @property {string} passwordHash - Hash da senha (bcrypt-like, usando SHA256 + salt)
- * @property {string} salt - Salt para hash da senha
- * @property {string} role - Papel do agente (owner, admin, manager, operator, auditor, readonly)
- * @property {string} name - Nome completo do agente
- * @property {boolean} active - Se o agente está ativo
- * @property {string} status - Status do usuário (pending, active, suspended, inactive)
- * @property {boolean} mfaEnabled - Se MFA está habilitado
- * @property {string|null} invitationToken - Token de convite (se pendente)
- * @property {string|null} invitationExpiresAt - Data de expiração do convite
- * @property {string|null} passwordResetToken - Token de reset de senha
- * @property {string|null} passwordResetExpiresAt - Data de expiração do reset
- * @property {string} createdAt - Data de criação (ISO string)
- * @property {string} updatedAt - Data da última atualização (ISO string)
- * @property {string|null} lastLoginAt - Data do último login (ISO string)
- */
+const { getSequelize } = require('../db/sequelize');
+const { User, Session } = require('../db/models');
 
-/**
- * @typedef {Object} Session
- * @property {string} token - Token da sessão
- * @property {string} agentId - ID do agente
- * @property {string} username - Nome de usuário (para facilitar consultas)
- * @property {string} createdAt - Data de criação (ISO string)
- * @property {string} expiresAt - Data de expiração (ISO string)
- * @property {string|null} lastActivityAt - Data da última atividade (ISO string)
- * @property {string} ipAddress - Endereço IP da requisição
- * @property {string} userAgent - User agent do navegador
- */
+// ---------------------------------------------------------------------------
+// Configurações
+// ---------------------------------------------------------------------------
 
-// Armazenamento em memória
-/** @type {Map<string, Agent>} */
-const agents = new Map();
+const TOKEN_EXPIRATION_HOURS = config.get('auth.tokenExpirationHours', 24);
+const TOKEN_LENGTH = 64; // hex length
+const MAX_SESSIONS_PER_AGENT = config.get('auth.maxSessionsPerAgent', 3);
+const INACTIVITY_TIMEOUT_MINUTES = config.get('auth.inactivityTimeoutMinutes', 30);
 
-/** @type {Map<string, Session>} */
-const sessions = new Map();
+// ---------------------------------------------------------------------------
+// Cache em memória (para validateToken síncrono)
+// ---------------------------------------------------------------------------
 
-// Caminhos dos arquivos de persistência
-const dataDir = path.join(__dirname, '..', 'data');
-const agentsFile = path.join(dataDir, 'agents.json');
-const sessionsFile = path.join(dataDir, 'sessions.json');
+/** @type {Map<string, any>} */
+const agents = new Map(); // userId -> { ...agent, _passwordHash }
 
-// Configurações - lidas do config.json
-const TOKEN_EXPIRATION_HOURS = config.get('auth.tokenExpirationHours', 24); // Tokens expiram em 24 horas (padrão)
-const TOKEN_LENGTH = 64; // Tamanho do token em caracteres (fixo)
-const MAX_SESSIONS_PER_AGENT = config.get('auth.maxSessionsPerAgent', 3); // Máximo de sessões simultâneas por agente (padrão: 3)
-const INACTIVITY_TIMEOUT_MINUTES = config.get('auth.inactivityTimeoutMinutes', 30); // Timeout de inatividade em minutos (padrão: 30)
+/** @type {Map<string, any>} */
+const sessions = new Map(); // token -> { token, agentId, expiresAt, lastActivityAt, agentSnapshot, ... }
 
-/**
- * Garante que o diretório de dados existe.
- */
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+let initialized = false;
+let initializingPromise = null;
+
+function dbAvailable() {
+  return !!getSequelize();
+}
+
+function sha256Hex(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = sha256Hex(password + salt);
+  return `sha256:${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!stored || typeof stored !== 'string') return false;
+
+  // Formato preferido: sha256:<salt>:<hash>
+  if (stored.startsWith('sha256:')) {
+    const parts = stored.split(':');
+    if (parts.length !== 3) return false;
+    const salt = parts[1];
+    const expected = parts[2];
+    return sha256Hex(password + salt) === expected;
   }
+
+  // Compatibilidade: seed legado armazenava sha256(password) sem salt
+  if (/^[a-f0-9]{64}$/i.test(stored)) {
+    return sha256Hex(password) === stored.toLowerCase();
+  }
+
+  return false;
 }
 
-/**
- * Gera um hash de senha usando SHA256 + salt.
- * Compatível com futura migração para bcrypt.
- *
- * @param {string} password - Senha em texto plano
- * @param {string} salt - Salt (se não fornecido, gera um novo)
- * @returns {{hash: string, salt: string}}
- */
-function hashPassword(password, salt = null) {
-  const actualSalt = salt || crypto.randomBytes(16).toString('hex');
-  const hash = crypto
-    .createHash('sha256')
-    .update(password + actualSalt)
-    .digest('hex');
-  return { hash, salt: actualSalt };
-}
-
-/**
- * Verifica se uma senha corresponde ao hash.
- *
- * @param {string} password - Senha em texto plano
- * @param {string} passwordHash - Hash armazenado
- * @param {string} salt - Salt usado no hash
- * @returns {boolean}
- */
-function verifyPassword(password, passwordHash, salt) {
-  const { hash } = hashPassword(password, salt);
-  return hash === passwordHash;
-}
-
-/**
- * Gera um token de sessão aleatório.
- *
- * @returns {string}
- */
 function generateToken() {
   return crypto.randomBytes(TOKEN_LENGTH / 2).toString('hex');
 }
 
-// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
-
-/**
- * Carrega agentes dos arquivos JSON (compatibilidade durante migração).
- * TODO: Migrar para PostgreSQL completamente.
- */
-function loadAgentsFromFiles() {
-  try {
-    if (fs.existsSync(agentsFile)) {
-      const data = fs.readFileSync(agentsFile, 'utf8');
-      const agentsArray = JSON.parse(data);
-      
-      agents.clear();
-      for (const agent of agentsArray) {
-        agents.set(agent.id, agent);
-      }
-      
-      logger.info(`[AuthService] ${agents.size} agente(s) carregado(s) de ${agentsFile}`);
-    } else {
-      logger.warn(`[AuthService] Arquivo ${agentsFile} não encontrado. Criando admin padrão...`);
-      createDefaultAdmin();
-    }
-  } catch (error) {
-    logger.error(`[AuthService] Erro ao carregar agentes de ${agentsFile}:`, error);
-    // Se falhar, cria admin padrão
-    if (agents.size === 0) {
-      createDefaultAdmin();
-    }
-  }
+function normalizeRole(role) {
+  if (!role) return 'operator';
+  const r = String(role).trim();
+  if (r === 'agent') return 'operator';
+  if (r === 'supervisor') return 'manager';
+  if (r === 'superadmin') return 'super_admin';
+  return r;
 }
 
-/**
- * Carrega sessões dos arquivos JSON (compatibilidade durante migração).
- * TODO: Migrar para PostgreSQL completamente.
- */
-function loadSessionsFromFiles() {
-  try {
-    if (fs.existsSync(sessionsFile)) {
-      const data = fs.readFileSync(sessionsFile, 'utf8');
-      const sessionsArray = JSON.parse(data);
-      
-      sessions.clear();
-      for (const session of sessionsArray) {
-        sessions.set(session.token, session);
-      }
-      
-      logger.info(`[AuthService] ${sessions.size} sessão(ões) carregada(s) de ${sessionsFile}`);
-    }
-  } catch (error) {
-    logger.error(`[AuthService] Erro ao carregar sessões de ${sessionsFile}:`, error);
-  }
-}
-
-/**
- * Inicializa o serviço carregando dados dos arquivos JSON.
- * TODO: Migrar para PostgreSQL completamente.
- */
-function initialize() {
-  ensureDataDir();
-  loadAgentsFromFiles();
-  loadSessionsFromFiles();
-  
-  // Se não houver agentes, cria admin padrão
-  if (agents.size === 0) {
-    createDefaultAdmin();
-  }
-}
-
-/**
- * Cria agente admin padrão (username: admin, password: Admin123!).
- * Apenas se não existir nenhum agente.
- */
-function createDefaultAdmin() {
-  if (agents.size > 0) return;
-
-  const { hash, salt } = hashPassword('Admin123!');
-  const now = new Date().toISOString();
-  // Usa tenant-demo que é criado automaticamente pelo tenantService
-  const tenantId = 'tenant-demo';
-
-  const admin = {
-    id: 'admin-001',
-    tenantId: tenantId,
-    username: 'admin',
-    email: 'admin@example.com',
-    passwordHash: hash,
+function toAgentSafe(agent) {
+  if (!agent) return null;
+  // Nunca retorna password_hash, invitation/password reset tokens
+  const {
+    _passwordHash,
+    passwordHash,
     salt,
-    role: 'owner', // Owner para o primeiro admin
-    name: 'Administrador',
-    active: true,
-    status: 'active',
-    mfaEnabled: false,
-    invitationToken: null,
-    invitationExpiresAt: null,
-    passwordResetToken: null,
-    passwordResetExpiresAt: null,
-    createdAt: now,
-    updatedAt: now,
-    lastLoginAt: null,
+    invitationToken,
+    invitationExpiresAt,
+    passwordResetToken,
+    passwordResetExpiresAt,
+    ...safe
+  } = agent;
+  return safe;
+}
+
+function buildAgentFromUserRow(userRow) {
+  const isSuper = !!userRow.is_superadmin;
+  const role = isSuper ? 'super_admin' : normalizeRole(userRow.role);
+
+  return {
+    id: userRow.id,
+    tenantId: userRow.tenant_key || 'tenant-demo',
+    username: userRow.username || (userRow.email ? userRow.email.split('@')[0] : null),
+    email: userRow.email,
+    role,
+    name: userRow.name,
+    active: userRow.is_active !== false,
+    status: userRow.status || 'active',
+    mfaEnabled: !!userRow.mfa_enabled,
+    createdAt: userRow.created_at ? new Date(userRow.created_at).toISOString() : (userRow.createdAt?.toISOString?.() || null),
+    updatedAt: userRow.updated_at ? new Date(userRow.updated_at).toISOString() : (userRow.updatedAt?.toISOString?.() || null),
+    lastLoginAt: userRow.last_login_at ? new Date(userRow.last_login_at).toISOString() : (userRow.lastLoginAt?.toISOString?.() || null),
   };
-
-  agents.set(admin.id, admin);
-  // Dados agora estão no banco de dados PostgreSQL - não precisa salvar em arquivo
-  logger.info(`[AuthService] Agente admin padrão criado (username: admin, password: Admin123!, tenantId: ${tenantId})`);
 }
 
-// Inicializa o serviço ao carregar o módulo
-initialize();
+async function ensureDefaultAdminIfEmpty() {
+  const UserModel = typeof User === 'function' ? User() : User;
 
-/**
- * Limpa sessões expiradas.
- */
-function cleanupExpiredSessions() {
+  const count = await UserModel.count();
+  if (count > 0) return;
+
+  logger.warn('[AuthService] Nenhum usuário encontrado. Criando admin padrão (admin/Admin123!)');
+
   const now = new Date();
-  let cleaned = 0;
+  const passwordHash = hashPassword('Admin123!');
 
-  for (const [token, session] of sessions.entries()) {
-    const expiresAt = new Date(session.expiresAt);
-    if (expiresAt <= now) {
-      sessions.delete(token);
-      cleaned++;
+  await UserModel.create({
+    username: 'admin',
+    name: 'Administrador',
+    email: 'admin@example.com',
+    password_hash: passwordHash,
+    role: 'owner',
+    is_active: true,
+    status: 'active',
+    tenant_key: 'tenant-demo',
+    is_superadmin: false,
+    mfa_enabled: false,
+    last_login_at: null,
+  });
+
+  // O cache será preenchido pelo load subsequente na initialize()
+}
+
+async function loadCachesFromDb() {
+  const UserModel = typeof User === 'function' ? User() : User;
+  const SessionModel = typeof Session === 'function' ? Session() : Session;
+
+  agents.clear();
+  sessions.clear();
+
+  const users = await UserModel.findAll();
+  for (const u of users) {
+    const agentSafe = buildAgentFromUserRow(u);
+    agents.set(u.id, {
+      ...agentSafe,
+      // Campos internos
+      _passwordHash: u.password_hash,
+      // Campos de convite/reset (não expor)
+      invitationToken: u.invitation_token || null,
+      invitationExpiresAt: u.invitation_expires_at ? new Date(u.invitation_expires_at).toISOString() : null,
+      passwordResetToken: u.password_reset_token || null,
+      passwordResetExpiresAt: u.password_reset_expires_at ? new Date(u.password_reset_expires_at).toISOString() : null,
+    });
+  }
+
+  const now = new Date();
+  const activeSessions = await SessionModel.findAll();
+  for (const s of activeSessions) {
+    const expiresAt = new Date(s.expires_at);
+    if (expiresAt <= now) continue;
+
+    sessions.set(s.token, {
+      token: s.token,
+      agentId: s.user_id,
+      username: s.agent_snapshot?.username || null,
+      createdAt: s.created_at ? new Date(s.created_at).toISOString() : (s.createdAt?.toISOString?.() || null),
+      expiresAt: expiresAt.toISOString(),
+      lastActivityAt: new Date(s.last_activity_at).toISOString(),
+      ipAddress: s.ip_address || 'unknown',
+      userAgent: s.user_agent || 'unknown',
+      tenantKey: s.tenant_key || null,
+      agentSnapshot: s.agent_snapshot || {},
+    });
+  }
+}
+
+/**
+ * Inicializa o AuthService carregando cache do PostgreSQL.
+ * Deve ser chamado após connect+migrations.
+ */
+async function initialize() {
+  if (initialized) return;
+  if (initializingPromise) return initializingPromise;
+
+  initializingPromise = (async () => {
+    if (!dbAvailable()) {
+      // Em testes/unit sem DB, mantém apenas em memória (sem persistência).
+      agents.clear();
+      sessions.clear();
+      initialized = true;
+      return;
     }
-  }
 
-  if (cleaned > 0) {
-    logger.debug(`[AuthService] Limpeza de sessões: ${cleaned} sessão(ões) expirada(s) removida(s)`);
-    // Dados agora estão no banco de dados PostgreSQL
-  }
+    await ensureDefaultAdminIfEmpty();
+    await loadCachesFromDb();
+
+    initialized = true;
+    logger.info('[AuthService] ✅ Cache carregado do PostgreSQL', {
+      agents: agents.size,
+      sessions: sessions.size,
+    });
+  })();
+
+  return initializingPromise;
 }
 
-/**
- * Limpa sessões inativas (timeout de inatividade).
- */
-function cleanupInactiveSessionsPeriodic() {
-  const removed = cleanupInactiveSessions();
-  if (removed > 0) {
-    logger.debug(`[AuthService] Limpeza de inatividade: ${removed} sessão(ões) removida(s)`);
-  }
-}
+// ---------------------------------------------------------------------------
+// API: Agents (DB-first)
+// ---------------------------------------------------------------------------
 
-// Limpa sessões expiradas a cada hora
-setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
-
-// Limpa sessões inativas a cada 5 minutos
-setInterval(cleanupInactiveSessionsPeriodic, 5 * 60 * 1000);
-
-/**
- * Cria um novo agente.
- *
- * @param {Object} params
- * @param {string} params.tenantId - ID do tenant (obrigatório)
- * @param {string} params.username - Nome de usuário (único)
- * @param {string} params.email - Email do agente
- * @param {string} params.password - Senha em texto plano
- * @param {string} params.role - Papel (admin, supervisor, agent)
- * @param {string} params.name - Nome completo
- * @returns {{success: boolean, agent?: Agent, error?: string}}
- */
-function createAgent({ tenantId, username, email, password, role = 'agent', name }) {
-  // Validações
-  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+async function createAgent({ tenantId, username, email, password, role, name }) {
+  if (!tenantId || typeof tenantId !== 'string') {
     return { success: false, error: 'tenantId é obrigatório' };
   }
-
-  if (!username || typeof username !== 'string' || username.trim() === '') {
+  if (!username || typeof username !== 'string') {
     return { success: false, error: 'Username é obrigatório' };
   }
-
-  if (!email || typeof email !== 'string' || email.trim() === '') {
+  if (!email || typeof email !== 'string') {
     return { success: false, error: 'Email é obrigatório' };
   }
-
   if (!password || typeof password !== 'string' || password.length < 6) {
     return { success: false, error: 'Senha deve ter pelo menos 6 caracteres' };
   }
 
-  // Valida role (apenas roles novos são aceitos)
-  // Se role for 'agent' (legado), migra para 'operator'
-  if (role === 'agent') {
-    role = 'operator';
-  }
-  const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly'];
-  if (!validRoles.includes(role)) {
-    return { success: false, error: `Papel inválido. Use: ${validRoles.join(', ')}` };
+  const normalizedRole = normalizeRole(role || 'operator');
+
+  await initialize();
+
+  if (!dbAvailable()) {
+    // fallback de testes
+    const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date().toISOString();
+    const passwordHash = hashPassword(password);
+    const agent = {
+      id,
+      tenantId,
+      username: username.trim(),
+      email: email.trim(),
+      role: normalizedRole,
+      name: name || username.trim(),
+      active: true,
+      status: 'active',
+      mfaEnabled: false,
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: null,
+      _passwordHash: passwordHash,
+    };
+    agents.set(id, agent);
+    return { success: true, agent: toAgentSafe(agent) };
   }
 
-  // Verifica se username já existe no mesmo tenant
-  for (const agent of agents.values()) {
-    if (agent.tenantId === tenantId.trim() && agent.username.toLowerCase() === username.toLowerCase()) {
-      return { success: false, error: 'Username já existe neste tenant' };
-    }
-    if (agent.tenantId === tenantId.trim() && agent.email.toLowerCase() === email.toLowerCase()) {
-      return { success: false, error: 'Email já existe neste tenant' };
-    }
+  const UserModel = typeof User === 'function' ? User() : User;
+
+  // Evita duplicação
+  const existing = await UserModel.findOne({
+    where: {
+      // username e email são unique no schema
+      [UserModel.sequelize.constructor.Op.or]: [
+        UserModel.sequelize.where(
+          UserModel.sequelize.fn('lower', UserModel.sequelize.col('username')),
+          username.trim().toLowerCase()
+        ),
+        UserModel.sequelize.where(
+          UserModel.sequelize.fn('lower', UserModel.sequelize.col('email')),
+          email.trim().toLowerCase()
+        ),
+      ],
+    },
+  }).catch(() => null);
+
+  if (existing) {
+    return { success: false, error: 'Usuário já existe (username/email)' };
   }
 
-  // Cria agente
-  const { hash, salt } = hashPassword(password);
-  const now = new Date().toISOString();
-  const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const passwordHash = hashPassword(password);
+  const created = await UserModel.create({
+    tenant_key: tenantId,
+    username: username.trim(),
+    email: email.trim(),
+    name: name || username.trim(),
+    password_hash: passwordHash,
+    role: normalizedRole,
+    is_active: true,
+    status: 'active',
+    is_superadmin: false,
+    mfa_enabled: false,
+  });
 
   const agent = {
-    id,
-    tenantId: tenantId.trim(),
-    username: username.trim(),
-    email: email.trim().toLowerCase(),
-    passwordHash: hash,
-    salt,
-    role: role.trim(),
-    name: name || username.trim(),
-    active: true,
-    status: 'active',
-    mfaEnabled: false,
+    ...buildAgentFromUserRow(created),
+    _passwordHash: created.password_hash,
     invitationToken: null,
     invitationExpiresAt: null,
     passwordResetToken: null,
     passwordResetExpiresAt: null,
-    createdAt: now,
-    updatedAt: now,
-    lastLoginAt: null,
   };
+  agents.set(created.id, agent);
 
-  agents.set(id, agent);
-  // Dados agora estão no banco de dados PostgreSQL
-
-  // Remove senha do retorno
-  const { passwordHash, salt: _, ...agentSafe } = agent;
-
-  return { success: true, agent: agentSafe };
+  return { success: true, agent: toAgentSafe(agent) };
 }
 
-/**
- * Autentica um agente (login).
- *
- * @param {string} username - Nome de usuário
- * @param {string} password - Senha
- * @param {string} ipAddress - Endereço IP da requisição
- * @param {string} userAgent - User agent do navegador
- * @returns {{success: boolean, token?: string, agent?: Agent, error?: string}}
- */
-function login(username, password, ipAddress = 'unknown', userAgent = 'unknown') {
+async function listAgents(tenantId = null) {
+  await initialize();
+
+  if (!dbAvailable()) {
+    let list = Array.from(agents.values()).map(toAgentSafe);
+    if (tenantId) list = list.filter(a => a.tenantId === tenantId);
+    return list;
+  }
+
+  const UserModel = typeof User === 'function' ? User() : User;
+  const where = tenantId ? { tenant_key: tenantId } : {};
+  const rows = await UserModel.findAll({ where });
+  return rows.map(buildAgentFromUserRow);
+}
+
+async function getAgent(agentId) {
+  await initialize();
+  if (!agentId) return null;
+
+  if (!dbAvailable()) {
+    const a = agents.get(agentId);
+    return a ? toAgentSafe(a) : null;
+  }
+
+  const UserModel = typeof User === 'function' ? User() : User;
+  const row = await UserModel.findByPk(agentId);
+  return row ? buildAgentFromUserRow(row) : null;
+}
+
+async function updateAgent(agentId, updates = {}) {
+  if (!agentId) return { success: false, error: 'agentId é obrigatório' };
+  await initialize();
+
+  if (!dbAvailable()) {
+    const current = agents.get(agentId);
+    if (!current) return { success: false, error: 'Agente não encontrado' };
+    const next = { ...current, ...updates, updatedAt: new Date().toISOString() };
+    agents.set(agentId, next);
+    return { success: true, agent: toAgentSafe(next) };
+  }
+
+  const UserModel = typeof User === 'function' ? User() : User;
+  const row = await UserModel.findByPk(agentId);
+  if (!row) return { success: false, error: 'Agente não encontrado' };
+
+  const allowed = {};
+  if (typeof updates.name === 'string') allowed.name = updates.name;
+  if (typeof updates.email === 'string') allowed.email = updates.email;
+  if (typeof updates.username === 'string') allowed.username = updates.username;
+  if (typeof updates.role === 'string') allowed.role = normalizeRole(updates.role);
+  if (typeof updates.active === 'boolean') allowed.is_active = updates.active;
+  if (typeof updates.status === 'string') allowed.status = updates.status;
+  if (typeof updates.tenantId === 'string') allowed.tenant_key = updates.tenantId;
+
+  await row.update(allowed);
+
+  // Atualiza cache
+  const agent = {
+    ...buildAgentFromUserRow(row),
+    _passwordHash: row.password_hash,
+    invitationToken: row.invitation_token || null,
+    invitationExpiresAt: row.invitation_expires_at ? new Date(row.invitation_expires_at).toISOString() : null,
+    passwordResetToken: row.password_reset_token || null,
+    passwordResetExpiresAt: row.password_reset_expires_at ? new Date(row.password_reset_expires_at).toISOString() : null,
+  };
+  agents.set(row.id, agent);
+
+  return { success: true, agent: toAgentSafe(agent) };
+}
+
+async function deleteAgent(agentId) {
+  if (!agentId) return { success: false, error: 'agentId é obrigatório' };
+  await initialize();
+
+  if (!dbAvailable()) {
+    agents.delete(agentId);
+    return { success: true };
+  }
+
+  const UserModel = typeof User === 'function' ? User() : User;
+  const deleted = await UserModel.destroy({ where: { id: agentId } });
+  agents.delete(agentId);
+
+  // Remove sessões do cache (e DB via cascade de sessions.user_id)
+  for (const [token, sess] of sessions.entries()) {
+    if (sess.agentId === agentId) sessions.delete(token);
+  }
+
+  return deleted ? { success: true } : { success: false, error: 'Agente não encontrado' };
+}
+
+// ---------------------------------------------------------------------------
+// API: Sessões
+// ---------------------------------------------------------------------------
+
+async function cleanupOldSessions(agentId, maxSessionsToKeep) {
+  if (!dbAvailable()) return;
+  const SessionModel = typeof Session === 'function' ? Session() : Session;
+
+  const all = await SessionModel.findAll({
+    where: { user_id: agentId },
+    order: [['created_at', 'DESC']],
+  });
+
+  if (all.length <= maxSessionsToKeep) return;
+
+  const toDelete = all.slice(maxSessionsToKeep);
+  const tokens = toDelete.map(s => s.token);
+  await SessionModel.destroy({ where: { token: tokens } });
+  tokens.forEach(t => sessions.delete(t));
+}
+
+async function login(username, password, ipAddress = 'unknown', userAgent = 'unknown') {
   if (!username || !password) {
     return { success: false, error: 'Username e senha são obrigatórios' };
   }
 
-  // Busca agente por username
+  await initialize();
+
+  const usernameLower = String(username).trim().toLowerCase();
+
+  // Busca usuário no cache para validação rápida
   let agent = null;
   for (const a of agents.values()) {
-    if (a.username.toLowerCase() === username.toLowerCase()) {
+    if (a.username && a.username.toLowerCase() === usernameLower) {
+      agent = a;
+      break;
+    }
+    if (a.email && a.email.toLowerCase() === usernameLower) {
       agent = a;
       break;
     }
   }
 
-  if (!agent) {
+  // Se DB está disponível, confirma no DB (fonte de verdade)
+  if (dbAvailable()) {
+    const UserModel = typeof User === 'function' ? User() : User;
+    const sequelize = UserModel.sequelize;
+    const Op = sequelize.constructor.Op;
+
+    const row = await UserModel.findOne({
+      where: {
+        [Op.or]: [
+          sequelize.where(sequelize.fn('lower', sequelize.col('username')), usernameLower),
+          sequelize.where(sequelize.fn('lower', sequelize.col('email')), usernameLower),
+        ],
+      },
+    });
+
+    if (!row) return { success: false, error: 'Credenciais inválidas' };
+
+    agent = {
+      ...buildAgentFromUserRow(row),
+      _passwordHash: row.password_hash,
+      invitationToken: row.invitation_token || null,
+      invitationExpiresAt: row.invitation_expires_at ? new Date(row.invitation_expires_at).toISOString() : null,
+      passwordResetToken: row.password_reset_token || null,
+      passwordResetExpiresAt: row.password_reset_expires_at ? new Date(row.password_reset_expires_at).toISOString() : null,
+    };
+
+    // Atualiza cache do usuário
+    agents.set(row.id, agent);
+  }
+
+  if (!agent) return { success: false, error: 'Credenciais inválidas' };
+  if (!agent.active) return { success: false, error: 'Agente inativo' };
+
+  if (!verifyPassword(password, agent._passwordHash)) {
     return { success: false, error: 'Credenciais inválidas' };
   }
 
-  if (!agent.active) {
-    return { success: false, error: 'Agente inativo' };
+  // Remove sessões antigas antes de criar a nova
+  if (dbAvailable()) {
+    await cleanupOldSessions(agent.id, Math.max(1, MAX_SESSIONS_PER_AGENT - 1));
   }
 
-  // Verifica senha
-  if (!verifyPassword(password, agent.passwordHash, agent.salt)) {
-    return { success: false, error: 'Credenciais inválidas' };
-  }
-
-  // Remove sessões antigas do agente antes de criar nova (mantém apenas as mais recentes)
-  cleanupOldSessions(agent.id, MAX_SESSIONS_PER_AGENT - 1);
-
-  // Cria sessão
   const token = generateToken();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + TOKEN_EXPIRATION_HOURS * 60 * 60 * 1000);
 
-  const session = {
+  const agentSafe = toAgentSafe(agent);
+  const sessionObj = {
     token,
     agentId: agent.id,
     username: agent.username,
@@ -405,155 +511,81 @@ function login(username, password, ipAddress = 'unknown', userAgent = 'unknown')
     lastActivityAt: now.toISOString(),
     ipAddress,
     userAgent,
+    tenantKey: agent.tenantId,
+    agentSnapshot: agentSafe,
   };
 
-  sessions.set(token, session);
-  // Dados agora estão no banco de dados PostgreSQL
+  sessions.set(token, sessionObj);
 
-  // Atualiza último login do agente
-  agent.lastLoginAt = now.toISOString();
-  agent.updatedAt = now.toISOString();
-  // Dados agora estão no banco de dados PostgreSQL
+  if (dbAvailable()) {
+    const SessionModel = typeof Session === 'function' ? Session() : Session;
+    await SessionModel.create({
+      token,
+      user_id: agent.id,
+      tenant_key: agent.tenantId,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      agent_snapshot: agentSafe,
+      expires_at: expiresAt,
+      last_activity_at: now,
+    });
 
-  // Remove senha do retorno
-  const { passwordHash, salt, ...agentSafe } = agent;
+    // Atualiza last_login_at no usuário
+    const UserModel = typeof User === 'function' ? User() : User;
+    await UserModel.update(
+      { last_login_at: now },
+      { where: { id: agent.id } }
+    );
+  }
 
-  logger.info(`[AuthService] Login realizado: ${agent.username} (${agent.id})`);
-
+  logger.info('[AuthService] Login realizado', { username: agent.username, agentId: agent.id });
   return { success: true, token, agent: agentSafe };
 }
 
-/**
- * Faz logout (remove sessão).
- *
- * @param {string} token - Token da sessão
- * @returns {{success: boolean}}
- */
-function logout(token) {
-  if (!token) {
-    return { success: false, error: 'Token é obrigatório' };
-  }
+async function logout(token) {
+  if (!token) return { success: false, error: 'Token é obrigatório' };
+  await initialize();
 
-  const session = sessions.get(token);
-  if (session) {
-    sessions.delete(token);
-    // Dados agora estão no banco de dados PostgreSQL
-    logger.info(`[AuthService] Logout realizado: ${session.username} (${session.agentId})`);
+  sessions.delete(token);
+
+  if (dbAvailable()) {
+    const SessionModel = typeof Session === 'function' ? Session() : Session;
+    await SessionModel.destroy({ where: { token } });
   }
 
   return { success: true };
 }
 
-/**
- * Remove sessões antigas de um agente, mantendo apenas as mais recentes.
- *
- * @param {string} agentId - ID do agente
- * @param {number} maxSessions - Número máximo de sessões a manter
- * @returns {number} - Número de sessões removidas
- */
-function cleanupOldSessions(agentId, maxSessions) {
-  const agentSessions = [];
-  
-  // Coleta todas as sessões do agente
-  for (const [token, session] of sessions.entries()) {
-    if (session.agentId === agentId) {
-      agentSessions.push({ token, session, createdAt: new Date(session.createdAt) });
-    }
-  }
+async function logoutAllSessions(agentId) {
+  if (!agentId) return 0;
+  await initialize();
 
-  // Se não exceder o limite, não faz nada
-  if (agentSessions.length <= maxSessions) {
-    return 0;
-  }
-
-  // Ordena por data de criação (mais antigas primeiro)
-  agentSessions.sort((a, b) => a.createdAt - b.createdAt);
-
-  // Remove as sessões mais antigas
-  const toRemove = agentSessions.length - maxSessions;
   let removed = 0;
-  
-  for (let i = 0; i < toRemove; i++) {
-    sessions.delete(agentSessions[i].token);
-    removed++;
-  }
-
-  if (removed > 0) {
-    // Dados agora estão no banco de dados PostgreSQL
-    logger.debug(`[AuthService] ${removed} sessão(ões) antiga(s) removida(s) do agente ${agentId}`);
-  }
-
-  return removed;
-}
-
-/**
- * Remove todas as sessões de um agente.
- *
- * @param {string} agentId - ID do agente
- * @returns {number} - Número de sessões removidas
- */
-function logoutAllSessions(agentId) {
-  let removed = 0;
-  
-  for (const [token, session] of sessions.entries()) {
-    if (session.agentId === agentId) {
+  for (const [token, s] of sessions.entries()) {
+    if (s.agentId === agentId) {
       sessions.delete(token);
       removed++;
     }
   }
 
-  if (removed > 0) {
-    // Dados agora estão no banco de dados PostgreSQL
-    logger.info(`[AuthService] Todas as sessões removidas do agente ${agentId}: ${removed} sessão(ões)`);
+  if (dbAvailable()) {
+    const SessionModel = typeof Session === 'function' ? Session() : Session;
+    await SessionModel.destroy({ where: { user_id: agentId } });
   }
 
   return removed;
 }
 
 /**
- * Verifica e remove sessões inativas (timeout de inatividade).
- *
- * @param {string} agentId - ID do agente (opcional, se não fornecido verifica todos)
- * @returns {number} - Número de sessões removidas por inatividade
- */
-function cleanupInactiveSessions(agentId = null) {
-  const now = new Date();
-  const timeoutMs = INACTIVITY_TIMEOUT_MINUTES * 60 * 1000;
-  let removed = 0;
-
-  for (const [token, session] of sessions.entries()) {
-    // Filtra por agente se fornecido
-    if (agentId && session.agentId !== agentId) {
-      continue;
-    }
-
-    // Verifica timeout de inatividade
-    const lastActivity = new Date(session.lastActivityAt);
-    const inactiveTime = now - lastActivity;
-
-    if (inactiveTime > timeoutMs) {
-      sessions.delete(token);
-      removed++;
-      logger.debug(`[AuthService] Sessão removida por inatividade: ${session.username} (${Math.round(inactiveTime / 60000)} min inativo)`);
-    }
-  }
-
-  if (removed > 0) {
-    // Dados agora estão no banco de dados PostgreSQL
-  }
-
-  return removed;
-}
-
-/**
- * Valida um token e retorna o agente associado.
- *
- * @param {string} token - Token da sessão
- * @returns {{valid: boolean, agent?: Agent, session?: Session, error?: string}}
+ * Valida token de forma SÍNCRONA usando cache em memória.
+ * (O middleware depende disso.)
  */
 function validateToken(token) {
   if (!token || typeof token !== 'string') {
     return { valid: false, error: 'Token inválido' };
+  }
+  if (!initialized) {
+    return { valid: false, error: 'AuthService ainda não inicializado' };
   }
 
   const session = sessions.get(token);
@@ -561,291 +593,135 @@ function validateToken(token) {
     return { valid: false, error: 'Sessão não encontrada' };
   }
 
-  // Verifica se expirou
-  const expiresAt = new Date(session.expiresAt);
   const now = new Date();
+  const expiresAt = new Date(session.expiresAt);
   if (expiresAt <= now) {
     sessions.delete(token);
-    // Dados agora estão no banco de dados PostgreSQL
+    if (dbAvailable()) {
+      // best-effort async cleanup
+      const SessionModel = typeof Session === 'function' ? Session() : Session;
+      setImmediate(() => SessionModel.destroy({ where: { token } }).catch(() => {}));
+    }
     return { valid: false, error: 'Sessão expirada' };
   }
 
-  // Verifica timeout de inatividade
   const lastActivity = new Date(session.lastActivityAt);
   const inactiveTime = now - lastActivity;
   const timeoutMs = INACTIVITY_TIMEOUT_MINUTES * 60 * 1000;
-  
   if (inactiveTime > timeoutMs) {
     sessions.delete(token);
-    // Dados agora estão no banco de dados PostgreSQL
+    if (dbAvailable()) {
+      const SessionModel = typeof Session === 'function' ? Session() : Session;
+      setImmediate(() => SessionModel.destroy({ where: { token } }).catch(() => {}));
+    }
     return { valid: false, error: 'Sessão expirada por inatividade' };
   }
 
-  // Busca agente
-  const agent = agents.get(session.agentId);
-  if (!agent) {
-    sessions.delete(token);
-    // Dados agora estão no banco de dados PostgreSQL
-    return { valid: false, error: 'Agente não encontrado' };
-  }
-
-  if (!agent.active) {
-    sessions.delete(token);
-    // Dados agora estão no banco de dados PostgreSQL
-    return { valid: false, error: 'Agente inativo' };
-  }
-
-  // Atualiza última atividade
+  // Atualiza lastActivityAt (cache) e best-effort no DB
   session.lastActivityAt = now.toISOString();
-  // Dados agora estão no banco de dados PostgreSQL
+  sessions.set(token, session);
+  if (dbAvailable()) {
+    const SessionModel = typeof Session === 'function' ? Session() : Session;
+    setImmediate(() => SessionModel.update(
+      { last_activity_at: now },
+      { where: { token } }
+    ).catch(() => {}));
+  }
 
-  // Remove senha do retorno
-  const { passwordHash, salt, ...agentSafe } = agent;
-
-  return { valid: true, agent: agentSafe, session };
+  return { valid: true, agent: session.agentSnapshot, session };
 }
 
-/**
- * Lista todos os agentes (sem senhas).
- * 
- * @param {string} [tenantId] - Filtrar por tenant (opcional)
- * @returns {Agent[]}
- */
-function listAgents(tenantId = null) {
-  let agentsList = Array.from(agents.values());
-  
-  // Filtra por tenant se fornecido
-  if (tenantId) {
-    agentsList = agentsList.filter(agent => agent.tenantId === tenantId);
-  }
-  
-  return agentsList.map((agent) => {
-    const { passwordHash, salt, ...agentSafe } = agent;
-    return agentSafe;
-  });
-}
+// ---------------------------------------------------------------------------
+// RPA Token login
+// ---------------------------------------------------------------------------
 
-/**
- * Obtém um agente por ID (sem senha).
- *
- * @param {string} agentId
- * @returns {Agent|null}
- */
-function getAgent(agentId) {
-  const agent = agents.get(agentId);
-  if (!agent) return null;
-
-  const { passwordHash, salt, ...agentSafe } = agent;
-  return agentSafe;
-}
-
-/**
- * Atualiza um agente.
- *
- * @param {string} agentId
- * @param {Object} updates - Campos para atualizar
- * @returns {{success: boolean, agent?: Agent, error?: string}}
- */
-function updateAgent(agentId, updates) {
-  const agent = agents.get(agentId);
-  if (!agent) {
-    return { success: false, error: 'Agente não encontrado' };
-  }
-
-  // Atualiza campos permitidos
-  if (updates.name !== undefined) {
-    agent.name = String(updates.name).trim();
-  }
-
-  if (updates.email !== undefined) {
-    const newEmail = String(updates.email).trim().toLowerCase();
-    // Verifica se email já existe em outro agente
-    for (const a of agents.values()) {
-      if (a.id !== agentId && a.email === newEmail) {
-        return { success: false, error: 'Email já existe' };
-      }
-    }
-    agent.email = newEmail;
-  }
-
-  if (updates.role !== undefined) {
-    // Valida role (apenas roles novos são aceitos)
-    const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly'];
-    if (!validRoles.includes(updates.role)) {
-      return { success: false, error: `Papel inválido. Use: ${validRoles.join(', ')}` };
-    }
-    agent.role = updates.role;
-  }
-
-  if (updates.status !== undefined) {
-    const validStatuses = ['pending', 'active', 'suspended', 'inactive'];
-    if (!validStatuses.includes(updates.status)) {
-      return { success: false, error: `Status inválido. Use: ${validStatuses.join(', ')}` };
-    }
-    agent.status = updates.status;
-    agent.active = updates.status === 'active';
-  }
-
-  if (updates.mfaEnabled !== undefined) {
-    agent.mfaEnabled = Boolean(updates.mfaEnabled);
-  }
-
-  if (updates.active !== undefined) {
-    agent.active = Boolean(updates.active);
-  }
-
-  if (updates.tenantId !== undefined) {
-    const newTenantId = String(updates.tenantId).trim();
-    if (newTenantId === '') {
-      return { success: false, error: 'tenantId não pode ser vazio' };
-    }
-    agent.tenantId = newTenantId;
-  }
-
-  if (updates.password !== undefined) {
-    if (typeof updates.password !== 'string' || updates.password.length < 6) {
-      return { success: false, error: 'Senha deve ter pelo menos 6 caracteres' };
-    }
-    const { hash, salt } = hashPassword(updates.password);
-    agent.passwordHash = hash;
-    agent.salt = salt;
-  }
-
-  agent.updatedAt = new Date().toISOString();
-  // Dados agora estão no banco de dados PostgreSQL
-
-  const { passwordHash, salt, ...agentSafe } = agent;
-  return { success: true, agent: agentSafe };
-}
-
-/**
- * Remove um agente.
- *
- * @param {string} agentId
- * @returns {{success: boolean, error?: string}}
- */
-function deleteAgent(agentId) {
-  const agent = agents.get(agentId);
-  if (!agent) {
-    return { success: false, error: 'Agente não encontrado' };
-  }
-
-  // Não permite remover o último admin
-  if (agent.role === 'admin') {
-    const adminCount = Array.from(agents.values()).filter((a) => a.role === 'admin' && a.active).length;
-    if (adminCount <= 1) {
-      return { success: false, error: 'Não é possível remover o último administrador' };
-    }
-  }
-
-  // Remove todas as sessões do agente
-  for (const [token, session] of sessions.entries()) {
-    if (session.agentId === agentId) {
-      sessions.delete(token);
-    }
-  }
-  // Dados agora estão no banco de dados PostgreSQL
-
-  agents.delete(agentId);
-  // Dados agora estão no banco de dados PostgreSQL
-
-  logger.info(`[AuthService] Agente removido: ${agent.username} (${agentId})`);
-
-  return { success: true };
-}
-
-/**
- * Autentica usando token RPA exclusivo.
- * 
- * @param {string} rpaToken - Token RPA
- * @param {string} ipAddress - Endereço IP da requisição
- * @param {string} userAgent - User agent
- * @returns {{success: boolean, token?: string, agent?: Agent, error?: string}}
- */
-function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown') {
+async function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown') {
   if (!rpaToken || typeof rpaToken !== 'string') {
     return { success: false, error: 'Token RPA é obrigatório' };
   }
 
-  // Carrega token RPA esperado
-  let rpaTokenManager;
-  try {
-    rpaTokenManager = require('../../tests/rpa/utils/rpaTokenManager');
-  } catch (error) {
-    // CRÍTICO: Não aceita tokens sem validação, mesmo em desenvolvimento
-    logger.error('[AuthService] CRÍTICO: Módulo rpaTokenManager não encontrado. Validação de token RPA indisponível.', {
-      error: error.message,
-      errorStack: error.stack,
-      environment: process.env.NODE_ENV,
-    });
-    // Sempre falha explicitamente - não há fallback seguro para autenticação
-    return { 
-      success: false, 
-      error: 'Sistema de validação de token RPA não disponível. Autenticação não pode ser realizada.',
-      critical: true,
-    };
-  }
-
   let expectedToken = null;
-  if (rpaTokenManager) {
+  try {
+    const rpaTokenManager = require('../../tests/rpa/utils/rpaTokenManager');
     expectedToken = rpaTokenManager.loadRpaToken();
-    
     if (!expectedToken) {
       return { success: false, error: 'Token RPA não configurado no servidor' };
     }
-
-    // Verifica se o token corresponde
     if (rpaToken !== expectedToken) {
-      logger.warn(`[AuthService] Tentativa de login RPA com token inválido de ${ipAddress}`);
+      logger.warn('[AuthService] Tentativa de login RPA com token inválido', { ipAddress });
       return { success: false, error: 'Token RPA inválido' };
     }
-
-    // Verifica se o token é válido (não expirado)
     if (!rpaTokenManager.isTokenValid(rpaToken)) {
       return { success: false, error: 'Token RPA expirado ou inválido' };
     }
+  } catch (err) {
+    logger.error('[AuthService] CRÍTICO: rpaTokenManager indisponível', { error: err.message });
+    return { success: false, error: 'Sistema de validação de token RPA não disponível' };
   }
 
-  // Busca ou cria agente RPA especial
+  await initialize();
+
+  // Busca ou cria usuário RPA
+  const username = 'rpa';
+  const email = 'rpa@local';
+
   let rpaAgent = null;
-  const rpaUsername = 'rpa-automation';
-  
-  // Busca agente RPA existente
-  for (const agent of agents.values()) {
-    if (agent.username === rpaUsername) {
-      rpaAgent = agent;
+  for (const a of agents.values()) {
+    if (a.username === username) {
+      rpaAgent = a;
       break;
     }
   }
 
-  // Se não existe, cria agente RPA
-  if (!rpaAgent) {
-    const createResult = createAgent({
-      tenantId: 'system',
-      username: rpaUsername,
-      email: 'rpa@automation.local',
-      password: crypto.randomBytes(32).toString('hex'), // Senha aleatória (não será usada)
-      role: 'operator', // RPA Automation usa role operator
-      name: 'RPA Automation',
-    });
-    
-    if (createResult.success) {
-      rpaAgent = agents.get(createResult.agent.id);
+  if (dbAvailable()) {
+    const UserModel = typeof User === 'function' ? User() : User;
+    const row = await UserModel.findOne({ where: { username } });
+    if (!row) {
+      const created = await UserModel.create({
+        username,
+        email,
+        name: 'RPA Automation',
+        password_hash: hashPassword(crypto.randomBytes(16).toString('hex')),
+        role: 'operator',
+        is_active: true,
+        status: 'active',
+        tenant_key: 'tenant-demo',
+        is_superadmin: false,
+        mfa_enabled: false,
+      });
+      rpaAgent = { ...buildAgentFromUserRow(created), _passwordHash: created.password_hash };
+      agents.set(created.id, rpaAgent);
     } else {
-      return { success: false, error: 'Erro ao criar agente RPA' };
+      rpaAgent = { ...buildAgentFromUserRow(row), _passwordHash: row.password_hash };
+      agents.set(row.id, rpaAgent);
     }
+  } else if (!rpaAgent) {
+    const id = `rpa-${Date.now()}`;
+    rpaAgent = {
+      id,
+      tenantId: 'tenant-demo',
+      username,
+      email,
+      role: 'operator',
+      name: 'RPA Automation',
+      active: true,
+      status: 'active',
+      mfaEnabled: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLoginAt: null,
+      _passwordHash: hashPassword('noop'),
+    };
+    agents.set(id, rpaAgent);
   }
 
-  if (!rpaAgent.active) {
-    return { success: false, error: 'Agente RPA inativo' };
-  }
-
-  // Cria sessão
+  // Cria sessão SEM depender de senha (RPA já autenticou via token)
   const token = generateToken();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + TOKEN_EXPIRATION_HOURS * 60 * 60 * 1000);
+  const agentSafe = toAgentSafe(rpaAgent);
 
-  const session = {
+  const sessionObj = {
     token,
     agentId: rpaAgent.id,
     username: rpaAgent.username,
@@ -854,284 +730,187 @@ function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown
     lastActivityAt: now.toISOString(),
     ipAddress,
     userAgent: `RPA/${userAgent}`,
+    tenantKey: rpaAgent.tenantId,
+    agentSnapshot: agentSafe,
   };
 
-  sessions.set(token, session);
-  // Dados agora estão no banco de dados PostgreSQL
+  sessions.set(token, sessionObj);
 
-  // Atualiza último login
-  rpaAgent.lastLoginAt = now.toISOString();
-  rpaAgent.updatedAt = now.toISOString();
-  // Dados agora estão no banco de dados PostgreSQL
+  if (dbAvailable()) {
+    const SessionModel = typeof Session === 'function' ? Session() : Session;
+    await SessionModel.create({
+      token,
+      user_id: rpaAgent.id,
+      tenant_key: rpaAgent.tenantId,
+      ip_address: ipAddress,
+      user_agent: `RPA/${userAgent}`,
+      agent_snapshot: agentSafe,
+      expires_at: expiresAt,
+      last_activity_at: now,
+    });
+  }
 
-  // Remove senha do retorno
-  const { passwordHash, salt, ...agentSafe } = rpaAgent;
-
-  logger.info(`[AuthService] Login RPA realizado: ${rpaAgent.username} (${rpaAgent.id})`);
-
+  logger.info('[AuthService] Login RPA realizado', { username: rpaAgent.username, agentId: rpaAgent.id });
   return { success: true, token, agent: agentSafe };
 }
 
-/**
- * Cria um convite para um novo usuário.
- *
- * @param {Object} params
- * @param {string} params.tenantId - ID do tenant
- * @param {string} params.email - Email do usuário
- * @param {string} params.role - Papel (owner, admin, manager, operator, auditor, readonly)
- * @param {string} [params.name] - Nome do usuário
- * @returns {{success: boolean, invitationToken?: string, error?: string}}
- */
-function inviteUser({ tenantId, email, role = 'operator', name }) {
-  if (!tenantId || !email) {
-    return { success: false, error: 'tenantId e email são obrigatórios' };
+// ---------------------------------------------------------------------------
+// Convites / Reset de Senha
+// ---------------------------------------------------------------------------
+
+async function inviteUser({ tenantId, email, role = 'operator', name = null, username = null }) {
+  if (!email) return { success: false, error: 'Email é obrigatório' };
+  if (!tenantId) return { success: false, error: 'tenantId é obrigatório' };
+
+  await initialize();
+
+  const token = crypto.randomBytes(24).toString('hex');
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  if (!dbAvailable()) {
+    return { success: false, error: 'PostgreSQL é obrigatório para convites' };
   }
 
-  // Verifica se email já existe no tenant
-  for (const agent of agents.values()) {
-    if (agent.tenantId === tenantId && agent.email.toLowerCase() === email.toLowerCase()) {
-      return { success: false, error: 'Email já existe neste tenant' };
-    }
+  const UserModel = typeof User === 'function' ? User() : User;
+
+  const existing = await UserModel.findOne({ where: { email } });
+  if (existing) {
+    return { success: false, error: 'Usuário já existe' };
   }
 
-  // Gera token de convite
-  const invitationToken = generateToken();
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 dias
-
-  // Cria agente com status pending
-  const agentId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  const agent = {
-    id: agentId,
-    tenantId: tenantId.trim(),
-    username: email.split('@')[0] + '-' + Date.now().toString(36).slice(2, 6), // Username temporário
-    email: email.trim().toLowerCase(),
-    passwordHash: '', // Será definido quando aceitar convite
-    salt: '',
-    role: role.trim(),
+  const created = await UserModel.create({
+    tenant_key: tenantId,
+    username: username || email.split('@')[0],
+    email,
     name: name || email.split('@')[0],
-    active: false,
+    password_hash: hashPassword(crypto.randomBytes(16).toString('hex')),
+    role: normalizeRole(role),
+    is_active: false,
     status: 'pending',
-    mfaEnabled: false,
-    invitationToken,
+    is_superadmin: false,
+    mfa_enabled: false,
+    invitation_token: token,
+    invitation_expires_at: expiresAt,
+  });
+
+  // Atualiza cache
+  agents.set(created.id, {
+    ...buildAgentFromUserRow(created),
+    _passwordHash: created.password_hash,
+    invitationToken: token,
     invitationExpiresAt: expiresAt.toISOString(),
-    passwordResetToken: null,
-    passwordResetExpiresAt: null,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-    lastLoginAt: null,
-  };
+  });
 
-  agents.set(agentId, agent);
-  // Dados agora estão no banco de dados PostgreSQL
-
-  logger.info(`[AuthService] Convite criado: ${email} (${tenantId})`);
-
-  return { success: true, invitationToken, agentId };
+  return { success: true, agentId: created.id, invitationToken: token, invitationExpiresAt: expiresAt.toISOString() };
 }
 
-/**
- * Aceita convite e define senha.
- *
- * @param {string} invitationToken - Token do convite
- * @param {string} password - Nova senha
- * @param {string} username - Nome de usuário escolhido
- * @returns {{success: boolean, agent?: Agent, token?: string, error?: string}}
- */
-function acceptInvitation(invitationToken, password, username) {
+async function acceptInvitation(invitationToken, password, username) {
   if (!invitationToken || !password || !username) {
-    return { success: false, error: 'Token, senha e username são obrigatórios' };
+    return { success: false, error: 'invitationToken, password e username são obrigatórios' };
   }
 
-  // Busca agente pelo token
-  let agent = null;
-  for (const a of agents.values()) {
-    if (a.invitationToken === invitationToken) {
-      agent = a;
-      break;
-    }
+  await initialize();
+  if (!dbAvailable()) return { success: false, error: 'PostgreSQL é obrigatório para aceitar convite' };
+
+  const UserModel = typeof User === 'function' ? User() : User;
+
+  const row = await UserModel.findOne({ where: { invitation_token: invitationToken } });
+  if (!row) return { success: false, error: 'Convite inválido' };
+
+  if (row.invitation_expires_at && new Date(row.invitation_expires_at) < new Date()) {
+    return { success: false, error: 'Convite expirado' };
   }
 
-  if (!agent) {
-    return { success: false, error: 'Convite inválido' };
+  await row.update({
+    username,
+    password_hash: hashPassword(password),
+    is_active: true,
+    status: 'active',
+    invitation_token: null,
+    invitation_expires_at: null,
+  });
+
+  // Atualiza cache e faz login
+  const agent = { ...buildAgentFromUserRow(row), _passwordHash: row.password_hash };
+  agents.set(row.id, agent);
+
+  const loginResult = await login(username, password);
+  if (!loginResult.success) {
+    return { success: false, error: loginResult.error || 'Falha ao autenticar após aceitar convite' };
   }
 
-  // Verifica se expirou
-  if (agent.invitationExpiresAt) {
-    const expiresAt = new Date(agent.invitationExpiresAt);
-    if (new Date() > expiresAt) {
-      return { success: false, error: 'Convite expirado' };
-    }
-  }
-
-  // Verifica se username já existe no tenant
-  for (const a of agents.values()) {
-    if (a.tenantId === agent.tenantId && a.id !== agent.id && a.username.toLowerCase() === username.toLowerCase()) {
-      return { success: false, error: 'Username já existe neste tenant' };
-    }
-  }
-
-  // Define senha
-  const { hash, salt } = hashPassword(password);
-  agent.passwordHash = hash;
-  agent.salt = salt;
-  agent.username = username.trim();
-  agent.status = 'active';
-  agent.active = true;
-  agent.invitationToken = null;
-  agent.invitationExpiresAt = null;
-  agent.updatedAt = new Date().toISOString();
-
-  agents.set(agent.id, agent);
-  // Dados agora estão no banco de dados PostgreSQL
-
-  // Cria sessão
-  const token = generateToken();
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + TOKEN_EXPIRATION_HOURS * 60 * 60 * 1000);
-
-  const session = {
-    token,
-    agentId: agent.id,
-    username: agent.username,
-    createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString(),
-    lastActivityAt: now.toISOString(),
-    ipAddress: 'unknown',
-    userAgent: 'unknown',
-  };
-
-  sessions.set(token, session);
-  // Dados agora estão no banco de dados PostgreSQL
-
-  const { passwordHash, salt: _, ...agentSafe } = agent;
-
-  logger.info(`[AuthService] Convite aceito: ${agent.email} (${agent.id})`);
-
-  return { success: true, agent: agentSafe, token };
+  return { success: true, token: loginResult.token, agent: loginResult.agent };
 }
 
-/**
- * Solicita reset de senha.
- *
- * @param {string} email - Email do usuário
- * @returns {{success: boolean, resetToken?: string, error?: string}}
- */
-function requestPasswordReset(email) {
-  if (!email) {
-    return { success: false, error: 'Email é obrigatório' };
-  }
+async function requestPasswordReset(email) {
+  if (!email) return { success: false, error: 'Email é obrigatório' };
 
-  // Busca agente por email
-  let agent = null;
-  for (const a of agents.values()) {
-    if (a.email.toLowerCase() === email.toLowerCase()) {
-      agent = a;
-      break;
-    }
-  }
+  await initialize();
+  if (!dbAvailable()) return { success: false, error: 'PostgreSQL é obrigatório para reset de senha' };
 
-  if (!agent) {
-    // Por segurança, não revela se email existe ou não
-    return { success: true, message: 'Se o email existir, um link de reset será enviado' };
-  }
+  const UserModel = typeof User === 'function' ? User() : User;
+  const row = await UserModel.findOne({ where: { email } });
+  if (!row) return { success: true };
 
-  // Gera token de reset
-  const resetToken = generateToken();
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
+  const resetToken = crypto.randomBytes(24).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  await row.update({
+    password_reset_token: resetToken,
+    password_reset_expires_at: expiresAt,
+  });
 
-  agent.passwordResetToken = resetToken;
-  agent.passwordResetExpiresAt = expiresAt.toISOString();
-  agent.updatedAt = now.toISOString();
-
-  agents.set(agent.id, agent);
-  // Dados agora estão no banco de dados PostgreSQL
-
-  logger.info(`[AuthService] Reset de senha solicitado: ${email}`);
-
-  // TODO: Enviar email com link de reset
-  return { success: true, resetToken, message: 'Link de reset enviado por email' };
+  // Não retornamos token publicamente por segurança
+  return { success: true };
 }
 
-/**
- * Reseta senha usando token.
- *
- * @param {string} resetToken - Token de reset
- * @param {string} newPassword - Nova senha
- * @returns {{success: boolean, error?: string}}
- */
-function resetPassword(resetToken, newPassword) {
+async function resetPassword(resetToken, newPassword) {
   if (!resetToken || !newPassword) {
-    return { success: false, error: 'Token e nova senha são obrigatórios' };
+    return { success: false, error: 'resetToken e newPassword são obrigatórios' };
   }
 
-  if (newPassword.length < 6) {
-    return { success: false, error: 'Senha deve ter pelo menos 6 caracteres' };
+  await initialize();
+  if (!dbAvailable()) return { success: false, error: 'PostgreSQL é obrigatório para reset de senha' };
+
+  const UserModel = typeof User === 'function' ? User() : User;
+  const row = await UserModel.findOne({ where: { password_reset_token: resetToken } });
+  if (!row) return { success: false, error: 'Token inválido' };
+
+  if (row.password_reset_expires_at && new Date(row.password_reset_expires_at) < new Date()) {
+    return { success: false, error: 'Token expirado' };
   }
 
-  // Busca agente pelo token
-  let agent = null;
-  for (const a of agents.values()) {
-    if (a.passwordResetToken === resetToken) {
-      agent = a;
-      break;
-    }
-  }
+  await row.update({
+    password_hash: hashPassword(newPassword),
+    password_reset_token: null,
+    password_reset_expires_at: null,
+  });
 
-  if (!agent) {
-    return { success: false, error: 'Token de reset inválido' };
-  }
-
-  // Verifica se expirou
-  if (agent.passwordResetExpiresAt) {
-    const expiresAt = new Date(agent.passwordResetExpiresAt);
-    if (new Date() > expiresAt) {
-      return { success: false, error: 'Token de reset expirado' };
-    }
-  }
-
-  // Define nova senha
-  const { hash, salt } = hashPassword(newPassword);
-  agent.passwordHash = hash;
-  agent.salt = salt;
-  agent.passwordResetToken = null;
-  agent.passwordResetExpiresAt = null;
-  agent.updatedAt = new Date().toISOString();
-
-  agents.set(agent.id, agent);
-  // Dados agora estão no banco de dados PostgreSQL
-
-  // Remove todas as sessões do agente (força novo login)
-  logoutAllSessions(agent.id);
-
-  logger.info(`[AuthService] Senha resetada: ${agent.email} (${agent.id})`);
+  // Atualiza cache
+  const agent = { ...buildAgentFromUserRow(row), _passwordHash: row.password_hash };
+  agents.set(row.id, agent);
 
   return { success: true };
 }
 
 module.exports = {
+  initialize,
+  // agents
   createAgent,
-  login,
-  logout,
-  logoutAllSessions,
-  validateToken,
-  loginWithRpaToken,
   listAgents,
   getAgent,
   updateAgent,
   deleteAgent,
+  // sessions
+  login,
+  logout,
+  logoutAllSessions,
+  validateToken,
+  // rpa
+  loginWithRpaToken,
+  // invite/reset
   inviteUser,
   acceptInvitation,
   requestPasswordReset,
   resetPassword,
-  // Funções internas para testes
-  _internal: {
-    hashPassword,
-    verifyPassword,
-    generateToken,
-    cleanupOldSessions,
-    cleanupInactiveSessions,
-  },
 };
 

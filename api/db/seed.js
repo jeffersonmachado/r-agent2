@@ -127,17 +127,19 @@ async function ensureSuperAdmin() {
   // Gera senha aleatória se não fornecida
   const password = process.env.SUPERADMIN_PASSWORD || crypto.randomBytes(16).toString('hex');
   
-  // Hash da senha (simples - em produção usar bcrypt)
-  const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+  // Hash da senha (compatível com authService: sha256:salt:hash)
+  const salt = crypto.randomBytes(16).toString('hex');
+  const passwordHash = `sha256:${salt}:${crypto.createHash('sha256').update(password + salt).digest('hex')}`;
   
   const userId = uuidv4();
   await sequelize.query(
     `INSERT INTO users (
-      id, email, password_hash, name, role, is_active
-    ) VALUES (:id, :email, :passwordHash, :name, :role, :isActive)
+      id, email, password_hash, name, username, role, is_active, is_superadmin
+    ) VALUES (:id, :email, :passwordHash, :name, :username, :role, :isActive, :isSuperadmin)
     ON CONFLICT (email) DO UPDATE SET
       role = EXCLUDED.role,
       is_active = EXCLUDED.is_active,
+      is_superadmin = EXCLUDED.is_superadmin,
       updated_at = CURRENT_TIMESTAMP`,
     {
       replacements: {
@@ -145,8 +147,10 @@ async function ensureSuperAdmin() {
         email,
         passwordHash,
         name: process.env.SUPERADMIN_NAME || 'Super Admin',
-        role: 'superadmin',
+        username: process.env.SUPERADMIN_USERNAME || email.split('@')[0],
+        role: 'super_admin',
         isActive: true,
+        isSuperadmin: true,
       },
       type: sequelize.constructor.QueryTypes.INSERT,
     }

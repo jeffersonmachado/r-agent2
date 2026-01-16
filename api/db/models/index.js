@@ -10,6 +10,7 @@ const getTenantSetting = require('./TenantSetting');
 const getTenantAISetting = require('./TenantAISetting');
 const getTenantAICredential = require('./TenantAICredential');
 const getAuditLog = require('./AuditLog');
+const getSession = require('./Session');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -19,6 +20,7 @@ const TenantSetting = () => getTenantSetting();
 const TenantAISetting = () => getTenantAISetting();
 const TenantAICredential = () => getTenantAICredential();
 const AuditLog = () => getAuditLog();
+const Session = () => getSession();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -35,6 +37,7 @@ function defineRelationships() {
   const TenantAISettingModel = TenantAISetting();
   const TenantAICredentialModel = TenantAICredential();
   const AuditLogModel = AuditLog();
+  const SessionModel = Session();
 
   // Tenant <-> User (many-to-many via TenantUser)
   TenantModel.belongsToMany(UserModel, {
@@ -100,6 +103,16 @@ function defineRelationships() {
     foreignKey: 'actor_user_id',
     as: 'actor',
   });
+
+  // User -> Session (one-to-many)
+  UserModel.hasMany(SessionModel, {
+    foreignKey: 'user_id',
+    as: 'sessions',
+  });
+  SessionModel.belongsTo(UserModel, {
+    foreignKey: 'user_id',
+    as: 'user',
+  });
 }
 
 module.exports = {
@@ -110,6 +123,7 @@ module.exports = {
   TenantAISetting,
   TenantAICredential,
   AuditLog,
+  Session,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -119,4 +133,5 @@ module.exports = {
   getTenantAISetting,
   getTenantAICredential,
   getAuditLog,
+  getSession,
 };

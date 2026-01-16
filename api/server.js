@@ -1159,7 +1159,7 @@ async function requestHandler(req, res) {
       const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'unknown';
 
-      const result = authLogin(username, password, ipAddress, userAgent);
+      const result = await authLogin(username, password, ipAddress, userAgent);
 
       if (!result.success) {
         sendJson(res, 401, { error: 'authentication_failed', message: result.error });
@@ -1211,7 +1211,7 @@ async function requestHandler(req, res) {
       const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'RPA-Automation';
 
-      const result = loginWithRpaToken(rpaToken, ipAddress, userAgent);
+      const result = await loginWithRpaToken(rpaToken, ipAddress, userAgent);
 
       if (!result.success) {
         sendJson(res, 401, { error: 'rpa_authentication_failed', message: result.error });
@@ -2829,7 +2829,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     // Filtra agentes por tenant do agente autenticado
-    const agents = listAgents(req.tenantId);
+    const agents = await listAgents(req.tenantId);
     sendJson(res, 200, { agents });
     return;
   }
@@ -2857,7 +2857,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const body = await parseJsonBody(req);
       // Garante que tenantId seja o mesmo do agente autenticado
       body.tenantId = req.tenantId;
-      const result = createAgent(body);
+      const result = await createAgent(body);
 
       if (!result.success) {
         badRequest(res, result.error);
@@ -2904,7 +2904,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const agent = getAgent(agentId);
+    const agent = await getAgent(agentId);
     if (!agent) {
       sendJson(res, 404, { error: 'agent_not_found' });
       return;
@@ -2929,7 +2929,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const agentId = decodeURIComponent(pathname.slice('/auth/agents/'.length));
-    const agent = getAgent(agentId);
+    const agent = await getAgent(agentId);
     
     if (!agent) {
       sendJson(res, 404, { error: 'agent_not_found' });
@@ -2964,7 +2964,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         delete body.active;
       }
 
-      const result = updateAgent(agentId, body);
+      const result = await updateAgent(agentId, body);
 
       if (!result.success) {
         badRequest(res, result.error);
@@ -3010,7 +3010,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const agentId = decodeURIComponent(pathname.slice('/auth/agents/'.length));
-    const agent = getAgent(agentId);
+    const agent = await getAgent(agentId);
     
     if (!agent) {
       sendJson(res, 404, { error: 'agent_not_found' });
@@ -3023,7 +3023,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const result = deleteAgent(agentId);
+    const result = await deleteAgent(agentId);
 
     if (!result.success) {
       badRequest(res, result.error);
@@ -3069,7 +3069,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // Garante que tenantId seja o mesmo do agente autenticado
       body.tenantId = req.tenantId || body.tenantId;
       
-      const result = inviteUser(body);
+      const result = await inviteUser(body);
       if (!result.success) {
         badRequest(res, result.error);
         return;
@@ -3113,7 +3113,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const result = acceptInvitation(body.invitationToken, body.password, body.username);
+      const result = await acceptInvitation(body.invitationToken, body.password, body.username);
       if (!result.success) {
         badRequest(res, result.error);
         return;
@@ -3161,7 +3161,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const result = requestPasswordReset(body.email);
+      await requestPasswordReset(body.email);
       // Sempre retorna sucesso (por segurança, não revela se email existe)
       sendJson(res, 200, { 
         success: true, 
@@ -3192,7 +3192,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const result = resetPassword(body.resetToken, body.newPassword);
+      const result = await resetPassword(body.resetToken, body.newPassword);
       if (!result.success) {
         badRequest(res, result.error);
         return;
@@ -10961,6 +10961,19 @@ async function startInitialization() {
       } catch (demoErr) {
         console.warn('[Init] ⚠️  Aviso ao verificar tenant de demonstração:', demoErr.message);
         logger.warn('[Init] ⚠️  Aviso ao verificar tenant de demonstração:', demoErr.message);
+      }
+
+      try {
+        // Inicializa cache do AuthService (necessário para validateToken síncrono)
+        const { initialize: initializeAuthService } = require('./services/authService');
+        await initializeAuthService();
+        console.log('[Init] ✅ AuthService inicializado');
+        logger.info('[Init] ✅ AuthService inicializado');
+      } catch (authInitErr) {
+        const error = `Falha ao inicializar AuthService: ${authInitErr.message}`;
+        console.error(`[Init] ❌ ${error}`);
+        logger.error(`[Init] ❌ ${error}`);
+        throw new Error(error);
       }
       
       // Inicializa providers de IA do banco de dados (após banco estar conectado)
