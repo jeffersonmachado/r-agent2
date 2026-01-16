@@ -21,67 +21,44 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Alinhado com package.json engines: ">=20.19.0 || >=22.12.0"
+          node-version: '20.19.0'
           cache: 'npm'
       
       - name: Instalar dependências
         run: npm ci
-      
-      - name: Testes Unitários
-        run: npm run test:unit
-      
-      - name: Validação Estrutural
-        run: npm run test:flow
-      
-      - name: Seed de Dados
-        run: npm run seed:test
-      
-      - name: Gate de Dados
-        run: npm run test:data
-      
-      - name: Testes de Scripts
-        run: npm run test:scripts
-        continue-on-error: true
 
-  # Fase 2: Testes RPA
-  rpa-tests:
-    name: Testes RPA
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [validation]
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Instalar dependências
-        run: npm ci
-      
-      - name: Instalar Playwright
+      - name: Instalar Playwright (Chromium)
         run: npx playwright install chromium --with-deps
-      
-      - name: Executar testes RPA em modo CI
-        env:
-          TEST_BASE_URL: ${{ secrets.TEST_BASE_URL || 'http://localhost:3000' }}
-          TEST_FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL || 'http://localhost:5173' }}
+
+      - name: Iniciar Frontend (Vite) e executar validação oficial
         run: |
-          node tests/rpa/cli.js ci example-login || echo "Seed example-login não disponível ou falhou"
-        continue-on-error: true
-      
-      - name: Upload artifacts RPA
+          cd frontend
+          npm ci
+          npm run start -- --host 0.0.0.0 --port 5173 --strictPort &
+          VITE_PID=$!
+          cd ..
+          node -e "const http=require('http'); const url='http://127.0.0.1:5173'; let tries=60; (function ping(){ http.get(url,res=>{process.exit(0)}).on('error',()=>{ if(--tries<=0) process.exit(1); setTimeout(ping,1000); });})();"
+          npm run system:validate
+          kill $VITE_PID || true
+
+      - name: Upload artifacts RPA (relatórios)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpa-reports
+          path: tests/rpa/reports/*.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload RPA replay/screenshot (se houver)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rpa-artifacts
           path: |
             tests/rpa/replay/*.json
-            tests/rpa/reports/*.json
+            tests/rpa/screenshots/*.png
           retention-days: 7
           if-no-files-found: ignore
 
@@ -98,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20.19.0'
           cache: 'npm'
       
       - name: Instalar dependências
@@ -109,7 +86,6 @@ jobs:
           cd frontend
           npm ci
           npm run build
-        continue-on-error: true
       
       - name: Upload build artifacts
         if: success()
@@ -124,7 +100,7 @@ jobs:
   summary:
     name: Resumo do Pipeline
     runs-on: ubuntu-latest
-    needs: [validation, rpa-tests, build]
+    needs: [validation, build]
     if: always()
     
     steps:
@@ -137,7 +113,6 @@ jobs:
           echo "| Fase | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Validação e Testes | ${{ needs.validation.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Testes RPA | ${{ needs.rpa-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           

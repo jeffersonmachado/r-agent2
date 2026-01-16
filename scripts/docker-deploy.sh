@@ -95,9 +95,12 @@ fi
 
 # Configura SSH com senha
 export SSHPASS="$SSH_PASSWORD"
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=2"
+# Timeouts aumentados para permitir builds longos (npm ci pode demorar vários minutos)
+# ServerAliveInterval=30: envia keepalive a cada 30 segundos
+# ServerAliveCountMax=20: permite até 20 intervalos sem resposta (20*30 = 10 minutos)
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes"
 SSH_CMD="sshpass -e ssh $SSH_OPTS"
-RSYNC_CMD="rsync -avz --progress -e 'sshpass -e ssh $SSH_OPTS'"
+RSYNC_CMD="rsync -avz --progress --delete -e 'sshpass -e ssh $SSH_OPTS'"
 
 # Variáveis padrão
 MODE="prod"
@@ -201,7 +204,7 @@ echo ""
 
 # Testa conexão SSH com timeout explícito no SSH
 info "  Testando SSH..."
-SSH_TEST_CMD="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=2 ${REMOTE_USER}@${REMOTE_HOST} \"echo 'Conexão OK'\""
+SSH_TEST_CMD="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes ${REMOTE_USER}@${REMOTE_HOST} \"echo 'Conexão OK'\""
 echo -e "${YELLOW}[COMANDO SSH]${NC} Testando conexão SSH"
 echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_TEST_CMD"
 echo ""
@@ -333,6 +336,7 @@ SYNC_PATHS=(
     "qa"
     "tests"
     "redis"
+    "lib"
 )
 
 info "  Diretórios/arquivos que serão sincronizados:"
@@ -355,11 +359,11 @@ if [ ${#RSYNC_SOURCES[@]} -eq 0 ]; then
 fi
 
 # Usa explicitamente paths absolutos no rsync (ex.: /opt/results/ria/r-agent2/api/)
-RSYNC_CMD_FULL="rsync -avz --progress ${EXCLUDE_LIST[@]} -e \"sshpass -e ssh $SSH_OPTS\" \"${RSYNC_SOURCES[@]}\" \"${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/\""
+RSYNC_CMD_FULL="rsync -avz --progress --delete ${EXCLUDE_LIST[@]} -e \"sshpass -e ssh $SSH_OPTS\" \"${RSYNC_SOURCES[@]}\" \"${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/\""
 echo -e "${YELLOW}[COMANDO RSYNC]${NC} Sincronizando arquivos"
 echo -e "${YELLOW}[COMANDO RSYNC]${NC} $RSYNC_CMD_FULL"
 echo ""
-rsync -avz --progress \
+rsync -avz --progress --delete \
     "${EXCLUDE_LIST[@]}" \
     -e "sshpass -e ssh $SSH_OPTS" \
     "${RSYNC_SOURCES[@]}" \
@@ -428,6 +432,8 @@ if [ "$BUILD" = true ]; then
     else
         info "Construindo TODAS as imagens no servidor remoto (isso pode levar vários minutos)..."
     fi
+    warn "⚠️  ATENÇÃO: O build pode demorar 10-20 minutos. A conexão SSH foi configurada para manter-se ativa durante builds longos."
+    warn "⚠️  Se a conexão cair, você pode executar apenas o build do serviço que falhou usando --frontend-only ou --api-only"
     
     if [ "$MODE" = "prod" ]; then
         info "Modo: Produção (--no-cache)"
@@ -441,36 +447,80 @@ if [ "$BUILD" = true ]; then
                 BUILD_CMD="docker build --build-arg VITE_BASE_PATH=/r-agent2/ -t r-agent2-frontend:latest -f frontend/Dockerfile ."
             elif [ "$BUILD_SERVICE" = "api" ]; then
                 BUILD_CMD="docker build -t r-agent2-api:latest -f api/Dockerfile ."
+            elif [ "$BUILD_SERVICE" = "rag-service" ]; then
+                BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
             else
                 BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build --no-cache $BUILD_SERVICE"
             fi
         else
+            # Construir TODAS as imagens necessárias
+            # docker compose build só constrói serviços com 'build:', então precisamos construir manualmente
+            # as imagens que só têm 'image:' definido (api e rag-service)
+            info "Construindo imagens que não têm build no compose (API e RAG Service)..."
+            
+            # Build API
+            info "Construindo imagem da API..."
+            API_BUILD_CMD="docker build -t r-agent2-api:latest -f api/Dockerfile ."
+            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $API_BUILD_CMD"
+            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $API_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
+            API_BUILD_EXIT=${PIPESTATUS[0]}
+            if [ $API_BUILD_EXIT -ne 0 ]; then
+                error "❌ Build da API FALHOU"
+                exit 1
+            fi
+            
+            # Build RAG Service
+            info "Construindo imagem do RAG Service..."
+            RAG_BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
+            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $RAG_BUILD_CMD"
+            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $RAG_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
+            RAG_BUILD_EXIT=${PIPESTATUS[0]}
+            if [ $RAG_BUILD_EXIT -ne 0 ]; then
+                error "❌ Build do RAG Service FALHOU"
+                exit 1
+            fi
+            
+            # Build serviços que têm build no compose (frontend e redis)
+            info "Construindo serviços com build no compose (Frontend e Redis)..."
             BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build --no-cache"
         fi
-        # Executa build e mostra saída em tempo real
-        echo -e "${YELLOW}[COMANDO SSH]${NC} Construindo imagens Docker (modo produção)"
-        echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"cd ${REMOTE_DIR} && $BUILD_CMD\""
-        echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $BUILD_CMD"
-        echo ""
-        echo -e "${BLUE}[SAÍDA DO COMANDO DOCKER COMPOSE]${NC}"
-        echo ""
-        # Executa o comando e mostra saída em tempo real, filtrando apenas warnings do SSH
-        # Usa um pipe nomeado ou arquivo temporário para capturar código de saída
-        TEMP_OUTPUT=$(mktemp)
-        # Executa o comando, mostra saída em tempo real e salva em arquivo temporário
-        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $BUILD_CMD" 2>&1 | tee "$TEMP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
-        # Captura o código de saída do SSH (primeiro comando do pipe)
-        BUILD_EXIT_CODE=${PIPESTATUS[0]}
-        rm -f "$TEMP_OUTPUT"
-        echo ""
-        echo -e "${GREEN}[RESULTADO]${NC} Build concluído (exit code: $BUILD_EXIT_CODE)"
-        echo ""
         
-        # Verifica se build falhou
-        if [ $BUILD_EXIT_CODE -ne 0 ]; then
-            error "❌ Build FALHOU com código de saída $BUILD_EXIT_CODE"
-            error "Verifique os erros acima e corrija antes de continuar"
-            exit 1
+        # Executa build apenas se BUILD_CMD estiver definido (não foi construído manualmente)
+        if [ -n "$BUILD_CMD" ]; then
+            # Executa build e mostra saída em tempo real
+            echo -e "${YELLOW}[COMANDO SSH]${NC} Construindo imagens Docker (modo produção)"
+            echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"cd ${REMOTE_DIR} && $BUILD_CMD\""
+            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $BUILD_CMD"
+            echo ""
+            echo -e "${BLUE}[SAÍDA DO COMANDO DOCKER COMPOSE]${NC}"
+            echo ""
+            # Executa o comando e mostra saída em tempo real, filtrando apenas warnings do SSH
+            # Usa um pipe nomeado ou arquivo temporário para capturar código de saída
+            TEMP_OUTPUT=$(mktemp)
+            # Executa o comando, mostra saída em tempo real e salva em arquivo temporário
+            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $BUILD_CMD" 2>&1 | tee "$TEMP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
+            # Captura o código de saída do SSH (primeiro comando do pipe)
+            BUILD_EXIT_CODE=${PIPESTATUS[0]}
+            rm -f "$TEMP_OUTPUT"
+            echo ""
+            echo -e "${GREEN}[RESULTADO]${NC} Build concluído (exit code: $BUILD_EXIT_CODE)"
+            echo ""
+            
+            # Verifica se build falhou
+            if [ $BUILD_EXIT_CODE -ne 0 ]; then
+                error "❌ Build FALHOU com código de saída $BUILD_EXIT_CODE"
+                if [ $BUILD_EXIT_CODE -eq 255 ]; then
+                    error "Possível timeout de conexão SSH durante o build."
+                    error "Sugestões:"
+                    error "  1. Tente novamente executando apenas o serviço que falhou:"
+                    error "     ./scripts/docker-deploy.sh --prod --build --frontend-only"
+                    error "  2. Verifique se o servidor tem recursos suficientes (memória/CPU)"
+                    error "  3. Verifique a conectividade de rede com o servidor"
+                else
+                    error "Verifique os erros acima e corrija antes de continuar"
+                fi
+                exit 1
+            fi
         fi
     else
         info "Modo: Desenvolvimento"
@@ -502,7 +552,16 @@ if [ "$BUILD" = true ]; then
         # Verifica se build falhou
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
             error "❌ Build FALHOU com código de saída $BUILD_EXIT_CODE"
-            error "Verifique os erros acima e corrija antes de continuar"
+            if [ $BUILD_EXIT_CODE -eq 255 ]; then
+                error "Possível timeout de conexão SSH durante o build."
+                error "Sugestões:"
+                error "  1. Tente novamente executando apenas o serviço que falhou:"
+                error "     ./scripts/docker-deploy.sh --dev --build --frontend-only"
+                error "  2. Verifique se o servidor tem recursos suficientes (memória/CPU)"
+                error "  3. Verifique a conectividade de rede com o servidor"
+            else
+                error "Verifique os erros acima e corrija antes de continuar"
+            fi
             exit 1
         fi
     fi
@@ -556,20 +615,128 @@ else
         info "Iniciando em modo desenvolvimento..."
     fi
 
+    # Verifica se as imagens necessárias existem
+    info "Verificando se as imagens Docker existem..."
+    CHECK_IMAGES_CMD="cd ${REMOTE_DIR} && docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'r-agent2-(api|frontend|rag-service|redis):latest' || echo 'Imagens faltando'"
+    IMAGES_CHECK=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$CHECK_IMAGES_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+    MISSING_IMAGES=""
+    for img in r-agent2-api:latest r-agent2-frontend:latest r-agent2-rag-service:latest r-agent2-redis:latest; do
+        if ! echo "$IMAGES_CHECK" | grep -q "$img"; then
+            MISSING_IMAGES="$MISSING_IMAGES $img"
+        fi
+    done
+    if [ -n "$MISSING_IMAGES" ]; then
+        error "❌ Imagens faltando:$MISSING_IMAGES"
+        error "Execute o build primeiro ou verifique se as imagens foram construídas corretamente"
+        exit 1
+    else
+        info "✅ Todas as imagens necessárias estão presentes"
+    fi
+    echo ""
+
+    # Cria os volumes necessários antes de iniciar os serviços
+    section "Criando Volumes Docker"
+    info "Criando volumes necessários..."
+    
+    # O Docker Compose adiciona um prefixo baseado no nome do projeto (geralmente o nome do diretório)
+    # O prefixo padrão é o nome do diretório onde está o docker-compose.yml
+    # Vamos descobrir o prefixo real verificando o nome do diretório remoto
+    GET_PROJECT_NAME_CMD="cd ${REMOTE_DIR} && basename \$(pwd) | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]-'"
+    PROJECT_NAME=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$GET_PROJECT_NAME_CMD" 2>&1 | grep -vE "(Warning|Permanently)" | head -1 | tr -d '\r\n' || echo "r-agent2")
+    
+    # Baseado nos volumes definidos no docker-compose.prod.yml: redis-data, rag-vector-store, api-data
+    VOLUME_PREFIX="${PROJECT_NAME}"
+    VOLUMES_TO_CREATE=("${VOLUME_PREFIX}_redis-data" "${VOLUME_PREFIX}_rag-vector-store" "${VOLUME_PREFIX}_api-data")
+    
+    info "Verificando/criando volumes com prefixo '${VOLUME_PREFIX}':"
+    for vol in "${VOLUMES_TO_CREATE[@]}"; do
+        # Verifica se o volume existe
+        CHECK_VOL_CMD="docker volume inspect $vol >/dev/null 2>&1 && echo 'exists' || echo 'not_exists'"
+        VOL_EXISTS=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $CHECK_VOL_CMD" 2>&1 | grep -vE "(Warning|Permanently)" | head -1 | tr -d '\r\n' || echo "not_exists")
+        
+        if [ "$VOL_EXISTS" = "exists" ]; then
+            info "  ✓ Volume $vol já existe"
+        else
+            # Tenta criar o volume
+            CREATE_VOL_CMD="docker volume create $vol 2>&1"
+            echo -e "${YELLOW}[COMANDO REMOTO]${NC} docker volume create $vol"
+            VOL_OUTPUT=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $CREATE_VOL_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+            if echo "$VOL_OUTPUT" | grep -qE "Created|$vol"; then
+                info "  ✓ Volume $vol criado com sucesso"
+            else
+                warn "  ⚠ Aviso ao criar volume $vol: $VOL_OUTPUT"
+                warn "  (O Docker Compose tentará criar automaticamente se necessário)"
+            fi
+        fi
+    done
+    echo ""
+    info "✅ Volumes verificados/criados"
+    echo ""
+
+    # Copia dados sincronizados para o volume Docker (se existirem)
+    section "Copiando Dados para Volume Docker"
+    info "Verificando se há dados sincronizados para copiar para o volume..."
+    
+    # Verifica se o diretório api/data existe no servidor
+    CHECK_DATA_DIR_CMD="cd ${REMOTE_DIR} && test -d api/data && ls api/data/*.json 2>/dev/null | head -1 || echo ''"
+    DATA_FILES=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$CHECK_DATA_DIR_CMD" 2>&1 | grep -vE "(Warning|Permanently)" | head -1 || echo "")
+    
+    if [ -n "$DATA_FILES" ]; then
+        info "Dados encontrados em ${REMOTE_DIR}/api/data, copiando para o volume..."
+        
+        # Copia dados do diretório sincronizado para o volume usando container temporário
+        COPY_DATA_CMD="cd ${REMOTE_DIR} && docker run --rm -v ${VOLUME_PREFIX}_api-data:/data -v \$(pwd)/api/data:/source alpine sh -c 'cp -r /source/* /data/ 2>/dev/null && echo \"Dados copiados\" || echo \"Aviso: alguns arquivos podem não ter sido copiados\"'"
+        echo -e "${YELLOW}[COMANDO REMOTO]${NC} Copiando dados para volume Docker"
+        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$COPY_DATA_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
+        COPY_EXIT=${PIPESTATUS[0]}
+        
+        if [ $COPY_EXIT -eq 0 ]; then
+            info "✅ Dados copiados para o volume Docker"
+        else
+            warn "⚠️  Aviso: pode ter havido problemas ao copiar dados para o volume"
+        fi
+    else
+        info "Nenhum dado encontrado em ${REMOTE_DIR}/api/data (volume será inicializado vazio)"
+    fi
+    echo ""
+
     UP_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE up -d"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Iniciando serviços"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$UP_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $UP_CMD"
     echo ""
-    $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$UP_CMD" 2>&1 | while IFS= read -r line; do
-        if echo "$line" | grep -qE "(Creating|Starting|Started|Up|healthy|Container)"; then
-            echo "  $line"
-        fi
-    done
+    
+    # Captura saída completa para diagnóstico
+    TEMP_UP_OUTPUT=$(mktemp)
+    $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$UP_CMD" 2>&1 | tee "$TEMP_UP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
     UP_EXIT=${PIPESTATUS[0]}
+    
+    # Mostra saída filtrada (apenas linhas importantes)
     echo ""
-    echo -e "${GREEN}[RESULTADO]${NC} Serviços iniciados (exit code: $UP_EXIT)"
-    info "✅ Serviços iniciados"
+    if [ $UP_EXIT -eq 0 ]; then
+        echo -e "${GREEN}[RESULTADO]${NC} Serviços iniciados (exit code: $UP_EXIT)"
+        info "✅ Serviços iniciados"
+    else
+        echo -e "${RED}[RESULTADO]${NC} Falha ao iniciar serviços (exit code: $UP_EXIT)"
+        error "❌ Erro ao iniciar serviços"
+        echo ""
+        info "Saída completa do comando:"
+        cat "$TEMP_UP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
+        echo ""
+        info "Verificando erros específicos..."
+        ERROR_OUTPUT=$(cat "$TEMP_UP_OUTPUT" | grep -iE "(error|failed|cannot|unable|missing)" || true)
+        if [ -n "$ERROR_OUTPUT" ]; then
+            echo "$ERROR_OUTPUT" | head -10
+        fi
+        echo ""
+        info "Verificando status dos containers criados..."
+        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker ps -a --filter 'name=r-agent2' --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'" 2>&1 | grep -vE "(Warning|Permanently)" || true
+        echo ""
+        error "Verifique os erros acima e corrija antes de continuar"
+        rm -f "$TEMP_UP_OUTPUT"
+        exit 1
+    fi
+    rm -f "$TEMP_UP_OUTPUT"
     echo ""
 fi
 
@@ -625,8 +792,68 @@ else
     echo -e "${GREEN}[RESULTADO]${NC} Status verificado (exit code: $PS_EXIT)"
     echo ""
 
-    section "Logs Iniciais (últimas 20 linhas)"
-    LOGS_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE logs --tail=20"
+    # Verifica se os containers estão realmente rodando
+    info "Verificando se containers estão rodando..."
+    CHECK_CONTAINERS_CMD="cd ${REMOTE_DIR} && docker ps -a --filter 'name=r-agent2' --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'"
+    echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando containers não rodando"
+    echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$CHECK_CONTAINERS_CMD\""
+    echo -e "${YELLOW}[COMANDO REMOTO]${NC} $CHECK_CONTAINERS_CMD"
+    echo ""
+    CONTAINER_STATUS=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$CHECK_CONTAINERS_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+    echo "$CONTAINER_STATUS"
+    echo ""
+    
+    # Verifica containers não rodando
+    NOT_RUNNING=$(echo "$CONTAINER_STATUS" | grep -vE "(Up|NAMES|^$)" || true)
+    if [ -n "$NOT_RUNNING" ]; then
+        warn "⚠ Alguns containers não estão rodando:"
+        echo "$NOT_RUNNING"
+        echo ""
+        
+        # Verifica se containers existem mas não estão rodando
+        for container in api frontend rag-service redis; do
+            CONTAINER_NAME="r-agent2-${container}-prod"
+            EXISTS_CMD="cd ${REMOTE_DIR} && docker ps -a --filter 'name=^${CONTAINER_NAME}$' --format '{{.Names}}'"
+            EXISTS=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$EXISTS_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+            
+            if [ -n "$EXISTS" ]; then
+                # Container existe, verifica status
+                STATUS_CMD="cd ${REMOTE_DIR} && docker inspect ${CONTAINER_NAME} --format '{{.State.Status}}' 2>/dev/null || echo 'não encontrado'"
+                STATUS=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$STATUS_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+                
+                if [ "$STATUS" != "running" ]; then
+                    info "Container ${container} está em status: $STATUS"
+                    if [ "$STATUS" != "não encontrado" ]; then
+                        info "Mostrando logs de erro do container ${container}..."
+                        LOGS_ERR_CMD="cd ${REMOTE_DIR} && docker logs ${CONTAINER_NAME} --tail=50 2>&1"
+                        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$LOGS_ERR_CMD" 2>&1 | grep -vE "(Warning|Permanently)" | tail -30 || true
+                        echo ""
+                        
+                        # Verifica se há erro de imagem
+                        IMAGE_CMD="cd ${REMOTE_DIR} && docker inspect ${CONTAINER_NAME} --format '{{.Config.Image}}' 2>/dev/null || echo 'imagem não encontrada'"
+                        IMAGE=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$IMAGE_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+                        info "Imagem esperada: $IMAGE"
+                        
+                        # Verifica se a imagem existe
+                        IMAGE_EXISTS_CMD="cd ${REMOTE_DIR} && docker images --format '{{.Repository}}:{{.Tag}}' | grep -q '^${IMAGE}$' && echo 'existe' || echo 'não existe'"
+                        IMAGE_EXISTS=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$IMAGE_EXISTS_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+                        if [ "$IMAGE_EXISTS" != "existe" ]; then
+                            error "❌ Imagem $IMAGE não encontrada! Execute o build primeiro."
+                        fi
+                        echo ""
+                    fi
+                fi
+            else
+                warn "Container ${container} não foi criado"
+            fi
+        done
+    else
+        info "✅ Todos os containers estão rodando"
+    fi
+    echo ""
+
+    section "Logs Iniciais (últimas 30 linhas)"
+    LOGS_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE logs --tail=30"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Obtendo logs iniciais"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$LOGS_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $LOGS_CMD"
@@ -638,56 +865,65 @@ else
     echo ""
 
     section "Verificando Saúde dos Serviços"
-    info "Aguardando mais 10 segundos para health checks..."
-    sleep 10
+    info "Aguardando mais 20 segundos para health checks..."
+    sleep 20
 
+    # Verifica API
     info "Verificando API..."
-    HEALTH_API_CMD="curl -f http://localhost:3001/health &> /dev/null"
+    HEALTH_API_CMD="curl -f -s -o /dev/null -w '%{http_code}' http://localhost:3001/health"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando saúde da API"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$HEALTH_API_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $HEALTH_API_CMD"
     echo ""
-    if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_API_CMD" 2>&1 | grep -vE "(Warning|Permanently)" > /dev/null; then
-        HEALTH_API_EXIT=${PIPESTATUS[0]}
-        echo -e "${GREEN}[RESULTADO]${NC} API está respondendo (exit code: $HEALTH_API_EXIT)"
+    HEALTH_API_OUTPUT=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_API_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+    HEALTH_API_EXIT=${PIPESTATUS[0]}
+    if [ $HEALTH_API_EXIT -eq 0 ] && echo "$HEALTH_API_OUTPUT" | grep -qE "^200$"; then
+        echo -e "${GREEN}[RESULTADO]${NC} API está respondendo (HTTP 200)"
         info "✓ API está respondendo"
     else
-        HEALTH_API_EXIT=${PIPESTATUS[0]}
-        echo -e "${YELLOW}[RESULTADO]${NC} API não está respondendo ainda (exit code: $HEALTH_API_EXIT)"
-        warn "⚠ API não está respondendo ainda (pode estar iniciando)"
+        echo -e "${RED}[RESULTADO]${NC} API não está respondendo (exit code: $HEALTH_API_EXIT, output: $HEALTH_API_OUTPUT)"
+        error "❌ API não está respondendo"
+        info "Verificando logs da API..."
+        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker logs r-agent2-api-prod --tail=50" 2>&1 | grep -vE "(Warning|Permanently)" | tail -30 || true
     fi
     echo ""
 
+    # Verifica Frontend
     info "Verificando Frontend..."
-    HEALTH_FRONTEND_CMD="curl -f http://localhost:8086 &> /dev/null"
+    HEALTH_FRONTEND_CMD="curl -f -s -o /dev/null -w '%{http_code}' http://localhost:8086"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando saúde do Frontend"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$HEALTH_FRONTEND_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $HEALTH_FRONTEND_CMD"
     echo ""
-    if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_FRONTEND_CMD" 2>&1 | grep -vE "(Warning|Permanently)" > /dev/null; then
-        HEALTH_FRONTEND_EXIT=${PIPESTATUS[0]}
-        echo -e "${GREEN}[RESULTADO]${NC} Frontend está respondendo (exit code: $HEALTH_FRONTEND_EXIT)"
+    HEALTH_FRONTEND_OUTPUT=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_FRONTEND_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+    HEALTH_FRONTEND_EXIT=${PIPESTATUS[0]}
+    if [ $HEALTH_FRONTEND_EXIT -eq 0 ] && echo "$HEALTH_FRONTEND_OUTPUT" | grep -qE "^200$"; then
+        echo -e "${GREEN}[RESULTADO]${NC} Frontend está respondendo (HTTP 200)"
         info "✓ Frontend está respondendo"
     else
-        HEALTH_FRONTEND_EXIT=${PIPESTATUS[0]}
-        echo -e "${YELLOW}[RESULTADO]${NC} Frontend não está respondendo ainda (exit code: $HEALTH_FRONTEND_EXIT)"
-        warn "⚠ Frontend não está respondendo ainda (pode estar iniciando)"
+        echo -e "${RED}[RESULTADO]${NC} Frontend não está respondendo (exit code: $HEALTH_FRONTEND_EXIT, output: $HEALTH_FRONTEND_OUTPUT)"
+        error "❌ Frontend não está respondendo"
+        info "Verificando logs do Frontend..."
+        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker logs r-agent2-frontend-prod --tail=50" 2>&1 | grep -vE "(Warning|Permanently)" | tail -30 || true
+        info "Verificando se API está healthy (frontend depende da API)..."
+        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker inspect r-agent2-api-prod --format '{{.State.Health.Status}}' 2>/dev/null || echo 'Health check não disponível'" 2>&1 | grep -vE "(Warning|Permanently)" || true
     fi
     echo ""
 
+    # Verifica RAG Service
     info "Verificando RAG Service..."
-    HEALTH_RAG_CMD="curl -f http://localhost:8002/rag/health &> /dev/null"
+    HEALTH_RAG_CMD="curl -f -s -o /dev/null -w '%{http_code}' http://localhost:8002/rag/health"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando saúde do RAG Service"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$HEALTH_RAG_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $HEALTH_RAG_CMD"
     echo ""
-    if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_RAG_CMD" 2>&1 | grep -vE "(Warning|Permanently)" > /dev/null; then
-        HEALTH_RAG_EXIT=${PIPESTATUS[0]}
-        echo -e "${GREEN}[RESULTADO]${NC} RAG Service está respondendo (exit code: $HEALTH_RAG_EXIT)"
+    HEALTH_RAG_OUTPUT=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_RAG_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+    HEALTH_RAG_EXIT=${PIPESTATUS[0]}
+    if [ $HEALTH_RAG_EXIT -eq 0 ] && echo "$HEALTH_RAG_OUTPUT" | grep -qE "^200$"; then
+        echo -e "${GREEN}[RESULTADO]${NC} RAG Service está respondendo (HTTP 200)"
         info "✓ RAG Service está respondendo"
     else
-        HEALTH_RAG_EXIT=${PIPESTATUS[0]}
-        echo -e "${YELLOW}[RESULTADO]${NC} RAG Service não está respondendo ainda (exit code: $HEALTH_RAG_EXIT)"
+        echo -e "${YELLOW}[RESULTADO]${NC} RAG Service não está respondendo ainda (exit code: $HEALTH_RAG_EXIT, output: $HEALTH_RAG_OUTPUT)"
         warn "⚠ RAG Service não está respondendo ainda (pode estar iniciando)"
     fi
     echo ""
@@ -701,6 +937,9 @@ else
     echo ""
     info "Para ver os logs:"
     echo "  ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE logs -f'"
+    info "Para ver logs de um serviço específico:"
+    echo "  ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && docker logs r-agent2-api-prod -f'"
+    echo "  ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && docker logs r-agent2-frontend-prod -f'"
     info "Para parar os serviços:"
     echo "  ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE down'"
 fi

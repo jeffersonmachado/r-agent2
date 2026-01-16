@@ -1,37 +1,12 @@
 [
   {
-    "id": "tenant-1767641804276-2vmy2jt",
-    "name": "Test Tenant E-commerce",
-    "site": "https://test-ecommerce.com",
-    "ramo_atividade": "E-commerce e Varejo Online - Venda de produtos físicos e digitais",
-    "objetivo": "Aumentar vendas online e reduzir abandono de carrinho",
+    "id": "tenant-demo",
+    "name": "Tenant Demo",
+    "site": "https://demo.example.com",
+    "ramo_atividade": "Tecnologia e Software - Plataforma de demonstração",
+    "objetivo": "Demonstração e desenvolvimento da plataforma",
     "active": true,
-    "createdAt": "2026-01-05T19:36:44.276Z",
-    "updatedAt": "2026-01-07T23:45:55.126Z",
-    "status": "active",
-    "plan": "enterprise",
-    "limits": {
-      "usuarios": -1,
-      "agentes_ia": -1,
-      "execucoes_rpa": -1,
-      "tokens_ia": -1,
-      "documentos_rag": -1,
-      "storage_mb": -1
-    },
-    "settings": {},
-    "branding": {},
-    "trialExpiresAt": "2026-01-21T16:47:40.161Z"
-  },
-  {
-    "id": "tenant-1767641804348-vz318dk",
-    "name": "Test Tenant Saúde",
-    "site": "https://test-saude.com",
-    "ramo_atividade": "Saúde e Bem-estar - Clínica médica especializada",
-    "objetivo": "Agilizar agendamentos e melhorar comunicação com pacientes",
-    "active": true,
-    "createdAt": "2026-01-05T19:36:44.348Z",
-    "updatedAt": "2026-01-05T19:36:44.348Z",
-    "status": "active",
+    "status": "trial",
     "plan": "trial",
     "limits": {
       "usuarios": 3,
@@ -43,7 +18,10 @@
     },
     "settings": {},
     "branding": {},
-    "trialExpiresAt": "2026-01-21T16:47:40.161Z"
+    "createdAt": "2026-01-11T17:35:46.862Z",
+    "updatedAt": "2026-01-11T17:35:46.862Z",
+    "suspendedAt": null,
+    "trialExpiresAt": "2026-01-25T17:35:46.863Z"
   },
   {
     "id": "system",
@@ -64,78 +42,9 @@
     },
     "settings": {},
     "branding": {},
-    "createdAt": "2026-01-07T18:22:39.913Z",
-    "updatedAt": "2026-01-07T18:22:39.913Z",
+    "createdAt": "2026-01-11T17:35:46.862Z",
+    "updatedAt": "2026-01-11T17:35:46.862Z",
     "suspendedAt": null,
     "trialExpiresAt": null
-  },
-  {
-    "id": "tenant-demo",
-    "name": "Tenant Demo",
-    "site": "https://demo.example.com",
-    "ramo_atividade": "Tecnologia e Software - Plataforma de demonstração",
-    "objetivo": "Demonstração e desenvolvimento da plataforma",
-    "active": true,
-    "createdAt": "2026-01-05T00:54:55.433Z",
-    "updatedAt": "2026-01-07T20:41:16.524Z",
-    "status": "active",
-    "plan": "trial",
-    "limits": {
-      "usuarios": 3,
-      "agentes_ia": 2,
-      "execucoes_rpa": 50,
-      "tokens_ia": 50000,
-      "documentos_rag": 50,
-      "storage_mb": 500
-    },
-    "settings": {},
-    "branding": {},
-    "suspendedAt": null,
-    "trialExpiresAt": "2026-01-19T00:54:55.433Z"
-  },
-  {
-    "id": "test-tenant",
-    "name": "Tenant de Teste",
-    "site": "https://teste.com",
-    "ramo_atividade": "Tecnologia e Software",
-    "objetivo": "Testar funcionalidades do sistema",
-    "active": true,
-    "createdAt": "2026-01-09T01:44:19.435Z",
-    "updatedAt": "2026-01-09T01:44:19.436Z",
-    "status": "active",
-    "plan": "enterprise",
-    "limits": {
-      "usuarios": -1,
-      "agentes_ia": -1,
-      "execucoes_rpa": -1,
-      "tokens_ia": -1,
-      "documentos_rag": -1,
-      "storage_mb": -1
-    },
-    "settings": {},
-    "branding": {}
-  },
-  {
-    "name": "studiooly",
-    "site": "https://studiooly.com.br",
-    "ramo_atividade": "Estúdio de atividades físicas e bem-estar com foco em treino funcional e crossfit, além de modalidades como balé e serviços de fisioterapia. Atua de forma local, oferecendo turmas com horários definidos, planos por frequência e pacotes de atendimento, combinando condicionamento físico, saúde e reabilitação em um único espaço.",
-    "objetivo": "Automatizar a captação e conversão de visitantes em alunos, respondendo dúvidas sobre modalidades, horários, planos e valores em canais como WhatsApp e redes sociais. Centralizar o atendimento com IA para triagem, agendamento e follow-up, além de coletar dados do aluno e orientar o envio de comprovante de pagamento, reduzindo o trabalho manual e aumentando as matrículas.",
-    "active": true,
-    "status": "trial",
-    "plan": "trial",
-    "limits": {
-      "usuarios": 3,
-      "agentes_ia": 2,
-      "execucoes_rpa": 50,
-      "tokens_ia": 50000,
-      "documentos_rag": 50,
-      "storage_mb": 500
-    },
-    "settings": {},
-    "branding": {},
-    "createdAt": "2026-01-09T06:00:58.055Z",
-    "updatedAt": "2026-01-09T06:00:58.055Z",
-    "suspendedAt": null,
-    "trialExpiresAt": "2026-01-23T06:00:58.055Z"
   }
 ]

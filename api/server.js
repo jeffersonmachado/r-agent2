@@ -5,7 +5,7 @@
  * - Não depende de nenhuma biblioteca externa (sem Express).
  * - Exponde endpoints de health/version + CRUD de fluxos, validação,
  *   simulação e replay.
- * - Fluxos são persistidos em arquivo JSON (api/data/flows.json).
+ * - Fluxos são persistidos no banco de dados PostgreSQL.
  */
 
 const http = require('http');
@@ -84,7 +84,6 @@ const {
   addAgentMessage,
   markMessagesAsRead,
   getTicketMessages,
-  loadQueuesFromFile,
 } = require('./services/queueService');
 const {
   listQuickReplies,
@@ -196,6 +195,14 @@ const {
   scrapeUrls,
 } = require('./services/webScrapingService');
 const {
+  getAIConfig,
+  saveAIConfig,
+  saveAICredentials,
+  getDecryptedAPIKey,
+} = require('./services/tenantAIService');
+const { connect, isConnected } = require('./db/index');
+const { defineRelationships } = require('./db/models');
+const {
   getLatestQaResult,
   getQaHistory,
   getQaResultById,
@@ -218,7 +225,6 @@ const {
 const { validateInput, ValidationError, schemas } = require('./utils/inputValidator');
 
 const port = Number(config.get('api.port', 3000));
-// Removido defaultTenantId hardcoded - tenant deve ser sempre fornecido via req.tenantId
 
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, 'data');
@@ -324,91 +330,31 @@ let saveSessionEventsTimeout = null;
 const SAVE_DEBOUNCE_MS = 2000; // Salva após 2 segundos de inatividade
 
 /**
- * Salva conversas (sessionEvents) no arquivo JSON.
- * Usa debounce para evitar muitas escritas quando há muitas mensagens.
+ * Salva conversas (sessionEvents).
+ * @deprecated Migrado para banco de dados PostgreSQL. Esta função não faz mais nada.
  */
 function saveSessionEventsToFile() {
-  // Limpa timeout anterior se existir
-  if (saveSessionEventsTimeout) {
-    clearTimeout(saveSessionEventsTimeout);
-  }
-  
-  // Agenda salvamento após debounce
-  saveSessionEventsTimeout = setTimeout(() => {
-    try {
-      ensureDataDir();
-      const conversationsData = {};
-      for (const [sessionId, events] of sessionEvents.entries()) {
-        if (Array.isArray(events) && events.length > 0) {
-          conversationsData[sessionId] = events;
-        }
-      }
-      const data = JSON.stringify(conversationsData, null, 2);
-      fs.writeFileSync(conversationsFile, data, 'utf8');
-      logger.debug(`[Conversations] Conversas salvas: ${Object.keys(conversationsData).length} sessão(ões)`);
-    } catch (err) {
-      logger.error('[Conversations] Erro ao salvar conversas no arquivo:', err);
-    }
-    saveSessionEventsTimeout = null;
-  }, SAVE_DEBOUNCE_MS);
+  // Migrado para banco de dados - não salva mais em arquivo JSON
+  logger.debug('[Conversations] saveSessionEventsToFile chamado mas ignorado (dados estão no banco de dados)');
 }
 
 /**
- * Salva conversas imediatamente (sem debounce).
- * Usado quando é necessário garantir que os dados sejam salvos, como na limpeza.
+ * Salva conversas imediatamente.
+ * @deprecated Migrado para banco de dados PostgreSQL. Esta função não faz mais nada.
  */
 function saveSessionEventsToFileImmediate() {
-  // Limpa timeout se existir
-  if (saveSessionEventsTimeout) {
-    clearTimeout(saveSessionEventsTimeout);
-    saveSessionEventsTimeout = null;
-  }
-  
-  try {
-    ensureDataDir();
-    const conversationsData = {};
-    for (const [sessionId, events] of sessionEvents.entries()) {
-      if (Array.isArray(events) && events.length > 0) {
-        conversationsData[sessionId] = events;
-      }
-    }
-    const data = JSON.stringify(conversationsData, null, 2);
-    fs.writeFileSync(conversationsFile, data, 'utf8');
-    logger.debug(`[Conversations] Conversas salvas imediatamente: ${Object.keys(conversationsData).length} sessão(ões)`);
-  } catch (err) {
-    logger.error('[Conversations] Erro ao salvar conversas no arquivo:', err);
-  }
+  // Migrado para banco de dados - não salva mais em arquivo JSON
+  logger.debug('[Conversations] saveSessionEventsToFileImmediate chamado mas ignorado (dados estão no banco de dados)');
 }
 
 /**
- * Carrega conversas (sessionEvents) do arquivo JSON.
+ * Carrega conversas (sessionEvents).
+ * @deprecated Migrado para banco de dados PostgreSQL. Esta função não faz mais nada.
  */
 function loadSessionEventsFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(conversationsFile)) {
-      logger.debug(`[Conversations] Arquivo de conversas não encontrado: ${conversationsFile}. Iniciando com dados vazios.`);
-      return;
-    }
-    
-    const data = fs.readFileSync(conversationsFile, 'utf8');
-    const conversationsData = JSON.parse(data);
-    
-    if (typeof conversationsData === 'object' && conversationsData !== null) {
-      sessionEvents.clear();
-      let loaded = 0;
-      for (const [sessionId, events] of Object.entries(conversationsData)) {
-        if (Array.isArray(events) && events.length > 0) {
-          sessionEvents.set(sessionId, events);
-          loaded++;
-        }
-      }
-      logger.info(`[Conversations] Carregadas ${loaded} conversa(s) do arquivo ${conversationsFile}`);
-    }
-  } catch (err) {
-    logger.error('[Conversations] Erro ao carregar conversas do arquivo:', err);
-    // Continua com Map vazio se houver erro
-  }
+  // Migrado para banco de dados - não carrega mais de arquivo JSON
+  logger.debug('[Conversations] loadSessionEventsFromFile chamado mas ignorado (dados estão no banco de dados)');
+  // Dados agora estão no banco de dados PostgreSQL
 }
 
 /**
@@ -450,8 +396,8 @@ const TICKET_CLEANUP_INTERVAL_HOURS = Number(config.get('api.ticketCleanup.inter
 const TICKET_MAX_AGE_DAYS = Number(config.get('api.ticketCleanup.maxAgeDays', 7));
 startAutoCleanup(TICKET_CLEANUP_INTERVAL_HOURS, TICKET_MAX_AGE_DAYS);
 
-// Inicializa providers de IA
-initializeAiProviders();
+// Inicialização de providers de IA movida para startInitialization()
+// para garantir que o banco de dados esteja conectado antes de carregar configurações
 
 /**
  * Inicializa o sistema criando o tenant 'system' e o usuário 'systemadmin' se não existirem.
@@ -475,8 +421,7 @@ async function initializeSystemAdmin() {
     // Recarrega dados para garantir que temos a versão mais recente
     const authService = require('./services/authService');
     const tenantService = require('./services/tenantService');
-    tenantService._internal.loadTenantsFromFile();
-    authService._internal.loadAgentsFromFile();
+    // Dados agora estão no banco de dados PostgreSQL
     
     // Aguarda mais um pouco para garantir que os dados foram carregados
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -487,7 +432,7 @@ async function initializeSystemAdmin() {
     
     if (!systemTenant) {
       logger.info('[Init] Tenant "system" não existe. Criando...');
-      const tenantResult = createTenant({
+      const tenantResult = await createTenant({
         id: 'system',
         name: 'Sistema',
         site: 'https://sistema.com',
@@ -503,95 +448,130 @@ async function initializeSystemAdmin() {
       } else {
         systemTenant = tenantResult.tenant;
         logger.info('[Init] ✅ Tenant "system" criado com sucesso');
-        // Recarrega tenants após criar
-        tenantService._internal.loadTenantsFromFile();
       }
     } else {
       logger.info('[Init] ✅ Tenant "system" já existe');
     }
 
-    // Verifica se o agente 'systemadmin' existe
-    logger.info('[Init] Verificando se systemadmin existe...');
+    // Verifica se o agente 'systemadmin' existe no PostgreSQL
+    logger.info('[Init] Verificando se systemadmin existe no PostgreSQL...');
     
-    // Recarrega agentes para garantir que temos a versão mais recente
-    authService._internal.loadAgentsFromFile();
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Usa PostgreSQL diretamente ao invés de arquivos JSON
+    const { getSequelize } = require('./db/sequelize');
+    const { User, TenantUser, Tenant } = require('./db/models');
+    const crypto = require('crypto');
     
-    const allAgents = listAgents(); // Lista todos os agentes
-    const systemAgents = listAgents('system'); // Lista agentes do tenant system
-    logger.info('[Init] Total de agentes carregados:', allAgents.length);
-    logger.info('[Init] Agentes do tenant system:', systemAgents.length);
+    // Função para hash de senha (mesma lógica do authService)
+    function hashPassword(password, salt = null) {
+      const actualSalt = salt || crypto.randomBytes(16).toString('hex');
+      const hash = crypto
+        .createHash('sha256')
+        .update(password + actualSalt)
+        .digest('hex');
+      return { hash, salt: actualSalt };
+    }
     
-    const systemAdminExists = allAgents.some(agent => 
-      agent.username && agent.username.toLowerCase() === 'systemadmin'
-    ) || systemAgents.some(agent => 
-      agent.username && agent.username.toLowerCase() === 'systemadmin'
-    );
-
-    if (!systemAdminExists) {
-      logger.info('[Init] systemadmin não encontrado. Criando agente super admin...');
+    const sequelize = getSequelize();
+    if (!sequelize) {
+      logger.error('[Init] ❌ Sequelize não está disponível. Não é possível verificar/criar systemadmin.');
+      return;
+    }
+    
+    try {
+      const UserModel = User();
+      const TenantUserModel = TenantUser();
+      const TenantModel = Tenant();
       
-      // Garante que o tenant 'system' existe antes de criar o agente
-      if (!systemTenant) {
-        logger.warn('[Init] ⚠️  Tenant "system" não existe. Tentando criar novamente...');
-        const tenantResult = createTenant({
-          id: 'system',
-          name: 'Sistema',
-          site: 'https://sistema.com',
-          ramo_atividade: 'Sistema de Administração',
-          objetivo: 'Administração global do sistema',
-          plan: 'enterprise',
+      // Busca usuário pelo email
+      const existingUser = await UserModel.findOne({
+        where: { email: 'systemadmin@exemplo.com' },
+      });
+      
+      let systemAdminExists = false;
+      let userId = null;
+      
+      if (existingUser) {
+        userId = existingUser.id;
+        // Verifica se está associado ao tenant system
+        const tenantUser = await TenantUserModel.findOne({
+          where: {
+            user_id: userId,
+            tenant_id: systemTenant?.id || (await TenantModel.findOne({ where: { tenant_key: 'system' } }))?.id,
+          },
         });
-        if (tenantResult.success) {
-          systemTenant = tenantResult.tenant;
-          tenantService._internal.loadTenantsFromFile();
-          logger.info('[Init] ✅ Tenant "system" criado na segunda tentativa');
-        }
+        systemAdminExists = !!tenantUser;
       }
       
-      if (systemTenant || getTenant('system')) {
-        const agentResult = createAgent({
-          tenantId: 'system',
-          username: 'systemadmin',
-          email: 'systemadmin@exemplo.com',
-          password: 'Admin123!',
-          role: 'owner',
-          name: 'Administrador do Sistema',
-        });
-
-        if (agentResult.success) {
-          logger.info('[Init] ✅ Super Admin criado com sucesso!');
-          logger.info('[Init] 📋 Credenciais: username=systemadmin, password=Admin123!');
-          logger.info('[Init] ID do agente:', agentResult.agent?.id);
-          
-          // Recarrega agentes após criar
-          authService._internal.loadAgentsFromFile();
-        } else {
-          // Se já existe, apenas loga como debug (não é erro)
-          if (agentResult.error && agentResult.error.includes('já existe')) {
-            logger.info('[Init] ℹ️  Super Admin já existe (erro: já existe)');
+      if (!systemAdminExists) {
+        logger.info('[Init] systemadmin não encontrado. Criando no PostgreSQL...');
+        
+        // Garante que o tenant 'system' existe
+        if (!systemTenant) {
+          logger.warn('[Init] ⚠️  Tenant "system" não existe. Tentando criar novamente...');
+          const tenantResult = await createTenant({
+            id: 'system',
+            name: 'Sistema',
+            site: 'https://sistema.com',
+            ramo_atividade: 'Sistema de Administração',
+            objetivo: 'Administração global do sistema',
+            plan: 'enterprise',
+          });
+          if (tenantResult.success) {
+            systemTenant = tenantResult.tenant;
+            logger.info('[Init] ✅ Tenant "system" criado na segunda tentativa');
           } else {
-            logger.error('[Init] ❌ Erro ao criar super admin!');
-            logger.error('[Init] Erro:', agentResult.error);
-            logger.error('[Init] Detalhes completos:', JSON.stringify(agentResult, null, 2));
-            
-            // Tenta verificar novamente após o erro
-            authService._internal.loadAgentsFromFile();
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const allAgentsAfter = listAgents();
-            const existsAfter = allAgentsAfter.some(agent => 
-              agent.username && agent.username.toLowerCase() === 'systemadmin'
-            );
-            if (existsAfter) {
-              logger.info('[Init] ✅ Super Admin foi criado (verificado após erro)');
-            }
+            logger.error('[Init] ❌ Falha ao criar tenant "system" na segunda tentativa:', tenantResult.error);
+            return;
           }
         }
+        
+        // Busca o tenant system no banco para obter o ID UUID
+        const systemTenantDb = await TenantModel.findOne({
+          where: { tenant_key: 'system' },
+        });
+        
+        if (!systemTenantDb) {
+          logger.error('[Init] ❌ Tenant "system" não encontrado no banco de dados');
+          return;
+        }
+        
+        // Cria ou atualiza o usuário
+        const { hash, salt } = hashPassword('Admin123!');
+        const passwordHash = hash; // O banco usa password_hash, não precisa do salt separado
+        
+        if (!userId) {
+          // Cria novo usuário
+          const newUser = await UserModel.create({
+            name: 'Administrador do Sistema',
+            email: 'systemadmin@exemplo.com',
+            password_hash: passwordHash,
+            is_superadmin: true,
+          });
+          userId = newUser.id;
+          logger.info('[Init] ✅ Usuário systemadmin criado no PostgreSQL');
+        }
+        
+        // Cria ou atualiza a associação com o tenant system
+        await TenantUserModel.findOrCreate({
+          where: {
+            user_id: userId,
+            tenant_id: systemTenantDb.id,
+          },
+          defaults: {
+            user_id: userId,
+            tenant_id: systemTenantDb.id,
+            role: 'owner',
+          },
+        });
+        
+        logger.info('[Init] ✅ Super Admin criado/atualizado no PostgreSQL!');
+        logger.info('[Init] 📋 Credenciais: email=systemadmin@exemplo.com, password=Admin123!');
       } else {
-        logger.error('[Init] ❌ Não foi possível criar systemadmin: tenant "system" não existe');
+        logger.info('[Init] ✅ Super Admin já existe no PostgreSQL');
       }
-    } else {
-      logger.info('[Init] ✅ Super Admin já existe (encontrado nos agentes carregados)');
+    } catch (error) {
+      logger.error('[Init] ❌ Erro ao verificar/criar systemadmin no PostgreSQL:', error);
+      logger.error('[Init] Stack:', error.stack);
     }
     logger.info('[Init] ========================================');
   } catch (error) {
@@ -617,52 +597,27 @@ function ensureDataDir() {
 }
 
 /**
- * Carrega fluxos do arquivo JSON.
+ * Carrega fluxos.
+ * @deprecated Migrado para banco de dados PostgreSQL. Esta função não faz mais nada.
  */
 function loadFlowsFromFile() {
-  try {
-    ensureDataDir();
-    if (fs.existsSync(flowsFile)) {
-      const data = fs.readFileSync(flowsFile, 'utf8');
-      const flowsArray = JSON.parse(data);
-      if (Array.isArray(flowsArray)) {
-        flows.clear();
-        for (const flow of flowsArray) {
-          if (flow && flow.id) {
-            flows.set(flow.id, flow);
-          }
-        }
-        logger.info(`Carregados ${flows.size} fluxo(s) do arquivo ${flowsFile}`);
-      }
-    } else {
-      logger.info(`Arquivo de fluxos não encontrado: ${flowsFile}. Criando novo arquivo.`);
-    }
-  } catch (err) {
-    logger.error('Erro ao carregar fluxos do arquivo:', err);
-    // Continua com Map vazio se houver erro
-  }
+  // Migrado para banco de dados - não carrega mais de arquivo JSON
+  logger.debug('loadFlowsFromFile chamado mas ignorado (dados estão no banco de dados)');
+  // Dados agora estão no banco de dados PostgreSQL
 }
 
 /**
- * Salva todos os fluxos no arquivo JSON.
+ * Salva todos os fluxos.
+ * @deprecated Migrado para banco de dados PostgreSQL. Esta função não faz mais nada.
  */
 function saveFlowsToFile() {
-  try {
-    ensureDataDir();
-    const flowsArray = Array.from(flows.values());
-    const data = JSON.stringify(flowsArray, null, 2);
-    fs.writeFileSync(flowsFile, data, 'utf8');
-    logger.debug(`Fluxos salvos no arquivo ${flowsFile} (${flows.size} fluxo(s))`);
-  } catch (err) {
-    logger.error('Erro ao salvar fluxos no arquivo:', err);
-  }
+  // Migrado para banco de dados - não salva mais em arquivo JSON
+  logger.debug('saveFlowsToFile chamado mas ignorado (dados estão no banco de dados)');
 }
 
-// Carrega fluxos do arquivo ao iniciar o servidor
-loadFlowsFromFile();
-
-// Carrega conversas do arquivo ao iniciar o servidor
-loadSessionEventsFromFile();
+// Dados agora são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+// loadFlowsFromFile(); // Deprecated - dados agora estão no banco
+// loadSessionEventsFromFile(); // Deprecated - dados agora estão no banco
 
 // ---------------------------------------------------------------------------
 // Helpers HTTP básicos
@@ -800,7 +755,7 @@ function validateFlowStructure(rawFlow) {
 /**
  * Garante metadados mínimos de FlowDefinition.
  *
- * - tenantId: sempre presente (cai no DEFAULT_TENANT_ID se não vier)
+ * - tenantId: sempre presente (deve ser fornecido)
  * - id: se não vier, gera um id simples com timestamp
  * - name: valor default amigável
  * - version: default 1 se não vier ou não for número
@@ -895,9 +850,146 @@ async function requestHandler(req, res) {
     logger.debug(`[Server] Requisição GET recebida: ${pathname}`);
   }
 
-  // Healthcheck básico
+  // Healthcheck básico (mantido para compatibilidade)
   if (method === 'GET' && pathname === '/health') {
     sendJson(res, 200, { status: 'ok' });
+    return;
+  }
+
+  // Liveness probe: verifica se o processo está vivo
+  // Sempre retorna 200 se o processo está rodando (não consulta DB)
+  if (method === 'GET' && pathname === '/health/live') {
+    const uptimeSec = Math.floor(process.uptime());
+    sendJson(res, 200, {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptimeSec
+    });
+    return;
+  }
+
+  // Healthcheck do banco de dados (detalhado)
+  if (method === 'GET' && pathname === '/health/db') {
+    try {
+      const dbHealth = require('./db/health');
+      
+      // Verifica conexão
+      const connectionCheck = await dbHealth.checkDbConnection();
+      
+      // Obtém informações do banco
+      const dbInfo = dbHealth.getDbInfo();
+      
+      // Obtém status das migrations
+      const migrationStatus = await dbHealth.getMigrationStatusSafe();
+      
+      // Obtém status do sync
+      const syncStatus = dbHealth.getSyncStatus();
+      
+      // Obtém ambiente
+      const environment = dbHealth.getEnvironment();
+      
+      if (!connectionCheck.ok) {
+        sendJson(res, 503, {
+          status: 'fail',
+          environment,
+          latencyMs: connectionCheck.latencyMs,
+          db: dbInfo,
+          migrations: {
+            applied: migrationStatus.appliedCount,
+            pending: migrationStatus.pendingCount,
+            pendingNames: migrationStatus.pendingNames
+          },
+          sync: syncStatus,
+          errorMessage: connectionCheck.errorMessage,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+      
+      sendJson(res, 200, {
+        status: 'ok',
+        environment,
+        latencyMs: connectionCheck.latencyMs,
+        db: dbInfo,
+        migrations: {
+          applied: migrationStatus.appliedCount,
+          pending: migrationStatus.pendingCount,
+          pendingNames: migrationStatus.pendingNames
+        },
+        sync: syncStatus,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      logger.error('[Health DB] Erro ao verificar banco de dados:', err);
+      const dbHealth = require('./db/health');
+      const dbInfo = dbHealth.getDbInfo();
+      const environment = dbHealth.getEnvironment();
+      
+      sendJson(res, 503, {
+        status: 'fail',
+        environment,
+        latencyMs: 0,
+        db: dbInfo,
+        migrations: {
+          applied: 0,
+          pending: 0,
+          pendingNames: []
+        },
+        errorMessage: err.message || 'Erro ao verificar banco de dados',
+        timestamp: new Date().toISOString()
+      });
+    }
+    return;
+  }
+
+  // Readiness probe: verifica se o serviço está pronto para receber tráfego
+  // Retorna 200 apenas se: DB ok E sem migrations pendentes
+  if (method === 'GET' && pathname === '/health/ready') {
+    try {
+      const dbHealth = require('./db/health');
+      
+      // Verifica conexão
+      const connectionCheck = await dbHealth.checkDbConnection();
+      
+      if (!connectionCheck.ok) {
+        sendJson(res, 503, {
+          status: 'not_ready',
+          reason: 'db_connection_failed',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+      
+      // Verifica migrations pendentes
+      const migrationStatus = await dbHealth.getMigrationStatusSafe();
+      
+      if (migrationStatus.pendingCount > 0) {
+        sendJson(res, 503, {
+          status: 'not_ready',
+          reason: 'migrations_pending',
+          pending: migrationStatus.pendingCount,
+          pendingNames: migrationStatus.pendingNames,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+      
+      // Tudo ok: DB conectado e sem migrations pendentes
+      sendJson(res, 200, {
+        status: 'ready',
+        db: 'ok',
+        migrationsPending: 0,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      logger.error('[Health Ready] Erro ao verificar readiness:', err);
+      sendJson(res, 503, {
+        status: 'not_ready',
+        reason: 'check_failed',
+        error: err.message || 'Erro ao verificar readiness',
+        timestamp: new Date().toISOString()
+      });
+    }
     return;
   }
 
@@ -949,7 +1041,7 @@ async function requestHandler(req, res) {
   // Rotas públicas: /health, /version, /system/status, /system/websocket, OPTIONS
   // Rotas de autenticação não exigem tenant_id (login, reset, convites)
   // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
-  const publicRoutes = ['/health', '/version', '/system/status', '/system/websocket'];
+  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket'];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
   const superAdminRoutes = pathname.startsWith('/super-admin');
   
@@ -1645,8 +1737,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const tenantsList = listTenants();
-    sendJson(res, 200, { tenants: tenantsList });
+    try {
+      const tenantsList = await listTenants();
+      sendJson(res, 200, { tenants: tenantsList });
+    } catch (err) {
+      logger.error('Erro ao listar tenants:', err);
+      sendJson(res, 500, { error: 'Erro ao listar tenants', message: err.message });
+    }
     return;
   }
 
@@ -1661,9 +1758,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
     
     // Verifica se o tenant existe primeiro
-    const tenant = getTenant(tenantId);
-    if (!tenant) {
-      sendJson(res, 404, { error: 'tenant_not_found' });
+    try {
+      const tenant = await getTenant(tenantId);
+      if (!tenant) {
+        sendJson(res, 404, { error: 'tenant_not_found' });
+        return;
+      }
+    } catch (err) {
+      logger.error('Erro ao verificar tenant:', err);
+      sendJson(res, 500, { error: 'Erro ao verificar tenant', message: err.message });
       return;
     }
     
@@ -1709,13 +1812,246 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const usage = getTenantUsage(tenantId);
-    if (!usage) {
-      sendJson(res, 404, { error: 'tenant_not_found' });
+    try {
+      const usage = await getTenantUsage(tenantId);
+      if (!usage) {
+        sendJson(res, 404, { error: 'tenant_not_found' });
+        return;
+      }
+
+      sendJson(res, 200, { usage });
+    } catch (err) {
+      logger.error('Erro ao obter métricas de uso:', err);
+      sendJson(res, 500, { error: 'Erro ao obter métricas de uso', message: err.message });
+    }
+    return;
+  }
+
+  // GET /tenants/:id/ai-provider-status - Verifica se tenant tem provider de IA válido (deve vir ANTES da rota genérica /tenants/:id)
+  if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/ai-provider-status')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
 
-    sendJson(res, 200, { usage });
+    const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/ai-provider-status', ''));
+    
+    // Verifica se o usuário tem permissão para ver o status do tenant
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser && req.agent.role !== 'admin' && req.agent.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver o status de provider de IA do seu próprio tenant' });
+      return;
+    }
+
+    try {
+      const { getAiProviderForTenant } = require('../engine/aiProviderManager');
+      const { getAIConfig, getDecryptedAPIKey } = require('./services/tenantAIService');
+      
+      // Busca configuração de IA do tenant no banco de dados
+      const tenantAiConfig = await getAIConfig(tenantId);
+      
+      // Configuração específica é obrigatória - se não tiver, retorna false
+      if (!tenantAiConfig || !tenantAiConfig.primary || !tenantAiConfig.configured) {
+        logger.warn('Tenant não tem configuração específica de provider de IA (obrigatória)', {
+          tenantId,
+          hasTenantConfig: !!tenantAiConfig,
+          hasPrimary: !!tenantAiConfig?.primary,
+          configured: tenantAiConfig?.configured,
+        });
+        
+        sendJson(res, 200, { 
+          hasValidProvider: false,
+          tenantId 
+        });
+        return;
+      }
+      
+      // Obtém o provider específico do tenant
+      const provider = getAiProviderForTenant(tenantId);
+      
+      // Verifica se o provider é válido
+      const hasValidProvider = provider !== null && 
+                              typeof provider === 'object' && 
+                              typeof provider.generate === 'function';
+      
+      // Se o provider não estiver registrado, testa o token do provider configurado
+      let finalIsValid = hasValidProvider;
+      
+      if (!hasValidProvider && tenantAiConfig.primary) {
+        const primaryProvider = tenantAiConfig.primary;
+        // Busca API key do banco de dados (criptografada)
+        const apiKey = await getDecryptedAPIKey(tenantId, primaryProvider);
+        
+        if (apiKey && apiKey.trim()) {
+          logger.debug('Provider não registrado, testando token do provider configurado', {
+            tenantId,
+            primaryProvider,
+            hasApiKey: !!apiKey,
+          });
+          
+          // Testa o token do provider primário configurado
+          try {
+            if (primaryProvider === 'openai') {
+              const response = await fetch('https://api.openai.com/v1/models', {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${apiKey.trim()}`,
+                },
+                signal: AbortSignal.timeout(10000),
+              });
+              
+              if (response.ok) {
+                const data = await response.json().catch(() => null);
+                finalIsValid = !!(data && Array.isArray(data.data));
+                logger.info('Token OpenAI testado com sucesso', {
+                  tenantId,
+                  isValid: finalIsValid,
+                  hasData: !!data,
+                  isArray: Array.isArray(data?.data),
+                });
+              } else {
+                const errorData = await response.json().catch(() => ({}));
+                logger.warn('Token OpenAI inválido', {
+                  tenantId,
+                  status: response.status,
+                  error: errorData.error?.message || response.statusText,
+                });
+                finalIsValid = false;
+              }
+            } else if (primaryProvider === 'anthropic') {
+              const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                  'x-api-key': apiKey.trim(),
+                  'anthropic-version': '2023-06-01',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: 'claude-3-haiku-20240307',
+                  max_tokens: 10,
+                  messages: [{ role: 'user', content: 'test' }],
+                }),
+                signal: AbortSignal.timeout(10000),
+              });
+              
+              if (response.ok) {
+                const data = await response.json().catch(() => null);
+                finalIsValid = !!(data && data.content);
+                logger.info('Token Anthropic testado com sucesso', {
+                  tenantId,
+                  isValid: finalIsValid,
+                  hasData: !!data,
+                  hasContent: !!data?.content,
+                });
+              } else {
+                const errorData = await response.json().catch(() => ({}));
+                logger.warn('Token Anthropic inválido', {
+                  tenantId,
+                  status: response.status,
+                  error: errorData.error?.message || response.statusText,
+                });
+                finalIsValid = false;
+              }
+            }
+          } catch (err) {
+            logger.warn('Erro ao testar token do provider', {
+              tenantId,
+              provider: primaryProvider,
+              error: err.message,
+            });
+            finalIsValid = false;
+          }
+        } else {
+          logger.warn('API key não encontrada para o provider configurado', {
+            tenantId,
+            primaryProvider,
+          });
+          finalIsValid = false;
+        }
+      }
+      
+      logger.debug('Verificando provider de IA para tenant', {
+        tenantId,
+        hasValidProvider,
+        finalIsValid,
+        primaryProvider: tenantAiConfig?.primary,
+      });
+      
+      if (!finalIsValid) {
+        logger.warn('Provider de IA não válido para tenant', {
+          tenantId,
+          hasTenantConfig: !!tenantAiConfig,
+          tenantPrimaryProvider: tenantAiConfig?.primary,
+          tenantSecondaryProvider: tenantAiConfig?.secondary,
+        });
+      }
+      
+      logger.info('Status final de provider de IA do tenant', {
+        tenantId,
+        hasValidProvider: finalIsValid,
+        providerRegistrado: hasValidProvider,
+        providerTestado: !hasValidProvider && tenantAiConfig?.primary,
+      });
+      
+      const responseData = { 
+        hasValidProvider: finalIsValid,
+        tenantId 
+      };
+      
+      logger.debug('Enviando resposta ao cliente', responseData);
+      
+      sendJson(res, 200, responseData);
+    } catch (err) {
+      logger.error('Erro ao verificar status de provider de IA do tenant:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao verificar status de provider de IA' });
+    }
+    return;
+  }
+
+  // GET /tenants/:id/ai-config - Obtém configuração de IA do tenant (deve vir ANTES da rota genérica /tenants/:id)
+  // NOTA: Esta rota também cobre /tenants/current/ai-config por compatibilidade.
+  if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/ai-config')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    let tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/ai-config', ''));
+    // Compatibilidade: /tenants/current/ai-config deve resolver para o tenant do agente autenticado.
+    if (tenantId === 'current') {
+      tenantId = authResult.agent?.tenantId;
+    }
+    if (!tenantId) {
+      sendJson(res, 400, { error: 'bad_request', message: 'tenantId ausente ou inválido' });
+      return;
+    }
+    
+    // Verifica se o usuário tem permissão para ver a config de IA do tenant
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser && req.agent.role !== 'admin' && req.agent.tenantId !== tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver a configuração de IA do seu próprio tenant' });
+      return;
+    }
+
+    try {
+      // Busca configuração de IA do tenant no banco de dados
+      const { getAIConfig } = require('./services/tenantAIService');
+      const tenantAiConfig = await getAIConfig(tenantId);
+      
+      // Se tenant não existir, 404
+      if (tenantAiConfig === null) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant não encontrado' });
+        return;
+      }
+      
+      // Retorna configuração completa (sem segredos) para o frontend reidratar campos (model, temperature, max_tokens, etc).
+      sendJson(res, 200, { tenantId, ...tenantAiConfig });
+    } catch (err) {
+      logger.error('Erro ao obter configuração de IA do tenant:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter configuração de IA do tenant' });
+    }
     return;
   }
 
@@ -1741,13 +2077,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const tenant = getTenant(tenantId);
-    if (!tenant) {
-      sendJson(res, 404, { error: 'tenant_not_found' });
-      return;
-    }
+    try {
+      const tenant = await getTenant(tenantId);
+      if (!tenant) {
+        sendJson(res, 404, { error: 'tenant_not_found' });
+        return;
+      }
 
-    sendJson(res, 200, { tenant });
+      sendJson(res, 200, { tenant });
+    } catch (err) {
+      logger.error('[Server] Erro ao obter tenant:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
     return;
   }
 
@@ -1773,14 +2114,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/context', ''));
-    const tenant = getTenant(tenantId);
     
-    if (!tenant) {
-      sendJson(res, 404, { error: 'tenant_not_found' });
-      return;
-    }
-
     try {
+      const tenant = await getTenant(tenantId);
+      if (!tenant) {
+        sendJson(res, 404, { error: 'tenant_not_found' });
+        return;
+      }
       const body = await parseJsonBody(req);
       
       // Valida entrada usando schema
@@ -1793,7 +2133,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
       
       // Passa informações do usuário para auditoria e validação
-      const result = updateTenantContext(tenantId, body, {
+      const result = await updateTenantContext(tenantId, body, {
         userRole: req.agent.role,
         userId: req.agent.id,
         username: req.agent.username,
@@ -1829,7 +2169,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   }
 
   // PUT /tenants/:id - Atualiza tenant
-  if (method === 'PUT' && pathname.startsWith('/tenants/')) {
+  // Exclui rotas específicas que devem ser tratadas antes (ai-config, ai-credentials, etc)
+  if (method === 'PUT' && pathname.startsWith('/tenants/') && 
+      !pathname.endsWith('/ai-config') && !pathname.endsWith('/ai-credentials')) {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
@@ -1868,7 +2210,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       
-      const result = updateTenant(tenantId, body);
+      const result = await updateTenant(tenantId, body);
 
       if (!result.success) {
         badRequest(res, result.error);
@@ -1907,26 +2249,35 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    // Apenas admins podem remover tenants
-    if (req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas administradores podem remover tenants' });
+    // Apenas super-admins podem remover tenants
+    const isSuperAdminUser = isSuperAdmin(req.agent);
+    if (!isSuperAdminUser) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem remover tenants' });
       return;
     }
 
     const tenantId = decodeURIComponent(pathname.slice('/tenants/'.length));
-    const tenant = getTenant(tenantId);
     
-    if (!tenant) {
-      sendJson(res, 404, { error: 'tenant_not_found' });
-      return;
-    }
+    try {
+      const tenant = await getTenant(tenantId);
+      if (!tenant) {
+        sendJson(res, 404, { error: 'tenant_not_found' });
+        return;
+      }
 
-    const result = deleteTenant(tenantId);
+      const result = await deleteTenant(tenantId);
 
-    if (!result.success) {
-      badRequest(res, result.error);
-      return;
+      if (!result.success) {
+        badRequest(res, result.error);
+        return;
+      }
+
+      sendJson(res, 200, { success: true, message: 'Tenant removido com sucesso' });
+    } catch (err) {
+      logger.error('Erro ao remover tenant:', err);
+      sendJson(res, 500, { error: 'Erro ao remover tenant', message: err.message });
     }
+    return;
 
     // Registra ação de auditoria
     logAction({
@@ -1968,7 +2319,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const result = suspendTenant(tenantId);
+    const result = await suspendTenant(tenantId);
     if (!result.success) {
       sendJson(res, 400, { error: result.error });
       return;
@@ -2005,7 +2356,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const result = reactivateTenant(tenantId);
+    const result = await reactivateTenant(tenantId);
     if (!result.success) {
       sendJson(res, 400, { error: result.error });
       return;
@@ -2049,7 +2400,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const result = changePlan(tenantId, body.plan);
+      const result = await changePlan(tenantId, body.plan);
       if (!result.success) {
         sendJson(res, 400, { error: result.error });
         return;
@@ -2105,7 +2456,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         search: url.searchParams.get('search'),
       };
 
-      const tenants = listAllTenants(filters);
+      const tenants = await listAllTenants(filters);
       sendJson(res, 200, { tenants });
     } catch (err) {
       logger.error('Erro ao listar tenants (Super Admin):', err);
@@ -3423,6 +3774,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         operationType,
       });
 
+      // Para super-admins, adiciona flag indicando que rate limit é apenas informativo
+      const isSuperAdminUser = req.agent ? isSuperAdmin(req.agent) : false;
+      if (isSuperAdminUser) {
+        status.isSuperAdmin = true;
+        status.informativeOnly = true; // Rate limit é apenas informativo, não bloqueia
+      }
+
       sendJson(res, 200, status);
     } catch (err) {
       logger.error('Erro ao verificar rate limit:', err);
@@ -3469,6 +3827,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const result = await generateAndValidate(body, {
         tenantId: finalTenantId,
         userId,
+        agent: req.agent, // Passa agente para verificação de super-admin
       }, onProgress);
 
       // Trata erro de rate limit no resultado
@@ -4719,7 +5078,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const queuesCountBefore = queuesBefore.length;
       
       // Recarrega dados do arquivo
-      loadQueuesFromFile();
+      // Dados agora estão no banco de dados PostgreSQL
       
       // Obtém estado após recarregar
       const allTicketsAfter = listAllTickets();
@@ -5781,7 +6140,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           throw new Error('Configuração retornada não é um objeto válido');
         }
         
-        sendJson(res, 200, configData);
+        // Sanitiza a configuração: remove apiKey e seção ai completa para evitar vazamento
+        // A configuração de IA por tenant deve ser obtida via endpoint específico
+        const sanitizedConfig = JSON.parse(JSON.stringify(configData)); // Deep copy
+        
+        // Remove apiKey de qualquer provider de IA
+        if (sanitizedConfig.ai) {
+          if (sanitizedConfig.ai.openai && sanitizedConfig.ai.openai.apiKey) {
+            delete sanitizedConfig.ai.openai.apiKey;
+          }
+          if (sanitizedConfig.ai.anthropic && sanitizedConfig.ai.anthropic.apiKey) {
+            delete sanitizedConfig.ai.anthropic.apiKey;
+          }
+          // Remove a seção ai completamente para evitar confusão
+          // A configuração de IA deve ser obtida via /tenants/:tenantId/ai-config
+          delete sanitizedConfig.ai;
+        }
+        
+        sendJson(res, 200, sanitizedConfig);
       } catch (err) {
         // Usa console.error como fallback caso logger falhe
         try {
@@ -5805,22 +6181,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     // Se não for requisição de API, continua para o catch-all (não retorna aqui)
   }
 
-  // GET /api/data/rag_question_generation_rules.json - Serve regras de geração de perguntas (deprecated, use /contracts/rag/question-generation.rules.json)
   // GET /contracts/rag/question-generation.rules.json - Serve regras de geração de perguntas
-  if (method === 'GET' && (pathname === '/api/data/rag_question_generation_rules.json' || pathname === '/contracts/rag/question-generation.rules.json')) {
+  // GET /api/data/rag_question_generation_rules.json - Compatibilidade retroativa (deprecated)
+  if (method === 'GET' && (pathname === '/contracts/rag/question-generation.rules.json' || pathname === '/api/data/rag_question_generation_rules.json')) {
     try {
-      // Tenta carregar do contrato primeiro
+      // Carrega do contrato
       const contractsDir = path.join(__dirname, '..', 'contracts');
       const rulesFile = path.join(contractsDir, 'rag', 'question-generation.rules.json');
-      
-      // Fallback para o arquivo antigo em api/data
-      let fileToLoad = rulesFile;
-      if (!fs.existsSync(rulesFile)) {
-        const oldFile = path.join(dataDir, 'rag_question_generation_rules.json');
-        if (fs.existsSync(oldFile)) {
-          fileToLoad = oldFile;
-        }
-      }
+      const fileToLoad = rulesFile;
       
       if (!fs.existsSync(fileToLoad)) {
         sendJson(res, 404, { error: 'not_found', message: 'Arquivo de regras não encontrado' });
@@ -5838,6 +6206,330 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         error: 'Erro ao ler regras',
         message: err.message || 'Erro desconhecido'
       });
+    }
+    return;
+  }
+
+  // GET /tenants/current/ai-config - Obtém configuração de IA do tenant atual (sem segredos)
+  if (method === 'GET' && pathname === '/tenants/current/ai-config') {
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      let tenantId = authResult.agent.tenantId;
+      
+      // Validação: se tenantId for "current" (string literal), isso é um erro
+      if (tenantId === 'current') {
+        logger.error('[Server] tenantId inválido: "current" (string literal). Agente:', {
+          id: authResult.agent.id,
+          username: authResult.agent.username,
+          role: authResult.agent.role,
+          tenantId: authResult.agent.tenantId
+        });
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido: "current" não é um tenant válido. Verifique a configuração do agente.' });
+        return;
+      }
+      
+      if (!tenantId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Agente não possui tenantId' });
+        return;
+      }
+
+      const aiConfig = await getAIConfig(tenantId);
+      
+      if (aiConfig === null) {
+        sendJson(res, 404, { error: 'not_found', message: 'Configuração de IA não encontrada para este tenant' });
+        return;
+      }
+
+      sendJson(res, 200, aiConfig);
+    } catch (err) {
+      logger.error('Erro ao obter configuração de IA do tenant atual:', err);
+      sendJson(res, 500, { error: 'Erro ao obter configuração de IA', message: err.message });
+    }
+    return;
+  }
+
+  // PUT /tenants/current/ai-config - Salva configuração de IA do tenant atual
+  if (method === 'PUT' && pathname === '/tenants/current/ai-config') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      let tenantId = authResult.agent.tenantId;
+      
+      // Validação: se tenantId for "current" (string literal), isso é um erro
+      if (tenantId === 'current') {
+        logger.error('[Server] tenantId inválido: "current" (string literal). Agente:', {
+          id: authResult.agent.id,
+          username: authResult.agent.username,
+          role: authResult.agent.role,
+          tenantId: authResult.agent.tenantId
+        });
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido: "current" não é um tenant válido. Verifique a configuração do agente.' });
+        return;
+      }
+      
+      if (!tenantId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Agente não possui tenantId' });
+        return;
+      }
+
+      // Verifica permissão (owner/admin podem alterar)
+      const permResult = requirePermission(req, 'tenants', 'update');
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar configurações de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        badRequest(res, 'Configuração deve ser um objeto JSON válido');
+        return;
+      }
+
+      const savedConfig = await saveAIConfig(tenantId, body);
+      sendJson(res, 200, savedConfig);
+    } catch (err) {
+      logger.error('Erro ao salvar configuração de IA do tenant atual:', err);
+      sendJson(res, 500, { error: 'Erro ao salvar configuração de IA', message: err.message });
+    }
+    return;
+  }
+
+  // PUT /tenants/current/ai-credentials - Salva credenciais de IA do tenant atual (criptografadas)
+  if (method === 'PUT' && pathname === '/tenants/current/ai-credentials') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      let tenantId = authResult.agent.tenantId;
+      
+      // Validação: se tenantId for "current" (string literal), isso é um erro
+      if (tenantId === 'current') {
+        logger.error('[Server] tenantId inválido: "current" (string literal). Agente:', {
+          id: authResult.agent.id,
+          username: authResult.agent.username,
+          role: authResult.agent.role,
+          tenantId: authResult.agent.tenantId
+        });
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido: "current" não é um tenant válido. Verifique a configuração do agente.' });
+        return;
+      }
+      
+      if (!tenantId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Agente não possui tenantId' });
+        return;
+      }
+
+      // Verifica permissão (owner/admin podem alterar)
+      const permResult = requirePermission(req, 'tenants', 'update');
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar credenciais de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        badRequest(res, 400, { error: 'invalid_request', message: 'Body deve ser um objeto JSON válido' });
+        return;
+      }
+
+      const { provider, apiKey } = body;
+
+      if (!provider || typeof provider !== 'string') {
+        badRequest(res, 400, { error: 'invalid_request', message: 'Provider é obrigatório' });
+        return;
+      }
+
+      if (!apiKey || typeof apiKey !== 'string') {
+        badRequest(res, 400, { error: 'invalid_request', message: 'API key é obrigatória' });
+        return;
+      }
+
+      await saveAICredentials(tenantId, provider, apiKey);
+      
+      sendJson(res, 200, { 
+        success: true, 
+        message: 'Credenciais salvas com sucesso' 
+      });
+    } catch (err) {
+      logger.error('Erro ao salvar credenciais de IA do tenant atual:', err);
+      sendJson(res, 500, { error: 'Erro ao salvar credenciais de IA', message: err.message });
+    }
+    return;
+  }
+
+  // GET /tenants/:tenantKey/ai-config - Obtém configuração de IA do tenant (sem segredos)
+  if (method === 'GET' && pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/)) {
+    const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/);
+    const tenantKey = match[1];
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      // Verifica se o usuário tem acesso ao tenant
+      // Super-admin pode acessar qualquer tenant
+      // Outros usuários só podem acessar seu próprio tenant
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!isSuperAdmin && authResult.agent.tenantId !== tenantKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado a este tenant' });
+        return;
+      }
+
+      const aiConfig = await getAIConfig(tenantKey);
+      
+      if (aiConfig === null) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant não encontrado' });
+        return;
+      }
+
+      sendJson(res, 200, aiConfig);
+    } catch (err) {
+      logger.error('Erro ao obter configuração de IA:', err);
+      sendJson(res, 500, { error: 'Erro ao obter configuração de IA', message: err.message });
+    }
+    return;
+  }
+
+  // PUT /tenants/:tenantKey/ai-config - Salva configuração de IA do tenant
+  if (method === 'PUT' && pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/)) {
+    const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/);
+    const tenantKey = match[1];
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      // Verifica RBAC: apenas admin/owner/superadmin podem alterar
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!isSuperAdmin && authResult.agent.tenantId !== tenantKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado a este tenant' });
+        return;
+      }
+
+      // Verifica permissão (owner/admin podem alterar)
+      const permResult = requirePermission(req, 'tenants', 'update');
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar configurações de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        badRequest(res, 'Configuração deve ser um objeto JSON válido');
+        return;
+      }
+
+      const savedConfig = await saveAIConfig(tenantKey, body);
+      sendJson(res, 200, savedConfig);
+    } catch (err) {
+      logger.error('Erro ao salvar configuração de IA:', err);
+      sendJson(res, 500, { error: 'Erro ao salvar configuração de IA', message: err.message });
+    }
+    return;
+  }
+
+  // PUT /tenants/:tenantKey/ai-credentials - Salva credenciais de IA do tenant (criptografadas)
+  if (method === 'PUT' && pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials$/)) {
+    const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials$/);
+    const tenantKey = match[1];
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      // Verifica RBAC: apenas admin/owner/superadmin podem alterar
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!isSuperAdmin && authResult.agent.tenantId !== tenantKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado a este tenant' });
+        return;
+      }
+
+      // Verifica permissão (owner/admin podem alterar)
+      const permResult = requirePermission(req, 'tenants', 'update');
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar credenciais de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        badRequest(res, 400, { error: 'invalid_request', message: 'Body deve ser um objeto JSON válido' });
+        return;
+      }
+
+      const { provider, apiKey } = body;
+
+      if (!provider || typeof provider !== 'string') {
+        badRequest(res, 400, { error: 'invalid_request', message: 'Provider é obrigatório' });
+        return;
+      }
+
+      if (!apiKey || typeof apiKey !== 'string') {
+        badRequest(res, 400, { error: 'invalid_request', message: 'API key é obrigatória' });
+        return;
+      }
+
+      await saveAICredentials(tenantKey, provider, apiKey);
+      
+      sendJson(res, 200, { 
+        success: true, 
+        message: 'Credenciais salvas com sucesso' 
+      });
+    } catch (err) {
+      logger.error('Erro ao salvar credenciais de IA:', err);
+      // Se o erro for "Tenant não encontrado", retorna 404
+      if (err.message && err.message.includes('não encontrado')) {
+        sendJson(res, 404, { error: 'not_found', message: err.message });
+      } else {
+        sendJson(res, 500, { error: 'Erro ao salvar credenciais de IA', message: err.message });
+      }
     }
     return;
   }
@@ -10195,21 +10887,94 @@ async function startInitialization() {
   }
   
   initializationPromise = (async () => {
-    console.log('[Init] Iniciando inicialização automática do systemadmin...');
-    logger.info('[Init] Iniciando inicialização automática do systemadmin...');
+    console.log('[Init] Iniciando inicialização automática...');
+    logger.info('[Init] Iniciando inicialização automática...');
     
     // Aguarda um pouco para garantir que todos os módulos foram carregados
     await new Promise(resolve => setTimeout(resolve, 500));
     
+    // Inicializa banco de dados PostgreSQL (OBRIGATÓRIO)
+    console.log('[Init] Conectando ao PostgreSQL...');
+    logger.info('[Init] Conectando ao PostgreSQL...');
+    
     try {
-      await initializeSystemAdmin();
-      console.log('[Init] ✅ Inicialização automática concluída');
-      logger.info('[Init] ✅ Inicialização automática concluída');
-    } catch (error) {
-      console.error('[Init] ❌ Erro na inicialização automática:', error);
-      logger.error('[Init] ❌ Erro na inicialização automática:', error);
-      throw error;
+      // Inicializa conexão Sequelize com retry
+      // Usa config.js como fonte principal (config.json > env vars)
+      const { connect } = require('./db/sequelize');
+      await connect(30, 1000); // 30 tentativas, delay inicial 1s
+      console.log('[Init] ✅ PostgreSQL conectado (Sequelize)');
+      logger.info('[Init] ✅ PostgreSQL conectado (Sequelize)');
+    } catch (dbErr) {
+      const error = `Falha ao conectar ao PostgreSQL: ${dbErr.message}`;
+      console.error(`[Init] ❌ ${error}`);
+      logger.error(`[Init] ❌ ${error}`);
+      throw new Error(error);
     }
+    
+    try {
+      // Executa migrations Sequelize
+      console.log('[Init] Executando migrations Sequelize...');
+      logger.info('[Init] Executando migrations Sequelize...');
+      const { runMigrations } = require('./db/migrate');
+      await runMigrations();
+      console.log('[Init] ✅ Migrations concluídas');
+      logger.info('[Init] ✅ Migrations concluídas');
+    } catch (migrationErr) {
+      const error = `Falha ao executar migrations: ${migrationErr.message}`;
+      console.error(`[Init] ❌ ${error}`);
+      logger.error(`[Init] ❌ ${error}`);
+      throw new Error(error);
+    }
+    
+    try {
+      // Executa seed
+      console.log('[Init] Executando seed...');
+      logger.info('[Init] Executando seed...');
+      const { runSeed } = require('./db/seed');
+      await runSeed();
+      console.log('[Init] ✅ Seed concluído');
+      logger.info('[Init] ✅ Seed concluído');
+    } catch (seedErr) {
+      const error = `Falha ao executar seed: ${seedErr.message}`;
+      console.error(`[Init] ❌ ${error}`);
+      logger.error(`[Init] ❌ ${error}`);
+      throw new Error(error);
+    }
+    
+      try {
+        // Define relacionamentos dos models
+        const { defineRelationships } = require('./db/models');
+        defineRelationships();
+        console.log('[Init] ✅ Relacionamentos definidos');
+        logger.info('[Init] ✅ Relacionamentos definidos');
+      } catch (relErr) {
+        console.warn('[Init] ⚠️  Aviso ao definir relacionamentos:', relErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao definir relacionamentos:', relErr.message);
+      }
+      
+      try {
+        // Garante que o tenant de demonstração existe
+        const { ensureDemoTenantExists } = require('./services/tenantService');
+        await ensureDemoTenantExists();
+        console.log('[Init] ✅ Tenant de demonstração verificado');
+        logger.info('[Init] ✅ Tenant de demonstração verificado');
+      } catch (demoErr) {
+        console.warn('[Init] ⚠️  Aviso ao verificar tenant de demonstração:', demoErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao verificar tenant de demonstração:', demoErr.message);
+      }
+      
+      // Inicializa providers de IA do banco de dados (após banco estar conectado)
+      try {
+        console.log('[Init] Inicializando providers de IA do banco de dados...');
+        logger.info('[Init] Inicializando providers de IA do banco de dados...');
+        await initializeAiProviders();
+        console.log('[Init] ✅ Providers de IA inicializados');
+        logger.info('[Init] ✅ Providers de IA inicializados');
+      } catch (aiErr) {
+        // Não falha a inicialização se houver erro nos providers
+        console.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
+        logger.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
+      }
   })();
   
   return initializationPromise;
@@ -10257,16 +11022,14 @@ if (require.main === module) {
       logger.info(`API server listening on http://0.0.0.0:${port}`);
     });
   }).catch((error) => {
-    console.error('[Server] ❌ Erro ao inicializar systemadmin, mas continuando inicialização do servidor');
+    console.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
     console.error('[Server] Erro:', error);
     console.error('[Server] Stack:', error.stack);
-    logger.error('[Server] ❌ Erro ao inicializar systemadmin, mas continuando inicialização do servidor');
+    logger.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
     logger.error('[Server] Erro:', error);
     logger.error('[Server] Stack:', error.stack);
-    server.listen(port, () => {
-      console.log(`API server listening on http://0.0.0.0:${port}`);
-      logger.info(`API server listening on http://0.0.0.0:${port}`);
-    });
+    console.error('[Server] Encerrando processo...');
+    process.exit(1);
   });
 } else {
   console.log('[Server] ⚠️  Bloco if (require.main === module) NÃO executado - servidor não será iniciado automaticamente');

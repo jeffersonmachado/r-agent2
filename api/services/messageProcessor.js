@@ -53,6 +53,9 @@ const { emitEvent } = require('./websocketService');
 const config = require('../utils/config');
 const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
 const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
+const path = require('path');
 
 // Sessões em memória (para produção, ideal mover para Redis/DB)
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
@@ -140,11 +143,72 @@ async function processWhatsAppMessage(message, value, deps) {
   const messageId = message.id;
   const sessionId = `whatsapp_${from}`;
 
+  // Inicializa replay (opcional)
+  const shouldRecordReplay = process.env.ENABLE_MESSAGE_REPLAY !== 'false';
+  const shouldRecord = process.env.ENABLE_MESSAGE_RECORDING !== 'false';
+  let replay = null;
+  let replayId = null;
+  let recording = null;
+  let recordingId = null;
+  
+  if (shouldRecordReplay) {
+    replay = new ReplaySystem({
+      storagePath: path.join(process.cwd(), 'replays', 'message'),
+      context: 'message',
+      enableScreenshots: false,
+    });
+    
+    replayId = `message-${sessionId}-${Date.now()}`;
+    replay.start(replayId, {
+      sessionId,
+      messageId,
+      from,
+    });
+  }
+
+  if (shouldRecord) {
+    recording = new RecordingSystem({
+      storagePath: path.join(process.cwd(), 'recordings', 'message'),
+      context: 'message',
+      enableTimestamps: true,
+    });
+    
+    recordingId = `message-${sessionId}-${Date.now()}`;
+    recording.start(recordingId, {
+      name: 'Processamento de Mensagem WhatsApp',
+      description: 'Processamento de mensagem do WhatsApp',
+      sessionId,
+      messageId,
+      from,
+      source: 'automatic',
+    });
+    recording.recordAction({
+      type: 'message-process',
+      step: 'process',
+      value: { messageId, from, text: text.substring(0, 200) },
+    });
+  }
+
   let state = sessions.get(sessionId);
 
   // Verifica se já existe ticket ativo (handoff em andamento)
   const existingTicket = getTicketBySession(sessionId);
   if (existingTicket && existingTicket.status !== 'closed') {
+    if (replay) {
+      replay.recordEvent('ticket_active', { ticketId: existingTicket.id });
+      replay.stop();
+      replay.save(replayId);
+    }
+    if (recording) {
+      recording.recordAction({
+        type: 'ticket-active',
+        step: 'ticket-active',
+        value: { ticketId: existingTicket.id },
+      });
+      recording.stop();
+      recording.save(recordingId);
+    }
+    
     // Atualiza última mensagem do usuário no ticket e adiciona ao histórico
     updateLastMessage(existingTicket.id, text);
     
@@ -169,6 +233,21 @@ async function processWhatsAppMessage(message, value, deps) {
   
   // Verifica se está em atendimento humano síncrono
   if (isInHumanSession(sessionId)) {
+    if (replay) {
+      replay.recordEvent('human_session_active');
+      replay.stop();
+      replay.save(replayId);
+    }
+    if (recording) {
+      recording.recordAction({
+        type: 'human-session-active',
+        step: 'human-session-active',
+        value: { sessionId },
+      });
+      recording.stop();
+      recording.save(recordingId);
+    }
+    
     // Durante atendimento humano síncrono, mensagens são roteadas para o humano
     // A implementação real de WebSocket/API deve ser feita na camada de API
     // Por enquanto, apenas logamos
@@ -227,6 +306,22 @@ async function processWhatsAppMessage(message, value, deps) {
   const tenantId = state.tenantId; // Tenant deve ser fornecido no state
   const aiProvider = getAiProviderForTenant(tenantId);
   
+  // Registra início do processamento
+  if (replay) {
+    replay.recordEvent('message_processing_started', {
+      flowId: state.flowId,
+      currentNodeId: state.currentNodeId,
+    });
+  }
+  if (recording) {
+    recording.recordAction({
+      type: 'message-processing',
+      step: 'processing-started',
+      value: { flowId: state.flowId, currentNodeId: state.currentNodeId },
+    });
+  }
+  
+  const stepStartTime = new Date().toISOString();
   const result = await executeStep(state, compiledFlow, {
     registry,
     input: {
@@ -239,8 +334,31 @@ async function processWhatsAppMessage(message, value, deps) {
     deps: {
       persistence: persistenceServices,
       registry, // Passa registry para handlers que precisam (ex: subflow)
+      replay, // Passa replay para o executeStep registrar ações
     },
   });
+  const stepEndTime = new Date().toISOString();
+
+  // Registra execução no replay
+  if (replay) {
+    replay.recordAction(
+      {
+        type: 'message_processing',
+        step: 'process-message',
+        value: { text: text.substring(0, 100), messageId },
+      },
+      {
+        success: true,
+        startTime: stepStartTime,
+        endTime: stepEndTime,
+        actual: {
+          nextNodeId: result.state.currentNodeId,
+          outputType: result.output?.type,
+          eventsCount: result.events?.length || 0,
+        },
+      }
+    );
+  }
 
   // Atualiza sessão
   sessions.set(sessionId, result.state);
@@ -374,11 +492,31 @@ async function processWhatsAppMessage(message, value, deps) {
         
         // Resposta válida ou warning em dev: envia normalmente
         await sendTextMessage(from, messageText);
+        
+        if (replay) {
+          replay.recordEvent('message_sent', {
+            messageLength: messageText.length,
+            cdrValidated: cdrValidation.status === 'pass',
+          });
+        }
       } catch (err) {
+        if (replay) {
+          replay.recordError(err, 'send-message');
+        }
         logger.error('[ERROR] Não foi possível enviar mensagem do bot:', err);
         // Não interrompe o fluxo, apenas loga o erro
       }
     }
+  }
+
+  // Finaliza e salva replay
+  if (replay) {
+    replay.recordEvent('message_processing_completed', {
+      nextNodeId: result.state.currentNodeId,
+      outputType: result.output?.type,
+    });
+    replay.stop();
+    replay.save(replayId);
   }
 }
 

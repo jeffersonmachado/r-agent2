@@ -38,6 +38,7 @@ import { DevDashboardPage } from './pages/DevDashboardPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { useRouter } from './hooks/useRouter';
+import { isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
 
 /**
  * Suprime aviso conhecido do React sobre prop 'hasSubitems' do rete-context-menu-plugin.
@@ -153,9 +154,8 @@ function AppWithAuth() {
   const isDevDashboard = currentPath === '/dev' || currentPath === '/dev-dashboard' || currentPath.startsWith('/dev');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
-  // Verifica se é Super Admin (mesma lógica do backend)
-  const isSuperAdmin = agent?.role === 'super_admin' || 
-    (agent?.role === 'owner' && agent?.tenantId === 'system');
+  // Verifica se é Super Admin usando a função completa que considera originalTenantId
+  const isSuperAdmin = checkIsSuperAdmin(agent);
 
   // Todas as rotas requerem autenticação, exceto /login
   const publicRoutes = []; // Nenhuma rota pública além de /login

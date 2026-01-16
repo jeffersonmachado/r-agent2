@@ -39,7 +39,7 @@
  * Isso garante que as regras sejam as mesmas no backend (validação)
  * e no frontend (validação preventiva).
  */
-const { TYPE_COMPATIBILITY } = require('./typeCompatibility');
+const { TYPE_COMPATIBILITY } = require('./utils/typeCompatibility');
 
 /**
  * Adiciona mensagem amigável (messageUi) a um erro de validação baseado no código.

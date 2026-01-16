@@ -1,0 +1,9 @@
+{
+  "tickets": [],
+  "queues": {
+    "suporte": [],
+    "vendas": [],
+    "tecnico": [],
+    "financeiro": []
+  }
+}

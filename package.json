@@ -40,9 +40,14 @@
     "autotest": "node scripts/autotest.js",
     "check:green": "node scripts/check-green.js",
     "seed:test": "node tests/seeds/seedTestData.js",
+    "migrate": "node api/db/migrate.js",
+    "db:migrate": "node api/db/migrate.js",
+    "db:migrate:status": "node api/db/migrate.js --status",
     "seed": "node scripts/seed.js",
     "seed:reset": "node scripts/seed.js --reset",
     "seed:tenant": "node scripts/create-tenant-seed.js",
+    "fix:tenants": "node scripts/fix-tenants-without-name.js",
+    "fix:tenants:dry-run": "node scripts/fix-tenants-without-name.js --dry-run",
     "start": "node api/server.js",
     "start:frontend": "cd frontend && npm start",
     "start:api": "node api/server.js",
@@ -120,7 +125,13 @@
     "services:kill-orphans": "sudo ./scripts/kill-orphan-uvicorn.sh",
     "services:check-port": "./scripts/check-port-8000.sh",
     "rag:fix-port": "sudo ./scripts/fix-rag-port.sh",
-    "fix": "sudo ./scripts/clean-restart-services.sh"
+    "fix": "sudo ./scripts/clean-restart-services.sh",
+    "reset:all": "./scripts/reset-all.sh",
+    "reset:all:yes": "./scripts/reset-all.sh tenant-demo --yes"
+  },
+  "engines": {
+    "node": ">=20.19.0 || >=22.12.0",
+    "npm": ">=10.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
@@ -131,10 +142,14 @@
     "openai": "^4.20.0",
     "pdf-parse": "^1.1.4",
     "pdfjs-dist": "^3.11.174",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4",
     "playwright": "^1.40.0",
     "rate-limiter-flexible": "^5.0.3",
+    "sequelize": "^6.35.2",
     "sharp": "^0.33.5",
     "tesseract.js": "^5.1.1",
+    "umzug": "^3.2.1",
     "uuid": "^9.0.0",
     "ws": "^8.18.3"
   },
@@ -142,6 +157,7 @@
     "@playwright/test": "^1.40.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.0",
-    "pm2": "^5.3.0"
+    "pm2": "^5.3.0",
+    "sequelize-cli": "^6.6.2"
   }
 }

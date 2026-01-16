@@ -26,7 +26,6 @@ let cachedConfig = null;
 const ENV_TO_CONFIG_MAP = {
   'NODE_ENV': 'nodeEnv',
   'API_PORT': 'api.port',
-  'DEFAULT_TENANT_ID': 'api.defaultTenantId',
   'TICKET_CLEANUP_INTERVAL_HOURS': 'api.ticketCleanup.intervalHours',
   'TICKET_MAX_AGE_DAYS': 'api.ticketCleanup.maxAgeDays',
   'FRONTEND_PORT': 'frontend.port',
@@ -55,6 +54,12 @@ const ENV_TO_CONFIG_MAP = {
   'RATE_LIMIT_SYSTEM_VALIDATE_DURATION': 'rateLimit.policies.systemValidate.duration',
   'RAG_SERVICE_URL': 'rag.serviceUrl',
   'RAG_TIMEOUT': 'rag.timeout',
+  'DATABASE_URL': 'database.url',
+  'PGHOST': 'database.host',
+  'PGPORT': 'database.port',
+  'PGDATABASE': 'database.database',
+  'PGUSER': 'database.username',
+  'PGPASSWORD': 'database.password',
 };
 
 /**
@@ -154,9 +159,45 @@ function get(path, defaultValue = undefined) {
 }
 
 /**
- * Obtém toda a configuração.
+ * Remove secrets da configuração antes de retornar
  * 
- * @returns {Object} Configuração completa (cópia profunda para evitar mutações)
+ * @param {Object} config - Configuração completa
+ * @returns {Object} Configuração sem secrets
+ */
+function sanitizeConfig(config) {
+  if (!config || typeof config !== 'object') {
+    return {};
+  }
+  
+  // Cria cópia profunda
+  const sanitized = JSON.parse(JSON.stringify(config));
+  
+  // Remove apiKey de qualquer lugar
+  function removeSecrets(obj) {
+    if (!obj || typeof obj !== 'object') {
+      return;
+    }
+    
+    for (const key in obj) {
+      if (key.toLowerCase().includes('apikey') || 
+          key.toLowerCase().includes('api_key') ||
+          key.toLowerCase().includes('secret') ||
+          key.toLowerCase().includes('password')) {
+        delete obj[key];
+      } else if (typeof obj[key] === 'object') {
+        removeSecrets(obj[key]);
+      }
+    }
+  }
+  
+  removeSecrets(sanitized);
+  return sanitized;
+}
+
+/**
+ * Obtém toda a configuração (sem secrets).
+ * 
+ * @returns {Object} Configuração completa sem secrets (cópia profunda para evitar mutações)
  */
 function getAll() {
   try {
@@ -168,21 +209,8 @@ function getAll() {
       return {};
     }
     
-    // Retorna uma cópia profunda para evitar mutações acidentais
-    try {
-      const serialized = JSON.stringify(config);
-      return JSON.parse(serialized);
-    } catch (err) {
-      // Se houver erro na serialização (ex: referências circulares), retorna cópia simples
-      console.error('[Config] Erro ao serializar configuração:', err.message);
-      // Tenta fazer uma cópia superficial
-      try {
-        return { ...config };
-      } catch (copyErr) {
-        console.error('[Config] Erro ao copiar configuração:', copyErr.message);
-        return {};
-      }
-    }
+    // Remove secrets antes de retornar
+    return sanitizeConfig(config);
   } catch (err) {
     // Erro geral ao obter configuração
     console.error('[Config] Erro ao obter configuração:', err.message, err.stack);
@@ -270,11 +298,107 @@ function validateRedisConfig() {
   };
 }
 
+/**
+ * Obtém a URL de conexão do banco de dados.
+ * Prioridade: config.json > env vars (DATABASE_URL ou PGHOST/PGUSER/etc)
+ * 
+ * @returns {string} URL de conexão do banco
+ */
+function getDatabaseUrl() {
+  // 1) Tenta config.json primeiro
+  const configUrl = get('database.url');
+  if (configUrl) {
+    return configUrl;
+  }
+
+  // 2) Fallback para DATABASE_URL (env)
+  if (process.env.DATABASE_URL) {
+    // eslint-disable-next-line no-console
+    console.log('[Config] Usando DATABASE_URL de variável de ambiente (fallback)');
+    return process.env.DATABASE_URL;
+  }
+
+  // 3) Fallback: constrói URL a partir de variáveis individuais
+  const host = process.env.PGHOST || get('database.host') || 'localhost';
+  const port = process.env.PGPORT || get('database.port') || '5432';
+  const database = process.env.PGDATABASE || get('database.database') || 'r_agent2';
+  const username = process.env.PGUSER || get('database.username') || 'postgres';
+  const password = process.env.PGPASSWORD || get('database.password') || 'postgres';
+
+  if (process.env.PGHOST || process.env.PGUSER) {
+    // eslint-disable-next-line no-console
+    console.log('[Config] Usando variáveis de ambiente individuais para banco (fallback)');
+  }
+
+  return `postgres://${username}:${password}@${host}:${port}/${database}`;
+}
+
+/**
+ * Obtém configuração do pool de conexões.
+ * 
+ * @returns {Object} Configuração do pool { min, max }
+ */
+function getDatabasePool() {
+  const poolConfig = get('database.pool', {});
+  return {
+    min: poolConfig.min !== undefined ? poolConfig.min : (process.env.DB_POOL_MIN ? parseInt(process.env.DB_POOL_MIN, 10) : 0),
+    max: poolConfig.max !== undefined ? poolConfig.max : (process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 10),
+  };
+}
+
+/**
+ * Obtém configuração SSL do banco de dados.
+ * 
+ * @returns {boolean|Object} Configuração SSL (false ou objeto de configuração)
+ */
+function getDatabaseSsl() {
+  const sslConfig = get('database.ssl');
+  if (sslConfig !== undefined) {
+    return sslConfig;
+  }
+  // Fallback: verifica se DATABASE_URL tem SSL
+  const dbUrl = process.env.DATABASE_URL || getDatabaseUrl();
+  if (dbUrl && (dbUrl.includes('sslmode=require') || dbUrl.includes('ssl=true'))) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Extrai informações do banco de dados da URL (sem senha).
+ * Útil para logs e diagnóstico.
+ * 
+ * @param {string} databaseUrl - URL do banco de dados
+ * @returns {Object} { host, port, database, username } (sem senha)
+ */
+function parseDatabaseUrlSafe(databaseUrl) {
+  try {
+    const url = new URL(databaseUrl);
+    return {
+      host: url.hostname,
+      port: parseInt(url.port || '5432', 10),
+      database: url.pathname.replace(/^\//, ''),
+      username: url.username,
+    };
+  } catch (error) {
+    return {
+      host: 'unknown',
+      port: 5432,
+      database: 'unknown',
+      username: 'unknown',
+    };
+  }
+}
+
 module.exports = {
   get,
   getAll,
   reload,
   loadConfig,
   validateRedisConfig,
+  getDatabaseUrl,
+  getDatabasePool,
+  getDatabaseSsl,
+  parseDatabaseUrlSafe,
 };
 

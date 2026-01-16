@@ -14,7 +14,6 @@ Em desenvolvimento, o sistema usa o tenant `tenant-demo` por padrão:
 // api/data/config.json
 {
   "api": {
-    "defaultTenantId": "tenant-demo"  // ← Tenant padrão para dev
   },
   "rag": {
     "serviceUrl": "http://localhost:8000",  // ← Serviço RAG local

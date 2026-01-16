@@ -1,5 +1,5 @@
 import React from 'react';
-import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, OptionsField, RouterField, ScheduleRouterField } from './components/PropertyField';
+import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, OptionsField, RouterField, ScheduleRouterField, NumberField, BooleanField } from './components/PropertyField';
 import { getNodeSchema, getNodeProperties } from './editor/nodeSchemas';
 
 /**
@@ -38,6 +38,7 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
 
   // Obtém propriedades do schema
   let properties = getNodeProperties(type);
+  const schemaNodeForVisibility = { id, type, config };
   
   // Para nós ai_task, filtra propriedades baseado na tarefa selecionada
   if (type === 'ai_task') {
@@ -63,6 +64,16 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
       properties = properties.filter((prop) => prop.key === 'task');
     }
   }
+
+  // ✅ Aplica showWhen do schema (ex: campos condicionais no fallback)
+  properties = properties.filter((prop) => {
+    if (typeof prop.showWhen !== 'function') return true;
+    try {
+      return !!prop.showWhen(schemaNodeForVisibility);
+    } catch {
+      return true;
+    }
+  });
 
   const updateConfigField = (field, value) => {
     onChangeConfig({
@@ -193,6 +204,42 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
                   placeholder={prop.placeholder}
                   required={prop.required}
                   className={prop.key === 'variable' || prop.key === 'outputVariable' ? 'font-mono' : ''}
+                />
+              );
+            }
+
+            if (prop.type === 'number') {
+              return (
+                <NumberField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={value}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '') {
+                      updateConfigField(prop.key, undefined);
+                      return;
+                    }
+                    const num = Number(raw);
+                    updateConfigField(prop.key, Number.isFinite(num) ? num : undefined);
+                  }}
+                  placeholder={prop.placeholder}
+                  required={prop.required}
+                  className={prop.key === 'confidenceThreshold' ? 'font-mono' : ''}
+                />
+              );
+            }
+
+            if (prop.type === 'boolean') {
+              return (
+                <BooleanField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  value={!!value}
+                  onChange={(e) => updateConfigField(prop.key, !!e.target.checked)}
+                  required={prop.required}
                 />
               );
             }
@@ -423,21 +470,14 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
             </div>
           )}
           {Object.keys(config).length > 0 && (
-            <JsonField
-              label="Configuração Avançada"
-              description="Configuração customizada em formato JSON. Use apenas se necessário."
-              value={JSON.stringify(config, null, 2)}
-              onChange={(rawValue) => {
-                try {
-                  const parsed = JSON.parse(rawValue || '{}');
-                  onChangeConfig(parsed);
-                } catch {
-                  // Mantém raw para edição incremental
-                }
-              }}
-              rows={6}
-              expectedType="object"
-            />
+            <PropertyField
+              label="Configuração detectada (somente leitura)"
+              description="Neste projeto, toda configuração deve ser feita pelos campos do Painel de Propriedades (sem edição manual de JSON). Se este nó ainda não expõe campos para estes valores, o schema do nó deve ser ajustado."
+            >
+              <pre className="w-full p-3 rounded-lg bg-bg-secondary border border-border-default text-xs font-mono text-text-primary overflow-auto max-h-48 whitespace-pre">
+                {JSON.stringify(config, null, 2)}
+              </pre>
+            </PropertyField>
           )}
         </div>
       )}

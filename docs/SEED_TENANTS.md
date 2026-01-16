@@ -76,24 +76,29 @@ Cada tenant recebe automaticamente um **tenant context** com:
 - `prioridade`: `HIGH`
 - `escopo`: `["rag", "chatbot", "classificacao_intencao"]`
 
-### 📁 Arquivos Criados
+### 📁 Dados Criados
 
-- `api/data/tenants.json` - Lista de tenants
-- `api/data/tenant_contexts.json` - Contextos cognitivos dos tenants
+- **Tenants**: Salvos no banco de dados PostgreSQL (tabela `tenants`)
+- **Tenant Contexts**: Salvos no banco de dados PostgreSQL (tabela `tenant_contexts` ou similar)
+
+**NOTA:** Arquivos JSON foram removidos. Todos os dados agora estão no banco de dados PostgreSQL.
 
 ## 🔍 Verificar Dados Criados
 
-### Via Terminal
+### Via Terminal (PostgreSQL)
 
 ```bash
+# Conectar ao banco de dados
+psql -U postgres -d r_agent2
+
 # Ver tenants criados
-cat api/data/tenants.json | jq
+SELECT id, tenant_key, name, site FROM tenants;
 
 # Ver tenant contexts
-cat api/data/tenant_contexts.json | jq
+SELECT tenant_id, ramo_atividade, objetivo FROM tenant_contexts;
 
 # Ver apenas IDs dos tenants
-cat api/data/tenants.json | jq '.[].id'
+SELECT tenant_key FROM tenants;
 ```
 
 ### Via Interface Web
@@ -140,7 +145,7 @@ Quando você executa o seed:
 
 1. **Cria Tenants** → `createTenants()`
    - Cria 3 tenants de exemplo
-   - Salva em `api/data/tenants.json`
+   - Salva no banco de dados PostgreSQL (tabela `tenants`)
 
 2. **Cria Tenant Contexts** → `createTenantContexts()`
    - Cria contexto cognitivo para cada tenant
@@ -175,7 +180,8 @@ Quando você cria ou atualiza um tenant via API ou interface:
 npm run seed:reset
 
 # Verificar tenants criados
-cat api/data/tenants.json | jq '.[].name'
+# Via PostgreSQL
+SELECT name FROM tenants;
 ```
 
 ### Criar Dados para Novo Tenant

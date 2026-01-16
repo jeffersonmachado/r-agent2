@@ -33,6 +33,7 @@ import {
 export function DevDashboardPage() {
   const { theme } = useTheme();
   const dashboard = useDevDashboard();
+  const isMobile = useIsMobile();
 
   const {
     activeTab,
@@ -101,11 +102,18 @@ export function DevDashboardPage() {
           scrollbar-width: thin;
           scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
         }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
       `}</style>
-      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: theme.colors.bg.primary }}>
+      <div className="h-screen w-full flex flex-col overflow-hidden" style={{ backgroundColor: theme.colors.bg.primary }}>
         <div className="flex-1 overflow-y-auto dev-dashboard-scroll">
-          <div className="p-8">
-            <div className="max-w-7xl mx-auto">
+          <div className="p-4 md:p-6 lg:p-8">
+            <div className="w-full">
               <DevDashboardHeader
                 onShowLogs={() => setShowLogs(true)}
                 onRefresh={refreshAll}
@@ -120,7 +128,7 @@ export function DevDashboardPage() {
               <DevDashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
               {/* Conteúdo das tabs */}
-              <div className="rounded-lg p-6" style={{ 
+              <div className="rounded-lg p-4 md:p-6" style={{ 
                 backgroundColor: theme.colors.bg.elevated,
                 border: `1px solid ${theme.colors.border.default}`,
                 boxShadow: theme.name === 'dark' ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 4px 6px rgba(0, 0, 0, 0.1)'
@@ -134,7 +142,7 @@ export function DevDashboardPage() {
                 {/* Tab: Métricas - Mantida inline por enquanto */}
                 {activeTab === 'metrics' && (
                   <div>
-                    <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Métricas de Performance</h2>
+                    <h2 className="text-xl md:text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Métricas de Performance</h2>
                     {metrics ? (
                       <div className="space-y-6">
                         {metrics.general && (
@@ -256,11 +264,11 @@ export function DevDashboardPage() {
                 {/* Tab: Rate Limit - Mantida inline por enquanto */}
                 {activeTab === 'rate-limit' && (
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>Status de Rate Limiting</h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                      <h2 className="text-xl md:text-2xl font-bold" style={{ color: theme.colors.text.primary }}>Status de Rate Limiting</h2>
                       <button
                         onClick={clearRateLimitCache}
-                        className="px-4 py-2 rounded-lg transition-colors"
+                        className="px-3 md:px-4 py-2 rounded-lg transition-colors text-sm md:text-base whitespace-nowrap"
                         style={{ 
                           backgroundColor: theme.colors.status.warning,
                           color: '#ffffff'
@@ -280,7 +288,7 @@ export function DevDashboardPage() {
                             {status.error ? (
                               <div style={{ color: theme.colors.status.error }}>Erro: {status.error}</div>
                             ) : (
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                                 <div>
                                   <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Permitido</div>
                                   <div className="font-semibold" style={{ 
@@ -325,7 +333,7 @@ export function DevDashboardPage() {
                           border: `1px solid ${theme.colors.border.default}`
                         }}>
                           <h3 className="text-lg font-semibold mb-3" style={{ color: theme.colors.text.primary }}>Servidor</h3>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                             <div>
                               <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Status</div>
                               <div className="font-semibold" style={{ 
@@ -348,7 +356,7 @@ export function DevDashboardPage() {
                             border: `1px solid ${theme.colors.border.default}`
                           }}>
                             <h3 className="text-lg font-semibold mb-3" style={{ color: theme.colors.text.primary }}>Estatísticas</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
                               <div>
                                 <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Total de Clientes</div>
                                 <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
@@ -394,16 +402,16 @@ export function DevDashboardPage() {
                 {/* Tab: Contratos - Usando FileEditor */}
                 {activeTab === 'contracts-prompts' && (
                   <div>
-                    <div className="mb-6">
-                      <h2 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
+                    <div className="mb-4 md:mb-6">
+                      <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
                         📋 Contratos
                       </h2>
-                      <p className="text-base mb-4" style={{ color: theme.colors.text.secondary }}>
+                      <p className="text-sm md:text-base mb-4" style={{ color: theme.colors.text.secondary }}>
                         Gerencie os contratos de interface e estruturas de dados do sistema.
                       </p>
                       <button
                         onClick={fetchDevFiles}
-                        className="px-4 py-2 rounded-lg transition-colors"
+                        className="px-3 md:px-4 py-2 rounded-lg transition-colors text-sm md:text-base"
                         style={{ 
                           backgroundColor: theme.colors.status.info,
                           color: '#ffffff'
@@ -412,21 +420,21 @@ export function DevDashboardPage() {
                         🔄 Atualizar Lista
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                       <div className="lg:col-span-1">
-                        <div className="rounded-lg p-5" style={{ 
+                            <div className="rounded-lg p-4 md:p-5" style={{ 
                           backgroundColor: theme.colors.bg.secondary,
                           border: `2px solid ${theme.colors.border.default}`,
                         }}>
                           <div className="flex items-center gap-3 mb-4">
-                            <div className="text-3xl">📋</div>
+                            <div className="text-2xl md:text-3xl">📋</div>
                             <div>
                               <h3 className="font-bold text-lg" style={{ color: theme.colors.text.primary }}>
                                 Contratos
                               </h3>
                             </div>
                           </div>
-                          <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                          <div className="space-y-3 max-h-[500px] md:max-h-[600px] overflow-y-auto">
                             {devFiles.contracts.length === 0 ? (
                               <div className="text-center py-4" style={{ color: theme.colors.text.tertiary }}>
                                 <p className="text-sm">Nenhum contrato encontrado</p>
@@ -500,7 +508,7 @@ export function DevDashboardPage() {
                       </p>
                       <button
                         onClick={fetchDevFiles}
-                        className="px-4 py-2 rounded-lg transition-colors"
+                        className="px-3 md:px-4 py-2 rounded-lg transition-colors text-sm md:text-base"
                         style={{ 
                           backgroundColor: theme.colors.status.info,
                           color: '#ffffff'
@@ -509,11 +517,11 @@ export function DevDashboardPage() {
                         🔄 Atualizar Lista
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                       <div className="lg:col-span-1">
-                        <div className="space-y-4 max-h-[800px] overflow-y-auto">
+                        <div className="space-y-4 max-h-[600px] md:max-h-[800px] overflow-y-auto">
                           {devFiles.documents && Object.keys(devFiles.documents).length > 0 && (
-                            <div className="rounded-lg p-5" style={{ 
+                            <div className="rounded-lg p-4 md:p-5" style={{ 
                               backgroundColor: theme.colors.bg.secondary,
                               border: `2px solid ${theme.colors.border.default}`,
                             }}>
@@ -628,16 +636,16 @@ export function DevDashboardPage() {
                 {/* Tab: Nós - Usando FileEditor */}
                 {activeTab === 'nodes' && (
                   <div>
-                    <div className="mb-6">
-                      <h2 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
+                    <div className="mb-4 md:mb-6">
+                      <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
                         🔧 Nós dos Fluxos
                       </h2>
-                      <p className="text-base mb-4" style={{ color: theme.colors.text.secondary }}>
+                      <p className="text-sm md:text-base mb-4" style={{ color: theme.colors.text.secondary }}>
                         Gerencie as definições de nós, schemas, regras e erros conhecidos dos fluxos.
                       </p>
                       <button
                         onClick={fetchDevFiles}
-                        className="px-4 py-2 rounded-lg transition-colors"
+                        className="px-3 md:px-4 py-2 rounded-lg transition-colors text-sm md:text-base"
                         style={{ 
                           backgroundColor: theme.colors.status.info,
                           color: '#ffffff'
@@ -646,14 +654,14 @@ export function DevDashboardPage() {
                         🔄 Atualizar Lista
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                       <div className="lg:col-span-1">
-                        <div className="rounded-lg p-5" style={{ 
+                        <div className="rounded-lg p-4 md:p-5" style={{ 
                           backgroundColor: theme.colors.bg.secondary,
                           border: `2px solid ${theme.colors.border.default}`,
                         }}>
                           <div className="flex items-center gap-3 mb-4">
-                            <div className="text-3xl">🔧</div>
+                            <div className="text-2xl md:text-3xl">🔧</div>
                             <div>
                               <h3 className="font-bold text-lg" style={{ color: theme.colors.text.primary }}>
                                 Definições de Nós
@@ -731,7 +739,7 @@ export function DevDashboardPage() {
                 {/* Tab: Ferramentas - Mantida inline por enquanto */}
                 {activeTab === 'tools' && (
                   <div>
-                    <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Ferramentas de Desenvolvimento</h2>
+                    <h2 className="text-xl md:text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Ferramentas de Desenvolvimento</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-4 rounded-lg" style={{ 
                         border: `1px solid ${theme.colors.border.default}`,
@@ -762,7 +770,7 @@ export function DevDashboardPage() {
                         </p>
                         <button
                           onClick={() => setShowLogs(true)}
-                          className="px-4 py-2 rounded-lg transition-colors"
+                          className="px-3 md:px-4 py-2 rounded-lg transition-colors text-sm md:text-base"
                           style={{ 
                             backgroundColor: theme.colors.accent.primary,
                             color: '#ffffff'

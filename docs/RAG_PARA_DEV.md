@@ -14,7 +14,6 @@ Em desenvolvimento, o sistema usa o tenant `tenant-demo` por padrão:
 // api/data/config.json
 {
   "api": {
-    "defaultTenantId": "tenant-demo"  // ← Tenant padrão para dev
   },
   "rag": {
     "serviceUrl": "http://localhost:8000",  // ← Serviço RAG local
@@ -298,7 +297,8 @@ curl http://localhost:8000/rag/health
 rm -rf rag-service/data/vector_store/tenant-demo.*
 
 # Limpar documentos RAG (cuidado: remove todos os documentos)
-rm api/data/rag_documents.json
+# NOTA: Documentos agora estão no banco de dados PostgreSQL
+# Use a interface web ou API para remover documentos
 ```
 
 ## 🔄 Fluxo Completo em Desenvolvimento
@@ -316,7 +316,7 @@ rm api/data/rag_documents.json
    ↓
 6. Serviço RAG indexa no vector store do tenant-demo
    ↓
-7. Documento salvo em api/data/rag_documents.json
+7. Documento salvo no banco de dados PostgreSQL (tabela `rag_documents` ou similar)
    ↓
 8. Consultas RAG usam vector store do tenant-demo
 ```

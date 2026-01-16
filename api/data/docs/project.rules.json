@@ -61,6 +61,21 @@
       "id": "LOGICAL_VALIDATION",
       "description": "Focar em validações lógicas (variáveis, estados) ao invés de elementos visuais",
       "enforcement": "medium"
+    },
+    {
+      "id": "MIGRATIONS_USE_MODELS",
+      "description": "Migrations devem usar models do Sequelize para operações de dados. Use queryInterface apenas para alterações de schema (addColumn, removeColumn, etc). Para buscar e atualizar dados, sempre use os models do Sequelize (ex: TenantAISetting.findAll(), setting.update()).",
+      "enforcement": "hard"
+    },
+    {
+      "id": "TENANT_IDENTIFIER_CONVENTION",
+      "description": "Sempre use findTenantByIdentifier() para buscar tenants. Prefira tenant_key em APIs públicas, URLs e frontend. Use id (UUID) apenas para foreign keys no banco de dados. Veja api/data/docs/TENANT_IDENTIFIER_CONVENTION.md para detalhes.",
+      "enforcement": "medium"
+    },
+    {
+      "id": "FLOW_EDITOR_CONFIG_VIA_PROPERTIES_PANEL",
+      "description": "Toda configuração de nós do Flow Editor (incluindo adicionar/remover saídas de nós multi-saída) DEVE ser feita pelo Painel de Propriedades. É PROIBIDO expor/usar edição manual de JSON para alterar config/saídas no painel.",
+      "enforcement": "hard"
     }
   ],
   "enforcementLevels": {

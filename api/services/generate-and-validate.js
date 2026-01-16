@@ -25,10 +25,11 @@ const logger = require('../utils/logger');
 const { validateGenerationContract } = require('../utils/contractValidator');
 const { orchestrateGeneration } = require('./generationOrchestrator');
 const { validateFlow } = require('../../engine/validator');
-const { saveFlowToFile, removeFlowFromFile } = require('./generationOrchestrator');
+// Funções saveFlowToFile e removeFlowFromFile removidas - dados agora estão no banco de dados PostgreSQL
 const { enforceRateLimit } = require('../../infra/rate-limit');
 const { createExecutionContext, updateStage, updateStatus, toProgressFormat } = require('./pipelineExecutionContext');
 const { advancePipeline } = require('./pipelineOrchestrator');
+const { isSuperAdmin } = require('./superAdminService');
 
 // Cache de execuções em andamento (proteção reentrante)
 const runningExecutions = new Map();
@@ -292,6 +293,11 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
   try {
     // ETAPA 0: Rate Limiting (ANTES de qualquer coisa)
     logger.info(`[Pipeline][${execution.executionId}] ETAPA 0: Verificando rate limiting`);
+    
+    // Verifica se é super-admin (rate limit é apenas informativo para super-admins)
+    const agent = options.agent || null;
+    const isSuperAdminUser = agent ? isSuperAdmin(agent) : false;
+    
     try {
       // Identifica tipo de operação
       // Prioriza BOOTSTRAP sobre DRY_RUN porque é mais restritivo
@@ -312,17 +318,49 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         operationType, 
         isBootstrap, 
         isDryRun,
-        executionMode 
+        executionMode,
+        isSuperAdmin: isSuperAdminUser
       });
 
-      // Aplica rate limiting
-      await enforceRateLimit({
-        userId,
-        operationType,
-      });
+      // Para super-admins, verifica rate limit mas apenas para logging (não bloqueia)
+      if (isSuperAdminUser) {
+        try {
+          await enforceRateLimit({
+            userId,
+            operationType,
+          });
+          logger.info(`[Pipeline][${execution.executionId}] Rate limiting verificado (super-admin - apenas informativo)`, { userId, operationType });
+        } catch (rateLimitError) {
+          if (rateLimitError.code === 'RATE_LIMIT_EXCEEDED') {
+            const retryAfter = (rateLimitError.retryAfter && !isNaN(rateLimitError.retryAfter) && rateLimitError.retryAfter > 0)
+              ? rateLimitError.retryAfter
+              : 60;
+            
+            // Apenas loga, não bloqueia para super-admin
+            logger.warn(`[Pipeline][${execution.executionId}] Rate limit excedido (super-admin - apenas informativo)`, { 
+              retryAfter,
+              userId,
+              operationType,
+              agentId: agent?.id,
+              username: agent?.username
+            });
+            // Continua execução normalmente para super-admin
+          } else {
+            // Se não for erro de rate limit, propaga
+            throw rateLimitError;
+          }
+        }
+      } else {
+        // Para usuários normais, rate limit é bloqueante
+        await enforceRateLimit({
+          userId,
+          operationType,
+        });
 
-      logger.info(`[Pipeline][${execution.executionId}] Rate limiting aprovado`, { userId, operationType });
+        logger.info(`[Pipeline][${execution.executionId}] Rate limiting aprovado`, { userId, operationType });
+      }
     } catch (rateLimitError) {
+      // Este catch só é alcançado para usuários não-super-admin
       if (rateLimitError.code === 'RATE_LIMIT_EXCEEDED') {
         // Garante que retryAfter é um número válido
         const retryAfter = (rateLimitError.retryAfter && !isNaN(rateLimitError.retryAfter) && rateLimitError.retryAfter > 0)
@@ -390,6 +428,30 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         result.errors.push(advanceResult.error);
         result.motivo = advanceResult.error;
         updateStatus(execution, 'failed');
+        
+        // Inclui artefatos gerados mesmo quando há erro no pipeline
+        if (execution.generationResult) {
+          const genResult = execution.generationResult;
+          if (genResult.flowDefinition) {
+            result.flowDefinition = genResult.flowDefinition;
+            result.flowGenerated = true;
+          }
+          if (genResult.rpaTest) {
+            result.rpaTest = genResult.rpaTest;
+            result.rpaGenerated = true;
+          }
+          if (genResult.seed) {
+            result.seed = genResult.seed;
+            result.seedGenerated = true;
+          }
+          if (genResult.validation) {
+            result.validation = genResult.validation;
+          }
+          if (genResult.dependencies) {
+            result.dependencies = genResult.dependencies;
+          }
+        }
+        
         break;
       }
     }
@@ -416,6 +478,16 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
             }
             result.motivo = 'Validação RAG falhou - execução não pode ser aprovada sem grounding válido';
             
+            // Inclui artefatos gerados mesmo quando há erro
+            if (execution.generationResult) {
+              const genResult = execution.generationResult;
+              if (genResult.flowDefinition) result.flowDefinition = genResult.flowDefinition;
+              if (genResult.rpaTest) result.rpaTest = genResult.rpaTest;
+              if (genResult.seed) result.seed = genResult.seed;
+              if (genResult.validation) result.validation = genResult.validation;
+              if (genResult.dependencies) result.dependencies = genResult.dependencies;
+            }
+            
             updateStatus(execution, 'failed');
             return result;
           }
@@ -428,6 +500,17 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
           });
           result.errors.push(`Erro na validação RAG: ${ragError.message}`);
           result.motivo = 'Erro na validação RAG';
+          
+          // Inclui artefatos gerados mesmo quando há erro
+          if (execution.generationResult) {
+            const genResult = execution.generationResult;
+            if (genResult.flowDefinition) result.flowDefinition = genResult.flowDefinition;
+            if (genResult.rpaTest) result.rpaTest = genResult.rpaTest;
+            if (genResult.seed) result.seed = genResult.seed;
+            if (genResult.validation) result.validation = genResult.validation;
+            if (genResult.dependencies) result.dependencies = genResult.dependencies;
+          }
+          
           updateStatus(execution, 'failed');
           return result;
         }
@@ -458,10 +541,23 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
             result.errors.push(`Gate de validação bloqueou fluxo gerado por IA: ${validationError.message}`);
             result.motivo = 'Fluxo gerado por IA não passou na validação obrigatória do gate';
             
+            // Inclui artefatos gerados mesmo quando há erro
+            if (execution.flow) {
+              result.flowDefinition = execution.flow;
+              result.flowGenerated = true;
+            }
+            if (execution.generationResult) {
+              const genResult = execution.generationResult;
+              if (genResult.rpaTest) result.rpaTest = genResult.rpaTest;
+              if (genResult.seed) result.seed = genResult.seed;
+              if (genResult.validation) result.validation = genResult.validation;
+              if (genResult.dependencies) result.dependencies = genResult.dependencies;
+            }
+            
             // Rollback em modo bootstrap
             if (isBootstrap && artifacts.flowPath) {
               logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após falha do gate de IA`);
-              removeFlowFromFile(execution.flow.id);
+              // Dados agora estão no banco de dados PostgreSQL - rollback não necessário
             }
             
             updateStatus(execution, 'failed');
@@ -479,10 +575,23 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
           result.errors.push(`Validação de schema falhou: ${schemaValidation.errors.join('; ')}`);
           result.motivo = 'Validação de schema falhou';
           
+          // Inclui artefatos gerados mesmo quando há erro
+          if (execution.flow) {
+            result.flowDefinition = execution.flow;
+            result.flowGenerated = true;
+          }
+          if (execution.generationResult) {
+            const genResult = execution.generationResult;
+            if (genResult.rpaTest) result.rpaTest = genResult.rpaTest;
+            if (genResult.seed) result.seed = genResult.seed;
+            if (genResult.validation) result.validation = genResult.validation;
+            if (genResult.dependencies) result.dependencies = genResult.dependencies;
+          }
+          
           // Rollback em modo bootstrap
           if (isBootstrap && artifacts.flowPath) {
             logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após falha de schema`);
-            removeFlowFromFile(execution.flow.id);
+            // Dados agora estão no banco de dados PostgreSQL - rollback não necessário
           }
           
           updateStatus(execution, 'failed');
@@ -494,8 +603,8 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
       if (execution.rpaPassed !== false || !execution.rpaTestPath) {
         if (execution.flow) {
           if (!isBootstrap || execution.rpaPassed) {
-            const flowPath = saveFlowToFile(execution.flow);
-            artifacts.flowPath = flowPath;
+            // Dados agora estão no banco de dados PostgreSQL - não precisa salvar em arquivo
+            artifacts.flowPath = null; // Não há mais arquivo físico
             artifacts.flowId = execution.flow.id;
           }
         }
@@ -546,7 +655,16 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
 
     return result;
   } catch (err) {
-    logger.error(`[Pipeline][${execution.executionId}] Erro em generate-and-validate`, err);
+    logger.error(`[Pipeline][${execution.executionId}] Erro em generate-and-validate`, {
+      error: err.message,
+      stack: err.stack,
+      name: err.name,
+      code: err.code,
+      fullError: err.toString(),
+      executionId: execution.executionId,
+      flowId: execution.flow?.id,
+      testId: execution.rpaTest?.id,
+    });
 
     updateStatus(execution, 'failed');
 
@@ -554,7 +672,7 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
     if (isBootstrap) {
       logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após erro`);
       if (artifacts.flowId && artifacts.flowPath) {
-        removeFlowFromFile(artifacts.flowId);
+        // Dados agora estão no banco de dados PostgreSQL - rollback não necessário
       }
       if (artifacts.rpaTestPath && fs.existsSync(artifacts.rpaTestPath)) {
         fs.unlinkSync(artifacts.rpaTestPath);
@@ -566,6 +684,66 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
 
     result.errors.push(err.message || 'Erro desconhecido');
     result.motivo = err.message || 'Erro desconhecido';
+    
+    // Inclui artefatos gerados mesmo quando há erro, para que possam ser visualizados
+    if (execution.flow) {
+      result.flowDefinition = execution.flow;
+      result.flowGenerated = true;
+    }
+    if (execution.rpaTest) {
+      result.rpaTest = execution.rpaTest;
+      result.rpaGenerated = true;
+    }
+    if (execution.seed) {
+      result.seed = execution.seed;
+      result.seedGenerated = true;
+    }
+    
+    // Inclui todos os artefatos do generationResult se disponíveis
+    if (execution.generationResult) {
+      const genResult = execution.generationResult;
+      
+      // Inclui flowDefinition se não foi incluído acima
+      if (!result.flowDefinition && genResult.flowDefinition) {
+        result.flowDefinition = genResult.flowDefinition;
+        result.flowGenerated = true;
+      }
+      
+      // Inclui rpaTest se não foi incluído acima
+      if (!result.rpaTest && genResult.rpaTest) {
+        result.rpaTest = genResult.rpaTest;
+        result.rpaGenerated = true;
+      }
+      
+      // Inclui seed se não foi incluído acima
+      if (!result.seed && genResult.seed) {
+        result.seed = genResult.seed;
+        result.seedGenerated = true;
+      }
+      
+      // Inclui informações de validação
+      if (genResult.validation) {
+        result.validation = genResult.validation;
+      }
+      
+      // Inclui dependências
+      if (genResult.dependencies) {
+        result.dependencies = genResult.dependencies;
+      }
+      
+      // Inclui metadata
+      if (genResult.metadata) {
+        result.metadata = genResult.metadata;
+      }
+    }
+    
+    logger.info(`[Pipeline][${execution.executionId}] Retornando resultado com artefatos gerados mesmo após erro`, {
+      hasFlow: !!result.flowDefinition,
+      hasRpaTest: !!result.rpaTest,
+      hasSeed: !!result.seed,
+      error: err.message,
+    });
+    
     return result;
   } finally {
     // Remove da lista de execuções em andamento

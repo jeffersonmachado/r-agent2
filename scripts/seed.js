@@ -2,16 +2,28 @@
  * Script de Seed Completo para r-agent2
  * 
  * Este script popula o sistema com dados iniciais completos:
- * - Agentes (admin, supervisor, agent)
+ * - Tenants (apenas tenant-demo, remove os demais)
+ * - Agentes (admin, manager, operator) com todos os campos necessários
  * - Fluxos de conversa
  * - Filas de atendimento
  * - Departamentos
  * - Respostas rápidas
  * - Configurações
  * - Webhooks
+ * - Tenant contexts
+ * 
+ * IMPORTANTE:
+ * - Cria apenas o tenant-demo no arquivo tenants.json (mantém o tenant "system")
+ * - Remove todos os outros tenants existentes
+ * - Agentes são criados com role 'manager' (não 'supervisor') e 'operator' (não 'agent')
+ * - Agentes usam 'passwordHash' (não 'hash') para compatibilidade com authService
+ * - SEM MIGRAÇÕES: Este script sempre sobrescreve dados existentes
+ * - Dados de outros tenants serão perdidos se existirem
  * 
  * Uso:
- *   node scripts/seed.js [--reset] [--tenant=tenant-id]
+ *   node scripts/seed.js [--tenant=tenant-id] [--reset]
+ * 
+ * Se --tenant não for especificado, usa 'tenant-demo' como padrão.
  */
 
 const fs = require('fs');
@@ -63,16 +75,28 @@ function ensureDataDir() {
  * Cria agentes iniciais
  */
 function createAgents(tenantId) {
+  // Senhas seguem padrão similar: [Nome]123!
+  const adminPwd = hashPassword('Admin123!');
+  const supervisorPwd = hashPassword('Supervisor123!');
+  const agentPwd = hashPassword('Atendente123!');
+  
   const agents = [
     {
       id: 'admin-001',
       tenantId,
       username: 'admin',
       email: 'admin@example.com',
-      ...hashPassword('Admin123!'),
+      passwordHash: adminPwd.hash,
+      salt: adminPwd.salt,
       role: 'admin',
       name: 'Administrador',
       active: true,
+      status: 'active',
+      mfaEnabled: false,
+      invitationToken: null,
+      invitationExpiresAt: null,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
       createdAt: now(),
       updatedAt: now(),
       lastLoginAt: null,
@@ -82,10 +106,17 @@ function createAgents(tenantId) {
       tenantId,
       username: 'supervisor',
       email: 'supervisor@example.com',
-      ...hashPassword('supervisor123'),
-      role: 'supervisor',
+      passwordHash: supervisorPwd.hash,
+      salt: supervisorPwd.salt,
+      role: 'manager', // supervisor migra para manager
       name: 'Supervisor',
       active: true,
+      status: 'active',
+      mfaEnabled: false,
+      invitationToken: null,
+      invitationExpiresAt: null,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
       createdAt: now(),
       updatedAt: now(),
       lastLoginAt: null,
@@ -95,10 +126,17 @@ function createAgents(tenantId) {
       tenantId,
       username: 'atendente1',
       email: 'atendente1@example.com',
-      ...hashPassword('atendente123'),
-      role: 'agent',
+      passwordHash: agentPwd.hash,
+      salt: agentPwd.salt,
+      role: 'operator', // agent migra para operator
       name: 'Atendente 1',
       active: true,
+      status: 'active',
+      mfaEnabled: false,
+      invitationToken: null,
+      invitationExpiresAt: null,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
       createdAt: now(),
       updatedAt: now(),
       lastLoginAt: null,
@@ -108,10 +146,17 @@ function createAgents(tenantId) {
       tenantId,
       username: 'atendente2',
       email: 'atendente2@example.com',
-      ...hashPassword('atendente123'),
-      role: 'agent',
+      passwordHash: agentPwd.hash,
+      salt: agentPwd.salt,
+      role: 'operator', // agent migra para operator
       name: 'Atendente 2',
       active: true,
+      status: 'active',
+      mfaEnabled: false,
+      invitationToken: null,
+      invitationExpiresAt: null,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
       createdAt: now(),
       updatedAt: now(),
       lastLoginAt: null,
@@ -122,83 +167,64 @@ function createAgents(tenantId) {
 }
 
 /**
- * Cria tenants iniciais
+ * Cria apenas o tenant-demo, removendo os demais
  */
 function createTenants() {
+  const now = new Date().toISOString();
+  const trialExpiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(); // 14 dias
+  
   const tenants = [
     {
-      id: 'tenant-default',
+      id: 'tenant-demo',
       name: 'Tenant Demo',
-      site: 'https://example.com',
-      ramo_atividade: 'Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente',
-      objetivo: 'Automatizar o atendimento ao cliente com IA, reduzindo tempo de resposta e melhorando a satisfação do cliente através de chatbots inteligentes e RPA',
+      site: 'https://demo.example.com',
+      ramo_atividade: 'Tecnologia e Software - Plataforma de demonstração',
+      objetivo: 'Demonstração e desenvolvimento da plataforma',
       active: true,
-      createdAt: now(),
-      updatedAt: now(),
+      status: 'trial',
+      plan: 'trial',
+      limits: {
+        usuarios: 3,
+        agentes_ia: 2,
+        execucoes_rpa: 50,
+        tokens_ia: 50000,
+        documentos_rag: 50,
+        storage_mb: 500
+      },
+      settings: {},
+      branding: {},
+      createdAt: now,
+      updatedAt: now,
+      suspendedAt: null,
+      trialExpiresAt: trialExpiresAt
     },
     {
-      id: 'tenant-ecommerce',
-      name: 'E-commerce Store',
-      site: 'https://ecommerce-example.com',
-      ramo_atividade: 'E-commerce e Varejo Online - Venda de produtos físicos e digitais através de plataforma online',
-      objetivo: 'Melhorar a experiência de compra online, reduzir abandono de carrinho e aumentar conversão através de atendimento proativo e personalizado',
+      id: 'system',
+      name: 'Sistema',
+      site: 'https://sistema.com',
+      ramo_atividade: 'Sistema de Administração',
+      objetivo: 'Administração global do sistema',
       active: true,
-      createdAt: now(),
-      updatedAt: now(),
-    },
-    {
-      id: 'tenant-saude',
-      name: 'Clínica de Saúde',
-      site: 'https://clinica-saude-example.com',
-      ramo_atividade: 'Saúde e Bem-estar - Clínica médica especializada em atendimento ambulatorial e consultas',
-      objetivo: 'Agilizar agendamentos, fornecer informações sobre serviços e tratamentos, e melhorar a comunicação com pacientes através de assistente virtual',
-      active: true,
-      createdAt: now(),
-      updatedAt: now(),
-    },
+      status: 'active',
+      plan: 'enterprise',
+      limits: {
+        usuarios: -1,
+        agentes_ia: -1,
+        execucoes_rpa: -1,
+        tokens_ia: -1,
+        documentos_rag: -1,
+        storage_mb: -1
+      },
+      settings: {},
+      branding: {},
+      createdAt: now,
+      updatedAt: now,
+      suspendedAt: null,
+      trialExpiresAt: null
+    }
   ];
-
+  
   return tenants;
-}
-
-/**
- * Cria tenant contexts iniciais
- */
-function createTenantContexts() {
-  const contexts = [
-    {
-      tenantId: 'tenant-default',
-      ramo_atividade: 'Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente',
-      objetivo: 'Automatizar o atendimento ao cliente com IA, reduzindo tempo de resposta e melhorando a satisfação do cliente através de chatbots inteligentes e RPA',
-      site_oficial: 'https://example.com',
-      prioridade: 'HIGH',
-      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
-      createdAt: now(),
-      updatedAt: now(),
-    },
-    {
-      tenantId: 'tenant-ecommerce',
-      ramo_atividade: 'E-commerce e Varejo Online - Venda de produtos físicos e digitais através de plataforma online',
-      objetivo: 'Melhorar a experiência de compra online, reduzir abandono de carrinho e aumentar conversão através de atendimento proativo e personalizado',
-      site_oficial: 'https://ecommerce-example.com',
-      prioridade: 'HIGH',
-      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
-      createdAt: now(),
-      updatedAt: now(),
-    },
-    {
-      tenantId: 'tenant-saude',
-      ramo_atividade: 'Saúde e Bem-estar - Clínica médica especializada em atendimento ambulatorial e consultas',
-      objetivo: 'Agilizar agendamentos, fornecer informações sobre serviços e tratamentos, e melhorar a comunicação com pacientes através de assistente virtual',
-      site_oficial: 'https://clinica-saude-example.com',
-      prioridade: 'HIGH',
-      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
-      createdAt: now(),
-      updatedAt: now(),
-    },
-  ];
-
-  return contexts;
 }
 
 /**
@@ -531,7 +557,6 @@ function createConfig(tenantId) {
   return {
     api: {
       port: 3000,
-      defaultTenantId: tenantId,
       sessionTimeout: 3600000, // 1 hora
       maxRetries: 3,
     },
@@ -629,37 +654,51 @@ function createRAGAudit() {
 }
 
 /**
+ * Cria tenant context (sem migração - sempre sobrescreve)
+ */
+function createTenantContext(tenantId) {
+  const now = new Date().toISOString();
+  
+  return [
+    {
+      tenantId,
+      ramo_atividade: 'Tecnologia e Software - Desenvolvimento de soluções de automação e inteligência artificial para atendimento ao cliente',
+      objetivo: 'Automatizar o atendimento ao cliente com IA, reduzindo tempo de resposta e melhorando a satisfação do cliente através de chatbots inteligentes e RPA',
+      site_oficial: 'https://example.com',
+      prioridade: 'HIGH',
+      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+}
+
+/**
  * Função principal de seed
  */
-function seed(tenantId = DEFAULT_TENANT_ID, reset = false) {
+function seed(tenantId = 'tenant-demo', reset = false) {
   console.log('🌱 Iniciando seed completo...');
   console.log(`📦 Tenant ID: ${tenantId}`);
   
   ensureDataDir();
   
+  // SEM MIGRAÇÕES: Sempre sobrescreve dados existentes
+  // Isso pode causar erros se houver dados de outros tenants
   if (reset) {
     console.log('⚠️  Modo RESET: dados existentes serão sobrescritos');
+  } else {
+    console.log('⚠️  ATENÇÃO: Dados existentes serão sobrescritos (sem migração)');
   }
   
-  // Tenants
-  console.log('🏢 Criando tenants...');
+  // Cria apenas o tenant-demo (e mantém o tenant system)
+  console.log('🏢 Criando tenants (apenas tenant-demo)...');
   const tenants = createTenants();
   fs.writeFileSync(
     path.join(DATA_DIR, 'tenants.json'),
     JSON.stringify(tenants, null, 2),
     'utf8'
   );
-  console.log(`   ✅ ${tenants.length} tenant(s) criado(s)`);
-
-  // Tenant Contexts
-  console.log('🧠 Criando tenant contexts...');
-  const tenantContexts = createTenantContexts();
-  fs.writeFileSync(
-    path.join(DATA_DIR, 'tenant_contexts.json'),
-    JSON.stringify(tenantContexts, null, 2),
-    'utf8'
-  );
-  console.log(`   ✅ ${tenantContexts.length} contexto(s) criado(s)`);
+  console.log(`   ✅ ${tenants.length} tenant(s) criado(s) (tenant-demo + system)`);
 
   // Agentes
   console.log('👤 Criando agentes...');
@@ -781,6 +820,16 @@ function seed(tenantId = DEFAULT_TENANT_ID, reset = false) {
   );
   console.log('   ✅ Arquivo de audit RAG criado');
   
+  // Tenant Context
+  console.log('🏢 Criando tenant context...');
+  const tenantContexts = createTenantContext(tenantId);
+  fs.writeFileSync(
+    path.join(DATA_DIR, 'tenant_contexts.json'),
+    JSON.stringify(tenantContexts, null, 2),
+    'utf8'
+  );
+  console.log('   ✅ Tenant context criado');
+  
   console.log('\n✅ Seed completo concluído com sucesso!');
   console.log(`📁 Dados salvos em: ${DATA_DIR}`);
   console.log('\n📋 Resumo:');
@@ -791,15 +840,15 @@ function seed(tenantId = DEFAULT_TENANT_ID, reset = false) {
   console.log(`   - ${quickReplies.quickReplies.length} resposta(s) rápida(s)`);
   console.log(`   - ${webhooks.webhooks.length} webhook(s)`);
   console.log('\n🔑 Credenciais padrão:');
-  console.log('   Admin:');
+  console.log('   Admin (role: admin):');
   console.log('     Username: admin');
   console.log('     Password: Admin123!');
-  console.log('   Supervisor:');
+  console.log('   Supervisor (role: manager):');
   console.log('     Username: supervisor');
-  console.log('     Password: supervisor123');
-  console.log('   Atendente:');
+  console.log('     Password: Supervisor123!');
+  console.log('   Atendente (role: operator):');
   console.log('     Username: atendente1 ou atendente2');
-  console.log('     Password: atendente123');
+  console.log('     Password: Atendente123!');
 }
 
 // Parse argumentos
@@ -813,20 +862,22 @@ for (const arg of args) {
   } else if (arg.startsWith('--tenant=')) {
     tenantId = arg.split('=')[1];
   } else if (arg === '--help' || arg === '-h') {
-    console.log('Uso: node scripts/seed.js [--reset] --tenant=tenant-id');
+    console.log('Uso: node scripts/seed.js [--reset] [--tenant=tenant-id]');
     console.log('');
     console.log('Opções:');
     console.log('  --reset          Sobrescreve dados existentes');
-    console.log('  --tenant=ID      Define o tenant ID (OBRIGATÓRIO)');
+    console.log('  --tenant=ID      Define o tenant ID (padrão: tenant-demo)');
     console.log('  --help, -h       Mostra esta ajuda');
+    console.log('');
+    console.log('Nota: Este script cria apenas o tenant-demo no arquivo tenants.json,');
+    console.log('      removendo todos os outros tenants (exceto o tenant "system").');
     process.exit(0);
   }
 }
 
 if (!tenantId) {
-  console.error('❌ Erro: --tenant=ID é obrigatório');
-  console.error('   Use --help para ver as opções disponíveis');
-  process.exit(1);
+  tenantId = 'tenant-demo';
+  console.log('ℹ️  Tenant não especificado, usando tenant-demo como padrão');
 }
 
 // Executa seed

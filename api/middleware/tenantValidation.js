@@ -66,9 +66,9 @@ function extractTenantId(req) {
  * Adiciona req.tenantId e req.tenant ao request.
  * 
  * @param {http.IncomingMessage} req
- * @returns {{valid: boolean, tenantId?: string, tenant?: Object, error?: string}}
+ * @returns {Promise<{valid: boolean, tenantId?: string, tenant?: Object, error?: string}>}
  */
-function requireTenant(req) {
+async function requireTenant(req) {
   const tenantId = extractTenantId(req);
 
   if (!tenantId) {
@@ -79,7 +79,7 @@ function requireTenant(req) {
   }
 
   // Verifica se tenant existe
-  const tenant = getTenant(tenantId);
+  const tenant = await getTenant(tenantId);
   if (!tenant) {
     // Para super-admin com tenantId "system", permite mesmo se tenant não existir ainda
     // (pode ser criado posteriormente)
@@ -117,17 +117,22 @@ function requireTenant(req) {
   }
 
   // Valida status do tenant
-  const statusValidation = validateTenantStatus(tenantId);
-  if (!statusValidation.valid) {
-    logger.warn('[TenantValidation] Tentativa de acesso a tenant inválido/suspenso', {
-      tenantId,
-      status: tenant.status,
-      error: statusValidation.error,
-    });
-    return {
-      valid: false,
-      error: statusValidation.error || 'Tenant não disponível',
-    };
+  try {
+    const statusValidation = await validateTenantStatus(tenantId);
+    if (!statusValidation.valid) {
+      logger.warn('[TenantValidation] Tentativa de acesso a tenant inválido/suspenso', {
+        tenantId,
+        status: tenant.status,
+        error: statusValidation.error,
+      });
+      return {
+        valid: false,
+        error: statusValidation.error || 'Tenant não disponível',
+      };
+    }
+  } catch (err) {
+    logger.error('[TenantValidation] Erro ao validar status do tenant:', err);
+    // Continua mesmo com erro de validação (não bloqueia)
   }
 
   // Verifica isolamento: se o agente está autenticado, deve pertencer ao mesmo tenant
@@ -162,10 +167,10 @@ function requireTenant(req) {
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse} res
  * @param {Function} sendJson - Função helper para enviar JSON
- * @returns {boolean} true se válido, false se bloqueado
+ * @returns {Promise<boolean>} true se válido, false se bloqueado
  */
-function validateTenantMiddleware(req, res, sendJson) {
-  const validation = requireTenant(req);
+async function validateTenantMiddleware(req, res, sendJson) {
+  const validation = await requireTenant(req);
 
   if (!validation.valid) {
     sendJson(res, 403, {

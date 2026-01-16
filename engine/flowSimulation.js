@@ -31,6 +31,9 @@ const { aiTaskNodeHandler } = require('./nodes/aiTaskNode');
 const { getOrCompileFlow } = require('./compiledFlowCache');
 const { executeStep } = require('./executeStep');
 const { buildConversationReplay } = require('./replay');
+const { ReplaySystem } = require('../lib/replaySystem');
+const { RecordingSystem } = require('../lib/recordingSystem');
+const path = require('path');
 
 /**
  * @typedef {import('./flowTypes').FlowDefinition} FlowDefinition
@@ -170,10 +173,34 @@ async function simulateFlow(flow, options) {
     throw new Error('simulateFlow: flow inválido');
   }
 
+  // Inicializa replay
+  const replay = new ReplaySystem({
+    storagePath: path.join(process.cwd(), 'replays', 'simulation'),
+    context: 'simulation',
+    enableScreenshots: false,
+  });
+
+  const replayId = `simulate-${flow.id}-${Date.now()}`;
+  replay.start(replayId, {
+    flowId: flow.id,
+    flowName: flow.name,
+    maxSteps: options?.maxSteps || 50,
+    startNodeId: options?.startNodeId,
+  });
+
   const compiled = getOrCompileFlow(flow);
 
   const startNodeId = resolveStartNodeId(flow, options && options.startNodeId);
   if (!startNodeId) {
+    replay.recordError(new Error('Não foi possível determinar nó inicial'), 'simulate-flow');
+    recording.recordCustom('error', {
+      step: 'start-node-error',
+      value: { error: 'Não foi possível determinar nó inicial' },
+    });
+    replay.stop();
+    replay.save(`${replayId}-error`);
+    recording.stop();
+    recording.save(`${recordingId}-error`);
     throw new Error('simulateFlow: não foi possível determinar nó inicial');
   }
 
@@ -203,7 +230,10 @@ async function simulateFlow(flow, options) {
   const allEvents = [];
 
   for (let i = 0; i < maxSteps; i += 1) {
-    if (!state.currentNodeId) break;
+    if (!state.currentNodeId) {
+      replay.recordEvent('simulation_ended', { reason: 'no_current_node', step: i });
+      break;
+    }
 
     let input = undefined;
     if (typeof inputProvider === 'function') {
@@ -218,14 +248,24 @@ async function simulateFlow(flow, options) {
     };
 
     const before = state;
+    
+    // Registra início do passo
+    replay.recordEvent('simulation_step_started', {
+      step: i,
+      currentNodeId: before.currentNodeId,
+    });
+    
+    const stepStartTime = new Date().toISOString();
     // eslint-disable-next-line no-await-in-loop
     const result = await executeStep(before, compiled, {
       registry,
       input: execInput,
       deps: {
         registry, // Passa registry para handlers que precisam (ex: subflow)
+        replay, // Passa replay para o executeStep registrar ações
       },
     });
+    const stepEndTime = new Date().toISOString();
 
     const step = {
       index: i,
@@ -235,13 +275,72 @@ async function simulateFlow(flow, options) {
       events: result.events,
     };
 
+    // Registra passo no replay
+    replay.recordAction(
+      {
+        type: 'simulation_step',
+        step: `step-${i}`,
+        nodeId: before.currentNodeId,
+      },
+      {
+        success: true,
+        startTime: stepStartTime,
+        endTime: stepEndTime,
+        actual: {
+          nextNodeId: result.state.currentNodeId,
+          outputType: result.output?.type,
+          eventsCount: result.events.length,
+        },
+      }
+    );
+
     steps.push(step);
     allEvents.push(...result.events);
 
     state = result.state;
+    
+    // Registra transição de nó
+    if (before.currentNodeId !== result.state.currentNodeId) {
+      replay.recordEvent('node_transition', {
+        from: before.currentNodeId,
+        to: result.state.currentNodeId,
+        step: i,
+      });
+
+      recording.recordAction({
+        type: 'node-transition',
+        step: `transition-${i}`,
+        value: {
+          from: before.currentNodeId,
+          to: result.state.currentNodeId,
+        },
+      });
+    }
   }
 
-  const replay = buildConversationReplay(allEvents);
+  const conversationReplay = buildConversationReplay(allEvents);
+
+  // Finaliza e salva replay do sistema
+  replay.recordEvent('simulation_completed', {
+    stepsCount: steps.length,
+    eventsCount: allEvents.length,
+    finalNodeId: state.currentNodeId,
+  });
+  replay.stop();
+  const replayPath = replay.save(replayId);
+
+  // Finaliza e salva gravação
+  recording.recordAction({
+    type: 'simulation-complete',
+    step: 'complete',
+    value: {
+      stepsCount: steps.length,
+      eventsCount: allEvents.length,
+      finalNodeId: state.currentNodeId,
+    },
+  });
+  recording.stop();
+  const recordingPath = recording.save(recordingId);
 
   return {
     compiledFlowInfo: {
@@ -251,7 +350,8 @@ async function simulateFlow(flow, options) {
     },
     steps,
     events: allEvents,
-    replay,
+    replay: conversationReplay,
+    replayPath, // Adiciona caminho do replay do sistema
   };
 }
 

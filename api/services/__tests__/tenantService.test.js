@@ -1,6 +1,10 @@
 /**
  * Testes para tenantService.js (funcionalidades SaaS)
+ * 
+ * ATUALIZADO: Agora usa PostgreSQL (mockado) em vez de JSON/Map
  */
+
+const { mockDatabase, clearDatabaseMocks, setupTenantMock, setupTenantNotFound, createMockTenant } = require('../../../tests/helpers/dbMock');
 
 // Mock do sistema de arquivos antes de importar o módulo
 jest.mock('fs');
@@ -11,10 +15,13 @@ jest.mock('../../utils/logger', () => ({
   warn: jest.fn(),
 }));
 jest.mock('../../utils/config', () => ({
-  get: jest.fn((key, defaultValue) => defaultValue || null), // Removido fallback para 'tenant-demo'
+  get: jest.fn((key, defaultValue) => defaultValue || null),
 }));
 jest.mock('../webScrapingService');
 jest.mock('../ragDocumentsService');
+
+// Mock do banco de dados
+const { mockSequelize, mockModels } = mockDatabase();
 
 const fs = require('fs');
 const {
@@ -25,41 +32,96 @@ const {
   changePlan,
   validateTenantStatus,
   getTenantUsage,
-  _internal,
 } = require('../tenantService');
 
-describe('tenantService SaaS', () => {
+describe('tenantService SaaS (PostgreSQL)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Limpa mocks dos models
+    Object.values(mockModels).forEach(model => {
+      Object.values(model).forEach(method => {
+        if (jest.isMockFunction(method)) {
+          method.mockClear();
+        }
+      });
+    });
+    // Garante que getSequelize retorna um objeto válido com pool
+    const { getSequelize } = require('../../db/sequelize');
+    const sequelize = getSequelize();
+    if (sequelize) {
+      if (!sequelize.connectionManager) {
+        sequelize.connectionManager = {};
+      }
+      sequelize.connectionManager.pool = {};
+    } else {
+      // Se getSequelize retornar null, configura o mock para retornar um objeto válido
+      const mockSequelize = {
+        connectionManager: { pool: {} },
+        authenticate: jest.fn().mockResolvedValue(true),
+        close: jest.fn().mockResolvedValue(true),
+      };
+      getSequelize.mockReturnValue(mockSequelize);
+    }
     fs.existsSync = jest.fn().mockReturnValue(false);
     fs.mkdirSync = jest.fn();
     fs.writeFileSync = jest.fn();
     fs.readFileSync = jest.fn().mockReturnValue('[]');
-    
-    // Limpa o Map de tenants antes de cada teste
-    _internal.clearTenants();
-    _internal.clearTenantContexts();
   });
 
   describe('createTenant', () => {
-    test('deve criar tenant com plano trial por padrão', () => {
-      const result = createTenant({
+    test('deve criar tenant com plano trial por padrão', async () => {
+      // Garante que getSequelize retorna um objeto válido
+      const { getSequelize } = require('../../db/sequelize');
+      const sequelize = getSequelize();
+      if (sequelize && sequelize.connectionManager) {
+        sequelize.connectionManager.pool = {};
+      }
+
+      // Configura mock para não encontrar tenant existente
+      mockModels.Tenant.findOne
+        .mockResolvedValueOnce(null) // Primeira chamada (verifica tenant_key)
+        .mockResolvedValueOnce(null); // Segunda chamada (verifica site)
+
+      const mockTenant = createMockTenant({
+        tenant_key: 'tenant-test-123',
+        name: 'Test Tenant',
+        site: 'https://test.com',
+        ramo_atividade: 'Teste',
+        objetivo: 'Testar',
+        plan: 'trial',
+        status: 'trial',
+      });
+
+      mockModels.Tenant.create.mockResolvedValue(mockTenant);
+
+      const result = await createTenant({
         name: 'Test Tenant',
         site: 'https://test.com',
         ramo_atividade: 'Teste',
         objetivo: 'Testar',
       });
 
+      if (!result.success) {
+        console.log('Erro no createTenant:', result.error);
+      }
       expect(result.success).toBe(true);
       expect(result.tenant).toBeDefined();
       expect(result.tenant.plan).toBe('trial');
       expect(result.tenant.status).toBe('trial');
-      expect(result.tenant.limits).toBeDefined();
-      expect(result.tenant.trialExpiresAt).toBeDefined();
+      expect(mockModels.Tenant.create).toHaveBeenCalled();
     });
 
-    test('deve criar tenant com plano específico', () => {
-      const result = createTenant({
+    test('deve criar tenant com plano específico', async () => {
+      const mockTenant = setupTenantMock(mockModels, {
+        name: 'Test Tenant',
+        site: 'https://test.com',
+        ramo_atividade: 'Teste',
+        objetivo: 'Testar',
+        plan: 'pro',
+        status: 'active',
+      });
+
+      const result = await createTenant({
         name: 'Test Tenant',
         site: 'https://test.com',
         ramo_atividade: 'Teste',
@@ -72,8 +134,24 @@ describe('tenantService SaaS', () => {
       expect(result.tenant.status).toBe('active');
     });
 
-    test('deve incluir limites do plano', () => {
-      const result = createTenant({
+    test('deve incluir limites do plano', async () => {
+      const mockTenant = setupTenantMock(mockModels, {
+        name: 'Test Tenant Limits',
+        site: 'https://test-limits.com',
+        ramo_atividade: 'Teste',
+        objetivo: 'Testar',
+        plan: 'pro',
+        limits: {
+          usuarios: 10,
+          agentes_ia: 5,
+          execucoes_rpa: 500,
+          tokens_ia: 500000,
+          documentos_rag: 200,
+          storage_mb: 500,
+        },
+      });
+
+      const result = await createTenant({
         name: 'Test Tenant Limits',
         site: 'https://test-limits.com',
         ramo_atividade: 'Teste',
@@ -86,8 +164,8 @@ describe('tenantService SaaS', () => {
       expect(result.tenant.limits.usuarios).toBe(10);
     });
 
-    test('deve retornar erro para plano inválido', () => {
-      const result = createTenant({
+    test('deve retornar erro para plano inválido', async () => {
+      const result = await createTenant({
         name: 'Test Tenant',
         site: 'https://test.com',
         ramo_atividade: 'Teste',
@@ -101,21 +179,23 @@ describe('tenantService SaaS', () => {
   });
 
   describe('suspendTenant', () => {
-    test('deve suspender tenant', () => {
-      // Primeiro cria um tenant
-      const createResult = createTenant({
+    test('deve suspender tenant', async () => {
+      const tenantId = 'test-tenant-suspend';
+      const mockTenant = setupTenantMock(mockModels, {
+        id: tenantId,
         name: 'Test Tenant Suspend',
         site: 'https://test-suspend.com',
         ramo_atividade: 'Teste',
         objetivo: 'Testar',
+        status: 'active',
       });
 
-      expect(createResult.success).toBe(true);
-      expect(createResult.tenant).toBeDefined();
-      const tenantId = createResult.tenant.id;
+      // Mock do update para retornar tenant suspenso
+      const suspendedTenant = { ...mockTenant, status: 'suspended', suspended_at: new Date() };
+      mockModels.Tenant.update.mockResolvedValue([1, [suspendedTenant]]);
+      mockModels.Tenant.findOne.mockResolvedValue(suspendedTenant);
 
-      // Depois suspende
-      const suspendResult = suspendTenant(tenantId);
+      const suspendResult = await suspendTenant(tenantId);
 
       expect(suspendResult.success).toBe(true);
       expect(suspendResult.tenant.status).toBe('suspended');
@@ -125,62 +205,75 @@ describe('tenantService SaaS', () => {
   });
 
   describe('reactivateTenant', () => {
-    test('deve reativar tenant suspenso', () => {
-      // Cria e suspende tenant
-      const createResult = createTenant({
+    test('deve reativar tenant suspenso', async () => {
+      const tenantId = 'test-tenant-id';
+      const mockTenant = setupTenantMock(mockModels, {
+        id: tenantId,
         name: 'Test Tenant Reactivate',
         site: 'https://test-reactivate.com',
-        ramo_atividade: 'Teste',
-        objetivo: 'Testar',
-        plan: 'pro',
+        status: 'suspended',
       });
 
-      expect(createResult.success).toBe(true);
-      expect(createResult.tenant).toBeDefined();
-      const tenantId = createResult.tenant.id;
-      suspendTenant(tenantId);
+      // Mock do update para retornar tenant ativo
+      const activeTenant = { ...mockTenant, status: 'active' };
+      mockModels.Tenant.update.mockResolvedValue([1, [activeTenant]]);
+      mockModels.Tenant.findOne.mockResolvedValue(activeTenant);
 
-      // Reativa
-      const reactivateResult = reactivateTenant(tenantId);
+      const reactivateResult = await reactivateTenant(tenantId);
 
       expect(reactivateResult.success).toBe(true);
       expect(reactivateResult.tenant.status).toBe('active');
-      expect(reactivateResult.tenant.active).toBe(true);
+      expect(mockModels.Tenant.update).toHaveBeenCalled();
     });
   });
 
   describe('changePlan', () => {
-    test('deve mudar plano do tenant', () => {
-      const createResult = createTenant({
+    test('deve mudar plano do tenant', async () => {
+      const tenantId = 'test-tenant-change';
+      const mockTenant = setupTenantMock(mockModels, {
+        id: tenantId,
         name: 'Test Tenant',
         site: 'https://test.com',
         ramo_atividade: 'Teste',
         objetivo: 'Testar',
         plan: 'trial',
+        status: 'trial',
       });
 
-      const tenantId = createResult.tenant.id;
+      // Mock do update para retornar tenant com plano pro
+      const updatedTenant = { 
+        ...mockTenant, 
+        plan: 'pro',
+        limits: {
+          usuarios: 10,
+          agentes_ia: 5,
+          execucoes_rpa: 500,
+          tokens_ia: 500000,
+          documentos_rag: 200,
+          storage_mb: 500,
+        },
+      };
+      mockModels.Tenant.update.mockResolvedValue([1, [updatedTenant]]);
+      mockModels.Tenant.findOne.mockResolvedValue(updatedTenant);
 
-      const changeResult = changePlan(tenantId, 'pro');
+      const changeResult = await changePlan(tenantId, 'pro');
 
       expect(changeResult.success).toBe(true);
       expect(changeResult.tenant.plan).toBe('pro');
       expect(changeResult.tenant.limits.usuarios).toBe(10);
     });
 
-    test('deve retornar erro para plano inválido', () => {
-      const createResult = createTenant({
+    test('deve retornar erro para plano inválido', async () => {
+      const tenantId = 'test-tenant-invalid';
+      setupTenantMock(mockModels, {
+        id: tenantId,
         name: 'Test Tenant Invalid Plan',
         site: 'https://test-invalidplan.com',
         ramo_atividade: 'Teste',
         objetivo: 'Testar',
       });
 
-      expect(createResult.success).toBe(true);
-      expect(createResult.tenant).toBeDefined();
-      const tenantId = createResult.tenant.id;
-
-      const changeResult = changePlan(tenantId, 'invalid');
+      const changeResult = await changePlan(tenantId, 'invalid');
 
       expect(changeResult.success).toBe(false);
       expect(changeResult.error).toContain('Plano inválido');
@@ -188,35 +281,27 @@ describe('tenantService SaaS', () => {
   });
 
   describe('validateTenantStatus', () => {
-    test('deve validar tenant ativo', () => {
-      const createResult = createTenant({
-        name: 'Test Tenant',
-        site: 'https://test.com',
-        ramo_atividade: 'Teste',
-        objetivo: 'Testar',
+    test('deve validar tenant ativo', async () => {
+      const tenantId = 'test-tenant-id';
+      setupTenantMock(mockModels, {
+        id: tenantId,
+        status: 'active',
         plan: 'pro',
       });
 
-      const tenantId = createResult.tenant.id;
-      const validation = validateTenantStatus(tenantId);
+      const validation = await validateTenantStatus(tenantId);
 
       expect(validation.valid).toBe(true);
     });
 
-    test('deve invalidar tenant suspenso', () => {
-      const createResult = createTenant({
-        name: 'Test Tenant Validate Suspended',
-        site: 'https://test-validatesuspended.com',
-        ramo_atividade: 'Teste',
-        objetivo: 'Testar',
+    test('deve invalidar tenant suspenso', async () => {
+      const tenantId = 'test-tenant-id';
+      setupTenantMock(mockModels, {
+        id: tenantId,
+        status: 'suspended',
       });
 
-      expect(createResult.success).toBe(true);
-      expect(createResult.tenant).toBeDefined();
-      const tenantId = createResult.tenant.id;
-      suspendTenant(tenantId);
-
-      const validation = validateTenantStatus(tenantId);
+      const validation = await validateTenantStatus(tenantId);
 
       expect(validation.valid).toBe(false);
       expect(validation.error).toContain('suspenso');

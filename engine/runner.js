@@ -17,6 +17,8 @@
 const { findNode, createEngineEvent, normalizeNext } = require('./utils');
 const persistenceServices = require('./services/persistenceServices');
 const { classifyErrorType, getErrorDefinition } = require('./errorCodes');
+const { ReplaySystem } = require('../lib/replaySystem');
+const path = require('path');
 
 /**
  * @typedef {import('./flowTypes').FlowDefinition} FlowDefinition
@@ -105,6 +107,14 @@ async function runStep(flow, state, registry, input, deps = null) {
   if (registry && !nodeDeps.registry) {
     nodeDeps.registry = registry;
   }
+  
+  // Extrai replay das dependências se disponível
+  const replay = nodeDeps?.replay || null;
+  
+  // Adiciona replay às dependências se disponível (para compatibilidade)
+  if (replay && !nodeDeps.replay) {
+    nodeDeps.replay = replay;
+  }
 
   // Log de entrada no nó
   const enterEvent = createEngineEvent({
@@ -179,6 +189,15 @@ async function runStep(flow, state, registry, input, deps = null) {
       break;
     } catch (err) {
       lastError = err;
+      
+      // Registra erro no replay
+      if (replay) {
+        replay.recordError(err, node.id, {
+          attempt,
+          maxAttempts,
+          nodeType: node.type,
+        });
+      }
       
       // Determina tipo de erro para classificação usando sistema centralizado
       let errorType = 'system';
@@ -322,6 +341,17 @@ async function runStep(flow, state, registry, input, deps = null) {
       nextNodeId,
     },
   });
+
+  // Salva replay se foi criado e nó finalizou (end ou erro)
+  if (replay && (nextNodeId === null || node.type === 'end')) {
+    replay.stop();
+    const replayPath = replay.save(`flow-${state.flowId}-session-${state.sessionId}`);
+    // Adiciona replayPath ao estado para acesso posterior
+    if (!finalNextState.metadata) {
+      finalNextState.metadata = {};
+    }
+    finalNextState.metadata.replayPath = replayPath;
+  }
 
   return {
     nextState: finalNextState,

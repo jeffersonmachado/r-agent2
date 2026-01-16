@@ -293,57 +293,13 @@ function createAnthropicProvider() {
   };
 }
 
-/**
- * Provider de fallback (respostas estáticas)
- * 
- * CRÍTICO: Este provider deve ser usado apenas como último recurso.
- * Seu uso frequente indica problemas graves no sistema.
- */
-function createFallbackProvider() {
-  return {
-    async generate(prompt, context) {
-      // CRÍTICO: Log como erro - uso de fallback estático indica problema grave
-      logger.error('[aiProviderService] CRÍTICO: Provider de fallback estático sendo usado', {
-        promptLength: prompt?.length || 0,
-        sessionId: context?.sessionId || 'unknown',
-        tenantId: context?.tenantId || 'unknown',
-        severity: 'CRITICAL',
-        alert: 'FALLBACK_STATIC_PROVIDER_USED',
-        warning: 'Todos os providers de IA falharam. Sistema está degradado.',
-      });
-      
-      // Registra no monitoramento de fallbacks
-      try {
-        const { recordFallback, FALLBACK_TYPES } = require('../../engine/fallbackMonitor');
-        recordFallback(FALLBACK_TYPES.AI_PROVIDER_STATIC, {
-          sessionId: context?.sessionId || 'unknown',
-          tenantId: context?.tenantId || 'unknown',
-          promptLength: prompt?.length || 0,
-        });
-      } catch (monitorError) {
-        // Não falha se monitoramento não estiver disponível
-      }
-      
-      return {
-        text: '[IA não disponível] Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.',
-        metadata: {
-          fallbackUsed: true,
-          severity: 'CRITICAL',
-          timestamp: new Date().toISOString(),
-        },
-      };
-    },
-  };
-}
 
 /**
  * Inicializa os providers de IA baseado na configuração
+ * Carrega configurações do banco de dados (PostgreSQL) ou do config.json como fallback
  */
-function initializeAiProviders() {
+async function initializeAiProviders() {
   try {
-    // Registra provider de fallback
-    registerAiProvider('fallback', createFallbackProvider());
-
     // Tenta registrar OpenAI se configurado
     try {
       const openaiProvider = createOpenAIProvider();
@@ -362,27 +318,87 @@ function initializeAiProviders() {
       logger.warn('⚠️  Anthropic não configurado', { message: err.message });
     }
 
-    // Configura providers por tenant
-    const aiConfig = config.get('ai', {});
-    const tenantConfig = aiConfig.tenants || {};
+    // Tenta carregar configurações do banco de dados
+    let tenantsLoaded = 0;
+    try {
+      const { listAllTenants } = require('./superAdminService');
+      const { getAIConfig } = require('./tenantAIService');
+      
+      // Lista todos os tenants do banco
+      const tenants = await listAllTenants();
+      
+      // Para cada tenant, carrega a configuração de IA
+      for (const tenant of tenants) {
+        try {
+          const tenantId = tenant.tenant_key || tenant.id;
+          const aiConfig = await getAIConfig(tenantId);
+          
+          if (aiConfig && aiConfig.configured && aiConfig.primary) {
+            setTenantAiConfig(tenantId, {
+              primary: aiConfig.primary,
+              secondary: aiConfig.secondary,
+            });
+            logger.info(`✅ Configurado provider de IA para tenant: ${tenantId} (primary: ${aiConfig.primary})`);
+            tenantsLoaded++;
+          }
+        } catch (err) {
+          logger.debug(`Não foi possível carregar configuração de IA para tenant ${tenant.tenant_key || tenant.id}`, { error: err.message });
+        }
+      }
+      
+      logger.info(`✅ Providers de IA inicializados. Tenants configurados do banco: ${tenantsLoaded}`);
+    } catch (err) {
+      logger.warn('⚠️  Não foi possível carregar configurações do banco, usando config.json como fallback', { error: err.message });
+      
+      // Fallback: carrega do config.json (para migração gradual)
+      const aiConfig = config.get('ai', {});
+      const tenantConfig = aiConfig.tenants || {};
 
-    // Configuração padrão para todos os tenants
-    const defaultProvider = aiConfig.defaultProvider || 'fallback';
-    const defaultFallback = aiConfig.defaultFallback || 'fallback';
-
-    // Removido configuração padrão para 'tenant-demo'
-    // Cada tenant deve ter sua configuração explícita
-
-    // Configura tenants específicos
-    for (const [tenantId, tenantAiConfig] of Object.entries(tenantConfig)) {
-      setTenantAiConfig(tenantId, {
-        primary: tenantAiConfig.primary || defaultProvider,
-        fallback: tenantAiConfig.fallback || defaultFallback,
-      });
-      logger.info(`✅ Configurado provider de IA para tenant: ${tenantId}`);
+      // Configura tenants específicos (apenas configurações explícitas)
+      for (const [tenantId, tenantAiConfig] of Object.entries(tenantConfig)) {
+        if (!tenantAiConfig.primary) {
+          logger.warn(`⚠️  Tenant ${tenantId} não tem provider primário configurado, ignorando`);
+          continue;
+        }
+        
+        setTenantAiConfig(tenantId, {
+          primary: tenantAiConfig.primary,
+          secondary: tenantAiConfig.secondary,
+        });
+        logger.info(`✅ Configurado provider de IA para tenant: ${tenantId} (primary: ${tenantAiConfig.primary})`);
+        tenantsLoaded++;
+      }
+      
+      logger.info(`✅ Providers de IA inicializados. Tenants configurados do config.json: ${tenantsLoaded}`);
     }
-
-    logger.info(`✅ Providers de IA inicializados. Provider padrão: ${defaultProvider}`);
+    
+    // Configuração automática obrigatória para o tenant "system"
+    try {
+      const { getAiProviderForTenant, setTenantAiConfig, isProviderRegistered } = require('../../engine/aiProviderManager');
+      const systemProvider = getAiProviderForTenant('system');
+      if (!systemProvider) {
+        // Configura com o primeiro provider disponível (prioriza openai, depois anthropic)
+        const preferredProviders = ['openai', 'anthropic'];
+        let configured = false;
+        
+        for (const providerId of preferredProviders) {
+          if (isProviderRegistered(providerId)) {
+            setTenantAiConfig('system', { primary: providerId });
+            logger.info(`✅ Configurado provider de IA para tenant "system": ${providerId}`);
+            configured = true;
+            break;
+          }
+        }
+        
+        if (!configured) {
+          logger.warn('⚠️  Tenant "system" não pôde ser configurado - nenhum provider de IA disponível');
+        }
+      } else {
+        logger.debug('ℹ️  Tenant "system" já possui provider configurado');
+      }
+    } catch (err) {
+      logger.warn('⚠️  Erro ao configurar tenant "system"', { error: err.message });
+    }
   } catch (err) {
     logger.error('❌ Erro ao inicializar providers de IA', err);
   }
@@ -443,6 +459,5 @@ module.exports = {
   generateAiResponse,
   createOpenAIProvider,
   createAnthropicProvider,
-  createFallbackProvider,
 };
 

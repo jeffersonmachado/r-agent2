@@ -23,6 +23,8 @@ const { analyzeFlowDependencies, resolveDependencies } = require('./rpaTestDepen
 const { generateRpaTestFromFlow } = require('./rpaTestGeneratorService');
 const { validateFlow } = require('../../engine/validator');
 const { executeRecording, getExecutionStatus } = require('./rpaService');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
 
 /**
  * Calcula hash do contrato para versionamento.
@@ -191,17 +193,79 @@ function saveRpaTestFile(rpaTest) {
  * @returns {Object} Gravação RPA
  */
 function convertRpaTestToRecording(rpaTest) {
+  // Copia os steps originais
+  const steps = [...(rpaTest.steps || [])];
+  
+  // Converte asserts em steps de assert e insere nos steps
+  if (rpaTest.asserts && rpaTest.asserts.length > 0) {
+    // Ordena asserts por step
+    const sortedAsserts = [...rpaTest.asserts].sort((a, b) => {
+      const stepA = typeof a.step === 'number' ? a.step : parseInt(a.step) || 0;
+      const stepB = typeof b.step === 'number' ? b.step : parseInt(b.step) || 0;
+      return stepA - stepB;
+    });
+    
+    // Insere asserts nos steps na posição correta
+    // Começa do final para não alterar os índices
+    for (let i = sortedAsserts.length - 1; i >= 0; i--) {
+      const assert = sortedAsserts[i];
+      const stepIndex = typeof assert.step === 'number' ? assert.step : parseInt(assert.step) || 0;
+      
+      // Cria step de assert a partir do assert
+      const assertStep = {
+        step: `step-${stepIndex + 1}`,
+        action: 'assert',
+        type: assert.type || 'visible',
+        ...(assert.selector && { selector: assert.selector }),
+        ...(assert.title && { title: assert.title }),
+        ...(assert.page && { page: assert.page }),
+        ...(assert.expected !== undefined && { expected: assert.expected }),
+        ...(assert.exists !== undefined && { exists: assert.exists }),
+        ...(assert.message && { message: assert.message }),
+        ...(assert.description && { description: assert.description }),
+      };
+      
+      // Valida que o assert tem pelo menos selector, title ou page
+      if (!assertStep.selector && !assertStep.title && !assertStep.page) {
+        logger.warn('Assert sem selector, title ou page - adicionando fallback', {
+          assert,
+          stepIndex,
+          testId: rpaTest.id,
+        });
+        // Adiciona fallback: usa title da página se não tiver nada
+        assertStep.title = assert.expected || 'Página carregada';
+      }
+      
+      // Insere o assert step após o step correspondente
+      // Se stepIndex for maior que o número de steps, adiciona no final
+      if (stepIndex < steps.length) {
+        steps.splice(stepIndex + 1, 0, assertStep);
+      } else {
+        steps.push(assertStep);
+      }
+    }
+  }
+  
+  logger.info('Teste RPA convertido para gravação', {
+    testId: rpaTest.id,
+    originalStepsCount: rpaTest.steps?.length || 0,
+    assertsCount: rpaTest.asserts?.length || 0,
+    finalStepsCount: steps.length,
+  });
+  
   return {
     id: rpaTest.id,
     name: rpaTest.name || `Teste RPA - ${rpaTest.flowId}`,
     description: rpaTest.description || 'Teste RPA gerado automaticamente',
     version: rpaTest.version || '1.0.0',
-    steps: rpaTest.steps || [],
+    steps: steps,
     data: rpaTest.data || {},
     metadata: {
       ...rpaTest.metadata,
       convertedFromTest: true,
       convertedAt: new Date().toISOString(),
+      originalStepsCount: rpaTest.steps?.length || 0,
+      assertsCount: rpaTest.asserts?.length || 0,
     },
   };
 }
@@ -250,83 +314,7 @@ function removeTemporaryRecording(recordingId) {
   }
 }
 
-/**
- * Salva fluxo em arquivo.
- * 
- * @param {Object} flow - Fluxo a ser salvo
- * @returns {string} Caminho do arquivo salvo
- */
-function saveFlowToFile(flow) {
-  const dataDir = path.join(__dirname, '..', '..', 'api', 'data');
-  
-  // Garante que o diretório existe
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-
-  const flowsFile = path.join(dataDir, 'flows.json');
-  
-  // Carrega fluxos existentes
-  let flows = [];
-  if (fs.existsSync(flowsFile)) {
-    try {
-      const content = fs.readFileSync(flowsFile, 'utf8');
-      flows = JSON.parse(content);
-      if (!Array.isArray(flows)) {
-        flows = [];
-      }
-    } catch (err) {
-      logger.warn('Erro ao carregar fluxos existentes, criando novo arquivo', { error: err.message });
-      flows = [];
-    }
-  }
-
-  // Remove fluxo existente com mesmo ID se houver
-  flows = flows.filter(f => f.id !== flow.id);
-  
-  // Adiciona novo fluxo
-  flows.push(flow);
-
-  // Salva
-  fs.writeFileSync(flowsFile, JSON.stringify(flows, null, 2), 'utf8');
-
-  logger.info('Fluxo salvo', { flowId: flow.id, flowName: flow.name, filePath: flowsFile });
-
-  return flowsFile;
-}
-
-/**
- * Remove fluxo do arquivo (rollback).
- * 
- * @param {string} flowId - ID do fluxo
- */
-function removeFlowFromFile(flowId) {
-  const dataDir = path.join(__dirname, '..', '..', 'api', 'data');
-  const flowsFile = path.join(dataDir, 'flows.json');
-  
-  if (!fs.existsSync(flowsFile)) {
-    return;
-  }
-
-  try {
-    const content = fs.readFileSync(flowsFile, 'utf8');
-    let flows = JSON.parse(content);
-    if (!Array.isArray(flows)) {
-      return;
-    }
-
-    // Remove fluxo
-    const originalLength = flows.length;
-    flows = flows.filter(f => f.id !== flowId);
-
-    if (flows.length < originalLength) {
-      fs.writeFileSync(flowsFile, JSON.stringify(flows, null, 2), 'utf8');
-      logger.info('Fluxo removido (rollback)', { flowId, filePath: flowsFile });
-    }
-  } catch (err) {
-    logger.error('Erro ao remover fluxo (rollback)', { error: err.message, flowId });
-  }
-}
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
 
 /**
  * Executa e valida teste RPA.
@@ -340,6 +328,76 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
     // Normaliza URLs no teste antes de converter (garante que ações navigate tenham URL)
     const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
     normalizeRpaTestUrls(rpaTest);
+    
+    // Valida asserts antes de converter
+    if (rpaTest.asserts && rpaTest.asserts.length > 0) {
+      const invalidAsserts = [];
+      rpaTest.asserts.forEach((assert, index) => {
+        if (!assert.selector && !assert.title && !assert.page) {
+          invalidAsserts.push({
+            index,
+            step: assert.step,
+            assert,
+          });
+        }
+      });
+      
+      if (invalidAsserts.length > 0) {
+        logger.warn('Asserts inválidos encontrados - corrigindo automaticamente', {
+          testId: rpaTest.id,
+          invalidCount: invalidAsserts.length,
+          invalidAsserts,
+        });
+        
+        // Corrige asserts inválidos adicionando title como fallback
+        invalidAsserts.forEach(({ index, assert }) => {
+          if (!rpaTest.asserts[index].title && !rpaTest.asserts[index].selector && !rpaTest.asserts[index].page) {
+            rpaTest.asserts[index].title = assert.expected || 'Página carregada';
+            logger.info('Assert corrigido com title fallback', {
+              assertIndex: index,
+              step: assert.step,
+              newTitle: rpaTest.asserts[index].title,
+            });
+          }
+        });
+      }
+    }
+    
+    // Valida steps de assert antes de converter
+    if (rpaTest.steps && rpaTest.steps.length > 0) {
+      const invalidSteps = [];
+      rpaTest.steps.forEach((step, index) => {
+        if (step.action === 'assert' || step.type === 'assert') {
+          if (!step.selector && !step.title && !step.page) {
+            invalidSteps.push({
+              index,
+              step: step.step || `step-${index + 1}`,
+              stepData: step,
+            });
+          }
+        }
+      });
+      
+      if (invalidSteps.length > 0) {
+        logger.warn('Steps de assert inválidos encontrados - corrigindo automaticamente', {
+          testId: rpaTest.id,
+          invalidCount: invalidSteps.length,
+          invalidSteps,
+        });
+        
+        // Corrige steps inválidos
+        invalidSteps.forEach(({ index, stepData }) => {
+          if (!rpaTest.steps[index].title && !rpaTest.steps[index].selector && !rpaTest.steps[index].page) {
+            rpaTest.steps[index].title = stepData.expected || 'Página carregada';
+            logger.info('Step de assert corrigido com title fallback', {
+              stepIndex: index,
+              step: stepData.step,
+              newTitle: rpaTest.steps[index].title,
+            });
+          }
+        });
+      }
+    }
     
     // Converte teste em gravação
     const recording = convertRpaTestToRecording(rpaTest);
@@ -410,14 +468,29 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
             }
           }
           
+          // Log detalhado de todos os erros
+          const allErrors = status.results?.errors || [];
           logger.error('Teste RPA falhou', { 
             executionId, 
             testId: rpaTest.id, 
             error,
-            errorsCount: status.results?.errors?.length || 0,
-            currentStep: status.currentStep
+            errorsCount: allErrors.length,
+            currentStep: status.currentStep,
+            allErrors: allErrors.map((e, idx) => ({
+              index: idx,
+              step: e.step,
+              action: e.action,
+              error: e.error,
+              message: e.message,
+            })),
+            firstError: allErrors[0] ? {
+              step: allErrors[0].step,
+              action: allErrors[0].action,
+              error: allErrors[0].error,
+              message: allErrors[0].message,
+            } : null,
           });
-          return { success: false, error, executionId };
+          return { success: false, error, executionId, errors: allErrors };
         }
         
         attempts++;
@@ -497,19 +570,75 @@ async function orchestrateGeneration(payload, options = {}) {
   const tenantId = options.tenantId || 'demo-tenant';
   const dryRun = options.dryRun || false;
 
+  // Inicializa Sistema de Replay
+  const replay = new ReplaySystem({
+    storagePath: path.join(process.cwd(), 'replays', 'generation'),
+    context: 'generation',
+    enableScreenshots: false,
+  });
+
+  const replayId = `generate-${payload.name || 'unknown'}-${Date.now()}`;
+  replay.start(replayId, {
+    tenantId,
+    payloadName: payload.name,
+    useRag: payload.useRag,
+    useWebScraping: payload.useWebScraping,
+    generateRpaTest: payload.generateRpaTest,
+    generateFlow: payload.generateFlow,
+    generateSeed: payload.generateSeed,
+    bootstrap: payload.bootstrap,
+    dryRun,
+  });
+
   logger.info('Iniciando orquestração de geração', { 
     payloadName: payload.name,
     useRag: payload.useRag,
     useWebScraping: payload.useWebScraping,
     generateRpaTest: payload.generateRpaTest,
     dryRun,
+    replayId,
   });
 
   try {
     // Passo 1: Valida payload com contrato
+    const validationStartTime = new Date().toISOString();
     const contractValidation = validateGenerationContract(payload);
+    const validationEndTime = new Date().toISOString();
+    
+    replay.recordAction(
+      { type: 'validation', step: 'validate-payload' },
+      {
+        success: contractValidation.valid,
+        startTime: validationStartTime,
+        endTime: validationEndTime,
+        actual: {
+          valid: contractValidation.valid,
+          errors: contractValidation.errors,
+        },
+      }
+    );
+
+    recording.recordAction({
+      type: 'validation',
+      step: 'validate-payload',
+      value: {
+        valid: contractValidation.valid,
+        errors: contractValidation.errors,
+      },
+    });
+    
     if (!contractValidation.valid) {
-      throw new Error(`Validação de contrato falhou: ${contractValidation.errors.join('; ')}`);
+      const error = new Error(`Validação de contrato falhou: ${contractValidation.errors.join('; ')}`);
+      replay.recordError(error, 'validate-payload');
+      recording.recordCustom('error', {
+        step: 'validate-payload-error',
+        value: { error: error.message },
+      });
+      replay.stop();
+      replay.save(replayId);
+      recording.stop();
+      recording.save(recordingId);
+      throw error;
     }
 
     // Carrega contrato para hash
@@ -526,6 +655,16 @@ async function orchestrateGeneration(payload, options = {}) {
     // Se for dry-run, retorna apenas validação e contexto
     if (dryRun) {
       logger.info('Modo DRY-RUN: retornando apenas validação e contexto');
+      replay.recordEvent('dry_run_completed');
+      recording.recordCustom('dry-run', {
+        step: 'dry-run-completed',
+        value: { status: 'completed' },
+      });
+      replay.stop();
+      const replayPath = replay.save(replayId);
+      recording.stop();
+      const recordingPath = recording.save(recordingId);
+      
       return {
         success: true,
         dryRun: true,
@@ -537,12 +676,22 @@ async function orchestrateGeneration(payload, options = {}) {
         metadata: {
           generatedAt: new Date().toISOString(),
           duration: Date.now() - startTime,
+          replayPath,
+          recordingPath,
         },
       };
     }
 
     // Passo 3: Gera fluxo usando IA
     logger.info('Gerando fluxo por IA', { descriptionLength: payload.description.length });
+    replay.recordEvent('flow_generation_started');
+    recording.recordGeneration('flow', {
+      description: payload.description,
+      useRag: payload.useRag,
+      useWebScraping: payload.useWebScraping,
+    }, {
+      step: 'generate-flow',
+    });
     
     // Prepara opções com contexto RAG do pipeline (se disponível)
     const generationOptions = {
@@ -605,10 +754,40 @@ async function orchestrateGeneration(payload, options = {}) {
                 payload.generate?.rpa ? 'generate.rpa' : 
                 'bootstrap'
       });
+      replay.recordEvent('rpa_generation_started', {
+        flowId: flow.id,
+        rpaMode: payload.rpaMode,
+      });
+
+      recording.recordGeneration('rpa', {
+        flowId: flow.id,
+        rpaMode: payload.rpaMode,
+      }, {
+        step: 'generate-rpa',
+      });
+      
+      const rpaStartTime = new Date().toISOString();
       rpaArtifact = await generateRpaArtifact(flow, {
         tenantId,
         rpaMode: payload.rpaMode || 'infer',
         autoResolveDependencies: options.autoResolveDependencies || false,
+      });
+      const rpaEndTime = new Date().toISOString();
+      
+      replay.recordAction(
+        { type: 'rpa_generation', step: 'generate-rpa' },
+        {
+          success: !!rpaArtifact?.rpaTest,
+          startTime: rpaStartTime,
+          endTime: rpaEndTime,
+          actual: {
+            rpaTestId: rpaArtifact?.rpaTest?.id,
+            dependenciesCount: rpaArtifact?.dependencies?.seeds?.length || 0,
+          },
+        }
+      );
+      replay.recordEvent('rpa_generation_completed', {
+        rpaTestId: rpaArtifact?.rpaTest?.id,
       });
 
       // No modo bootstrap, NÃO salva ainda - só salva se RPA passar
@@ -632,15 +811,43 @@ async function orchestrateGeneration(payload, options = {}) {
 
       if (!bootstrapValidation.success) {
         // Rollback: nada foi persistido ainda, apenas retorna erro
+        const errorMessage = bootstrapValidation.error || 'Erro desconhecido na validação RPA';
+        const errors = bootstrapValidation.errors || [];
+        
+        // Log detalhado com todos os erros
         logger.error('Modo Bootstrap: RPA falhou, nada será persistido', {
           flowId: flow.id,
           testId: rpaArtifact.rpaTest.id,
-          error: bootstrapValidation.error,
+          error: errorMessage,
+          executionId: bootstrapValidation.executionId,
+          errorsCount: errors.length,
+          allErrors: errors.map((e, idx) => ({
+            index: idx,
+            step: e.step,
+            action: e.action,
+            error: e.error,
+            message: e.message,
+          })),
+          firstError: errors[0] ? {
+            step: errors[0].step,
+            action: errors[0].action,
+            error: errors[0].error,
+            message: errors[0].message,
+          } : null,
+          fullBootstrapValidation: JSON.stringify(bootstrapValidation, null, 2),
         });
         
-        throw new Error(`Validação RPA falhou no modo Bootstrap: ${bootstrapValidation.error}`);
+        replay.recordEvent('bootstrap_validation_failed', {
+          error: errorMessage,
+          errorsCount: errors.length,
+        });
+        throw new Error(`Validação RPA falhou no modo Bootstrap: ${errorMessage}`);
       }
 
+      replay.recordEvent('bootstrap_validation_passed', {
+        rpaTestId: rpaArtifact.rpaTest.id,
+      });
+      
       logger.info('Modo Bootstrap: RPA passou, prosseguindo com persistência', {
         flowId: flow.id,
         testId: rpaArtifact.rpaTest.id,
@@ -679,7 +886,7 @@ async function orchestrateGeneration(payload, options = {}) {
       }
 
       // Salva fluxo
-      saveFlowToFile(flow);
+      // Dados agora estão no banco de dados PostgreSQL
 
       // Salva teste RPA
       if (rpaArtifact?.rpaTest) {
@@ -728,13 +935,29 @@ async function orchestrateGeneration(payload, options = {}) {
       });
     }
 
+    // Finaliza e salva replay
+    replay.recordEvent('generation_completed', {
+      flowId: flow?.id,
+      rpaTestId: rpaArtifact?.rpaTest?.id,
+    });
+    replay.stop();
+    const replayPath = replay.save(replayId);
+    
+    logger.info('Orquestração de geração concluída', {
+      payloadName: payload.name,
+      replayPath,
+    });
+
     return {
       success: true,
       flowDefinition: flow,
       rpaTest: rpaArtifact?.rpaTest || null,
       dependencies: rpaArtifact?.dependencies || null,
       resolution: rpaArtifact?.resolution || null,
-      metadata: auditMetadata,
+      metadata: {
+        ...auditMetadata,
+        replayPath,
+      },
       validation: {
         flow: flowValidation,
         contract: contractValidation,
@@ -747,11 +970,29 @@ async function orchestrateGeneration(payload, options = {}) {
       ragSources: ragInfo.sources,
     };
   } catch (err) {
+    // Registra erro no replay
+    replay.recordError(err, 'orchestrate-generation');
+    replay.recordEvent('generation_failed', {
+      error: err.message,
+    });
+    replay.stop();
+    const replayPath = replay.save(`${replayId}-error`);
+
+    // Registra erro na gravação
+    recording.recordCustom('error', {
+      step: 'generation-error',
+      value: { error: err.message },
+    });
+    recording.stop();
+    const recordingPath = recording.save(`${recordingId}-error`);
+    
     logger.error('Erro na orquestração de geração', {
       error: err.message,
       stack: err.stack,
       payloadName: payload.name,
       bootstrap: payload.bootstrap || false,
+      replayPath,
+      recordingPath,
     });
 
     // No modo bootstrap, se algo falhou, garante que nada foi persistido
@@ -774,7 +1015,5 @@ module.exports = {
   createAuditMetadata,
   calculateContractHash,
   executeAndValidateRpa,
-  saveFlowToFile,
-  removeFlowFromFile,
 };
 

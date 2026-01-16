@@ -12,6 +12,8 @@
 
 const { runStep } = require('./runner');
 const { recordMetricsForStep } = require('./metrics');
+const { ReplaySystem } = require('../lib/replaySystem');
+const path = require('path');
 
 /**
  * @typedef {import('./flowTypes').ConversationState} ConversationState

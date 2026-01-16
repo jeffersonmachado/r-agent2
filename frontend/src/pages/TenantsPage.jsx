@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { PlanSelectionModal } from '../components/PlanSelectionModal';
 import logger from '../utils/logger';
+import { formatDateTime } from '../utils/dateFormatter';
 
 export function TenantsPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -105,6 +106,7 @@ export function TenantsPage() {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(
         (tenant) =>
+          tenant.id?.toLowerCase().includes(searchLower) ||
           tenant.name?.toLowerCase().includes(searchLower) ||
           tenant.site?.toLowerCase().includes(searchLower) ||
           tenant.ramo_atividade?.toLowerCase().includes(searchLower) ||
@@ -319,7 +321,7 @@ export function TenantsPage() {
               type="text"
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              placeholder="Nome, site, ramo ou objetivo..."
+              placeholder="Tenant ID, nome, site, ramo ou objetivo..."
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
             />
           </div>
@@ -608,6 +610,9 @@ export function TenantsPage() {
             <thead>
               <tr className="bg-bg-secondary border-b border-border-default">
                 <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                  Tenant ID
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
                   Nome
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
@@ -622,6 +627,9 @@ export function TenantsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
                   Status
                 </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                  Criado em
+                </th>
                 <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">
                   Ações
                 </th>
@@ -630,6 +638,9 @@ export function TenantsPage() {
             <tbody>
               {tenants.map((tenant) => (
                 <tr key={tenant.id} className="border-b border-border-default hover:bg-bg-hover transition-colors">
+                  <td className="px-4 py-3 text-sm text-text-secondary font-mono">
+                    {tenant.id}
+                  </td>
                   <td className="px-4 py-3 text-sm text-text-primary font-medium">{tenant.name}</td>
                   <td className="px-4 py-3 text-sm text-text-primary">
                     <a 
@@ -674,6 +685,9 @@ export function TenantsPage() {
                        tenant.status === 'terminated' ? 'Encerrado' :
                        tenant.active ? 'Ativo' : 'Inativo'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-text-secondary">
+                    {formatDateTime(tenant.createdAt)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex gap-2 justify-end flex-wrap">

@@ -12,6 +12,9 @@ const config = require('../utils/config');
 const logger = require('../utils/logger');
 const nlpService = require('./nlpService');
 const ragDeduplicationService = require('./ragDeduplicationService');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
+const path = require('path');
 
 // Lazy loading do tenantService para evitar dependência circular
 let tenantService = null;
@@ -23,7 +26,7 @@ function getTenantService() {
 }
 
 // URL padrão do serviço Python RAG
-const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000');
+const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
 const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
 
 /**
@@ -213,6 +216,52 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     throw new Error('Query não pode ser vazia');
   }
 
+  // Inicializa replay (opcional, pode ser desabilitado para performance)
+  const shouldRecordReplay = process.env.ENABLE_RAG_REPLAY !== 'false';
+  const shouldRecord = process.env.ENABLE_RAG_RECORDING !== 'false';
+  let replay = null;
+  let replayId = null;
+  let recording = null;
+  let recordingId = null;
+  
+  if (shouldRecordReplay) {
+    replay = new ReplaySystem({
+      storagePath: path.join(process.cwd(), 'replays', 'rag'),
+      context: 'rag',
+      enableScreenshots: false,
+    });
+    
+    replayId = `rag-query-${tenantId}-${Date.now()}`;
+    replay.start(replayId, {
+      tenantId,
+      query: query.substring(0, 100), // Primeiros 100 chars
+      contextKeys: Object.keys(context),
+      filtersKeys: Object.keys(filters),
+    });
+  }
+
+  if (shouldRecord) {
+    recording = new RecordingSystem({
+      storagePath: path.join(process.cwd(), 'recordings', 'rag'),
+      context: 'rag',
+      enableTimestamps: true,
+    });
+    
+    recordingId = `rag-query-${tenantId}-${Date.now()}`;
+    recording.start(recordingId, {
+      name: 'Consulta RAG',
+      description: 'Consulta ao sistema RAG',
+      tenantId,
+      query: query.substring(0, 200),
+      source: 'automatic',
+    });
+    recording.recordAction({
+      type: 'rag-query',
+      step: 'query',
+      value: { query: query.substring(0, 200), tenantId },
+    });
+  }
+
   if (!tenantId) {
     throw new Error('tenantId é obrigatório');
   }
@@ -398,6 +447,27 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       errorMessage = `Endpoint não encontrado no serviço RAG (${serviceUrl}). Verifique se o serviço está configurado corretamente.`;
     }
     
+    // Cria um novo erro com mensagem melhorada
+    const improvedError = new Error(errorMessage);
+    improvedError.originalError = error;
+    
+    // Registra erro no replay
+    if (replay) {
+      replay.recordError(improvedError, 'rag-query');
+      replay.stop();
+      replay.save(`${replayId}-error`);
+    }
+
+    // Registra erro na gravação
+    if (recording) {
+      recording.recordCustom('error', {
+        step: 'query-error',
+        value: { error: errorMessage },
+      });
+      recording.stop();
+      recording.save(`${recordingId}-error`);
+    }
+    
     logger.error('[RAGService] Erro ao consultar RAG', {
       error: errorMessage,
       originalError: error.message,
@@ -406,9 +476,6 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       stack: error.stack,
     });
     
-    // Cria um novo erro com mensagem melhorada
-    const improvedError = new Error(errorMessage);
-    improvedError.originalError = error;
     throw improvedError;
   }
 }

@@ -12,6 +12,8 @@ import { fetchJson } from '../api/client';
 import { Dialog } from '../components/Dialog';
 import * as tenantsApi from '../api/tenants';
 import logger from '../utils/logger';
+import { getRpaReplay } from '../api/flows';
+import { executeRpaRecording } from '../api/rpa';
 
 /**
  * Tela Única - Centro Operacional da Plataforma
@@ -82,6 +84,8 @@ export function GenerateSystemPage() {
 
   // BLOCO 5 - Pipeline Visível
   const [pipelineStatus, setPipelineStatus] = useState({
+    providerValidated: false,
+    ragValidated: false,
     descriptionSuggested: false,
     filesInferred: false,
     payloadValid: false,
@@ -97,6 +101,8 @@ export function GenerateSystemPage() {
   
   // Estado detalhado do pipeline com timestamps e mensagens
   const [pipelineDetails, setPipelineDetails] = useState({
+    providerValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+    ragValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
     descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
     filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
     payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -199,6 +205,16 @@ export function GenerateSystemPage() {
 
   const getStepMessage = (step, status) => {
     const messages = {
+      providerValidated: {
+        completed: 'Provider de IA validado',
+        in_progress: 'Validando provider de IA...',
+        error: 'Provider de IA não configurado',
+      },
+      ragValidated: {
+        completed: 'Serviço RAG validado',
+        in_progress: 'Validando serviço RAG...',
+        error: 'Serviço RAG não disponível',
+      },
       descriptionSuggested: {
         completed: 'Descrição sugerida pela IA',
         in_progress: 'Sugerindo descrição com IA...',
@@ -499,6 +515,8 @@ export function GenerateSystemPage() {
       
       // Reseta pipeline status
       const resetStatus = {
+        providerValidated: false,
+        ragValidated: false,
         descriptionSuggested: false,
         filesInferred: false,
         payloadValid: false,
@@ -515,6 +533,8 @@ export function GenerateSystemPage() {
       
       // Reseta pipeline details
       setPipelineDetails({
+        providerValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        ragValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
         descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
         filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
         payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -527,6 +547,187 @@ export function GenerateSystemPage() {
         rpaExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
         approved: { status: 'pending', timestamp: null, message: null, progress: 0 },
       });
+
+      // Validação do provider de IA ANTES de iniciar processamento
+      try {
+        updatePipelineWithDetails({ 
+          providerValidated: { status: 'in_progress', progress: 0, message: 'Validando provider de IA...' }
+        }, 'provider-validation');
+        
+        logger.info('[TenantMode] Validando provider de IA antes de iniciar processamento...');
+        
+        // Validação rigorosa: verifica se o tenant do usuário tem provider configurado
+        // Não usa fallback - se o tenant não tiver provider, para o processamento
+        const tenantId = agent?.tenantId;
+        if (!tenantId) {
+          const errorMsg = 'Tenant não identificado. Faça login novamente e tente novamente.';
+          logger.error('[TenantMode] Tenant não identificado');
+          
+          updatePipelineWithDetails({ 
+            providerValidated: { 
+              status: 'error', 
+              progress: 0, 
+              message: errorMsg,
+              timestamp: new Date().toISOString()
+            }
+          }, 'provider-validation-error');
+          
+          showToast(errorMsg, 'error', 10000);
+          setExecuting(false);
+          return;
+        }
+        
+        // Faz uma chamada de teste para verificar se o provider está disponível para este tenant
+        // Se falhar, significa que o tenant não tem provider configurado
+        try {
+          logger.info('[TenantMode] Verificando se provider está disponível para o tenant', { tenantId });
+          const testResponse = await fetchJson('/system/suggest-description', {
+            method: 'POST',
+            body: JSON.stringify({ 
+              prompt: 'test',
+              name: 'test',
+              tenantId: tenantId
+            }),
+            timeoutMs: 5000
+          });
+          
+          // Se chegou aqui, o provider está disponível para o tenant
+          logger.info('[TenantMode] Provider disponível para o tenant', { tenantId });
+        } catch (testError) {
+          // Se falhar com erro de provider não configurado, para o processamento
+          const errorMessage = testError.body?.message || testError.message || '';
+          if (errorMessage.includes('Nenhum provider de IA configurado')) {
+            const errorMsg = `Provider de IA não configurado para o tenant "${tenantId}". Configure um provider de IA para este tenant antes de usar esta funcionalidade.`;
+            logger.error('[TenantMode] Provider de IA não configurado para o tenant', { tenantId, errorMessage });
+            
+            updatePipelineWithDetails({ 
+              providerValidated: { 
+                status: 'error', 
+                progress: 0, 
+                message: errorMsg,
+                timestamp: new Date().toISOString()
+              }
+            }, 'provider-validation-error');
+            
+            showToast(errorMsg, 'error', 10000);
+            setExecuting(false);
+            return;
+          }
+          // Se for outro erro (timeout, servidor, etc), também para para evitar problemas
+          const errorMsg = `Erro ao verificar provider de IA para o tenant "${tenantId}": ${errorMessage}`;
+          logger.error('[TenantMode] Erro ao verificar provider', { tenantId, error: testError });
+          
+          updatePipelineWithDetails({ 
+            providerValidated: { 
+              status: 'error', 
+              progress: 0, 
+              message: errorMsg,
+              timestamp: new Date().toISOString()
+            }
+          }, 'provider-validation-error');
+          
+          showToast(errorMsg, 'error', 10000);
+          setExecuting(false);
+          return;
+        }
+        
+        logger.info('[TenantMode] Provider de IA validado para o tenant', { 
+          tenantId 
+        });
+        
+        updatePipelineWithDetails({ 
+          providerValidated: { 
+            status: 'completed', 
+            progress: 100, 
+            message: `Provider de IA validado para o tenant "${tenantId}"`,
+            timestamp: new Date().toISOString()
+          }
+        }, 'provider-validation');
+        
+        // Armazena o tenantId validado para usar em todas as chamadas subsequentes (sem fallback)
+        const validatedTenantId = tenantId;
+      } catch (providerError) {
+        logger.error('[TenantMode] Erro ao validar provider de IA', providerError);
+        const errorMsg = 'Erro ao verificar configuração do provider de IA. Verifique se o servidor está respondendo.';
+        
+        updatePipelineWithDetails({ 
+          providerValidated: { 
+            status: 'error', 
+            progress: 0, 
+            message: errorMsg,
+            timestamp: new Date().toISOString()
+          }
+        }, 'provider-validation-error');
+        
+        showToast(errorMsg, 'error', 10000);
+        setExecuting(false);
+        return;
+      }
+
+      // Validação do RAG ANTES de iniciar processamento
+      try {
+        updatePipelineWithDetails({ 
+          ragValidated: { status: 'in_progress', progress: 0, message: 'Validando serviço RAG...' }
+        }, 'rag-validation');
+        
+        logger.info('[TenantMode] Validando serviço RAG antes de iniciar processamento...');
+        const systemStatusResponse = await fetchJson('/system/status', { 
+          method: 'GET',
+          timeoutMs: 5000 
+        });
+        
+        const ragService = systemStatusResponse?.services?.ragService;
+        if (!ragService || ragService.status !== 'healthy') {
+          const errorMsg = 'Serviço RAG não está disponível. Verifique se o serviço RAG está rodando e tente novamente.';
+          logger.error('[TenantMode] Serviço RAG não disponível', { 
+            ragService,
+            systemStatus: systemStatusResponse 
+          });
+          
+          updatePipelineWithDetails({ 
+            ragValidated: { 
+              status: 'error', 
+              progress: 0, 
+              message: errorMsg,
+              timestamp: new Date().toISOString()
+            }
+          }, 'rag-validation-error');
+          
+          showToast(errorMsg, 'error', 10000);
+          setExecuting(false);
+          return;
+        }
+        
+        logger.info('[TenantMode] Serviço RAG validado', { 
+          status: ragService.status,
+          details: ragService.details 
+        });
+        
+        updatePipelineWithDetails({ 
+          ragValidated: { 
+            status: 'completed', 
+            progress: 100, 
+            message: 'Serviço RAG validado e disponível',
+            timestamp: new Date().toISOString()
+          }
+        }, 'rag-validation');
+      } catch (ragError) {
+        logger.error('[TenantMode] Erro ao validar serviço RAG', ragError);
+        const errorMsg = 'Erro ao verificar serviço RAG. Verifique se o serviço RAG está rodando e acessível.';
+        
+        updatePipelineWithDetails({ 
+          ragValidated: { 
+            status: 'error', 
+            progress: 0, 
+            message: errorMsg,
+            timestamp: new Date().toISOString()
+          }
+        }, 'rag-validation-error');
+        
+        showToast(errorMsg, 'error', 10000);
+        setExecuting(false);
+        return;
+      }
       
       // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
       if (executionMode === 'dry-run') {
@@ -555,7 +756,7 @@ export function GenerateSystemPage() {
                     autoIndex: true, // Indexa automaticamente no RAG
                     source: 'web_scraping',
                     category: 'general',
-                    tenantId: agent?.tenantId || 'tenant-demo',
+                    tenantId: validatedTenantId,
                   }),
                 });
                 
@@ -610,7 +811,7 @@ export function GenerateSystemPage() {
               body: JSON.stringify({ 
                 prompt: `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`,
                 name: name.trim(),
-                tenantId: agent?.tenantId || 'tenant-demo',
+                tenantId: validatedTenantId,
                 urls: validUrls // Envia URLs para referência
               }),
             });
@@ -786,7 +987,7 @@ export function GenerateSystemPage() {
                     autoIndex: true, // Indexa automaticamente no RAG
                     source: 'web_scraping',
                     category: 'general',
-                    tenantId: agent?.tenantId || 'system',
+                    tenantId: validatedTenantId,
                   }),
                 });
                 
@@ -880,7 +1081,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               body: JSON.stringify({ 
                 prompt: promptText,
                 name: name.trim(),
-                tenantId: agent?.tenantId || 'system',
+                tenantId: validatedTenantId,
                 urls: validUrls // Envia URLs para possível uso futuro no backend
               }),
             });
@@ -902,29 +1103,46 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                 suggestedLength: finalDescription.length 
               });
             } else {
-              // Se não conseguir sugerir, usa o nome como base
-              finalDescription = `Empresa chamada ${name.trim()}. Gere uma descrição completa do tenant baseada neste nome.`;
+              // Se não conseguir sugerir, para o processamento
+              const errorMsg = 'A IA não retornou uma descrição sugerida. Não é possível continuar sem descrição.';
+              logger.error('[TenantMode] Descrição não sugerida', { suggestionResponse });
+              
               updatePipelineWithDetails({ 
                 descriptionSuggested: { 
-                  status: 'completed', 
-                  progress: 100, 
-                  message: 'Usando nome como base para descrição',
+                  status: 'error', 
+                  progress: 0, 
+                  message: errorMsg,
                   timestamp: new Date().toISOString()
                 }
-              }, 'description-suggestion');
+              }, 'description-suggestion-error');
+              
+              showToast(errorMsg, 'error', 10000);
+              setExecuting(false);
+              return;
             }
           } catch (suggestionError) {
             logger.error('[TenantMode] Erro ao sugerir descrição', suggestionError);
+            
+            // Extrai mensagem de erro
+            let errorMsg = 'Erro ao sugerir descrição. Não é possível continuar sem descrição.';
+            if (suggestionError.body?.message) {
+              errorMsg = suggestionError.body.message;
+            } else if (suggestionError.message) {
+              errorMsg = suggestionError.message;
+            }
+            
             updatePipelineWithDetails({ 
               descriptionSuggested: { 
                 status: 'error', 
                 progress: 0, 
-                message: 'Erro ao sugerir descrição. Usando nome como base...',
+                message: errorMsg,
                 timestamp: new Date().toISOString()
               }
-            }, 'description-suggestion');
-            // Usa o nome como base se a sugestão falhar
-            finalDescription = `Empresa chamada ${name.trim()}. Gere uma descrição completa do tenant baseada neste nome.`;
+            }, 'description-suggestion-error');
+            
+            showToast(errorMsg, 'error', 10000);
+            setExecuting(false);
+            return;
           }
           } else {
             // Descrição já preenchida, marca como concluída (não precisa sugerir)
@@ -966,18 +1184,55 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             active: true,
           };
           
-          const createdTenant = await tenantsApi.createTenant(tenantData);
-          updatePipelineWithDetails({ payloadValid: true }, 'tenant-creation');
+          let createdTenant;
+          
+          // Em modo dry-run, não cria o tenant de fato, apenas simula
+          logger.info('[TenantMode] Verificando modo de execução antes de criar tenant', { 
+            executionMode, 
+            isDryRun: executionMode === 'dry-run',
+            tenantData: { name: tenantData.name, site: tenantData.site }
+          });
+          
+          if (executionMode === 'dry-run') {
+            logger.info('[TenantMode] Modo dry-run: simulando criação do tenant (não será persistido)');
+            // Simula criação do tenant sem persistir
+            createdTenant = {
+              tenant: {
+                ...tenantData,
+                id: `tenant-dry-run-${Date.now()}`,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              dryRun: true,
+            };
+            updatePipelineWithDetails({ 
+              payloadValid: true,
+              dryRun: true,
+              message: 'Tenant simulado (modo dry-run - não foi persistido)'
+            }, 'tenant-creation');
+            showToast('Modo dry-run: Tenant simulado (não foi criado de fato)', 'info', 5000);
+          } else {
+            // Modo real: cria o tenant de fato
+            logger.info('[TenantMode] Modo real: criando tenant de fato');
+            createdTenant = await tenantsApi.createTenant(tenantData);
+            logger.info('[TenantMode] Tenant criado com sucesso', { tenantId: createdTenant?.tenant?.id });
+            updatePipelineWithDetails({ payloadValid: true }, 'tenant-creation');
+          }
           
           // Se o usuário selecionou gerar fluxo/RPA/seed, executa a geração completa
           if (generateFlow || generateRpa || generateSeed) {
-            showToast('Tenant criado! Iniciando geração de artefatos...', 'success');
+            if (executionMode === 'dry-run') {
+              showToast('Tenant simulado! Iniciando geração de artefatos (modo dry-run)...', 'info');
+            } else {
+              showToast('Tenant criado! Iniciando geração de artefatos...', 'success');
+            }
             
             // Gera payload para criação de artefatos
             const payload = generatePayload();
             // Atualiza o nome do tenant no payload
             payload.name = name.trim();
-            payload.tenantId = createdTenant.tenant.id;
+            // Não define payload.tenantId - o servidor deve usar o tenant do usuário logado
+            // (que tem o provider de IA configurado) ao invés do tenant recém-criado
             
             // Arquivos já foram processados antes da sugestão de descrição
             // Não precisa processar novamente aqui
@@ -1196,6 +1451,15 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
     
     // Se precisa sugerir descrição, executa essa etapa primeiro
     if (needsDescriptionSuggestion && !isTenantMode) {
+      // Valida que o tenantId existe (sem fallback)
+      if (!agent?.tenantId) {
+        const errorMsg = 'Tenant não identificado. Faça login novamente e tente novamente.';
+        setError(errorMsg);
+        showToast(errorMsg, 'error', 10000);
+        setExecuting(false);
+        return;
+      }
+      
       try {
         updatePipelineWithDetails({ 
           descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição com IA...' }
@@ -1204,13 +1468,13 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         // Gera descrição sugerida usando IA via API
         const suggestionPrompt = `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         
-        // Chama API para sugerir descrição
+        // Chama API para sugerir descrição (sem fallback de tenantId)
         const suggestionResponse = await fetchJson('/system/suggest-description', {
           method: 'POST',
           body: JSON.stringify({ 
             prompt: suggestionPrompt,
             name: name.trim(),
-            tenantId: agent?.tenantId || 'tenant-demo'
+            tenantId: agent.tenantId
           }),
         });
         
@@ -1262,18 +1526,46 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       if (rateLimitUntil && rateLimitUntil > Date.now()) {
         const remaining = Math.ceil((rateLimitUntil - Date.now()) / 1000);
         const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
-        let message = `Limite de execuções atingido`;
-        if (operationType === 'BOOTSTRAP') {
-          message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
-        } else if (operationType === 'GENERATION_REAL') {
-          message += ` (modo Real: 5 execuções por minuto)`;
-        }
-        message += `. Tente novamente em ${remaining} segundos.`;
         
-        setError(message);
-        showToast(message, 'error', 8000);
-        setExecuting(false);
-        return;
+        // Verifica se é super-admin (rate limit é apenas informativo)
+        const isSuperAdminUser = agent?.role === 'super_admin' || 
+                                 (agent?.tenantId === 'system' && agent?.role === 'admin');
+        
+        if (isSuperAdminUser) {
+          // Para super-admins: apenas informativo, não bloqueia
+          let message = `ℹ️ Limite de execuções atingido (apenas informativo para super-admin)`;
+          if (operationType === 'BOOTSTRAP') {
+            message += `\n\nModo Bootstrap: 1 execução a cada 5 minutos\nNormalmente seria necessário aguardar ${remaining} segundos, mas como super-admin você pode continuar.`;
+          } else if (operationType === 'GENERATION_REAL') {
+            message += `\n\nModo Real: 5 execuções por minuto\nNormalmente seria necessário aguardar ${remaining} segundos, mas como super-admin você pode continuar.`;
+          } else {
+            message += `\n\nModo Dry-Run: 50 execuções por minuto\nNormalmente seria necessário aguardar ${remaining} segundos, mas como super-admin você pode continuar.`;
+          }
+          
+          showToast(message, 'warning', 8000);
+          logger.warn('[Execute] Rate limit local excedido (super-admin - apenas informativo)', {
+            remaining,
+            operationType,
+          });
+          // Limpa o rate limit local para permitir continuar
+          setRateLimitUntil(null);
+          setRateLimitSecondsRemaining(0);
+          // Continua execução para super-admin
+        } else {
+          // Para usuários normais: bloqueia
+          let message = `Limite de execuções atingido`;
+          if (operationType === 'BOOTSTRAP') {
+            message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
+          } else if (operationType === 'GENERATION_REAL') {
+            message += ` (modo Real: 5 execuções por minuto)`;
+          }
+          message += `. Tente novamente em ${remaining} segundos.`;
+          
+          setError(message);
+          showToast(message, 'error', 8000);
+          setExecuting(false);
+          return;
+        }
       }
 
       // Gera payload antes de processar arquivos
@@ -1285,35 +1577,76 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         logger.debug('[Execute] Verificando rate limit no servidor antes de executar');
         const rateLimitCheck = await checkRateLimit(payload);
         
+        // Verifica se é super-admin (rate limit é apenas informativo)
+        const isSuperAdminUser = agent?.role === 'super_admin' || 
+                                 (agent?.tenantId === 'system' && agent?.role === 'admin') ||
+                                 rateLimitCheck?.isSuperAdmin ||
+                                 rateLimitCheck?.informativeOnly;
+        
         if (!rateLimitCheck.allowed) {
           const retryAfter = rateLimitCheck.retryAfter || 60;
-          const until = Date.now() + (retryAfter * 1000);
-          setRateLimitUntil(until);
-          setRateLimitSecondsRemaining(retryAfter);
-          
           const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
-          let message = `Limite de execuções atingido`;
-          if (operationType === 'BOOTSTRAP') {
-            message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
-          } else if (operationType === 'GENERATION_REAL') {
-            message += ` (modo Real: 5 execuções por minuto)`;
-          }
-          message += `. Tente novamente em ${retryAfter} segundos.`;
           
-          setError(message);
-          showToast(message, 'error', 8000);
-          setExecuting(false);
-          logger.warn('[Execute] Rate limit verificado no servidor: bloqueado', {
-            retryAfter,
-            remainingPoints: rateLimitCheck.remainingPoints,
-            totalPoints: rateLimitCheck.totalPoints,
-          });
-          return;
+          if (isSuperAdminUser) {
+            // Para super-admins: apenas informativo, não bloqueia
+            let message = `ℹ️ Limite de execuções atingido (apenas informativo para super-admin)`;
+            if (operationType === 'BOOTSTRAP') {
+              message += `\n\nModo Bootstrap: 1 execução a cada 5 minutos\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin você pode continuar.`;
+            } else if (operationType === 'GENERATION_REAL') {
+              message += `\n\nModo Real: 5 execuções por minuto\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin você pode continuar.`;
+            } else {
+              message += `\n\nModo Dry-Run: 50 execuções por minuto\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin você pode continuar.`;
+            }
+            
+            showToast(message, 'warning', 8000);
+            logger.warn('[Execute] Rate limit excedido (super-admin - apenas informativo)', {
+              retryAfter,
+              remainingPoints: rateLimitCheck.remainingPoints,
+              totalPoints: rateLimitCheck.totalPoints,
+              operationType,
+            });
+            // Continua execução para super-admin
+          } else {
+            // Para usuários normais: bloqueia
+            const until = Date.now() + (retryAfter * 1000);
+            setRateLimitUntil(until);
+            setRateLimitSecondsRemaining(retryAfter);
+            
+            let message = `Limite de execuções atingido`;
+            if (operationType === 'BOOTSTRAP') {
+              message += ` (modo Bootstrap: 1 execução a cada 5 minutos)`;
+            } else if (operationType === 'GENERATION_REAL') {
+              message += ` (modo Real: 5 execuções por minuto)`;
+            }
+            message += `. Tente novamente em ${retryAfter} segundos.`;
+            
+            setError(message);
+            showToast(message, 'error', 8000);
+            setExecuting(false);
+            logger.warn('[Execute] Rate limit verificado no servidor: bloqueado', {
+              retryAfter,
+              remainingPoints: rateLimitCheck.remainingPoints,
+              totalPoints: rateLimitCheck.totalPoints,
+            });
+            return;
+          }
+        } else if (isSuperAdminUser && rateLimitCheck.remainingPoints !== undefined) {
+          // Para super-admins, mostra informação sobre rate limit mesmo quando permitido
+          const remaining = rateLimitCheck.remainingPoints || 0;
+          const total = rateLimitCheck.totalPoints || 0;
+          if (remaining < total * 0.2) { // Se restam menos de 20% dos pontos
+            showToast(
+              `ℹ️ Atenção: Você está usando ${total - remaining}/${total} pontos de rate limit. Como super-admin, você pode continuar mesmo após exceder o limite.`,
+              'info',
+              5000
+            );
+          }
         }
         
         logger.debug('[Execute] Rate limit verificado no servidor: permitido', {
           remainingPoints: rateLimitCheck.remainingPoints,
           totalPoints: rateLimitCheck.totalPoints,
+          isSuperAdmin: isSuperAdminUser,
         });
       } catch (rateLimitError) {
         // Se a verificação de rate limit falhar, ainda tentamos executar
@@ -1504,33 +1837,68 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       // Trata erro de rate limit
       if (err.status === 429 || (err.body && err.body.error === 'rate_limit_exceeded')) {
         const retryAfter = err.body?.retryAfter || err.retryAfter || 60;
-        const until = Date.now() + (retryAfter * 1000);
-        setRateLimitUntil(until);
-        setRateLimitSecondsRemaining(retryAfter);
+        
+        // Verifica se é super-admin (rate limit é apenas informativo)
+        // Pode vir do header HTTP ou do erro
+        const isSuperAdminUser = agent?.role === 'super_admin' || 
+                                 (agent?.tenantId === 'system' && agent?.role === 'admin') ||
+                                 err.isSuperAdmin ||
+                                 (err.body && err.body.isSuperAdmin);
         
         // Mensagem mais detalhada baseada no tipo de operação
         const operationType = bootstrap ? 'BOOTSTRAP' : (executionMode === 'dry-run' ? 'DRY_RUN' : 'GENERATION_REAL');
-        let message = `⏱️ Limite de execuções atingido`;
-        if (operationType === 'BOOTSTRAP') {
-          message += `\n\nModo Bootstrap: 1 execução a cada 5 minutos\nTente novamente em ${retryAfter} segundos (${Math.ceil(retryAfter / 60)} minuto${Math.ceil(retryAfter / 60) !== 1 ? 's' : ''})`;
-        } else if (operationType === 'GENERATION_REAL') {
-          message += `\n\nModo Real: 5 execuções por minuto\nTente novamente em ${retryAfter} segundos`;
+        
+        if (isSuperAdminUser) {
+          // Para super-admins: apenas informativo, não bloqueia
+          let message = `ℹ️ Limite de execuções atingido durante execução (apenas informativo para super-admin)`;
+          if (operationType === 'BOOTSTRAP') {
+            message += `\n\nModo Bootstrap: 1 execução a cada 5 minutos\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin a execução continua.`;
+          } else if (operationType === 'GENERATION_REAL') {
+            message += `\n\nModo Real: 5 execuções por minuto\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin a execução continua.`;
+          } else {
+            message += `\n\nModo Dry-Run: 50 execuções por minuto\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin a execução continua.`;
+          }
+          
+          showToast(message, 'warning', 8000);
+          logger.warn('[Execute] Rate limit excedido durante execução (super-admin - apenas informativo)', {
+            operationType,
+            retryAfter,
+            bootstrap,
+            executionMode,
+            severity: 'LOW',
+            alert: 'RATE_LIMIT_EXCEEDED_DURING_EXECUTION_SUPER_ADMIN',
+          });
+          // Não bloqueia para super-admin, continua processamento
         } else {
-          message += `\n\nModo Dry-Run: 50 execuções por minuto\nTente novamente em ${retryAfter} segundos`;
+          // Para usuários normais: bloqueia
+          const until = Date.now() + (retryAfter * 1000);
+          setRateLimitUntil(until);
+          setRateLimitSecondsRemaining(retryAfter);
+          
+          let message = `⏱️ Limite de execuções atingido`;
+          if (operationType === 'BOOTSTRAP') {
+            message += `\n\nModo Bootstrap: 1 execução a cada 5 minutos\nTente novamente em ${retryAfter} segundos (${Math.ceil(retryAfter / 60)} minuto${Math.ceil(retryAfter / 60) !== 1 ? 's' : ''})`;
+          } else if (operationType === 'GENERATION_REAL') {
+            message += `\n\nModo Real: 5 execuções por minuto\nTente novamente em ${retryAfter} segundos`;
+          } else {
+            message += `\n\nModo Dry-Run: 50 execuções por minuto\nTente novamente em ${retryAfter} segundos`;
+          }
+          
+          // Log estruturado para monitoramento
+          logger.warn('[Execute] Rate limit excedido durante execução', {
+            operationType,
+            retryAfter,
+            bootstrap,
+            executionMode,
+            severity: 'MEDIUM',
+            alert: 'RATE_LIMIT_EXCEEDED_DURING_EXECUTION',
+          });
+          
+          setError(message);
+          showToast(message, 'error', 10000); // Aumenta duração para 10 segundos
+          setExecuting(false);
+          return;
         }
-        
-        // Log estruturado para monitoramento
-        logger.warn('[Execute] Rate limit excedido durante execução', {
-          operationType,
-          retryAfter,
-          bootstrap,
-          executionMode,
-          severity: 'MEDIUM',
-          alert: 'RATE_LIMIT_EXCEEDED_DURING_EXECUTION',
-        });
-        
-        setError(message);
-        showToast(message, 'error', 10000); // Aumenta duração para 10 segundos
       } else {
         // Marca IA como erro no pipeline se estiver em progresso
         const currentAiStatus = pipelineDetails.aiExecuted?.status;
@@ -1734,8 +2102,13 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         }
       }
 
-      // Obtém tenantId do agente (obrigatório para indexação correta)
-      const tenantId = agent?.tenantId || 'system';
+      // Obtém tenantId do agente (obrigatório para indexação correta, sem fallback)
+      if (!agent?.tenantId) {
+        const errorMsg = 'Tenant não identificado. Faça login novamente e tente novamente.';
+        showToast(errorMsg, 'error', 10000);
+        throw new Error(errorMsg);
+      }
+      const tenantId = agent.tenantId;
       
       logger.info('[FileUpload] Preparando upload para RAG', {
         fileName: fileObj.name,
@@ -1986,12 +2359,124 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       // Busca o relatório JSON usando fetchJson que já constrói a URL correta
       // e inclui headers de autenticação automaticamente
       const data = await fetchJson(reportLink);
+      
+      // Log informações sobre o replay carregado
+      const replayData = data.replayData || data;
+      if (replayData) {
+        const actionsCount = replayData.actions?.length || 0;
+        const screensCount = replayData.screens?.length || 0;
+        logger.info('Replay carregado', {
+          replayId: replayData.id,
+          recordingId: replayData.recordingId,
+          actionsCount,
+          screensCount,
+          hasActions: actionsCount > 0,
+          hasScreens: screensCount > 0,
+          startTime: replayData.startTime,
+          endTime: replayData.endTime,
+        });
+      }
+      
       setReportData(data);
     } catch (err) {
       logger.error('Erro ao carregar relatório', err);
       setReportError(err.message || 'Erro ao carregar relatório');
     } finally {
       setLoadingReport(false);
+    }
+  };
+
+  // Executa um replay ao clicar no Replay ID e abre a tela de reprodução
+  const handleReplayClick = async (replayId, detail) => {
+    if (!replayId) {
+      showToast('Replay ID não encontrado', 'error');
+      return;
+    }
+
+    try {
+      showToast('Buscando informações do replay...', 'info');
+      
+      // Tenta usar o recordingId diretamente do detail se disponível
+      let recordingId = detail?.recordingId;
+      let replayFilename = null;
+      let replayLink = null;
+      
+      // Primeiro, encontra o arquivo de replay para obter o replayLink
+      const replayPath = detail?.replayPath;
+      if (replayPath) {
+        // Extrai o nome do arquivo do caminho
+        replayFilename = replayPath.split('/').pop();
+        if (replayFilename) {
+          replayLink = `/tests/rpa/replay/${replayFilename}`;
+        }
+      }
+      
+      // Se não tiver replayPath, busca na lista de replays
+      if (!replayFilename) {
+        try {
+          const { listRpaReplays } = await import('../api/flows');
+          const replaysList = await listRpaReplays();
+          
+          // Busca o arquivo de replay que contém o replayId
+          for (const file of replaysList.files || []) {
+            try {
+              const replayData = await getRpaReplay(file.filename);
+              if (replayData?.id === replayId) {
+                replayFilename = file.filename;
+                replayLink = `/tests/rpa/replay/${file.filename}`;
+                if (!recordingId) {
+                  recordingId = replayData?.recordingId;
+                }
+                break;
+              }
+            } catch (err) {
+              // Continua procurando em outros arquivos
+              continue;
+            }
+          }
+        } catch (err) {
+          logger.warn('Erro ao buscar replay na lista', { error: err.message });
+        }
+      }
+      
+      // Se ainda não tiver recordingId, tenta buscar do arquivo de replay
+      if (!recordingId && replayFilename) {
+        try {
+          const replayData = await getRpaReplay(replayFilename);
+          recordingId = replayData?.recordingId;
+        } catch (err) {
+          logger.warn('Erro ao buscar replay pelo filename', { replayFilename, error: err.message });
+        }
+      }
+      
+      // Abre a tela de reprodução primeiro
+      if (replayLink) {
+        await handleViewReport(replayLink);
+      } else {
+        showToast('Não foi possível encontrar o arquivo de replay', 'warning');
+        logger.warn('ReplayLink não encontrado', { replayId, detail });
+      }
+      
+      // Executa o replay se tiver recordingId
+      if (recordingId) {
+        showToast(`Executando replay: ${recordingId}...`, 'info');
+        
+        // Executa o recording
+        const result = await executeRpaRecording(recordingId, {}, {});
+        
+        if (result && result.success !== false) {
+          showToast('Replay executado com sucesso!', 'success');
+          logger.info('Replay executado com sucesso', { replayId, recordingId, result });
+        } else {
+          showToast('Erro ao executar replay', 'error');
+          logger.error('Erro ao executar replay', { replayId, recordingId, result });
+        }
+      } else {
+        logger.warn('RecordingId não encontrado, apenas abrindo tela de reprodução', { replayId, detail });
+      }
+    } catch (err) {
+      logger.error('Erro ao executar replay', err);
+      showToast(err.message || 'Erro ao executar replay', 'error');
     }
   };
 
@@ -2495,7 +2980,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             </select>
           </div>
         </div>
-        )}
 
         {/* BLOCO 4 - Validações Automáticas */}
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
@@ -2529,6 +3013,10 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 5 — Pipeline Visível</h2>
           <div className="flex flex-col gap-3">
             {[
+              ...(isTenantMode ? [
+                { key: 'providerValidated', label: 'Provider de IA validado' },
+                { key: 'ragValidated', label: 'Serviço RAG validado' },
+              ] : []),
               ...(needsDescriptionSuggestion ? [{ key: 'descriptionSuggested', label: 'Sugerir descrição' }] : []),
               { key: 'filesInferred', label: 'Arquivos inferidos e indexados' },
               { key: 'payloadValid', label: 'Payload válido' },
@@ -2688,6 +3176,73 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   {finalStatus.icon} {finalStatus.label}
                 </div>
               )}
+              
+              {/* Informações do Tenant Criado */}
+              {result.tenant && (
+                <div className="mt-4 p-4 bg-bg-secondary rounded-lg border border-border-default">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <span>🏢</span> Tenant Criado
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-text-tertiary">Nome:</span>
+                      <p className="text-text-primary font-medium">{result.tenant.name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-text-tertiary">Tenant ID:</span>
+                      <p className="text-text-primary font-mono text-xs break-all">
+                        {result.tenant.id || result.tenant.tenantId || result.tenantId || 'N/A'}
+                      </p>
+                    </div>
+                    {result.tenant.site && (
+                      <div>
+                        <span className="text-text-tertiary">Site:</span>
+                        <p className="text-text-primary">
+                          <a 
+                            href={result.tenant.site} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-accent-primary hover:underline"
+                          >
+                            {result.tenant.site}
+                          </a>
+                        </p>
+                      </div>
+                    )}
+                    {result.tenant.plan && (
+                      <div>
+                        <span className="text-text-tertiary">Plano:</span>
+                        <p className="text-text-primary font-medium capitalize">{result.tenant.plan}</p>
+                      </div>
+                    )}
+                    {result.tenant.active !== undefined && (
+                      <div>
+                        <span className="text-text-tertiary">Status:</span>
+                        <p className={`font-medium ${result.tenant.active ? 'text-status-success' : 'text-status-error'}`}>
+                          {result.tenant.active ? '✓ Ativo' : '✗ Inativo'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {result.tenant.description && (
+                    <div className="mt-3">
+                      <span className="text-text-tertiary text-sm">Descrição:</span>
+                      <p className="text-text-primary text-sm mt-1">{result.tenant.description}</p>
+                    </div>
+                  )}
+                  <div className="mt-4">
+                    <Button
+                      onClick={() => navigate('/tenants')}
+                      variant="default"
+                      size="sm"
+                      className="text-sm"
+                    >
+                      📋 Ver Todos os Tenants
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
               {result.motivo && (
                 <div className="mt-2">
                   <strong>Motivo:</strong> {result.motivo}
@@ -2715,6 +3270,138 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   </Button>
                 )}
               </div>
+
+              {/* Artefatos Gerados */}
+              {(result.flowDefinition || result.rpaTest || result.seed) && (
+                <div className="mt-6 p-4 bg-bg-secondary rounded-lg border border-border-default">
+                  <h4 className="text-sm font-semibold text-text-primary mb-3">📦 Artefatos Gerados</h4>
+                  <div className="space-y-3">
+                    {result.flowDefinition && (
+                      <div className="p-3 bg-bg-primary rounded border border-border-default">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h5 className="text-sm font-semibold text-text-primary mb-1">
+                              🔄 Fluxo (Flow)
+                            </h5>
+                            <p className="text-xs text-text-secondary font-mono mb-1">
+                              ID: {result.flowDefinition.id}
+                            </p>
+                            <p className="text-xs text-text-primary">
+                              Nome: {result.flowDefinition.name || 'Sem nome'}
+                            </p>
+                            {result.flowDefinition.nodes && (
+                              <p className="text-xs text-text-tertiary mt-1">
+                                {result.flowDefinition.nodes.length} node(s)
+                              </p>
+                            )}
+                          </div>
+                          {result.flowDefinition.id && (
+                            <Button
+                              onClick={() => navigate(`/flows/${result.flowDefinition.id}`)}
+                              variant="ghost"
+                              size="xs"
+                              className="text-xs"
+                            >
+                              Ver →
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {result.rpaTest && (
+                      <div className="p-3 bg-bg-primary rounded border border-border-default">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h5 className="text-sm font-semibold text-text-primary mb-1">
+                              🤖 Teste RPA
+                            </h5>
+                            <p className="text-xs text-text-secondary font-mono mb-1">
+                              ID: {result.rpaTest.id}
+                            </p>
+                            {result.rpaTest.steps && (
+                              <p className="text-xs text-text-tertiary mt-1">
+                                {result.rpaTest.steps.length} passo(s)
+                              </p>
+                            )}
+                            {result.rpaTest.asserts && (
+                              <p className="text-xs text-text-tertiary">
+                                {result.rpaTest.asserts.length} assert(s)
+                              </p>
+                            )}
+                            {result.rpaTest.filePath && (
+                              <p className="text-xs text-text-tertiary font-mono mt-1 break-all">
+                                📁 {result.rpaTest.filePath}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {result.seed && (
+                      <div className="p-3 bg-bg-primary rounded border border-border-default">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h5 className="text-sm font-semibold text-text-primary mb-1">
+                              🌱 Seed
+                            </h5>
+                            <p className="text-xs text-text-secondary font-mono mb-1">
+                              ID: {result.seed.id || 'N/A'}
+                            </p>
+                            {result.seed.name && (
+                              <p className="text-xs text-text-primary">
+                                Nome: {result.seed.name}
+                              </p>
+                            )}
+                            {result.seed.filePath && (
+                              <p className="text-xs text-text-tertiary font-mono mt-1 break-all">
+                                📁 {result.seed.filePath}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {result.dependencies && result.dependencies.length > 0 && (
+                      <div className="p-3 bg-bg-primary rounded border border-border-default">
+                        <h5 className="text-sm font-semibold text-text-primary mb-1">
+                          🔗 Dependências
+                        </h5>
+                        <p className="text-xs text-text-tertiary">
+                          {result.dependencies.length} dependência(s) resolvida(s)
+                        </p>
+                      </div>
+                    )}
+
+                    {result.validation && (
+                      <div className="p-3 bg-bg-primary rounded border border-border-default">
+                        <h5 className="text-sm font-semibold text-text-primary mb-2">
+                          ✅ Validações
+                        </h5>
+                        <div className="space-y-1 text-xs">
+                          {result.validation.flow && (
+                            <p className={`${result.validation.flow.valid ? 'text-status-success' : 'text-status-error'}`}>
+                              {result.validation.flow.valid ? '✓' : '✗'} Fluxo: {result.validation.flow.valid ? 'Válido' : 'Inválido'}
+                            </p>
+                          )}
+                          {result.validation.contract && (
+                            <p className={`${result.validation.contract.valid ? 'text-status-success' : 'text-status-error'}`}>
+                              {result.validation.contract.valid ? '✓' : '✗'} Contrato: {result.validation.contract.valid ? 'Válido' : 'Inválido'}
+                            </p>
+                          )}
+                          {result.validation.bootstrap !== null && (
+                            <p className={`${result.validation.bootstrap ? 'text-status-success' : 'text-status-error'}`}>
+                              {result.validation.bootstrap ? '✓' : '✗'} Bootstrap: {result.validation.bootstrap ? 'Aprovado' : 'Reprovado'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             {result.warnings && result.warnings.length > 0 && (
               <div className="mt-4">
@@ -2969,37 +3656,68 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   
                   {(() => {
                     const replayData = reportData.replayData || reportData;
+                    const actionsCount = replayData.actions?.length || 0;
+                    const screensCount = replayData.screens?.length || 0;
+                    const totalSteps = getReplaySteps().length;
+                    
                     return (
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                        {replayData.id && (
-                          <div>
-                            <span className="text-text-tertiary block">ID do Replay:</span>
-                            <p className="text-text-primary font-mono text-xs">{replayData.id}</p>
+                      <>
+                        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                          {replayData.id && (
+                            <div>
+                              <span className="text-text-tertiary block">ID do Replay:</span>
+                              <p className="text-text-primary font-mono text-xs">{replayData.id}</p>
+                            </div>
+                          )}
+                          {replayData.recordingId && (
+                            <div>
+                              <span className="text-text-tertiary block">ID da Gravação:</span>
+                              <p className="text-text-primary font-mono text-xs">{replayData.recordingId}</p>
+                            </div>
+                          )}
+                          {replayData.startTime && (
+                            <div>
+                              <span className="text-text-tertiary block">Início:</span>
+                              <p className="text-text-primary">
+                                {new Date(replayData.startTime).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
+                          )}
+                          {replayData.endTime && (
+                            <div>
+                              <span className="text-text-tertiary block">Fim:</span>
+                              <p className="text-text-primary">
+                                {new Date(replayData.endTime).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Informações sobre passos e artefatos */}
+                        <div className="bg-bg-secondary rounded-lg p-3 mb-4 border border-border-default">
+                          <h4 className="text-xs font-semibold text-text-primary mb-2">📊 Estatísticas do Replay</h4>
+                          <div className="grid grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <span className="text-text-tertiary block">Ações:</span>
+                              <p className="text-text-primary font-semibold">{actionsCount}</p>
+                            </div>
+                            <div>
+                              <span className="text-text-tertiary block">Screenshots:</span>
+                              <p className="text-text-primary font-semibold">{screensCount}</p>
+                            </div>
+                            <div>
+                              <span className="text-text-tertiary block">Passos:</span>
+                              <p className="text-text-primary font-semibold">{totalSteps}</p>
+                            </div>
                           </div>
-                        )}
-                        {replayData.recordingId && (
-                          <div>
-                            <span className="text-text-tertiary block">ID da Gravação:</span>
-                            <p className="text-text-primary font-mono text-xs">{replayData.recordingId}</p>
-                          </div>
-                        )}
-                        {replayData.startTime && (
-                          <div>
-                            <span className="text-text-tertiary block">Início:</span>
-                            <p className="text-text-primary">
-                              {new Date(replayData.startTime).toLocaleString('pt-BR')}
-                            </p>
-                          </div>
-                        )}
-                        {replayData.endTime && (
-                          <div>
-                            <span className="text-text-tertiary block">Fim:</span>
-                            <p className="text-text-primary">
-                              {new Date(replayData.endTime).toLocaleString('pt-BR')}
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                          {replayData.errors && replayData.errors.length > 0 && (
+                            <div className="mt-2">
+                              <span className="text-text-tertiary text-xs">Erros:</span>
+                              <p className="text-status-error font-semibold text-xs">{replayData.errors.length}</p>
+                            </div>
+                          )}
+                        </div>
+                      </>
                     );
                   })()}
 
@@ -3443,7 +4161,13 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                           {detail.replayId && (
                             <div>
                               <span className="text-text-tertiary block">Replay ID:</span>
-                              <p className="text-text-primary font-mono text-xs">{detail.replayId}</p>
+                              <p 
+                                className="text-text-primary font-mono text-xs cursor-pointer hover:text-primary-default hover:underline transition-colors"
+                                onClick={() => handleReplayClick(detail.replayId, detail)}
+                                title="Clique para executar o replay"
+                              >
+                                {detail.replayId}
+                              </p>
                             </div>
                           )}
                         </div>

@@ -4,12 +4,16 @@
  * Responsabilidades:
  * - Gerenciar tenants (criar, listar, atualizar)
  * - Gerenciar tenant_context (contexto cognitivo do tenant)
- * - Persistência em JSON
+ * - Persistência em PostgreSQL (OBRIGATÓRIO)
  * - Validação de schema
  *
  * Persistência:
- * - Tenants: api/data/tenants.json
- * - Tenant Contexts: api/data/tenant_contexts.json
+ * - Tenants: PostgreSQL (tabela tenants)
+ * - Tenant Contexts: PostgreSQL (tabela tenant_contexts ou similar)
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
+ * 
+ * IMPORTANTE: PostgreSQL é obrigatório. Não há fallback para JSON.
  */
 
 const fs = require('fs');
@@ -18,6 +22,29 @@ const { spawn } = require('child_process');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
 const webScrapingService = require('./webScrapingService');
+const { getSequelize } = require('../db/sequelize');
+
+// Função auxiliar para verificar se está conectado
+function isConnected() {
+  const sequelize = getSequelize();
+  if (!sequelize) return false;
+  try {
+    // Verifica se a conexão está ativa (método simples)
+    return sequelize.connectionManager.pool !== null;
+  } catch (e) {
+    return false;
+  }
+}
+const { Tenant } = require('../db/models');
+
+// PostgreSQL é obrigatório - não há mais fallback
+
+// Helper para obter models (suporta lazy loading)
+function getModels() {
+  return {
+    Tenant: typeof Tenant === 'function' ? Tenant() : Tenant,
+  };
+}
 
 // Lazy loading do ragDocumentsService para evitar dependência circular
 let ragDocumentsService = null;
@@ -59,9 +86,6 @@ function getRagDocumentsService() {
  * @property {string} updatedAt - Data da última atualização (ISO string)
  */
 
-// Armazenamento em memória
-/** @type {Map<string, Tenant>} */
-const tenants = new Map();
 
 /** @type {Map<string, TenantContext>} */
 const tenantContexts = new Map();
@@ -83,53 +107,18 @@ function ensureDataDir() {
 }
 
 /**
- * Verifica se existem dados do tenant-demo (agentes, fluxos, etc.)
+ * Verifica se existem dados do tenant-demo.
  * 
- * @returns {boolean} true se existirem dados, false caso contrário
+ * NOTA: Esta função foi simplificada - dados agora estão no banco de dados PostgreSQL.
+ * A verificação deve ser feita diretamente no banco de dados.
+ * 
+ * @returns {boolean} false (sempre retorna false, pois dados estão no banco)
  */
 function hasDemoTenantData() {
-  const DEMO_TENANT_ID = 'tenant-demo';
-  
-  try {
-    let hasAgents = false;
-    let hasFlows = false;
-    
-    // Verifica agentes
-    const agentsFile = path.join(dataDir, 'agents.json');
-    if (fs.existsSync(agentsFile)) {
-      const agents = JSON.parse(fs.readFileSync(agentsFile, 'utf8'));
-      if (Array.isArray(agents)) {
-        hasAgents = agents.some(a => a.tenantId === DEMO_TENANT_ID);
-        if (hasAgents) {
-          const count = agents.filter(a => a.tenantId === DEMO_TENANT_ID).length;
-          logger.info(`[TenantService] Encontrados ${count} agente(s) do tenant-demo`);
-        }
-      }
-    }
-    
-    // Verifica fluxos
-    const flowsFile = path.join(dataDir, 'flows.json');
-    if (fs.existsSync(flowsFile)) {
-      const flows = JSON.parse(fs.readFileSync(flowsFile, 'utf8'));
-      if (Array.isArray(flows)) {
-        hasFlows = flows.some(f => f.tenantId === DEMO_TENANT_ID);
-        if (hasFlows) {
-          const count = flows.filter(f => f.tenantId === DEMO_TENANT_ID).length;
-          logger.info(`[TenantService] Encontrados ${count} fluxo(s) do tenant-demo`);
-        }
-      }
-    }
-    
-    // Se não encontrou agentes nem fluxos, considera que não há dados
-    const hasData = hasAgents || hasFlows;
-    if (!hasData) {
-      logger.info('[TenantService] Nenhum dado encontrado para tenant-demo (agentes ou fluxos)');
-    }
-    return hasData;
-  } catch (err) {
-    logger.warn('[TenantService] Erro ao verificar dados do tenant-demo:', err.message);
-    return false;
-  }
+  // Dados agora estão no banco de dados PostgreSQL - não verifica mais arquivos JSON
+  // Esta função é mantida apenas para compatibilidade, mas sempre retorna false
+  // A verificação real deve ser feita consultando o banco de dados
+  return false;
 }
 
 /**
@@ -163,42 +152,58 @@ function runDemoTenantSeed() {
  * Garante que o tenant de demonstração (`tenant-demo`) exista e tenha dados.
  * 
  * Este tenant é usado como ambiente de demonstração e desenvolvimento.
- * Se não existir no arquivo de tenants, é criado automaticamente com
+ * Se não existir no PostgreSQL, é criado automaticamente com
  * dados padrão seguros.
  * Se existir mas não tiver dados (agentes, fluxos, etc.), executa o seed.
  */
-function ensureDemoTenantExists() {
+async function ensureDemoTenantExists() {
   const DEMO_TENANT_ID = 'tenant-demo';
   let tenantCreated = false;
 
   logger.info('[TenantService] Verificando tenant-demo e seus dados...');
 
-  // Verifica se o tenant existe
-  if (!tenants.has(DEMO_TENANT_ID)) {
-    logger.info('[TenantService] Tenant de demonstração não encontrado. Criando tenant-demo padrão...');
-
-    const result = createTenant({
-      id: DEMO_TENANT_ID,
-      name: 'Tenant Demo',
-      site: 'https://demo.example.com',
-      ramo_atividade: 'Tecnologia e Software - Plataforma de demonstração',
-      objetivo: 'Demonstração e desenvolvimento da plataforma',
-      plan: 'trial',
-      settings: {},
-      branding: {},
-    });
-
-    if (!result.success) {
-      logger.error('[TenantService] Falha ao criar tenant-demo padrão:', {
-        error: result.error,
-      });
-      return; // Não continua se não conseguiu criar o tenant
-    }
+  try {
+    // Verifica se o tenant existe no PostgreSQL usando findTenantByIdentifier diretamente
+    // para evitar problemas com formatação de retorno
+    const existingTenantRaw = await findTenantByIdentifier(DEMO_TENANT_ID);
+    const existingTenant = existingTenantRaw ? await getTenant(DEMO_TENANT_ID) : null;
     
-    logger.info('[TenantService] Tenant-demo criado automaticamente com sucesso.');
-    tenantCreated = true;
-  } else {
-    logger.info('[TenantService] Tenant-demo já existe.');
+    if (!existingTenant) {
+      logger.info('[TenantService] Tenant de demonstração não encontrado. Criando tenant-demo padrão...');
+      logger.debug('[TenantService] Tentando criar tenant-demo com tenant_key:', DEMO_TENANT_ID);
+
+      const result = await createTenant({
+        tenant_key: DEMO_TENANT_ID, // Usa tenant_key em vez de id
+        name: 'Tenant Demo',
+        site: 'https://demo.example.com',
+        ramo_atividade: 'Tecnologia e Software - Plataforma de demonstração',
+        objetivo: 'Demonstração e desenvolvimento da plataforma',
+        plan: 'trial',
+        settings: {},
+        branding: {},
+      });
+
+      if (!result.success) {
+        logger.error('[TenantService] Falha ao criar tenant-demo padrão:', {
+          error: result.error,
+          details: result,
+        });
+        return; // Não continua se não conseguiu criar o tenant
+      }
+      
+      logger.info('[TenantService] Tenant-demo criado com sucesso:', {
+        tenant_key: DEMO_TENANT_ID,
+        tenant_id: result.tenant?.id,
+      });
+      
+      logger.info('[TenantService] Tenant-demo criado automaticamente com sucesso.');
+      tenantCreated = true;
+    } else {
+      logger.info('[TenantService] Tenant-demo já existe.');
+    }
+  } catch (err) {
+    logger.error('[TenantService] Erro ao verificar/criar tenant-demo:', err);
+    return;
   }
 
   // Verifica se existem dados do tenant-demo
@@ -233,82 +238,6 @@ function isValidUrl(url) {
   }
 }
 
-/**
- * Salva tenants no arquivo JSON.
- */
-function saveTenantsToFile() {
-  try {
-    ensureDataDir();
-    const tenantsArray = Array.from(tenants.values());
-    const data = JSON.stringify(tenantsArray, null, 2);
-    fs.writeFileSync(tenantsFile, data, 'utf8');
-    logger.debug(`[TenantService] Tenants salvos: ${tenantsArray.length} tenant(s)`);
-  } catch (err) {
-    logger.error('[TenantService] Erro ao salvar tenants:', err);
-  }
-}
-
-/**
- * Carrega tenants do arquivo JSON.
- * Migra tenants antigos para o novo formato SaaS.
- */
-function loadTenantsFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(tenantsFile)) {
-      logger.info(`[TenantService] Arquivo de tenants não encontrado: ${tenantsFile}. Iniciando com dados vazios.`);
-      return;
-    }
-
-    const data = fs.readFileSync(tenantsFile, 'utf8');
-    const tenantsArray = JSON.parse(data);
-
-    if (Array.isArray(tenantsArray)) {
-      tenants.clear();
-      let migrated = 0;
-      for (const tenant of tenantsArray) {
-        if (tenant && tenant.id) {
-          // Migração: adiciona campos SaaS se não existirem
-          if (!tenant.status) {
-            tenant.status = tenant.active ? 'active' : 'suspended';
-            migrated++;
-          }
-          if (!tenant.plan) {
-            tenant.plan = 'trial';
-            migrated++;
-          }
-          if (!tenant.limits) {
-            tenant.limits = getDefaultLimits(tenant.plan || 'trial');
-            migrated++;
-          }
-          if (!tenant.settings) {
-            tenant.settings = {};
-            migrated++;
-          }
-          if (!tenant.branding) {
-            tenant.branding = {};
-            migrated++;
-          }
-          if (!tenant.trialExpiresAt && tenant.plan === 'trial') {
-            // Trial de 14 dias por padrão
-            const trialExpires = new Date();
-            trialExpires.setDate(trialExpires.getDate() + 14);
-            tenant.trialExpiresAt = trialExpires.toISOString();
-            migrated++;
-          }
-          tenants.set(tenant.id, tenant);
-        }
-      }
-      logger.info(`[TenantService] Tenants carregados: ${tenants.size} tenant(s)`);
-      if (migrated > 0) {
-        logger.info(`[TenantService] ${migrated} campo(s) migrado(s) para formato SaaS`);
-        saveTenantsToFile(); // Salva com novos campos
-      }
-    }
-  } catch (err) {
-    logger.error('[TenantService] Erro ao carregar tenants:', err);
-  }
-}
 
 /**
  * Retorna limites padrão para um plano.
@@ -355,54 +284,10 @@ function getDefaultLimits(plan) {
   return limitsByPlan[plan] || limitsByPlan.trial;
 }
 
-/**
- * Salva tenant contexts no arquivo JSON.
- */
-function saveTenantContextsToFile() {
-  try {
-    ensureDataDir();
-    const contextsArray = Array.from(tenantContexts.values());
-    const data = JSON.stringify(contextsArray, null, 2);
-    fs.writeFileSync(tenantContextsFile, data, 'utf8');
-    logger.debug(`[TenantService] Tenant contexts salvos: ${contextsArray.length} contexto(s)`);
-  } catch (err) {
-    logger.error('[TenantService] Erro ao salvar tenant contexts:', err);
-  }
-}
-
-/**
- * Carrega tenant contexts do arquivo JSON.
- */
-function loadTenantContextsFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(tenantContextsFile)) {
-      logger.info(`[TenantService] Arquivo de tenant contexts não encontrado: ${tenantContextsFile}. Iniciando com dados vazios.`);
-      return;
-    }
-
-    const data = fs.readFileSync(tenantContextsFile, 'utf8');
-    const contextsArray = JSON.parse(data);
-
-    if (Array.isArray(contextsArray)) {
-      tenantContexts.clear();
-      for (const context of contextsArray) {
-        if (context && context.tenantId) {
-          tenantContexts.set(context.tenantId, context);
-        }
-      }
-      logger.info(`[TenantService] Tenant contexts carregados: ${tenantContexts.size} contexto(s)`);
-    }
-  } catch (err) {
-    logger.error('[TenantService] Erro ao carregar tenant contexts:', err);
-  }
-}
-
-// Carrega dados ao iniciar o módulo
-loadTenantsFromFile();
-loadTenantContextsFromFile();
-// Garante que o tenant de demonstração sempre exista
-ensureDemoTenantExists();
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+// Garante que o tenant de demonstração sempre exista (deferido para quando o servidor iniciar)
+// ensureDemoTenantExists() será chamado pelo server.js após conectar ao PostgreSQL
 
 /**
  * Cria ou atualiza o tenant_context automaticamente quando um tenant é criado/atualizado.
@@ -428,7 +313,7 @@ function syncTenantContext(tenantId, ramo_atividade, objetivo, site_oficial) {
   };
 
   tenantContexts.set(tenantId, context);
-  saveTenantContextsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   logger.debug(`[TenantService] Tenant context sincronizado: ${tenantId}`);
 }
@@ -519,7 +404,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
  * @param {Object} [params.branding] - Branding personalizado
  * @returns {{success: boolean, tenant?: Tenant, error?: string}}
  */
-function createTenant({ id, name, site, ramo_atividade, objetivo, plan = 'trial', settings = {}, branding = {} }) {
+async function createTenant({ id, tenant_key, name, site, ramo_atividade, objetivo, plan = 'trial', settings = {}, branding = {} }) {
   // Validações
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return { success: false, error: 'Nome é obrigatório' };
@@ -547,241 +432,503 @@ function createTenant({ id, name, site, ramo_atividade, objetivo, plan = 'trial'
     return { success: false, error: `Plano inválido. Use: ${validPlans.join(', ')}` };
   }
 
-  // Verifica se já existe tenant com mesmo site
-  for (const tenant of tenants.values()) {
-    if (tenant.site.toLowerCase() === site.trim().toLowerCase()) {
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) {
+    return { success: false, error: 'PostgreSQL não está disponível. O banco de dados é obrigatório.' };
+  }
+
+  try {
+    const { Tenant: TenantModel } = getModels();
+    
+    // Usa tenant_key se fornecido, senão usa id, senão gera um automaticamente
+    const finalTenantKey = tenant_key || id || `tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    
+    // Verifica se já existe tenant com mesmo tenant_key
+    const existing = await TenantModel.findOne({
+      where: { tenant_key: finalTenantKey },
+    });
+    if (existing) {
+      return { success: false, error: 'Já existe um tenant com este ID' };
+    }
+    
+    // Verifica se já existe tenant com mesmo site
+    const existingBySite = await TenantModel.findOne({
+      where: { site: site.trim() },
+    });
+    if (existingBySite) {
       return { success: false, error: 'Já existe um tenant com este site' };
     }
-  }
 
-  // Cria tenant
-  const now = new Date().toISOString();
-  // Se id não foi fornecido, gera um automaticamente
-  const tenantId = id || `tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  
-  // Se id foi fornecido, verifica se já existe
-  if (id) {
-    if (tenants.has(id)) {
-      return { success: false, error: `Já existe um tenant com o ID: ${id}` };
+    // Calcula expiração do trial se for trial
+    let trialExpiresAt = null;
+    if (plan === 'trial') {
+      const trialExpires = new Date();
+      trialExpires.setDate(trialExpires.getDate() + 14); // 14 dias
+      trialExpiresAt = trialExpires;
     }
+
+    // Cria tenant no PostgreSQL
+    const { Tenant } = getModels();
+    const tenantRecord = await Tenant.create({
+      tenant_key: finalTenantKey,
+      name: name.trim(),
+      site: site.trim(),
+      ramo_atividade: ramo_atividade.trim(),
+      objetivo: objetivo.trim(),
+      status: plan === 'trial' ? 'trial' : 'active',
+      plan: plan,
+      limits: getDefaultLimits(plan),
+      settings: settings || {},
+      branding: branding || {},
+      suspendedAt: null,
+      trialExpiresAt: trialExpiresAt,
+    });
+
+    // Converte para formato compatível usando toJSON() para garantir serialização correta
+    const tenantData = tenantRecord.toJSON ? tenantRecord.toJSON() : tenantRecord.dataValues || tenantRecord;
+    
+    const tenantKey = tenantData.tenant_key;
+    const tenantName = tenantData.name;
+    const tenantStatus = tenantData.status;
+    const tenantPlan = tenantData.plan;
+    
+    const tenant = {
+      id: tenantKey,
+      tenant_key: tenantKey,
+      name: tenantName,
+      site: tenantData.site || null,
+      ramo_atividade: tenantData.ramo_atividade || null,
+      objetivo: tenantData.objetivo || null,
+      active: tenantStatus !== 'suspended' && tenantStatus !== 'terminated',
+      status: tenantStatus,
+      plan: tenantPlan,
+      limits: tenantData.limits || {},
+      settings: tenantData.settings || {},
+      branding: tenantData.branding || {},
+      createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
+      suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
+      trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+    };
+
+    // Cria/atualiza tenant_context automaticamente
+    syncTenantContext(tenantId, ramo_atividade.trim(), objetivo.trim(), site.trim());
+
+    // Indexa site como fonte institucional canônica (assíncrono, não bloqueia)
+    indexSiteAsInstitutionalSource(tenantId, site.trim()).catch(err => {
+      logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, err);
+    });
+
+    logger.info(`[TenantService] Tenant criado: ${tenantId} (${name}), plano: ${plan}`);
+
+    return { success: true, tenant };
+  } catch (err) {
+    logger.error('[TenantService] Erro ao criar tenant no PostgreSQL:', err);
+    return { success: false, error: err.message || 'Erro ao criar tenant' };
   }
-  
-  // Calcula expiração do trial se for trial
-  let trialExpiresAt = null;
-  if (plan === 'trial') {
-    const trialExpires = new Date();
-    trialExpires.setDate(trialExpires.getDate() + 14); // 14 dias
-    trialExpiresAt = trialExpires.toISOString();
-  }
-
-  const tenant = {
-    id,
-    name: name.trim(),
-    site: site.trim(),
-    ramo_atividade: ramo_atividade.trim(),
-    objetivo: objetivo.trim(),
-    active: true,
-    status: plan === 'trial' ? 'trial' : 'active',
-    plan: plan,
-    limits: getDefaultLimits(plan),
-    settings: settings || {},
-    branding: branding || {},
-    createdAt: now,
-    updatedAt: now,
-    suspendedAt: null,
-    trialExpiresAt: trialExpiresAt,
-  };
-
-  tenants.set(tenantId, tenant);
-  saveTenantsToFile();
-
-  // Cria/atualiza tenant_context automaticamente
-  syncTenantContext(tenantId, ramo_atividade.trim(), objetivo.trim(), site.trim());
-
-  // Indexa site como fonte institucional canônica (assíncrono, não bloqueia)
-  indexSiteAsInstitutionalSource(tenantId, site.trim()).catch(err => {
-    logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, err);
-  });
-
-  logger.info(`[TenantService] Tenant criado: ${tenantId} (${name}), plano: ${plan}`);
-
-  return { success: true, tenant };
 }
 
 /**
- * Atualiza um tenant.
+ * Atualiza um tenant no PostgreSQL.
  *
  * @param {string} tenantId
  * @param {Object} updates - Campos para atualizar
- * @returns {{success: boolean, tenant?: Tenant, error?: string}}
+ * @returns {Promise<{success: boolean, tenant?, error?: string}>}>}
  */
-function updateTenant(tenantId, updates) {
-  const tenant = tenants.get(tenantId);
-  if (!tenant) {
-    return { success: false, error: 'Tenant não encontrado' };
+async function updateTenant(tenantId, updates) {
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) {
+    return { success: false, error: 'PostgreSQL não está disponível. O banco de dados é obrigatório.' };
   }
 
-  // Atualiza campos permitidos
-  if (updates.name !== undefined) {
-    tenant.name = String(updates.name).trim();
-  }
-
-  if (updates.site !== undefined) {
-    const newSite = String(updates.site).trim();
-    if (!isValidUrl(newSite)) {
-      return { success: false, error: 'Site deve ser uma URL válida (http:// ou https://)' };
+  try {
+    const { Tenant: TenantModel } = getModels();
+    const tenantRecord = await TenantModel.findOne({
+      where: { tenant_key: tenantId },
+    });
+    
+    if (!tenantRecord) {
+      return { success: false, error: 'Tenant não encontrado' };
     }
-    // Verifica se outro tenant já usa este site
-    for (const t of tenants.values()) {
-      if (t.id !== tenantId && t.site.toLowerCase() === newSite.toLowerCase()) {
+
+    // Prepara atualizações
+    const updateData = {};
+    const { Op } = require('sequelize');
+
+    if (updates.name !== undefined) {
+      updateData.name = String(updates.name).trim();
+    }
+
+    if (updates.site !== undefined) {
+      const newSite = String(updates.site).trim();
+      if (!isValidUrl(newSite)) {
+        return { success: false, error: 'Site deve ser uma URL válida (http:// ou https://)' };
+      }
+      // Verifica se outro tenant já usa este site
+      const existingBySite = await TenantModel.findOne({
+        where: { 
+          site: newSite,
+          tenant_key: { [Op.ne]: tenantId }
+        },
+      });
+      if (existingBySite) {
         return { success: false, error: 'Já existe outro tenant com este site' };
       }
+      updateData.site = newSite;
     }
-    tenant.site = newSite;
+
+    if (updates.ramo_atividade !== undefined) {
+      const newRamo = String(updates.ramo_atividade).trim();
+      if (newRamo === '') {
+        return { success: false, error: 'Ramo de atividade não pode ser vazio' };
+      }
+      updateData.ramo_atividade = newRamo;
+    }
+
+    if (updates.objetivo !== undefined) {
+      const newObjetivo = String(updates.objetivo).trim();
+      if (newObjetivo === '') {
+        return { success: false, error: 'Objetivo não pode ser vazio' };
+      }
+      updateData.objetivo = newObjetivo;
+    }
+
+    if (updates.status !== undefined) {
+      const validStatuses = ['trial', 'active', 'suspended', 'terminated'];
+      if (!validStatuses.includes(updates.status)) {
+        return { success: false, error: `Status inválido. Use: ${validStatuses.join(', ')}` };
+      }
+      updateData.status = updates.status;
+      if (updates.status === 'suspended') {
+        updateData.suspendedAt = new Date();
+      } else if (updates.status !== 'suspended') {
+        updateData.suspendedAt = null;
+      }
+    } else if (updates.active !== undefined) {
+      // Atualiza status baseado em active
+      if (!updates.active && tenantRecord.status !== 'terminated') {
+        updateData.status = 'suspended';
+        updateData.suspendedAt = new Date();
+      } else if (updates.active && tenantRecord.status === 'suspended') {
+        updateData.status = tenantRecord.plan === 'trial' ? 'trial' : 'active';
+        updateData.suspendedAt = null;
+      }
+    }
+
+    if (updates.plan !== undefined) {
+      const validPlans = ['free', 'trial', 'pro', 'enterprise'];
+      if (!validPlans.includes(updates.plan)) {
+        return { success: false, error: `Plano inválido. Use: ${validPlans.join(', ')}` };
+      }
+      updateData.plan = updates.plan;
+      updateData.limits = getDefaultLimits(updates.plan);
+      // Se mudou para trial, atualiza expiração
+      if (updates.plan === 'trial' && !tenantRecord.trialExpiresAt) {
+        const trialExpires = new Date();
+        trialExpires.setDate(trialExpires.getDate() + 14);
+        updateData.trialExpiresAt = trialExpires;
+      }
+    }
+
+    if (updates.limits !== undefined) {
+      if (typeof updates.limits !== 'object') {
+        return { success: false, error: 'Limites deve ser um objeto' };
+      }
+      updateData.limits = { ...tenantRecord.limits, ...updates.limits };
+    }
+
+    if (updates.settings !== undefined) {
+      if (typeof updates.settings !== 'object') {
+        return { success: false, error: 'Configurações deve ser um objeto' };
+      }
+      updateData.settings = { ...tenantRecord.settings, ...updates.settings };
+    }
+
+    if (updates.branding !== undefined) {
+      if (typeof updates.branding !== 'object') {
+        return { success: false, error: 'Branding deve ser um objeto' };
+      }
+      updateData.branding = { ...tenantRecord.branding, ...updates.branding };
+    }
+
+    // Atualiza no banco
+    await tenantRecord.update(updateData);
+    
+    // Recarrega para obter dados atualizados
+    await tenantRecord.reload();
+
+    // Converte para formato compatível usando toJSON() para garantir serialização correta
+    const tenantData = tenantRecord.toJSON ? tenantRecord.toJSON() : tenantRecord.dataValues || tenantRecord;
+    
+    const tenantKey = tenantData.tenant_key;
+    const tenantName = tenantData.name;
+    const tenantStatus = tenantData.status;
+    const tenantPlan = tenantData.plan;
+    
+    const tenant = {
+      id: tenantKey,
+      tenant_key: tenantKey,
+      name: tenantName,
+      site: tenantData.site || null,
+      ramo_atividade: tenantData.ramo_atividade || null,
+      objetivo: tenantData.objetivo || null,
+      active: tenantStatus !== 'suspended' && tenantStatus !== 'terminated',
+      status: tenantStatus,
+      plan: tenantPlan,
+      limits: tenantData.limits || {},
+      settings: tenantData.settings || {},
+      branding: tenantData.branding || {},
+      createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
+      suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
+      trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+    };
+
+    // Sincroniza tenant_context
+    syncTenantContext(
+      tenantId,
+      tenantRecord.ramo_atividade,
+      tenantRecord.objetivo,
+      tenantRecord.site
+    );
+
+    // Se o site foi atualizado, reindexa como fonte institucional
+    if (updates.site !== undefined) {
+      indexSiteAsInstitutionalSource(tenantId, tenantRecord.site).catch(err => {
+        logger.error(`[TenantService] Erro ao indexar site após atualização do tenant:`, err);
+      });
+    }
+
+    logger.info(`[TenantService] Tenant atualizado: ${tenantId}`);
+
+    return { success: true, tenant };
+  } catch (err) {
+    logger.error('[TenantService] Erro ao atualizar tenant no PostgreSQL:', err);
+    return { success: false, error: err.message || 'Erro ao atualizar tenant' };
+  }
+}
+
+/**
+ * Lista todos os tenants do PostgreSQL.
+ *
+ * @returns {Promise<Tenant[]>}
+ */
+async function listTenants() {
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) {
+    throw new Error('PostgreSQL não está disponível. O banco de dados é obrigatório.');
   }
 
-  if (updates.ramo_atividade !== undefined) {
-    const newRamo = String(updates.ramo_atividade).trim();
-    if (newRamo === '') {
-      return { success: false, error: 'Ramo de atividade não pode ser vazio' };
-    }
-    tenant.ramo_atividade = newRamo;
-  }
-
-  if (updates.objetivo !== undefined) {
-    const newObjetivo = String(updates.objetivo).trim();
-    if (newObjetivo === '') {
-      return { success: false, error: 'Objetivo não pode ser vazio' };
-    }
-    tenant.objetivo = newObjetivo;
-  }
-
-  if (updates.active !== undefined) {
-    tenant.active = Boolean(updates.active);
-    // Atualiza status baseado em active
-    if (!tenant.active && tenant.status !== 'terminated') {
-      tenant.status = 'suspended';
-      tenant.suspendedAt = new Date().toISOString();
-    } else if (tenant.active && tenant.status === 'suspended') {
-      tenant.status = tenant.plan === 'trial' ? 'trial' : 'active';
-      tenant.suspendedAt = null;
-    }
-  }
-
-  if (updates.status !== undefined) {
-    const validStatuses = ['trial', 'active', 'suspended', 'terminated'];
-    if (!validStatuses.includes(updates.status)) {
-      return { success: false, error: `Status inválido. Use: ${validStatuses.join(', ')}` };
-    }
-    tenant.status = updates.status;
-    if (updates.status === 'suspended' && !tenant.suspendedAt) {
-      tenant.suspendedAt = new Date().toISOString();
-    } else if (updates.status !== 'suspended') {
-      tenant.suspendedAt = null;
-    }
-    tenant.active = updates.status !== 'suspended' && updates.status !== 'terminated';
-  }
-
-  if (updates.plan !== undefined) {
-    const validPlans = ['free', 'trial', 'pro', 'enterprise'];
-    if (!validPlans.includes(updates.plan)) {
-      return { success: false, error: `Plano inválido. Use: ${validPlans.join(', ')}` };
-    }
-    tenant.plan = updates.plan;
-    tenant.limits = getDefaultLimits(updates.plan);
-    // Se mudou para trial, atualiza expiração
-    if (updates.plan === 'trial' && !tenant.trialExpiresAt) {
-      const trialExpires = new Date();
-      trialExpires.setDate(trialExpires.getDate() + 14);
-      tenant.trialExpiresAt = trialExpires.toISOString();
-    }
-  }
-
-  if (updates.limits !== undefined) {
-    if (typeof updates.limits !== 'object') {
-      return { success: false, error: 'Limites deve ser um objeto' };
-    }
-    tenant.limits = { ...tenant.limits, ...updates.limits };
-  }
-
-  if (updates.settings !== undefined) {
-    if (typeof updates.settings !== 'object') {
-      return { success: false, error: 'Configurações deve ser um objeto' };
-    }
-    tenant.settings = { ...tenant.settings, ...updates.settings };
-  }
-
-  if (updates.branding !== undefined) {
-    if (typeof updates.branding !== 'object') {
-      return { success: false, error: 'Branding deve ser um objeto' };
-    }
-    tenant.branding = { ...tenant.branding, ...updates.branding };
-  }
-
-  tenant.updatedAt = new Date().toISOString();
-  saveTenantsToFile();
-
-  // Sincroniza tenant_context
-  syncTenantContext(
-    tenantId,
-    tenant.ramo_atividade,
-    tenant.objetivo,
-    tenant.site
-  );
-
-  // Se o site foi atualizado, reindexa como fonte institucional
-  if (updates.site !== undefined) {
-    indexSiteAsInstitutionalSource(tenantId, tenant.site).catch(err => {
-      logger.error(`[TenantService] Erro ao indexar site após atualização do tenant:`, err);
+  try {
+    const { Tenant } = getModels();
+    const tenantsFromDb = await Tenant.findAll({
+      order: [['created_at', 'DESC']],
+      attributes: ['id', 'tenant_key', 'name', 'site', 'ramo_atividade', 'objetivo', 'status', 'plan', 'limits', 'settings', 'branding', 'suspended_at', 'trial_expires_at', 'created_at', 'updated_at'],
     });
+
+    return tenantsFromDb.map(tenant => {
+      // Usa toJSON() para garantir serialização correta do Sequelize
+      const tenantData = tenant.toJSON ? tenant.toJSON() : tenant.dataValues || tenant;
+      
+      const tenantKey = tenantData.tenant_key;
+      const tenantStatus = tenantData.status;
+      
+      return {
+        id: tenantKey,
+        tenant_key: tenantKey,
+        name: tenantData.name,
+        site: tenantData.site || null,
+        ramo_atividade: tenantData.ramo_atividade || null,
+        objetivo: tenantData.objetivo || null,
+        active: tenantStatus !== 'suspended' && tenantStatus !== 'terminated',
+        status: tenantStatus,
+        plan: tenantData.plan,
+        limits: tenantData.limits || {},
+        settings: tenantData.settings || {},
+        branding: tenantData.branding || {},
+        createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
+        updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
+        suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
+        trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+      };
+    });
+  } catch (err) {
+    logger.error('[TenantService] Erro ao listar tenants do PostgreSQL:', err);
+    throw err;
+  }
+}
+
+/**
+ * Helper: Busca tenant por tenant_key ou id (UUID).
+ * Padroniza a busca de tenants em todo o sistema.
+ * 
+ * @param {string} identifier - tenant_key (ex: "tenant-demo") ou id (UUID)
+ * @returns {Promise<Tenant|null>} Instância do Sequelize ou null
+ */
+async function findTenantByIdentifier(identifier) {
+  if (!identifier || typeof identifier !== 'string') {
+    logger.warn('[TenantService] findTenantByIdentifier: identifier inválido', { identifier });
+    return null;
   }
 
-  logger.info(`[TenantService] Tenant atualizado: ${tenantId}`);
-
-  return { success: true, tenant };
-}
-
-/**
- * Lista todos os tenants.
- *
- * @returns {Tenant[]}
- */
-function listTenants() {
-  return Array.from(tenants.values());
-}
-
-/**
- * Obtém um tenant por ID.
- *
- * @param {string} tenantId
- * @returns {Tenant|null}
- */
-function getTenant(tenantId) {
-  return tenants.get(tenantId) || null;
-}
-
-/**
- * Remove um tenant.
- *
- * @param {string} tenantId
- * @returns {{success: boolean, error?: string}}
- */
-function deleteTenant(tenantId) {
-  const tenant = tenants.get(tenantId);
-  if (!tenant) {
-    return { success: false, error: 'Tenant não encontrado' };
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) {
+    logger.error('[TenantService] findTenantByIdentifier: PostgreSQL não está disponível');
+    throw new Error('PostgreSQL não está disponível. O banco de dados é obrigatório.');
   }
 
-  // Remove tenant_context também
-  tenantContexts.delete(tenantId);
-  saveTenantContextsToFile();
+  const { Tenant } = getModels();
+  
+  // Tenta buscar por tenant_key primeiro (caso mais comum)
+  let tenant = await Tenant.findOne({
+    where: { tenant_key: identifier },
+  });
 
-  tenants.delete(tenantId);
-  saveTenantsToFile();
+  if (tenant) {
+    logger.debug('[TenantService] Tenant encontrado por tenant_key', { 
+      identifier, 
+      tenant_id: tenant.id, 
+      tenant_key: tenant.tenant_key 
+    });
+    return tenant;
+  }
 
-  logger.info(`[TenantService] Tenant removido: ${tenantId}`);
+  // Se não encontrou por tenant_key e parece ser UUID, tenta buscar por id
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)) {
+    tenant = await Tenant.findOne({
+      where: { id: identifier },
+    });
+    
+    if (tenant) {
+      logger.debug('[TenantService] Tenant encontrado por id (UUID)', { 
+        identifier, 
+        tenant_id: tenant.id, 
+        tenant_key: tenant.tenant_key 
+      });
+      return tenant;
+    }
+  }
 
-  return { success: true };
+  logger.warn('[TenantService] Tenant não encontrado', { identifier });
+  return null;
+}
+
+/**
+ * Obtém um tenant por ID do PostgreSQL.
+ * 
+ * CONVENÇÃO: Esta função aceita tenant_key (string legível) ou id (UUID).
+ * Prefira usar tenant_key em APIs públicas e URLs.
+ *
+ * @param {string} tenantId - tenant_key (ex: "tenant-demo") ou id (UUID)
+ * @returns {Promise<Tenant|null>}
+ */
+async function getTenant(tenantId) {
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) {
+    throw new Error('PostgreSQL não está disponível. O banco de dados é obrigatório.');
+  }
+
+  try {
+    const { Tenant } = getModels();
+    
+    // Usa a função helper para buscar por tenant_key ou id
+    let tenant = await findTenantByIdentifier(tenantId);
+    
+    if (!tenant) {
+      return null;
+    }
+
+    // Busca novamente com os atributos específicos necessários
+    const tenantWithAttrs = await Tenant.findOne({
+      where: { id: tenant.id },
+      attributes: ['id', 'tenant_key', 'name', 'site', 'ramo_atividade', 'objetivo', 'status', 'plan', 'limits', 'settings', 'branding', 'suspended_at', 'trial_expires_at', 'created_at', 'updated_at'],
+    });
+
+    if (!tenantWithAttrs) {
+      return null;
+    }
+
+    // Usa toJSON() para garantir serialização correta do Sequelize
+    // Isso garante que todos os campos sejam acessados corretamente, mesmo com underscored: true
+    const tenantData = tenant.toJSON ? tenant.toJSON() : tenant.dataValues || tenant;
+    
+    const tenantKey = tenantData.tenant_key;
+    const tenantName = tenantData.name;
+    const tenantStatus = tenantData.status;
+    const tenantPlan = tenantData.plan;
+    
+    // Valida que o tenant tem nome (obrigatório)
+    if (!tenantName || (typeof tenantName === 'string' && tenantName.trim() === '')) {
+      logger.error('[TenantService] Tenant encontrado sem nome', {
+        tenantId,
+        tenant_key: tenantKey,
+        name: tenantName,
+        tenantDataKeys: Object.keys(tenantData),
+        rawTenant: tenantData,
+      });
+      throw new Error(`Tenant ${tenantId} está inconsistente: campo 'name' é obrigatório mas está vazio ou ausente`);
+    }
+
+    return {
+      id: tenantKey,
+      tenant_key: tenantKey,
+      name: tenantName,
+      site: tenantData.site || null,
+      ramo_atividade: tenantData.ramo_atividade || null,
+      objetivo: tenantData.objetivo || null,
+      active: tenantStatus !== 'suspended' && tenantStatus !== 'terminated',
+      status: tenantStatus,
+      plan: tenantPlan,
+      limits: tenantData.limits || {},
+      settings: tenantData.settings || {},
+      branding: tenantData.branding || {},
+      createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
+      suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
+      trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+    };
+  } catch (err) {
+    logger.error('[TenantService] Erro ao obter tenant do PostgreSQL:', err);
+    throw err;
+  }
+}
+
+/**
+ * Remove um tenant do PostgreSQL.
+ *
+ * @param {string} tenantId
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function deleteTenant(tenantId) {
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) {
+    return { success: false, error: 'PostgreSQL não está disponível. O banco de dados é obrigatório.' };
+  }
+
+  try {
+    const { Tenant: TenantModel } = getModels();
+    const tenantRecord = await TenantModel.findOne({
+      where: { tenant_key: tenantId },
+    });
+    
+    if (!tenantRecord) {
+      return { success: false, error: 'Tenant não encontrado' };
+    }
+
+    // Remove tenant_context também
+    tenantContexts.delete(tenantId);
+    // Dados agora estão no banco de dados PostgreSQL
+
+    // Remove do PostgreSQL (CASCADE remove relacionamentos)
+    await tenantRecord.destroy();
+
+    logger.info(`[TenantService] Tenant removido: ${tenantId}`);
+
+    return { success: true };
+  } catch (err) {
+    logger.error('[TenantService] Erro ao remover tenant do PostgreSQL:', err);
+    return { success: false, error: err.message || 'Erro ao remover tenant' };
+  }
 }
 
 /**
@@ -807,10 +954,17 @@ function getTenantContext(tenantId) {
  * @param {Object} options - Opções (userRole, userId para auditoria)
  * @returns {{success: boolean, context?: TenantContext, error?: string}}
  */
-function updateTenantContext(tenantId, updates, options = {}) {
-  // Verifica se tenant existe
-  if (!tenants.has(tenantId)) {
-    return { success: false, error: 'Tenant não encontrado' };
+async function updateTenantContext(tenantId, updates, options = {}) {
+  // Verifica se tenant existe no PostgreSQL
+  let tenant;
+  try {
+    tenant = await getTenant(tenantId);
+    if (!tenant) {
+      return { success: false, error: 'Tenant não encontrado' };
+    }
+  } catch (err) {
+    logger.error('[TenantService] Erro ao verificar tenant:', err);
+    return { success: false, error: 'Erro ao verificar tenant' };
   }
 
   // PROTEÇÃO CONTRA PROMPT INJECTION:
@@ -837,19 +991,27 @@ function updateTenantContext(tenantId, updates, options = {}) {
   let context = tenantContexts.get(tenantId);
   const now = new Date().toISOString();
 
-  // Se não existe, cria
+  // Se não existe, cria usando dados do tenant
   if (!context) {
-    const tenant = tenants.get(tenantId);
-    context = {
-      tenantId,
-      ramo_atividade: tenant.ramo_atividade || '',
-      objetivo: tenant.objetivo || '',
-      site_oficial: tenant.site || '',
-      prioridade: 'HIGH',
-      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
-      createdAt: now,
-      updatedAt: now,
-    };
+    try {
+      const tenant = await getTenant(tenantId);
+      if (!tenant) {
+        return { success: false, error: 'Tenant não encontrado' };
+      }
+      context = {
+        tenantId,
+        ramo_atividade: tenant.ramo_atividade || '',
+        objetivo: tenant.objetivo || '',
+        site_oficial: tenant.site || '',
+        prioridade: 'HIGH',
+        escopo: ['rag', 'chatbot', 'classificacao_intencao'],
+        createdAt: now,
+        updatedAt: now,
+      };
+    } catch (err) {
+      logger.error('[TenantService] Erro ao obter tenant para contexto:', err);
+      return { success: false, error: 'Erro ao obter dados do tenant' };
+    }
   }
 
   // Atualiza campos permitidos
@@ -892,7 +1054,7 @@ function updateTenantContext(tenantId, updates, options = {}) {
 
   context.updatedAt = now;
   tenantContexts.set(tenantId, context);
-  saveTenantContextsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Log de auditoria
   logger.info(`[TenantService] Tenant context atualizado: ${tenantId}`, {
@@ -920,13 +1082,18 @@ function suspendTenant(tenantId) {
  * @param {string} tenantId
  * @returns {{success: boolean, tenant?: Tenant, error?: string}}
  */
-function reactivateTenant(tenantId) {
-  const tenant = tenants.get(tenantId);
-  if (!tenant) {
-    return { success: false, error: 'Tenant não encontrado' };
+async function reactivateTenant(tenantId) {
+  try {
+    const tenant = await getTenant(tenantId);
+    if (!tenant) {
+      return { success: false, error: 'Tenant não encontrado' };
+    }
+    const status = tenant.plan === 'trial' ? 'trial' : 'active';
+    return await updateTenant(tenantId, { status, active: true });
+  } catch (err) {
+    logger.error('[TenantService] Erro ao reativar tenant:', err);
+    return { success: false, error: err.message || 'Erro ao reativar tenant' };
   }
-  const status = tenant.plan === 'trial' ? 'trial' : 'active';
-  return updateTenant(tenantId, { status, active: true });
 }
 
 /**
@@ -936,75 +1103,87 @@ function reactivateTenant(tenantId) {
  * @param {string} newPlan - Novo plano
  * @returns {{success: boolean, tenant?: Tenant, error?: string}}
  */
-function changePlan(tenantId, newPlan) {
-  return updateTenant(tenantId, { plan: newPlan });
+async function changePlan(tenantId, newPlan) {
+  return await updateTenant(tenantId, { plan: newPlan });
 }
 
 /**
- * Verifica se um tenant está ativo e não expirado.
+ * Verifica se um tenant está ativo e não expirado (PostgreSQL).
  *
  * @param {string} tenantId
- * @returns {{valid: boolean, error?: string}}
+ * @returns {Promise<{valid: boolean, error?: string}>}
  */
-function validateTenantStatus(tenantId) {
-  const tenant = tenants.get(tenantId);
-  if (!tenant) {
-    return { valid: false, error: 'Tenant não encontrado' };
-  }
-
-  if (tenant.status === 'terminated') {
-    return { valid: false, error: 'Tenant encerrado' };
-  }
-
-  if (tenant.status === 'suspended') {
-    return { valid: false, error: 'Tenant suspenso' };
-  }
-
-  // Verifica se trial expirou
-  if (tenant.status === 'trial' && tenant.trialExpiresAt) {
-    const expiresAt = new Date(tenant.trialExpiresAt);
-    const now = new Date();
-    if (now > expiresAt) {
-      // Auto-suspende trial expirado
-      updateTenant(tenantId, { status: 'suspended' });
-      return { valid: false, error: 'Trial expirado' };
+async function validateTenantStatus(tenantId) {
+  try {
+    const tenant = await getTenant(tenantId);
+    if (!tenant) {
+      return { valid: false, error: 'Tenant não encontrado' };
     }
-  }
 
-  return { valid: true };
+    if (tenant.status === 'terminated') {
+      return { valid: false, error: 'Tenant encerrado' };
+    }
+
+    if (tenant.status === 'suspended') {
+      return { valid: false, error: 'Tenant suspenso' };
+    }
+
+    // Verifica se trial expirou
+    if (tenant.status === 'trial' && tenant.trialExpiresAt) {
+      const expiresAt = new Date(tenant.trialExpiresAt);
+      const now = new Date();
+      if (now > expiresAt) {
+        // Auto-suspende trial expirado
+        await updateTenant(tenantId, { status: 'suspended' });
+        return { valid: false, error: 'Trial expirado' };
+      }
+    }
+
+    return { valid: true };
+  } catch (err) {
+    logger.error('[TenantService] Erro ao validar status do tenant:', err);
+    return { valid: false, error: 'Erro ao validar tenant' };
+  }
 }
 
 /**
- * Obtém métricas de uso de um tenant.
+ * Obtém métricas de uso de um tenant (PostgreSQL).
  *
  * @param {string} tenantId
- * @returns {Object} Métricas de uso
+ * @returns {Promise<Object|null>} Métricas de uso
  */
-function getTenantUsage(tenantId) {
-  const tenant = tenants.get(tenantId);
-  if (!tenant) {
+async function getTenantUsage(tenantId) {
+  try {
+    const tenant = await getTenant(tenantId);
+    if (!tenant) {
+      return null;
+    }
+
+    // TODO: Implementar contagem real de uso do PostgreSQL
+    // Por enquanto retorna estrutura básica
+    return {
+      tenantId,
+      usuarios: 0, // TODO: contar usuários ativos do PostgreSQL
+      agentes_ia: 0, // TODO: contar agentes IA
+      execucoes_rpa: 0, // TODO: contar execuções RPA no período
+      tokens_ia: 0, // TODO: contar tokens IA no período
+      documentos_rag: 0, // TODO: contar documentos RAG
+      storage_mb: 0, // TODO: calcular storage usado
+      periodo: 'mensal',
+    };
+  } catch (err) {
+    logger.error('[TenantService] Erro ao obter métricas de uso:', err);
     return null;
   }
-
-  // TODO: Implementar contagem real de uso
-  // Por enquanto retorna estrutura básica
-  return {
-    tenantId,
-    usuarios: 0, // TODO: contar usuários ativos
-    agentes_ia: 0, // TODO: contar agentes IA
-    execucoes_rpa: 0, // TODO: contar execuções RPA no período
-    tokens_ia: 0, // TODO: contar tokens IA no período
-    documentos_rag: 0, // TODO: contar documentos RAG
-    storage_mb: 0, // TODO: calcular storage usado
-    periodo: 'mensal',
-  };
 }
 
 module.exports = {
+  ensureDemoTenantExists,
   createTenant,
   updateTenant,
   listTenants,
   getTenant,
+  findTenantByIdentifier, // Helper padronizado para buscar tenant por tenant_key ou id
   deleteTenant,
   suspendTenant,
   reactivateTenant,
@@ -1015,12 +1194,7 @@ module.exports = {
   updateTenantContext,
   // Funções internas para testes
   _internal: {
-    saveTenantsToFile,
-    loadTenantsFromFile,
-    saveTenantContextsToFile,
-    loadTenantContextsFromFile,
     getDefaultLimits,
-    clearTenants: () => tenants.clear(),
     clearTenantContexts: () => tenantContexts.clear(),
   },
 };

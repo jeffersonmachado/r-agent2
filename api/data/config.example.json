@@ -1,0 +1,32 @@
+{
+  "api": {
+    "port": 3000,
+    "sessionTimeout": 3600000,
+    "maxRetries": 3
+  },
+  "chatbot": {
+    "defaultFlowId": "flow-welcome",
+    "enableFallback": true,
+    "fallbackMaxAttempts": 3,
+    "enableEmotionCheck": true
+  },
+  "queues": {
+    "defaultQueue": "suporte",
+    "autoAssign": true,
+    "maxTicketsPerAgent": 10
+  },
+  "features": {
+    "enableRAG": false,
+    "enableWebhooks": true,
+    "enableBulkMessaging": false
+  },
+  "ai": {
+    "openai": {
+      "model": "gpt-5.2"
+    },
+    "anthropic": {
+      "model": "claude-3-sonnet-20240229"
+    }
+  },
+  "NOTE": "apiKey não deve estar neste arquivo. Use OPENAI_API_KEY via env ou tenant_ai_credentials no banco."
+}

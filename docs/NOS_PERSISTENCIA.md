@@ -1,6 +1,8 @@
 # Nós de Persistência
 
-Este documento descreve como usar os nós que acessam dados de persistência (flows.json, queues.json, config.json) durante a execução de fluxos.
+Este documento descreve como usar os nós que acessam dados de persistência (banco de dados PostgreSQL e config.json) durante a execução de fluxos.
+
+**NOTA:** Dados de fluxos, filas e tickets agora estão no banco de dados PostgreSQL. Apenas `config.json` ainda é usado para configurações do sistema.
 
 ## Visão Geral
 
@@ -177,7 +179,7 @@ registry.register('list_flows', listFlowsNodeHandler);
 
 ## Notas Importantes
 
-1. **Performance**: Acessos a persistência são síncronos (leitura de arquivos), então use com moderação em fluxos de alta frequência
+1. **Performance**: Acessos a persistência são assíncronos (banco de dados PostgreSQL), otimizados para alta frequência
 2. **Erros**: Todos os nós de persistência tratam erros graciosamente e salvam informações de erro nas variáveis
 3. **Eventos**: Todos os acessos geram eventos do tipo `PERSISTENCE_ACCESS` para auditoria
 4. **Segurança**: Os serviços de persistência apenas leem dados, nunca escrevem

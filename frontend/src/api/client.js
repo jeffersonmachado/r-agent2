@@ -8,7 +8,8 @@
  */
 
 import logger from '../utils/logger';
-import { getAuthHeaders } from './auth';
+import { getAuthHeaders, removeToken } from './auth';
+import { redirectToLogin } from '../utils/index';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -19,7 +20,7 @@ const DEFAULT_TIMEOUT_MS = 15000;
  * Prioridade de configuração:
  * 1. VITE_API_BASE_URL (variável de ambiente)
  * 2. Configuração via API /config (se disponível)
- * 3. Fallback: http://localhost:3000 (porta padrão da API)
+ * 3. Fallback: http://localhost:3001 (porta padrão da API)
  * 
  * NOTA: O frontend não pode acessar diretamente api/data/config.json.
  * A configuração deve ser fornecida via variável de ambiente ou endpoint /config.
@@ -65,7 +66,14 @@ function buildUrl(path) {
     
     if (isViteDev) {
       // Desenvolvimento: usa URL relativa para que o proxy do Vite funcione
-      // O proxy do Vite redireciona para http://localhost:3000 automaticamente
+      // O proxy do Vite redireciona para a porta configurada em config.json (padrão: 3001) automaticamente
+      // IMPORTANTE: Não adiciona basePath aqui em desenvolvimento, pois o proxy precisa da URL relativa
+      console.log('[buildUrl] Desenvolvimento Vite detectado, usando URL relativa:', {
+        path,
+        normalizedPath,
+        port: window.location.port,
+        hostname: window.location.hostname,
+      });
       return normalizedPath;
     }
   }
@@ -115,16 +123,45 @@ async function fetchWithTimeout(input, init) {
  * @returns {Promise<T>}
  */
 export async function fetchJson(path, init) {
+  // Log IMEDIATO no início para garantir que a função está sendo chamada
+  console.log('[HTTP Client] 🚀 fetchJson chamado', {
+    path,
+    timestamp: new Date().toISOString(),
+    stack: new Error().stack?.split('\n').slice(0, 5).join('\n'),
+  });
+  
   const url = buildUrl(path);
   const method = init?.method || 'GET';
+  
+  console.log('[HTTP Client] 📍 URL construída:', {
+    path,
+    url,
+    method,
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'não definido',
+    windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+    windowPort: typeof window !== 'undefined' ? window.location.port : 'N/A',
+  });
   
   // Log estruturado com URL final resolvida
   logger.debug('HTTP Request', { 
     method, 
     url, 
     path,
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)'
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)',
+    windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+    windowPort: typeof window !== 'undefined' ? window.location.port : 'N/A',
   });
+  
+  // Log adicional para debug de proxy
+  if (typeof window !== 'undefined' && window.location.port === '5173') {
+    console.log('[HTTP Client] 🔄 Requisição em desenvolvimento:', {
+      path,
+      url,
+      method,
+      expectedProxy: 'http://localhost:3000' + path,
+      currentLocation: window.location.href,
+    });
+  }
 
   try {
     // Inclui headers de autenticação se disponível
@@ -134,10 +171,12 @@ export async function fetchJson(path, init) {
     // quando há um body (para requisições POST, PUT, PATCH)
     const hasBody = init && (init.body !== undefined && init.body !== null);
     
-    // Merge dos headers: primeiro os headers customizados, depois auth, depois Content-Type (para garantir que seja sempre definido)
+    // Merge dos headers: primeiro os headers customizados, depois auth, depois Content-Type e Accept (para garantir que sejam sempre definidos)
     const mergedHeaders = {
       ...(init && init.headers),
       ...authHeaders,
+      // Sempre envia Accept: application/json para garantir que a API retorne JSON
+      'Accept': 'application/json',
       // Garante que Content-Type seja application/json se houver body
       ...(hasBody && { 'Content-Type': 'application/json' }),
     };
@@ -145,16 +184,36 @@ export async function fetchJson(path, init) {
     // Remove headers do init para evitar sobrescrita, mas mantém timeoutMs
     const { headers: _, timeoutMs, ...restInit } = init || {};
     
+    console.log('[HTTP Client] 📤 Fazendo requisição fetch:', {
+      url,
+      method,
+      headers: Object.keys(mergedHeaders),
+      hasAuth: !!mergedHeaders.Authorization,
+    });
+    
     const response = await fetchWithTimeout(url, {
       ...restInit,
       headers: mergedHeaders,
       timeoutMs, // Passa timeoutMs explicitamente
     });
 
+    console.log('[HTTP Client] 📥 Resposta recebida:', {
+      url: response.url,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries()),
+    });
+
     const contentType = response.headers.get('Content-Type') || '';
     const isJson = contentType.includes('application/json');
 
     if (!response.ok) {
+      console.log('[HTTP Client] ❌ Resposta não OK:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+      });
       let errorBody = null;
       if (isJson) {
         try {
@@ -192,6 +251,85 @@ export async function fetchJson(path, init) {
         });
       }
 
+      // Tratamento especial para erro 401 (Unauthorized)
+      // Redireciona para login, exceto se já estiver em rotas de autenticação
+      console.log('[HTTP Client] 🔍 Verificando status da resposta:', {
+        status: response.status,
+        is401: response.status === 401,
+      });
+      
+      if (response.status === 401) {
+        console.log('[HTTP Client] 🚨 ERRO 401 DETECTADO! Iniciando tratamento...');
+        
+        const isAuthRoute = path.includes('/auth/') || path.includes('/login');
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isOnLoginPage = currentPath.includes('/login');
+        
+        // Log detalhado do erro 401
+        const logData = {
+          method: init?.method || 'GET',
+          url,
+          path,
+          status: response.status,
+          statusText: response.statusText,
+          isAuthRoute,
+          currentPath,
+          isOnLoginPage,
+          errorBody,
+          responseUrl: response.url,
+          headers: Object.fromEntries(response.headers.entries()),
+        };
+        
+        console.error('[HTTP Client] ⚠️⚠️⚠️ ERRO 401 (Unauthorized) DETECTADO ⚠️⚠️⚠️', logData);
+        console.error('[HTTP Client] Detalhes completos:', JSON.stringify(logData, null, 2));
+        
+        // Sempre loga erro 401 (independente do nível de log)
+        logger.error('Erro 401 (Unauthorized) detectado', logData);
+        
+        if (!isAuthRoute && typeof window !== 'undefined' && !isOnLoginPage) {
+          // Remove o token inválido
+          console.warn('[HTTP Client] 🗑️ Removendo token inválido...');
+          removeToken();
+          
+          logger.warn('Token removido e redirecionando para login', {
+            path,
+            currentPath,
+            redirectTo: '/login',
+          });
+          console.warn('[HTTP Client] 🔄 Redirecionando para /login devido a erro 401');
+          console.warn('[HTTP Client] Path atual:', currentPath);
+          console.warn('[HTTP Client] Vai redirecionar para:', '/login');
+          
+          // Redireciona para login IMEDIATAMENTE
+          try {
+            redirectToLogin();
+            console.log('[HTTP Client] ✅ redirectToLogin() chamado com sucesso');
+            
+            // IMPORTANTE: Não lança o erro para evitar que o componente tente tratá-lo
+            // Retorna uma Promise que nunca resolve, mas o redirecionamento já foi feito
+            // Isso evita que o erro seja exibido na UI
+            return new Promise(() => {
+              // Promise que nunca resolve - o redirecionamento já foi feito
+            });
+          } catch (err) {
+            console.error('[HTTP Client] ❌ Erro ao chamar redirectToLogin():', err);
+            // Fallback: tenta redirecionar manualmente
+            const basePath = typeof window !== 'undefined' && window.location.pathname.match(/^\/([^/]+)/) 
+              ? window.location.pathname.match(/^\/([^/]+)/)[0] 
+              : '';
+            window.location.href = `${window.location.origin}${basePath}/login`;
+            
+            // Retorna Promise que nunca resolve
+            return new Promise(() => {});
+          }
+        } else {
+          // Log quando não redireciona (já está em rota de auth ou login)
+          const reason = isAuthRoute ? 'rota de autenticação' : isOnLoginPage ? 'já está na página de login' : 'outro motivo';
+          logger.debug(`Erro 401 - não redirecionando (${reason})`, logData);
+          console.debug(`[HTTP Client] Erro 401 - não redirecionando (${reason})`, logData);
+        }
+      }
+
       const error = new Error(
         `Erro HTTP ${response.status} ao chamar ${url}${
           errorBody ? ` - ${JSON.stringify(errorBody)}` : ''
@@ -203,13 +341,43 @@ export async function fetchJson(path, init) {
       error.body = errorBody;
       // @ts-ignore
       error.url = url; // Inclui URL final no erro para rastreabilidade
+      // @ts-ignore
+      error.isSuperAdmin = response.headers.get('X-RateLimit-SuperAdmin') === 'true'; // Indica se é super-admin
       throw error;
     }
 
     let result;
     if (!isJson) {
       // @ts-ignore
-      result = /** @type {any} */ (await response.text());
+      const textResult = /** @type {any} */ (await response.text());
+      
+      // Se recebeu HTML ao invés de JSON, provavelmente é um erro de roteamento
+      // ou a API não está configurada corretamente
+      if (typeof textResult === 'string' && textResult.trim().startsWith('<!')) {
+        logger.error('API retornou HTML ao invés de JSON', { 
+          method: init?.method || 'GET',
+          url, 
+          path,
+          status: response.status,
+          contentType,
+          sample: textResult.substring(0, 200)
+        });
+        
+        const error = new Error(
+          `API retornou HTML ao invés de JSON ao chamar ${url}. Verifique se a rota está configurada corretamente.`
+        );
+        // @ts-ignore
+        error.status = response.status;
+        // @ts-ignore
+        error.body = textResult;
+        // @ts-ignore
+        error.url = url;
+        // @ts-ignore
+        error.isHtmlResponse = true;
+        throw error;
+      }
+      
+      result = textResult;
     } else {
       result = /** @type {T} */ (await response.json());
     }
@@ -223,6 +391,38 @@ export async function fetchJson(path, init) {
     });
     return result;
   } catch (err) {
+    console.error('[HTTP Client] 💥 Erro capturado no catch:', {
+      name: err?.name,
+      message: err?.message,
+      status: err?.status,
+      path,
+      url,
+      stack: err?.stack?.split('\n').slice(0, 10).join('\n'),
+    });
+    
+    // Verifica se é erro 401 no catch também
+    if (err?.status === 401) {
+      console.error('[HTTP Client] 🚨 ERRO 401 NO CATCH!', {
+        path,
+        url,
+        errMessage: err.message,
+        errStatus: err.status,
+      });
+      
+      const isAuthRoute = path.includes('/auth/') || path.includes('/login');
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isOnLoginPage = currentPath.includes('/login');
+      
+      if (!isAuthRoute && typeof window !== 'undefined' && !isOnLoginPage) {
+        console.warn('[HTTP Client] 🗑️ Removendo token e redirecionando (do catch)...');
+        removeToken();
+        redirectToLogin();
+        
+        // Retorna Promise que nunca resolve para evitar que o erro seja propagado
+        return new Promise(() => {});
+      }
+    }
+    
     if (err instanceof Error && err.name === 'AbortError') {
       logger.error('Request timeout', { 
         method: init?.method || 'GET',

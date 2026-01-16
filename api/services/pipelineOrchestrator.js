@@ -23,6 +23,9 @@ const { validateGenerationContract } = require('../utils/contractValidator');
 const { orchestrateGeneration } = require('./generationOrchestrator');
 const { validateFlow } = require('../../engine/validator');
 const { saveFlowToFile, removeFlowFromFile } = require('./generationOrchestrator');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
+const path = require('path');
 
 /**
  * Avança o pipeline para a próxima etapa válida.
@@ -32,6 +35,26 @@ const { saveFlowToFile, removeFlowFromFile } = require('./generationOrchestrator
  * @returns {Promise<{shouldContinue: boolean, error?: string}>}
  */
 async function advancePipeline(execution, onProgress = null) {
+  // Inicializa replay se não existir
+  let replay = execution._replay;
+  const shouldRecordReplay = process.env.ENABLE_PIPELINE_REPLAY !== 'false';
+  
+  if (shouldRecordReplay && !replay) {
+    replay = new ReplaySystem({
+      storagePath: path.join(process.cwd(), 'replays', 'pipeline'),
+      context: 'pipeline',
+      enableScreenshots: false,
+    });
+    
+    const replayId = `pipeline-${execution.executionId}-${Date.now()}`;
+    replay.start(replayId, {
+      executionId: execution.executionId,
+      status: execution.status,
+    });
+    
+    execution._replay = replay;
+  }
+
   // DETERMINISMO: Verifica se execução já foi persistida e tem decisão final
   const { reuseDecision, hasFinalDecision } = require('./executionPersistence');
   if (hasFinalDecision(execution.executionId)) {
@@ -41,6 +64,21 @@ async function advancePipeline(execution, onProgress = null) {
         executionId: execution.executionId,
         status: execution.status,
       });
+      
+      if (replay) {
+        replay.recordEvent('decision_reused', {
+          executionId: execution.executionId,
+        });
+      }
+
+      if (recording) {
+        recording.recordAction({
+          type: 'decision-reused',
+          step: 'decision-reused',
+          value: { executionId: execution.executionId },
+        });
+      }
+      
       if (onProgress) {
         onProgress(toProgressFormat(execution));
       }
@@ -85,6 +123,15 @@ async function advancePipeline(execution, onProgress = null) {
       });
     });
     
+    // Finaliza e salva replay
+    if (execution._replay) {
+      execution._replay.recordEvent('pipeline_completed', {
+        status: execution.status,
+      });
+      execution._replay.stop();
+      execution._replay.save(`pipeline-${execution.executionId}`);
+    }
+    
     if (onProgress) {
       onProgress(toProgressFormat(execution));
     }
@@ -109,6 +156,17 @@ async function advancePipeline(execution, onProgress = null) {
       error: error.message,
     });
     updateStatus(execution, 'failed');
+
+    // Registra erro na gravação
+    if (execution._recording) {
+      execution._recording.recordCustom('error', {
+        step: 'pipeline-error',
+        value: { error: error.message, stage: nextStage },
+      });
+      execution._recording.stop();
+      execution._recording.save(`pipeline-${execution.executionId}-error`);
+    }
+
     return { shouldContinue: false, error: error.message };
   }
 }
@@ -121,16 +179,41 @@ async function advancePipeline(execution, onProgress = null) {
  * @param {Function} onProgress - Callback para atualizar progresso
  */
 async function executeStage(execution, stage, onProgress) {
+  const replay = execution._replay;
+  const recording = execution._recording;
+  
   // Verifica se já está concluída (idempotência)
   if (isStageCompleted(execution, stage)) {
     logger.debug('[PipelineOrchestrator] Etapa já concluída, pulando', {
       executionId: execution.executionId,
       stage,
     });
+    if (replay) {
+      replay.recordEvent('stage_skipped', { stage, reason: 'already_completed' });
+    }
+    if (recording) {
+      recording.recordAction({
+        type: 'stage-skipped',
+        step: stage,
+        value: { reason: 'already_completed' },
+      });
+    }
     return;
   }
 
   logger.info(`[PipelineOrchestrator][${execution.executionId}] Executando etapa: ${stage}`);
+  
+  if (replay) {
+    replay.recordEvent('stage_started', { stage });
+  }
+
+  if (recording) {
+    recording.recordAction({
+      type: 'stage',
+      step: stage,
+      value: { status: 'started' },
+    });
+  }
 
   switch (stage) {
     case 'filesInferred':
@@ -178,6 +261,15 @@ async function executeStage(execution, stage, onProgress) {
         stage,
       });
       return;
+  }
+
+  // Registra conclusão da etapa no replay
+  if (replay) {
+    replay.recordAction(
+      { type: 'stage_execution', step: stage },
+      { success: true }
+    );
+    replay.recordEvent('stage_completed', { stage });
   }
 
   // Notifica progresso

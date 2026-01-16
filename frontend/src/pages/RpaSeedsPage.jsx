@@ -306,7 +306,7 @@ export function RpaSeedsPage() {
   }
 
   return (
-    <div className="support-page" style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="support-page">
       <div style={{ marginBottom: '30px' }}>
         <h1 className="text-3xl font-bold text-text-primary mb-2">🌱 Seeds RPA</h1>
         <p className="text-text-secondary">

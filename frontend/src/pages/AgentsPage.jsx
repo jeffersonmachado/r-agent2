@@ -12,6 +12,7 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
 import { isSuperAdmin } from '../utils/menuPermissions';
+import { formatDateTime } from '../utils/dateFormatter';
 
 export function AgentsPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -485,6 +486,9 @@ export function AgentsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
                   Status
                 </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                  Criado em
+                </th>
                 {canManageAgents && (
                   <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">
                     Ações
@@ -507,6 +511,9 @@ export function AgentsPage() {
                     }`}>
                       {agent.active ? 'Ativo' : 'Inativo'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-text-secondary">
+                    {formatDateTime(agent.createdAt)}
                   </td>
                   {canManageAgents && (
                     <td className="px-4 py-3 text-right">

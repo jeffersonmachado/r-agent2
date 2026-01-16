@@ -16,6 +16,8 @@ const flowToRpaConverter = require('../../engine/flowToRpaConverter');
 const rpaService = require('./rpaService');
 const fs = require('fs');
 const path = require('path');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
 
 /**
  * @typedef {Object} PipelineResult
@@ -53,11 +55,46 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     saveRecording = true,
   } = options;
 
+  // Inicializa replay
+  const replay = new ReplaySystem({
+    storagePath: path.join(process.cwd(), 'replays', 'rpa-pipeline'),
+    context: 'rpa-pipeline',
+    enableScreenshots: false,
+  });
+
+  // Inicializa gravação
+  const recordingSystem = new RecordingSystem({
+    storagePath: path.join(process.cwd(), 'recordings', 'rpa-pipeline'),
+    context: 'rpa-pipeline',
+    enableTimestamps: false,
+  });
+
+  const replayId = `rpa-pipeline-${flow.id}-${Date.now()}`;
+  const recordingId = `rpa-pipeline-${flow.id}-${Date.now()}`;
+  
+  replay.start(replayId, {
+    flowId: flow.id,
+    flowName: flow.name,
+    autoExecuteSeeds,
+    saveRecording,
+  });
+
+  recordingSystem.start(recordingId, {
+    name: `RPA Pipeline - ${flow.name}`,
+    description: 'Pipeline completo de geração de gravação RPA',
+    flowId: flow.id,
+    flowName: flow.name,
+    autoExecuteSeeds,
+    saveRecording,
+    source: 'automatic',
+  });
+
   logger.info('[RpaFlowPipeline] Iniciando pipeline RPA para fluxo', {
     flowId: flow.id,
     flowName: flow.name,
     autoExecuteSeeds,
     saveRecording,
+    replayId,
   });
 
   const result = {
@@ -76,7 +113,24 @@ async function executeRpaFlowPipeline(flow, options = {}) {
 
     // PASSO 1: Análise de dependências
     logger.info('[RpaFlowPipeline] Passo 1: Analisando dependências...');
+    replay.recordEvent('dependency_analysis_started');
+    
+    const depStartTime = new Date().toISOString();
     const dependencyResolution = await rpaDependencyResolver.resolveDependencies(flow, tenantId);
+    const depEndTime = new Date().toISOString();
+    
+    replay.recordAction(
+      { type: 'dependency_analysis', step: 'analyze-dependencies' },
+      {
+        success: !!dependencyResolution,
+        startTime: depStartTime,
+        endTime: depEndTime,
+        actual: {
+          seedsCount: dependencyResolution?.seeds?.length || 0,
+        },
+      }
+    );
+    
     result.dependencyResolution = dependencyResolution;
 
     if (!dependencyResolution.allSatisfied) {
@@ -94,7 +148,41 @@ async function executeRpaFlowPipeline(flow, options = {}) {
       } else {
         // PASSO 2: Execução de seeds RPA faltantes
         logger.info('[RpaFlowPipeline] Passo 2: Executando seeds RPA faltantes...');
+        replay.recordEvent('seeds_execution_started', {
+          seedsCount: dependencyResolution.requiredSeeds.length,
+        });
+        recording.recordAction({
+          type: 'seed-execution',
+          step: 'execute-seeds',
+          value: { seedsCount: dependencyResolution.requiredSeeds.length },
+        });
+        
+        const seedsStartTime = new Date().toISOString();
         const seedsResult = await executeRequiredSeeds(dependencyResolution.requiredSeeds, tenantId);
+        const seedsEndTime = new Date().toISOString();
+        
+        replay.recordAction(
+          { type: 'seeds_execution', step: 'execute-seeds' },
+          {
+            success: seedsResult.errors.length === 0,
+            startTime: seedsStartTime,
+            endTime: seedsEndTime,
+            actual: {
+              executedCount: seedsResult.executedSeeds.length,
+              errorsCount: seedsResult.errors.length,
+            },
+          }
+        );
+
+        recordingSystem.recordAction({
+          type: 'seed-execution',
+          step: 'seeds-executed',
+          value: {
+            executedCount: seedsResult.executedSeeds.length,
+            errorsCount: seedsResult.errors.length,
+          },
+        });
+        
         result.executedSeeds = seedsResult.executedSeeds;
         result.errors.push(...seedsResult.errors);
         result.warnings.push(...seedsResult.warnings);
@@ -128,12 +216,25 @@ async function executeRpaFlowPipeline(flow, options = {}) {
 
     // PASSO 4: Conversão Fluxo → Gravação RPA
     logger.info('[RpaFlowPipeline] Passo 4: Convertendo fluxo para gravação RPA...');
-    const recording = flowToRpaConverter.convertFlowToRpaRecording(flow, {
+    recording.recordAction({
+      type: 'flow-conversion',
+      step: 'convert-flow',
+      value: { flowId: flow.id },
+    });
+    const rpaRecording = flowToRpaConverter.convertFlowToRpaRecording(flow, {
       dependencyResolution,
       executedSeeds: result.executedSeeds,
       snapshot: dependencyResolution.snapshot,
     });
-    result.recording = recording;
+    result.recording = rpaRecording;
+    recordingSystem.recordAction({
+      type: 'flow-conversion',
+      step: 'flow-converted',
+      value: {
+        recordingId: rpaRecording.id,
+        stepsCount: rpaRecording.steps.length,
+      },
+    });
 
     // PASSO 5: Preview dos passos (já está no recording)
     logger.info('[RpaFlowPipeline] Passo 5: Preview dos passos gerado', {
@@ -143,25 +244,91 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     // PASSO 6: Salvamento da gravação
     if (saveRecording) {
       logger.info('[RpaFlowPipeline] Passo 6: Salvando gravação RPA...');
-      await saveRpaRecording(recording);
+      replay.recordEvent('recording_save_started');
+      recordingSystem.recordAction({
+        type: 'recording-save',
+        step: 'save-recording',
+        value: { recordingId: rpaRecording.id },
+      });
+      
+      const saveStartTime = new Date().toISOString();
+      await saveRpaRecording(rpaRecording);
+      const saveEndTime = new Date().toISOString();
+      
+      replay.recordAction(
+        { type: 'recording_save', step: 'save-recording' },
+        {
+          success: true,
+          startTime: saveStartTime,
+          endTime: saveEndTime,
+        }
+      );
+
+      recordingSystem.recordAction({
+        type: 'recording-save',
+        step: 'recording-saved',
+        value: { status: 'success' },
+      });
+      
       logger.info('[RpaFlowPipeline] Gravação salva com sucesso', {
-        recordingId: recording.id,
+        recordingId: rpaRecording.id,
       });
     }
 
     result.success = true;
     result.snapshot = dependencyResolution.snapshot;
 
+    // Finaliza e salva replay
+    replay.recordEvent('pipeline_completed', {
+      recordingId: rpaRecording.id,
+      stepsCount: rpaRecording.steps.length,
+    });
+    replay.stop();
+    const replayPath = replay.save(replayId);
+    result.replayPath = replayPath;
+
+    // Finaliza e salva gravação
+    recordingSystem.recordAction({
+      type: 'pipeline-complete',
+      step: 'complete',
+      value: { status: 'success', recordingId: rpaRecording.id },
+    });
+    recordingSystem.stop();
+    const recordingPath = recordingSystem.save(recordingId);
+    result.recordingPath = recordingPath;
+
     logger.info('[RpaFlowPipeline] Pipeline concluído com sucesso', {
       flowId: flow.id,
-      recordingId: recording.id,
-      stepsCount: recording.steps.length,
+      recordingId: rpaRecording.id,
+      stepsCount: rpaRecording.steps.length,
+      replayPath,
+      recordingPath,
     });
 
   } catch (error) {
+    // Registra erro no replay
+    replay.recordError(error, 'rpa-flow-pipeline');
+    replay.recordEvent('pipeline_failed', {
+      error: error.message,
+    });
+    replay.stop();
+    const replayPath = replay.save(`${replayId}-error`);
+    result.replayPath = replayPath;
+
+    // Registra erro na gravação
+    recordingSystem.recordCustom('error', {
+      step: 'pipeline-error',
+      value: { error: error.message },
+    });
+    recordingSystem.stop();
+    const recordingPath = recordingSystem.save(`${recordingId}-error`);
+    result.recordingPath = recordingPath;
+    
     logger.error('[RpaFlowPipeline] Erro no pipeline', {
       error: error.message,
       stack: error.stack,
+      replayPath,
+      recordingPath,
     });
     result.errors.push(error.message);
   }

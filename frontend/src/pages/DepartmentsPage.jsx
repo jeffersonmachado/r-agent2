@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
+import { formatDateTime } from '../utils/dateFormatter';
 
 export function DepartmentsPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -238,6 +239,11 @@ export function DepartmentsPage() {
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+                {dept.createdAt && (
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Criado em: {formatDateTime(dept.createdAt)}
                   </div>
                 )}
               </div>

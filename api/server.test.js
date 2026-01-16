@@ -101,6 +101,90 @@ describe('API server (api/server.js)', () => {
     expect(res.body).toEqual({ status: 'ok' });
   });
 
+  describe('Health endpoints', () => {
+    test('GET /health/live deve retornar 200 com status ok, timestamp e uptimeSec', async () => {
+      const res = await request(port, 'GET', '/health/live');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('status', 'ok');
+      expect(res.body).toHaveProperty('timestamp');
+      expect(res.body).toHaveProperty('uptimeSec');
+      expect(typeof res.body.uptimeSec).toBe('number');
+      expect(res.body.uptimeSec).toBeGreaterThanOrEqual(0);
+    });
+
+    test('GET /health/db deve retornar informações detalhadas do banco', async () => {
+      const res = await request(port, 'GET', '/health/db');
+      // Pode retornar 200 (ok) ou 503 (fail) dependendo do estado do DB
+      expect([200, 503]).toContain(res.status);
+      expect(res.body).toHaveProperty('status');
+      expect(res.body).toHaveProperty('environment');
+      expect(res.body).toHaveProperty('latencyMs');
+      expect(res.body).toHaveProperty('db');
+      expect(res.body).toHaveProperty('migrations');
+      expect(res.body).toHaveProperty('sync');
+      expect(res.body).toHaveProperty('timestamp');
+      
+      // Verifica estrutura do db
+      expect(res.body.db).toHaveProperty('host');
+      expect(res.body.db).toHaveProperty('database');
+      
+      // Verifica estrutura das migrations
+      expect(res.body.migrations).toHaveProperty('applied');
+      expect(res.body.migrations).toHaveProperty('pending');
+      expect(res.body.migrations).toHaveProperty('pendingNames');
+      expect(Array.isArray(res.body.migrations.pendingNames)).toBe(true);
+      expect(res.body.migrations.pendingNames.length).toBeLessThanOrEqual(10);
+      
+      // Verifica estrutura do sync
+      expect(res.body.sync).toHaveProperty('allowSync');
+      expect(res.body.sync).toHaveProperty('syncBlockedInProduction');
+      
+      // Não deve retornar senha
+      expect(JSON.stringify(res.body)).not.toMatch(/password/i);
+    });
+
+    test('GET /health/ready deve retornar 200 quando DB ok e sem migrations pendentes', async () => {
+      const res = await request(port, 'GET', '/health/ready');
+      // Pode retornar 200 (ready) ou 503 (not_ready) dependendo do estado
+      expect([200, 503]).toContain(res.status);
+      
+      if (res.status === 200) {
+        expect(res.body).toHaveProperty('status', 'ready');
+        expect(res.body).toHaveProperty('db', 'ok');
+        expect(res.body).toHaveProperty('migrationsPending', 0);
+        expect(res.body).toHaveProperty('timestamp');
+      } else {
+        // 503 quando não está pronto
+        expect(res.body).toHaveProperty('status', 'not_ready');
+        expect(res.body).toHaveProperty('reason');
+        expect(['db_connection_failed', 'migrations_pending', 'check_failed']).toContain(res.body.reason);
+        expect(res.body).toHaveProperty('timestamp');
+        
+        // Se for migrations_pending, deve ter pending e pendingNames
+        if (res.body.reason === 'migrations_pending') {
+          expect(res.body).toHaveProperty('pending');
+          expect(res.body).toHaveProperty('pendingNames');
+          expect(Array.isArray(res.body.pendingNames)).toBe(true);
+          expect(res.body.pendingNames.length).toBeLessThanOrEqual(10);
+        }
+      }
+    });
+
+    test('GET /health/ready com migrations pendentes deve retornar 503', async () => {
+      // Este teste verifica que o endpoint retorna 503 quando há migrations pendentes
+      // O comportamento real depende do estado do banco, mas a estrutura deve estar correta
+      const res = await request(port, 'GET', '/health/ready');
+      expect([200, 503]).toContain(res.status);
+      
+      if (res.status === 503 && res.body.reason === 'migrations_pending') {
+        expect(res.body).toHaveProperty('pending');
+        expect(res.body).toHaveProperty('pendingNames');
+        expect(Array.isArray(res.body.pendingNames)).toBe(true);
+        expect(res.body.pendingNames.length).toBeLessThanOrEqual(10);
+      }
+    });
+  });
+
   test('GET /version deve retornar nome e env', async () => {
     const res = await request(port, 'GET', '/version');
     expect(res.status).toBe(200);
@@ -275,7 +359,7 @@ describe('API server (api/server.js)', () => {
     expect(res.body).toHaveProperty('error', 'session_not_found');
   });
 
-  test('POST /flows com fluxo sem tenantId usa defaultTenantId', async () => {
+  test('POST /flows com fluxo sem tenantId usa tenant-demo', async () => {
     const uniqueId = `flow-no-tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const flowWithoutTenant = {
       id: uniqueId,

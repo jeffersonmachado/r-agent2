@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection } from '../api/config';
+import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection, getTenantAiConfig, saveTenantAiConfig, saveTenantAiCredentials } from '../api/config';
 import { listFlows } from '../api/flows';
 import { useAuth } from '../context/authContext';
 import { useToast } from '../components/Toast';
@@ -15,7 +15,7 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
  * Permite visualizar e editar o arquivo config.json.
  */
 export function ConfigPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, agent } = useAuth();
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { themeName } = useTheme();
@@ -47,15 +47,60 @@ export function ConfigPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [jsonError, setJsonError] = useState(null);
   const [viewMode, setViewMode] = useState('form'); // 'form' ou 'json'
-  const [activeTab, setActiveTab] = useState('api'); // 'api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'general'
+  
+  // Lê o parâmetro 'tab' da URL para abrir a aba correta
+  const getInitialTab = () => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam && ['api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'general'].includes(tabParam)) {
+        return tabParam;
+      }
+    }
+    return 'api';
+  };
+  
+  // Lê o parâmetro 'tenant' da URL para configurar provider de tenant específico
+  // Atualiza quando a URL muda
+  const getTargetTenantId = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('tenant') || null;
+    }
+    return null;
+  }, []);
+  
+  const [targetTenantId, setTargetTenantId] = useState(() => getTargetTenantId());
+  
+  // Atualiza targetTenantId quando a URL muda
+  useEffect(() => {
+    const newTargetTenantId = getTargetTenantId();
+    if (newTargetTenantId !== targetTenantId) {
+      setTargetTenantId(newTargetTenantId);
+    }
+  }, [getTargetTenantId, targetTenantId]);
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab); // 'api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'general'
   const [flows, setFlows] = useState([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
   const [validatingTokens, setValidatingTokens] = useState({}); // { 'ai.openai.apiKey': true }
   const [tokenValidationStatus, setTokenValidationStatus] = useState({}); // { 'ai.openai.apiKey': { valid: true, error: null } }
   const [validatingRedis, setValidatingRedis] = useState(false);
   const [redisValidationStatus, setRedisValidationStatus] = useState(null); // { valid: true, error: null }
+  
+  // Estado específico para configuração de IA do tenant
+  const [tenantAiConfig, setTenantAiConfig] = useState(null); // { tenantId, primary, secondary, configured, model, temperature, max_tokens }
+  const [loadingTenantAiConfig, setLoadingTenantAiConfig] = useState(false);
+  const [savingTenantAiConfig, setSavingTenantAiConfig] = useState(false);
+  const [savingTenantAiCredentials, setSavingTenantAiCredentials] = useState(false);
+  const [apiKey, setApiKey] = useState(''); // Campo de apiKey (sempre vazio ao carregar, nunca exibido)
+  const [apiKeyProvider, setApiKeyProvider] = useState(''); // Provider para o qual a apiKey será salva
+  const [validatingApiKey, setValidatingApiKey] = useState(false);
+  const [apiKeyValidationStatus, setApiKeyValidationStatus] = useState(null); // { valid: boolean, error: string | null }
+  const [credentialsValidatedAndSaved, setCredentialsValidatedAndSaved] = useState(false); // Rastreia se credenciais foram validadas e salvas
 
   const configLoadedRef = useRef(false);
+  const configLoadedTenantRef = useRef(null); // Rastreia qual tenant foi carregado
   const showToastRef = useRef(showToast);
 
   // Atualiza ref quando showToast muda
@@ -71,11 +116,68 @@ export function ConfigPage() {
     setLoading(true);
     try {
       const data = await getConfig();
+      
+      // Valida que data é um objeto válido
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        // Se for string (HTML de erro), tenta parsear como JSON
+        if (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              setConfig(parsed);
+              setEditedConfig(JSON.parse(JSON.stringify(parsed))); // Deep copy
+              setJsonText(JSON.stringify(parsed, null, 2));
+              setHasChanges(false);
+              setJsonError(null);
+              return;
+            }
+          } catch {
+            // Não é JSON válido, provavelmente HTML
+          }
+        }
+        
+        // Se chegou aqui, os dados não são válidos
+        logger.error('Configuração inválida recebida', { data: typeof data === 'string' ? data.substring(0, 200) : data });
+        showToastRef.current('Erro: configuração inválida recebida do servidor', 'error');
+        configLoadedRef.current = false;
+        return;
+      }
+      
+      // IMPORTANTE: Preserva TODA a configuração original (incluindo todos os tenants)
+      // Isso é necessário para que ao salvar, possamos fazer merge correto
       setConfig(data);
-      setEditedConfig(JSON.parse(JSON.stringify(data))); // Deep copy
-      setJsonText(JSON.stringify(data, null, 2));
+      
+      // Para exibição na aba IA, filtra para mostrar apenas o tenant atual
+      // mas mantém todos os dados no editedConfig para preservar ao salvar
+      const filteredData = JSON.parse(JSON.stringify(data)); // Deep copy
+      
+      // Determina o tenant atual - NUNCA deve ser null quando há um tenant válido
+      // Prioridade: targetTenantId (da URL) > agent.tenantId (do agente logado)
+      // IMPORTANTE: Se agent.tenantId for 'system', ainda usa ele (não exclui mais)
+      const currentTenantId = targetTenantId || agent?.tenantId || null;
+      
+      // Se tiver um tenant específico, filtra ai.tenants para mostrar apenas o tenant atual
+      // Se currentTenantId for null, não filtra (mostra todos os tenants)
+      if (currentTenantId && filteredData.ai?.tenants) {
+        // Mantém apenas o tenant atual visível, mas preserva os outros no config original
+        const allTenants = { ...filteredData.ai.tenants };
+        filteredData.ai.tenants = {};
+        if (allTenants[currentTenantId]) {
+          filteredData.ai.tenants[currentTenantId] = allTenants[currentTenantId];
+        } else {
+          // Se o tenant não tem configuração ainda, cria um objeto vazio para permitir edição
+          filteredData.ai.tenants[currentTenantId] = {};
+        }
+        logger.info('Filtrando configuração de IA para mostrar apenas tenant atual', { tenantId: currentTenantId });
+      }
+      
+      setEditedConfig(filteredData);
+      setJsonText(JSON.stringify(filteredData, null, 2));
       setHasChanges(false);
       setJsonError(null);
+      
+      // Salva o tenant atual no ref
+      configLoadedTenantRef.current = currentTenantId;
     } catch (error) {
       logger.error('Erro ao carregar configuração', error);
       showToastRef.current('Erro ao carregar configuração', 'error');
@@ -83,14 +185,23 @@ export function ConfigPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [agent?.tenantId, targetTenantId]);
 
-  // Carrega na montagem (apenas uma vez)
+  // Carrega na montagem (aguarda agent estar disponível para filtrar corretamente)
   useEffect(() => {
-    if (!configLoadedRef.current) {
-      loadConfig();
+    if (!authLoading && isAuthenticated) {
+      // Determina o tenant atual - mesma lógica do loadConfig
+      const currentTenantId = targetTenantId || agent?.tenantId || null;
+      const previousTenantId = configLoadedTenantRef.current;
+      
+      // Se ainda não carregou, ou se o tenant mudou, recarrega
+      if (!configLoadedRef.current || currentTenantId !== previousTenantId) {
+        configLoadedRef.current = false; // Permite recarregar
+        configLoadedTenantRef.current = currentTenantId;
+        loadConfig();
+      }
     }
-  }, [loadConfig]);
+  }, [loadConfig, authLoading, isAuthenticated, agent?.tenantId, targetTenantId]);
 
   const flowsLoadedRef = useRef(false);
 
@@ -117,6 +228,84 @@ export function ConfigPage() {
       loadFlowsList();
     }
   }, [activeTab, loadFlowsList]);
+
+  // Carrega configuração de IA do tenant atual quando a aba IA está ativa
+  const loadTenantAiConfig = useCallback(async () => {
+    // Determina qual tenant usar: targetTenantId (da URL) > agent.tenantId
+    const tenantToUse = targetTenantId || agent?.tenantId;
+    if (!tenantToUse) {
+      setTenantAiConfig({
+        tenantId: null,
+        primary: null,
+        secondary: null,
+        configured: false,
+        model: null,
+        temperature: null,
+        max_tokens: null
+      });
+      setApiKey(''); // Sempre limpa apiKey
+      setApiKeyProvider('');
+      return;
+    }
+
+    setLoadingTenantAiConfig(true);
+    try {
+      // Usa targetTenantId se disponível (super-admin), senão usa current
+      const aiConfig = await getTenantAiConfig(targetTenantId || undefined);
+      // getTenantAiConfig já retorna primary e secondary
+      setTenantAiConfig({
+        tenantId: tenantToUse,
+        primary: aiConfig?.primary || null,
+        secondary: aiConfig?.secondary || null,
+        configured: aiConfig?.configured || false,
+        model: aiConfig?.model || null,
+        temperature: aiConfig?.temperature || null,
+        max_tokens: aiConfig?.max_tokens || null
+      });
+      setApiKey(''); // Sempre limpa apiKey - nunca exibimos a chave atual
+      setApiKeyProvider('');
+      setCredentialsValidatedAndSaved(false); // Reset ao recarregar
+    } catch (error) {
+      logger.error('Erro ao carregar configuração de IA do tenant', error);
+      const tenantToUse = targetTenantId || agent?.tenantId;
+      // Se for 404, trata como não configurado
+      if (error.status === 404) {
+        setTenantAiConfig({
+          tenantId: tenantToUse || null,
+          primary: null,
+          secondary: null,
+          configured: false,
+          model: null,
+          temperature: null,
+          max_tokens: null
+        });
+      } else {
+        showToastRef.current('Erro ao carregar configuração de IA do tenant', 'error');
+        const tenantToUse = targetTenantId || agent?.tenantId;
+        setTenantAiConfig({
+          tenantId: tenantToUse || null,
+          primary: null,
+          secondary: null,
+          configured: false,
+          model: null,
+          temperature: null,
+          max_tokens: null
+        });
+      }
+      setApiKey(''); // Sempre limpa apiKey
+      setApiKeyProvider('');
+      setCredentialsValidatedAndSaved(false); // Reset ao recarregar
+    } finally {
+      setLoadingTenantAiConfig(false);
+    }
+  }, [agent?.tenantId, targetTenantId]);
+
+  // Carrega configuração de IA quando a aba IA está ativa ou quando o tenant muda
+  useEffect(() => {
+    if (activeTab === 'ai') {
+      loadTenantAiConfig();
+    }
+  }, [activeTab, loadTenantAiConfig]);
 
   // Valida JSON quando o texto muda (com debounce)
   const jsonValidationTimeoutRef = useRef(null);
@@ -183,15 +372,52 @@ export function ConfigPage() {
       return;
     }
 
-    if (!editedConfig) {
-      showToast('Nenhuma configuração para salvar', 'warning');
-      return;
-    }
-
     setSaving(true);
     try {
+      // Se estiver na aba IA, salva a configuração de IA do tenant
+      if (activeTab === 'ai') {
+        if (!tenantAiConfig?.primary) {
+          showToast('Selecione um provider primário antes de salvar', 'warning');
+          setSaving(false);
+          return;
+        }
+        
+        setSavingTenantAiConfig(true);
+        try {
+          // Usa targetTenantId se disponível (super-admin), senão undefined (usa current)
+          await saveTenantAiConfig({
+            primary: tenantAiConfig.primary,
+            secondary: tenantAiConfig.secondary || undefined,
+            model: tenantAiConfig.model || undefined,
+            temperature: tenantAiConfig.temperature !== null && tenantAiConfig.temperature !== undefined ? tenantAiConfig.temperature : undefined,
+            max_tokens: tenantAiConfig.max_tokens || undefined
+          }, targetTenantId || undefined);
+          showToast('Configuração de IA salva com sucesso!', 'success');
+          // Reset estado de credenciais quando configuração muda
+          setCredentialsValidatedAndSaved(false);
+          setApiKeyValidationStatus(null);
+          await loadTenantAiConfig(); // Recarrega
+        } catch (error) {
+          logger.error('Erro ao salvar configuração de IA', error);
+          const errorMessage = error.body?.message || error.message || 'Erro ao salvar configuração';
+          showToast(`Erro: ${errorMessage}`, 'error');
+        } finally {
+          setSavingTenantAiConfig(false);
+          setSaving(false);
+        }
+        return;
+      }
+      
+      // Para outras abas, verifica se há configuração para salvar
+      if (!editedConfig) {
+        showToast('Nenhuma configuração para salvar', 'warning');
+        setSaving(false);
+        return;
+      }
+      
       await updateConfig(editedConfig);
       showToast('Configuração salva com sucesso!', 'success');
+      configLoadedRef.current = false; // Permite recarregar
       await loadConfig(); // Recarrega para garantir sincronização
     } catch (error) {
       logger.error('Erro ao salvar configuração', error);
@@ -400,11 +626,34 @@ export function ConfigPage() {
   const updateValue = useCallback((path, value) => {
     if (!editedConfig) return;
 
+    // Valida que editedConfig é um objeto válido
+    if (typeof editedConfig !== 'object' || Array.isArray(editedConfig)) {
+      logger.error('editedConfig não é um objeto válido', { 
+        type: typeof editedConfig, 
+        isArray: Array.isArray(editedConfig),
+        sample: typeof editedConfig === 'string' ? editedConfig.substring(0, 200) : editedConfig
+      });
+      showToast('Erro: configuração inválida. Recarregue a página.', 'error');
+      return;
+    }
+
     const keys = path.split('.');
     const newConfig = JSON.parse(JSON.stringify(editedConfig)); // Deep copy
 
     let current = newConfig;
     for (let i = 0; i < keys.length - 1; i++) {
+      // Garante que current é um objeto antes de criar propriedades
+      if (!current || typeof current !== 'object' || Array.isArray(current)) {
+        logger.error('Tentativa de criar propriedade em valor não-objeto', { 
+          path, 
+          key: keys[i], 
+          currentType: typeof current,
+          isArray: Array.isArray(current)
+        });
+        showToast('Erro: estrutura de configuração inválida. Recarregue a página.', 'error');
+        return;
+      }
+      
       if (!current[keys[i]]) {
         current[keys[i]] = {};
       }
@@ -414,6 +663,17 @@ export function ConfigPage() {
     const lastKey = keys[keys.length - 1];
     if (value === '' || value === null) {
       delete current[lastKey];
+      // Se estiver deletando uma propriedade dentro de ai.tenants[tenantId] e o objeto ficar vazio, remove o objeto também
+      if (keys.length >= 3 && keys[0] === 'ai' && keys[1] === 'tenants' && Object.keys(current).length === 0) {
+        const tenantId = keys[2];
+        if (newConfig.ai?.tenants?.[tenantId] && Object.keys(newConfig.ai.tenants[tenantId]).length === 0) {
+          delete newConfig.ai.tenants[tenantId];
+          // Se o objeto tenants ficar vazio, remove também
+          if (newConfig.ai.tenants && Object.keys(newConfig.ai.tenants).length === 0) {
+            delete newConfig.ai.tenants;
+          }
+        }
+      }
     } else {
       // Tenta converter para número se for um número válido
       if (typeof value === 'string' && /^-?\d+$/.test(value)) {
@@ -440,7 +700,7 @@ export function ConfigPage() {
     if (path === 'rateLimit.redis.url') {
       setRedisValidationStatus(null);
     }
-  }, [editedConfig, viewMode]);
+  }, [editedConfig, viewMode, showToast]);
 
   // Renderiza campo de input para um valor
   const renderField = (label, path, value, type = 'text', options = null) => {
@@ -623,8 +883,8 @@ export function ConfigPage() {
           scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
         }
       `}</style>
-      <div className="min-h-screen bg-bg-primary p-6 overflow-y-auto config-page-scroll">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen w-full bg-bg-primary p-6 overflow-y-auto config-page-scroll">
+        <div className="w-full">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -646,11 +906,11 @@ export function ConfigPage() {
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={saving || !hasChanges || jsonError} 
+              disabled={(saving || savingTenantAiConfig) || (activeTab !== 'ai' && !hasChanges) || jsonError || (activeTab === 'ai' && !tenantAiConfig?.primary)} 
               variant="primary"
               className="flex items-center gap-2"
             >
-              {saving ? (
+              {(saving || savingTenantAiConfig) ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Salvando...</span>
@@ -752,7 +1012,6 @@ export function ConfigPage() {
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {renderField('Porta', 'api.port', editedConfig.api?.port, 'number')}
-                    {renderField('Tenant Padrão', 'api.defaultTenantId', editedConfig.api?.defaultTenantId)}
                   </div>
                   <div className="mt-6 pt-6 border-t border-border-default">
                     <h4 className="text-lg font-medium text-text-primary mb-4">Limpeza de Tickets</h4>
@@ -935,111 +1194,403 @@ export function ConfigPage() {
                     <span>Inteligência Artificial</span>
                   </h3>
                   
-                  <div className="mb-6 pb-6 border-b border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Configuração Geral</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField(
-                        'Provider Padrão', 
-                        'ai.defaultProvider', 
-                        editedConfig.ai?.defaultProvider,
-                        'text',
-                        [
-                          { value: 'openai', label: 'OpenAI' },
-                          { value: 'anthropic', label: 'Anthropic (Claude)' },
-                          { value: 'fallback', label: 'Fallback (Simulado)' }
-                        ]
-                      )}
-                      {renderField(
-                        'Provider de Fallback', 
-                        'ai.defaultFallback', 
-                        editedConfig.ai?.defaultFallback,
-                        'text',
-                        [
-                          { value: 'fallback', label: 'Fallback (Simulado)' },
-                          { value: 'openai', label: 'OpenAI' },
-                          { value: 'anthropic', label: 'Anthropic (Claude)' }
-                        ]
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="mb-6 pb-6 border-b border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">OpenAI</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('API Key', 'ai.openai.apiKey', editedConfig.ai?.openai?.apiKey, 'password')}
-                      {renderField(
-                        'Modelo', 
-                        'ai.openai.model', 
-                        editedConfig.ai?.openai?.model,
-                        'text',
-                        [
-                          { value: 'gpt-5.2', label: 'GPT-5.2 (Mais recente - Recomendado)' },
-                          { value: 'gpt-5.1', label: 'GPT-5.1' },
-                          { value: 'gpt-4o-2024-11-20', label: 'GPT-4o (Nov 2024)' },
-                          { value: 'gpt-4o', label: 'GPT-4o' },
-                          { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Rápido e econômico)' },
-                          { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-                          { value: 'gpt-4-turbo-preview', label: 'GPT-4 Turbo Preview' },
-                          { value: 'gpt-4', label: 'GPT-4' },
-                          { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Recomendado para custo)' },
-                          { value: 'gpt-3.5-turbo-16k', label: 'GPT-3.5 Turbo 16k' }
-                        ]
-                      )}
-                    </div>
-                    <div className="mt-4 p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                      <p className="text-sm text-text-secondary">
-                        💡 Obtenha sua chave em:{' '}
-                        <a 
-                          href="https://platform.openai.com/api-keys" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-accent-primary hover:underline"
-                        >
-                          platform.openai.com/api-keys
-                        </a>
-                      </p>
-                    </div>
-                  </div>
+                  {(() => {
+                    const currentTenantId = agent?.tenantId;
+                    
+                    // Se não houver tenant, mostra mensagem
+                    if (!currentTenantId) {
+                      return (
+                        <div className="p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
+                          <p className="text-sm text-text-primary">
+                            <strong>⚠️ Não autenticado:</strong> É necessário estar autenticado para configurar IA.
+                          </p>
+                        </div>
+                      );
+                    }
 
-                  <div className="mb-6">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Anthropic (Claude)</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('API Key', 'ai.anthropic.apiKey', editedConfig.ai?.anthropic?.apiKey, 'password')}
-                      {renderField(
-                        'Modelo', 
-                        'ai.anthropic.model', 
-                        editedConfig.ai?.anthropic?.model,
-                        'text',
-                        [
-                          { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Mais recente)' },
-                          { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-                          { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet (Recomendado)' },
-                          { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Rápido)' }
-                        ]
-                      )}
-                    </div>
-                    <div className="mt-4 p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                      <p className="text-sm text-text-secondary">
-                        💡 Obtenha sua chave em:{' '}
-                        <a 
-                          href="https://console.anthropic.com/" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-accent-primary hover:underline"
-                        >
-                          console.anthropic.com
-                        </a>
-                      </p>
-                    </div>
-                  </div>
+                    // Carregando configuração
+                    if (loadingTenantAiConfig) {
+                      return (
+                        <div className="p-4 text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-primary mx-auto mb-2"></div>
+                          <p className="text-sm text-text-secondary">Carregando configuração de IA...</p>
+                        </div>
+                      );
+                    }
 
-                  <div className="mt-6 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
-                    <p className="text-sm text-text-primary">
-                      <strong>ℹ️ Nota:</strong> Após configurar, reinicie o servidor da API para aplicar as mudanças. 
-                      Os providers precisam ter os SDKs instalados (npm install openai ou npm install @anthropic-ai/sdk) 
-                      e o código real implementado em <code className="bg-bg-primary px-1 rounded">api/services/aiProviderService.js</code>.
-                    </p>
-                  </div>
+                    const tenantToUse = targetTenantId || agent?.tenantId;
+                    const currentConfig = tenantAiConfig || {
+                      tenantId: tenantToUse || null,
+                      primary: null,
+                      secondary: null,
+                      configured: false,
+                      model: null,
+                      temperature: null,
+                      max_tokens: null
+                    };
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-status-info/10 rounded-lg border border-status-info/30">
+                          <p className="text-sm text-text-primary">
+                            <strong>ℹ️ Tenant:</strong> {tenantToUse}
+                            {targetTenantId && targetTenantId !== agent?.tenantId && (
+                              <span className="text-xs text-text-secondary ml-2">(configurando como super-admin)</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-text-secondary mt-1">
+                            Esta configuração é específica para este tenant. Cada tenant precisa ter seu próprio provider configurado.
+                          </p>
+                        </div>
+
+                        <div className="mb-4 p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
+                          <p className="text-sm text-text-primary">
+                            <strong>⚠️ Importante:</strong> Cada tenant DEVE ter uma configuração específica de provider de IA. 
+                            Esta configuração é obrigatória para que o tenant possa usar os recursos de IA.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block mb-2 text-sm font-medium text-text-primary">
+                              Provider Primário (Obrigatório)
+                            </label>
+                              <select
+                                value={currentConfig.primary || ''}
+                                onChange={(e) => {
+                                  const newPrimary = e.target.value || null;
+                                  setTenantAiConfig({
+                                    ...currentConfig,
+                                    primary: newPrimary,
+                                    configured: !!newPrimary,
+                                    // Reset modelo quando provider muda (modelos são específicos por provider)
+                                    model: null
+                                  });
+                                  // Reset estado de credenciais quando provider muda
+                                  setCredentialsValidatedAndSaved(false);
+                                  setApiKeyValidationStatus(null);
+                                }}
+                              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                            >
+                              <option value="">Selecione um provider...</option>
+                              <option value="openai">OpenAI</option>
+                              <option value="anthropic">Anthropic (Claude)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block mb-2 text-sm font-medium text-text-primary">
+                              Provider Secundário (Opcional)
+                            </label>
+                            <select
+                              value={currentConfig.secondary || ''}
+                              onChange={(e) => {
+                                const newSecondary = e.target.value || null;
+                                setTenantAiConfig({
+                                  ...currentConfig,
+                                  secondary: newSecondary
+                                });
+                              }}
+                              disabled={!currentConfig.primary}
+                              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value="">Nenhum</option>
+                              {currentConfig.primary !== 'openai' && <option value="openai">OpenAI</option>}
+                              {currentConfig.primary !== 'anthropic' && <option value="anthropic">Anthropic (Claude)</option>}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Modelo e Parâmetros */}
+                        {currentConfig.primary && (
+                          <div className="pt-6 border-t border-border-default space-y-4">
+                            <h4 className="text-lg font-medium text-text-primary">Modelo e Parâmetros</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              <div>
+                                <label className="block mb-2 text-sm font-medium text-text-primary">
+                                  Modelo
+                                </label>
+                                <select
+                                  value={currentConfig.model || ''}
+                                  onChange={(e) => {
+                                    setTenantAiConfig({
+                                      ...currentConfig,
+                                      model: e.target.value || null
+                                    });
+                                  }}
+                                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                                >
+                                  <option value="">Padrão do provider</option>
+                                  {currentConfig.primary === 'openai' && (
+                                    <>
+                                      <option value="gpt-4">GPT-4</option>
+                                      <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                      <option value="gpt-4o">GPT-4o</option>
+                                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    </>
+                                  )}
+                                  {currentConfig.primary === 'anthropic' && (
+                                    <>
+                                      <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                      <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                                      <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                                      <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                    </>
+                                  )}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block mb-2 text-sm font-medium text-text-primary">
+                                  Temperatura (0-2)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="2"
+                                  step="0.1"
+                                  value={currentConfig.temperature ?? ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                                    setTenantAiConfig({
+                                      ...currentConfig,
+                                      temperature: value
+                                    });
+                                  }}
+                                  placeholder="Padrão: 0.7"
+                                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block mb-2 text-sm font-medium text-text-primary">
+                                  Max Tokens
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  value={currentConfig.max_tokens ?? ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value === '' ? null : parseInt(e.target.value);
+                                    setTenantAiConfig({
+                                      ...currentConfig,
+                                      max_tokens: value
+                                    });
+                                  }}
+                                  placeholder="Padrão: 2000"
+                                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Credenciais */}
+                        {currentConfig.primary && (
+                          <div className="pt-6 border-t border-border-default space-y-4">
+                            <h4 className="text-lg font-medium text-text-primary">Credenciais</h4>
+                            
+                            <div className="p-4 bg-status-info/10 rounded-lg border border-status-info/30">
+                              <p className="text-sm text-text-primary">
+                                <strong>ℹ️ Segurança:</strong> A chave atual nunca é exibida por segurança.
+                              </p>
+                              <p className="text-xs text-text-secondary mt-1">
+                                Para atualizar a chave, informe uma nova chave no campo abaixo e clique em "Salvar Credenciais".
+                              </p>
+                            </div>
+
+                            <div>
+                              <label className="block mb-2 text-sm font-medium text-text-primary">
+                                Provider para API Key
+                              </label>
+                              <select
+                                value={apiKeyProvider}
+                                onChange={(e) => setApiKeyProvider(e.target.value)}
+                                className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                              >
+                                <option value="">Selecione um provider...</option>
+                                {currentConfig.primary && <option value={currentConfig.primary}>{currentConfig.primary === 'openai' ? 'OpenAI' : 'Anthropic (Claude)'}</option>}
+                                {currentConfig.secondary && <option value={currentConfig.secondary}>{currentConfig.secondary === 'openai' ? 'OpenAI' : 'Anthropic (Claude)'}</option>}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block mb-2 text-sm font-medium text-text-primary">
+                                API Key
+                              </label>
+                              <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                  <input
+                                    type="password"
+                                    value={apiKey}
+                                    onChange={(e) => {
+                                      setApiKey(e.target.value);
+                                      // Limpa status de validação quando o valor muda
+                                      setApiKeyValidationStatus(null);
+                                    }}
+                                    disabled={!apiKeyProvider}
+                                    placeholder="Informe uma nova chave para atualizar"
+                                    className={`w-full px-3 py-2 pr-10 bg-bg-secondary border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${
+                                      apiKeyValidationStatus
+                                        ? apiKeyValidationStatus.valid
+                                          ? 'border-status-success'
+                                          : 'border-status-error'
+                                        : 'border-border-default'
+                                    }`}
+                                  />
+                                  {apiKeyValidationStatus && (
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                      {apiKeyValidationStatus.valid ? (
+                                        <svg className="w-5 h-5 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      ) : (
+                                        <svg className="w-5 h-5 text-status-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!apiKey || apiKey.trim() === '') {
+                                      showToast('Informe uma API Key para testar', 'warning');
+                                      return;
+                                    }
+                                    if (!apiKeyProvider) {
+                                      showToast('Selecione um provider antes de testar', 'error');
+                                      return;
+                                    }
+
+                                    setValidatingApiKey(true);
+                                    setApiKeyValidationStatus(null);
+
+                                    try {
+                                      const result = await validateProviderToken(apiKeyProvider, apiKey.trim());
+                                      setApiKeyValidationStatus({
+                                        valid: result.valid,
+                                        error: result.error || null,
+                                      });
+
+                                      if (result.valid) {
+                                        showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : 'Anthropic'} válida!`, 'success');
+                                      } else {
+                                        showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : 'Anthropic'} inválida: ${result.error || 'Erro desconhecido'}`, 'error');
+                                      }
+                                    } catch (error) {
+                                      logger.error('Erro ao validar API Key', error);
+                                      setApiKeyValidationStatus({
+                                        valid: false,
+                                        error: error.message || 'Erro ao validar API Key',
+                                      });
+                                      showToast(`Erro ao validar API Key: ${error.message || 'Erro desconhecido'}`, 'error');
+                                    } finally {
+                                      setValidatingApiKey(false);
+                                    }
+                                  }}
+                                  disabled={!apiKey || !apiKey.trim() || !apiKeyProvider || validatingApiKey}
+                                  className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+                                >
+                                  {validatingApiKey ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                      <span>Testando...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span>Testar API Key</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              {apiKeyValidationStatus && !apiKeyValidationStatus.valid && apiKeyValidationStatus.error && (
+                                <p className="mt-1 text-xs text-status-error">{apiKeyValidationStatus.error}</p>
+                              )}
+                              {apiKeyValidationStatus && apiKeyValidationStatus.valid && (
+                                <p className="mt-1 text-xs text-status-success">✓ API Key válida e funcionando corretamente</p>
+                              )}
+                              <p className="text-xs text-text-secondary mt-1">
+                                A chave atual nunca é exibida por segurança. Informe uma nova chave para atualizar.
+                              </p>
+                            </div>
+
+                            {/* Botão Salvar Credenciais */}
+                            <div className="flex gap-3">
+                              <button
+                                onClick={async () => {
+                                  if (!apiKey || apiKey.trim() === '') {
+                                    showToast('Informe uma API Key para salvar', 'warning');
+                                    return;
+                                  }
+                                  if (!apiKeyProvider) {
+                                    showToast('Selecione um provider antes de salvar credenciais', 'error');
+                                    return;
+                                  }
+
+                                  setSavingTenantAiCredentials(true);
+                                  try {
+                                    // Usa targetTenantId se disponível (super-admin), senão undefined (usa current)
+                                    await saveTenantAiCredentials({
+                                      provider: apiKeyProvider,
+                                      apiKey: apiKey.trim()
+                                    }, targetTenantId || undefined);
+                                    // Se a API Key foi validada antes de salvar, marca como validada e salva
+                                    if (apiKeyValidationStatus && apiKeyValidationStatus.valid) {
+                                      setCredentialsValidatedAndSaved(true);
+                                      showToast('Credenciais validadas e salvas com sucesso!', 'success');
+                                    } else {
+                                      showToast('Credenciais salvas, mas não foram validadas. Teste a API Key antes de salvar para garantir que está funcionando.', 'warning');
+                                    }
+                                    setApiKey(''); // Limpa o campo após salvar
+                                    setApiKeyProvider(''); // Limpa o provider também
+                                    setApiKeyValidationStatus(null); // Limpa status de validação
+                                  } catch (error) {
+                                    logger.error('Erro ao salvar credenciais de IA', error);
+                                    const errorMessage = error.body?.message || error.message || 'Erro ao salvar credenciais';
+                                    showToast(`Erro: ${errorMessage}`, 'error');
+                                  } finally {
+                                    setSavingTenantAiCredentials(false);
+                                  }
+                                }}
+                                disabled={savingTenantAiConfig || savingTenantAiCredentials || !apiKeyProvider || !apiKey.trim() || !apiKeyValidationStatus?.valid}
+                                className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
+                              >
+                                {savingTenantAiCredentials ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>Salvando...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>🔐</span>
+                                    <span>Salvar Credenciais</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {currentConfig.configured && credentialsValidatedAndSaved && (
+                          <div className="p-3 bg-status-success/10 rounded-lg border border-status-success/30">
+                            <p className="text-sm text-status-success">
+                              ✓ Configuração de IA ativa para este tenant
+                            </p>
+                            <p className="text-xs text-status-success mt-1">
+                              Provider configurado e credenciais validadas e salvas com sucesso.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

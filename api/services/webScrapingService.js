@@ -11,6 +11,9 @@ const logger = require('../utils/logger');
 const ragDocumentsService = require('./ragDocumentsService');
 const { v4: uuidv4 } = require('uuid');
 const { enforceScrapingRateLimit } = require('../../infra/rate-limit/scraping');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
+const path = require('path');
 
 // Verifica se cheerio está disponível
 let cheerio = null;
@@ -167,6 +170,25 @@ async function scrapeUrl(url, options = {}) {
     throw new Error('URL é obrigatória');
   }
 
+  // Inicializa replay (opcional)
+  const shouldRecordReplay = process.env.ENABLE_SCRAPING_REPLAY !== 'false';
+  let replay = null;
+  let replayId = null;
+  
+  if (shouldRecordReplay) {
+    replay = new ReplaySystem({
+      storagePath: path.join(process.cwd(), 'replays', 'scraping'),
+      context: 'scraping',
+      enableScreenshots: false,
+    });
+    
+    replayId = `scraping-${Date.now()}`;
+    replay.start(replayId, {
+      url,
+      options: Object.keys(options),
+    });
+  }
+
   // Valida URL
   try {
     new URL(url);
@@ -199,6 +221,13 @@ async function scrapeUrl(url, options = {}) {
     });
 
     // Faz requisição
+    if (recording) {
+      recording.recordAction({
+        type: 'url-fetch',
+        step: 'fetch-url',
+        value: { url },
+      });
+    }
     const response = await fetchUrl(url, { timeout });
     const html = await response.text();
 
@@ -206,6 +235,13 @@ async function scrapeUrl(url, options = {}) {
     const metadata = extractMetadata(html, url);
 
     // Extrai conteúdo
+    if (recording) {
+      recording.recordAction({
+        type: 'content-extraction',
+        step: 'extract-content',
+        value: { url },
+      });
+    }
     const content = extractTextFromHtml(html, {
       contentSelector,
       removeSelectors,
@@ -239,8 +275,22 @@ async function scrapeUrl(url, options = {}) {
     let isDuplicate = false;
 
     if (autoIndex) {
+      if (replay) {
+        replay.recordEvent('indexing_started', { documentId });
+      }
+      if (recording) {
+        recording.recordAction({
+          type: 'document-indexing',
+          step: 'index-document',
+          value: { documentId },
+        });
+      }
+      
       try {
+        const indexStartTime = new Date().toISOString();
         const result = await ragDocumentsService.createDocument(document, tenantId);
+        const indexEndTime = new Date().toISOString();
+        
         if (result.success && result.document) {
           // Verifica se é duplicata
           if (result.isDuplicate) {
@@ -250,6 +300,20 @@ async function scrapeUrl(url, options = {}) {
               existingDocumentId: result.existingDocument.id,
               existingTitle: result.existingDocument.title,
             });
+            
+            if (replay) {
+              replay.recordAction(
+                { type: 'document_indexing', step: 'index-document' },
+                {
+                  success: true,
+                  startTime: indexStartTime,
+                  endTime: indexEndTime,
+                  actual: { isDuplicate: true },
+                }
+              );
+              replay.stop();
+              replay.save(replayId);
+            }
             
             // Retorna documento existente
             return {
@@ -267,18 +331,45 @@ async function scrapeUrl(url, options = {}) {
           
           indexed = result.document.indexed || false;
           chunksCreated = result.document.chunksCount || 0;
+          
+          if (replay) {
+            replay.recordAction(
+              { type: 'document_indexing', step: 'index-document' },
+              {
+                success: true,
+                startTime: indexStartTime,
+                endTime: indexEndTime,
+                actual: { chunksCreated, indexed },
+              }
+            );
+          }
+          
           logger.info('[WebScraping] Documento indexado automaticamente', {
             documentId,
             chunksCreated,
           });
         }
       } catch (indexError) {
+        if (replay) {
+          replay.recordError(indexError, 'document-indexing');
+        }
         logger.error('[WebScraping] Erro ao indexar documento', {
           error: indexError.message,
           documentId,
         });
         // Não falha o scraping se a indexação falhar
       }
+    }
+
+    // Finaliza e salva replay
+    if (replay) {
+      replay.recordEvent('scraping_completed', {
+        documentId,
+        contentLength: content.length,
+        indexed,
+      });
+      replay.stop();
+      replay.save(replayId);
     }
 
     return {
@@ -294,6 +385,24 @@ async function scrapeUrl(url, options = {}) {
       isDuplicate: isDuplicate || false,
     };
   } catch (error) {
+    // Registra erro no replay
+    if (replay) {
+      replay.recordError(error, 'url-scraping');
+      replay.recordEvent('scraping_failed', { error: error.message });
+      replay.stop();
+      replay.save(`${replayId}-error`);
+    }
+
+    // Registra erro na gravação
+    if (recording) {
+      recording.recordCustom('error', {
+        step: 'scraping-error',
+        value: { error: error.message },
+      });
+      recording.stop();
+      recording.save(`${recordingId}-error`);
+    }
+    
     logger.error('[WebScraping] Erro ao raspar URL', {
       url,
       error: error.message,

@@ -13,6 +13,8 @@ const path = require('path');
 const { runQa } = require('../../qa/qaRunner');
 const { readQaResults, getQaStats } = require('../../engine/qa/qaTelemetry');
 const logger = require('../utils/logger');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
 
 // Diretório onde resultados de QA são salvos
 const QA_RESULTS_DIR = path.join(__dirname, '../../qa');
@@ -105,8 +107,46 @@ function getQaResultById(id) {
 function runQaManual(options = {}) {
   const { changedFiles, source = 'manual' } = options;
 
+  // Inicializa replay
+  const replay = new ReplaySystem({
+    storagePath: path.join(process.cwd(), 'replays', 'qa'),
+    context: 'qa',
+    enableScreenshots: false,
+  });
+
+  // Inicializa gravação
+  const recording = new RecordingSystem({
+    storagePath: path.join(process.cwd(), 'recordings', 'qa'),
+    context: 'qa',
+    enableTimestamps: true,
+  });
+
+  const replayId = `qa-${source}-${Date.now()}`;
+  const recordingId = `qa-${source}-${Date.now()}`;
+  
+  replay.start(replayId, {
+    source,
+    changedFiles: changedFiles?.length || 0,
+  });
+
+  recording.start(recordingId, {
+    name: `Execução de QA - ${source}`,
+    description: 'Execução manual de QA',
+    source,
+    changedFilesCount: changedFiles?.length || 0,
+  });
+
   try {
+    replay.recordEvent('qa_execution_started', { source });
+    recording.recordAction({
+      type: 'qa-execution',
+      step: 'run-qa',
+      value: { source, changedFilesCount: changedFiles?.length || 0 },
+    });
+    
+    const qaStartTime = new Date().toISOString();
     const result = runQa({ changedFiles, source });
+    const qaEndTime = new Date().toISOString();
 
     // Salva resultado
     if (!fs.existsSync(QA_RESULTS_DIR)) {
@@ -114,15 +154,74 @@ function runQaManual(options = {}) {
     }
     fs.writeFileSync(QA_RESULT_FILE, JSON.stringify(result, null, 2), 'utf8');
 
+    // Registra ações de QA
+    replay.recordAction(
+      { type: 'qa_execution', step: 'run-qa' },
+      {
+        success: result.status === 'PASS',
+        startTime: qaStartTime,
+        endTime: qaEndTime,
+        actual: {
+          status: result.status,
+          checksCount: result.checks?.length || 0,
+          scopes: result.scope,
+        },
+      }
+    );
+
+    // Registra cada check
+    if (result.checks) {
+      result.checks.forEach((check, index) => {
+        replay.recordAction(
+          { type: 'qa_check', step: `check-${index + 1}` },
+          {
+            success: check.status === 'PASS',
+            actual: {
+              name: check.name,
+              status: check.status,
+              scope: check.scope,
+            },
+          }
+        );
+      });
+    }
+
+    replay.recordEvent('qa_execution_completed', {
+      status: result.status,
+    });
+    replay.stop();
+    const replayPath = replay.save(replayId);
+    result.replayPath = replayPath;
+
     logger.info('[qaService] QA manual executado', {
       status: result.status,
       scopes: result.scope,
-      checks: result.checks.length
+      checks: result.checks.length,
+      replayPath,
     });
 
     return result;
   } catch (error) {
-    logger.error('[qaService] Erro ao executar QA manual', { error: error.message });
+    replay.recordError(error, 'qa-execution');
+    replay.recordEvent('qa_execution_failed', {
+      error: error.message,
+    });
+    replay.stop();
+    const replayPath = replay.save(`${replayId}-error`);
+
+    // Registra erro na gravação
+    recording.recordCustom('error', {
+      step: 'qa-execution-error',
+      value: { error: error.message },
+    });
+    recording.stop();
+    const recordingPath = recording.save(`${recordingId}-error`);
+    
+    logger.error('[qaService] Erro ao executar QA manual', {
+      error: error.message,
+      replayPath,
+      recordingPath,
+    });
     throw error;
   }
 }

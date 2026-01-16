@@ -22,7 +22,6 @@ Arquivos principais:
   - Variáveis:
     - `NODE_ENV` – ambiente (`production`, `staging`, `development`).
     - `API_PORT` – porta interna de escuta.
-    - `DEFAULT_TENANT_ID` – tenant padrão (útil em ambientes simples).
 
 - **frontend**
   - Build: `frontend/Dockerfile`.
@@ -49,21 +48,18 @@ Edite `.env` conforme o ambiente:
   - `API_PORT=3000`
   - `FRONTEND_PORT=80` (se exposto diretamente)
   - `VITE_API_BASE_URL=https://sua-api.exemplo.com`
-  - `DEFAULT_TENANT_ID=tenant-prod`
 
 - **Staging**
   - `NODE_ENV=production`
   - `API_PORT=4000`
   - `FRONTEND_PORT=8081`
   - `VITE_API_BASE_URL=https://sua-api-staging.exemplo.com`
-  - `DEFAULT_TENANT_ID=tenant-staging`
 
 - **Desenvolvimento local**
   - `NODE_ENV=development`
   - `API_PORT=3000`
   - `FRONTEND_PORT=8080`
   - `VITE_API_BASE_URL=http://localhost:3000`
-  - `DEFAULT_TENANT_ID=tenant-demo`
 
 > Observação: se estiver usando multi-tenant e múltiplos providers de IA, variáveis adicionais podem ser definidas (ex.: `AI_PROVIDER_PRIMARY`, `AI_PROVIDER_FALLBACK`) e consumidas pela camada de backend.
 
@@ -123,7 +119,7 @@ Passos típicos de pipeline:
 
 ## Multi-tenant e segurança
 
-- Cada instância da API deve ser configurada com um `DEFAULT_TENANT_ID` ou, em cenários multi-tenant reais, extrair o `tenantId` do token/autenticação.
+- Em cenários multi-tenant reais, o `tenantId` deve ser extraído do token/autenticação ou fornecido via header `X-Tenant-Id`.
 - O isolamento por tenant é garantido na engine (tipos/estado trazem `tenantId`), mas o **deploy** deve garantir:
   - Que logs/audit estejam segregados por tenant quando necessário.
   - Que segredos (chaves de IA, credenciais de banco) sejam definidos por ambiente e, se preciso, por tenant (via cofres de segredos externos).

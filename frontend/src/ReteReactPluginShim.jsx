@@ -146,6 +146,7 @@ function DefaultNodeComponent(props) {
   const errors = validation.errors || [];
   const isActive = node?.data?.ui?.isActive;
   const isExecuted = node?.data?.ui?.isExecuted;
+  const isSelected = !!node?.selected;
 
   // ✅ Formata mensagens de erro para o tooltip
   const errorTooltip = hasErrors && errors.length > 0
@@ -167,6 +168,7 @@ function DefaultNodeComponent(props) {
     hasErrors ? 'flow-node--error' : '',
     isActive ? 'flow-node--active' : '',
     isExecuted ? 'flow-node--executed' : '', // Adiciona classe para nós executados
+    isSelected ? 'flow-node--selected' : '',
   ].filter(Boolean).join(' ');
 
   // Verificações seguras para inputs e outputs

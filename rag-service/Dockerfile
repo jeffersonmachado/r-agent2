@@ -25,16 +25,16 @@ RUN mkdir -p /app/data /app/data/vector_store && \
 
 # Define variáveis de ambiente padrão
 ENV HOST=0.0.0.0
-ENV PORT=8000
+ENV PORT=8001
 ENV PYTHONUNBUFFERED=1
 
 # Expõe porta
-EXPOSE 8000
+EXPOSE 8001
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/rag/health || exit 1
+    CMD curl -f http://localhost:8001/rag/health || exit 1
 
 # Comando para iniciar
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 

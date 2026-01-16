@@ -7,10 +7,12 @@
  * - Atribuir tickets para atendentes
  * - Fechar tickets
  * - Obter informações de tickets e sessões
- * - Persistir dados em arquivo JSON
+ * - Persistir dados em PostgreSQL
  *
  * Persistência:
- * - Tickets e filas são salvos em api/data/queues.json
+ * - Tickets e filas: PostgreSQL (tabelas tickets, queues)
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  * - Dados são carregados ao iniciar o servidor
  * - Salvamento automático após operações de escrita
  */
@@ -72,93 +74,8 @@ function ensureDataDir() {
   }
 }
 
-/**
- * Salva tickets e filas no arquivo JSON.
- */
-function saveQueuesToFile() {
-  try {
-    ensureDataDir();
-    
-    // Converte Map de tickets para array
-    const ticketsArray = Array.from(tickets.values());
-    
-    // Converte Map de filas para objeto simples
-    const queuesObj = {};
-    for (const [queueName, ticketIds] of queues.entries()) {
-      queuesObj[queueName] = Array.from(ticketIds);
-    }
-    
-    const data = {
-      tickets: ticketsArray,
-      queues: queuesObj,
-      savedAt: new Date().toISOString(),
-    };
-    
-    const jsonData = JSON.stringify(data, null, 2);
-    fs.writeFileSync(queuesFile, jsonData, 'utf8');
-    
-    logger.debug(`[QueueService] Dados salvos: ${ticketsArray.length} ticket(s), ${Object.keys(queuesObj).length} fila(s)`);
-  } catch (err) {
-    logger.error('[QueueService] Erro ao salvar dados no arquivo', err);
-  }
-}
-
-/**
- * Carrega tickets e filas do arquivo JSON.
- * Migra tickets existentes sem tenantId para o tenant padrão.
- */
-function loadQueuesFromFile() {
-  try {
-    ensureDataDir();
-    
-    if (!fs.existsSync(queuesFile)) {
-      logger.debug(`[QueueService] Arquivo de dados não encontrado: ${queuesFile}. Iniciando com dados vazios.`);
-      return;
-    }
-    
-    const data = fs.readFileSync(queuesFile, 'utf8');
-    const parsed = JSON.parse(data);
-    let migratedTickets = 0;
-    
-    // Carrega tickets
-    if (Array.isArray(parsed.tickets)) {
-      tickets.clear();
-      for (const ticket of parsed.tickets) {
-        if (ticket && ticket.id) {
-          // Migração: tickets sem tenantId não podem ser migrados automaticamente
-          if (!ticket.tenantId || typeof ticket.tenantId !== 'string' || ticket.tenantId.trim() === '') {
-            // Ticket sem tenantId requer correção manual - será ignorado
-            logger.warn(`[QueueService] Ticket ${ticket.id} sem tenantId - requer correção manual`);
-            continue; // Pula ticket sem tenantId
-          }
-          tickets.set(ticket.id, ticket);
-        }
-      }
-    }
-    
-    // Carrega filas
-    if (parsed.queues && typeof parsed.queues === 'object') {
-      queues.clear();
-      for (const [queueName, ticketIds] of Object.entries(parsed.queues)) {
-        if (Array.isArray(ticketIds)) {
-          queues.set(queueName, new Set(ticketIds));
-        }
-      }
-    }
-    
-    logger.debug(`[QueueService] Dados carregados: ${tickets.size} ticket(s), ${queues.size} fila(s)`);
-    if (migratedTickets > 0) {
-      logger.warn(`[QueueService] ${migratedTickets} ticket(s) ignorado(s) por falta de tenantId`);
-      saveQueuesToFile(); // Salva sem os tickets ignorados
-    }
-  } catch (err) {
-    logger.error('[QueueService] Erro ao carregar dados do arquivo', err);
-    // Continua com Map vazio se houver erro
-  }
-}
-
-// Carrega dados ao iniciar o módulo
-loadQueuesFromFile();
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 // Teste de getMetrics após carregar dados (apenas em desenvolvimento)
 if (process.env.NODE_ENV !== 'production') {
@@ -249,7 +166,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
   queues.get(queue).add(id);
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   return ticket;
 }
@@ -344,7 +261,7 @@ function createQueue(queueName) {
   queues.set(normalizedName, new Set());
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   logger.debug(`[QueueService] Fila criada: ${normalizedName}`);
 
@@ -416,7 +333,7 @@ function deleteQueue(queueName, force = false) {
   queues.delete(normalizedName);
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   logger.debug(`[QueueService] Fila excluída: ${normalizedName}${deletedTickets > 0 ? ` (${deletedTickets} ticket(s) fechado(s))` : ''}`);
 
@@ -516,7 +433,7 @@ function assignTicket(ticketId, assignedTo) {
   ticket.updatedAt = new Date().toISOString();
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   return ticket;
 }
@@ -541,7 +458,7 @@ function closeTicket(ticketId) {
   }
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   return ticket;
 }
@@ -580,7 +497,7 @@ function updateLastMessage(ticketId, message) {
   }
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   return ticket;
 }
@@ -613,7 +530,7 @@ function addAgentMessage(ticketId, message, agentId = null) {
   ticket.updatedAt = new Date().toISOString();
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   return ticket;
 }
@@ -632,7 +549,7 @@ function markMessagesAsRead(ticketId) {
   ticket.updatedAt = new Date().toISOString();
 
   // Salva automaticamente
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   return ticket;
 }
@@ -882,7 +799,5 @@ module.exports = {
   cleanupOldTickets,
   startAutoCleanup,
   getMetrics,
-  saveQueuesToFile,
-  loadQueuesFromFile,
 };
 

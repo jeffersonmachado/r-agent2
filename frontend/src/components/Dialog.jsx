@@ -209,7 +209,11 @@ export function Dialog({
   const hasCustomPosition = position.x !== 0 || position.y !== 0;
 
   // Se foi arrastado, usa posicionamento absoluto; senão, centraliza com flex
-  const containerClass = hasCustomPosition
+  // Se for fullscreen (size === 'full'), ocupa toda a tela
+  const isFullscreen = size === 'full';
+  const containerClass = isFullscreen
+    ? 'fixed inset-0 z-[2000] p-0'
+    : hasCustomPosition
     ? 'fixed inset-0 z-[2000] p-4'
     : 'fixed inset-0 z-[2000] flex items-center justify-center p-4';
 
@@ -228,9 +232,13 @@ export function Dialog({
       {/* Dialog */}
       <div
         ref={dialogRef}
-        className={`relative z-10 bg-gradient-to-br from-bg-elevated to-bg-tertiary border border-border-default rounded-xl shadow-2xl w-full ${sizeConfig.className} ${dialogSize.height ? '' : 'max-h-[90vh]'} flex flex-col ${hasCustomPosition ? '' : 'slide-in-from-top-4'} ${isDragging ? 'cursor-move' : ''}`}
+        className={`relative z-10 bg-gradient-to-br from-bg-elevated to-bg-tertiary border border-border-default ${isFullscreen ? 'rounded-none' : 'rounded-xl'} shadow-2xl w-full ${isFullscreen ? 'h-full' : sizeConfig.className} ${isFullscreen ? '' : (dialogSize.height ? '' : 'max-h-[90vh]')} flex flex-col ${hasCustomPosition || isFullscreen ? '' : 'slide-in-from-top-4'} ${isDragging ? 'cursor-move' : ''}`}
         onClick={(e) => e.stopPropagation()}
-        style={{ ...dialogStyle, ...sizeConfig.style }}
+        style={{ 
+          ...dialogStyle, 
+          ...sizeConfig.style,
+          ...(isFullscreen ? { width: '100vw', height: '100vh', maxWidth: '100vw', maxHeight: '100vh' } : {})
+        }}
       >
         {/* Header */}
         {title && (
@@ -262,7 +270,7 @@ export function Dialog({
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-border-default scrollbar-track-transparent">
+        <div className={`flex-1 overflow-hidden ${isFullscreen ? 'p-4' : 'p-6'} scrollbar-thin scrollbar-thumb-border-default scrollbar-track-transparent`}>
           {children}
         </div>
 

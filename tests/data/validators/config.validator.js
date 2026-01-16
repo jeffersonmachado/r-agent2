@@ -59,17 +59,6 @@ function validateConfig() {
     });
   }
   
-  // Verifica tenant de teste
-  if (config.api && config.api.defaultTenantId !== 'tenant-test') {
-    warnings.push({
-      validator: 'config.validator',
-      level: 'warning',
-      message: 'defaultTenantId não está configurado como "tenant-test"',
-      details: {
-        defaultTenantId: config.api.defaultTenantId
-      }
-    });
-  }
   
   // Verifica se há dependências de APIs externas
   // Verifica config.ai.useRealAiApi (se existir, deve ser false)

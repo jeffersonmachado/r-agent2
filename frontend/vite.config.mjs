@@ -27,11 +27,17 @@ function frontendRoutesPlugin() {
           return next();
         }
         
+        // Verifica se é uma requisição de API baseado no header Accept
+        const acceptHeader = req.headers.accept || '';
+        const isApiRequest = acceptHeader.includes('application/json') && 
+                            !acceptHeader.includes('text/html');
+        
         // Ignora rotas da API - deixa o proxy lidar com elas
         // IMPORTANTE: 
         // - /audit/logs e /audit/stats são rotas de API, mas /audit é rota de página
         // - /web-scraping/scrape e /web-scraping/scrape-batch são rotas de API, mas /web-scraping é rota de página
         // - /rpa/* são rotas de API (RPA recordings, execute, etc)
+        // - /config pode ser tanto API quanto página (depende do Accept header)
         const isApiRoute = url.startsWith('/tickets') || 
                           url.startsWith('/queues') || 
                           url.startsWith('/flows') || 
@@ -53,25 +59,33 @@ function frontendRoutesPlugin() {
                           url.startsWith('/analytics') ||
                           url.startsWith('/export') ||
                           url.startsWith('/conversations') ||
+                          url.startsWith('/tests') || // /tests/rpa/replay é API
                           (url.startsWith('/rpa/') && url !== '/rpa-test') || // /rpa/recordings é API, mas /rpa-test é página
                           (url.startsWith('/web-scraping/') && url !== '/web-scraping') || // /web-scraping/scrape é API
-                          (url.startsWith('/audit/') && url !== '/audit'); // /audit/logs, /audit/stats são API
+                          (url.startsWith('/audit/') && url !== '/audit') || // /audit/logs, /audit/stats são API
+                          (url === '/config' && isApiRequest) || // /config é API quando Accept: application/json
+                          (url.startsWith('/config/') && url !== '/config'); // /config/validate-* são API
         
         // Para rotas de API (especialmente DELETE, POST, PUT), não faz nada e deixa o proxy lidar
         // O proxy do Vite será aplicado depois deste middleware
         if (isApiRoute) {
           // Deixa o proxy lidar com rotas da API - não modifica nada, apenas passa adiante
+          console.log('[FrontendRoutesPlugin] Rota de API detectada, passando para proxy:', {
+            method: req.method,
+            url: req.url,
+            isApiRoute: true,
+          });
           return next();
         }
         
         // Se for uma rota de página do frontend e for GET
         if (req.method === 'GET') {
-          const acceptHeader = req.headers.accept || '';
           const isNavigation = acceptHeader.includes('text/html') || 
                                !acceptHeader.includes('application/json');
           
           // Se for navegação (não é API e não é arquivo estático)
           // Serve index.html para todas as rotas do frontend (SPA routing)
+          // IMPORTANTE: Não serve HTML para /config quando for requisição de API
           if (!isApiRoute && !url.includes('.') && !url.startsWith('/@')) {
             // Serve o index.html para SPA routing
             req.url = '/index.html';
@@ -197,6 +211,33 @@ const viteConfig = defineConfig({
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('[Vite Proxy] Proxying /auth request:', {
+              method: req.method,
+              url: req.url,
+              target: `http://localhost:${config.api?.port || 3000}${req.url}`,
+              headers: req.headers,
+            });
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('[Vite Proxy] Proxy response for /auth:', {
+              method: req.method,
+              url: req.url,
+              statusCode: proxyRes.statusCode,
+              statusMessage: proxyRes.statusMessage,
+              headers: proxyRes.headers,
+            });
+          });
+          proxy.on('error', (err, req, res) => {
+            console.error('[Vite Proxy] Proxy error for /auth:', {
+              error: err.message,
+              stack: err.stack,
+              method: req.method,
+              url: req.url,
+            });
+          });
+        },
       },
       '^/system': {
         target: `http://localhost:${config.api?.port || 3000}`,
@@ -334,6 +375,13 @@ const viteConfig = defineConfig({
           // Para outros métodos (POST, PUT, DELETE) ou GET com Accept: application/json, faz proxy
           return undefined;
         },
+      },
+      // Rota para subcaminhos de /config (ex: /config/validate-provider-token)
+      // Sempre faz proxy para subcaminhos, pois são rotas de API
+      '^/config/': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
       },
     },
   },

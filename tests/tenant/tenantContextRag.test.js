@@ -15,12 +15,23 @@ describe('Tenant Context RAG Integration', () => {
   let tenantEcommerceId, tenantSaudeId;
 
   beforeAll(async () => {
-    // Limpa dados de teste anteriores
-    const tenants = tenantService.listTenants();
-    for (const tenant of tenants) {
-      if (tenant.id.startsWith('test-rag-')) {
-        tenantService.deleteTenant(tenant.id);
+    // Limpa dados de teste anteriores (apenas se PostgreSQL estiver disponível)
+    try {
+      const tenants = await tenantService.listTenants();
+      if (Array.isArray(tenants)) {
+        for (const tenant of tenants) {
+          if (tenant.id && tenant.id.startsWith('test-rag-')) {
+            try {
+              await tenantService.deleteTenant(tenant.id);
+            } catch (err) {
+              // Ignora erros ao deletar (pode não existir)
+            }
+          }
+        }
       }
+    } catch (err) {
+      // Se PostgreSQL não estiver disponível, pula a limpeza
+      console.warn('⚠️  PostgreSQL não disponível para limpeza de testes:', err.message);
     }
 
     // Cria tenants de teste com ramos distintos

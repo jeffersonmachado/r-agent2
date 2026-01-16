@@ -55,45 +55,45 @@ describe('tenantValidation middleware', () => {
   });
 
   describe('requireTenant', () => {
-    test('deve retornar erro quando tenantId não é fornecido', () => {
-      const result = requireTenant(mockReq);
+    test('deve retornar erro quando tenantId não é fornecido', async () => {
+      const result = await requireTenant(mockReq);
       
       expect(result.valid).toBe(false);
       expect(result.error).toContain('tenant_id é obrigatório');
     });
 
-    test('deve retornar erro quando tenant não existe', () => {
+    test('deve retornar erro quando tenant não existe', async () => {
       mockReq.agent = { tenantId: 'tenant-inexistente' };
-      getTenant.mockReturnValue(null);
+      getTenant.mockResolvedValue(null);
       
-      const result = requireTenant(mockReq);
+      const result = await requireTenant(mockReq);
       
       expect(result.valid).toBe(false);
       expect(result.error).toContain('Tenant não encontrado');
     });
 
-    test('deve retornar erro quando tenant está suspenso', () => {
+    test('deve retornar erro quando tenant está suspenso', async () => {
       mockReq.agent = { tenantId: 'tenant-1' };
       const mockTenant = { id: 'tenant-1', status: 'suspended' };
-      getTenant.mockReturnValue(mockTenant);
-      validateTenantStatus.mockReturnValue({ valid: false, error: 'Tenant suspenso' });
+      getTenant.mockResolvedValue(mockTenant);
+      validateTenantStatus.mockResolvedValue({ valid: false, error: 'Tenant suspenso' });
       
-      const result = requireTenant(mockReq);
+      const result = await requireTenant(mockReq);
       
       expect(result.valid).toBe(false);
       expect(result.error).toContain('Tenant suspenso');
     });
 
-    test('deve retornar erro quando há tentativa de acesso cruzado', () => {
+    test('deve retornar erro quando há tentativa de acesso cruzado', async () => {
       const mockTenant1 = { id: 'tenant-1', status: 'active' };
       const mockTenant2 = { id: 'tenant-2', status: 'active' };
       
       getTenant.mockImplementation((id) => {
-        if (id === 'tenant-1') return mockTenant1;
-        if (id === 'tenant-2') return mockTenant2;
-        return null;
+        if (id === 'tenant-1') return Promise.resolve(mockTenant1);
+        if (id === 'tenant-2') return Promise.resolve(mockTenant2);
+        return Promise.resolve(null);
       });
-      validateTenantStatus.mockReturnValue({ valid: true });
+      validateTenantStatus.mockResolvedValue({ valid: true });
       
       // Simula que o agente pertence a tenant-1 mas tenta acessar tenant-2 via header
       // Como extractTenantId prioriza req.agent.tenantId, vamos simular diretamente
@@ -105,7 +105,7 @@ describe('tenantValidation middleware', () => {
       // Então vamos testar diretamente a lógica de isolamento
       // Simulando que o tenantId extraído é tenant-2 (como se viesse do header)
       // mas o agente pertence a tenant-1
-      const result = requireTenant(mockReq);
+      const result = await requireTenant(mockReq);
       
       // Como extractTenantId prioriza o agente, ele retorna tenant-1
       // Então não há acesso cruzado neste caso
@@ -119,13 +119,13 @@ describe('tenantValidation middleware', () => {
       // com extractTenantId atual, mas pode acontecer em outros cenários)
     });
 
-    test('deve retornar sucesso quando tenant é válido', () => {
+    test('deve retornar sucesso quando tenant é válido', async () => {
       mockReq.agent = { id: 'agent-1', tenantId: 'tenant-1' };
       const mockTenant = { id: 'tenant-1', status: 'active' };
-      getTenant.mockReturnValue(mockTenant);
-      validateTenantStatus.mockReturnValue({ valid: true });
+      getTenant.mockResolvedValue(mockTenant);
+      validateTenantStatus.mockResolvedValue({ valid: true });
       
-      const result = requireTenant(mockReq);
+      const result = await requireTenant(mockReq);
       
       expect(result.valid).toBe(true);
       expect(result.tenantId).toBe('tenant-1');

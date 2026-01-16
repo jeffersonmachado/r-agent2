@@ -151,3 +151,129 @@ export async function validateRedisConnection(redisUrl) {
   }
 }
 
+/**
+ * Obtém a configuração de IA do tenant atual ou de um tenant específico.
+ * Se tenantId for fornecido, usa /tenants/{tenantId}/ai-config (para super-admin).
+ * Caso contrário, usa /tenants/current/ai-config (tenant autenticado).
+ * 
+ * @param {string} [tenantId] - ID do tenant (opcional, para super-admin)
+ * @returns {Promise<{primary?: string, secondary?: string, configured?: boolean}>}
+ */
+export async function getTenantAiConfig(tenantId = null) {
+  try {
+    const endpoint = tenantId 
+      ? `/tenants/${encodeURIComponent(tenantId)}/ai-config`
+      : '/tenants/current/ai-config';
+    
+    const config = await fetchJson(endpoint, {
+      method: 'GET',
+    });
+    // Garante que retorna no formato esperado (primary/secondary)
+    return {
+      primary: config.primary || config.provider || null,
+      secondary: config.secondary || null,
+      configured: !!(config.primary || config.provider),
+      // Mantém campos antigos para compatibilidade
+      ...config
+    };
+  } catch (error) {
+    logger.error('Erro ao obter configuração de IA do tenant', error);
+    // Se for 404, retorna configuração vazia (não configurado)
+    if (error.status === 404) {
+      return {
+        primary: null,
+        secondary: null,
+        configured: false
+      };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Atualiza a configuração de IA do tenant atual ou de um tenant específico.
+ * Se tenantId for fornecido, usa /tenants/{tenantId}/ai-config (para super-admin).
+ * Caso contrário, usa /tenants/current/ai-config (tenant autenticado).
+ * 
+ * @param {Object} config - Configuração { primary: string, secondary?: string } ou { enabled, provider, model, temperature, maxTokens, quotaMonthly } para compatibilidade
+ * @param {string} [tenantId] - ID do tenant (opcional, para super-admin)
+ * @returns {Promise<Object>}
+ */
+export async function saveTenantAiConfig(config, tenantId = null) {
+  try {
+    if (!config || typeof config !== 'object') {
+      throw new Error('config deve ser um objeto válido');
+    }
+
+    // Normaliza o payload: suporta primary/secondary ou formato antigo
+    const normalizedConfig = {};
+    
+    // Prioridade: primary/secondary (novo formato)
+    if (config.primary !== undefined) normalizedConfig.primary = config.primary;
+    if (config.secondary !== undefined) normalizedConfig.secondary = config.secondary;
+    
+    // Compatibilidade com formato antigo
+    if (config.enabled !== undefined) normalizedConfig.enabled = Boolean(config.enabled);
+    if (config.provider !== undefined && !normalizedConfig.primary) normalizedConfig.provider = config.provider;
+    if (config.model !== undefined) normalizedConfig.model = config.model;
+    if (config.temperature !== undefined) normalizedConfig.temperature = Number(config.temperature);
+    if (config.maxTokens !== undefined) normalizedConfig.maxTokens = Number(config.maxTokens);
+    // Suporte ao formato snake_case usado no backend (tenantAIService)
+    if (config.max_tokens !== undefined) normalizedConfig.max_tokens = Number(config.max_tokens);
+    if (config.quotaMonthly !== undefined) normalizedConfig.quotaMonthly = Number(config.quotaMonthly);
+    if (config.quota_monthly !== undefined) normalizedConfig.quota_monthly = Number(config.quota_monthly);
+
+    const endpoint = tenantId 
+      ? `/tenants/${encodeURIComponent(tenantId)}/ai-config`
+      : '/tenants/current/ai-config';
+
+    return await fetchJson(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(normalizedConfig),
+    });
+  } catch (error) {
+    logger.error('Erro ao salvar configuração de IA do tenant', error);
+    throw error;
+  }
+}
+
+/**
+ * Salva as credenciais de IA do tenant atual ou de um tenant específico.
+ * Se tenantId for fornecido, usa /tenants/{tenantId}/ai-credentials (para super-admin).
+ * Caso contrário, usa /tenants/current/ai-credentials (tenant autenticado).
+ * A apiKey é criptografada no backend e nunca retornada.
+ * 
+ * @param {Object} credentials - { provider: string, apiKey: string }
+ * @param {string} [tenantId] - ID do tenant (opcional, para super-admin)
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export async function saveTenantAiCredentials(credentials, tenantId = null) {
+  try {
+    if (!credentials || typeof credentials !== 'object') {
+      throw new Error('credentials deve ser um objeto válido');
+    }
+    if (!credentials.provider || typeof credentials.provider !== 'string') {
+      throw new Error('provider é obrigatório');
+    }
+    if (!credentials.apiKey || typeof credentials.apiKey !== 'string') {
+      throw new Error('apiKey é obrigatória');
+    }
+
+    const endpoint = tenantId 
+      ? `/tenants/${encodeURIComponent(tenantId)}/ai-credentials`
+      : '/tenants/current/ai-credentials';
+
+    return await fetchJson(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({
+        provider: credentials.provider,
+        apiKey: credentials.apiKey
+      }),
+    });
+  } catch (error) {
+    logger.error('Erro ao salvar credenciais de IA do tenant', error);
+    throw error;
+  }
+}
+
+

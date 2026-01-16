@@ -43,10 +43,10 @@ function isSuperAdmin(agent) {
  * Lista todos os tenants com métricas.
  * 
  * @param {Object} filters - Filtros (status, plan, search)
- * @returns {Array} Lista de tenants com métricas
+ * @returns {Promise<Array>} Lista de tenants com métricas
  */
-function listAllTenants(filters = {}) {
-  const tenants = listTenants();
+async function listAllTenants(filters = {}) {
+  const tenants = await listTenants();
   
   let filtered = tenants;
   
@@ -70,8 +70,8 @@ function listAllTenants(filters = {}) {
   }
   
   // Adiciona métricas básicas
-  return filtered.map(tenant => {
-    const usage = getTenantUsage(tenant.id);
+  return await Promise.all(filtered.map(async tenant => {
+    const usage = await getTenantUsage(tenant.id);
     return {
       ...tenant,
       metrics: usage || {
@@ -83,7 +83,7 @@ function listAllTenants(filters = {}) {
         storage_mb: 0,
       },
     };
-  });
+  }));
 }
 
 /**

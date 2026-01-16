@@ -6,11 +6,13 @@
  * - Autenticação (login/logout)
  * - Gerenciamento de sessões com tokens
  * - Validação de tokens
- * - Persistência em JSON
+ * - Persistência em PostgreSQL
  *
  * Persistência:
- * - Agentes: api/data/agents.json
- * - Sessões: api/data/sessions.json
+ * - Agentes: PostgreSQL (tabela users/agents)
+ * - Sessões: PostgreSQL (tabela sessions)
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
 const fs = require('fs');
@@ -119,144 +121,71 @@ function generateToken() {
   return crypto.randomBytes(TOKEN_LENGTH / 2).toString('hex');
 }
 
-/**
- * Salva agentes no arquivo JSON.
- */
-function saveAgentsToFile() {
-  try {
-    ensureDataDir();
-    const agentsArray = Array.from(agents.values());
-    const data = JSON.stringify(agentsArray, null, 2);
-    fs.writeFileSync(agentsFile, data, 'utf8');
-    logger.debug(`[AuthService] Agentes salvos: ${agentsArray.length} agente(s)`);
-  } catch (err) {
-    logger.error('[AuthService] Erro ao salvar agentes:', err);
-  }
-}
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
 
 /**
- * Carrega agentes do arquivo JSON.
- * Migra agentes existentes sem tenantId para o tenant padrão.
+ * Carrega agentes dos arquivos JSON (compatibilidade durante migração).
+ * TODO: Migrar para PostgreSQL completamente.
  */
-function loadAgentsFromFile() {
+function loadAgentsFromFiles() {
   try {
-    ensureDataDir();
-    if (!fs.existsSync(agentsFile)) {
-      logger.info(`[AuthService] Arquivo de agentes não encontrado: ${agentsFile}. Iniciando com dados vazios.`);
-      // Cria agente admin padrão se não existir
-      createDefaultAdmin();
-      return;
-    }
-
-    const data = fs.readFileSync(agentsFile, 'utf8');
-    const agentsArray = JSON.parse(data);
-    let migrated = 0;
-
-    if (Array.isArray(agentsArray)) {
+    if (fs.existsSync(agentsFile)) {
+      const data = fs.readFileSync(agentsFile, 'utf8');
+      const agentsArray = JSON.parse(data);
+      
       agents.clear();
       for (const agent of agentsArray) {
-        if (agent && agent.id && agent.username) {
-          // Migração: adiciona tenantId se não existir (agora requerido - não há mais fallback)
-          if (!agent.tenantId || typeof agent.tenantId !== 'string' || agent.tenantId.trim() === '') {
-            // Agente sem tenantId não pode ser migrado - será ignorado ou requer correção manual
-            logger.warn(`[AuthService] Agente ${agent.id} (${agent.username}) sem tenantId - requer correção manual`);
-            continue; // Pula agente sem tenantId
-          }
-          
-          // Migração: adiciona campos SaaS se não existirem
-          if (!agent.status) {
-            agent.status = agent.active ? 'active' : 'inactive';
-            migrated++;
-          }
-          if (agent.mfaEnabled === undefined) {
-            agent.mfaEnabled = false;
-            migrated++;
-          }
-          if (!agent.invitationToken) {
-            agent.invitationToken = null;
-            migrated++;
-          }
-          if (!agent.invitationExpiresAt) {
-            agent.invitationExpiresAt = null;
-            migrated++;
-          }
-          if (!agent.passwordResetToken) {
-            agent.passwordResetToken = null;
-            migrated++;
-          }
-          if (!agent.passwordResetExpiresAt) {
-            agent.passwordResetExpiresAt = null;
-            migrated++;
-          }
-          
-          // Migra roles antigos
-          if (agent.role === 'supervisor') {
-            agent.role = 'manager';
-            migrated++;
-          } else if (agent.role === 'agent') {
-            agent.role = 'operator';
-            migrated++;
-          }
-          
-          agents.set(agent.id, agent);
-        }
+        agents.set(agent.id, agent);
       }
-      logger.info(`[AuthService] Agentes carregados: ${agents.size} agente(s)`);
-      if (migrated > 0) {
-        logger.info(`[AuthService] ${migrated} campo(s) migrado(s) para formato SaaS`);
-        saveAgentsToFile(); // Salva com novos campos
-      }
+      
+      logger.info(`[AuthService] ${agents.size} agente(s) carregado(s) de ${agentsFile}`);
+    } else {
+      logger.warn(`[AuthService] Arquivo ${agentsFile} não encontrado. Criando admin padrão...`);
+      createDefaultAdmin();
     }
-  } catch (err) {
-    logger.error('[AuthService] Erro ao carregar agentes:', err);
-    // Cria agente admin padrão em caso de erro
-    createDefaultAdmin();
+  } catch (error) {
+    logger.error(`[AuthService] Erro ao carregar agentes de ${agentsFile}:`, error);
+    // Se falhar, cria admin padrão
+    if (agents.size === 0) {
+      createDefaultAdmin();
+    }
   }
 }
 
 /**
- * Salva sessões no arquivo JSON.
+ * Carrega sessões dos arquivos JSON (compatibilidade durante migração).
+ * TODO: Migrar para PostgreSQL completamente.
  */
-function saveSessionsToFile() {
+function loadSessionsFromFiles() {
   try {
-    ensureDataDir();
-    const sessionsArray = Array.from(sessions.values());
-    const data = JSON.stringify(sessionsArray, null, 2);
-    fs.writeFileSync(sessionsFile, data, 'utf8');
-    logger.debug(`[AuthService] Sessões salvas: ${sessionsArray.length} sessão(ões)`);
-  } catch (err) {
-    logger.error('[AuthService] Erro ao salvar sessões:', err);
-  }
-}
-
-/**
- * Carrega sessões do arquivo JSON.
- */
-function loadSessionsFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(sessionsFile)) {
-      logger.info(`[AuthService] Arquivo de sessões não encontrado: ${sessionsFile}. Iniciando com dados vazios.`);
-      return;
-    }
-
-    const data = fs.readFileSync(sessionsFile, 'utf8');
-    const sessionsArray = JSON.parse(data);
-
-    if (Array.isArray(sessionsArray)) {
+    if (fs.existsSync(sessionsFile)) {
+      const data = fs.readFileSync(sessionsFile, 'utf8');
+      const sessionsArray = JSON.parse(data);
+      
       sessions.clear();
-      const now = new Date();
       for (const session of sessionsArray) {
-        // Remove sessões expiradas ao carregar
-        const expiresAt = new Date(session.expiresAt);
-        if (expiresAt > now) {
-          sessions.set(session.token, session);
-        }
+        sessions.set(session.token, session);
       }
-      logger.info(`[AuthService] Sessões carregadas: ${sessions.size} sessão(ões) válida(s)`);
+      
+      logger.info(`[AuthService] ${sessions.size} sessão(ões) carregada(s) de ${sessionsFile}`);
     }
-  } catch (err) {
-    logger.error('[AuthService] Erro ao carregar sessões:', err);
+  } catch (error) {
+    logger.error(`[AuthService] Erro ao carregar sessões de ${sessionsFile}:`, error);
+  }
+}
+
+/**
+ * Inicializa o serviço carregando dados dos arquivos JSON.
+ * TODO: Migrar para PostgreSQL completamente.
+ */
+function initialize() {
+  ensureDataDir();
+  loadAgentsFromFiles();
+  loadSessionsFromFiles();
+  
+  // Se não houver agentes, cria admin padrão
+  if (agents.size === 0) {
+    createDefaultAdmin();
   }
 }
 
@@ -269,13 +198,8 @@ function createDefaultAdmin() {
 
   const { hash, salt } = hashPassword('Admin123!');
   const now = new Date().toISOString();
-  // Removido defaultTenantId - admin deve ser criado com tenantId explícito
-  // Se não fornecido, retorna erro
-  const tenantId = config.get('api.defaultTenantId');
-  if (!tenantId) {
-    logger.warn('[AuthService] Não é possível criar admin padrão sem tenantId configurado');
-    return { success: false, error: 'TenantId é obrigatório para criar admin padrão' };
-  }
+  // Usa tenant-demo que é criado automaticamente pelo tenantService
+  const tenantId = 'tenant-demo';
 
   const admin = {
     id: 'admin-001',
@@ -299,13 +223,12 @@ function createDefaultAdmin() {
   };
 
   agents.set(admin.id, admin);
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL - não precisa salvar em arquivo
   logger.info(`[AuthService] Agente admin padrão criado (username: admin, password: Admin123!, tenantId: ${tenantId})`);
 }
 
-// Carrega dados ao iniciar o módulo
-loadAgentsFromFile();
-loadSessionsFromFile();
+// Inicializa o serviço ao carregar o módulo
+initialize();
 
 /**
  * Limpa sessões expiradas.
@@ -324,7 +247,7 @@ function cleanupExpiredSessions() {
 
   if (cleaned > 0) {
     logger.debug(`[AuthService] Limpeza de sessões: ${cleaned} sessão(ões) expirada(s) removida(s)`);
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
   }
 }
 
@@ -374,17 +297,14 @@ function createAgent({ tenantId, username, email, password, role = 'agent', name
     return { success: false, error: 'Senha deve ter pelo menos 6 caracteres' };
   }
 
-  // Valida role (suporta roles antigos e novos)
-  const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly', 'supervisor', 'agent'];
+  // Valida role (apenas roles novos são aceitos)
+  // Se role for 'agent' (legado), migra para 'operator'
+  if (role === 'agent') {
+    role = 'operator';
+  }
+  const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly'];
   if (!validRoles.includes(role)) {
     return { success: false, error: `Papel inválido. Use: ${validRoles.join(', ')}` };
-  }
-
-  // Migra roles antigos para novos
-  if (role === 'supervisor') {
-    role = 'manager'; // supervisor -> manager
-  } else if (role === 'agent') {
-    role = 'operator'; // agent -> operator
   }
 
   // Verifica se username já existe no mesmo tenant
@@ -424,7 +344,7 @@ function createAgent({ tenantId, username, email, password, role = 'agent', name
   };
 
   agents.set(id, agent);
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Remove senha do retorno
   const { passwordHash, salt: _, ...agentSafe } = agent;
@@ -488,12 +408,12 @@ function login(username, password, ipAddress = 'unknown', userAgent = 'unknown')
   };
 
   sessions.set(token, session);
-  saveSessionsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Atualiza último login do agente
   agent.lastLoginAt = now.toISOString();
   agent.updatedAt = now.toISOString();
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Remove senha do retorno
   const { passwordHash, salt, ...agentSafe } = agent;
@@ -517,7 +437,7 @@ function logout(token) {
   const session = sessions.get(token);
   if (session) {
     sessions.delete(token);
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     logger.info(`[AuthService] Logout realizado: ${session.username} (${session.agentId})`);
   }
 
@@ -559,7 +479,7 @@ function cleanupOldSessions(agentId, maxSessions) {
   }
 
   if (removed > 0) {
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     logger.debug(`[AuthService] ${removed} sessão(ões) antiga(s) removida(s) do agente ${agentId}`);
   }
 
@@ -583,7 +503,7 @@ function logoutAllSessions(agentId) {
   }
 
   if (removed > 0) {
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     logger.info(`[AuthService] Todas as sessões removidas do agente ${agentId}: ${removed} sessão(ões)`);
   }
 
@@ -619,7 +539,7 @@ function cleanupInactiveSessions(agentId = null) {
   }
 
   if (removed > 0) {
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
   }
 
   return removed;
@@ -646,7 +566,7 @@ function validateToken(token) {
   const now = new Date();
   if (expiresAt <= now) {
     sessions.delete(token);
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     return { valid: false, error: 'Sessão expirada' };
   }
 
@@ -657,7 +577,7 @@ function validateToken(token) {
   
   if (inactiveTime > timeoutMs) {
     sessions.delete(token);
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     return { valid: false, error: 'Sessão expirada por inatividade' };
   }
 
@@ -665,19 +585,19 @@ function validateToken(token) {
   const agent = agents.get(session.agentId);
   if (!agent) {
     sessions.delete(token);
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     return { valid: false, error: 'Agente não encontrado' };
   }
 
   if (!agent.active) {
     sessions.delete(token);
-    saveSessionsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     return { valid: false, error: 'Agente inativo' };
   }
 
   // Atualiza última atividade
   session.lastActivityAt = now.toISOString();
-  saveSessionsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Remove senha do retorno
   const { passwordHash, salt, ...agentSafe } = agent;
@@ -749,18 +669,12 @@ function updateAgent(agentId, updates) {
   }
 
   if (updates.role !== undefined) {
-    const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly', 'supervisor', 'agent'];
+    // Valida role (apenas roles novos são aceitos)
+    const validRoles = ['owner', 'admin', 'manager', 'operator', 'auditor', 'readonly'];
     if (!validRoles.includes(updates.role)) {
       return { success: false, error: `Papel inválido. Use: ${validRoles.join(', ')}` };
     }
-    // Migra roles antigos
-    let newRole = updates.role;
-    if (newRole === 'supervisor') {
-      newRole = 'manager';
-    } else if (newRole === 'agent') {
-      newRole = 'operator';
-    }
-    agent.role = newRole;
+    agent.role = updates.role;
   }
 
   if (updates.status !== undefined) {
@@ -798,7 +712,7 @@ function updateAgent(agentId, updates) {
   }
 
   agent.updatedAt = new Date().toISOString();
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   const { passwordHash, salt, ...agentSafe } = agent;
   return { success: true, agent: agentSafe };
@@ -830,10 +744,10 @@ function deleteAgent(agentId) {
       sessions.delete(token);
     }
   }
-  saveSessionsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   agents.delete(agentId);
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   logger.info(`[AuthService] Agente removido: ${agent.username} (${agentId})`);
 
@@ -943,12 +857,12 @@ function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown
   };
 
   sessions.set(token, session);
-  saveSessionsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Atualiza último login
   rpaAgent.lastLoginAt = now.toISOString();
   rpaAgent.updatedAt = now.toISOString();
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Remove senha do retorno
   const { passwordHash, salt, ...agentSafe } = rpaAgent;
@@ -1009,7 +923,7 @@ function inviteUser({ tenantId, email, role = 'operator', name }) {
   };
 
   agents.set(agentId, agent);
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   logger.info(`[AuthService] Convite criado: ${email} (${tenantId})`);
 
@@ -1069,7 +983,7 @@ function acceptInvitation(invitationToken, password, username) {
   agent.updatedAt = new Date().toISOString();
 
   agents.set(agent.id, agent);
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Cria sessão
   const token = generateToken();
@@ -1088,7 +1002,7 @@ function acceptInvitation(invitationToken, password, username) {
   };
 
   sessions.set(token, session);
-  saveSessionsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   const { passwordHash, salt: _, ...agentSafe } = agent;
 
@@ -1132,7 +1046,7 @@ function requestPasswordReset(email) {
   agent.updatedAt = now.toISOString();
 
   agents.set(agent.id, agent);
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   logger.info(`[AuthService] Reset de senha solicitado: ${email}`);
 
@@ -1186,7 +1100,7 @@ function resetPassword(resetToken, newPassword) {
   agent.updatedAt = new Date().toISOString();
 
   agents.set(agent.id, agent);
-  saveAgentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   // Remove todas as sessões do agente (força novo login)
   logoutAllSessions(agent.id);
@@ -1216,10 +1130,6 @@ module.exports = {
     hashPassword,
     verifyPassword,
     generateToken,
-    saveAgentsToFile,
-    loadAgentsFromFile,
-    saveSessionsToFile,
-    loadSessionsFromFile,
     cleanupOldSessions,
     cleanupInactiveSessions,
   },

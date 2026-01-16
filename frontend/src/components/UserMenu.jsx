@@ -43,6 +43,8 @@ export function UserMenu() {
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
   const containerRef = useRef(null);
+  const lastTouchTimeRef = useRef(0);
+  const touchStartRef = useRef(null);
 
   // Fecha o dropdown ao clicar fora e desativa modo de arrasto
   useEffect(() => {
@@ -126,7 +128,7 @@ export function UserMenu() {
     };
   }, []);
 
-  // Handler de duplo clique para ativar modo de arrasto
+  // Handler de duplo clique para ativar modo de arrasto (desktop)
   const handleDoubleClick = useCallback((e) => {
     if (!isInEditor) return;
     
@@ -148,7 +150,38 @@ export function UserMenu() {
     logger.debug('[UserMenu] Modo de arrasto ativado');
   }, [isInEditor]);
 
-  // Handlers de drag
+  // Handler de duplo toque para ativar modo de arrasto (mobile)
+  const handleDoubleTap = useCallback((e) => {
+    if (!isInEditor) return;
+    
+    const now = Date.now();
+    const timeSinceLastTouch = now - lastTouchTimeRef.current;
+    
+    // Se o segundo toque ocorreu dentro de 300ms do primeiro, considera duplo toque
+    if (timeSinceLastTouch > 0 && timeSinceLastTouch < 300) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Ativa modo de arrasto
+      setDragModeEnabled(true);
+      
+      // Desativa após 3 segundos de inatividade
+      if (dragModeTimeoutRef.current) {
+        clearTimeout(dragModeTimeoutRef.current);
+      }
+      dragModeTimeoutRef.current = setTimeout(() => {
+        setDragModeEnabled(false);
+      }, 3000);
+      
+      logger.debug('[UserMenu] Modo de arrasto ativado (duplo toque)');
+      lastTouchTimeRef.current = 0; // Reset para evitar múltiplas ativações
+    } else {
+      // Primeiro toque - registra o tempo
+      lastTouchTimeRef.current = now;
+    }
+  }, [isInEditor]);
+
+  // Handlers de drag (desktop - mouse)
   const handleMouseDown = useCallback((e) => {
     if (!isInEditor || !dragModeEnabled) return;
     
@@ -164,6 +197,71 @@ export function UserMenu() {
       // Offset Y: distância do mouse até o topo do botão
       const offsetX = rect.right - e.clientX;
       const offsetY = e.clientY - rect.top;
+      
+      setDragOffset({
+        x: offsetX,
+        y: offsetY
+      });
+    }
+  }, [isInEditor, dragModeEnabled]);
+
+  // Handlers de drag (mobile - touch)
+  const handleTouchStart = useCallback((e) => {
+    if (!isInEditor) {
+      // Mesmo fora do editor, verifica duplo toque (pode ser útil no futuro)
+      handleDoubleTap(e);
+      return;
+    }
+    
+    // Verifica se é duplo toque primeiro
+    const now = Date.now();
+    const timeSinceLastTouch = now - lastTouchTimeRef.current;
+    const isDoubleTap = timeSinceLastTouch > 0 && timeSinceLastTouch < 300;
+    
+    if (isDoubleTap) {
+      // É duplo toque - ativa modo de arrasto
+      e.preventDefault();
+      e.stopPropagation();
+      
+      setDragModeEnabled(true);
+      
+      if (dragModeTimeoutRef.current) {
+        clearTimeout(dragModeTimeoutRef.current);
+      }
+      dragModeTimeoutRef.current = setTimeout(() => {
+        setDragModeEnabled(false);
+      }, 3000);
+      
+      logger.debug('[UserMenu] Modo de arrasto ativado (duplo toque)');
+      lastTouchTimeRef.current = 0;
+      return; // Não inicia arrasto imediatamente no duplo toque
+    } else {
+      // Primeiro toque - registra o tempo
+      lastTouchTimeRef.current = now;
+    }
+    
+    // Se o modo de arrasto não está ativado, não inicia o drag
+    if (!dragModeEnabled) return;
+    
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    setHasMoved(false);
+    hasMovedRef.current = false;
+    setIsDragging(true);
+    clickBlockedRef.current = false;
+    
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    };
+    
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      // Calcula offset baseado na posição atual do toque em relação ao botão
+      const offsetX = rect.right - touch.clientX;
+      const offsetY = touch.clientY - rect.top;
       
       setDragOffset({
         x: offsetX,
@@ -207,6 +305,41 @@ export function UserMenu() {
       }
     };
 
+    const handleTouchMove = (e) => {
+      e.preventDefault(); // Previne scroll durante o arrasto
+      const touch = e.touches[0];
+      if (!touch || !touchStartRef.current) return;
+      
+      // Se moveu mais de 5px, considera como arrasto
+      if (!hasMovedRef.current) {
+        const movedDistance = Math.abs(touch.clientX - touchStartRef.current.x) + 
+                             Math.abs(touch.clientY - touchStartRef.current.y);
+        if (movedDistance > 5) {
+          setHasMoved(true);
+          hasMovedRef.current = true;
+          clickBlockedRef.current = true;
+        }
+      }
+      
+      if (hasMovedRef.current || clickBlockedRef.current) {
+        // Calcula nova posição baseada na posição do toque
+        const newRight = window.innerWidth - (touch.clientX + dragOffset.x);
+        const newTop = touch.clientY - dragOffset.y;
+        
+        // Limita aos limites da tela (deixa margem de 50px)
+        const maxRight = window.innerWidth - 50;
+        const maxTop = window.innerHeight - 50;
+        
+        const newPosition = {
+          top: Math.max(0, Math.min(newTop, maxTop)),
+          right: Math.max(0, Math.min(newRight, maxRight))
+        };
+        
+        setPosition(newPosition);
+        positionRef.current = newPosition;
+      }
+    };
+
     const handleMouseUp = () => {
       if (hasMoved || clickBlockedRef.current) {
         // Salva posição no localStorage apenas se houve movimento
@@ -218,14 +351,33 @@ export function UserMenu() {
       }
       setIsDragging(false);
       setHasMoved(false);
+      touchStartRef.current = null;
+    };
+
+    const handleTouchEnd = () => {
+      if (hasMoved || clickBlockedRef.current) {
+        // Salva posição no localStorage apenas se houve movimento
+        localStorage.setItem('userMenuPosition', JSON.stringify(positionRef.current));
+        // Bloqueia o click por um breve momento após soltar
+        setTimeout(() => {
+          clickBlockedRef.current = false;
+        }, 100);
+      }
+      setIsDragging(false);
+      setHasMoved(false);
+      touchStartRef.current = null;
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
     
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isDragging, dragOffset, isInEditor]);
 
@@ -390,12 +542,12 @@ export function UserMenu() {
         if (result && result.tenant) {
           setTenantInfo(result.tenant);
         } else {
-          setTenantInfo({ name: agent.tenantId, id: agent.tenantId });
+          logger.warn('[UserMenu] Tenant não encontrado:', agent.tenantId);
+          setTenantInfo(null);
         }
       } catch (err) {
-        logger.warn('Erro ao carregar informações do tenant', err);
-        // Fallback: usa tenantId como nome
-        setTenantInfo({ name: agent.tenantId, id: agent.tenantId });
+        logger.error('Erro ao carregar informações do tenant', err);
+        setTenantInfo(null);
       }
     };
 
@@ -501,6 +653,7 @@ export function UserMenu() {
         className={`user-menu-button ${isInEditor ? 'draggable' : ''} ${dragModeEnabled ? 'drag-mode-active' : ''}`}
         onDoubleClick={handleDoubleClick}
         onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         onClick={(e) => {
           // Só abre o menu se não houve movimento (não estava arrastando)
           // O modo de arrasto só afeta se pode arrastar, não bloqueia o clique normal

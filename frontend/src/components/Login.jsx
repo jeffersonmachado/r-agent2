@@ -12,6 +12,7 @@ import { TenantSelectorModal } from './TenantSelectorModal';
 import logger from '../utils/logger';
 import { getStaticUrl } from '../utils';
 import { setToken } from '../api/auth';
+import { checkTenantAiProviderStatus } from '../api/tenant';
 
 export function Login() {
   const { login, isAuthenticated, agent, updateAgent } = useAuth();
@@ -27,26 +28,17 @@ export function Login() {
   const [loginResult, setLoginResult] = useState(null);
   const [isSuperAdminLogin, setIsSuperAdminLogin] = useState(false);
 
-  // Redireciona automaticamente quando autenticado (exceto super-admin)
-  useEffect(() => {
-    if (isAuthenticated && agent && !showTenantModal) {
-      const isSuperAdmin = agent.role === 'super_admin' || (agent.role === 'owner' && agent.tenantId === 'system');
-      
-      logger.debug('[Login] useEffect - isAuthenticated:', isAuthenticated, 'agent:', agent, 'showTenantModal:', showTenantModal);
-      
-      if (!isSuperAdmin) {
-        // Se não é super-admin, redireciona normalmente
-        logger.debug('[Login] Redirecionando para /support (não é super-admin no useEffect)');
-        navigate('/support');
-      }
-      // Se for super-admin, o modal já foi aberto no handleSubmit
-    }
-  }, [isAuthenticated, agent, navigate, showTenantModal]);
+  // IMPORTANTE: Não redireciona automaticamente via useEffect
+  // A verificação de provider e redirecionamento são feitos explicitamente no handleSubmit e handleTenantSelected
+  // Isso garante que a verificação de provider seja feita ANTES de redirecionar
+  // useEffect desabilitado para evitar redirecionamento prematuro
 
   // Redireciona quando tenant for selecionado
   const handleTenantSelected = async (tenant) => {
     try {
       console.log('[Login] Tenant selecionado:', tenant);
+      console.log('[Login] loginResult disponível:', !!loginResult);
+      console.log('[Login] loginResult.agent disponível:', !!loginResult?.agent);
       
       // Atualiza o tenantId do agente
       if (loginResult && loginResult.agent) {
@@ -58,7 +50,72 @@ export function Login() {
         
         console.log('[Login] Atualizando agente com novo tenantId:', updatedAgent);
         
+        // Verifica se o tenant tem provider de IA válido ANTES de atualizar o agente e fechar o modal
+        // IMPORTANTE: Esta verificação é feita APÓS o super-admin selecionar o tenant
+        try {
+          console.log('[Login] Verificando provider de IA para o tenant selecionado:', tenant.id);
+          const aiProviderStatus = await checkTenantAiProviderStatus(tenant.id);
+          console.log('[Login] Resposta completa da verificação:', JSON.stringify(aiProviderStatus, null, 2));
+          
+          // Verifica explicitamente se hasValidProvider é true
+          // Verificação defensiva: verifica se a propriedade existe e é explicitamente true
+          const hasValidProvider = aiProviderStatus && 
+                               typeof aiProviderStatus === 'object' && 
+                               aiProviderStatus.hasValidProvider === true;
+          
+          if (!hasValidProvider) {
+            console.log('[Login] ❌ Tenant NÃO tem provider de IA válido. Status:', aiProviderStatus);
+            console.log('[Login] Detalhes da verificação:', {
+              hasAiProviderStatus: !!aiProviderStatus,
+              isObject: typeof aiProviderStatus === 'object',
+              hasValidProviderValue: aiProviderStatus?.hasValidProvider,
+              hasValidProviderType: typeof aiProviderStatus?.hasValidProvider,
+              isTrue: aiProviderStatus?.hasValidProvider === true,
+            });
+            
+            // IMPORTANTE: Atualiza o agente ANTES de redirecionar para que o campo de config apareça
+            console.log('[Login] Atualizando agente antes de redirecionar para /config...');
+            updateAgent(updatedAgent);
+            setIsSuperAdminLogin(false);
+            
+            showToast('Configure um provider de IA para o tenant antes de continuar', 'warning');
+            
+            // Usa requestAnimationFrame para garantir que o React processou a atualização do estado
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                console.log('[Login] Redirecionando para /config após verificação de provider');
+                try {
+                  navigate(`/config?tab=ai&tenant=${tenant.id}`);
+                  console.log('[Login] Comando navigate para /config executado');
+                  
+                  // Verifica se o redirecionamento funcionou após um tempo
+                  setTimeout(() => {
+                    if (window.location.pathname.includes('/login')) {
+                      console.warn('[Login] ⚠️ Ainda em /login após navigate, tentando window.location');
+                      const basePath = window.location.pathname.split('/login')[0] || '';
+                      window.location.href = `${basePath}/config?tab=ai&tenant=${tenant.id}`;
+                    }
+                  }, 500);
+                } catch (err) {
+                  console.error('[Login] Erro ao usar navigate, tentando window.location:', err);
+                  const basePath = window.location.pathname.split('/login')[0] || '';
+                  window.location.href = `${basePath}/config?tab=ai&tenant=${tenant.id}`;
+                }
+              }, 300);
+            });
+            return; // Não continua para /support, mas agente já foi atualizado
+          }
+          
+          console.log('[Login] ✅ Tenant tem provider de IA válido, continuando para /support');
+        } catch (err) {
+          console.error('[Login] Erro ao verificar provider de IA:', err);
+          logger.warn('Erro ao verificar provider de IA do tenant, continuando normalmente', err);
+          // Em caso de erro, permite acesso (não bloqueia)
+        }
+        
+        // Só atualiza agente e fecha modal se chegou até aqui (provider válido ou erro na verificação)
         // Atualiza o agente no contexto de autenticação
+        console.log('[Login] Atualizando agente antes de redirecionar...');
         updateAgent(updatedAgent);
         
         // Marca que não é mais login de super-admin (tenant foi selecionado)
@@ -69,11 +126,58 @@ export function Login() {
         
         showToast(`Acessando tenant: ${tenant.name || tenant.id}`, 'success');
         
-        // Aguarda um pouco para garantir que o estado foi atualizado antes de redirecionar
-        setTimeout(() => {
-          console.log('[Login] Redirecionando para /support após seleção do tenant');
-          navigate('/support');
-        }, 200);
+        // Aguarda um pouco mais para garantir que o estado foi atualizado antes de redirecionar
+        // Usa requestAnimationFrame para garantir que o React processou a atualização do estado
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            console.log('[Login] Redirecionando para /support após seleção do tenant');
+            console.log('[Login] Estado antes do redirecionamento:', {
+              isAuthenticated,
+              agent: !!agent,
+              tenantId: agent?.tenantId,
+            });
+            
+            // Força o redirecionamento usando window.location se navigate não funcionar
+            try {
+              navigate('/support');
+              console.log('[Login] Comando navigate executado');
+              
+              // Verifica se o redirecionamento funcionou após um tempo
+              setTimeout(() => {
+                if (window.location.pathname.includes('/login')) {
+                  console.warn('[Login] ⚠️ Ainda em /login após navigate, tentando window.location');
+                  const basePath = window.location.pathname.split('/login')[0] || '';
+                  window.location.href = `${basePath}/support`;
+                }
+              }, 500);
+            } catch (err) {
+              console.error('[Login] Erro ao usar navigate, tentando window.location:', err);
+              const basePath = window.location.pathname.split('/login')[0] || '';
+              window.location.href = `${basePath}/support`;
+            }
+          }, 300);
+        });
+      } else {
+        // Se não há loginResult ou agent, tenta usar o agente atual do contexto
+        console.warn('[Login] ⚠️ loginResult ou agent não disponível, tentando usar agente do contexto');
+        if (agent) {
+          const updatedAgent = {
+            ...agent,
+            tenantId: tenant.id,
+            originalTenantId: agent.tenantId,
+          };
+          updateAgent(updatedAgent);
+          setIsSuperAdminLogin(false);
+          setShowTenantModal(false);
+          showToast(`Acessando tenant: ${tenant.name || tenant.id}`, 'success');
+          setTimeout(() => {
+            console.log('[Login] Redirecionando para /support (usando agente do contexto)');
+            navigate('/support');
+          }, 200);
+        } else {
+          console.error('[Login] ❌ Não foi possível atualizar agente: loginResult e agent não disponíveis');
+          showToast('Erro: informações de autenticação não disponíveis', 'error');
+        }
       }
     } catch (err) {
       console.error('[Login] Erro ao selecionar tenant:', err);
@@ -114,6 +218,45 @@ export function Login() {
         console.log('[Login] showTenantModal definido como:', true);
         showToast('Login realizado com sucesso! Selecione o tenant.', 'success');
       } else {
+        // Verifica se o tenant tem provider de IA válido antes de redirecionar
+        const tenantId = result.agent?.tenantId;
+        if (tenantId) {
+          try {
+            console.log('[Login] Verificando provider de IA para tenant:', tenantId);
+            const aiProviderStatus = await checkTenantAiProviderStatus(tenantId);
+            console.log('[Login] Resposta da verificação de provider:', aiProviderStatus);
+            
+            // Verifica explicitamente se hasValidProvider é true
+            // Verificação defensiva: verifica se a propriedade existe e é explicitamente true
+            const hasValidProvider = aiProviderStatus && 
+                                    typeof aiProviderStatus === 'object' && 
+                                    aiProviderStatus.hasValidProvider === true;
+            
+            if (hasValidProvider) {
+              console.log('[Login] ✅ Tenant tem provider de IA válido, continuando normalmente');
+            } else {
+              console.log('[Login] ❌ Tenant NÃO tem provider de IA válido, redirecionando para configuração');
+              console.log('[Login] Detalhes da verificação:', {
+                hasAiProviderStatus: !!aiProviderStatus,
+                isObject: typeof aiProviderStatus === 'object',
+                hasValidProviderValue: aiProviderStatus?.hasValidProvider,
+                hasValidProviderType: typeof aiProviderStatus?.hasValidProvider,
+                isTrue: aiProviderStatus?.hasValidProvider === true,
+              });
+              showToast('Configure um provider de IA para o tenant antes de continuar', 'warning');
+              setTimeout(() => {
+                navigate('/config?tab=ai');
+              }, 1500);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            logger.warn('Erro ao verificar provider de IA do tenant, continuando normalmente', err);
+            console.error('[Login] Erro na verificação de provider:', err);
+            // Continua mesmo se houver erro na verificação
+          }
+        }
+        
         // Redireciona normalmente (não é super-admin)
         console.log('[Login] Redirecionando para /support (não é super-admin)');
         setIsSuperAdminLogin(false);

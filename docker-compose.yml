@@ -9,7 +9,7 @@ services:
     container_name: chatbot-api
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      API_PORT: ${API_PORT:-3000}
+      API_PORT: ${API_PORT:-3001}
       # DEFAULT_TENANT_ID removido - tenant deve ser fornecido via autenticação
       RATE_LIMIT_REDIS_URL: ${RATE_LIMIT_REDIS_URL:-redis://redis:6379}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
@@ -24,12 +24,27 @@ services:
       RATE_LIMIT_SCRAPING_DURATION: ${RATE_LIMIT_SCRAPING_DURATION:-300}
       RATE_LIMIT_SCRAPING_RPS: ${RATE_LIMIT_SCRAPING_RPS:-3}
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
-      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
+      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8001}
+      # PostgreSQL
+      DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
+      PGHOST: ${PGHOST:-postgres}
+      PGUSER: ${PGUSER:-results_app}
+      PGPASSWORD: ${PGPASSWORD:-StrongPass}
+      PGDATABASE: ${PGDATABASE:-results_saas}
+      PGPORT: ${PGPORT:-5432}
+      # Criptografia de segredos
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      # OpenAI API Key (server default, opcional)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
-      - "${API_PORT:-3000}:3000"
+      - "${API_PORT:-3001}:3001"
     depends_on:
-      - redis
-      - rag-service
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rag-service:
+        condition: service_started
     restart: unless-stopped
 
   frontend:
@@ -70,10 +85,30 @@ services:
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
-      - "${RAG_PORT:-8000}:8000"
+      - "${RAG_PORT:-8001}:8001"
     volumes:
       - rag-vector-store:/app/data/vector_store
     restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: chatbot-postgres
+    environment:
+      POSTGRES_USER: ${PGUSER:-results_app}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-StrongPass}
+      POSTGRES_DB: ${PGDATABASE:-results_saas}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${PGPORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres} -d ${PGDATABASE:-r_agent2}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     build:
@@ -96,5 +131,6 @@ services:
 volumes:
   rag-vector-store:
   redis-data:
+  postgres-data:
 
 

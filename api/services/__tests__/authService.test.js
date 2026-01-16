@@ -52,6 +52,9 @@ describe('authService', () => {
         name: 'Test User',
       });
 
+      if (!result.success) {
+        console.log('Erro ao criar agente:', result.error);
+      }
       expect(result.success).toBe(true);
       expect(result.agent).toBeDefined();
       expect(result.agent.username).toBe('testuser');
@@ -98,8 +101,8 @@ describe('authService', () => {
     test('deve retornar erro quando role é inválido', () => {
       const result = createAgent({
         tenantId: 'tenant-1',
-        username: 'testuser',
-        email: 'test@example.com',
+        username: `testuser-${Date.now()}`,
+        email: `test-${Date.now()}@example.com`,
         password: 'password123',
         role: 'invalid_role',
       });
@@ -117,7 +120,7 @@ describe('authService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.agent.role).toBe('operator'); // Role padrão 'agent' migra para 'operator'
+      expect(result.agent.role).toBe('operator'); // Role padrão é 'operator' (não mais 'agent')
     });
   });
 
@@ -130,6 +133,7 @@ describe('authService', () => {
         username: uniqueUsername,
         email: `test-${Date.now()}@example.com`,
         password: 'password123',
+        role: 'operator', // Role válido
       });
 
       expect(createResult.success).toBe(true);
@@ -149,6 +153,7 @@ describe('authService', () => {
         username: uniqueUsername,
         email: `test-${Date.now()}@example.com`,
         password: 'password123',
+        role: 'operator',
       });
 
       const loginResult = login(uniqueUsername, 'wrongpassword', '127.0.0.1', 'test-agent');
@@ -209,6 +214,7 @@ describe('authService', () => {
         username: uniqueUsername,
         email: `test-${Date.now()}@example.com`,
         password: 'password123',
+        role: 'operator',
       });
 
       const loginResult = login(uniqueUsername, 'password123');
@@ -262,6 +268,7 @@ describe('authService', () => {
         username: `user1-${timestamp}`,
         email: `user1-${timestamp}@example.com`,
         password: 'password123',
+        role: 'operator',
       });
 
       createAgent({
@@ -269,6 +276,7 @@ describe('authService', () => {
         username: `user2-${timestamp}`,
         email: `user2-${timestamp}@example.com`,
         password: 'password123',
+        role: 'operator',
       });
 
       const agents = listAgents();

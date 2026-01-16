@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
+import { formatDateTime } from '../utils/dateFormatter';
 
 export function QuickRepliesPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -282,6 +283,11 @@ export function QuickRepliesPage() {
                   </span>
                   <span className="ml-2">Usado {reply.usageCount || 0} vezes</span>
                 </div>
+                {reply.createdAt && (
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Criado em: {formatDateTime(reply.createdAt)}
+                  </div>
+                )}
               </div>
             ))}
           </div>

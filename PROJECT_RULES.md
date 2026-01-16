@@ -282,6 +282,46 @@ const nodeColorStyle = { '--node-color': color };
 
 ---
 
+## 🧩 Flow Editor — Configuração Obrigatória via Painel de Propriedades
+
+### Regra Fundamental
+
+✅ **Toda configuração de nós do Flow Editor DEVE ser feita pelo Painel de Propriedades (`SidebarProperties`)**.
+
+Isso inclui (obrigatoriamente):
+- Ajustar `config` de qualquer nó (textos, URLs, variáveis, thresholds, flags, etc.)
+- **Adicionar/remover saídas de nós multi-saída** (ex.: regras, horários, opções, intenções)
+
+### Nós com múltiplas saídas (multi-saída)
+
+- **As saídas são derivadas do `config` do nó** (definidas em `frontend/src/editor/nodeSchemas.js` via `outputs` e/ou `getOutputs(node)`).
+- O editor **atualiza portas dinamicamente** via `updateNodeIO(nodeId)` quando o `config` muda.
+- ❌ **PROIBIDO**: criar/editar saídas alterando JSON manualmente, hacks no DOM, ou “editar config em JSON” no painel.
+
+### Proibição de edição manual de JSON no painel
+
+❌ **PROIBIDO** expor UI que permita editar `config` diretamente como JSON livre no painel (ex.: “Configuração Avançada” editável).
+
+✅ **PERMITIDO**:
+- Mostrar JSON **somente leitura** para diagnóstico/migração
+- Criar novos campos/controles no painel para cobrir o `config`
+
+### Fonte única da verdade
+
+- **`nodeSchemas.js` é a fonte única da verdade** para:
+  - Campos do painel (metadados e propriedades)
+  - Entradas/saídas (ports) e sockets
+  - Regras de validação por nó
+
+### Regra de implementação (quando faltar campo no painel)
+
+Se um nó precisar de nova configuração:
+- ✅ Atualizar `frontend/src/editor/nodeSchemas.js` (propriedade + descrição + default + validação)
+- ✅ Garantir renderização no `SidebarProperties` (tipo de campo suportado)
+- ✅ Para saídas dinâmicas: usar `getOutputs(node)` e garantir que o painel edite o `config` que alimenta essas saídas
+
+---
+
 ## 🔒 Regras de Validação
 
 ### Validação da Engine (Obrigatória)

@@ -110,10 +110,15 @@ describe('Sistema RPA', () => {
       // Salva e obtém o caminho real onde foi salvo
       const savedPath = recorder.save('test-load');
       
+      // Verifica se o arquivo foi salvo
+      expect(fs.existsSync(savedPath)).toBe(true);
+      
       // Registra arquivo para limpeza no afterAll
       testFilesToCleanup.push(savedPath);
       
+      // Carrega a gravação
       const loaded = ActionRecorder.load('test-load');
+      expect(loaded).not.toBeNull();
       expect(loaded.name).toBe('test-load');
       expect(loaded.steps).toHaveLength(1);
       

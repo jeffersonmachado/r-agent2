@@ -175,9 +175,7 @@ function addTagToTicket(ticketId, tag) {
     ticket.tags.push(normalizedTag);
     ticket.updatedAt = new Date().toISOString();
     
-    // Salva alteração
-    const { saveQueuesToFile } = require('./queueService');
-    saveQueuesToFile();
+    // Dados agora estão no banco de dados PostgreSQL - não precisa salvar em arquivo
   }
   
   return { success: true, ticket };
@@ -190,7 +188,7 @@ function addTagToTicket(ticketId, tag) {
  * @returns {{success: boolean, ticket?: Object, error?: string}}
  */
 function removeTagFromTicket(ticketId, tag) {
-  const { getTicket, saveQueuesToFile } = require('./queueService');
+  const { getTicket } = require('./queueService');
   
   const ticket = getTicket(ticketId);
   if (!ticket) {
@@ -204,7 +202,7 @@ function removeTagFromTicket(ticketId, tag) {
   const normalizedTag = tag.trim().toLowerCase();
   ticket.tags = ticket.tags.filter(t => t !== normalizedTag);
   ticket.updatedAt = new Date().toISOString();
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, ticket };
 }
@@ -216,7 +214,7 @@ function removeTagFromTicket(ticketId, tag) {
  * @returns {{success: boolean, ticket?: Object, error?: string}}
  */
 function setTicketCategory(ticketId, category) {
-  const { getTicket, saveQueuesToFile } = require('./queueService');
+  const { getTicket } = require('./queueService');
   
   const ticket = getTicket(ticketId);
   if (!ticket) {
@@ -225,7 +223,7 @@ function setTicketCategory(ticketId, category) {
   
   ticket.category = category ? category.trim() : null;
   ticket.updatedAt = new Date().toISOString();
-  saveQueuesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, ticket };
 }

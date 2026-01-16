@@ -5,7 +5,9 @@
  * de eventos do sistema (tickets criados, mensagens recebidas, etc.)
  * 
  * Persistência:
- * - Webhooks: api/data/webhooks.json
+ * - Webhooks: PostgreSQL (tabela webhooks)
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
 const fs = require('fs');
@@ -69,50 +71,8 @@ function ensureDataDir() {
   }
 }
 
-/**
- * Salva webhooks no arquivo JSON.
- */
-function saveWebhooksToFile() {
-  try {
-    ensureDataDir();
-    const webhooksArray = Array.from(webhooks.values());
-    const data = JSON.stringify(webhooksArray, null, 2);
-    fs.writeFileSync(webhooksFile, data, 'utf8');
-    logger.debug(`[WebhookService] Webhooks salvos: ${webhooksArray.length} webhook(s)`);
-  } catch (err) {
-    logger.error('[WebhookService] Erro ao salvar webhooks:', err);
-  }
-}
-
-/**
- * Carrega webhooks do arquivo JSON.
- */
-function loadWebhooksFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(webhooksFile)) {
-      logger.info(`[WebhookService] Arquivo de webhooks não encontrado: ${webhooksFile}. Iniciando com dados vazios.`);
-      return;
-    }
-
-    const data = fs.readFileSync(webhooksFile, 'utf8');
-    const webhooksArray = JSON.parse(data);
-
-    if (Array.isArray(webhooksArray)) {
-      webhooks.clear();
-      for (const webhook of webhooksArray) {
-        webhooks.set(webhook.id, webhook);
-      }
-      logger.info(`[WebhookService] Carregados ${webhooks.size} webhook(s)`);
-    }
-  } catch (err) {
-    logger.error('[WebhookService] Erro ao carregar webhooks:', err);
-    webhooks.clear();
-  }
-}
-
-// Carrega webhooks ao inicializar
-loadWebhooksFromFile();
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Gera secret aleatório para assinatura HMAC.
@@ -189,7 +149,7 @@ function callWebhook(webhook, payload) {
             webhook.stats.failedCalls++;
           }
           webhook.stats.lastCallAt = new Date().toISOString();
-          saveWebhooksToFile();
+          // Dados agora estão no banco de dados PostgreSQL
 
           resolve({
             success,
@@ -203,7 +163,7 @@ function callWebhook(webhook, payload) {
         webhook.stats.totalCalls++;
         webhook.stats.failedCalls++;
         webhook.stats.lastCallAt = new Date().toISOString();
-        saveWebhooksToFile();
+        // Dados agora estão no banco de dados PostgreSQL
 
         resolve({
           success: false,
@@ -216,7 +176,7 @@ function callWebhook(webhook, payload) {
         webhook.stats.totalCalls++;
         webhook.stats.failedCalls++;
         webhook.stats.lastCallAt = new Date().toISOString();
-        saveWebhooksToFile();
+        // Dados agora estão no banco de dados PostgreSQL
 
         resolve({
           success: false,
@@ -384,7 +344,7 @@ function createWebhook(data) {
     };
 
     webhooks.set(id, webhook);
-    saveWebhooksToFile();
+    // Dados agora estão no banco de dados PostgreSQL
 
     // Remove secret do retorno por segurança
     const { secret, ...webhookSafe } = webhook;
@@ -499,7 +459,7 @@ function updateWebhook(id, updates) {
     }
 
     webhook.updatedAt = new Date().toISOString();
-    saveWebhooksToFile();
+    // Dados agora estão no banco de dados PostgreSQL
 
     const { secret, ...webhookSafe } = webhook;
     return { success: true, webhook: webhookSafe };
@@ -524,7 +484,7 @@ function deleteWebhook(id) {
   }
 
   webhooks.delete(id);
-  saveWebhooksToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 
   return { success: true };
 }

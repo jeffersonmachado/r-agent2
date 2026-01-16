@@ -1802,7 +1802,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
     : [...new Set([...KNOWN_SOURCES, ...documentsArray.map(doc => doc.metadata?.source).filter(Boolean)])].sort();
 
   return (
-    <div className="support-page" style={{ paddingTop: '60px' }}>
+    <div className="support-page w-full h-screen" style={{ paddingTop: '60px' }}>
       <div className="support-header">
         <div style={{ marginBottom: '10px' }}>
           <h1>📚 Gerenciamento de Documentos RAG</h1>

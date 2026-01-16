@@ -18,6 +18,7 @@ const logger = require('../utils/logger');
 const config = require('../utils/config');
 const { generateAiResponse } = require('./aiProviderService');
 const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
+const { RecordingSystem } = require('../../lib/recordingSystem');
 
 // Cache dos prompts carregados
 let cachedPrompts = null;
@@ -378,6 +379,12 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
     logger.debug('Prompt construído para IA', { promptLength: prompt.length });
     
     // Chama a IA para gerar o teste
+    recording.recordGeneration('rpa-test', {
+      flowId: flow.id,
+      dependencies: dependencies,
+    }, {
+      step: 'generate-rpa-test',
+    });
     const aiResponse = await generateAiResponse(prompt, tenantId, {
       flowId: flow.id,
       nodeId: 'rpa-test-generator',
@@ -554,6 +561,18 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
       rpaTest.validationWarnings.local = localValidation;
     }
     
+    recording.recordAction({
+      type: 'rpa-test-generated',
+      step: 'test-generated',
+      value: {
+        testId: rpaTest.id,
+        stepsCount: rpaTest.steps.length,
+        assertsCount: rpaTest.asserts.length,
+      },
+    });
+    recording.stop();
+    recording.save(recordingId);
+
     logger.info('Teste RPA gerado pela IA com sucesso', { 
       testId: rpaTest.id,
       stepCount: rpaTest.steps.length,
@@ -567,6 +586,12 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
       error: err.message,
       stack: err.stack 
     });
+    recording.recordCustom('error', {
+      step: 'generation-error',
+      value: { error: err.message },
+    });
+    recording.stop();
+    recording.save(`${recordingId}-error`);
     throw err;
   }
 }

@@ -1,4 +1,24 @@
 import logger from '../../utils/logger';
+import { getNodeSchema } from '../nodeSchemas';
+
+type ValidationErrorLike =
+  | string
+  | {
+      code?: string;
+      message?: string;
+      messageUi?: string;
+      severity?: string;
+      source?: 'local' | 'backend';
+      [key: string]: any;
+    };
+
+function isBackendValidationError(err: ValidationErrorLike) {
+  return typeof err === 'object' && !!err && err.source === 'backend';
+}
+
+function isLocalValidationError(err: ValidationErrorLike) {
+  return typeof err === 'object' && !!err && err.source === 'local';
+}
 
 /**
  * Aplica erros de validação do backend aos nós do editor
@@ -37,19 +57,15 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
   // ✅ Se backendErrors está vazio, limpa todos os erros do backend dos nós
   // Se tem erros, limpa erros do backend existentes antes de aplicar novos
   if (backendErrors.length === 0) {
-    // Limpa todos os erros que têm code (erros do backend)
+    // ✅ Remove apenas erros marcados como source="backend" (mantém erros locais)
     nodes.forEach((node) => {
       if (node.data?.validation?.errors) {
-        // Remove apenas erros que têm code (vindos do backend)
-        const localErrors = node.data.validation.errors.filter((err) => {
-          // Mantém apenas strings (erros locais) ou objetos sem code
-          if (typeof err === 'string') return true;
-          if (typeof err === 'object' && !err.code) return true;
-          return false; // Remove objetos com code (erros do backend)
-        });
-        
-        node.data.validation.errors = localErrors;
-        node.data.validation.status = localErrors.length > 0 ? 'invalid' : 'valid';
+        const remainingErrors = (node.data.validation.errors as ValidationErrorLike[]).filter(
+          (err) => !isBackendValidationError(err),
+        );
+
+        node.data.validation.errors = remainingErrors;
+        node.data.validation.status = remainingErrors.length > 0 ? 'invalid' : 'valid';
         
         if (area && typeof area.update === 'function') {
           try {
@@ -66,15 +82,9 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
   // ✅ Limpa erros do backend existentes (mantém apenas erros locais)
   nodes.forEach((node) => {
     if (node.data?.validation?.errors) {
-      // Remove apenas erros que têm code (vindos do backend)
-      const localErrors = node.data.validation.errors.filter((err) => {
-        // Mantém apenas strings (erros locais) ou objetos sem code
-        if (typeof err === 'string') return true;
-        if (typeof err === 'object' && !err.code) return true;
-        return false; // Remove objetos com code (erros do backend)
-      });
-      
-      node.data.validation.errors = localErrors;
+      node.data.validation.errors = (node.data.validation.errors as ValidationErrorLike[]).filter(
+        (err) => !isBackendValidationError(err),
+      );
     }
   });
   
@@ -109,16 +119,20 @@ export function applyBackendValidationErrors(editor, area, backendErrors) {
         const errorMessageUi = error.messageUi || errorMessage; // Usa messageUi se disponível, senão usa message
         
         // Verifica se o erro já existe (evita duplicatas)
-        const errorExists = editorNode.data.validation.errors.some(
-          (err) => (typeof err === 'object' && err.code === errorCode && err.message === errorMessage) ||
-                   (typeof err === 'string' && err === errorMessage)
-        );
+        const errorExists = (editorNode.data.validation.errors as ValidationErrorLike[]).some((err) => {
+          if (typeof err === 'string') return err === errorMessage;
+          if (typeof err !== 'object' || !err) return false;
+          return err.source === 'backend' && err.code === errorCode && err.message === errorMessage;
+        });
         
         if (!errorExists) {
           editorNode.data.validation.errors.push({
+            source: 'backend',
             code: errorCode,
             message: errorMessage, // ✅ Mensagem técnica original
             messageUi: errorMessageUi, // ✅ Mensagem amigável
+            severity: error.severity || 'error',
+            details: error.details || {},
           });
         }
         
@@ -165,19 +179,78 @@ export function runFlowValidation(editor, area?: any) {
     if (!editor) return;
   
     const nodes = editor.getNodes();
+    const connections =
+      typeof editor.getConnections === 'function' ? editor.getConnections() : [];
     
     logger.debug('runFlowValidation - iniciando validação', {
       nodeCount: nodes.length,
     });
   
     for (const node of nodes) {
-      const errors = validateNode(node);
+      const nodeType = node?.data?.type || node?.type || 'unknown';
+
+      const schema = getNodeSchema(nodeType);
+
+      // Extrai targets conectados a partir das conexões do editor
+      const nextTargets = Array.from(
+        new Set(
+          (connections || [])
+            .filter((c: any) => c && String(c.source) === String(node.id))
+            .map((c: any) => String(c.target)),
+        ),
+      );
+
+      // Adapta nó do Rete para o formato esperado pelos schemas (engine-like)
+      const plainNode = {
+        id: String(node.id),
+        type: nodeType,
+        config: (node?.data?.config && typeof node.data.config === 'object') ? node.data.config : {},
+        next: nextTargets.length > 0 ? nextTargets : null,
+      };
+
+      let localErrors: ValidationErrorLike[] = [];
+
+      if (!schema || typeof schema.validate !== 'function') {
+        localErrors = [
+          {
+            source: 'local',
+            code: 'UNKNOWN_NODE_TYPE',
+            message: `Tipo de nó desconhecido: "${nodeType}".`,
+            messageUi: `Tipo de nó desconhecido: "${nodeType}".`,
+            severity: 'error',
+            nodeIds: [String(node.id)],
+          },
+        ];
+      } else {
+        const schemaErrors = schema.validate(plainNode) || [];
+        localErrors = (Array.isArray(schemaErrors) ? schemaErrors : [schemaErrors]).map((err) => {
+          if (typeof err === 'string') return err;
+          if (typeof err === 'object' && err) {
+            return { source: 'local', ...err };
+          }
+          return {
+            source: 'local',
+            code: 'VALIDATION_ERROR',
+            message: 'Erro de validação',
+            messageUi: 'Erro de validação',
+            severity: 'error',
+            nodeIds: [String(node.id)],
+          };
+        });
+      }
+
+      const existingErrors: ValidationErrorLike[] = (node?.data?.validation?.errors || []) as any;
+      const backendErrors = existingErrors.filter((err) => isBackendValidationError(err));
+
+      // Mantém só 1 set “local” vigente (substitui locais antigos pelos novos)
+      const mergedErrors = [...backendErrors, ...localErrors];
   
       // ✅ Usa erros exatamente como estão (sem transformação)
       // Erros locais são strings, erros do backend são objetos com code e message
+      if (!node.data) node.data = {};
       node.data.validation = {
-        status: errors.length ? 'invalid' : 'valid',
-        errors: errors
+        status: mergedErrors.length ? 'invalid' : 'valid',
+        errors: mergedErrors,
       };
       
       // ✅ Usa area.update() para forçar re-render do React (padrão do Rete.js v2)
@@ -191,12 +264,12 @@ export function runFlowValidation(editor, area?: any) {
         }
       }
       
-      if (errors.length > 0) {
+      if (mergedErrors.length > 0) {
         logger.debug('runFlowValidation - nó marcado como inválido', {
           nodeId: node.id,
-          nodeType: node.data?.type,
-          errorCount: errors.length,
-          errors: errors,
+          nodeType,
+          errorCount: mergedErrors.length,
+          errors: mergedErrors,
         });
       }
     }
@@ -206,27 +279,3 @@ export function runFlowValidation(editor, area?: any) {
       invalidCount: nodes.filter(n => n.data?.validation?.status === 'invalid').length,
     });
   }
-  
-  /**
-   * Validação PURA de um nó
-   * - Não acessa editor
-   * - Não acessa DOM
-   */
-  function validateNode(node) {
-    const errors: string[] = [];
-  
-    if (node.type === 'message') {
-      if (!node.data?.text || node.data.text.trim() === '') {
-        errors.push('Mensagem vazia');
-      }
-    }
-  
-    if (node.type === 'condition') {
-      if (!node.data?.expression) {
-        errors.push('Condição não configurada');
-      }
-    }
-  
-    return errors;
-  }
-  

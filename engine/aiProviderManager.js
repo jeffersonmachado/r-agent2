@@ -2,9 +2,9 @@
  * Gerenciador de múltiplos providers de IA.
  *
  * Regras:
- * - Suporta múltiplos providers (ex.: "openai", "local", "fallback").
+ * - Suporta múltiplos providers (ex.: "openai", "anthropic").
  * - Seleção por tenant:
- *   - Cada tenant pode ter um provider principal e um fallback.
+ *   - Cada tenant pode ter um provider primário e um secundário.
  * - IA nunca controla fluxo:
  *   - Este módulo apenas seleciona QUAL provider será chamado.
  *   - A decisão de fluxo continua no grafo/routers, nunca no modelo.
@@ -22,12 +22,12 @@
 /**
  * Configuração de provider de IA por tenant.
  *
- * - primary: id do provider principal (ex.: "openai").
- * - fallback: id do provider de fallback (ex.: "local" ou "stub").
+ * - primary: id do provider primário (ex.: "openai").
+ * - secondary: id do provider secundário (ex.: "anthropic").
  *
  * @typedef {Object} TenantAiConfig
  * @property {string} primary
- * @property {string} [fallback]
+ * @property {string} [secondary]
  */
 
 /** @type {Map<string, AiProvider>} */
@@ -41,8 +41,7 @@ const tenantConfig = new Map();
  *
  * Exemplo de ids:
  * - "openai"
- * - "local-llm"
- * - "fallback-static"
+ * - "anthropic"
  *
  * @param {string} id
  * @param {AiProvider} provider
@@ -66,18 +65,18 @@ function setTenantAiConfig(tenantId, config) {
   }
   tenantConfig.set(tenantId, {
     primary: config.primary,
-    fallback: config.fallback,
+    secondary: config.secondary,
   });
 }
 
 /**
- * Obtém o provider configurado para um tenant, já com fallback
+ * Obtém o provider configurado para um tenant, já com provider secundário
  * aplicado (se houver).
  *
  * Decisão:
- * - Se houver fallback, retornamos um "provider composto" que:
+ * - Se houver provider secundário, retornamos um "provider composto" que:
  *   - Tenta o provider primário.
- *   - Em caso de erro, tenta o fallback.
+ *   - Em caso de erro, tenta o provider secundário.
  * - Erros de ambos continuam sendo tratados no aiNodeHandler
  *   como AI_ERROR, sem afetar o fluxo.
  *
@@ -115,7 +114,7 @@ function getAiProviderForTenant(tenantId) {
   log.debug('✅ getAiProviderForTenant: Configuração encontrada', {
     tenantId,
     primary: cfg.primary,
-    fallback: cfg.fallback,
+    secondary: cfg.secondary,
   });
 
   const primary = providerRegistry.get(cfg.primary);
@@ -134,20 +133,20 @@ function getAiProviderForTenant(tenantId) {
     hasGenerate: typeof primary.generate === 'function',
   });
 
-  const fallback = cfg.fallback ? providerRegistry.get(cfg.fallback) : null;
+  const secondary = cfg.secondary ? providerRegistry.get(cfg.secondary) : null;
 
-  if (!fallback) {
-    log.debug('ℹ️ getAiProviderForTenant: Sem fallback configurado, retornando provider primário', {
+  if (!secondary) {
+    log.debug('ℹ️ getAiProviderForTenant: Sem provider secundário configurado, retornando provider primário', {
       tenantId,
       primaryId: cfg.primary,
     });
     return primary;
   }
 
-  log.debug('✅ getAiProviderForTenant: Provider composto (com fallback)', {
+  log.debug('✅ getAiProviderForTenant: Provider composto (com secundário)', {
     tenantId,
     primaryId: cfg.primary,
-    fallbackId: cfg.fallback,
+    secondaryId: cfg.secondary,
   });
 
   /** @type {AiProvider} */
@@ -166,59 +165,56 @@ function getAiProviderForTenant(tenantId) {
         });
         return result;
       } catch (err) {
-        // CRÍTICO: Log como erro ao invés de warning - fallback não deve ser silencioso
-        log.error('❌ Provider composto: Provider primário falhou, usando fallback', {
+        // Log como warning - provider secundário sendo usado
+        log.warn('⚠️ Provider composto: Provider primário falhou, usando provider secundário', {
           tenantId,
           primaryId: cfg.primary,
-          fallbackId: cfg.fallback,
+          secondaryId: cfg.secondary,
           error: err.message,
           errorStack: err.stack,
-          severity: 'HIGH',
-          alert: 'AI_PROVIDER_FALLBACK_USED',
         });
         
-        // Registra no monitoramento de fallbacks
-        try {
-          const { recordFallback, FALLBACK_TYPES } = require('./fallbackMonitor');
-          recordFallback(FALLBACK_TYPES.AI_PROVIDER_FALLBACK, {
-            tenantId,
-            primaryProvider: cfg.primary,
-            fallbackProvider: cfg.fallback,
-            errorType: err.name || 'UnknownError',
-            sessionId: context?.sessionId,
-          });
-        } catch (monitorError) {
-          // Não falha se monitoramento não estiver disponível
-          log.debug('Não foi possível registrar métrica de fallback', { error: monitorError.message });
-        }
-        
-        // Tentamos o fallback, mas sem mudar a semântica de fluxo:
+        // Tentamos o provider secundário, mas sem mudar a semântica de fluxo:
         // qualquer erro ainda será tratado no nível do nó de IA.
-        if (!fallback) {
-          log.error('❌ Provider composto: Fallback não disponível', {
+        if (!secondary) {
+          log.error('❌ Provider composto: Provider secundário não disponível', {
             tenantId,
-            fallbackId: cfg.fallback,
-            severity: 'CRITICAL',
-            alert: 'AI_PROVIDER_FALLBACK_UNAVAILABLE',
+            secondaryId: cfg.secondary,
           });
           throw err;
         }
-        const fallbackResult = await fallback.generate(prompt, context);
-        // Log como warning - fallback funcionou mas é um sinal de problema
-        log.warn('⚠️ Provider composto: Fallback funcionou (problema no provider primário deve ser investigado)', {
+        const secondaryResult = await secondary.generate(prompt, context);
+        log.info('✅ Provider composto: Provider secundário funcionou', {
           tenantId,
-          fallbackId: cfg.fallback,
+          secondaryId: cfg.secondary,
           primaryId: cfg.primary,
-          hasText: !!fallbackResult?.text,
-          severity: 'MEDIUM',
-          alert: 'AI_PROVIDER_FALLBACK_SUCCESS',
+          hasText: !!secondaryResult?.text,
         });
-        return fallbackResult;
+        return secondaryResult;
       }
     },
   };
 
   return composite;
+}
+
+/**
+ * Verifica se um provider está registrado.
+ * 
+ * @param {string} providerId
+ * @returns {boolean}
+ */
+function isProviderRegistered(providerId) {
+  return providerRegistry.has(providerId);
+}
+
+/**
+ * Obtém a lista de IDs de providers registrados.
+ * 
+ * @returns {string[]}
+ */
+function getRegisteredProviderIds() {
+  return Array.from(providerRegistry.keys());
 }
 
 /**
@@ -233,6 +229,8 @@ module.exports = {
   registerAiProvider,
   setTenantAiConfig,
   getAiProviderForTenant,
+  isProviderRegistered,
+  getRegisteredProviderIds,
   clearAiProviderConfig,
 };
 

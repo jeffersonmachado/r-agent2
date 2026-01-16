@@ -140,10 +140,38 @@ export function getStaticUrl(url) {
  * @param {string} [path='/login'] - Caminho de destino (padrão: '/login')
  */
 export function redirectToLogin(path = '/login') {
+  if (typeof window === 'undefined') {
+    console.warn('[redirectToLogin] window não está disponível');
+    return;
+  }
+  
   const basePath = BASE_PATH;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const fullPath = basePath ? `${basePath}${normalizedPath}` : normalizedPath;
-  window.location.href = `${window.location.origin}${fullPath}`;
+  const redirectUrl = `${window.location.origin}${fullPath}`;
+  
+  console.log('[redirectToLogin] Redirecionando para login:', {
+    path,
+    basePath,
+    normalizedPath,
+    fullPath,
+    redirectUrl,
+    currentUrl: window.location.href,
+  });
+  
+  try {
+    window.location.href = redirectUrl;
+    console.log('[redirectToLogin] ✅ Redirecionamento iniciado');
+  } catch (err) {
+    console.error('[redirectToLogin] ❌ Erro ao redirecionar:', err);
+    // Fallback: tenta usar replace
+    try {
+      window.location.replace(redirectUrl);
+      console.log('[redirectToLogin] ✅ Redirecionamento via replace iniciado');
+    } catch (err2) {
+      console.error('[redirectToLogin] ❌ Erro ao usar replace também:', err2);
+    }
+  }
 }
 
 

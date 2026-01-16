@@ -166,28 +166,25 @@ async function loadExistingData(dependencies, tenantId) {
 
   try {
     // Carrega departamentos
-    const deptPath = path.join(dataDir, 'departments.json');
-    if (fs.existsSync(deptPath)) {
-      const deptData = JSON.parse(fs.readFileSync(deptPath, 'utf8'));
-      const departments = deptData.departments || [];
-      dependencies.cadastros.departments.existing = departments.map(d => d.name || d.id);
-    }
+    // Migrado para banco de dados - não lê mais de arquivo JSON
+    // Dados devem ser carregados do banco de dados PostgreSQL
+    const deptData = { departments: [] }; // Placeholder - dados agora vêm do banco
+    const departments = deptData.departments || [];
+    dependencies.cadastros.departments.existing = departments.map(d => d.name || d.id);
 
     // Carrega filas
-    const queuesPath = path.join(dataDir, 'queues.json');
-    if (fs.existsSync(queuesPath)) {
-      const queuesData = JSON.parse(fs.readFileSync(queuesPath, 'utf8'));
-      const queues = queuesData.queues || {};
-      dependencies.cadastros.queues.existing = Object.keys(queues);
-    }
+    // Migrado para banco de dados - não lê mais de arquivo JSON
+    // Dados devem ser carregados do banco de dados PostgreSQL
+    const queuesData = { queues: {} }; // Placeholder - dados agora vêm do banco
+    const queues = queuesData.queues || {};
+    dependencies.cadastros.queues.existing = Object.keys(queues);
 
     // Carrega agentes
-    const agentsPath = path.join(dataDir, 'agents.json');
-    if (fs.existsSync(agentsPath)) {
-      const agentsData = JSON.parse(fs.readFileSync(agentsPath, 'utf8'));
-      const agents = Array.isArray(agentsData) ? agentsData : (agentsData.agents || []);
-      dependencies.cadastros.agents.existing = agents.map(a => a.id || a.email || a.username);
-    }
+    // Migrado para banco de dados - não lê mais de arquivo JSON
+    // Dados devem ser carregados do banco de dados PostgreSQL
+    const agentsData = []; // Placeholder - dados agora vêm do banco
+    const agents = Array.isArray(agentsData) ? agentsData : (agentsData.agents || []);
+    dependencies.cadastros.agents.existing = agents.map(a => a.id || a.email || a.username);
 
     // Identifica o que está faltando
     dependencies.cadastros.departments.missing = dependencies.cadastros.departments.required

@@ -30,17 +30,26 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Alinhado com package.json engines: ">=20.19.0 || >=22.12.0"
+          node-version: '20.19.0'
           cache: 'npm'
       
       - name: Instalar dependências
         run: npm ci
-      
-      - name: Executar testes críticos
+
+      - name: Instalar Playwright (Chromium)
+        run: npx playwright install chromium --with-deps
+
+      - name: Iniciar Frontend (Vite) e executar validação oficial
         run: |
-          npm run test:unit
-          npm run test:flow
-          npm run test:data
+          cd frontend
+          npm ci
+          npm run start -- --host 0.0.0.0 --port 5173 --strictPort &
+          VITE_PID=$!
+          cd ..
+          node -e "const http=require('http'); const url='http://127.0.0.1:5173'; let tries=60; (function ping(){ http.get(url,res=>{process.exit(0)}).on('error',()=>{ if(--tries<=0) process.exit(1); setTimeout(ping,1000); });})();"
+          npm run system:validate
+          kill $VITE_PID || true
       
       - name: Verificar build
         run: |

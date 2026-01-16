@@ -4,7 +4,6 @@
     "nodeEnv": "test",
     "api": {
       "port": 3000,
-      "defaultTenantId": "tenant-test",
       "ticketCleanup": {
         "intervalHours": 1,
         "maxAgeDays": 7

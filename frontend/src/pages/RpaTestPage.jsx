@@ -389,7 +389,7 @@ export function RpaTestPage() {
   }
 
   return (
-    <div className="h-screen bg-bg-primary flex flex-col overflow-hidden">
+    <div className="h-screen w-full bg-bg-primary flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 p-6 border-b border-border-default bg-bg-elevated">
         <div className="max-w-full mx-auto">

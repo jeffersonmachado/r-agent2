@@ -3,14 +3,33 @@
  * 
  * Captura ações do usuário na interface e salva em formato JSON
  * para reprodução posterior.
+ * 
+ * NOTA: Este módulo agora é um wrapper do RecordingSystem genérico
+ * para manter compatibilidade com código existente.
+ * Novos desenvolvimentos devem usar lib/recordingSystem.js diretamente.
  */
 
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { RecordingSystem } = require('../../lib/recordingSystem');
 
+/**
+ * ActionRecorder - Wrapper de compatibilidade
+ * 
+ * Mantém interface original para compatibilidade retroativa.
+ * Internamente usa RecordingSystem genérico.
+ */
 class ActionRecorder {
   constructor() {
+    // Usa RecordingSystem internamente
+    this.recordingSystem = new RecordingSystem({
+      storagePath: path.join(__dirname, 'seeds'),
+      context: 'rpa',
+      enableTimestamps: false, // Seeds não devem ter timestamps
+    });
+    
+    // Mantém propriedades para compatibilidade
     this.actions = [];
     this.metadata = {
       id: null,
@@ -46,6 +65,7 @@ class ActionRecorder {
    */
   stop() {
     this.isRecording = false;
+    this.recordingSystem.stop();
   }
 
   /**
@@ -75,14 +95,19 @@ class ActionRecorder {
   recordClick(selector, options = {}) {
     if (!this.isRecording) return;
 
-    this.actions.push({
+    const action = {
       type: 'click',
       selector,
       waitFor: options.waitFor || null,
       timeout: options.timeout || 30000,
       force: options.force || false,
       // NÃO inclui timestamp - seed é neutro em relação ao tempo
-    });
+    };
+    
+    this.actions.push(action);
+    
+    // Também registra no RecordingSystem
+    this.recordingSystem.recordClick(selector, options);
   }
 
   /**
@@ -106,7 +131,7 @@ class ActionRecorder {
     if (!this.isRecording) return;
 
     // Grava apenas dados neutros (sem delays ou velocidade)
-    this.actions.push({
+    const action = {
       type: 'fill', // ou 'type' - ação de digitação
       selector,
       value, // Texto completo - será digitado caractere a caractere no replay
@@ -115,7 +140,12 @@ class ActionRecorder {
       timeout: options.timeout || 30000, // Timeout é necessário para encontrar elemento
       // NÃO inclui timestamp relativo - seed é neutro em relação ao tempo
       // NÃO inclui delays ou typingSpeedMs
-    });
+    };
+    
+    this.actions.push(action);
+    
+    // Também registra no RecordingSystem
+    this.recordingSystem.recordFill(selector, value, options);
   }
 
   /**
@@ -146,13 +176,18 @@ class ActionRecorder {
   recordWait(condition, options = {}) {
     if (!this.isRecording) return;
 
-    this.actions.push({
+    const action = {
       type: 'wait',
       condition,
       timeout: options.timeout || 30000,
       state: options.state || null, // 'visible', 'hidden', 'attached', 'detached'
       // NÃO inclui timestamp - seed é neutro em relação ao tempo
-    });
+    };
+    
+    this.actions.push(action);
+    
+    // Também registra no RecordingSystem
+    this.recordingSystem.recordWait(condition, options);
   }
 
   /**
@@ -178,7 +213,7 @@ class ActionRecorder {
     if (options.page || (typeof selectorOrPage === 'object' && selectorOrPage !== null && !selectorOrPage.selector)) {
       const pageConfig = options.page || selectorOrPage;
       
-      this.actions.push({
+      const action = {
         type: 'assert',
         page: {
           url: pageConfig.url || null,
@@ -190,7 +225,10 @@ class ActionRecorder {
         message: pageConfig.message || options.message || null,
         timeout: pageConfig.timeout || options.timeout || 30000,
         // NÃO inclui timestamp - seed é neutro em relação ao tempo
-      });
+      };
+      
+      this.actions.push(action);
+      this.recordingSystem.recordAssert(selectorOrPage, options);
       return;
     }
 
@@ -198,13 +236,16 @@ class ActionRecorder {
     // COMPATIBILIDADE: Título simples
     // ============================================
     if (options.title !== undefined) {
-      this.actions.push({
+      const action = {
         type: 'assert',
         title: options.title,
         message: options.message || null,
         timeout: options.timeout || 30000,
         // NÃO inclui timestamp - seed é neutro em relação ao tempo
-      });
+      };
+      
+      this.actions.push(action);
+      this.recordingSystem.recordAssert(selectorOrPage, options);
       return;
     }
 
@@ -217,7 +258,7 @@ class ActionRecorder {
       throw new Error('recordAssert requer selector, title ou page config');
     }
 
-    this.actions.push({
+    const action = {
       type: 'assert',
       selector,
       exists: options.exists !== undefined ? options.exists : true,
@@ -228,7 +269,10 @@ class ActionRecorder {
       message: options.message || null,
       timeout: options.timeout || 30000,
       // NÃO inclui timestamp - seed é neutro em relação ao tempo
-    });
+    };
+    
+    this.actions.push(action);
+    this.recordingSystem.recordAssert(selectorOrPage, options);
   }
 
   /**
@@ -240,11 +284,16 @@ class ActionRecorder {
   recordCustom(type, data = {}) {
     if (!this.isRecording) return;
 
-    this.actions.push({
+    const action = {
       type,
       ...data,
       // NÃO inclui timestamp automaticamente - seed é neutro em relação ao tempo
-    });
+    };
+    
+    this.actions.push(action);
+    
+    // Também registra no RecordingSystem
+    this.recordingSystem.recordCustom(type, data);
   }
 
   /**
@@ -254,6 +303,19 @@ class ActionRecorder {
    * @param {Object} data - Dados adicionais para incluir
    */
   save(filename, data = {}) {
+    // Adiciona dados ao RecordingSystem
+    if (data && Object.keys(data).length > 0) {
+      this.recordingSystem.addData(data);
+    }
+    
+    // Adiciona metadados
+    if (data.source) {
+      this.recordingSystem.addMetadata({ source: data.source });
+    }
+    
+    // Sincroniza dados do RecordingSystem com formato antigo
+    const recordingSystemData = this.recordingSystem.getData();
+    
     // UNIFICADO: Tudo salva em /seeds/ agora
     const seedsDir = path.join(__dirname, 'seeds');
     
@@ -262,8 +324,20 @@ class ActionRecorder {
       fs.mkdirSync(seedsDir, { recursive: true });
     }
 
+    // Garante que metadata.name está definido (usa o nome do arquivo se não estiver definido)
+    if (!this.metadata.name && filename) {
+      this.metadata.name = filename;
+    }
+
+    // Garante que metadata.name está definido (usa o nome do arquivo se não estiver definido)
+    if (!this.metadata.name && filename) {
+      this.metadata.name = filename;
+    }
+
+    // Mantém formato compatível
     const recording = {
       ...this.metadata,
+      name: this.metadata.name || filename, // Garante que name está definido
       steps: this.actions,
       data: {
         ...data,
@@ -274,6 +348,9 @@ class ActionRecorder {
 
     const filepath = path.join(seedsDir, `${filename}.json`);
     fs.writeFileSync(filepath, JSON.stringify(recording, null, 2), 'utf8');
+
+    // NÃO chama recordingSystem.save() aqui porque ele sobrescreve o arquivo com dados vazios
+    // O recordingSystem é usado apenas para gravação em tempo real, não para persistência
 
     return filepath;
   }
@@ -288,7 +365,7 @@ class ActionRecorder {
     const seedsFile = path.join(__dirname, 'seeds', `${filename}.json`);
     
     if (!fs.existsSync(seedsFile)) {
-      throw new Error(`Gravação não encontrada: ${filename}`);
+      return null; // Retorna null em vez de lançar erro para compatibilidade com testes
     }
 
     const content = fs.readFileSync(seedsFile, 'utf8');

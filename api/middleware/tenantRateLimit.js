@@ -13,6 +13,7 @@
 const { checkRateLimit } = require('../../infra/rate-limit');
 const { getTenant } = require('../services/tenantService');
 const { requireTenant } = require('./tenantValidation');
+const { isSuperAdmin } = require('../services/superAdminService');
 const logger = require('../utils/logger');
 
 /**
@@ -52,10 +53,54 @@ async function tenantRateLimitMiddleware(req, res, sendJson) {
     logger.debug('[TenantRateLimit] Rate limit desativado em desenvolvimento');
     return true;
   }
+  
+  // Para super-admins, rate limit é apenas informativo (não bloqueia)
+  if (req.agent && isSuperAdmin(req.agent)) {
+    // Ainda valida e verifica rate limit, mas apenas para logging
+    const tenantValidation = await requireTenant(req);
+    if (tenantValidation.valid) {
+      const tenantId = req.tenantId;
+      const tenant = req.tenant;
+      const limits = RATE_LIMITS_BY_PLAN[tenant.plan] || RATE_LIMITS_BY_PLAN.trial;
+      
+      try {
+        const operationType = `TENANT_API_${tenant.plan}_${limits.points}_${limits.duration}`;
+        const result = await checkRateLimit({
+          userId: `tenant:${tenantId}`,
+          operationType,
+        });
+        
+        // Apenas loga, não bloqueia
+        if (!result.allowed) {
+          logger.warn('[TenantRateLimit] Rate limit excedido (super-admin - apenas informativo)', {
+            tenantId,
+            plan: tenant.plan,
+            retryAfter: result.retryAfter,
+            agentId: req.agent.id,
+            username: req.agent.username,
+          });
+        }
+        
+        // Adiciona headers informativos mesmo para super-admin
+        res.setHeader('X-RateLimit-Limit', limits.points);
+        res.setHeader('X-RateLimit-Remaining', result.remainingPoints || limits.points);
+        res.setHeader('X-RateLimit-Reset', new Date(Date.now() + (limits.duration * 1000)).toISOString());
+        res.setHeader('X-RateLimit-SuperAdmin', 'true'); // Indica que é super-admin
+      } catch (err) {
+        logger.debug('[TenantRateLimit] Erro ao verificar rate limit para super-admin (ignorado)', {
+          tenantId: req.tenantId,
+          error: err.message,
+        });
+      }
+    }
+    // Super-admin sempre passa, rate limit é apenas informativo
+    return true;
+  }
+  
   // Rotas de autenticação e super-admin não exigem tenant_id
   // (serão tratadas antes de chegar aqui no server.js)
   // Valida tenant primeiro
-  const tenantValidation = requireTenant(req);
+  const tenantValidation = await requireTenant(req);
   if (!tenantValidation.valid) {
     sendJson(res, 403, {
       error: 'tenant_validation_failed',
@@ -165,7 +210,7 @@ async function tenantRateLimitMiddleware(req, res, sendJson) {
  */
 async function tenantUserRateLimitMiddleware(req, res, sendJson) {
   // Valida tenant primeiro
-  const tenantValidation = requireTenant(req);
+  const tenantValidation = await requireTenant(req);
   if (!tenantValidation.valid) {
     sendJson(res, 403, {
       error: 'tenant_validation_failed',

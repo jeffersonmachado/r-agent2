@@ -15,6 +15,8 @@ const logger = require('../utils/logger');
 const { generateChatbotFlow } = require('../../engine/ai/generateChatbotFlow');
 const ragService = require('./ragService');
 const webScrapingService = require('./webScrapingService');
+const { RecordingSystem } = require('../../lib/recordingSystem');
+const path = require('path');
 
 /**
  * Constrói o prompt para a IA gerar o fluxo.
@@ -341,6 +343,23 @@ async function generateFlowFromDescription(description, options = {}) {
   const flowId = options.flowId || `flow-${uuidv4().slice(0, 8)}`;
   const flowName = options.flowName || 'Fluxo Gerado';
   
+  // Inicializa gravação
+  const recording = new RecordingSystem({
+    storagePath: path.join(process.cwd(), 'recordings', 'flow-generation'),
+    context: 'flow-generation',
+    enableTimestamps: false,
+  });
+
+  const recordingId = `flow-gen-${flowId}-${Date.now()}`;
+  recording.start(recordingId, {
+    name: `Geração de Fluxo - ${flowName}`,
+    description: 'Geração de fluxo a partir de descrição',
+    flowId,
+    flowName,
+    tenantId,
+    source: 'automatic',
+  });
+  
   logger.info('Gerando fluxo a partir de descrição usando wrapper oficial', { 
     description: description.substring(0, 100),
     flowId,
@@ -392,6 +411,17 @@ async function generateFlowFromDescription(description, options = {}) {
       nodeCount: flow.nodes.length,
       validation: wrapperResult.validation
     });
+
+    recording.recordAction({
+      type: 'flow-generated',
+      step: 'flow-generated',
+      value: {
+        flowId,
+        nodeCount: flow.nodes.length,
+      },
+    });
+    recording.stop();
+    recording.save(recordingId);
     
     return flow;
   } catch (err) {
@@ -399,6 +429,13 @@ async function generateFlowFromDescription(description, options = {}) {
       error: err.message,
       stack: err.stack 
     });
+    
+    recording.recordCustom('error', {
+      step: 'generation-error',
+      value: { error: err.message },
+    });
+    recording.stop();
+    recording.save(`${recordingId}-error`);
     
     // Fallback: usa geração por palavras-chave
     return generateFlowFromKeywords(description, options);

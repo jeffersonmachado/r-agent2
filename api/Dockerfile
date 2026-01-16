@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 WORKDIR /app
 
@@ -24,6 +24,7 @@ COPY contracts/ ./contracts/
 COPY config/ ./config/
 COPY qa/ ./qa/
 COPY tests/ ./tests/
+COPY lib/ ./lib/
 
 # Cria diretório de dados se não existir
 RUN mkdir -p /app/api/data
@@ -37,9 +38,13 @@ EXPOSE 3000
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Comando para iniciar
-CMD ["node", "api/server.js"]
+# Copia entrypoint
+COPY api/entrypoint.sh ./api/entrypoint.sh
+RUN chmod +x ./api/entrypoint.sh
+
+# Entrypoint executa migrations + seed + server
+ENTRYPOINT ["./api/entrypoint.sh"]
 
 

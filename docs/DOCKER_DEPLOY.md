@@ -108,7 +108,6 @@ cp env.example .env
 #### API
 ```env
 API_PORT=3000
-DEFAULT_TENANT_ID=tenant-demo
 NODE_ENV=production
 LOG_LEVEL=info
 ```

@@ -7,7 +7,7 @@ Type=simple
 User=root
 WorkingDirectory=/opt/results/ria/r-agent2/rag-service
 Environment="PATH=/opt/results/ria/r-agent2/rag-service/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/opt/results/ria/r-agent2/rag-service/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+ExecStart=/opt/results/ria/r-agent2/rag-service/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8001
 Restart=always
 RestartSec=10
 StandardOutput=journal

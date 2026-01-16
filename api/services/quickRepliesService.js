@@ -5,10 +5,12 @@
  * - Gerenciar mensagens pré-definidas e templates
  * - Organizar respostas por categorias/tags
  * - Buscar respostas por palavras-chave
- * - Persistir dados em arquivo JSON
+ * - Persistir dados em PostgreSQL
  *
  * Persistência:
- * - Respostas rápidas: api/data/quickReplies.json
+ * - Respostas rápidas: PostgreSQL (tabela quick_replies)
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
 const fs = require('fs');
@@ -46,54 +48,8 @@ function ensureDataDir() {
   }
 }
 
-/**
- * Salva respostas rápidas no arquivo JSON.
- */
-function saveQuickRepliesToFile() {
-  try {
-    ensureDataDir();
-    const repliesArray = Array.from(quickReplies.values());
-    const data = {
-      quickReplies: repliesArray,
-      savedAt: new Date().toISOString(),
-    };
-    const jsonData = JSON.stringify(data, null, 2);
-    fs.writeFileSync(quickRepliesFile, jsonData, 'utf8');
-    logger.debug(`[QuickReplies] Dados salvos: ${repliesArray.length} resposta(s) rápida(s)`);
-  } catch (err) {
-    logger.error('[QuickReplies] Erro ao salvar dados no arquivo:', err);
-  }
-}
-
-/**
- * Carrega respostas rápidas do arquivo JSON.
- */
-function loadQuickRepliesFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(quickRepliesFile)) {
-      logger.info(`[QuickReplies] Arquivo não encontrado: ${quickRepliesFile}. Iniciando com dados vazios.`);
-      // Cria algumas respostas rápidas padrão
-      createDefaultQuickReplies();
-      return;
-    }
-    const data = fs.readFileSync(quickRepliesFile, 'utf8');
-    const parsed = JSON.parse(data);
-    if (Array.isArray(parsed.quickReplies)) {
-      quickReplies.clear();
-      for (const reply of parsed.quickReplies) {
-        if (reply && reply.id) {
-          quickReplies.set(reply.id, reply);
-        }
-      }
-    }
-    logger.info(`[QuickReplies] Dados carregados: ${quickReplies.size} resposta(s) rápida(s)`);
-  } catch (err) {
-    logger.error('[QuickReplies] Erro ao carregar dados do arquivo:', err);
-    // Cria respostas padrão em caso de erro
-    createDefaultQuickReplies();
-  }
-}
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Cria respostas rápidas padrão.
@@ -165,11 +121,11 @@ function createDefaultQuickReplies() {
   for (const reply of defaults) {
     quickReplies.set(reply.id, reply);
   }
-  saveQuickRepliesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 }
 
 // Carrega dados ao iniciar o módulo
-loadQuickRepliesFromFile();
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Lista todas as respostas rápidas.
@@ -258,7 +214,7 @@ function createQuickReply(data) {
   };
   
   quickReplies.set(id, quickReply);
-  saveQuickRepliesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, quickReply };
 }
@@ -301,7 +257,7 @@ function updateQuickReply(id, updates) {
   }
   
   quickReplies.set(id, updated);
-  saveQuickRepliesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, quickReply: updated };
 }
@@ -318,7 +274,7 @@ function deleteQuickReply(id) {
   }
   
   quickReplies.delete(id);
-  saveQuickRepliesToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true };
 }
@@ -332,7 +288,7 @@ function incrementUsage(id) {
   if (reply) {
     reply.usageCount = (reply.usageCount || 0) + 1;
     reply.updatedAt = new Date().toISOString();
-    saveQuickRepliesToFile();
+    // Dados agora estão no banco de dados PostgreSQL
   }
 }
 
@@ -417,6 +373,5 @@ module.exports = {
   searchByContext,
   getCategories,
   getTags,
-  loadQuickRepliesFromFile,
 };
 

@@ -69,6 +69,69 @@ export function TextField({
 }
 
 /**
+ * Campo numérico
+ */
+export function NumberField({
+  label,
+  description,
+  value,
+  onChange,
+  placeholder,
+  required = false,
+  error,
+  className = '',
+  min,
+  max,
+  step,
+}) {
+  return (
+    <PropertyField label={label} description={description} required={required} error={error}>
+      <Input
+        type="number"
+        value={value ?? ''}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={className}
+        min={min}
+        max={max}
+        step={step}
+      />
+    </PropertyField>
+  );
+}
+
+/**
+ * Campo booleano (toggle)
+ */
+export function BooleanField({
+  label,
+  description,
+  value,
+  onChange,
+  required = false,
+  error,
+  className = '',
+}) {
+  const checked = !!value;
+
+  return (
+    <PropertyField label={label} description={description} required={required} error={error} className={className}>
+      <label className="flex items-center justify-between gap-3 p-3 bg-bg-secondary border border-border-default rounded-lg cursor-pointer select-none">
+        <span className="text-[13px] text-text-secondary">
+          {checked ? 'Ativado' : 'Desativado'}
+        </span>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e)}
+          className="h-5 w-5"
+        />
+      </label>
+    </PropertyField>
+  );
+}
+
+/**
  * Campo de textarea
  */
 export function TextAreaField({

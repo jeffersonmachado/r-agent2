@@ -9,13 +9,13 @@ export function DevDashboardTabs({ activeTab, setActiveTab }) {
   const { theme } = useTheme();
 
   return (
-    <div className="mb-6" style={{ borderBottom: `1px solid ${theme.colors.border.default}` }}>
-      <div className="flex gap-2">
+    <div className="mb-4 md:mb-6" style={{ borderBottom: `1px solid ${theme.colors.border.default}` }}>
+      <div className="flex gap-1 md:gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className="px-4 py-2 font-medium transition-colors"
+            className="px-3 md:px-4 py-2 font-medium transition-colors whitespace-nowrap text-sm md:text-base flex-shrink-0"
             style={{
               color: activeTab === tab.id ? theme.colors.accent.primary : theme.colors.text.secondary,
               borderBottom: activeTab === tab.id ? `2px solid ${theme.colors.accent.primary}` : '2px solid transparent',

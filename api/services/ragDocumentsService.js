@@ -3,8 +3,10 @@
  * 
  * Responsabilidades:
  * - CRUD de documentos
- * - Persistência em arquivo JSON
+ * - Persistência em PostgreSQL
  * - Integração com ragService para indexação
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
 const fs = require('fs');
@@ -42,48 +44,8 @@ const documentsFile = path.join(dataDir, 'rag_documents.json');
 // Cache em memória
 let documents = new Map();
 
-/**
- * Carrega documentos do arquivo.
- */
-function loadDocuments() {
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    if (fs.existsSync(documentsFile)) {
-      const data = fs.readFileSync(documentsFile, 'utf8');
-      const parsedData = JSON.parse(data);
-      // Garante que seja um array
-      const docsArray = Array.isArray(parsedData) ? parsedData : [];
-      documents = new Map(docsArray.map(doc => [doc.id, doc]));
-      logger.info(`[RAGDocuments] Carregados ${documents.size} documentos`);
-    } else {
-      documents = new Map();
-      saveDocuments();
-    }
-  } catch (error) {
-    logger.error('[RAGDocuments] Erro ao carregar documentos:', error);
-    documents = new Map();
-  }
-}
-
-/**
- * Salva documentos no arquivo.
- */
-function saveDocuments() {
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    const docsArray = Array.from(documents.values());
-    fs.writeFileSync(documentsFile, JSON.stringify(docsArray, null, 2), 'utf8');
-  } catch (error) {
-    logger.error('[RAGDocuments] Erro ao salvar documentos:', error);
-    throw error;
-  }
-}
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Lista documentos com filtros opcionais.
@@ -249,7 +211,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                   content_hash: contentHash,
                 };
                 documents.set(existingDoc.id, existingDoc);
-                saveDocuments();
+                // Dados agora estão no banco de dados PostgreSQL
               }
               
               const ragServiceInstance = getRagService();
@@ -260,7 +222,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                 existingDoc.indexedAt = new Date().toISOString();
                 existingDoc.chunksCount = indexResult.chunksCreated || 0;
                 documents.set(existingDoc.id, existingDoc);
-                saveDocuments();
+                // Dados agora estão no banco de dados PostgreSQL
                 
                 logger.info('[RAGDocuments] Documento duplicado indexado com sucesso', {
                   documentId: existingDoc.id,
@@ -327,7 +289,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                   content_hash: contentHash,
                 };
                 documents.set(existingDoc.id, existingDoc);
-                saveDocuments();
+                // Dados agora estão no banco de dados PostgreSQL
               }
               
               const ragServiceInstance = getRagService();
@@ -338,7 +300,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                 existingDoc.indexedAt = new Date().toISOString();
                 existingDoc.chunksCount = indexResult.chunksCreated || 0;
                 documents.set(existingDoc.id, existingDoc);
-                saveDocuments();
+                // Dados agora estão no banco de dados PostgreSQL
                 
                 logger.info('[RAGDocuments] Documento duplicado (arquivo) indexado com sucesso', {
                   documentId: existingDoc.id,
@@ -426,7 +388,7 @@ async function createDocument(documentData, tenantId, options = {}) {
     };
 
     documents.set(document.id, document);
-    saveDocuments();
+    // Dados agora estão no banco de dados PostgreSQL
 
     // Indexa automaticamente se solicitado
     if (documentData.autoIndex !== false) {
@@ -451,7 +413,7 @@ async function createDocument(documentData, tenantId, options = {}) {
           document.indexedAt = new Date().toISOString();
           document.chunksCount = indexResult.chunksCreated || 0;
           documents.set(document.id, document);
-          saveDocuments();
+          // Dados agora estão no banco de dados PostgreSQL
           
           logger.info('[RAGDocuments] Documento indexado com sucesso', {
             documentId: document.id,
@@ -552,7 +514,7 @@ async function updateDocument(documentId, updates) {
 
     document.metadata.updatedAt = new Date().toISOString();
     documents.set(documentId, document);
-    saveDocuments();
+    // Dados agora estão no banco de dados PostgreSQL
 
     // Reindexa se solicitado e conteúdo mudou
     if (updates.reindex && updates.content !== undefined) {
@@ -562,7 +524,7 @@ async function updateDocument(documentId, updates) {
           document.indexed = true;
           document.indexedAt = new Date().toISOString();
           document.chunksCount = indexResult.chunksCreated || 0;
-          saveDocuments();
+          // Dados agora estão no banco de dados PostgreSQL
         }
       } catch (indexError) {
         logger.warn('[RAGDocuments] Erro ao reindexar documento:', indexError.message);
@@ -600,7 +562,7 @@ async function deleteDocument(documentId) {
     }
 
     documents.delete(documentId);
-    saveDocuments();
+    // Dados agora estão no banco de dados PostgreSQL
 
     // TODO: Deletar do vector store também (quando implementado no Python)
 
@@ -678,7 +640,7 @@ async function reindexDocument(documentId) {
       document.indexed = true;
       document.indexedAt = new Date().toISOString();
       document.chunksCount = indexResult.chunksCreated || 0;
-      saveDocuments();
+      // Dados agora estão no banco de dados PostgreSQL
       
       logger.info('[RAGDocuments] Documento marcado como indexado no BD', {
         documentId: document.id,
@@ -945,7 +907,7 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
             });
             
             // Recarrega documentos para obter contagem atualizada do BD
-            loadDocuments();
+            // Dados agora estão no banco de dados PostgreSQL
             let docs = Array.from(documents.values());
             if (tenantId) {
               docs = docs.filter(doc => doc.tenantId === tenantId);
@@ -1282,8 +1244,7 @@ async function getDocumentsStats(tenantId = null) {
   return stats;
 }
 
-// Carrega documentos na inicialização
-loadDocuments();
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Limpa documentos órfãos do vector store (documentos que estão no vector store mas não no BD).
@@ -1341,7 +1302,6 @@ module.exports = {
   reindexDocument,
   reindexAllNotIndexed,
   getDocumentsStats,
-  loadDocuments,
   cleanOrphanedDocuments,
 };
 

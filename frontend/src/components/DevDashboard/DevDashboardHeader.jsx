@@ -9,19 +9,19 @@ export function DevDashboardHeader({ onShowLogs, onRefresh, loading, autoRefresh
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.colors.text.primary }}>
             🛠️ Dashboard de Desenvolvimento
           </h1>
-          <p style={{ color: theme.colors.text.secondary }}>
+          <p className="text-sm md:text-base" style={{ color: theme.colors.text.secondary }}>
             Ferramentas e informações úteis para desenvolvedores
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 md:gap-4">
           <button
             onClick={onShowLogs}
-            className="px-4 py-2 rounded-lg transition-colors"
+            className="px-3 md:px-4 py-2 rounded-lg transition-colors text-sm md:text-base"
             style={{ 
               backgroundColor: theme.colors.accent.primary,
               color: '#ffffff'
@@ -34,7 +34,7 @@ export function DevDashboardHeader({ onShowLogs, onRefresh, loading, autoRefresh
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 md:px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
             style={{ 
               backgroundColor: loading ? theme.colors.text.tertiary : theme.colors.status.info,
               color: '#ffffff'
@@ -51,13 +51,13 @@ export function DevDashboardHeader({ onShowLogs, onRefresh, loading, autoRefresh
               onChange={(e) => setAutoRefresh(e.target.checked)}
               className="w-4 h-4"
             />
-            <span className="text-sm" style={{ color: theme.colors.text.secondary }}>Auto-atualizar</span>
+            <span className="text-xs md:text-sm" style={{ color: theme.colors.text.secondary }}>Auto-atualizar</span>
           </label>
           {autoRefresh && (
             <select
               value={refreshInterval}
               onChange={(e) => setRefreshInterval(Number(e.target.value))}
-              className="px-3 py-2 rounded-lg text-sm"
+              className="px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm"
               style={{ 
                 backgroundColor: theme.colors.bg.secondary,
                 border: `1px solid ${theme.colors.border.default}`,

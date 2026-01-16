@@ -6,10 +6,12 @@
  * - Enviar mensagens para múltiplos contatos
  * - Controlar taxa de envio (rate limiting)
  * - Rastrear status de envio
- * - Persistir dados em arquivo JSON
+ * - Persistir dados em PostgreSQL
  *
  * Persistência:
- * - Campanhas: api/data/bulkMessaging.json
+ * - Campanhas: PostgreSQL (tabela campaigns ou similar)
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
 const fs = require('fs');
@@ -58,53 +60,8 @@ function ensureDataDir() {
   }
 }
 
-/**
- * Salva campanhas no arquivo JSON.
- */
-function saveCampaignsToFile() {
-  try {
-    ensureDataDir();
-    const campaignsArray = Array.from(campaigns.values());
-    const data = {
-      campaigns: campaignsArray,
-      savedAt: new Date().toISOString(),
-    };
-    const jsonData = JSON.stringify(data, null, 2);
-    fs.writeFileSync(bulkMessagingFile, jsonData, 'utf8');
-    logger.debug(`[BulkMessaging] Dados salvos: ${campaignsArray.length} campanha(s)`);
-  } catch (err) {
-    logger.error('[BulkMessaging] Erro ao salvar dados no arquivo:', err);
-  }
-}
-
-/**
- * Carrega campanhas do arquivo JSON.
- */
-function loadCampaignsFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(bulkMessagingFile)) {
-      logger.info(`[BulkMessaging] Arquivo não encontrado: ${bulkMessagingFile}. Iniciando com dados vazios.`);
-      return;
-    }
-    const data = fs.readFileSync(bulkMessagingFile, 'utf8');
-    const parsed = JSON.parse(data);
-    if (Array.isArray(parsed.campaigns)) {
-      campaigns.clear();
-      for (const campaign of parsed.campaigns) {
-        if (campaign && campaign.id) {
-          campaigns.set(campaign.id, campaign);
-        }
-      }
-    }
-    logger.info(`[BulkMessaging] Dados carregados: ${campaigns.size} campanha(s)`);
-  } catch (err) {
-    logger.error('[BulkMessaging] Erro ao carregar dados do arquivo:', err);
-  }
-}
-
-// Carrega dados ao iniciar o módulo
-loadCampaignsFromFile();
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Lista todas as campanhas.
@@ -223,7 +180,7 @@ function createCampaign(data) {
   };
   
   campaigns.set(id, campaign);
-  saveCampaignsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, campaign };
 }
@@ -260,7 +217,7 @@ function updateCampaign(id, updates) {
   }
   
   campaigns.set(id, updated);
-  saveCampaignsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, campaign: updated };
 }
@@ -282,7 +239,7 @@ function deleteCampaign(id) {
   }
   
   campaigns.delete(id);
-  saveCampaignsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true };
 }
@@ -312,7 +269,7 @@ async function startCampaign(id) {
   
   campaign.status = 'sending';
   campaign.updatedAt = new Date().toISOString();
-  saveCampaignsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   // Inicia processo de envio assíncrono
   startSendingProcess(id);
@@ -337,7 +294,7 @@ function pauseCampaign(id) {
   
   campaign.status = 'paused';
   campaign.updatedAt = new Date().toISOString();
-  saveCampaignsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   // Para o processo de envio
   stopSendingProcess(id);
@@ -362,7 +319,7 @@ function resumeCampaign(id) {
   
   campaign.status = 'sending';
   campaign.updatedAt = new Date().toISOString();
-  saveCampaignsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   // Retoma processo de envio
   startSendingProcess(id);
@@ -393,7 +350,7 @@ async function startSendingProcess(campaignId) {
     campaign.status = 'completed';
     campaign.completedAt = new Date().toISOString();
     campaign.updatedAt = new Date().toISOString();
-    saveCampaignsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     stopSendingProcess(campaignId);
     return;
   }
@@ -409,7 +366,7 @@ async function startSendingProcess(campaignId) {
       campaign.status = 'completed';
       campaign.completedAt = new Date().toISOString();
       campaign.updatedAt = new Date().toISOString();
-      saveCampaignsToFile();
+      // Dados agora estão no banco de dados PostgreSQL
       stopSendingProcess(campaignId);
       return;
     }
@@ -431,7 +388,7 @@ async function startSendingProcess(campaignId) {
     }
     
     campaign.updatedAt = new Date().toISOString();
-    saveCampaignsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
     
     // Agenda próximo envio
     const timeout = setTimeout(sendNext, intervalMs);
@@ -463,6 +420,5 @@ module.exports = {
   startCampaign,
   pauseCampaign,
   resumeCampaign,
-  loadCampaignsFromFile,
 };
 

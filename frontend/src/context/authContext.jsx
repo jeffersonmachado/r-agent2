@@ -41,13 +41,34 @@ export function AuthProvider({ children }) {
 
     try {
       const result = await authApi.getCurrentAgent();
-      setAgent(result.agent);
+      
+      // Preserva originalTenantId do localStorage se existir
+      let agentToSet = result.agent;
+      if (agentToSet) {
+        try {
+          const storedAgent = localStorage.getItem('auth_agent');
+          if (storedAgent) {
+            const parsedStoredAgent = JSON.parse(storedAgent);
+            // Preserva originalTenantId se existir no localStorage
+            if (parsedStoredAgent.originalTenantId) {
+              agentToSet = {
+                ...agentToSet,
+                originalTenantId: parsedStoredAgent.originalTenantId
+              };
+            }
+          }
+        } catch (err) {
+          logger.warn('Erro ao ler informações do agente do localStorage:', err);
+        }
+      }
+      
+      setAgent(agentToSet);
       setIsAuthenticated(true);
       
-      // Atualiza informações do agente no localStorage (incluindo tenantId)
-      if (result.agent) {
+      // Atualiza informações do agente no localStorage (preservando originalTenantId)
+      if (agentToSet) {
         try {
-          localStorage.setItem('auth_agent', JSON.stringify(result.agent));
+          localStorage.setItem('auth_agent', JSON.stringify(agentToSet));
         } catch (err) {
           logger.warn('Erro ao salvar informações do agente no localStorage:', err);
         }

@@ -20,8 +20,24 @@ logs/
 .env.local
 .env.*.local
 
+# Backups locais de config (não versionar)
+.config-backup*.json
+
 # Token RPA (não deve ser commitado)
 tests/rpa/config/rpa-token.json
+
+# Artefatos gerados por testes RPA / Replay (não versionar)
+tests/rpa/replay/
+tests/rpa/reports/
+tests/rpa/screenshots/
+
+# Artefatos gerados por execução / debug local
+data/executions/
+recordings/
+replays/
+
+# Coverage (gerado)
+coverage/
 
 # Build outputs
 dist/

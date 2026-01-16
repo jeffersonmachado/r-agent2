@@ -48,7 +48,6 @@ describe('SaaS Security Tests', () => {
     fs.readFileSync = jest.fn().mockReturnValue('[]');
     
     // Limpa o estado antes de cada teste
-    _internal.clearTenants();
     _internal.clearTenantContexts();
   });
 

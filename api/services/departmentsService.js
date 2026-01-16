@@ -5,10 +5,12 @@
  * - Gerenciar departamentos da organização
  * - Associar agentes a departamentos
  * - Gerenciar filas por departamento
- * - Persistir dados em arquivo JSON
+ * - Persistir dados em PostgreSQL
  *
  * Persistência:
- * - Departamentos: api/data/departments.json
+ * - Departamentos: PostgreSQL (tabela departments)
+ * 
+ * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
 const fs = require('fs');
@@ -46,54 +48,8 @@ function ensureDataDir() {
   }
 }
 
-/**
- * Salva departamentos no arquivo JSON.
- */
-function saveDepartmentsToFile() {
-  try {
-    ensureDataDir();
-    const departmentsArray = Array.from(departments.values());
-    const data = {
-      departments: departmentsArray,
-      savedAt: new Date().toISOString(),
-    };
-    const jsonData = JSON.stringify(data, null, 2);
-    fs.writeFileSync(departmentsFile, jsonData, 'utf8');
-    logger.debug(`[Departments] Dados salvos: ${departmentsArray.length} departamento(s)`);
-  } catch (err) {
-    logger.error('[Departments] Erro ao salvar dados no arquivo:', err);
-  }
-}
-
-/**
- * Carrega departamentos do arquivo JSON.
- */
-function loadDepartmentsFromFile() {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(departmentsFile)) {
-      logger.info(`[Departments] Arquivo não encontrado: ${departmentsFile}. Iniciando com dados vazios.`);
-      // Cria alguns departamentos padrão
-      createDefaultDepartments();
-      return;
-    }
-    const data = fs.readFileSync(departmentsFile, 'utf8');
-    const parsed = JSON.parse(data);
-    if (Array.isArray(parsed.departments)) {
-      departments.clear();
-      for (const dept of parsed.departments) {
-        if (dept && dept.id) {
-          departments.set(dept.id, dept);
-        }
-      }
-    }
-    logger.info(`[Departments] Dados carregados: ${departments.size} departamento(s)`);
-  } catch (err) {
-    logger.error('[Departments] Erro ao carregar dados do arquivo:', err);
-    // Cria departamentos padrão em caso de erro
-    createDefaultDepartments();
-  }
-}
+// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Cria departamentos padrão.
@@ -141,11 +97,10 @@ function createDefaultDepartments() {
   for (const dept of defaults) {
     departments.set(dept.id, dept);
   }
-  saveDepartmentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
 }
 
-// Carrega dados ao iniciar o módulo
-loadDepartmentsFromFile();
+// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 /**
  * Lista todos os departamentos.
@@ -232,7 +187,7 @@ function createDepartment(data) {
   };
   
   departments.set(id, department);
-  saveDepartmentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, department };
 }
@@ -278,7 +233,7 @@ function updateDepartment(id, updates) {
   if (updated.color) updated.color = updated.color.trim();
   
   departments.set(id, updated);
-  saveDepartmentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true, department: updated };
 }
@@ -295,7 +250,7 @@ function deleteDepartment(id) {
   }
   
   departments.delete(id);
-  saveDepartmentsToFile();
+  // Dados agora estão no banco de dados PostgreSQL
   
   return { success: true };
 }
@@ -319,7 +274,7 @@ function addAgentToDepartment(departmentId, agentId) {
   if (!department.agentIds.includes(agentId)) {
     department.agentIds.push(agentId);
     department.updatedAt = new Date().toISOString();
-    saveDepartmentsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
   }
   
   return { success: true, department };
@@ -340,7 +295,7 @@ function removeAgentFromDepartment(departmentId, agentId) {
   if (Array.isArray(department.agentIds)) {
     department.agentIds = department.agentIds.filter(id => id !== agentId);
     department.updatedAt = new Date().toISOString();
-    saveDepartmentsToFile();
+    // Dados agora estão no banco de dados PostgreSQL
   }
   
   return { success: true, department };
@@ -378,6 +333,5 @@ module.exports = {
   removeAgentFromDepartment,
   getDepartmentsByAgent,
   getDepartmentByQueue,
-  loadDepartmentsFromFile,
 };
 

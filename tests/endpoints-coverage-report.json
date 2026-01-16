@@ -1,0 +1,4041 @@
+{
+  "total": 271,
+  "tested": 12,
+  "untested": 259,
+  "coverage": 4.428044280442804,
+  "endpoints": [
+    {
+      "method": "DELETE",
+      "path": "/auth/agents/",
+      "line": 2831
+    },
+    {
+      "method": "DELETE",
+      "path": "/auth/agents/:id",
+      "line": 2830
+    },
+    {
+      "method": "DELETE",
+      "path": "/bulk-campaigns/",
+      "line": 7060
+    },
+    {
+      "method": "DELETE",
+      "path": "/bulk-campaigns/:id",
+      "line": 7059
+    },
+    {
+      "method": "DELETE",
+      "path": "/departments/",
+      "line": 6782
+    },
+    {
+      "method": "DELETE",
+      "path": "/departments/:id",
+      "line": 6781
+    },
+    {
+      "method": "DELETE",
+      "path": "/departments/:id/agents/:agentId",
+      "line": 6864
+    },
+    {
+      "method": "DELETE",
+      "path": "/flows/",
+      "line": 3371
+    },
+    {
+      "method": "DELETE",
+      "path": "/flows/:id",
+      "line": 3369
+    },
+    {
+      "method": "DELETE",
+      "path": "/queues/",
+      "line": 4513
+    },
+    {
+      "method": "DELETE",
+      "path": "/queues/:name",
+      "line": 4512
+    },
+    {
+      "method": "DELETE",
+      "path": "/quick-replies/",
+      "line": 6585
+    },
+    {
+      "method": "DELETE",
+      "path": "/quick-replies/:id",
+      "line": 6584
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/documents/",
+      "line": 8307
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/documents/:id",
+      "line": 8306
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/learning/synonyms/",
+      "line": 8657
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/learning/synonyms/:tenantId/:term",
+      "line": 8656
+    },
+    {
+      "method": "DELETE",
+      "path": "/rpa/recordings/",
+      "line": 9235
+    },
+    {
+      "method": "DELETE",
+      "path": "/rpa/recordings/:id",
+      "line": 9234
+    },
+    {
+      "method": "DELETE",
+      "path": "/templates/",
+      "line": 5900
+    },
+    {
+      "method": "DELETE",
+      "path": "/templates/:id",
+      "line": 5899
+    },
+    {
+      "method": "DELETE",
+      "path": "/tenants/",
+      "line": 2085
+    },
+    {
+      "method": "DELETE",
+      "path": "/tenants/:id",
+      "line": 2084
+    },
+    {
+      "method": "DELETE",
+      "path": "/tests/rpa/replay/",
+      "line": 9770
+    },
+    {
+      "method": "DELETE",
+      "path": "/tests/rpa/replay/:filename",
+      "line": 9769
+    },
+    {
+      "method": "DELETE",
+      "path": "/tickets/",
+      "line": 7829
+    },
+    {
+      "method": "DELETE",
+      "path": "/tickets/:id/tags/:tag",
+      "line": 7828
+    },
+    {
+      "method": "DELETE",
+      "path": "/webhooks/",
+      "line": 9151
+    },
+    {
+      "method": "DELETE",
+      "path": "/webhooks/:id",
+      "line": 9150
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/agents",
+      "line": 7252
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/departments",
+      "line": 7282
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/general",
+      "line": 7222
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/metrics",
+      "line": 7192
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/queues",
+      "line": 7312
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/trends",
+      "line": 7342
+    },
+    {
+      "method": "GET",
+      "path": "/api/data/rag_question_generation_rules.json",
+      "line": 5999
+    },
+    {
+      "method": "GET",
+      "path": "/audit/logs",
+      "line": 3045
+    },
+    {
+      "method": "GET",
+      "path": "/audit/stats",
+      "line": 3078
+    },
+    {
+      "method": "GET",
+      "path": "/auth/agents",
+      "line": 2649
+    },
+    {
+      "method": "GET",
+      "path": "/auth/agents/",
+      "line": 2724
+    },
+    {
+      "method": "GET",
+      "path": "/auth/agents/:id",
+      "line": 2723
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "line": 1237
+    },
+    {
+      "method": "GET",
+      "path": "/auth/rpa/token",
+      "line": 1153
+    },
+    {
+      "method": "GET",
+      "path": "/bulk-campaigns",
+      "line": 6903
+    },
+    {
+      "method": "GET",
+      "path": "/bulk-campaigns/",
+      "line": 6929
+    },
+    {
+      "method": "GET",
+      "path": "/bulk-campaigns/:id",
+      "line": 6928
+    },
+    {
+      "method": "GET",
+      "path": "/config",
+      "line": 5952
+    },
+    {
+      "method": "GET",
+      "path": "/contracts/rag/question-generation.rules.json",
+      "line": 6000
+    },
+    {
+      "method": "GET",
+      "path": "/conversations",
+      "line": 4159
+    },
+    {
+      "method": "GET",
+      "path": "/conversations/",
+      "line": 4221
+    },
+    {
+      "method": "GET",
+      "path": "/conversations/:sessionId",
+      "line": 4220
+    },
+    {
+      "method": "GET",
+      "path": "/departments",
+      "line": 6638
+    },
+    {
+      "method": "GET",
+      "path": "/departments/",
+      "line": 6658
+    },
+    {
+      "method": "GET",
+      "path": "/departments/:id",
+      "line": 6657
+    },
+    {
+      "method": "GET",
+      "path": "/dev/files",
+      "line": 9953
+    },
+    {
+      "method": "GET",
+      "path": "/dev/files/",
+      "line": 10097
+    },
+    {
+      "method": "GET",
+      "path": "/dev/files/:type/:path",
+      "line": 10095
+    },
+    {
+      "method": "GET",
+      "path": "/export/conversations.json",
+      "line": 7449
+    },
+    {
+      "method": "GET",
+      "path": "/export/full-report.json",
+      "line": 7483
+    },
+    {
+      "method": "GET",
+      "path": "/export/metrics.csv",
+      "line": 7414
+    },
+    {
+      "method": "GET",
+      "path": "/export/tickets.csv",
+      "line": 7377
+    },
+    {
+      "method": "GET",
+      "path": "/flows",
+      "line": 3101
+    },
+    {
+      "method": "GET",
+      "path": "/flows/",
+      "line": 3117
+    },
+    {
+      "method": "GET",
+      "path": "/flows/:id",
+      "line": 3115
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "line": 898
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "line": 893
+    },
+    {
+      "method": "GET",
+      "path": "/metrics/queues",
+      "line": 4966
+    },
+    {
+      "method": "GET",
+      "path": "/onboarding/status",
+      "line": 2480
+    },
+    {
+      "method": "GET",
+      "path": "/qa/",
+      "line": 9878
+    },
+    {
+      "method": "GET",
+      "path": "/qa/:id",
+      "line": 9877
+    },
+    {
+      "method": "GET",
+      "path": "/qa/history",
+      "line": 9837
+    },
+    {
+      "method": "GET",
+      "path": "/qa/latest",
+      "line": 9815
+    },
+    {
+      "method": "GET",
+      "path": "/qa/stats",
+      "line": 9859
+    },
+    {
+      "method": "GET",
+      "path": "/queues",
+      "line": 4410
+    },
+    {
+      "method": "GET",
+      "path": "/queues/",
+      "line": 4487
+    },
+    {
+      "method": "GET",
+      "path": "/queues/:name",
+      "line": 4486
+    },
+    {
+      "method": "GET",
+      "path": "/queues/:queue/tickets",
+      "line": 4556
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies",
+      "line": 6377
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/",
+      "line": 6460
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/:id",
+      "line": 6459
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/categories",
+      "line": 6398
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/tags",
+      "line": 6411
+    },
+    {
+      "method": "GET",
+      "path": "/rag/deduplication/stats",
+      "line": 8097
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents",
+      "line": 8062
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents/",
+      "line": 8158
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents/:id",
+      "line": 8157
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents/stats",
+      "line": 8131
+    },
+    {
+      "method": "GET",
+      "path": "/rag/domains",
+      "line": 8793
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/full-data/",
+      "line": 8595
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/full-data/:tenantId",
+      "line": 8594
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/metrics/",
+      "line": 8513
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/metrics/:tenantId",
+      "line": 8512
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/validation-rules",
+      "line": 8689
+    },
+    {
+      "method": "GET",
+      "path": "/replay/",
+      "line": 4142
+    },
+    {
+      "method": "GET",
+      "path": "/replay/:sessionId",
+      "line": 4141
+    },
+    {
+      "method": "GET",
+      "path": "/report",
+      "line": 9559
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/execution/",
+      "line": 9329
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/execution/:executionId",
+      "line": 9328
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/execution/:executionId/report",
+      "line": 9558
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/record/status/",
+      "line": 9495
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/record/status/:recordingId",
+      "line": 9494
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/recordings",
+      "line": 9216
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/categories",
+      "line": 7702
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/stats",
+      "line": 7751
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/tags",
+      "line": 7689
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/tickets",
+      "line": 7715
+    },
+    {
+      "method": "GET",
+      "path": "/server/process-manager",
+      "line": 6089
+    },
+    {
+      "method": "GET",
+      "path": "/super-admin/tenants",
+      "line": 2270
+    },
+    {
+      "method": "GET",
+      "path": "/super-admin/tenants/",
+      "line": 2301
+    },
+    {
+      "method": "GET",
+      "path": "/super-admin/tenants/:id/metrics",
+      "line": 2300
+    },
+    {
+      "method": "GET",
+      "path": "/system/status",
+      "line": 912
+    },
+    {
+      "method": "GET",
+      "path": "/system/websocket",
+      "line": 928
+    },
+    {
+      "method": "GET",
+      "path": "/templates",
+      "line": 5733
+    },
+    {
+      "method": "GET",
+      "path": "/templates/",
+      "line": 5778
+    },
+    {
+      "method": "GET",
+      "path": "/templates/:id",
+      "line": 5777
+    },
+    {
+      "method": "GET",
+      "path": "/tenants",
+      "line": 1632
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/",
+      "line": 1653
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id",
+      "line": 1904
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id/ai-provider-status",
+      "line": 1721
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id/context",
+      "line": 1652
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id/usage",
+      "line": 1688
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/replay",
+      "line": 9644
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/replay/",
+      "line": 9723
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/replay/:filename",
+      "line": 9722
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/reports/",
+      "line": 9598
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/reports/:filename",
+      "line": 9597
+    },
+    {
+      "method": "GET",
+      "path": "/tickets",
+      "line": 4590
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/",
+      "line": 4683
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/:id",
+      "line": 5025
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/:id/messages",
+      "line": 4682
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/session/",
+      "line": 4652
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/session/:sessionId",
+      "line": 4651
+    },
+    {
+      "method": "GET",
+      "path": "/version",
+      "line": 904
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks",
+      "line": 8990
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/",
+      "line": 9004
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/:id",
+      "line": 9003
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/events",
+      "line": 8977
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/instagram",
+      "line": 5643
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/messenger",
+      "line": 5556
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/whatsapp",
+      "line": 5497
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/templates",
+      "line": 7905
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/templates/",
+      "line": 7930
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/templates/:id",
+      "line": 7929
+    },
+    {
+      "method": "POST",
+      "path": "/admin/rate-limit/clear",
+      "line": 1007
+    },
+    {
+      "method": "POST",
+      "path": "/admin/rate-limit/clear-cache",
+      "line": 988
+    },
+    {
+      "method": "POST",
+      "path": "/ai/chatbot/generate",
+      "line": 5273
+    },
+    {
+      "method": "POST",
+      "path": "/ai/rewrite-message",
+      "line": 7561
+    },
+    {
+      "method": "POST",
+      "path": "/ai/rewrite-multiple",
+      "line": 7601
+    },
+    {
+      "method": "POST",
+      "path": "/ai/rpa/generate",
+      "line": 5342
+    },
+    {
+      "method": "POST",
+      "path": "/ai/suggest-response",
+      "line": 7521
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/generate",
+      "line": 5411
+    },
+    {
+      "method": "POST",
+      "path": "/audio/transcribe",
+      "line": 7644
+    },
+    {
+      "method": "POST",
+      "path": "/auth/accept-invitation",
+      "line": 2934
+    },
+    {
+      "method": "POST",
+      "path": "/auth/agents",
+      "line": 2669
+    },
+    {
+      "method": "POST",
+      "path": "/auth/invite",
+      "line": 2880
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "line": 1041
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "line": 1171
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout-all",
+      "line": 1203
+    },
+    {
+      "method": "POST",
+      "path": "/auth/request-password-reset",
+      "line": 2982
+    },
+    {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "line": 3013
+    },
+    {
+      "method": "POST",
+      "path": "/auth/rpa/login",
+      "line": 1101
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns",
+      "line": 6954
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/",
+      "line": 7096
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/pause",
+      "line": 7126
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/resume",
+      "line": 7157
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/start",
+      "line": 7095
+    },
+    {
+      "method": "POST",
+      "path": "/cancel",
+      "line": 9358
+    },
+    {
+      "method": "POST",
+      "path": "/config/validate-provider-token",
+      "line": 6101
+    },
+    {
+      "method": "POST",
+      "path": "/config/validate-redis",
+      "line": 6233
+    },
+    {
+      "method": "POST",
+      "path": "/continue",
+      "line": 9389
+    },
+    {
+      "method": "POST",
+      "path": "/departments",
+      "line": 6677
+    },
+    {
+      "method": "POST",
+      "path": "/departments/",
+      "line": 6818
+    },
+    {
+      "method": "POST",
+      "path": "/departments/:id/agents",
+      "line": 6817
+    },
+    {
+      "method": "POST",
+      "path": "/flows",
+      "line": 3136
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:flowId/generate-rpa-test",
+      "line": 3703
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:id/generate-rpa",
+      "line": 4095
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:id/preview-rpa",
+      "line": 4063
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:id/resolve-dependencies",
+      "line": 4030
+    },
+    {
+      "method": "POST",
+      "path": "/flows/generate",
+      "line": 3472
+    },
+    {
+      "method": "POST",
+      "path": "/flows/generate/dry-run",
+      "line": 3523
+    },
+    {
+      "method": "POST",
+      "path": "/flows/simulate",
+      "line": 3950
+    },
+    {
+      "method": "POST",
+      "path": "/flows/validate",
+      "line": 3418
+    },
+    {
+      "method": "POST",
+      "path": "/instagram/send",
+      "line": 5684
+    },
+    {
+      "method": "POST",
+      "path": "/messenger/send",
+      "line": 5597
+    },
+    {
+      "method": "POST",
+      "path": "/next",
+      "line": 9528
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/complete",
+      "line": 2581
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/complete-step",
+      "line": 2532
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/create-templates",
+      "line": 2620
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/start",
+      "line": 2503
+    },
+    {
+      "method": "POST",
+      "path": "/qa/run",
+      "line": 9905
+    },
+    {
+      "method": "POST",
+      "path": "/queues",
+      "line": 4429
+    },
+    {
+      "method": "POST",
+      "path": "/queues/reload",
+      "line": 4889
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies",
+      "line": 6480
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies/",
+      "line": 6621
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies/:id/use",
+      "line": 6620
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies/search",
+      "line": 6424
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents",
+      "line": 8188
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents/",
+      "line": 8348
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents/:id/reindex",
+      "line": 8347
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents/reindex-all",
+      "line": 8391
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/clean-invalid-queries/",
+      "line": 8769
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/clean-invalid-queries/:tenantId",
+      "line": 8768
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/trigger-learning/",
+      "line": 8570
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/trigger-learning/:tenantId",
+      "line": 8569
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/update-synonyms",
+      "line": 8537
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/validation-rules/adapt/",
+      "line": 8729
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/validation-rules/adapt/:tenantId",
+      "line": 8728
+    },
+    {
+      "method": "POST",
+      "path": "/rag/query",
+      "line": 8435
+    },
+    {
+      "method": "POST",
+      "path": "/rpa-tests",
+      "line": 3877
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execute/",
+      "line": 9290
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execute/:recordingId",
+      "line": 9289
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execution/:executionId/cancel",
+      "line": 9357
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execution/:executionId/continue",
+      "line": 9388
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execution/:executionId/next",
+      "line": 9527
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/record/start",
+      "line": 9420
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/record/stop/",
+      "line": 9462
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/record/stop/:recordingId",
+      "line": 9461
+    },
+    {
+      "method": "POST",
+      "path": "/server/restart",
+      "line": 6340
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/impersonate",
+      "line": 2325
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/",
+      "line": 2375
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/:id/adjust-plan",
+      "line": 2436
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/:id/block",
+      "line": 2374
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/:id/unblock",
+      "line": 2411
+    },
+    {
+      "method": "POST",
+      "path": "/system/check-rate-limit",
+      "line": 3570
+    },
+    {
+      "method": "POST",
+      "path": "/system/generate-and-validate",
+      "line": 3627
+    },
+    {
+      "method": "POST",
+      "path": "/system/suggest-description",
+      "line": 1451
+    },
+    {
+      "method": "POST",
+      "path": "/templates",
+      "line": 5817
+    },
+    {
+      "method": "POST",
+      "path": "/tenants",
+      "line": 1260
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/",
+      "line": 2133
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/:id/change-plan",
+      "line": 2212
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/:id/reactivate",
+      "line": 2175
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/:id/suspend",
+      "line": 2132
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/generate-by-ai",
+      "line": 1323
+    },
+    {
+      "method": "POST",
+      "path": "/tickets",
+      "line": 4256
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/",
+      "line": 4722
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/assign",
+      "line": 4721
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/close",
+      "line": 4818
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/mark-read",
+      "line": 5068
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/message",
+      "line": 5113
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/tags",
+      "line": 7785
+    },
+    {
+      "method": "POST",
+      "path": "/web-scraping/scrape",
+      "line": 8854
+    },
+    {
+      "method": "POST",
+      "path": "/web-scraping/scrape-batch",
+      "line": 8923
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks",
+      "line": 9029
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/instagram",
+      "line": 5660
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/messenger",
+      "line": 5573
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/whatsapp",
+      "line": 5514
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/send-template",
+      "line": 8010
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/templates",
+      "line": 7960
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/agents/",
+      "line": 2756
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/agents/:id",
+      "line": 2755
+    },
+    {
+      "method": "PUT",
+      "path": "/bulk-campaigns/",
+      "line": 7009
+    },
+    {
+      "method": "PUT",
+      "path": "/bulk-campaigns/:id",
+      "line": 7008
+    },
+    {
+      "method": "PUT",
+      "path": "/config",
+      "line": 6036
+    },
+    {
+      "method": "PUT",
+      "path": "/departments/",
+      "line": 6731
+    },
+    {
+      "method": "PUT",
+      "path": "/departments/:id",
+      "line": 6730
+    },
+    {
+      "method": "PUT",
+      "path": "/dev/files/",
+      "line": 10177
+    },
+    {
+      "method": "PUT",
+      "path": "/dev/files/:type/:path",
+      "line": 10175
+    },
+    {
+      "method": "PUT",
+      "path": "/flows/",
+      "line": 3245
+    },
+    {
+      "method": "PUT",
+      "path": "/flows/:id",
+      "line": 3243
+    },
+    {
+      "method": "PUT",
+      "path": "/quick-replies/",
+      "line": 6534
+    },
+    {
+      "method": "PUT",
+      "path": "/quick-replies/:id",
+      "line": 6533
+    },
+    {
+      "method": "PUT",
+      "path": "/rag/documents/",
+      "line": 8256
+    },
+    {
+      "method": "PUT",
+      "path": "/rag/documents/:id",
+      "line": 8255
+    },
+    {
+      "method": "PUT",
+      "path": "/rag/learning/synonyms",
+      "line": 8619
+    },
+    {
+      "method": "PUT",
+      "path": "/tenants/",
+      "line": 1937
+    },
+    {
+      "method": "PUT",
+      "path": "/tenants/:id",
+      "line": 2013
+    },
+    {
+      "method": "PUT",
+      "path": "/tenants/:id/context",
+      "line": 1936
+    },
+    {
+      "method": "PUT",
+      "path": "/tickets/",
+      "line": 7864
+    },
+    {
+      "method": "PUT",
+      "path": "/tickets/:id/category",
+      "line": 7863
+    },
+    {
+      "method": "PUT",
+      "path": "/webhooks/",
+      "line": 9087
+    },
+    {
+      "method": "PUT",
+      "path": "/webhooks/:id",
+      "line": 9086
+    }
+  ],
+  "untestedEndpoints": [
+    {
+      "method": "DELETE",
+      "path": "/auth/agents/",
+      "line": 2831
+    },
+    {
+      "method": "DELETE",
+      "path": "/auth/agents/:id",
+      "line": 2830
+    },
+    {
+      "method": "DELETE",
+      "path": "/bulk-campaigns/",
+      "line": 7060
+    },
+    {
+      "method": "DELETE",
+      "path": "/bulk-campaigns/:id",
+      "line": 7059
+    },
+    {
+      "method": "DELETE",
+      "path": "/departments/",
+      "line": 6782
+    },
+    {
+      "method": "DELETE",
+      "path": "/departments/:id",
+      "line": 6781
+    },
+    {
+      "method": "DELETE",
+      "path": "/departments/:id/agents/:agentId",
+      "line": 6864
+    },
+    {
+      "method": "DELETE",
+      "path": "/flows/",
+      "line": 3371
+    },
+    {
+      "method": "DELETE",
+      "path": "/flows/:id",
+      "line": 3369
+    },
+    {
+      "method": "DELETE",
+      "path": "/queues/",
+      "line": 4513
+    },
+    {
+      "method": "DELETE",
+      "path": "/queues/:name",
+      "line": 4512
+    },
+    {
+      "method": "DELETE",
+      "path": "/quick-replies/",
+      "line": 6585
+    },
+    {
+      "method": "DELETE",
+      "path": "/quick-replies/:id",
+      "line": 6584
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/documents/",
+      "line": 8307
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/documents/:id",
+      "line": 8306
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/learning/synonyms/",
+      "line": 8657
+    },
+    {
+      "method": "DELETE",
+      "path": "/rag/learning/synonyms/:tenantId/:term",
+      "line": 8656
+    },
+    {
+      "method": "DELETE",
+      "path": "/rpa/recordings/",
+      "line": 9235
+    },
+    {
+      "method": "DELETE",
+      "path": "/rpa/recordings/:id",
+      "line": 9234
+    },
+    {
+      "method": "DELETE",
+      "path": "/templates/",
+      "line": 5900
+    },
+    {
+      "method": "DELETE",
+      "path": "/templates/:id",
+      "line": 5899
+    },
+    {
+      "method": "DELETE",
+      "path": "/tenants/:id",
+      "line": 2084
+    },
+    {
+      "method": "DELETE",
+      "path": "/tests/rpa/replay/",
+      "line": 9770
+    },
+    {
+      "method": "DELETE",
+      "path": "/tests/rpa/replay/:filename",
+      "line": 9769
+    },
+    {
+      "method": "DELETE",
+      "path": "/tickets/",
+      "line": 7829
+    },
+    {
+      "method": "DELETE",
+      "path": "/tickets/:id/tags/:tag",
+      "line": 7828
+    },
+    {
+      "method": "DELETE",
+      "path": "/webhooks/",
+      "line": 9151
+    },
+    {
+      "method": "DELETE",
+      "path": "/webhooks/:id",
+      "line": 9150
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/agents",
+      "line": 7252
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/departments",
+      "line": 7282
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/general",
+      "line": 7222
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/metrics",
+      "line": 7192
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/queues",
+      "line": 7312
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/trends",
+      "line": 7342
+    },
+    {
+      "method": "GET",
+      "path": "/api/data/rag_question_generation_rules.json",
+      "line": 5999
+    },
+    {
+      "method": "GET",
+      "path": "/audit/logs",
+      "line": 3045
+    },
+    {
+      "method": "GET",
+      "path": "/audit/stats",
+      "line": 3078
+    },
+    {
+      "method": "GET",
+      "path": "/auth/agents",
+      "line": 2649
+    },
+    {
+      "method": "GET",
+      "path": "/auth/agents/",
+      "line": 2724
+    },
+    {
+      "method": "GET",
+      "path": "/auth/agents/:id",
+      "line": 2723
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "line": 1237
+    },
+    {
+      "method": "GET",
+      "path": "/auth/rpa/token",
+      "line": 1153
+    },
+    {
+      "method": "GET",
+      "path": "/bulk-campaigns",
+      "line": 6903
+    },
+    {
+      "method": "GET",
+      "path": "/bulk-campaigns/",
+      "line": 6929
+    },
+    {
+      "method": "GET",
+      "path": "/bulk-campaigns/:id",
+      "line": 6928
+    },
+    {
+      "method": "GET",
+      "path": "/contracts/rag/question-generation.rules.json",
+      "line": 6000
+    },
+    {
+      "method": "GET",
+      "path": "/conversations",
+      "line": 4159
+    },
+    {
+      "method": "GET",
+      "path": "/conversations/",
+      "line": 4221
+    },
+    {
+      "method": "GET",
+      "path": "/conversations/:sessionId",
+      "line": 4220
+    },
+    {
+      "method": "GET",
+      "path": "/departments",
+      "line": 6638
+    },
+    {
+      "method": "GET",
+      "path": "/departments/",
+      "line": 6658
+    },
+    {
+      "method": "GET",
+      "path": "/departments/:id",
+      "line": 6657
+    },
+    {
+      "method": "GET",
+      "path": "/dev/files",
+      "line": 9953
+    },
+    {
+      "method": "GET",
+      "path": "/dev/files/",
+      "line": 10097
+    },
+    {
+      "method": "GET",
+      "path": "/dev/files/:type/:path",
+      "line": 10095
+    },
+    {
+      "method": "GET",
+      "path": "/export/conversations.json",
+      "line": 7449
+    },
+    {
+      "method": "GET",
+      "path": "/export/full-report.json",
+      "line": 7483
+    },
+    {
+      "method": "GET",
+      "path": "/export/metrics.csv",
+      "line": 7414
+    },
+    {
+      "method": "GET",
+      "path": "/export/tickets.csv",
+      "line": 7377
+    },
+    {
+      "method": "GET",
+      "path": "/flows",
+      "line": 3101
+    },
+    {
+      "method": "GET",
+      "path": "/flows/",
+      "line": 3117
+    },
+    {
+      "method": "GET",
+      "path": "/flows/:id",
+      "line": 3115
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "line": 898
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "line": 893
+    },
+    {
+      "method": "GET",
+      "path": "/metrics/queues",
+      "line": 4966
+    },
+    {
+      "method": "GET",
+      "path": "/onboarding/status",
+      "line": 2480
+    },
+    {
+      "method": "GET",
+      "path": "/qa/",
+      "line": 9878
+    },
+    {
+      "method": "GET",
+      "path": "/qa/:id",
+      "line": 9877
+    },
+    {
+      "method": "GET",
+      "path": "/qa/history",
+      "line": 9837
+    },
+    {
+      "method": "GET",
+      "path": "/qa/latest",
+      "line": 9815
+    },
+    {
+      "method": "GET",
+      "path": "/qa/stats",
+      "line": 9859
+    },
+    {
+      "method": "GET",
+      "path": "/queues",
+      "line": 4410
+    },
+    {
+      "method": "GET",
+      "path": "/queues/",
+      "line": 4487
+    },
+    {
+      "method": "GET",
+      "path": "/queues/:name",
+      "line": 4486
+    },
+    {
+      "method": "GET",
+      "path": "/queues/:queue/tickets",
+      "line": 4556
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies",
+      "line": 6377
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/",
+      "line": 6460
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/:id",
+      "line": 6459
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/categories",
+      "line": 6398
+    },
+    {
+      "method": "GET",
+      "path": "/quick-replies/tags",
+      "line": 6411
+    },
+    {
+      "method": "GET",
+      "path": "/rag/deduplication/stats",
+      "line": 8097
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents",
+      "line": 8062
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents/",
+      "line": 8158
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents/:id",
+      "line": 8157
+    },
+    {
+      "method": "GET",
+      "path": "/rag/documents/stats",
+      "line": 8131
+    },
+    {
+      "method": "GET",
+      "path": "/rag/domains",
+      "line": 8793
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/full-data/",
+      "line": 8595
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/full-data/:tenantId",
+      "line": 8594
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/metrics/",
+      "line": 8513
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/metrics/:tenantId",
+      "line": 8512
+    },
+    {
+      "method": "GET",
+      "path": "/rag/learning/validation-rules",
+      "line": 8689
+    },
+    {
+      "method": "GET",
+      "path": "/replay/",
+      "line": 4142
+    },
+    {
+      "method": "GET",
+      "path": "/replay/:sessionId",
+      "line": 4141
+    },
+    {
+      "method": "GET",
+      "path": "/report",
+      "line": 9559
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/execution/",
+      "line": 9329
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/execution/:executionId",
+      "line": 9328
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/execution/:executionId/report",
+      "line": 9558
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/record/status/",
+      "line": 9495
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/record/status/:recordingId",
+      "line": 9494
+    },
+    {
+      "method": "GET",
+      "path": "/rpa/recordings",
+      "line": 9216
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/categories",
+      "line": 7702
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/stats",
+      "line": 7751
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/tags",
+      "line": 7689
+    },
+    {
+      "method": "GET",
+      "path": "/segmentation/tickets",
+      "line": 7715
+    },
+    {
+      "method": "GET",
+      "path": "/server/process-manager",
+      "line": 6089
+    },
+    {
+      "method": "GET",
+      "path": "/super-admin/tenants",
+      "line": 2270
+    },
+    {
+      "method": "GET",
+      "path": "/super-admin/tenants/",
+      "line": 2301
+    },
+    {
+      "method": "GET",
+      "path": "/super-admin/tenants/:id/metrics",
+      "line": 2300
+    },
+    {
+      "method": "GET",
+      "path": "/system/status",
+      "line": 912
+    },
+    {
+      "method": "GET",
+      "path": "/system/websocket",
+      "line": 928
+    },
+    {
+      "method": "GET",
+      "path": "/templates",
+      "line": 5733
+    },
+    {
+      "method": "GET",
+      "path": "/templates/",
+      "line": 5778
+    },
+    {
+      "method": "GET",
+      "path": "/templates/:id",
+      "line": 5777
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id",
+      "line": 1904
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id/ai-provider-status",
+      "line": 1721
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id/context",
+      "line": 1652
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id/usage",
+      "line": 1688
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/replay",
+      "line": 9644
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/replay/",
+      "line": 9723
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/replay/:filename",
+      "line": 9722
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/reports/",
+      "line": 9598
+    },
+    {
+      "method": "GET",
+      "path": "/tests/rpa/reports/:filename",
+      "line": 9597
+    },
+    {
+      "method": "GET",
+      "path": "/tickets",
+      "line": 4590
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/",
+      "line": 4683
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/:id",
+      "line": 5025
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/:id/messages",
+      "line": 4682
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/session/",
+      "line": 4652
+    },
+    {
+      "method": "GET",
+      "path": "/tickets/session/:sessionId",
+      "line": 4651
+    },
+    {
+      "method": "GET",
+      "path": "/version",
+      "line": 904
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks",
+      "line": 8990
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/",
+      "line": 9004
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/:id",
+      "line": 9003
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/events",
+      "line": 8977
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/instagram",
+      "line": 5643
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/messenger",
+      "line": 5556
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/whatsapp",
+      "line": 5497
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/templates",
+      "line": 7905
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/templates/",
+      "line": 7930
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/templates/:id",
+      "line": 7929
+    },
+    {
+      "method": "POST",
+      "path": "/admin/rate-limit/clear",
+      "line": 1007
+    },
+    {
+      "method": "POST",
+      "path": "/admin/rate-limit/clear-cache",
+      "line": 988
+    },
+    {
+      "method": "POST",
+      "path": "/ai/chatbot/generate",
+      "line": 5273
+    },
+    {
+      "method": "POST",
+      "path": "/ai/rewrite-message",
+      "line": 7561
+    },
+    {
+      "method": "POST",
+      "path": "/ai/rewrite-multiple",
+      "line": 7601
+    },
+    {
+      "method": "POST",
+      "path": "/ai/rpa/generate",
+      "line": 5342
+    },
+    {
+      "method": "POST",
+      "path": "/ai/suggest-response",
+      "line": 7521
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/generate",
+      "line": 5411
+    },
+    {
+      "method": "POST",
+      "path": "/audio/transcribe",
+      "line": 7644
+    },
+    {
+      "method": "POST",
+      "path": "/auth/accept-invitation",
+      "line": 2934
+    },
+    {
+      "method": "POST",
+      "path": "/auth/agents",
+      "line": 2669
+    },
+    {
+      "method": "POST",
+      "path": "/auth/invite",
+      "line": 2880
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "line": 1171
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout-all",
+      "line": 1203
+    },
+    {
+      "method": "POST",
+      "path": "/auth/request-password-reset",
+      "line": 2982
+    },
+    {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "line": 3013
+    },
+    {
+      "method": "POST",
+      "path": "/auth/rpa/login",
+      "line": 1101
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns",
+      "line": 6954
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/",
+      "line": 7096
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/pause",
+      "line": 7126
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/resume",
+      "line": 7157
+    },
+    {
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/start",
+      "line": 7095
+    },
+    {
+      "method": "POST",
+      "path": "/cancel",
+      "line": 9358
+    },
+    {
+      "method": "POST",
+      "path": "/continue",
+      "line": 9389
+    },
+    {
+      "method": "POST",
+      "path": "/departments",
+      "line": 6677
+    },
+    {
+      "method": "POST",
+      "path": "/departments/",
+      "line": 6818
+    },
+    {
+      "method": "POST",
+      "path": "/departments/:id/agents",
+      "line": 6817
+    },
+    {
+      "method": "POST",
+      "path": "/flows",
+      "line": 3136
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:flowId/generate-rpa-test",
+      "line": 3703
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:id/generate-rpa",
+      "line": 4095
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:id/preview-rpa",
+      "line": 4063
+    },
+    {
+      "method": "POST",
+      "path": "/flows/:id/resolve-dependencies",
+      "line": 4030
+    },
+    {
+      "method": "POST",
+      "path": "/flows/generate",
+      "line": 3472
+    },
+    {
+      "method": "POST",
+      "path": "/flows/generate/dry-run",
+      "line": 3523
+    },
+    {
+      "method": "POST",
+      "path": "/flows/simulate",
+      "line": 3950
+    },
+    {
+      "method": "POST",
+      "path": "/flows/validate",
+      "line": 3418
+    },
+    {
+      "method": "POST",
+      "path": "/instagram/send",
+      "line": 5684
+    },
+    {
+      "method": "POST",
+      "path": "/messenger/send",
+      "line": 5597
+    },
+    {
+      "method": "POST",
+      "path": "/next",
+      "line": 9528
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/complete",
+      "line": 2581
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/complete-step",
+      "line": 2532
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/create-templates",
+      "line": 2620
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/start",
+      "line": 2503
+    },
+    {
+      "method": "POST",
+      "path": "/qa/run",
+      "line": 9905
+    },
+    {
+      "method": "POST",
+      "path": "/queues",
+      "line": 4429
+    },
+    {
+      "method": "POST",
+      "path": "/queues/reload",
+      "line": 4889
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies",
+      "line": 6480
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies/",
+      "line": 6621
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies/:id/use",
+      "line": 6620
+    },
+    {
+      "method": "POST",
+      "path": "/quick-replies/search",
+      "line": 6424
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents",
+      "line": 8188
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents/",
+      "line": 8348
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents/:id/reindex",
+      "line": 8347
+    },
+    {
+      "method": "POST",
+      "path": "/rag/documents/reindex-all",
+      "line": 8391
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/clean-invalid-queries/",
+      "line": 8769
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/clean-invalid-queries/:tenantId",
+      "line": 8768
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/trigger-learning/",
+      "line": 8570
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/trigger-learning/:tenantId",
+      "line": 8569
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/update-synonyms",
+      "line": 8537
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/validation-rules/adapt/",
+      "line": 8729
+    },
+    {
+      "method": "POST",
+      "path": "/rag/learning/validation-rules/adapt/:tenantId",
+      "line": 8728
+    },
+    {
+      "method": "POST",
+      "path": "/rag/query",
+      "line": 8435
+    },
+    {
+      "method": "POST",
+      "path": "/rpa-tests",
+      "line": 3877
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execute/",
+      "line": 9290
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execute/:recordingId",
+      "line": 9289
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execution/:executionId/cancel",
+      "line": 9357
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execution/:executionId/continue",
+      "line": 9388
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/execution/:executionId/next",
+      "line": 9527
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/record/start",
+      "line": 9420
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/record/stop/",
+      "line": 9462
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/record/stop/:recordingId",
+      "line": 9461
+    },
+    {
+      "method": "POST",
+      "path": "/server/restart",
+      "line": 6340
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/impersonate",
+      "line": 2325
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/",
+      "line": 2375
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/:id/adjust-plan",
+      "line": 2436
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/:id/block",
+      "line": 2374
+    },
+    {
+      "method": "POST",
+      "path": "/super-admin/tenants/:id/unblock",
+      "line": 2411
+    },
+    {
+      "method": "POST",
+      "path": "/system/check-rate-limit",
+      "line": 3570
+    },
+    {
+      "method": "POST",
+      "path": "/system/suggest-description",
+      "line": 1451
+    },
+    {
+      "method": "POST",
+      "path": "/templates",
+      "line": 5817
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/:id/change-plan",
+      "line": 2212
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/:id/reactivate",
+      "line": 2175
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/:id/suspend",
+      "line": 2132
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/generate-by-ai",
+      "line": 1323
+    },
+    {
+      "method": "POST",
+      "path": "/tickets",
+      "line": 4256
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/",
+      "line": 4722
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/assign",
+      "line": 4721
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/close",
+      "line": 4818
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/mark-read",
+      "line": 5068
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/message",
+      "line": 5113
+    },
+    {
+      "method": "POST",
+      "path": "/tickets/:id/tags",
+      "line": 7785
+    },
+    {
+      "method": "POST",
+      "path": "/web-scraping/scrape",
+      "line": 8854
+    },
+    {
+      "method": "POST",
+      "path": "/web-scraping/scrape-batch",
+      "line": 8923
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks",
+      "line": 9029
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/instagram",
+      "line": 5660
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/messenger",
+      "line": 5573
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/whatsapp",
+      "line": 5514
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/send-template",
+      "line": 8010
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/templates",
+      "line": 7960
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/agents/",
+      "line": 2756
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/agents/:id",
+      "line": 2755
+    },
+    {
+      "method": "PUT",
+      "path": "/bulk-campaigns/",
+      "line": 7009
+    },
+    {
+      "method": "PUT",
+      "path": "/bulk-campaigns/:id",
+      "line": 7008
+    },
+    {
+      "method": "PUT",
+      "path": "/departments/",
+      "line": 6731
+    },
+    {
+      "method": "PUT",
+      "path": "/departments/:id",
+      "line": 6730
+    },
+    {
+      "method": "PUT",
+      "path": "/dev/files/",
+      "line": 10177
+    },
+    {
+      "method": "PUT",
+      "path": "/dev/files/:type/:path",
+      "line": 10175
+    },
+    {
+      "method": "PUT",
+      "path": "/flows/",
+      "line": 3245
+    },
+    {
+      "method": "PUT",
+      "path": "/flows/:id",
+      "line": 3243
+    },
+    {
+      "method": "PUT",
+      "path": "/quick-replies/",
+      "line": 6534
+    },
+    {
+      "method": "PUT",
+      "path": "/quick-replies/:id",
+      "line": 6533
+    },
+    {
+      "method": "PUT",
+      "path": "/rag/documents/",
+      "line": 8256
+    },
+    {
+      "method": "PUT",
+      "path": "/rag/documents/:id",
+      "line": 8255
+    },
+    {
+      "method": "PUT",
+      "path": "/rag/learning/synonyms",
+      "line": 8619
+    },
+    {
+      "method": "PUT",
+      "path": "/tenants/:id",
+      "line": 2013
+    },
+    {
+      "method": "PUT",
+      "path": "/tenants/:id/context",
+      "line": 1936
+    },
+    {
+      "method": "PUT",
+      "path": "/tickets/",
+      "line": 7864
+    },
+    {
+      "method": "PUT",
+      "path": "/tickets/:id/category",
+      "line": 7863
+    },
+    {
+      "method": "PUT",
+      "path": "/webhooks/",
+      "line": 9087
+    },
+    {
+      "method": "PUT",
+      "path": "/webhooks/:id",
+      "line": 9086
+    }
+  ],
+  "untestedByCategory": {
+    "auth": [
+      {
+        "method": "DELETE",
+        "path": "/auth/agents/",
+        "line": 2831
+      },
+      {
+        "method": "DELETE",
+        "path": "/auth/agents/:id",
+        "line": 2830
+      },
+      {
+        "method": "GET",
+        "path": "/auth/agents",
+        "line": 2649
+      },
+      {
+        "method": "GET",
+        "path": "/auth/agents/",
+        "line": 2724
+      },
+      {
+        "method": "GET",
+        "path": "/auth/agents/:id",
+        "line": 2723
+      },
+      {
+        "method": "GET",
+        "path": "/auth/me",
+        "line": 1237
+      },
+      {
+        "method": "GET",
+        "path": "/auth/rpa/token",
+        "line": 1153
+      },
+      {
+        "method": "POST",
+        "path": "/auth/accept-invitation",
+        "line": 2934
+      },
+      {
+        "method": "POST",
+        "path": "/auth/agents",
+        "line": 2669
+      },
+      {
+        "method": "POST",
+        "path": "/auth/invite",
+        "line": 2880
+      },
+      {
+        "method": "POST",
+        "path": "/auth/logout",
+        "line": 1171
+      },
+      {
+        "method": "POST",
+        "path": "/auth/logout-all",
+        "line": 1203
+      },
+      {
+        "method": "POST",
+        "path": "/auth/request-password-reset",
+        "line": 2982
+      },
+      {
+        "method": "POST",
+        "path": "/auth/reset-password",
+        "line": 3013
+      },
+      {
+        "method": "POST",
+        "path": "/auth/rpa/login",
+        "line": 1101
+      },
+      {
+        "method": "PUT",
+        "path": "/auth/agents/",
+        "line": 2756
+      },
+      {
+        "method": "PUT",
+        "path": "/auth/agents/:id",
+        "line": 2755
+      }
+    ],
+    "bulk-campaigns": [
+      {
+        "method": "DELETE",
+        "path": "/bulk-campaigns/",
+        "line": 7060
+      },
+      {
+        "method": "DELETE",
+        "path": "/bulk-campaigns/:id",
+        "line": 7059
+      },
+      {
+        "method": "GET",
+        "path": "/bulk-campaigns",
+        "line": 6903
+      },
+      {
+        "method": "GET",
+        "path": "/bulk-campaigns/",
+        "line": 6929
+      },
+      {
+        "method": "GET",
+        "path": "/bulk-campaigns/:id",
+        "line": 6928
+      },
+      {
+        "method": "POST",
+        "path": "/bulk-campaigns",
+        "line": 6954
+      },
+      {
+        "method": "POST",
+        "path": "/bulk-campaigns/",
+        "line": 7096
+      },
+      {
+        "method": "POST",
+        "path": "/bulk-campaigns/:id/pause",
+        "line": 7126
+      },
+      {
+        "method": "POST",
+        "path": "/bulk-campaigns/:id/resume",
+        "line": 7157
+      },
+      {
+        "method": "POST",
+        "path": "/bulk-campaigns/:id/start",
+        "line": 7095
+      },
+      {
+        "method": "PUT",
+        "path": "/bulk-campaigns/",
+        "line": 7009
+      },
+      {
+        "method": "PUT",
+        "path": "/bulk-campaigns/:id",
+        "line": 7008
+      }
+    ],
+    "departments": [
+      {
+        "method": "DELETE",
+        "path": "/departments/",
+        "line": 6782
+      },
+      {
+        "method": "DELETE",
+        "path": "/departments/:id",
+        "line": 6781
+      },
+      {
+        "method": "DELETE",
+        "path": "/departments/:id/agents/:agentId",
+        "line": 6864
+      },
+      {
+        "method": "GET",
+        "path": "/departments",
+        "line": 6638
+      },
+      {
+        "method": "GET",
+        "path": "/departments/",
+        "line": 6658
+      },
+      {
+        "method": "GET",
+        "path": "/departments/:id",
+        "line": 6657
+      },
+      {
+        "method": "POST",
+        "path": "/departments",
+        "line": 6677
+      },
+      {
+        "method": "POST",
+        "path": "/departments/",
+        "line": 6818
+      },
+      {
+        "method": "POST",
+        "path": "/departments/:id/agents",
+        "line": 6817
+      },
+      {
+        "method": "PUT",
+        "path": "/departments/",
+        "line": 6731
+      },
+      {
+        "method": "PUT",
+        "path": "/departments/:id",
+        "line": 6730
+      }
+    ],
+    "flows": [
+      {
+        "method": "DELETE",
+        "path": "/flows/",
+        "line": 3371
+      },
+      {
+        "method": "DELETE",
+        "path": "/flows/:id",
+        "line": 3369
+      },
+      {
+        "method": "GET",
+        "path": "/flows",
+        "line": 3101
+      },
+      {
+        "method": "GET",
+        "path": "/flows/",
+        "line": 3117
+      },
+      {
+        "method": "GET",
+        "path": "/flows/:id",
+        "line": 3115
+      },
+      {
+        "method": "POST",
+        "path": "/flows",
+        "line": 3136
+      },
+      {
+        "method": "POST",
+        "path": "/flows/:flowId/generate-rpa-test",
+        "line": 3703
+      },
+      {
+        "method": "POST",
+        "path": "/flows/:id/generate-rpa",
+        "line": 4095
+      },
+      {
+        "method": "POST",
+        "path": "/flows/:id/preview-rpa",
+        "line": 4063
+      },
+      {
+        "method": "POST",
+        "path": "/flows/:id/resolve-dependencies",
+        "line": 4030
+      },
+      {
+        "method": "POST",
+        "path": "/flows/generate",
+        "line": 3472
+      },
+      {
+        "method": "POST",
+        "path": "/flows/generate/dry-run",
+        "line": 3523
+      },
+      {
+        "method": "POST",
+        "path": "/flows/simulate",
+        "line": 3950
+      },
+      {
+        "method": "POST",
+        "path": "/flows/validate",
+        "line": 3418
+      },
+      {
+        "method": "PUT",
+        "path": "/flows/",
+        "line": 3245
+      },
+      {
+        "method": "PUT",
+        "path": "/flows/:id",
+        "line": 3243
+      }
+    ],
+    "queues": [
+      {
+        "method": "DELETE",
+        "path": "/queues/",
+        "line": 4513
+      },
+      {
+        "method": "DELETE",
+        "path": "/queues/:name",
+        "line": 4512
+      },
+      {
+        "method": "GET",
+        "path": "/queues",
+        "line": 4410
+      },
+      {
+        "method": "GET",
+        "path": "/queues/",
+        "line": 4487
+      },
+      {
+        "method": "GET",
+        "path": "/queues/:name",
+        "line": 4486
+      },
+      {
+        "method": "GET",
+        "path": "/queues/:queue/tickets",
+        "line": 4556
+      },
+      {
+        "method": "POST",
+        "path": "/queues",
+        "line": 4429
+      },
+      {
+        "method": "POST",
+        "path": "/queues/reload",
+        "line": 4889
+      }
+    ],
+    "quick-replies": [
+      {
+        "method": "DELETE",
+        "path": "/quick-replies/",
+        "line": 6585
+      },
+      {
+        "method": "DELETE",
+        "path": "/quick-replies/:id",
+        "line": 6584
+      },
+      {
+        "method": "GET",
+        "path": "/quick-replies",
+        "line": 6377
+      },
+      {
+        "method": "GET",
+        "path": "/quick-replies/",
+        "line": 6460
+      },
+      {
+        "method": "GET",
+        "path": "/quick-replies/:id",
+        "line": 6459
+      },
+      {
+        "method": "GET",
+        "path": "/quick-replies/categories",
+        "line": 6398
+      },
+      {
+        "method": "GET",
+        "path": "/quick-replies/tags",
+        "line": 6411
+      },
+      {
+        "method": "POST",
+        "path": "/quick-replies",
+        "line": 6480
+      },
+      {
+        "method": "POST",
+        "path": "/quick-replies/",
+        "line": 6621
+      },
+      {
+        "method": "POST",
+        "path": "/quick-replies/:id/use",
+        "line": 6620
+      },
+      {
+        "method": "POST",
+        "path": "/quick-replies/search",
+        "line": 6424
+      },
+      {
+        "method": "PUT",
+        "path": "/quick-replies/",
+        "line": 6534
+      },
+      {
+        "method": "PUT",
+        "path": "/quick-replies/:id",
+        "line": 6533
+      }
+    ],
+    "rag": [
+      {
+        "method": "DELETE",
+        "path": "/rag/documents/",
+        "line": 8307
+      },
+      {
+        "method": "DELETE",
+        "path": "/rag/documents/:id",
+        "line": 8306
+      },
+      {
+        "method": "DELETE",
+        "path": "/rag/learning/synonyms/",
+        "line": 8657
+      },
+      {
+        "method": "DELETE",
+        "path": "/rag/learning/synonyms/:tenantId/:term",
+        "line": 8656
+      },
+      {
+        "method": "GET",
+        "path": "/rag/deduplication/stats",
+        "line": 8097
+      },
+      {
+        "method": "GET",
+        "path": "/rag/documents",
+        "line": 8062
+      },
+      {
+        "method": "GET",
+        "path": "/rag/documents/",
+        "line": 8158
+      },
+      {
+        "method": "GET",
+        "path": "/rag/documents/:id",
+        "line": 8157
+      },
+      {
+        "method": "GET",
+        "path": "/rag/documents/stats",
+        "line": 8131
+      },
+      {
+        "method": "GET",
+        "path": "/rag/domains",
+        "line": 8793
+      },
+      {
+        "method": "GET",
+        "path": "/rag/learning/full-data/",
+        "line": 8595
+      },
+      {
+        "method": "GET",
+        "path": "/rag/learning/full-data/:tenantId",
+        "line": 8594
+      },
+      {
+        "method": "GET",
+        "path": "/rag/learning/metrics/",
+        "line": 8513
+      },
+      {
+        "method": "GET",
+        "path": "/rag/learning/metrics/:tenantId",
+        "line": 8512
+      },
+      {
+        "method": "GET",
+        "path": "/rag/learning/validation-rules",
+        "line": 8689
+      },
+      {
+        "method": "POST",
+        "path": "/rag/documents",
+        "line": 8188
+      },
+      {
+        "method": "POST",
+        "path": "/rag/documents/",
+        "line": 8348
+      },
+      {
+        "method": "POST",
+        "path": "/rag/documents/:id/reindex",
+        "line": 8347
+      },
+      {
+        "method": "POST",
+        "path": "/rag/documents/reindex-all",
+        "line": 8391
+      },
+      {
+        "method": "POST",
+        "path": "/rag/learning/clean-invalid-queries/",
+        "line": 8769
+      },
+      {
+        "method": "POST",
+        "path": "/rag/learning/clean-invalid-queries/:tenantId",
+        "line": 8768
+      },
+      {
+        "method": "POST",
+        "path": "/rag/learning/trigger-learning/",
+        "line": 8570
+      },
+      {
+        "method": "POST",
+        "path": "/rag/learning/trigger-learning/:tenantId",
+        "line": 8569
+      },
+      {
+        "method": "POST",
+        "path": "/rag/learning/update-synonyms",
+        "line": 8537
+      },
+      {
+        "method": "POST",
+        "path": "/rag/learning/validation-rules/adapt/",
+        "line": 8729
+      },
+      {
+        "method": "POST",
+        "path": "/rag/learning/validation-rules/adapt/:tenantId",
+        "line": 8728
+      },
+      {
+        "method": "POST",
+        "path": "/rag/query",
+        "line": 8435
+      },
+      {
+        "method": "PUT",
+        "path": "/rag/documents/",
+        "line": 8256
+      },
+      {
+        "method": "PUT",
+        "path": "/rag/documents/:id",
+        "line": 8255
+      },
+      {
+        "method": "PUT",
+        "path": "/rag/learning/synonyms",
+        "line": 8619
+      }
+    ],
+    "rpa": [
+      {
+        "method": "DELETE",
+        "path": "/rpa/recordings/",
+        "line": 9235
+      },
+      {
+        "method": "DELETE",
+        "path": "/rpa/recordings/:id",
+        "line": 9234
+      },
+      {
+        "method": "GET",
+        "path": "/rpa/execution/",
+        "line": 9329
+      },
+      {
+        "method": "GET",
+        "path": "/rpa/execution/:executionId",
+        "line": 9328
+      },
+      {
+        "method": "GET",
+        "path": "/rpa/execution/:executionId/report",
+        "line": 9558
+      },
+      {
+        "method": "GET",
+        "path": "/rpa/record/status/",
+        "line": 9495
+      },
+      {
+        "method": "GET",
+        "path": "/rpa/record/status/:recordingId",
+        "line": 9494
+      },
+      {
+        "method": "GET",
+        "path": "/rpa/recordings",
+        "line": 9216
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/execute/",
+        "line": 9290
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/execute/:recordingId",
+        "line": 9289
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/execution/:executionId/cancel",
+        "line": 9357
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/execution/:executionId/continue",
+        "line": 9388
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/execution/:executionId/next",
+        "line": 9527
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/record/start",
+        "line": 9420
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/record/stop/",
+        "line": 9462
+      },
+      {
+        "method": "POST",
+        "path": "/rpa/record/stop/:recordingId",
+        "line": 9461
+      }
+    ],
+    "templates": [
+      {
+        "method": "DELETE",
+        "path": "/templates/",
+        "line": 5900
+      },
+      {
+        "method": "DELETE",
+        "path": "/templates/:id",
+        "line": 5899
+      },
+      {
+        "method": "GET",
+        "path": "/templates",
+        "line": 5733
+      },
+      {
+        "method": "GET",
+        "path": "/templates/",
+        "line": 5778
+      },
+      {
+        "method": "GET",
+        "path": "/templates/:id",
+        "line": 5777
+      },
+      {
+        "method": "POST",
+        "path": "/templates",
+        "line": 5817
+      }
+    ],
+    "tenants": [
+      {
+        "method": "DELETE",
+        "path": "/tenants/:id",
+        "line": 2084
+      },
+      {
+        "method": "GET",
+        "path": "/tenants/:id",
+        "line": 1904
+      },
+      {
+        "method": "GET",
+        "path": "/tenants/:id/ai-provider-status",
+        "line": 1721
+      },
+      {
+        "method": "GET",
+        "path": "/tenants/:id/context",
+        "line": 1652
+      },
+      {
+        "method": "GET",
+        "path": "/tenants/:id/usage",
+        "line": 1688
+      },
+      {
+        "method": "POST",
+        "path": "/tenants/:id/change-plan",
+        "line": 2212
+      },
+      {
+        "method": "POST",
+        "path": "/tenants/:id/reactivate",
+        "line": 2175
+      },
+      {
+        "method": "POST",
+        "path": "/tenants/:id/suspend",
+        "line": 2132
+      },
+      {
+        "method": "POST",
+        "path": "/tenants/generate-by-ai",
+        "line": 1323
+      },
+      {
+        "method": "PUT",
+        "path": "/tenants/:id",
+        "line": 2013
+      },
+      {
+        "method": "PUT",
+        "path": "/tenants/:id/context",
+        "line": 1936
+      }
+    ],
+    "tests": [
+      {
+        "method": "DELETE",
+        "path": "/tests/rpa/replay/",
+        "line": 9770
+      },
+      {
+        "method": "DELETE",
+        "path": "/tests/rpa/replay/:filename",
+        "line": 9769
+      },
+      {
+        "method": "GET",
+        "path": "/tests/rpa/replay",
+        "line": 9644
+      },
+      {
+        "method": "GET",
+        "path": "/tests/rpa/replay/",
+        "line": 9723
+      },
+      {
+        "method": "GET",
+        "path": "/tests/rpa/replay/:filename",
+        "line": 9722
+      },
+      {
+        "method": "GET",
+        "path": "/tests/rpa/reports/",
+        "line": 9598
+      },
+      {
+        "method": "GET",
+        "path": "/tests/rpa/reports/:filename",
+        "line": 9597
+      }
+    ],
+    "tickets": [
+      {
+        "method": "DELETE",
+        "path": "/tickets/",
+        "line": 7829
+      },
+      {
+        "method": "DELETE",
+        "path": "/tickets/:id/tags/:tag",
+        "line": 7828
+      },
+      {
+        "method": "GET",
+        "path": "/tickets",
+        "line": 4590
+      },
+      {
+        "method": "GET",
+        "path": "/tickets/",
+        "line": 4683
+      },
+      {
+        "method": "GET",
+        "path": "/tickets/:id",
+        "line": 5025
+      },
+      {
+        "method": "GET",
+        "path": "/tickets/:id/messages",
+        "line": 4682
+      },
+      {
+        "method": "GET",
+        "path": "/tickets/session/",
+        "line": 4652
+      },
+      {
+        "method": "GET",
+        "path": "/tickets/session/:sessionId",
+        "line": 4651
+      },
+      {
+        "method": "POST",
+        "path": "/tickets",
+        "line": 4256
+      },
+      {
+        "method": "POST",
+        "path": "/tickets/",
+        "line": 4722
+      },
+      {
+        "method": "POST",
+        "path": "/tickets/:id/assign",
+        "line": 4721
+      },
+      {
+        "method": "POST",
+        "path": "/tickets/:id/close",
+        "line": 4818
+      },
+      {
+        "method": "POST",
+        "path": "/tickets/:id/mark-read",
+        "line": 5068
+      },
+      {
+        "method": "POST",
+        "path": "/tickets/:id/message",
+        "line": 5113
+      },
+      {
+        "method": "POST",
+        "path": "/tickets/:id/tags",
+        "line": 7785
+      },
+      {
+        "method": "PUT",
+        "path": "/tickets/",
+        "line": 7864
+      },
+      {
+        "method": "PUT",
+        "path": "/tickets/:id/category",
+        "line": 7863
+      }
+    ],
+    "webhooks": [
+      {
+        "method": "DELETE",
+        "path": "/webhooks/",
+        "line": 9151
+      },
+      {
+        "method": "DELETE",
+        "path": "/webhooks/:id",
+        "line": 9150
+      },
+      {
+        "method": "GET",
+        "path": "/webhooks",
+        "line": 8990
+      },
+      {
+        "method": "GET",
+        "path": "/webhooks/",
+        "line": 9004
+      },
+      {
+        "method": "GET",
+        "path": "/webhooks/:id",
+        "line": 9003
+      },
+      {
+        "method": "GET",
+        "path": "/webhooks/events",
+        "line": 8977
+      },
+      {
+        "method": "GET",
+        "path": "/webhooks/instagram",
+        "line": 5643
+      },
+      {
+        "method": "GET",
+        "path": "/webhooks/messenger",
+        "line": 5556
+      },
+      {
+        "method": "GET",
+        "path": "/webhooks/whatsapp",
+        "line": 5497
+      },
+      {
+        "method": "POST",
+        "path": "/webhooks",
+        "line": 9029
+      },
+      {
+        "method": "POST",
+        "path": "/webhooks/instagram",
+        "line": 5660
+      },
+      {
+        "method": "POST",
+        "path": "/webhooks/messenger",
+        "line": 5573
+      },
+      {
+        "method": "POST",
+        "path": "/webhooks/whatsapp",
+        "line": 5514
+      },
+      {
+        "method": "PUT",
+        "path": "/webhooks/",
+        "line": 9087
+      },
+      {
+        "method": "PUT",
+        "path": "/webhooks/:id",
+        "line": 9086
+      }
+    ],
+    "analytics": [
+      {
+        "method": "GET",
+        "path": "/analytics/agents",
+        "line": 7252
+      },
+      {
+        "method": "GET",
+        "path": "/analytics/departments",
+        "line": 7282
+      },
+      {
+        "method": "GET",
+        "path": "/analytics/general",
+        "line": 7222
+      },
+      {
+        "method": "GET",
+        "path": "/analytics/metrics",
+        "line": 7192
+      },
+      {
+        "method": "GET",
+        "path": "/analytics/queues",
+        "line": 7312
+      },
+      {
+        "method": "GET",
+        "path": "/analytics/trends",
+        "line": 7342
+      }
+    ],
+    "api": [
+      {
+        "method": "GET",
+        "path": "/api/data/rag_question_generation_rules.json",
+        "line": 5999
+      },
+      {
+        "method": "POST",
+        "path": "/api/ai/generate",
+        "line": 5411
+      }
+    ],
+    "audit": [
+      {
+        "method": "GET",
+        "path": "/audit/logs",
+        "line": 3045
+      },
+      {
+        "method": "GET",
+        "path": "/audit/stats",
+        "line": 3078
+      }
+    ],
+    "contracts": [
+      {
+        "method": "GET",
+        "path": "/contracts/rag/question-generation.rules.json",
+        "line": 6000
+      }
+    ],
+    "conversations": [
+      {
+        "method": "GET",
+        "path": "/conversations",
+        "line": 4159
+      },
+      {
+        "method": "GET",
+        "path": "/conversations/",
+        "line": 4221
+      },
+      {
+        "method": "GET",
+        "path": "/conversations/:sessionId",
+        "line": 4220
+      }
+    ],
+    "dev": [
+      {
+        "method": "GET",
+        "path": "/dev/files",
+        "line": 9953
+      },
+      {
+        "method": "GET",
+        "path": "/dev/files/",
+        "line": 10097
+      },
+      {
+        "method": "GET",
+        "path": "/dev/files/:type/:path",
+        "line": 10095
+      },
+      {
+        "method": "PUT",
+        "path": "/dev/files/",
+        "line": 10177
+      },
+      {
+        "method": "PUT",
+        "path": "/dev/files/:type/:path",
+        "line": 10175
+      }
+    ],
+    "export": [
+      {
+        "method": "GET",
+        "path": "/export/conversations.json",
+        "line": 7449
+      },
+      {
+        "method": "GET",
+        "path": "/export/full-report.json",
+        "line": 7483
+      },
+      {
+        "method": "GET",
+        "path": "/export/metrics.csv",
+        "line": 7414
+      },
+      {
+        "method": "GET",
+        "path": "/export/tickets.csv",
+        "line": 7377
+      }
+    ],
+    "health": [
+      {
+        "method": "GET",
+        "path": "/health",
+        "line": 898
+      }
+    ],
+    "metrics": [
+      {
+        "method": "GET",
+        "path": "/metrics",
+        "line": 893
+      },
+      {
+        "method": "GET",
+        "path": "/metrics/queues",
+        "line": 4966
+      }
+    ],
+    "onboarding": [
+      {
+        "method": "GET",
+        "path": "/onboarding/status",
+        "line": 2480
+      },
+      {
+        "method": "POST",
+        "path": "/onboarding/complete",
+        "line": 2581
+      },
+      {
+        "method": "POST",
+        "path": "/onboarding/complete-step",
+        "line": 2532
+      },
+      {
+        "method": "POST",
+        "path": "/onboarding/create-templates",
+        "line": 2620
+      },
+      {
+        "method": "POST",
+        "path": "/onboarding/start",
+        "line": 2503
+      }
+    ],
+    "qa": [
+      {
+        "method": "GET",
+        "path": "/qa/",
+        "line": 9878
+      },
+      {
+        "method": "GET",
+        "path": "/qa/:id",
+        "line": 9877
+      },
+      {
+        "method": "GET",
+        "path": "/qa/history",
+        "line": 9837
+      },
+      {
+        "method": "GET",
+        "path": "/qa/latest",
+        "line": 9815
+      },
+      {
+        "method": "GET",
+        "path": "/qa/stats",
+        "line": 9859
+      },
+      {
+        "method": "POST",
+        "path": "/qa/run",
+        "line": 9905
+      }
+    ],
+    "replay": [
+      {
+        "method": "GET",
+        "path": "/replay/",
+        "line": 4142
+      },
+      {
+        "method": "GET",
+        "path": "/replay/:sessionId",
+        "line": 4141
+      }
+    ],
+    "report": [
+      {
+        "method": "GET",
+        "path": "/report",
+        "line": 9559
+      }
+    ],
+    "segmentation": [
+      {
+        "method": "GET",
+        "path": "/segmentation/categories",
+        "line": 7702
+      },
+      {
+        "method": "GET",
+        "path": "/segmentation/stats",
+        "line": 7751
+      },
+      {
+        "method": "GET",
+        "path": "/segmentation/tags",
+        "line": 7689
+      },
+      {
+        "method": "GET",
+        "path": "/segmentation/tickets",
+        "line": 7715
+      }
+    ],
+    "server": [
+      {
+        "method": "GET",
+        "path": "/server/process-manager",
+        "line": 6089
+      },
+      {
+        "method": "POST",
+        "path": "/server/restart",
+        "line": 6340
+      }
+    ],
+    "super-admin": [
+      {
+        "method": "GET",
+        "path": "/super-admin/tenants",
+        "line": 2270
+      },
+      {
+        "method": "GET",
+        "path": "/super-admin/tenants/",
+        "line": 2301
+      },
+      {
+        "method": "GET",
+        "path": "/super-admin/tenants/:id/metrics",
+        "line": 2300
+      },
+      {
+        "method": "POST",
+        "path": "/super-admin/impersonate",
+        "line": 2325
+      },
+      {
+        "method": "POST",
+        "path": "/super-admin/tenants/",
+        "line": 2375
+      },
+      {
+        "method": "POST",
+        "path": "/super-admin/tenants/:id/adjust-plan",
+        "line": 2436
+      },
+      {
+        "method": "POST",
+        "path": "/super-admin/tenants/:id/block",
+        "line": 2374
+      },
+      {
+        "method": "POST",
+        "path": "/super-admin/tenants/:id/unblock",
+        "line": 2411
+      }
+    ],
+    "system": [
+      {
+        "method": "GET",
+        "path": "/system/status",
+        "line": 912
+      },
+      {
+        "method": "GET",
+        "path": "/system/websocket",
+        "line": 928
+      },
+      {
+        "method": "POST",
+        "path": "/system/check-rate-limit",
+        "line": 3570
+      },
+      {
+        "method": "POST",
+        "path": "/system/suggest-description",
+        "line": 1451
+      }
+    ],
+    "version": [
+      {
+        "method": "GET",
+        "path": "/version",
+        "line": 904
+      }
+    ],
+    "whatsapp": [
+      {
+        "method": "GET",
+        "path": "/whatsapp/templates",
+        "line": 7905
+      },
+      {
+        "method": "GET",
+        "path": "/whatsapp/templates/",
+        "line": 7930
+      },
+      {
+        "method": "GET",
+        "path": "/whatsapp/templates/:id",
+        "line": 7929
+      },
+      {
+        "method": "POST",
+        "path": "/whatsapp/send-template",
+        "line": 8010
+      },
+      {
+        "method": "POST",
+        "path": "/whatsapp/templates",
+        "line": 7960
+      }
+    ],
+    "admin": [
+      {
+        "method": "POST",
+        "path": "/admin/rate-limit/clear",
+        "line": 1007
+      },
+      {
+        "method": "POST",
+        "path": "/admin/rate-limit/clear-cache",
+        "line": 988
+      }
+    ],
+    "ai": [
+      {
+        "method": "POST",
+        "path": "/ai/chatbot/generate",
+        "line": 5273
+      },
+      {
+        "method": "POST",
+        "path": "/ai/rewrite-message",
+        "line": 7561
+      },
+      {
+        "method": "POST",
+        "path": "/ai/rewrite-multiple",
+        "line": 7601
+      },
+      {
+        "method": "POST",
+        "path": "/ai/rpa/generate",
+        "line": 5342
+      },
+      {
+        "method": "POST",
+        "path": "/ai/suggest-response",
+        "line": 7521
+      }
+    ],
+    "audio": [
+      {
+        "method": "POST",
+        "path": "/audio/transcribe",
+        "line": 7644
+      }
+    ],
+    "cancel": [
+      {
+        "method": "POST",
+        "path": "/cancel",
+        "line": 9358
+      }
+    ],
+    "continue": [
+      {
+        "method": "POST",
+        "path": "/continue",
+        "line": 9389
+      }
+    ],
+    "instagram": [
+      {
+        "method": "POST",
+        "path": "/instagram/send",
+        "line": 5684
+      }
+    ],
+    "messenger": [
+      {
+        "method": "POST",
+        "path": "/messenger/send",
+        "line": 5597
+      }
+    ],
+    "next": [
+      {
+        "method": "POST",
+        "path": "/next",
+        "line": 9528
+      }
+    ],
+    "rpa-tests": [
+      {
+        "method": "POST",
+        "path": "/rpa-tests",
+        "line": 3877
+      }
+    ],
+    "web-scraping": [
+      {
+        "method": "POST",
+        "path": "/web-scraping/scrape",
+        "line": 8854
+      },
+      {
+        "method": "POST",
+        "path": "/web-scraping/scrape-batch",
+        "line": 8923
+      }
+    ]
+  }
+}
