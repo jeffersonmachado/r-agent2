@@ -75,6 +75,10 @@ function toDbPayload(ticket) {
     status: ticket.status,
     mode: ticket.mode || 'human',
     pause_reason: ticket.pauseReason || null,
+    first_response_at: ticket.firstResponseAt ? new Date(ticket.firstResponseAt) : null,
+    resolved_at: ticket.resolvedAt ? new Date(ticket.resolvedAt) : null,
+    waiting_time_seconds: Number.isFinite(ticket.waitingTimeSeconds) ? ticket.waitingTimeSeconds : null,
+    handling_time_seconds: Number.isFinite(ticket.handlingTimeSeconds) ? ticket.handlingTimeSeconds : null,
     assigned_to: ticket.assignedTo || null,
     phone_number: ticket.phoneNumber || null,
     last_user_message: ticket.lastUserMessage || null,
@@ -97,6 +101,10 @@ function fromDbRow(row) {
     status: row.status,
     mode: row.mode || 'human',
     pauseReason: row.pause_reason || null,
+    firstResponseAt: row.first_response_at ? new Date(row.first_response_at).toISOString() : null,
+    resolvedAt: row.resolved_at ? new Date(row.resolved_at).toISOString() : null,
+    waitingTimeSeconds: Number.isFinite(row.waiting_time_seconds) ? row.waiting_time_seconds : null,
+    handlingTimeSeconds: Number.isFinite(row.handling_time_seconds) ? row.handling_time_seconds : null,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
     lastUserMessage: row.last_user_message || null,
@@ -555,6 +563,21 @@ function closeTicket(ticketId) {
   ticket.status = 'closed';
   ticket.updatedAt = new Date().toISOString();
 
+  // SLA: resolvedAt + tempos (best-effort)
+  const resolvedAt = new Date();
+  ticket.resolvedAt = resolvedAt.toISOString();
+  const createdAt = ticket.createdAt ? new Date(ticket.createdAt) : null;
+  const firstResponseAt = ticket.firstResponseAt ? new Date(ticket.firstResponseAt) : null;
+  if (createdAt && !Number.isNaN(createdAt.getTime())) {
+    if (firstResponseAt && !Number.isNaN(firstResponseAt.getTime())) {
+      ticket.waitingTimeSeconds = Math.max(0, Math.round((firstResponseAt - createdAt) / 1000));
+      ticket.handlingTimeSeconds = Math.max(0, Math.round((resolvedAt - firstResponseAt) / 1000));
+    } else {
+      ticket.waitingTimeSeconds = Math.max(0, Math.round((resolvedAt - createdAt) / 1000));
+      ticket.handlingTimeSeconds = 0;
+    }
+  }
+
   // Remove da fila (mas mantém no histórico)
   const queueSet = queues.get(ticket.queue);
   if (queueSet) {
@@ -630,6 +653,16 @@ function addAgentMessage(ticketId, message, agentId = null) {
 
   ticket.messages.push(messageObj);
   ticket.updatedAt = new Date().toISOString();
+
+  // SLA: marca primeira resposta quando o agente envia a primeira mensagem
+  if (!ticket.firstResponseAt) {
+    ticket.firstResponseAt = messageObj.timestamp;
+    const createdAt = ticket.createdAt ? new Date(ticket.createdAt) : null;
+    const first = new Date(ticket.firstResponseAt);
+    if (createdAt && !Number.isNaN(createdAt.getTime()) && !Number.isNaN(first.getTime())) {
+      ticket.waitingTimeSeconds = Math.max(0, Math.round((first - createdAt) / 1000));
+    }
+  }
 
   persistTicketBestEffort(ticket);
 

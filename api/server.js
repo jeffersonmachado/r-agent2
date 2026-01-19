@@ -166,6 +166,8 @@ const channelGatewayService = require('./services/channelGatewayService');
 const { startWorker: startOutboundWorker } = require('./services/outboundQueueService');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
 const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, startAutoReturnToBot } = require('./services/handoverService');
+const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./services/assignmentService');
+const queueDefinitionService = require('./services/queueDefinitionService');
 const {
   getAllTags,
   getAllCategories,
@@ -4655,6 +4657,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         },
       });
 
+      // Auto-assign best-effort (se a fila estiver configurada com estratégia automática)
+      autoAssignTicket(ticket.id).catch(() => null);
+
       // Se há mensagem inicial, envia e adiciona ao histórico
       if (initialMessage && initialMessage !== '') {
         try {
@@ -4743,8 +4748,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const queuesList = listQueues();
-    sendJson(res, 200, queuesList);
+    // Compatibilidade: mantém retorno como array de strings.
+    // Agora inclui também definições persistidas na tabela `queues` (por tenant).
+    const legacy = listQueues() || [];
+    const defs = queueDefinitionService.listQueues({ tenantId: req.tenantId }).map((q) => q.name);
+    const merged = Array.from(new Set([...legacy, ...defs])).sort();
+    sendJson(res, 200, merged);
     return;
   }
 
@@ -4779,6 +4788,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const result = createQueue(queueName);
       
       if (result.success) {
+        // Persistência best-effort de metadados de fila (roteamento/prioridade)
+        queueDefinitionService.upsertQueue({
+          tenantId: req.tenantId,
+          name: result.queueName,
+          routingStrategy: 'manual',
+          priority: 0,
+          active: true,
+        }).catch(() => {});
+
         // Registra ação de auditoria
         logAction({
           agentId: req.agent.id,
@@ -8046,6 +8064,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const options = {
+        tenantId: req.tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
@@ -8076,6 +8095,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const options = {
+        tenantId: req.tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
@@ -8106,6 +8126,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const options = {
+        tenantId: req.tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
@@ -8136,6 +8157,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const options = {
+        tenantId: req.tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
@@ -8166,6 +8188,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const options = {
+        tenantId: req.tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
         groupBy: urlObj.searchParams.get('groupBy') || 'day',
@@ -11328,6 +11351,16 @@ async function startInitialization() {
         logger.warn('[Init] ⚠️  Aviso ao inicializar DepartmentsService:', deptErr.message);
       }
 
+      // Inicializa cache de definições de filas (best-effort)
+      try {
+        await queueDefinitionService.initialize();
+        console.log('[Init] ✅ QueueDefinitionService inicializado');
+        logger.info('[Init] ✅ QueueDefinitionService inicializado');
+      } catch (qDefErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar QueueDefinitionService:', qDefErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar QueueDefinitionService:', qDefErr.message);
+      }
+
       try {
         const { initialize: initializeQuickReplies } = require('./services/quickRepliesService');
         await initializeQuickReplies();
@@ -11433,6 +11466,15 @@ if (require.main === module) {
         startAutoReturnToBot({ inactivityMinutes, intervalMs: 15000 });
       } catch (err) {
         logger.warn('[Handover] Falha ao iniciar autoReturnToBot (ignorado)', { error: err.message });
+      }
+    }
+
+    // Assignment worker (reassign offline) - best-effort
+    if (process.env.ENABLE_ASSIGNMENT_WORKER !== 'false') {
+      try {
+        startAssignmentWorker({ intervalMs: 15000 });
+      } catch (err) {
+        logger.warn('[Assignment] Falha ao iniciar worker (ignorado)', { error: err.message });
       }
     }
   }).catch((error) => {

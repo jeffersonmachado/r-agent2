@@ -22,6 +22,7 @@ const getDepartment = require('./Department');
 const getQuickReply = require('./QuickReply');
 const getWebhook = require('./Webhook');
 const getRagDocument = require('./RagDocument');
+const getQueue = require('./Queue');
 const getChannelAccount = require('./ChannelAccount');
 const getChannelConversation = require('./ChannelConversation');
 const getChannelMessage = require('./ChannelMessage');
@@ -47,6 +48,7 @@ const Department = () => getDepartment();
 const QuickReply = () => getQuickReply();
 const Webhook = () => getWebhook();
 const RagDocument = () => getRagDocument();
+const Queue = () => getQueue();
 const ChannelAccount = () => getChannelAccount();
 const ChannelConversation = () => getChannelConversation();
 const ChannelMessage = () => getChannelMessage();
@@ -79,6 +81,7 @@ function defineRelationships() {
   const QuickReplyModel = QuickReply();
   const WebhookModel = Webhook();
   const RagDocumentModel = RagDocument();
+  const QueueModel = Queue();
   const ChannelAccountModel = ChannelAccount();
   const ChannelConversationModel = ChannelConversation();
   const ChannelMessageModel = ChannelMessage();
@@ -176,6 +179,7 @@ function defineRelationships() {
   // No explicit relationships for Ticket (tenant_key-based)
   // No explicit relationships for Flow (tenant_key-based)
   // No explicit relationships for TenantContext/Department/QuickReply/Webhook/RagDocument (tenant_key-based)
+  // No explicit relationships for Queue (tenant_key-based)
   // No explicit relationships for ChannelAccount/ChannelConversation/ChannelMessage/OutboundQueueItem (tenant_key-based)
 }
 
@@ -199,6 +203,7 @@ module.exports = {
   QuickReply,
   Webhook,
   RagDocument,
+  Queue,
   ChannelAccount,
   ChannelConversation,
   ChannelMessage,
@@ -224,6 +229,7 @@ module.exports = {
   getQuickReply,
   getWebhook,
   getRagDocument,
+  getQueue,
   getChannelAccount,
   getChannelConversation,
   getChannelMessage,

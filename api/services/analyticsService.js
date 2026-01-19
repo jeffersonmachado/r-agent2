@@ -23,6 +23,12 @@ const { listAgents } = require('./authService');
 const { queryLogs } = require('./auditService');
 const { listDepartments } = require('./departmentsService');
 const { listQueues } = require('./queueService');
+const { getSequelize } = require('../db/sequelize');
+const { ChannelConversation } = require('../db/models');
+
+function dbAvailable() {
+  return !!getSequelize();
+}
 
 /**
  * Calcula métricas gerais do sistema.
@@ -32,9 +38,9 @@ const { listQueues } = require('./queueService');
  * @returns {Object}
  */
 function getGeneralMetrics(options = {}) {
-  const { startDate, endDate } = options;
+  const { startDate, endDate, tenantId } = options;
   
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtra por período se fornecido
@@ -101,6 +107,76 @@ function getGeneralMetrics(options = {}) {
   const totalMessages = tickets.reduce((sum, ticket) => {
     return sum + (ticket.messages ? ticket.messages.length : 0);
   }, 0);
+
+  // -----------------------------------------------------------------------
+  // SLA (TME/TMA, abandono) - usa campos persistidos quando disponíveis
+  // -----------------------------------------------------------------------
+  const firstResponseSeconds = [];
+  const handlingSeconds = [];
+  let abandonedClosed = 0;
+
+  for (const t of tickets) {
+    if (!t) continue;
+
+    if (Number.isFinite(t.waitingTimeSeconds) && t.waitingTimeSeconds >= 0 && t.firstResponseAt) {
+      firstResponseSeconds.push(t.waitingTimeSeconds);
+    }
+
+    if (t.status === 'closed') {
+      const hasFirstResponse = !!t.firstResponseAt;
+      if (!hasFirstResponse) abandonedClosed++;
+
+      if (Number.isFinite(t.handlingTimeSeconds) && t.handlingTimeSeconds >= 0 && t.resolvedAt && t.firstResponseAt) {
+        handlingSeconds.push(t.handlingTimeSeconds);
+      }
+    }
+  }
+
+  const avgFirstResponseTimeSeconds = firstResponseSeconds.length
+    ? Math.round(firstResponseSeconds.reduce((a, b) => a + b, 0) / firstResponseSeconds.length)
+    : null;
+
+  const avgHandlingTimeSeconds = handlingSeconds.length
+    ? Math.round(handlingSeconds.reduce((a, b) => a + b, 0) / handlingSeconds.length)
+    : null;
+
+  const abandonmentRate = closedTickets > 0 ? Number((abandonedClosed / closedTickets).toFixed(4)) : 0;
+
+  // -----------------------------------------------------------------------
+  // Contenção bot (best-effort com ChannelConversation)
+  // - taxa de conversas no período que NÃO viraram ticket
+  // -----------------------------------------------------------------------
+  let botContainmentRate = null;
+  if (dbAvailable() && tenantId) {
+    try {
+      const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
+      const sequelize = ConversationModel.sequelize;
+      const Op = sequelize.constructor.Op;
+      const where = { tenant_key: tenantId };
+
+      if (startDate || endDate) {
+        where.last_message_at = {};
+        if (startDate) where.last_message_at[Op.gte] = new Date(startDate);
+        if (endDate) where.last_message_at[Op.lte] = new Date(endDate);
+      }
+
+      const totalConversations = await ConversationModel.count({ where });
+      const withTicket = await ConversationModel.count({
+        where: {
+          ...where,
+          current_ticket_id: { [Op.ne]: null },
+        },
+      });
+
+      if (totalConversations > 0) {
+        botContainmentRate = Number((1 - (withTicket / totalConversations)).toFixed(4));
+      } else {
+        botContainmentRate = null;
+      }
+    } catch (e) {
+      botContainmentRate = null;
+    }
+  }
   
   return {
     totalTickets,
@@ -110,6 +186,11 @@ function getGeneralMetrics(options = {}) {
     waitingTickets,
     avgResolutionTime, // em minutos
     avgFirstResponseTime, // em minutos
+    // SLA (novos)
+    avgFirstResponseTimeSeconds, // TME em segundos
+    avgHandlingTimeSeconds, // TMA em segundos
+    abandonmentRate, // 0..1
+    botContainmentRate, // 0..1 ou null
     totalMessages,
     ticketsByStatus: {
       waiting: waitingTickets,
@@ -127,10 +208,10 @@ function getGeneralMetrics(options = {}) {
  * @returns {Array}
  */
 function getAgentMetrics(options = {}) {
-  const { startDate, endDate } = options;
+  const { startDate, endDate, tenantId } = options;
   
-  const agents = listAgents();
-  const allTickets = listAllTickets();
+  const agents = listAgents(tenantId);
+  const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtra por período
@@ -207,10 +288,10 @@ function getAgentMetrics(options = {}) {
  * @returns {Array}
  */
 function getDepartmentMetrics(options = {}) {
-  const { startDate, endDate } = options;
+  const { startDate, endDate, tenantId } = options;
   
-  const departments = listDepartments();
-  const allTickets = listAllTickets();
+  const departments = listDepartments({ tenantId });
+  const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtra por período
@@ -279,10 +360,10 @@ function getDepartmentMetrics(options = {}) {
  * @returns {Array}
  */
 function getQueueMetrics(options = {}) {
-  const { startDate, endDate } = options;
+  const { startDate, endDate, tenantId } = options;
   
   const queues = listQueues();
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtra por período

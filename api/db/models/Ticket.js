@@ -58,6 +58,22 @@ function getTicketModel() {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      first_response_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      resolved_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      waiting_time_seconds: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      handling_time_seconds: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
       assigned_to: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -104,6 +120,8 @@ function getTicketModel() {
         { fields: ['session_id'], name: 'tickets_session_id_idx' },
         { fields: ['tenant_key', 'conversation_id'], name: 'tickets_tenant_key_conversation_id_idx' },
         { fields: ['tenant_key', 'mode'], name: 'tickets_tenant_key_mode_idx' },
+        { fields: ['tenant_key', 'first_response_at'], name: 'tickets_tenant_key_first_response_at_idx' },
+        { fields: ['tenant_key', 'resolved_at'], name: 'tickets_tenant_key_resolved_at_idx' },
         { fields: ['created_at'], name: 'tickets_created_at_idx' },
       ],
     });

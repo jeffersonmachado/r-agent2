@@ -55,6 +55,21 @@ export function AnalyticsPage() {
     return `${hours}h ${mins}min`;
   };
 
+  const formatSeconds = (seconds) => {
+    if (seconds === null || seconds === undefined) return '-';
+    const s = Number(seconds);
+    if (!Number.isFinite(s) || s < 0) return '-';
+    const mins = Math.round(s / 60);
+    return formatTime(mins);
+  };
+
+  const formatRate = (rate) => {
+    if (rate === null || rate === undefined) return '-';
+    const r = Number(rate);
+    if (!Number.isFinite(r)) return '-';
+    return `${Math.round(r * 100)}%`;
+  };
+
   if (authLoading) {
     return (
       <div className="support-page">
@@ -156,6 +171,37 @@ export function AnalyticsPage() {
                 <div className="text-sm text-text-secondary mb-1">Tempo Médio de Resolução</div>
                 <div className="text-3xl font-bold text-accent-primary">
                   {formatTime(metrics.general?.avgResolutionTime)}
+                </div>
+              </div>
+            </div>
+
+            {/* SLA */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+                <div className="text-sm text-text-secondary mb-1">TME (1ª resposta)</div>
+                <div className="text-3xl font-bold text-accent-primary">
+                  {formatSeconds(metrics.general?.avgFirstResponseTimeSeconds)}
+                </div>
+              </div>
+
+              <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+                <div className="text-sm text-text-secondary mb-1">TMA (atendimento)</div>
+                <div className="text-3xl font-bold text-accent-primary">
+                  {formatSeconds(metrics.general?.avgHandlingTimeSeconds)}
+                </div>
+              </div>
+
+              <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+                <div className="text-sm text-text-secondary mb-1">Taxa de Abandono</div>
+                <div className="text-3xl font-bold text-status-warning">
+                  {formatRate(metrics.general?.abandonmentRate)}
+                </div>
+              </div>
+
+              <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+                <div className="text-sm text-text-secondary mb-1">Contenção Bot</div>
+                <div className="text-3xl font-bold text-status-success">
+                  {formatRate(metrics.general?.botContainmentRate)}
                 </div>
               </div>
             </div>

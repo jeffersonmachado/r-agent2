@@ -365,6 +365,35 @@ function getWebSocketServer() {
   return wss;
 }
 
+/**
+ * Verifica se um agente está online (tem ao menos uma conexão WebSocket autenticada OPEN).
+ * @param {string} agentId
+ * @returns {boolean}
+ */
+function isAgentOnline(agentId) {
+  if (!agentId) return false;
+  for (const client of clients.values()) {
+    if (client.agentId === agentId && client.ws.readyState === 1) return true;
+  }
+  return false;
+}
+
+/**
+ * Retorna IDs de agentes online para um tenant.
+ * @param {string} tenantId
+ * @returns {string[]}
+ */
+function getOnlineAgentsByTenant(tenantId) {
+  const set = new Set();
+  if (!tenantId) return [];
+  for (const client of clients.values()) {
+    if (client.tenantId === tenantId && client.agentId && client.ws.readyState === 1) {
+      set.add(client.agentId);
+    }
+  }
+  return Array.from(set.values());
+}
+
 module.exports = {
   initializeWebSocket,
   sendToClient,
@@ -374,5 +403,7 @@ module.exports = {
   getStats,
   getConnectionsInfo,
   getWebSocketServer,
+  isAgentOnline,
+  getOnlineAgentsByTenant,
 };
 
