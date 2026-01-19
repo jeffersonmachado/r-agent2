@@ -104,6 +104,15 @@ export async function getTenantUsage(tenantId) {
 }
 
 /**
+ * Obtém plano + limites efetivos + uso do tenant atual
+ */
+export async function getCurrentTenantPlanUsage() {
+  return fetchJson('/tenants/current/plan-usage', {
+    method: 'GET',
+  });
+}
+
+/**
  * Gera dados de tenant por IA baseado em uma descrição
  */
 export async function generateTenantByAI(description) {

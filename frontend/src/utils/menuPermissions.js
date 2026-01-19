@@ -86,6 +86,13 @@ export const menuItems = [
     roles: ['supervisor', 'manager', 'admin', 'owner'],
   },
   {
+    label: 'Plano e Uso',
+    path: '/plan-usage',
+    icon: '📦',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['admin', 'owner'],
+  },
+  {
     label: 'Saúde de Canais',
     path: '/channel-health',
     icon: '📡',

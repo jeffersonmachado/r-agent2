@@ -7152,6 +7152,54 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /tenants/current/plan-usage - Retorna plano + limites efetivos + uso (tenant atual)
+  if (method === 'GET' && pathname === '/tenants/current/plan-usage') {
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      const tenantId = authResult.agent.tenantId;
+      if (!tenantId || tenantId === 'current') {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido' });
+        return;
+      }
+
+      // Apenas owner/admin (ou super-admin) podem ver limites/uso do plano
+      const isSuperAdminUser = isSuperAdmin(authResult.agent);
+      if (!isSuperAdminUser && authResult.agent.role !== 'owner' && authResult.agent.role !== 'admin') {
+        sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem ver plano/uso' });
+        return;
+      }
+
+      const { getTenant } = require('./services/tenantService');
+      const { getPlanLimits } = require('./services/planLimitsService');
+      const { getTenantUsage } = require('./services/tenantService');
+
+      const tenant = await getTenant(tenantId);
+      if (!tenant) {
+        sendJson(res, 404, { error: 'tenant_not_found' });
+        return;
+      }
+
+      const usage = await getTenantUsage(tenantId);
+      const limits = tenant.limits || getPlanLimits(tenant.plan);
+
+      sendJson(res, 200, {
+        tenantId,
+        plan: tenant.plan || 'trial',
+        limits,
+        usage,
+      });
+    } catch (err) {
+      logger.error('Erro ao obter plano/uso do tenant atual:', err);
+      sendJson(res, 500, { error: 'Erro ao obter plano/uso', message: err.message });
+    }
+    return;
+  }
+
   // PUT /tenants/current/ai-config - Salva configuração de IA do tenant atual
   if (method === 'PUT' && pathname === '/tenants/current/ai-config') {
     if (!hasJsonContentType(req)) {
