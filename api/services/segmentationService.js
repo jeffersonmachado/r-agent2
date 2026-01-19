@@ -155,6 +155,7 @@ function filterTickets(filters = {}) {
  */
 function addTagToTicket(ticketId, tag) {
   const { getTicket, updateTicket } = require('./queueService');
+  const { recordTagActionBestEffort } = require('./ticketTagService');
   
   const ticket = getTicket(ticketId);
   if (!ticket) {
@@ -174,8 +175,26 @@ function addTagToTicket(ticketId, tag) {
   if (!ticket.tags.includes(normalizedTag)) {
     ticket.tags.push(normalizedTag);
     ticket.updatedAt = new Date().toISOString();
-    
-    // Dados agora estão no banco de dados PostgreSQL - não precisa salvar em arquivo
+
+    // Persistência (DB-only) + trilha de tags (best-effort)
+    updateTicket(ticketId, { tags: ticket.tags });
+    recordTagActionBestEffort({
+      tenantId: ticket.tenantId,
+      ticketId,
+      tag: normalizedTag,
+      action: 'add',
+      actorUserId: null,
+    });
+
+    // Ação visível
+    if (!Array.isArray(ticket.messages)) ticket.messages = [];
+    ticket.messages.push({
+      id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      text: `Tag adicionada: ${normalizedTag}`,
+      sender: 'system',
+      timestamp: new Date().toISOString(),
+    });
+    updateTicket(ticketId, { messages: ticket.messages });
   }
   
   return { success: true, ticket };
@@ -188,7 +207,8 @@ function addTagToTicket(ticketId, tag) {
  * @returns {{success: boolean, ticket?: Object, error?: string}}
  */
 function removeTagFromTicket(ticketId, tag) {
-  const { getTicket } = require('./queueService');
+  const { getTicket, updateTicket } = require('./queueService');
+  const { recordTagActionBestEffort } = require('./ticketTagService');
   
   const ticket = getTicket(ticketId);
   if (!ticket) {
@@ -202,7 +222,23 @@ function removeTagFromTicket(ticketId, tag) {
   const normalizedTag = tag.trim().toLowerCase();
   ticket.tags = ticket.tags.filter(t => t !== normalizedTag);
   ticket.updatedAt = new Date().toISOString();
-  // Dados agora estão no banco de dados PostgreSQL
+  updateTicket(ticketId, { tags: ticket.tags });
+  recordTagActionBestEffort({
+    tenantId: ticket.tenantId,
+    ticketId,
+    tag: normalizedTag,
+    action: 'remove',
+    actorUserId: null,
+  });
+
+  if (!Array.isArray(ticket.messages)) ticket.messages = [];
+  ticket.messages.push({
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text: `Tag removida: ${normalizedTag}`,
+    sender: 'system',
+    timestamp: new Date().toISOString(),
+  });
+  updateTicket(ticketId, { messages: ticket.messages });
   
   return { success: true, ticket };
 }
@@ -214,7 +250,7 @@ function removeTagFromTicket(ticketId, tag) {
  * @returns {{success: boolean, ticket?: Object, error?: string}}
  */
 function setTicketCategory(ticketId, category) {
-  const { getTicket } = require('./queueService');
+  const { getTicket, updateTicket } = require('./queueService');
   
   const ticket = getTicket(ticketId);
   if (!ticket) {
@@ -223,7 +259,7 @@ function setTicketCategory(ticketId, category) {
   
   ticket.category = category ? category.trim() : null;
   ticket.updatedAt = new Date().toISOString();
-  // Dados agora estão no banco de dados PostgreSQL
+  updateTicket(ticketId, { category: ticket.category });
   
   return { success: true, ticket };
 }

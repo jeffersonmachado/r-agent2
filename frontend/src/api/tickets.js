@@ -150,8 +150,14 @@ export function closeTicket(ticketId) {
 
   logger.info('Fechando ticket', { ticketId });
 
+  // Compatível: se não houver options, mantém request sem body
+  const options = arguments.length > 1 ? (arguments[1] || {}) : {};
+
   return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/close`, {
     method: 'POST',
+    ...(options && (options.closeReasonId || options.closeReasonName)
+      ? { body: JSON.stringify({ closeReasonId: options.closeReasonId, closeReasonName: options.closeReasonName }) }
+      : {}),
   }).then(
     (ticket) => {
       logger.info('Ticket fechado com sucesso', { ticketId });
@@ -230,6 +236,32 @@ export function sendTicketMessage(ticketId, message) {
       throw error;
     }
   );
+}
+
+/**
+ * Obtém resumo IA do ticket (cache).
+ *
+ * @param {string} ticketId
+ * @returns {Promise<{summary: any}>}
+ */
+export function getTicketAiSummary(ticketId) {
+  if (!ticketId) {
+    return Promise.reject(new Error('getTicketAiSummary: ticketId é obrigatório'));
+  }
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/ai-summary`);
+}
+
+/**
+ * Gera/atualiza resumo IA do ticket.
+ *
+ * @param {string} ticketId
+ * @returns {Promise<{summary: any}>}
+ */
+export function generateTicketAiSummary(ticketId) {
+  if (!ticketId) {
+    return Promise.reject(new Error('generateTicketAiSummary: ticketId é obrigatório'));
+  }
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/ai-summary`, { method: 'POST' });
 }
 
 /**

@@ -23,6 +23,8 @@ const getQuickReply = require('./QuickReply');
 const getWebhook = require('./Webhook');
 const getRagDocument = require('./RagDocument');
 const getQueue = require('./Queue');
+const getCloseReason = require('./CloseReason');
+const getTicketTag = require('./TicketTag');
 const getChannelAccount = require('./ChannelAccount');
 const getChannelConversation = require('./ChannelConversation');
 const getChannelMessage = require('./ChannelMessage');
@@ -49,6 +51,8 @@ const QuickReply = () => getQuickReply();
 const Webhook = () => getWebhook();
 const RagDocument = () => getRagDocument();
 const Queue = () => getQueue();
+const CloseReason = () => getCloseReason();
+const TicketTag = () => getTicketTag();
 const ChannelAccount = () => getChannelAccount();
 const ChannelConversation = () => getChannelConversation();
 const ChannelMessage = () => getChannelMessage();
@@ -82,6 +86,8 @@ function defineRelationships() {
   const WebhookModel = Webhook();
   const RagDocumentModel = RagDocument();
   const QueueModel = Queue();
+  const CloseReasonModel = CloseReason();
+  const TicketTagModel = TicketTag();
   const ChannelAccountModel = ChannelAccount();
   const ChannelConversationModel = ChannelConversation();
   const ChannelMessageModel = ChannelMessage();
@@ -180,6 +186,7 @@ function defineRelationships() {
   // No explicit relationships for Flow (tenant_key-based)
   // No explicit relationships for TenantContext/Department/QuickReply/Webhook/RagDocument (tenant_key-based)
   // No explicit relationships for Queue (tenant_key-based)
+  // No explicit relationships for CloseReason/TicketTag (tenant_key-based)
   // No explicit relationships for ChannelAccount/ChannelConversation/ChannelMessage/OutboundQueueItem (tenant_key-based)
 }
 
@@ -204,6 +211,8 @@ module.exports = {
   Webhook,
   RagDocument,
   Queue,
+  CloseReason,
+  TicketTag,
   ChannelAccount,
   ChannelConversation,
   ChannelMessage,
@@ -230,6 +239,8 @@ module.exports = {
   getWebhook,
   getRagDocument,
   getQueue,
+  getCloseReason,
+  getTicketTag,
   getChannelAccount,
   getChannelConversation,
   getChannelMessage,

@@ -545,6 +545,15 @@ function assignTicket(ticketId, assignedTo) {
   ticket.assignedTo = assignedTo;
   ticket.updatedAt = new Date().toISOString();
 
+  // Ação visível (console operacional): registra como system message
+  if (!Array.isArray(ticket.messages)) ticket.messages = [];
+  ticket.messages.push({
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text: `Ticket atribuído para ${assignedTo}.`,
+    sender: 'system',
+    timestamp: new Date().toISOString(),
+  });
+
   persistTicketBestEffort(ticket);
 
   return ticket;
@@ -584,8 +593,36 @@ function closeTicket(ticketId) {
     queueSet.delete(ticketId);
   }
 
+  // Ação visível: system message de encerramento (motivo pode ser setado no context antes)
+  if (!Array.isArray(ticket.messages)) ticket.messages = [];
+  const closeReasonName = ticket.context?.closeReason?.name || ticket.context?.closeReasonName || null;
+  ticket.messages.push({
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text: closeReasonName ? `Ticket encerrado (${closeReasonName}).` : 'Ticket encerrado.',
+    sender: 'system',
+    timestamp: new Date().toISOString(),
+  });
+
   persistTicketBestEffort(ticket);
 
+  return ticket;
+}
+
+/**
+ * Atualiza ticket em memória e persiste best-effort.
+ * Útil para operações de segmentação (tags/categoria) sem quebrar API.
+ *
+ * @param {string} ticketId
+ * @param {Object} patch
+ * @returns {Ticket|null}
+ */
+function updateTicket(ticketId, patch = {}) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  Object.assign(ticket, patch);
+  ticket.updatedAt = new Date().toISOString();
+  persistTicketBestEffort(ticket);
   return ticket;
 }
 
@@ -971,6 +1008,7 @@ module.exports = {
   getTicketBySession,
   assignTicket,
   closeTicket,
+  updateTicket,
   updateLastMessage,
   addAgentMessage,
   markMessagesAsRead,

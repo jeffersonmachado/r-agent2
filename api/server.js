@@ -168,6 +168,8 @@ const { listConversations: listChannelConversations, listConversationMessages } 
 const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, startAutoReturnToBot } = require('./services/handoverService');
 const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./services/assignmentService');
 const queueDefinitionService = require('./services/queueDefinitionService');
+const closeReasonsService = require('./services/closeReasonsService');
+const ticketInsightService = require('./services/ticketInsightService');
 const {
   getAllTags,
   getAllCategories,
@@ -5309,6 +5311,39 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    // Motivo de encerramento (opcional, compatível com chamadas antigas sem body)
+    if (hasJsonContentType(req)) {
+      try {
+        const body = await parseJsonBody(req);
+        const closeReasonId = body?.closeReasonId ? String(body.closeReasonId) : null;
+        const closeReasonName = body?.closeReasonName ? String(body.closeReasonName) : null;
+
+        let closeReason = null;
+        if (closeReasonId) {
+          closeReason = closeReasonsService.getCloseReason(closeReasonId);
+        }
+        if (!closeReason && closeReasonName) {
+          closeReason = { id: null, name: closeReasonName };
+        }
+
+        if (closeReason) {
+          // atualiza ticket para que closeTicket escreva system message com motivo
+          const { updateTicket } = require('./services/queueService');
+          updateTicket(id, {
+            context: {
+              ...(ticket.context || {}),
+              closeReason: { id: closeReason.id || null, name: closeReason.name },
+              closeReasonName: closeReason.name,
+              closedBy: { id: req.agent.id, username: req.agent.username },
+              closedAt: new Date().toISOString(),
+            },
+          });
+        }
+      } catch (e) {
+        // ignora body inválido
+      }
+    }
+
     const closedTicket = closeTicket(id);
     if (!closedTicket) {
       sendJson(res, 404, { error: 'ticket_not_found' });
@@ -5343,6 +5378,131 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     });
 
     sendJson(res, 200, closedTicket);
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Close Reasons
+  // -----------------------------------------------------------------------
+
+  // GET /close-reasons - Lista motivos de encerramento do tenant
+  if (method === 'GET' && pathname === '/close-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const activeOnly = urlObj.searchParams.get('activeOnly');
+      const list = closeReasonsService.listCloseReasons({
+        tenantId: req.tenantId,
+        activeOnly: activeOnly === null ? true : activeOnly !== 'false',
+      });
+      sendJson(res, 200, { closeReasons: list });
+    } catch (err) {
+      logger.error('Erro ao listar close reasons:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Ticket Insights (Resumo IA)
+  // -----------------------------------------------------------------------
+
+  // GET /tickets/:id/ai-summary - Retorna resumo IA (cache)
+  if (method === 'GET' && pathname.startsWith('/tickets/') && pathname.endsWith('/ai-summary')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/ai-summary'.length));
+      const { getTicket } = require('./services/queueService');
+      const ticket = getTicket(id);
+      if (!ticket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      if (req.tenantId && ticket.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+        return;
+      }
+
+      const result = ticketInsightService.getAiSummary(id);
+      if (!result.success) {
+        sendJson(res, 404, { error: result.error });
+        return;
+      }
+      sendJson(res, 200, { summary: result.summary });
+    } catch (err) {
+      logger.error('Erro ao obter ai-summary:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // POST /tickets/:id/ai-summary - Gera/atualiza resumo IA
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/ai-summary')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/ai-summary'.length));
+      const { getTicket } = require('./services/queueService');
+      const ticket = getTicket(id);
+      if (!ticket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      if (req.tenantId && ticket.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+        return;
+      }
+
+      const result = await ticketInsightService.generateAiSummary({
+        ticketId: id,
+        tenantId: req.tenantId,
+        agent: req.agent,
+      });
+
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+
+      sendJson(res, 200, { summary: result.summary });
+    } catch (err) {
+      logger.error('Erro ao gerar ai-summary:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
     return;
   }
 
@@ -11369,6 +11529,16 @@ async function startInitialization() {
       } catch (qrErr) {
         console.warn('[Init] ⚠️  Aviso ao inicializar QuickRepliesService:', qrErr.message);
         logger.warn('[Init] ⚠️  Aviso ao inicializar QuickRepliesService:', qrErr.message);
+      }
+
+      // Inicializa close reasons (best-effort)
+      try {
+        await closeReasonsService.initialize();
+        console.log('[Init] ✅ CloseReasonsService inicializado');
+        logger.info('[Init] ✅ CloseReasonsService inicializado');
+      } catch (crErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar CloseReasonsService:', crErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar CloseReasonsService:', crErr.message);
       }
 
       try {
