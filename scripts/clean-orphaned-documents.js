@@ -10,8 +10,8 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-const dataDir = path.join(__dirname, '../api/data');
-const documentsFile = path.join(dataDir, 'rag_documents.json');
+const { connect } = require('../api/db/sequelize');
+const { RagDocument: RagDocumentGetter } = require('../api/db/models');
 const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
 const TENANT_ID = process.env.TENANT_ID;
 if (!TENANT_ID) {
@@ -25,18 +25,14 @@ async function cleanOrphanedDocuments() {
   try {
     console.log('🔍 Identificando documentos órfãos...\n');
     
-    // Carrega documentos do BD
-    if (!fs.existsSync(documentsFile)) {
-      console.error('❌ Arquivo de documentos não encontrado:', documentsFile);
-      process.exit(1);
-    }
-    
-    const bdDocs = JSON.parse(fs.readFileSync(documentsFile, 'utf8'));
-    const bdDocIds = new Set(
-      bdDocs
-        .filter(doc => doc.status === 'active')
-        .map(doc => doc.id)
-    );
+    // Carrega documentos ativos do PostgreSQL
+    await connect(30, 1000);
+    const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+    const rows = await RagDocumentModel.findAll({
+      where: { tenant_key: TENANT_ID, status: 'active' },
+      attributes: ['id'],
+    });
+    const bdDocIds = new Set(rows.map((r) => r.id));
     
     console.log(`📊 Documentos ativos no BD: ${bdDocIds.size}`);
     

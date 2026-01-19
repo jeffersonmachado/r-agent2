@@ -13,20 +13,10 @@
  * - Decisões são imutáveis após persistidas
  */
 
-const fs = require('fs');
-const path = require('path');
 const logger = require('../utils/logger');
 
-const EXECUTIONS_DIR = path.join(__dirname, '..', '..', 'data', 'executions');
-
-/**
- * Garante que o diretório de execuções existe.
- */
-function ensureExecutionsDir() {
-  if (!fs.existsSync(EXECUTIONS_DIR)) {
-    fs.mkdirSync(EXECUTIONS_DIR, { recursive: true });
-  }
-}
+const { getSequelize } = require('../db/sequelize');
+const { Execution } = require('../db/models');
 
 /**
  * Persiste uma execução completa.
@@ -35,11 +25,8 @@ function ensureExecutionsDir() {
  * @returns {Promise<void>}
  */
 async function persistExecution(execution) {
-  ensureExecutionsDir();
-  
   const executionId = execution.executionId;
-  const filePath = path.join(EXECUTIONS_DIR, `${executionId}.json`);
-  
+
   // Prepara dados para persistência (apenas o necessário)
   const persistedData = {
     executionId,
@@ -68,11 +55,37 @@ async function persistExecution(execution) {
   };
   
   try {
-    fs.writeFileSync(filePath, JSON.stringify(persistedData, null, 2), 'utf8');
-    logger.info('[executionPersistence] Execução persistida', {
+    const sequelize = getSequelize();
+    if (!sequelize) {
+      // Em testes/unit sem DB, não persiste.
+      logger.debug('[executionPersistence] DB indisponível, persistência ignorada (modo teste)', { executionId });
+      return;
+    }
+
+    const ExecutionModel = typeof Execution === 'function' ? Execution() : Execution;
+
+    // Upsert por execution_id
+    const now = new Date();
+    const existing = await ExecutionModel.findByPk(executionId);
+    if (existing) {
+      await existing.update({
+        status: persistedData.status,
+        data: persistedData,
+        updated_at: now,
+      });
+    } else {
+      await ExecutionModel.create({
+        execution_id: executionId,
+        status: persistedData.status,
+        data: persistedData,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    logger.info('[executionPersistence] Execução persistida (PostgreSQL)', {
       executionId,
       status: execution.status,
-      filePath,
     });
   } catch (error) {
     logger.error('[executionPersistence] Erro ao persistir execução', {
@@ -89,27 +102,25 @@ async function persistExecution(execution) {
  * @param {string} executionId - ID da execução
  * @returns {Object|null} Execução persistida ou null se não encontrada
  */
-function retrieveExecution(executionId) {
-  ensureExecutionsDir();
-  
-  const filePath = path.join(EXECUTIONS_DIR, `${executionId}.json`);
-  
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-  
+async function retrieveExecution(executionId) {
+  const sequelize = getSequelize();
+  if (!sequelize) return null;
+
   try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const persistedData = JSON.parse(content);
-    
-    logger.info('[executionPersistence] Execução recuperada', {
-      executionId,
-      status: persistedData.status,
-    });
-    
+    const ExecutionModel = typeof Execution === 'function' ? Execution() : Execution;
+    const row = await ExecutionModel.findByPk(executionId);
+    if (!row) return null;
+
+    const persistedData = row.data || null;
+    if (persistedData) {
+      logger.info('[executionPersistence] Execução recuperada (PostgreSQL)', {
+        executionId,
+        status: persistedData.status,
+      });
+    }
     return persistedData;
   } catch (error) {
-    logger.error('[executionPersistence] Erro ao recuperar execução', {
+    logger.error('[executionPersistence] Erro ao recuperar execução (PostgreSQL)', {
       executionId,
       error: error.message,
     });
@@ -123,8 +134,8 @@ function retrieveExecution(executionId) {
  * @param {string} executionId - ID da execução
  * @returns {boolean} True se execução já tem decisão final
  */
-function hasFinalDecision(executionId) {
-  const persisted = retrieveExecution(executionId);
+async function hasFinalDecision(executionId) {
+  const persisted = await retrieveExecution(executionId);
   if (!persisted) {
     return false;
   }
@@ -140,14 +151,14 @@ function hasFinalDecision(executionId) {
  * @param {Object} currentExecution - Execução atual (parcial)
  * @returns {Object|null} Execução recuperada com decisão ou null
  */
-function reuseDecision(executionId, currentExecution) {
-  const persisted = retrieveExecution(executionId);
+async function reuseDecision(executionId, currentExecution) {
+  const persisted = await retrieveExecution(executionId);
   if (!persisted) {
     return null;
   }
   
   // Se execução anterior tem decisão final, reutiliza
-  if (hasFinalDecision(executionId)) {
+  if (await hasFinalDecision(executionId)) {
     logger.info('[executionPersistence] Reutilizando decisão de execução anterior (determinismo)', {
       executionId,
       previousStatus: persisted.status,

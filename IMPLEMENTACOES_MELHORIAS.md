@@ -125,7 +125,7 @@ ws.onmessage = (event) => {
 
 #### Gerenciamento de Webhooks
 - ✅ CRUD completo (Create, Read, Update, Delete)
-- ✅ Persistência em JSON (`api/data/webhooks.json`)
+- ✅ Persistência em PostgreSQL (tabela `webhooks`)
 - ✅ Validação robusta de URLs e eventos
 - ✅ Estatísticas de chamadas (sucesso/falha)
 

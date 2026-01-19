@@ -1,21 +1,16 @@
 /**
- * Serviço de Respostas Rápidas (Quick Replies).
- *
- * Responsabilidades:
- * - Gerenciar mensagens pré-definidas e templates
- * - Organizar respostas por categorias/tags
- * - Buscar respostas por palavras-chave
- * - Persistir dados em PostgreSQL
+ * Serviço de Respostas Rápidas (DB-only).
  *
  * Persistência:
- * - Respostas rápidas: PostgreSQL (tabela quick_replies)
- * 
- * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
+ * - PostgreSQL (tabela quick_replies)
+ *
+ * Observação:
+ * - Mantém cache em memória para operações síncronas do server.
  */
 
-const fs = require('fs');
-const path = require('path');
 const logger = require('../utils/logger');
+const { getSequelize } = require('../db/sequelize');
+const { QuickReply: QuickReplyGetter } = require('../db/models');
 
 /**
  * @typedef {Object} QuickReply
@@ -31,25 +26,80 @@ const logger = require('../utils/logger');
  * @property {boolean} active - Se está ativa
  */
 
-// Armazenamento em memória
 /** @type {Map<string, QuickReply>} */
-const quickReplies = new Map();
+const quickReplies = new Map(); // id -> QuickReply
 
-// Caminho do arquivo de persistência
-const dataDir = path.join(__dirname, '..', 'data');
-const quickRepliesFile = path.join(dataDir, 'quickReplies.json');
+function dbAvailable() {
+  return !!getSequelize();
+}
 
-/**
- * Garante que o diretório de dados existe.
- */
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+function toDbPayload(reply) {
+  return {
+    id: reply.id,
+    tenant_key: reply.tenantId || 'tenant-demo',
+    title: reply.title,
+    message: reply.message,
+    tags: Array.isArray(reply.tags) ? reply.tags : [],
+    category: reply.category || null,
+    usage_count: Number.isFinite(reply.usageCount) ? reply.usageCount : 0,
+    created_by: reply.createdBy || null,
+    active: reply.active !== false,
+  };
+}
+
+function fromDbRow(row) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_key || null,
+    title: row.title,
+    message: row.message,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    category: row.category || 'geral',
+    usageCount: Number.isFinite(row.usage_count) ? row.usage_count : 0,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+    createdBy: row.created_by || null,
+    active: row.active !== false,
+  };
+}
+
+async function upsertQuickReplyToDb(reply) {
+  if (!dbAvailable()) return;
+  const QuickReplyModel = typeof QuickReplyGetter === 'function' ? QuickReplyGetter() : QuickReplyGetter;
+  const payload = toDbPayload(reply);
+  const now = new Date();
+
+  const existing = await QuickReplyModel.findByPk(reply.id);
+  if (existing) {
+    await existing.update({ ...payload, updated_at: now });
+  } else {
+    await QuickReplyModel.create({ ...payload, created_at: now, updated_at: now });
   }
 }
 
-// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
-// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+async function deleteQuickReplyFromDb(id) {
+  if (!dbAvailable()) return;
+  const QuickReplyModel = typeof QuickReplyGetter === 'function' ? QuickReplyGetter() : QuickReplyGetter;
+  await QuickReplyModel.destroy({ where: { id } });
+}
+
+function persistQuickReplyBestEffort(reply) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    upsertQuickReplyToDb(reply).catch((err) => {
+      logger.warn('[QuickRepliesService] Falha ao persistir quick reply no PostgreSQL', { id: reply.id, error: err.message });
+    });
+  });
+}
+
+function deleteQuickReplyBestEffort(id) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    deleteQuickReplyFromDb(id).catch((err) => {
+      logger.warn('[QuickRepliesService] Falha ao remover quick reply no PostgreSQL', { id, error: err.message });
+    });
+  });
+}
 
 /**
  * Cria respostas rápidas padrão.
@@ -58,6 +108,7 @@ function createDefaultQuickReplies() {
   const defaults = [
     {
       id: 'qr-001',
+      tenantId: 'tenant-demo',
       title: 'Saudação Inicial',
       message: 'Olá! Como posso ajudá-lo hoje?',
       tags: ['saudacao', 'inicio', 'boas-vindas'],
@@ -70,6 +121,7 @@ function createDefaultQuickReplies() {
     },
     {
       id: 'qr-002',
+      tenantId: 'tenant-demo',
       title: 'Despedida',
       message: 'Obrigado por entrar em contato! Tenha um ótimo dia!',
       tags: ['despedida', 'fim', 'agradecimento'],
@@ -82,6 +134,7 @@ function createDefaultQuickReplies() {
     },
     {
       id: 'qr-003',
+      tenantId: 'tenant-demo',
       title: 'Transferindo para Especialista',
       message: 'Vou transferir você para um especialista que poderá ajudá-lo melhor.',
       tags: ['transferencia', 'especialista'],
@@ -94,6 +147,7 @@ function createDefaultQuickReplies() {
     },
     {
       id: 'qr-004',
+      tenantId: 'tenant-demo',
       title: 'Solicitando Informações',
       message: 'Para que eu possa ajudá-lo melhor, preciso de algumas informações. Pode me informar?',
       tags: ['informacao', 'dados', 'coleta'],
@@ -106,6 +160,7 @@ function createDefaultQuickReplies() {
     },
     {
       id: 'qr-005',
+      tenantId: 'tenant-demo',
       title: 'Problema Resolvido',
       message: 'Fico feliz em saber que conseguimos resolver seu problema! Se precisar de mais alguma coisa, estou à disposição.',
       tags: ['resolucao', 'sucesso', 'satisfacao'],
@@ -120,12 +175,35 @@ function createDefaultQuickReplies() {
   
   for (const reply of defaults) {
     quickReplies.set(reply.id, reply);
+    persistQuickReplyBestEffort(reply);
   }
-  // Dados agora estão no banco de dados PostgreSQL
 }
 
-// Carrega dados ao iniciar o módulo
-// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+/**
+ * Inicializa cache em memória a partir do PostgreSQL (best-effort).
+ * Se não houver dados, cria defaults para tenant-demo.
+ */
+async function initialize() {
+  if (!dbAvailable()) return;
+  try {
+    const QuickReplyModel = typeof QuickReplyGetter === 'function' ? QuickReplyGetter() : QuickReplyGetter;
+    const rows = await QuickReplyModel.findAll();
+    quickReplies.clear();
+    for (const row of rows) {
+      const reply = fromDbRow(row);
+      quickReplies.set(reply.id, reply);
+    }
+
+    if (quickReplies.size === 0) {
+      createDefaultQuickReplies();
+      logger.info('[QuickRepliesService] Nenhuma quick reply encontrada. Defaults criados.', { count: quickReplies.size });
+    } else {
+      logger.info('[QuickRepliesService] Cache inicializado do PostgreSQL', { count: quickReplies.size });
+    }
+  } catch (err) {
+    logger.warn('[QuickRepliesService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+  }
+}
 
 /**
  * Lista todas as respostas rápidas.
@@ -138,6 +216,10 @@ function createDefaultQuickReplies() {
  */
 function listQuickReplies(filters = {}) {
   let results = Array.from(quickReplies.values());
+
+  if (filters.tenantId) {
+    results = results.filter((r) => r.tenantId === filters.tenantId);
+  }
   
   if (filters.category) {
     results = results.filter(r => r.category === filters.category);
@@ -191,7 +273,7 @@ function getQuickReply(id) {
  * @returns {{success: boolean, quickReply?: QuickReply, error?: string}}
  */
 function createQuickReply(data) {
-  const { title, message, tags = [], category = 'geral', createdBy = null } = data;
+  const { title, message, tags = [], category = 'geral', createdBy = null, tenantId = 'tenant-demo' } = data;
   
   if (!title || !message) {
     return { success: false, error: 'Título e mensagem são obrigatórios' };
@@ -202,6 +284,7 @@ function createQuickReply(data) {
   
   const quickReply = {
     id,
+    tenantId: tenantId || 'tenant-demo',
     title: title.trim(),
     message: message.trim(),
     tags: Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()) : [],
@@ -214,7 +297,7 @@ function createQuickReply(data) {
   };
   
   quickReplies.set(id, quickReply);
-  // Dados agora estão no banco de dados PostgreSQL
+  persistQuickReplyBestEffort(quickReply);
   
   return { success: true, quickReply };
 }
@@ -257,7 +340,7 @@ function updateQuickReply(id, updates) {
   }
   
   quickReplies.set(id, updated);
-  // Dados agora estão no banco de dados PostgreSQL
+  persistQuickReplyBestEffort(updated);
   
   return { success: true, quickReply: updated };
 }
@@ -274,7 +357,7 @@ function deleteQuickReply(id) {
   }
   
   quickReplies.delete(id);
-  // Dados agora estão no banco de dados PostgreSQL
+  deleteQuickReplyBestEffort(id);
   
   return { success: true };
 }
@@ -288,7 +371,7 @@ function incrementUsage(id) {
   if (reply) {
     reply.usageCount = (reply.usageCount || 0) + 1;
     reply.updatedAt = new Date().toISOString();
-    // Dados agora estão no banco de dados PostgreSQL
+    persistQuickReplyBestEffort(reply);
   }
 }
 
@@ -364,6 +447,7 @@ function getTags() {
 }
 
 module.exports = {
+  initialize,
   listQuickReplies,
   getQuickReply,
   createQuickReply,

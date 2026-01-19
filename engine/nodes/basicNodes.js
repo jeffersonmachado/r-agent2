@@ -45,7 +45,12 @@ async function startNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   
   // Valida que start tem next definido
-  if (!node.next || (typeof node.next !== 'string' && !Array.isArray(node.next))) {
+  const hasValidNext =
+    typeof node.next === 'string' ||
+    Array.isArray(node.next) ||
+    (node.next && typeof node.next === 'object' && (node.next.out || Object.keys(node.next).length > 0));
+
+  if (!node.next || !hasValidNext) {
     const error = new Error(`Start node "${node.id}" deve ter um campo "next" apontando para o próximo nó.`);
     // @ts-ignore
     error.code = 'ENGINE_START_MISSING_NEXT';
@@ -662,7 +667,7 @@ async function endNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   
   // Valida que end não tem saídas
-  if (node.next && (typeof node.next === 'string' || Array.isArray(node.next))) {
+  if (node.next) {
     const error = new Error(`End node "${node.id}" não pode ter saídas. Nós end devem ser folhas do fluxo.`);
     // @ts-ignore
     error.code = 'ENGINE_END_HAS_OUTPUTS';

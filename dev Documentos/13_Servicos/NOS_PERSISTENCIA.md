@@ -1,6 +1,6 @@
 # Nós de Persistência
 
-Este documento descreve como usar os nós que acessam dados de persistência (flows.json, queues.json, config.json) durante a execução de fluxos.
+Este documento descreve como usar os nós que acessam dados de persistência (PostgreSQL para flows/tickets, e config.json/env para configuração) durante a execução de fluxos.
 
 ## Visão Geral
 

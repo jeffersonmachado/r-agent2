@@ -8,7 +8,7 @@
  */
 
 import logger from '../utils/logger';
-import { getNodeSchema, DEFAULT_SOCKET_NAME } from '../editor/nodeSchemas';
+import { getNodeSchema, DEFAULT_SOCKET_NAME, getNodeInputs, getNodeOutputs } from '../editor/nodeSchemas';
 
 /**
  * Converte o JSON do editor (Rete) em um FlowDefinition da engine.
@@ -94,6 +94,7 @@ export function reteJsonToEngineFlow(reteJson, meta) {
 
     const outputs = node.outputs || {};
     const allConnections = [];
+    const connectionsByOutput = {};
     const invalidConnections = [];
     
     logger.debug('reteJsonToEngineFlow - processando outputs do nó', {
@@ -103,7 +104,7 @@ export function reteJsonToEngineFlow(reteJson, meta) {
       outputs: outputs,
     });
     
-    for (const output of Object.values(outputs)) {
+    for (const [outputKey, output] of Object.entries(outputs)) {
       if (!output || !Array.isArray(output.connections)) {
         logger.debug('reteJsonToEngineFlow - output sem connections válidas', {
           nodeId: fromId,
@@ -131,6 +132,8 @@ export function reteJsonToEngineFlow(reteJson, meta) {
           // Verifica se o nó de destino existe no mapa
           if (byId.has(targetId)) {
             allConnections.push(targetId);
+            if (!connectionsByOutput[outputKey]) connectionsByOutput[outputKey] = [];
+            connectionsByOutput[outputKey].push(targetId);
           } else {
             // ✅ Log para debug: conexão aponta para nó inexistente
             invalidConnections.push({
@@ -152,15 +155,31 @@ export function reteJsonToEngineFlow(reteJson, meta) {
       });
     }
     
-    // Se há conexões, armazenamos todas elas
-    if (allConnections.length > 0) {
-      // Para compatibilidade: se há apenas uma conexão, usamos string
-      // Se há múltiplas, usamos array
-      engineNode.next = allConnections.length === 1 ? allConnections[0] : allConnections;
+    // Se há conexões, armazenamos:
+    // - Compatibilidade: apenas "out" com 1 conexão => string (ou array se múltiplas)
+    // - Caso contrário, preserva por outputKey: { out: 'id', error: 'id', ... }
+    const keysWithConnections = Object.keys(connectionsByOutput).filter(
+      (k) => Array.isArray(connectionsByOutput[k]) && connectionsByOutput[k].length > 0
+    );
+
+    if (keysWithConnections.length > 0) {
+      const onlyOut = keysWithConnections.length === 1 && keysWithConnections[0] === 'out';
+      if (onlyOut) {
+        const conns = connectionsByOutput.out || [];
+        engineNode.next = conns.length === 1 ? conns[0] : conns;
+      } else {
+        const nextMap = {};
+        for (const key of keysWithConnections) {
+          const conns = connectionsByOutput[key];
+          nextMap[key] = conns.length === 1 ? conns[0] : conns;
+        }
+        engineNode.next = nextMap;
+      }
       logger.debug('Conexões mapeadas para nó', {
         nodeId: fromId,
         connectionCount: allConnections.length,
         connections: allConnections,
+        connectionsByOutput,
         invalidConnectionsCount: invalidConnections.length,
       });
     } else {
@@ -366,10 +385,11 @@ export function engineFlowToReteJson(flow) {
       name: 'FlowNode',
     };
     
-    // Adiciona inputs com sockets baseado no schema
-    if (nodeSchema && nodeSchema.inputs && nodeSchema.inputs.length > 0) {
+    // Adiciona inputs com sockets baseado no schema (inclui inputs dinâmicos)
+    const inputDefs = getNodeInputs(node.type, { id: String(numericId), type: node.type, config: nodeConfig });
+    if (inputDefs && inputDefs.length > 0) {
       nodeData.inputs = {};
-      nodeSchema.inputs.forEach(inputDef => {
+      inputDefs.forEach(inputDef => {
         nodeData.inputs[inputDef.key] = {
           socket: { name: inputDef.socketName || DEFAULT_SOCKET_NAME },
           label: inputDef.label,
@@ -378,10 +398,11 @@ export function engineFlowToReteJson(flow) {
       });
     }
     
-    // Adiciona outputs com sockets baseado no schema
-    if (nodeSchema && nodeSchema.outputs && nodeSchema.outputs.length > 0) {
+    // Adiciona outputs com sockets baseado no schema (inclui outputs dinâmicos e error ports)
+    const outputDefs = getNodeOutputs(node.type, { id: String(numericId), type: node.type, config: nodeConfig });
+    if (outputDefs && outputDefs.length > 0) {
       nodeData.outputs = {};
-      nodeSchema.outputs.forEach(outputDef => {
+      outputDefs.forEach(outputDef => {
         nodeData.outputs[outputDef.key] = {
           socket: { name: outputDef.socketName || DEFAULT_SOCKET_NAME },
           label: outputDef.label,
@@ -412,7 +433,7 @@ export function engineFlowToReteJson(flow) {
     }
 
     const fromNode = nodes[fromNumeric];
-    if (!fromNode || !fromNode.outputs || !fromNode.outputs.out || !Array.isArray(fromNode.outputs.out.connections)) {
+    if (!fromNode || !fromNode.outputs) {
       // Não gera warning para nós que não devem ter outputs (como "end")
       // Apenas loga em debug para casos inesperados
       if (node.type !== 'end') {
@@ -420,15 +441,15 @@ export function engineFlowToReteJson(flow) {
           fromId: node.id,
           fromNumeric,
           hasOutputs: !!(fromNode && fromNode.outputs),
-          hasOutOutput: !!(fromNode && fromNode.outputs && fromNode.outputs.out),
+          outputsKeys: fromNode && fromNode.outputs ? Object.keys(fromNode.outputs) : [],
           nodeType: fromNode?.data?.type
         });
       }
       return;
     }
 
-    // Função auxiliar para adicionar conexão
-    const addConnection = (nextId) => {
+    // Função auxiliar para adicionar conexão (por outputKey)
+    const addConnection = (outputKey, nextId) => {
       const toNumeric = engineIdToNumeric.get(String(nextId));
       
       if (!toNumeric) {
@@ -441,13 +462,23 @@ export function engineFlowToReteJson(flow) {
         return;
       }
 
+      // Garante que o output existe
+      if (!fromNode.outputs[outputKey]) {
+        const socket = { name: DEFAULT_SOCKET_NAME };
+        fromNode.outputs[outputKey] = {
+          socket,
+          label: outputKey,
+          connections: [],
+        };
+      }
+
       // Verifica se a conexão já existe para evitar duplicatas
-      const existingConnection = fromNode.outputs.out.connections.find(
+      const existingConnection = fromNode.outputs[outputKey].connections.find(
         conn => conn.node === toNumeric && conn.input === 'in'
       );
       
       if (!existingConnection) {
-        fromNode.outputs.out.connections.push({
+        fromNode.outputs[outputKey].connections.push({
           node: toNumeric,
           input: 'in',
         });
@@ -455,16 +486,30 @@ export function engineFlowToReteJson(flow) {
           fromId: node.id,
           toId: nextId,
           fromNumeric,
-          toNumeric
+          toNumeric,
+          outputKey,
         });
       }
     };
 
-    // Processa conexão padrão via "next" (para saída "out" ou "default")
+    // Processa conexão padrão via "next"
+    // - string/array => conecta em "out"
+    // - objeto => conecta por chave (out/error/timeout/etc)
     if (node.next) {
-      const nextConnections = Array.isArray(node.next) ? node.next : [node.next];
-      for (const nextId of nextConnections) {
-        addConnection(nextId);
+      if (typeof node.next === 'string' || Array.isArray(node.next)) {
+        const nextConnections = Array.isArray(node.next) ? node.next : [node.next];
+        for (const nextId of nextConnections) {
+          addConnection('out', nextId);
+        }
+      } else if (typeof node.next === 'object') {
+        for (const [outputKey, rawNext] of Object.entries(node.next)) {
+          const nextConnections = Array.isArray(rawNext) ? rawNext : [rawNext];
+          for (const nextId of nextConnections) {
+            if (typeof nextId === 'string' && nextId.trim()) {
+              addConnection(outputKey, nextId);
+            }
+          }
+        }
       }
     }
 

@@ -261,6 +261,19 @@ function buildEdges(flow) {
             edges.push({ from: node.id, to: nextId });
           }
         }
+      } else if (typeof node.next === 'object') {
+        for (const rawNext of Object.values(node.next)) {
+          if (!rawNext) continue;
+          if (typeof rawNext === 'string') {
+            edges.push({ from: node.id, to: rawNext });
+          } else if (Array.isArray(rawNext)) {
+            for (const nextId of rawNext) {
+              if (typeof nextId === 'string') {
+                edges.push({ from: node.id, to: nextId });
+              }
+            }
+          }
+        }
       }
     }
 
@@ -1068,8 +1081,12 @@ function validateNodeConfig(node, flow = null) {
         }
 
         // Validação de fallback explícito: deve ter regra com op=always OU defaultNext válido
-        if (node.next && typeof node.next === 'string' && node.next.trim() !== '') {
-          hasDefaultNext = true;
+        if (node.next) {
+          if (typeof node.next === 'string' && node.next.trim() !== '') {
+            hasDefaultNext = true;
+          } else if (typeof node.next === 'object' && node.next.out && typeof node.next.out === 'string' && node.next.out.trim() !== '') {
+            hasDefaultNext = true;
+          }
         }
 
         if (!hasAlwaysRule && !hasDefaultNext) {
@@ -1257,7 +1274,12 @@ function validateNodeConfig(node, flow = null) {
     case 'start': {
       // Valida que start não tem entradas (será validado em validateDisconnectedNodes)
       // Valida que start tem next definido (não pode ser nó final)
-      if (!node.next || (typeof node.next !== 'string' && !Array.isArray(node.next))) {
+      const hasValidNext =
+        typeof node.next === 'string' ||
+        Array.isArray(node.next) ||
+        (node.next && typeof node.next === 'object' && (node.next.out || Object.keys(node.next).length > 0));
+
+      if (!node.next || !hasValidNext) {
         errors.push(addUiMessage({
           code: 'START_MISSING_NEXT',
           message: `Nó start "${nodeId}" deve ter um campo "next" apontando para o próximo nó.`,
@@ -1269,7 +1291,7 @@ function validateNodeConfig(node, flow = null) {
 
     case 'end': {
       // Valida que end não tem saídas (nó folha)
-      if (node.next && (typeof node.next === 'string' || Array.isArray(node.next))) {
+      if (node.next) {
         errors.push(addUiMessage({
           code: 'END_HAS_OUTPUTS',
           message: `Nó end "${nodeId}" não pode ter saídas (campo "next"). Nós end devem ser folhas do fluxo.`,

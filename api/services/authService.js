@@ -2,7 +2,7 @@
  * Serviço de autenticação de agentes (PostgreSQL-first).
  *
  * Objetivo:
- * - Remover dependência de arquivos JSON (`api/data/agents.json`, `api/data/sessions.json`)
+ * - Remover dependência de arquivos JSON (DB-only)
  * - Persistir usuários e sessões no PostgreSQL
  * - Manter `validateToken()` síncrono via cache em memória (necessário pelo middleware)
  *

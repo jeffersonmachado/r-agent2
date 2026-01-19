@@ -10,13 +10,13 @@
  * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
-const fs = require('fs');
-const path = require('path');
 const http = require('http');
 const https = require('https');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const { validateInput, ValidationError } = require('../utils/inputValidator');
+const { getSequelize } = require('../db/sequelize');
+const { Webhook: WebhookGetter } = require('../db/models');
 
 /**
  * @typedef {Object} Webhook
@@ -42,10 +42,6 @@ const { validateInput, ValidationError } = require('../utils/inputValidator');
 /** @type {Map<string, Webhook>} */
 const webhooks = new Map();
 
-// Caminho do arquivo de persistência
-const dataDir = path.join(__dirname, '..', 'data');
-const webhooksFile = path.join(dataDir, 'webhooks.json');
-
 // Eventos disponíveis
 const AVAILABLE_EVENTS = [
   'ticket.created',
@@ -62,17 +58,108 @@ const AVAILABLE_EVENTS = [
   'campaign.failed',
 ];
 
-/**
- * Garante que o diretório de dados existe.
- */
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+function dbAvailable() {
+  return !!getSequelize();
+}
+
+function toDbPayload(webhook) {
+  return {
+    id: webhook.id,
+    tenant_key: webhook.tenantId,
+    url: webhook.url,
+    events: Array.isArray(webhook.events) ? webhook.events : [],
+    secret: webhook.secret,
+    active: webhook.active !== false,
+    timeout: Number.isFinite(webhook.timeout) ? webhook.timeout : 5000,
+    retries: Number.isFinite(webhook.retries) ? webhook.retries : 3,
+    headers: webhook.headers && typeof webhook.headers === 'object' && !Array.isArray(webhook.headers) ? webhook.headers : {},
+    stats: webhook.stats && typeof webhook.stats === 'object' ? webhook.stats : {
+      totalCalls: 0,
+      successfulCalls: 0,
+      failedCalls: 0,
+      lastCallAt: null,
+    },
+  };
+}
+
+function fromDbRow(row) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_key,
+    url: row.url,
+    events: Array.isArray(row.events) ? row.events : [],
+    secret: row.secret,
+    active: row.active !== false,
+    timeout: Number.isFinite(row.timeout) ? row.timeout : 5000,
+    retries: Number.isFinite(row.retries) ? row.retries : 3,
+    headers: row.headers && typeof row.headers === 'object' && !Array.isArray(row.headers) ? row.headers : {},
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+    stats: row.stats && typeof row.stats === 'object' ? row.stats : {
+      totalCalls: 0,
+      successfulCalls: 0,
+      failedCalls: 0,
+      lastCallAt: null,
+    },
+  };
+}
+
+async function upsertWebhookToDb(webhook) {
+  if (!dbAvailable()) return;
+  const WebhookModel = typeof WebhookGetter === 'function' ? WebhookGetter() : WebhookGetter;
+  const payload = toDbPayload(webhook);
+  const now = new Date();
+
+  const existing = await WebhookModel.findByPk(webhook.id);
+  if (existing) {
+    await existing.update({ ...payload, updated_at: now });
+  } else {
+    await WebhookModel.create({ ...payload, created_at: now, updated_at: now });
   }
 }
 
-// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
-// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+async function deleteWebhookFromDb(id) {
+  if (!dbAvailable()) return;
+  const WebhookModel = typeof WebhookGetter === 'function' ? WebhookGetter() : WebhookGetter;
+  await WebhookModel.destroy({ where: { id } });
+}
+
+function persistWebhookBestEffort(webhook) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    upsertWebhookToDb(webhook).catch((err) => {
+      logger.warn('[WebhookService] Falha ao persistir webhook no PostgreSQL', { id: webhook.id, error: err.message });
+    });
+  });
+}
+
+function deleteWebhookBestEffort(id) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    deleteWebhookFromDb(id).catch((err) => {
+      logger.warn('[WebhookService] Falha ao remover webhook no PostgreSQL', { id, error: err.message });
+    });
+  });
+}
+
+/**
+ * Inicializa cache em memória a partir do PostgreSQL (best-effort).
+ */
+async function initialize() {
+  if (!dbAvailable()) return;
+  try {
+    const WebhookModel = typeof WebhookGetter === 'function' ? WebhookGetter() : WebhookGetter;
+    const rows = await WebhookModel.findAll();
+    webhooks.clear();
+    for (const row of rows) {
+      const webhook = fromDbRow(row);
+      webhooks.set(webhook.id, webhook);
+    }
+    logger.info('[WebhookService] Cache inicializado do PostgreSQL', { count: webhooks.size });
+  } catch (err) {
+    logger.warn('[WebhookService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+  }
+}
 
 /**
  * Gera secret aleatório para assinatura HMAC.
@@ -149,7 +236,7 @@ function callWebhook(webhook, payload) {
             webhook.stats.failedCalls++;
           }
           webhook.stats.lastCallAt = new Date().toISOString();
-          // Dados agora estão no banco de dados PostgreSQL
+          persistWebhookBestEffort(webhook);
 
           resolve({
             success,
@@ -163,7 +250,7 @@ function callWebhook(webhook, payload) {
         webhook.stats.totalCalls++;
         webhook.stats.failedCalls++;
         webhook.stats.lastCallAt = new Date().toISOString();
-        // Dados agora estão no banco de dados PostgreSQL
+        persistWebhookBestEffort(webhook);
 
         resolve({
           success: false,
@@ -176,7 +263,7 @@ function callWebhook(webhook, payload) {
         webhook.stats.totalCalls++;
         webhook.stats.failedCalls++;
         webhook.stats.lastCallAt = new Date().toISOString();
-        // Dados agora estão no banco de dados PostgreSQL
+        persistWebhookBestEffort(webhook);
 
         resolve({
           success: false,
@@ -344,7 +431,7 @@ function createWebhook(data) {
     };
 
     webhooks.set(id, webhook);
-    // Dados agora estão no banco de dados PostgreSQL
+    persistWebhookBestEffort(webhook);
 
     // Remove secret do retorno por segurança
     const { secret, ...webhookSafe } = webhook;
@@ -459,7 +546,7 @@ function updateWebhook(id, updates) {
     }
 
     webhook.updatedAt = new Date().toISOString();
-    // Dados agora estão no banco de dados PostgreSQL
+    persistWebhookBestEffort(webhook);
 
     const { secret, ...webhookSafe } = webhook;
     return { success: true, webhook: webhookSafe };
@@ -484,7 +571,7 @@ function deleteWebhook(id) {
   }
 
   webhooks.delete(id);
-  // Dados agora estão no banco de dados PostgreSQL
+  deleteWebhookBestEffort(id);
 
   return { success: true };
 }
@@ -499,6 +586,7 @@ function getAvailableEvents() {
 }
 
 module.exports = {
+  initialize,
   createWebhook,
   listWebhooks,
   getWebhook,

@@ -19,19 +19,10 @@ Sistema de testes determinístico em camadas implementado conforme planejado.
 ### Arquivos Principais
 
 #### Seeds
-- ✅ `tests/seeds/agents.json` - Agentes de teste
-- ✅ `tests/seeds/flows.json` - Fluxos de teste
-- ✅ `tests/seeds/queues.json` - Filas de teste
-- ✅ `tests/seeds/departments.json` - Departamentos de teste
-- ✅ `tests/seeds/config.json` - Configuração de teste
-- ✅ `tests/seeds/quickReplies.json` - Respostas rápidas
-- ✅ `tests/seeds/seedTestData.js` - Script de seed
+- ⚠️ Seeds legados em JSON foram removidos (DB-only)
 
 #### Validadores
-- ✅ `tests/data/validators/agents.validator.js`
-- ✅ `tests/data/validators/flows.validator.js`
-- ✅ `tests/data/validators/queues.validator.js`
-- ✅ `tests/data/validators/departments.validator.js`
+- ⚠️ Validadores legados de seeds em JSON foram removidos (DB-only)
 - ✅ `tests/data/validators/config.validator.js`
 - ✅ `tests/data/validators/system.validator.js`
 

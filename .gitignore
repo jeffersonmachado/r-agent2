@@ -1,5 +1,4 @@
 # Dados de desenvolvimento
-api/data/flows.json
 api/data/config.json
 
 # Node modules
@@ -25,11 +24,19 @@ logs/
 
 # Token RPA (não deve ser commitado)
 tests/rpa/config/rpa-token.json
+rpa/config/rpa-token.json
 
 # Artefatos gerados por testes RPA / Replay (não versionar)
 tests/rpa/replay/
 tests/rpa/reports/
 tests/rpa/screenshots/
+tests/rpa/flows/
+
+# Artefatos gerados por RPA em runtime (novo local)
+rpa/replay/
+rpa/reports/
+rpa/screenshots/
+rpa/flows/
 
 # Artefatos gerados por execução / debug local
 data/executions/

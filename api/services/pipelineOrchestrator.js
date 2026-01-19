@@ -57,8 +57,8 @@ async function advancePipeline(execution, onProgress = null) {
 
   // DETERMINISMO: Verifica se execução já foi persistida e tem decisão final
   const { reuseDecision, hasFinalDecision } = require('./executionPersistence');
-  if (hasFinalDecision(execution.executionId)) {
-    const reused = reuseDecision(execution.executionId, execution);
+  if (await hasFinalDecision(execution.executionId)) {
+    const reused = await reuseDecision(execution.executionId, execution);
     if (reused) {
       logger.info('[PipelineOrchestrator] Reutilizando decisão de execução anterior (determinismo)', {
         executionId: execution.executionId,

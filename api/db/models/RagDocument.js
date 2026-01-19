@@ -1,0 +1,83 @@
+/**
+ * Model RagDocument - Documentos RAG (tenant_key-based)
+ */
+
+const { DataTypes } = require('sequelize');
+const { getSequelize } = require('../sequelize');
+
+let RagDocument = null;
+
+function getRagDocumentModel() {
+  if (!RagDocument) {
+    const sequelize = getSequelize();
+    if (!sequelize) {
+      return new Proxy({}, {
+        get: () => {
+          throw new Error('Sequelize não inicializado. Chame connect() primeiro.');
+        }
+      });
+    }
+
+    RagDocument = sequelize.define('RagDocument', {
+      id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        allowNull: false,
+      },
+      tenant_key: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      title: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      content: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: {},
+      },
+      permissions: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: {},
+      },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'active',
+      },
+      indexed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      indexed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      chunks_count: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+    }, {
+      tableName: 'rag_documents',
+      timestamps: true,
+      underscored: true,
+      indexes: [
+        { fields: ['tenant_key', 'status'], name: 'rag_documents_tenant_key_status_idx' },
+        { fields: ['tenant_key', 'indexed'], name: 'rag_documents_tenant_key_indexed_idx' },
+      ],
+    });
+  }
+
+  return RagDocument;
+}
+
+module.exports = getRagDocumentModel;
+

@@ -76,16 +76,7 @@ Este comando:
 
 ## Seeds de Dados
 
-Seeds são arquivos JSON versionados em `/tests/seeds/` que contêm dados determinísticos para testes:
-
-- `agents.json` - Agentes de teste (admin, supervisor, agent)
-- `flows.json` - Fluxos de teste
-- `queues.json` - Filas de teste
-- `departments.json` - Departamentos de teste
-- `config.json` - Configuração de teste
-- `quickReplies.json` - Respostas rápidas de teste
-
-**Importante:** Seeds usam `tenantId: "tenant-test"` para isolamento total de produção.
+Seeds legados em JSON foram removidos. O projeto opera em DB-only; testes devem criar dados via PostgreSQL/migrations ou via endpoints de API em ambiente de teste.
 
 ## Scripts de Conversa
 

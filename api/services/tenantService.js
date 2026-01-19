@@ -16,7 +16,6 @@
  * IMPORTANTE: PostgreSQL é obrigatório. Não há fallback para JSON.
  */
 
-const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const logger = require('../utils/logger');
@@ -35,7 +34,7 @@ function isConnected() {
     return false;
   }
 }
-const { Tenant } = require('../db/models');
+const { Tenant, TenantContext: TenantContextGetter, Flow: FlowGetter } = require('../db/models');
 
 // PostgreSQL é obrigatório - não há mais fallback
 
@@ -43,6 +42,8 @@ const { Tenant } = require('../db/models');
 function getModels() {
   return {
     Tenant: typeof Tenant === 'function' ? Tenant() : Tenant,
+    TenantContext: typeof TenantContextGetter === 'function' ? TenantContextGetter() : TenantContextGetter,
+    Flow: typeof FlowGetter === 'function' ? FlowGetter() : FlowGetter,
   };
 }
 
@@ -90,21 +91,73 @@ function getRagDocumentsService() {
 /** @type {Map<string, TenantContext>} */
 const tenantContexts = new Map();
 
-// Caminhos dos arquivos de persistência
-const dataDir = path.join(__dirname, '..', 'data');
-const tenantsFile = path.join(dataDir, 'tenants.json');
-const tenantContextsFile = path.join(dataDir, 'tenant_contexts.json');
-// Diretório raiz do projeto (para executar scripts auxiliares)
-const projectRoot = path.join(__dirname, '..', '..');
+function dbAvailable() {
+  return !!getSequelize();
+}
 
-/**
- * Garante que o diretório de dados existe.
- */
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+async function upsertTenantContextToDb(context) {
+  if (!dbAvailable() || !isConnected()) return;
+  const { TenantContext } = getModels();
+  const now = new Date();
+
+  const payload = {
+    tenant_key: context.tenantId,
+    ramo_atividade: context.ramo_atividade || '',
+    objetivo: context.objetivo || '',
+    site_oficial: context.site_oficial || '',
+    prioridade: context.prioridade || 'HIGH',
+    escopo: Array.isArray(context.escopo) ? context.escopo : ['rag', 'chatbot', 'classificacao_intencao'],
+  };
+
+  const existing = await TenantContext.findByPk(context.tenantId);
+  if (existing) {
+    await existing.update({ ...payload, updated_at: now });
+  } else {
+    await TenantContext.create({ ...payload, created_at: now, updated_at: now });
   }
 }
+
+async function deleteTenantContextFromDb(tenantKey) {
+  if (!dbAvailable() || !isConnected()) return;
+  const { TenantContext } = getModels();
+  await TenantContext.destroy({ where: { tenant_key: tenantKey } });
+}
+
+function persistTenantContextBestEffort(context) {
+  if (!dbAvailable() || !isConnected()) return;
+  setImmediate(() => {
+    upsertTenantContextToDb(context).catch((err) => {
+      logger.warn('[TenantService] Falha ao persistir tenant_context no PostgreSQL', { tenantId: context.tenantId, error: err.message });
+    });
+  });
+}
+
+async function initializeTenantContexts() {
+  if (!dbAvailable() || !isConnected()) return;
+  try {
+    const { TenantContext } = getModels();
+    const rows = await TenantContext.findAll();
+    tenantContexts.clear();
+    for (const row of rows) {
+      const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
+      tenantContexts.set(base.tenant_key, {
+        tenantId: base.tenant_key,
+        ramo_atividade: base.ramo_atividade || '',
+        objetivo: base.objetivo || '',
+        site_oficial: base.site_oficial || '',
+        prioridade: base.prioridade || 'HIGH',
+        escopo: Array.isArray(base.escopo) ? base.escopo : ['rag', 'chatbot', 'classificacao_intencao'],
+        createdAt: base.created_at ? new Date(base.created_at).toISOString() : (base.createdAt?.toISOString?.() || new Date().toISOString()),
+        updatedAt: base.updated_at ? new Date(base.updated_at).toISOString() : (base.updatedAt?.toISOString?.() || new Date().toISOString()),
+      });
+    }
+    logger.info('[TenantService] Tenant contexts carregados do PostgreSQL', { count: tenantContexts.size });
+  } catch (err) {
+    logger.warn('[TenantService] Falha ao carregar tenant contexts do PostgreSQL', { error: err.message });
+  }
+}
+// Diretório raiz do projeto (para executar scripts auxiliares)
+const projectRoot = path.join(__dirname, '..', '..');
 
 /**
  * Verifica se existem dados do tenant-demo.
@@ -114,11 +167,18 @@ function ensureDataDir() {
  * 
  * @returns {boolean} false (sempre retorna false, pois dados estão no banco)
  */
-function hasDemoTenantData() {
-  // Dados agora estão no banco de dados PostgreSQL - não verifica mais arquivos JSON
-  // Esta função é mantida apenas para compatibilidade, mas sempre retorna false
-  // A verificação real deve ser feita consultando o banco de dados
-  return false;
+async function hasDemoTenantData(tenantKey = 'tenant-demo') {
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) return false;
+
+  try {
+    const { Flow } = getModels();
+    const anyFlow = await Flow.findOne({ where: { tenant_key: tenantKey } });
+    return !!anyFlow;
+  } catch (err) {
+    logger.warn('[TenantService] Falha ao verificar dados do tenant-demo no PostgreSQL', { error: err.message });
+    return false;
+  }
 }
 
 /**
@@ -126,8 +186,8 @@ function hasDemoTenantData() {
  */
 function runDemoTenantSeed() {
   try {
-    logger.info('[TenantService] Iniciando seed completo para tenant-demo via scripts/seed-tenant-demo.js...');
-    const seedProcess = spawn('node', ['scripts/seed-tenant-demo.js'], {
+    logger.info('[TenantService] Iniciando seed completo para tenant-demo via scripts/seed-tenant-demo-db.js...');
+    const seedProcess = spawn('node', ['scripts/seed-tenant-demo-db.js'], {
       cwd: projectRoot,
       stdio: 'ignore',
       detached: true,
@@ -207,14 +267,11 @@ async function ensureDemoTenantExists() {
   }
 
   // Verifica se existem dados do tenant-demo
-  const hasData = hasDemoTenantData();
+  const hasData = await hasDemoTenantData(DEMO_TENANT_ID);
   if (!hasData) {
-    logger.info('[TenantService] Dados do tenant-demo não encontrados. Executando seed...');
-    runDemoTenantSeed();
+    logger.info('[TenantService] Dados do tenant-demo não encontrados. Seed automático desabilitado (DB-only).');
   } else if (tenantCreated) {
-    // Se o tenant foi criado agora, sempre executa o seed para garantir dados iniciais
-    logger.info('[TenantService] Tenant-demo recém-criado. Executando seed para popular dados iniciais...');
-    runDemoTenantSeed();
+    logger.info('[TenantService] Tenant-demo recém-criado. Seed automático desabilitado (DB-only).');
   } else {
     logger.info('[TenantService] Tenant-demo e seus dados já existem. Nenhuma ação necessária.');
   }
@@ -313,7 +370,7 @@ function syncTenantContext(tenantId, ramo_atividade, objetivo, site_oficial) {
   };
 
   tenantContexts.set(tenantId, context);
-  // Dados agora estão no banco de dados PostgreSQL
+  persistTenantContextBestEffort(context);
 
   logger.debug(`[TenantService] Tenant context sincronizado: ${tenantId}`);
 }
@@ -511,15 +568,15 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
       trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
     };
 
-    // Cria/atualiza tenant_context automaticamente
-    syncTenantContext(tenantId, ramo_atividade.trim(), objetivo.trim(), site.trim());
+    // Cria/atualiza tenant_context automaticamente (tenant_key)
+    syncTenantContext(tenantKey, ramo_atividade.trim(), objetivo.trim(), site.trim());
 
     // Indexa site como fonte institucional canônica (assíncrono, não bloqueia)
-    indexSiteAsInstitutionalSource(tenantId, site.trim()).catch(err => {
+    indexSiteAsInstitutionalSource(tenantKey, site.trim()).catch(err => {
       logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, err);
     });
 
-    logger.info(`[TenantService] Tenant criado: ${tenantId} (${name}), plano: ${plan}`);
+    logger.info(`[TenantService] Tenant criado: ${tenantKey} (${name}), plano: ${plan}`);
 
     return { success: true, tenant };
   } catch (err) {
@@ -917,7 +974,7 @@ async function deleteTenant(tenantId) {
 
     // Remove tenant_context também
     tenantContexts.delete(tenantId);
-    // Dados agora estão no banco de dados PostgreSQL
+    await deleteTenantContextFromDb(tenantId);
 
     // Remove do PostgreSQL (CASCADE remove relacionamentos)
     await tenantRecord.destroy();
@@ -1054,7 +1111,7 @@ async function updateTenantContext(tenantId, updates, options = {}) {
 
   context.updatedAt = now;
   tenantContexts.set(tenantId, context);
-  // Dados agora estão no banco de dados PostgreSQL
+  persistTenantContextBestEffort(context);
 
   // Log de auditoria
   logger.info(`[TenantService] Tenant context atualizado: ${tenantId}`, {
@@ -1178,6 +1235,7 @@ async function getTenantUsage(tenantId) {
 }
 
 module.exports = {
+  initializeTenantContexts,
   ensureDemoTenantExists,
   createTenant,
   updateTenant,

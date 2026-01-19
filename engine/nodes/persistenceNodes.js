@@ -1,8 +1,9 @@
 /**
  * Handlers de nós que utilizam serviços de persistência.
  * 
- * Estes nós demonstram como acessar dados de flows.json, queues.json e config.json
- * durante a execução de um fluxo.
+ * Estes nós acessam dados via `engine/services/persistenceServices`:
+ * - flows/tickets: PostgreSQL
+ * - config: config.json/env (configuração, não persistência operacional)
  */
 
 const { createEngineEvent } = require('../utils');

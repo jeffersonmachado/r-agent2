@@ -1,22 +1,15 @@
 /**
- * Serviços de persistência disponíveis para nós.
- * 
- * Permite que nós acessem dados de flows, queues e config
- * sem acoplar a engine diretamente aos arquivos.
- * 
- * Uso:
- *   const deps = { persistence: require('./services/persistenceServices') };
- *   const flows = await deps.persistence.getFlows();
+ * Serviços de persistência disponíveis para nós (DB-only).
+ *
+ * A engine não lê mais arquivos em `api/data/*.json`.
+ * - Flows: PostgreSQL (tabela flows)
+ * - Tickets/queues: PostgreSQL (tabela tickets)
+ * - Config: `api/utils/config` (config.json + env) — configuração, não persistência operacional
  */
 
-const fs = require('fs');
-const path = require('path');
-
-// Caminhos dos arquivos
-const dataDir = path.join(__dirname, '..', '..', 'api', 'data');
-const flowsFile = path.join(dataDir, 'flows.json');
-const queuesFile = path.join(dataDir, 'queues.json');
-const configFile = path.join(dataDir, 'config.json');
+const config = require('../../api/utils/config');
+const { getSequelize } = require('../../api/db/sequelize');
+const { Flow: FlowGetter, Ticket: TicketGetter } = require('../../api/db/models');
 
 /**
  * Lê todos os fluxos disponíveis.
@@ -25,15 +18,19 @@ const configFile = path.join(dataDir, 'config.json');
  */
 async function getFlows() {
   try {
-    if (fs.existsSync(flowsFile)) {
-      const data = fs.readFileSync(flowsFile, 'utf8');
-      const flows = JSON.parse(data);
-      return Array.isArray(flows) ? flows : [];
-    }
-    return [];
+    if (!getSequelize()) return [];
+    const FlowModel = typeof FlowGetter === 'function' ? FlowGetter() : FlowGetter;
+    const rows = await FlowModel.findAll();
+    return rows.map((row) => {
+      const data = row.data && typeof row.data === 'object' ? row.data : {};
+      const flowObj = { ...data, id: row.id };
+      if (row.tenant_key && !flowObj.tenantId) flowObj.tenantId = row.tenant_key;
+      if (row.name && !flowObj.name) flowObj.name = row.name;
+      return flowObj;
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao ler flows:', err.message);
+    console.error('[PersistenceServices] Erro ao ler flows do PostgreSQL:', err.message);
     return [];
   }
 }
@@ -101,16 +98,41 @@ async function findFlows(criteria = {}) {
  * @returns {Promise<Object>} Dados de filas e tickets
  */
 async function getQueuesData() {
+  const tickets = await getAllTickets();
+  const queues = {};
+  for (const t of tickets) {
+    if (!queues[t.queue]) queues[t.queue] = [];
+    queues[t.queue].push(t.id);
+  }
+  return { tickets, queues };
+}
+
+async function getAllTickets() {
   try {
-    if (fs.existsSync(queuesFile)) {
-      const data = fs.readFileSync(queuesFile, 'utf8');
-      return JSON.parse(data);
-    }
-    return { tickets: [], queues: {} };
+    if (!getSequelize()) return [];
+    const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
+    const rows = await TicketModel.findAll();
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenant_key,
+      sessionId: row.session_id,
+      queue: row.queue,
+      status: row.status,
+      assignedTo: row.assigned_to || null,
+      phoneNumber: row.phone_number || null,
+      lastUserMessage: row.last_user_message || null,
+      unreadCount: Number.isFinite(row.unread_count) ? row.unread_count : 0,
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      category: row.category || null,
+      messages: Array.isArray(row.messages) ? row.messages : [],
+      context: row.context || {},
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+    }));
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao ler queues:', err.message);
-    return { tickets: [], queues: {} };
+    console.error('[PersistenceServices] Erro ao ler tickets do PostgreSQL:', err.message);
+    return [];
   }
 }
 
@@ -128,13 +150,8 @@ async function getQueueTickets(queueName, options = {}) {
   }
   
   try {
-    const data = await getQueuesData();
-    const queue = data.queues[queueName] || [];
-    const tickets = data.tickets || [];
-    
-    let result = queue
-      .map(id => tickets.find(t => t && t.id === id))
-      .filter(Boolean);
+    const allTickets = await getAllTickets();
+    let result = allTickets.filter((t) => t.queue === queueName);
     
     // Filtra por status se especificado
     if (options.status) {
@@ -201,11 +218,7 @@ async function listQueues() {
  */
 async function getConfig() {
   try {
-    if (fs.existsSync(configFile)) {
-      const data = fs.readFileSync(configFile, 'utf8');
-      return JSON.parse(data);
-    }
-    return {};
+    return config.getAll();
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[PersistenceServices] Erro ao ler config:', err.message);
@@ -222,19 +235,7 @@ async function getConfig() {
  */
 async function getConfigValue(path, defaultValue = undefined) {
   try {
-    const config = await getConfig();
-    const parts = path.split('.');
-    let value = config;
-    
-    for (const part of parts) {
-      if (value && typeof value === 'object' && part in value) {
-        value = value[part];
-      } else {
-        return defaultValue;
-      }
-    }
-    
-    return value !== undefined ? value : defaultValue;
+    return config.get(path, defaultValue);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[PersistenceServices] Erro ao obter valor de config:', err.message);

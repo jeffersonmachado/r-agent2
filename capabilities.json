@@ -215,9 +215,9 @@
         "nodes": "engine/nodes/persistenceNodes.js"
       },
       "supportedData": [
-        "Fluxos (flows.json)",
-        "Filas e tickets (queues.json)",
-        "Configurações (config.json)"
+        "Fluxos (PostgreSQL: tabela flows)",
+        "Filas e tickets (PostgreSQL: tabela tickets)",
+        "Configurações (config.json/env)"
       ],
       "operations": [
         "getFlows",
@@ -326,7 +326,7 @@
       "description": "Gerencia agentes e permissões do sistema",
       "status": "active",
       "implementation": {
-        "data": "api/data/agents.json"
+        "service": "api/services/authService.js"
       },
       "features": [
         "Criação e edição de agentes",

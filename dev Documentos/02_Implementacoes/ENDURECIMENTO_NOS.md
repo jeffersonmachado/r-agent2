@@ -167,9 +167,7 @@ Erros são capturados e incluídos em eventos estruturados:
 ### Testes
 - `engine/__tests__/validator.test.js` - Novos testes de router
 - `tests/engine/flowExecutor.js` - Suporte ao formato novo
-- `tests/engine/simulator.js` - Suporte a `user_input`
-- `api/data/test/flows.json` - Fluxos atualizados
-- `tests/seeds/flows.json` - Seeds atualizados
+- `tests/engine/simulator.js` - Suporte a `user_input` (legado; removido no modo DB-only)
 
 ## 🚀 Próximos Passos (Opcional)
 

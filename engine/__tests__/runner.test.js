@@ -5,6 +5,7 @@
 const { runStep } = require('../runner');
 const { NodeRegistry } = require('../nodeRegistry');
 const { messageNodeHandler, endNodeHandler } = require('../nodes/basicNodes');
+const { apiNodeHandler } = require('../nodes/apiNode');
 
 describe('runStep', () => {
   let registry;
@@ -15,6 +16,7 @@ describe('runStep', () => {
     registry = new NodeRegistry();
     registry.register('message', messageNodeHandler);
     registry.register('end', endNodeHandler);
+    registry.register('api', apiNodeHandler);
 
     flow = {
       id: 'flow-1',
@@ -189,6 +191,86 @@ describe('runStep', () => {
     expect(result.nextState.currentNodeId).toBe('fallback');
     expect(result.nextState.metadata.lastError).toBeDefined();
     expect(result.nextState.metadata.lastError.type).toBe('system');
+  });
+
+  test('deve rotear por socket (error) quando node.next é mapa e output é error', async () => {
+    const flowWithApiPorts = {
+      id: 'flow-api-ports',
+      name: 'API Ports',
+      version: 1,
+      nodes: [
+        {
+          id: 'api1',
+          type: 'api',
+          config: {}, // sem URL => handler retorna output.type='error' (não lança)
+          next: { out: 'ok', error: 'err', timeout: 'to' },
+        },
+        { id: 'ok', type: 'message', config: { text: 'OK' }, next: 'end' },
+        { id: 'err', type: 'message', config: { text: 'ERR' }, next: 'end' },
+        { id: 'to', type: 'message', config: { text: 'TIMEOUT' }, next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    const initialState = {
+      sessionId: 's-api-ports',
+      flowId: flowWithApiPorts.id,
+      currentNodeId: 'api1',
+      variables: {},
+      history: [],
+      metadata: {},
+    };
+
+    const result = await runStep(flowWithApiPorts, initialState, registry);
+    expect(result.output.type).toBe('error');
+    expect(result.nextState.currentNodeId).toBe('err');
+  });
+
+  test('deve rotear por socket (timeout) quando NODE_TIMEOUT ocorrer e next tem timeout', async () => {
+    const slowHandler = jest.fn().mockImplementation(() => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            nextState: { ...state, currentNodeId: 'end' },
+            events: [],
+            output: { type: 'message', text: 'Slow' },
+          });
+        }, 1000);
+      });
+    });
+
+    registry.register('slow', slowHandler);
+
+    const flowWithTimeoutPort = {
+      id: 'flow-timeout-port',
+      name: 'Timeout Port',
+      version: 1,
+      nodes: [
+        {
+          id: 'start',
+          type: 'slow',
+          config: { timeoutMs: 50 },
+          next: { out: 'end', timeout: 'timeoutNode', error: 'errorNode' },
+        },
+        { id: 'timeoutNode', type: 'message', config: { text: 'Timeout' }, next: 'end' },
+        { id: 'errorNode', type: 'message', config: { text: 'Error' }, next: 'end' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    const initialState = {
+      sessionId: 's-timeout-port',
+      flowId: flowWithTimeoutPort.id,
+      currentNodeId: 'start',
+      variables: {},
+      history: [],
+      metadata: {},
+    };
+
+    const result = await runStep(flowWithTimeoutPort, initialState, registry);
+    // Em timeout, runner cai em node_error_fallback e deve escolher o socket timeout
+    expect(result.output.type).toBe('node_error_fallback');
+    expect(result.nextState.currentNodeId).toBe('timeoutNode');
   });
 
   test('deve classificar erros corretamente', async () => {

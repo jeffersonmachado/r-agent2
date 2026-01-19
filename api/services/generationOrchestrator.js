@@ -169,7 +169,8 @@ async function generateRpaArtifact(flow, options = {}) {
  * @returns {string} Caminho do arquivo salvo
  */
 function saveRpaTestFile(rpaTest) {
-  const flowsDir = path.join(__dirname, '..', '..', 'tests', 'rpa', 'flows');
+  // Runtime: não gravar em `tests/`. Artefatos gerados vão para `rpa/flows/`.
+  const flowsDir = path.join(__dirname, '..', '..', 'rpa', 'flows');
   
   // Garante que o diretório existe
   if (!fs.existsSync(flowsDir)) {

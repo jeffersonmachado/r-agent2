@@ -112,7 +112,7 @@ rag-service/data/vector_store/
 
 ```
 api/data/
-  └── rag_documents.json  ← Todos os documentos (incluindo tenant-demo)
+  └── (DB-only) documentos ficam no PostgreSQL (tabela `rag_documents`)
 ```
 
 ## 🔧 Configuração de Variáveis de Ambiente

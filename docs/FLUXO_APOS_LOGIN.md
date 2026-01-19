@@ -121,8 +121,8 @@ Quando você clica em "Sair":
 ## Persistência
 
 - **Token**: Armazenado no `localStorage` do navegador
-- **Sessão no Backend**: Armazenada em `api/data/sessions.json`
-- **Dados do Agente**: Carregados do `api/data/agents.json`
+- **Sessão no Backend**: Armazenada no PostgreSQL (tabela `sessions`)
+- **Dados do Agente**: Armazenados no PostgreSQL (tabela `users`)
 
 ## Segurança
 

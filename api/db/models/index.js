@@ -11,6 +11,17 @@ const getTenantAISetting = require('./TenantAISetting');
 const getTenantAICredential = require('./TenantAICredential');
 const getAuditLog = require('./AuditLog');
 const getSession = require('./Session');
+const getExecution = require('./Execution');
+const getAuditEvent = require('./AuditEvent');
+const getGenerationAudit = require('./GenerationAudit');
+const getAuditReport = require('./AuditReport');
+const getTicket = require('./Ticket');
+const getFlow = require('./Flow');
+const getTenantContext = require('./TenantContext');
+const getDepartment = require('./Department');
+const getQuickReply = require('./QuickReply');
+const getWebhook = require('./Webhook');
+const getRagDocument = require('./RagDocument');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -21,6 +32,17 @@ const TenantAISetting = () => getTenantAISetting();
 const TenantAICredential = () => getTenantAICredential();
 const AuditLog = () => getAuditLog();
 const Session = () => getSession();
+const Execution = () => getExecution();
+const AuditEvent = () => getAuditEvent();
+const GenerationAudit = () => getGenerationAudit();
+const AuditReport = () => getAuditReport();
+const Ticket = () => getTicket();
+const Flow = () => getFlow();
+const TenantContext = () => getTenantContext();
+const Department = () => getDepartment();
+const QuickReply = () => getQuickReply();
+const Webhook = () => getWebhook();
+const RagDocument = () => getRagDocument();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -38,6 +60,17 @@ function defineRelationships() {
   const TenantAICredentialModel = TenantAICredential();
   const AuditLogModel = AuditLog();
   const SessionModel = Session();
+  const ExecutionModel = Execution();
+  const AuditEventModel = AuditEvent();
+  const GenerationAuditModel = GenerationAudit();
+  const AuditReportModel = AuditReport();
+  const TicketModel = Ticket();
+  const FlowModel = Flow();
+  const TenantContextModel = TenantContext();
+  const DepartmentModel = Department();
+  const QuickReplyModel = QuickReply();
+  const WebhookModel = Webhook();
+  const RagDocumentModel = RagDocument();
 
   // Tenant <-> User (many-to-many via TenantUser)
   TenantModel.belongsToMany(UserModel, {
@@ -113,6 +146,24 @@ function defineRelationships() {
     foreignKey: 'user_id',
     as: 'user',
   });
+
+  // No explicit relationships for Execution (stored as JSONB)
+
+  // User -> AuditEvent (one-to-many)
+  UserModel.hasMany(AuditEventModel, {
+    foreignKey: 'actor_user_id',
+    as: 'auditEvents',
+  });
+  AuditEventModel.belongsTo(UserModel, {
+    foreignKey: 'actor_user_id',
+    as: 'actor',
+  });
+
+  // No explicit relationships for GenerationAudit/AuditReport (JSONB payloads)
+
+  // No explicit relationships for Ticket (tenant_key-based)
+  // No explicit relationships for Flow (tenant_key-based)
+  // No explicit relationships for TenantContext/Department/QuickReply/Webhook/RagDocument (tenant_key-based)
 }
 
 module.exports = {
@@ -124,6 +175,17 @@ module.exports = {
   TenantAICredential,
   AuditLog,
   Session,
+  Execution,
+  AuditEvent,
+  GenerationAudit,
+  AuditReport,
+  Ticket,
+  Flow,
+  TenantContext,
+  Department,
+  QuickReply,
+  Webhook,
+  RagDocument,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -134,4 +196,15 @@ module.exports = {
   getTenantAICredential,
   getAuditLog,
   getSession,
+  getExecution,
+  getAuditEvent,
+  getGenerationAudit,
+  getAuditReport,
+  getTicket,
+  getFlow,
+  getTenantContext,
+  getDepartment,
+  getQuickReply,
+  getWebhook,
+  getRagDocument,
 };

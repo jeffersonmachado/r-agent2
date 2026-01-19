@@ -26,7 +26,7 @@ import { SUPPORTED_TASKS } from '@shared/aiTaskExecutor';
 /**
  * @typedef {Object} NodeProperty
  * @property {string} key - Chave da propriedade no config
- * @property {'text'|'textarea'|'json'|'number'|'boolean'} type - Tipo do campo
+ * @property {'text'|'textarea'|'json'|'number'|'boolean'|'select'} type - Tipo do campo
  * @property {string} label - Label do campo
  * @property {string} description - Descrição do campo
  * @property {boolean} required - Se o campo é obrigatório
@@ -35,6 +35,8 @@ import { SUPPORTED_TASKS } from '@shared/aiTaskExecutor';
  * @property {string} placeholder - Placeholder do campo
  * @property {number} rows - Número de linhas (para textarea/json)
  * @property {'object'|'array'} expectedType - Tipo esperado para campos JSON
+ * @property {Array<{value:string,label:string}>} options - Opções para campos select
+ * @property {(node: {id:string,type:string,config:object}) => boolean} showWhen - Condição para exibir campo (opcional)
  */
 
 /**
@@ -1383,8 +1385,8 @@ export const NODE_SCHEMAS = {
       {
         key: 'body',
         type: 'json',
-        label: 'Dados para enviar (opcional)',
-        description: 'Se você está usando POST, PUT ou PATCH, adicione aqui os dados que quer enviar. Use {{variavel}} para valores dinâmicos. Exemplo: {"nome": "{{user_name}}", "email": "{{user_email}}"}',
+        label: 'Dados para enviar (body) (opcional)',
+        description: 'Aparece apenas para POST/PUT/PATCH. Use {{variavel}} para valores dinâmicos. Exemplo: {"nome": "{{user_name}}", "email": "{{user_email}}"}',
         required: false,
         placeholder: `{
   "nome": "{{user_name}}",
@@ -1392,6 +1394,10 @@ export const NODE_SCHEMAS = {
 }`,
         rows: 8,
         expectedType: 'object',
+        showWhen: (node) => {
+          const method = (node?.config?.method || 'GET').toUpperCase();
+          return ['POST', 'PUT', 'PATCH'].includes(method);
+        },
       },
       {
         key: 'outputVariable',
@@ -1406,7 +1412,7 @@ export const NODE_SCHEMAS = {
         key: 'timeout',
         type: 'number',
         label: 'Quanto tempo esperar? (opcional)',
-        description: 'Tempo máximo em milissegundos que o bot vai esperar pela resposta. 10000 = 10 segundos. Se não preencher, usa 10 segundos.',
+        description: 'Tempo máximo em milissegundos que o bot vai esperar pela resposta. 10000 = 10 segundos. Máximo: 300000 (5 minutos).',
         required: false,
         defaultValue: 10000,
         placeholder: '10000',
@@ -1420,12 +1426,14 @@ export const NODE_SCHEMAS = {
         errors.push({
           code: 'API_MISSING_CONFIG',
           message: `Nó de API "${nodeId}" deve ter um campo "config" com "url".`,
+          messageUi: `Preencha o campo "Qual é o endereço da API?" com uma URL (http/https).`,
           nodeIds: [nodeId],
         });
       } else if (!node.config.url || typeof node.config.url !== 'string') {
         errors.push({
           code: 'API_MISSING_URL',
           message: `Nó de API "${nodeId}" deve ter "config.url" (string não vazia).`,
+          messageUi: `Preencha o campo "Qual é o endereço da API?" com uma URL (http/https).`,
           nodeIds: [nodeId],
         });
       } else {
@@ -1434,11 +1442,15 @@ export const NODE_SCHEMAS = {
           new URL(node.config.url);
         } catch (err) {
           // Se falhar, pode ser porque tem variáveis {{variavel}}
-          // Nesse caso, valida se tem pelo menos http:// ou https://
-          if (!node.config.url.includes('http://') && !node.config.url.includes('https://')) {
+          // Nesse caso, valida se tem pelo menos http:// ou https://, ou se começa com {{...}}
+          const urlStr = String(node.config.url || '').trim();
+          const hasProtocol = urlStr.includes('http://') || urlStr.includes('https://');
+          const startsWithTemplate = urlStr.startsWith('{{') || urlStr.startsWith('${');
+          if (!hasProtocol && !startsWithTemplate) {
             errors.push({
               code: 'API_INVALID_URL',
               message: `Nó de API "${nodeId}" tem URL inválida. Deve começar com http:// ou https://`,
+              messageUi: `A URL parece inválida. Comece com "https://" (ou use uma variável como "{{BASE_URL}}/rota").`,
               nodeIds: [nodeId],
             });
           }
@@ -1452,6 +1464,42 @@ export const NODE_SCHEMAS = {
           errors.push({
             code: 'API_INVALID_METHOD',
             message: `Nó de API "${nodeId}" tem método HTTP inválido. Use: ${validMethods.join(', ')}`,
+            messageUi: `Método inválido. Escolha um método na lista (GET/POST/PUT/DELETE/PATCH).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+
+      // Valida headers
+      if (node.config && node.config.headers !== undefined && node.config.headers !== null) {
+        const isObj = typeof node.config.headers === 'object' && !Array.isArray(node.config.headers);
+        if (!isObj) {
+          errors.push({
+            code: 'API_INVALID_HEADERS',
+            message: `Nó de API "${nodeId}" tem "config.headers" inválido (deve ser objeto JSON).`,
+            messageUi: `Headers inválidos. Use um objeto JSON (ex.: {"Authorization": "Bearer {{token}}"}).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+
+      // Valida body: só faz sentido para POST/PUT/PATCH
+      if (node.config && node.config.body !== undefined && node.config.body !== null) {
+        const method = (node.config.method || 'GET').toUpperCase();
+        const isAllowed = ['POST', 'PUT', 'PATCH'].includes(method);
+        const isObjOrString = (typeof node.config.body === 'object' && !Array.isArray(node.config.body)) || typeof node.config.body === 'string';
+        if (!isAllowed) {
+          errors.push({
+            code: 'API_BODY_NOT_ALLOWED',
+            message: `Nó de API "${nodeId}" tem "config.body" mas o método é ${method}.`,
+            messageUi: `Você definiu um body, mas o método é ${method}. Troque o método para POST/PUT/PATCH ou remova o body.`,
+            nodeIds: [nodeId],
+          });
+        } else if (!isObjOrString) {
+          errors.push({
+            code: 'API_INVALID_BODY',
+            message: `Nó de API "${nodeId}" tem "config.body" inválido (deve ser objeto JSON ou string).`,
+            messageUi: `Body inválido. Use um objeto JSON (recomendado) ou uma string.`,
             nodeIds: [nodeId],
           });
         }
@@ -1464,6 +1512,7 @@ export const NODE_SCHEMAS = {
           errors.push({
             code: 'API_INVALID_TIMEOUT',
             message: `Nó de API "${nodeId}" tem timeout inválido (deve ser entre 0 e 300000ms).`,
+            messageUi: `Timeout inválido. Use um número entre 0 e 300000 (ms).`,
             nodeIds: [nodeId],
           });
         }
@@ -1477,6 +1526,7 @@ export const NODE_SCHEMAS = {
             ...validationError,
             code: 'API_INVALID_OUTPUT_VARIABLE',
             message: `Nó de API "${nodeId}" tem "config.outputVariable" inválido.`,
+            messageUi: `Nome de variável inválido. Use apenas letras, números e "_" e comece com letra ou "_".`,
             nodeIds: [nodeId],
           });
         }
@@ -2633,34 +2683,6 @@ export function getNodeInputs(type, node = null) {
     return schema.getInputs(node);
   }
   
-  // Se o nó tem errorPorts, adiciona entradas de erro
-  if (schema.errorPorts && node) {
-    const baseInputs = schema.inputs || [];
-    const errorInputs = [
-      {
-        key: 'error',
-        label: 'Erro',
-        socketName: DEFAULT_SOCKET_NAME,
-      },
-      {
-        key: 'no_match',
-        label: 'Sem Correspondência',
-        socketName: DEFAULT_SOCKET_NAME,
-      },
-    ];
-    
-    if (schema.supportsTimeout) {
-      errorInputs.splice(1, 0, {
-        key: 'timeout',
-        label: 'Timeout',
-        socketName: DEFAULT_SOCKET_NAME,
-      });
-    }
-    
-    // Combina inputs base com inputs de erro
-    return [...baseInputs, ...errorInputs];
-  }
-  
   return schema.inputs || [];
 }
 
@@ -2675,11 +2697,33 @@ export function getNodeOutputs(type, node = null) {
   if (!schema) return [];
   
   // Se o schema tem uma função getOutputs, usa ela
-  if (typeof schema.getOutputs === 'function' && node) {
-    return schema.getOutputs(node);
+  const baseOutputs = (typeof schema.getOutputs === 'function' && node)
+    ? schema.getOutputs(node)
+    : (schema.outputs || []);
+
+  // Se o nó suporta portas de erro/timeout, adiciona como SAÍDAS (outputs).
+  // Isso permite roteamento por socket no editor.
+  if (schema.errorPorts) {
+    // Alguns nós (ex.: API) não fazem sentido ter "no_match".
+    const includeNoMatch = type !== 'api';
+    const extraOutputs = [
+      { key: 'error', label: 'Erro', socketName: DEFAULT_SOCKET_NAME },
+      ...(includeNoMatch ? [{ key: 'no_match', label: 'Sem Correspondência', socketName: DEFAULT_SOCKET_NAME }] : []),
+    ];
+
+    if (schema.supportsTimeout) {
+      extraOutputs.splice(1, 0, { key: 'timeout', label: 'Timeout', socketName: DEFAULT_SOCKET_NAME });
+    }
+
+    const existingKeys = new Set(baseOutputs.map((o) => o.key));
+    for (const o of extraOutputs) {
+      if (!existingKeys.has(o.key)) {
+        baseOutputs.push(o);
+      }
+    }
   }
-  
-  return schema.outputs || [];
+
+  return baseOutputs;
 }
 
 /**

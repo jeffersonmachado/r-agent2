@@ -262,7 +262,33 @@ async function runStep(flow, state, registry, input, deps = null) {
       // caso contrário, aplicamos fallback (se configurado).
       if (attempt === maxAttempts) {
         // Falha definitiva do nó.
-        const fallbackNextNodeId = fallbackNodeId != null ? fallbackNodeId : normalizeNext(node.next);
+        function normalizeNextByPort(nodeNext, portKey) {
+          if (!nodeNext) return null;
+          if (typeof nodeNext === 'string' || Array.isArray(nodeNext)) {
+            return normalizeNext(nodeNext);
+          }
+          if (typeof nodeNext === 'object') {
+            const candidate =
+              (portKey && nodeNext[portKey] != null ? nodeNext[portKey] : null) ??
+              (nodeNext.out != null ? nodeNext.out : null) ??
+              (nodeNext.default != null ? nodeNext.default : null);
+
+            if (candidate != null) {
+              return normalizeNext(candidate);
+            }
+
+            // fallback: primeira entrada do mapa
+            const firstVal = Object.values(nodeNext).find((v) => v != null);
+            return normalizeNext(firstVal);
+          }
+          return null;
+        }
+
+        const portKeyForFailure = errorCode === 'NODE_TIMEOUT' ? 'timeout' : 'error';
+        const fallbackNextNodeId =
+          fallbackNodeId != null
+            ? fallbackNodeId
+            : normalizeNextByPort(node.next, portKeyForFailure);
 
         // Armazena informações de erro no estado para que o FallbackNode possa acessá-las
         const fallbackState = {
@@ -323,7 +349,42 @@ async function runStep(flow, state, registry, input, deps = null) {
     if (output && typeof output === 'object' && output.type === 'router') {
       nextNodeId = output.chosenNext || normalizeNext(node.next);
     } else {
-      nextNodeId = normalizeNext(node.next);
+      // Roteamento por portas (sockets):
+      // - se node.next for objeto: escolhe pela chave (out/error/timeout/no_match)
+      // - caso contrário: comportamento legacy (string/array)
+      const isPortMap = node.next && typeof node.next === 'object' && !Array.isArray(node.next);
+      if (isPortMap) {
+        const portKey =
+          output && typeof output === 'object' && (output.type === 'error' || output.type === 'node_error_fallback')
+            ? 'error'
+            : 'out';
+
+        // Reusa a função local (definida no bloco de fallback acima) se existir no escopo.
+        // eslint-disable-next-line no-use-before-define
+        const normalizeNextByPort = (nodeNext, portKeyArg) => {
+          if (!nodeNext) return null;
+          if (typeof nodeNext === 'string' || Array.isArray(nodeNext)) {
+            return normalizeNext(nodeNext);
+          }
+          if (typeof nodeNext === 'object') {
+            const candidate =
+              (portKeyArg && nodeNext[portKeyArg] != null ? nodeNext[portKeyArg] : null) ??
+              (nodeNext.out != null ? nodeNext.out : null) ??
+              (nodeNext.default != null ? nodeNext.default : null);
+
+            if (candidate != null) {
+              return normalizeNext(candidate);
+            }
+            const firstVal = Object.values(nodeNext).find((v) => v != null);
+            return normalizeNext(firstVal);
+          }
+          return null;
+        };
+
+        nextNodeId = normalizeNextByPort(node.next, portKey);
+      } else {
+        nextNodeId = normalizeNext(node.next);
+      }
     }
   }
 

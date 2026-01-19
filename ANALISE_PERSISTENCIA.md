@@ -4,53 +4,50 @@
 
 Este documento lista todas as estruturas de dados em memória encontradas no código e avalia se precisam de persistência em arquivo JSON.
 
-## ✅ Estruturas JÁ COM Persistência
+## ✅ Estruturas JÁ COM Persistência (DB-only)
 
 ### 1. **flows** (api/server.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivo**: `api/data/flows.json`
-- **Funções**: `loadFlowsFromFile()`, `saveFlowsToFile()`
+- **Fonte de verdade**: PostgreSQL (tabela `flows`)
+- **Cache**: Map em memória (carregado do DB)
 
 ### 2. **sessionEvents** (api/server.js) 
-- **Status**: ✅ **RECÉM IMPLEMENTADO**
-- **Arquivo**: `api/data/conversations.json`
-- **Funções**: `loadSessionEventsFromFile()`, `saveSessionEventsToFile()`
-- **Nota**: Implementado nesta sessão
+- **Status**: ⚠️ Cache em memória (sem persistência em JSON)
+- **Observação**: Export ainda existe via endpoint `/export/conversations.json`, mas não há mais arquivo em `api/data/`.
 
 ### 3. **tickets** e **queues** (api/services/queueService.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivo**: `api/data/queues.json`
-- **Funções**: `loadQueuesFromFile()`, `saveQueuesToFile()`
+- **Fonte de verdade**: PostgreSQL (tabela `tickets`)
+- **Cache**: Map em memória (carregado do DB)
 
 ### 4. **agents** e **sessions** (api/services/authService.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivos**: `api/data/agents.json`, `api/data/sessions.json`
-- **Funções**: `loadAgentsFromFile()`, `saveAgentsToFile()`, `loadSessionsFromFile()`, `saveSessionsToFile()`
+- **Fonte de verdade**: PostgreSQL (tabelas `users`, `sessions`)
+- **Cache**: Map em memória (carregado do DB)
 
 ### 5. **documents** (api/services/ragDocumentsService.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivo**: `api/data/rag_documents.json`
-- **Funções**: `loadDocuments()`, `saveDocuments()`
+- **Fonte de verdade**: PostgreSQL (tabela `rag_documents`)
+- **Cache**: Map em memória (carregado do DB)
 
 ### 6. **webhooks** (api/services/webhookService.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivo**: `api/data/webhooks.json`
-- **Funções**: `loadWebhooksFromFile()`, `saveWebhooksToFile()`
+- **Fonte de verdade**: PostgreSQL (tabela `webhooks`)
+- **Cache**: Map em memória (carregado do DB)
 
 ### 7. **campaigns** (api/services/bulkMessagingService.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivo**: `api/data/bulk_messaging.json`
-- **Funções**: `loadCampaignsFromFile()`, `saveCampaignsToFile()`
+- **Observação**: Este item era legado em JSON; verificar serviço/migração correspondente se ainda existir.
 
 ### 8. **departments** (api/services/departmentsService.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivo**: `api/data/departments.json`
-- **Funções**: `loadDepartmentsFromFile()`, `saveDepartmentsToFile()`
+- **Fonte de verdade**: PostgreSQL (tabela `departments`)
+- **Cache**: Map em memória (carregado do DB)
 
 ### 9. **quickReplies** (api/services/quickRepliesService.js)
 - **Status**: ✅ Já tem persistência
-- **Arquivo**: `api/data/quick_replies.json`
-- **Funções**: `loadQuickRepliesFromFile()`, `saveQuickRepliesToFile()`
+- **Fonte de verdade**: PostgreSQL (tabela `quick_replies`)
+- **Cache**: Map em memória (carregado do DB)
 
 ## ⚠️ Estruturas SEM Persistência (Avaliação)
 

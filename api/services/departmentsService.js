@@ -1,21 +1,16 @@
 /**
- * Serviço de Departamentos.
- *
- * Responsabilidades:
- * - Gerenciar departamentos da organização
- * - Associar agentes a departamentos
- * - Gerenciar filas por departamento
- * - Persistir dados em PostgreSQL
+ * Serviço de Departamentos (DB-only).
  *
  * Persistência:
- * - Departamentos: PostgreSQL (tabela departments)
- * 
- * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
+ * - PostgreSQL (tabela departments)
+ *
+ * Observação:
+ * - Mantém cache em memória para operações síncronas do server.
  */
 
-const fs = require('fs');
-const path = require('path');
 const logger = require('../utils/logger');
+const { getSequelize } = require('../db/sequelize');
+const { Department: DepartmentGetter } = require('../db/models');
 
 /**
  * @typedef {Object} Department
@@ -31,25 +26,80 @@ const logger = require('../utils/logger');
  * @property {string|null} createdBy - ID do agente que criou
  */
 
-// Armazenamento em memória
 /** @type {Map<string, Department>} */
-const departments = new Map();
+const departments = new Map(); // id -> Department
 
-// Caminho do arquivo de persistência
-const dataDir = path.join(__dirname, '..', 'data');
-const departmentsFile = path.join(dataDir, 'departments.json');
+function dbAvailable() {
+  return !!getSequelize();
+}
 
-/**
- * Garante que o diretório de dados existe.
- */
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+function toDbPayload(dept) {
+  return {
+    id: dept.id,
+    tenant_key: dept.tenantId || 'tenant-demo',
+    name: dept.name,
+    description: dept.description || null,
+    agent_ids: Array.isArray(dept.agentIds) ? dept.agentIds : [],
+    queue_names: Array.isArray(dept.queueNames) ? dept.queueNames : [],
+    color: dept.color || null,
+    active: dept.active !== false,
+    created_by: dept.createdBy || null,
+  };
+}
+
+function fromDbRow(row) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_key || null,
+    name: row.name,
+    description: row.description || '',
+    agentIds: Array.isArray(row.agent_ids) ? row.agent_ids : [],
+    queueNames: Array.isArray(row.queue_names) ? row.queue_names : [],
+    color: row.color || '#3B82F6',
+    active: row.active !== false,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+    createdBy: row.created_by || null,
+  };
+}
+
+async function upsertDepartmentToDb(dept) {
+  if (!dbAvailable()) return;
+  const DepartmentModel = typeof DepartmentGetter === 'function' ? DepartmentGetter() : DepartmentGetter;
+  const payload = toDbPayload(dept);
+  const now = new Date();
+
+  const existing = await DepartmentModel.findByPk(dept.id);
+  if (existing) {
+    await existing.update({ ...payload, updated_at: now });
+  } else {
+    await DepartmentModel.create({ ...payload, created_at: now, updated_at: now });
   }
 }
 
-// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
-// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+async function deleteDepartmentFromDb(id) {
+  if (!dbAvailable()) return;
+  const DepartmentModel = typeof DepartmentGetter === 'function' ? DepartmentGetter() : DepartmentGetter;
+  await DepartmentModel.destroy({ where: { id } });
+}
+
+function persistDepartmentBestEffort(dept) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    upsertDepartmentToDb(dept).catch((err) => {
+      logger.warn('[DepartmentsService] Falha ao persistir departamento no PostgreSQL', { id: dept.id, error: err.message });
+    });
+  });
+}
+
+function deleteDepartmentBestEffort(id) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    deleteDepartmentFromDb(id).catch((err) => {
+      logger.warn('[DepartmentsService] Falha ao remover departamento no PostgreSQL', { id, error: err.message });
+    });
+  });
+}
 
 /**
  * Cria departamentos padrão.
@@ -58,6 +108,7 @@ function createDefaultDepartments() {
   const defaults = [
     {
       id: 'dept-001',
+      tenantId: 'tenant-demo',
       name: 'Atendimento Geral',
       description: 'Departamento de atendimento geral ao cliente',
       agentIds: [],
@@ -70,6 +121,7 @@ function createDefaultDepartments() {
     },
     {
       id: 'dept-002',
+      tenantId: 'tenant-demo',
       name: 'Vendas',
       description: 'Departamento de vendas e comercial',
       agentIds: [],
@@ -82,6 +134,7 @@ function createDefaultDepartments() {
     },
     {
       id: 'dept-003',
+      tenantId: 'tenant-demo',
       name: 'Suporte Técnico',
       description: 'Departamento de suporte técnico',
       agentIds: [],
@@ -96,11 +149,35 @@ function createDefaultDepartments() {
   
   for (const dept of defaults) {
     departments.set(dept.id, dept);
+    persistDepartmentBestEffort(dept);
   }
-  // Dados agora estão no banco de dados PostgreSQL
 }
 
-// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+/**
+ * Inicializa cache em memória a partir do PostgreSQL (best-effort).
+ * Se não houver dados, cria defaults para tenant-demo.
+ */
+async function initialize() {
+  if (!dbAvailable()) return;
+  try {
+    const DepartmentModel = typeof DepartmentGetter === 'function' ? DepartmentGetter() : DepartmentGetter;
+    const rows = await DepartmentModel.findAll();
+    departments.clear();
+    for (const row of rows) {
+      const dept = fromDbRow(row);
+      departments.set(dept.id, dept);
+    }
+
+    if (departments.size === 0) {
+      createDefaultDepartments();
+      logger.info('[DepartmentsService] Nenhum departamento encontrado. Defaults criados.', { count: departments.size });
+    } else {
+      logger.info('[DepartmentsService] Cache inicializado do PostgreSQL', { count: departments.size });
+    }
+  } catch (err) {
+    logger.warn('[DepartmentsService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+  }
+}
 
 /**
  * Lista todos os departamentos.
@@ -111,6 +188,10 @@ function createDefaultDepartments() {
  */
 function listDepartments(filters = {}) {
   let results = Array.from(departments.values());
+
+  if (filters.tenantId) {
+    results = results.filter((d) => d.tenantId === filters.tenantId);
+  }
   
   if (filters.activeOnly !== false) {
     results = results.filter(d => d.active !== false);
@@ -155,7 +236,8 @@ function createDepartment(data) {
     agentIds = [], 
     queueNames = [], 
     color = '#3B82F6',
-    createdBy = null 
+    createdBy = null,
+    tenantId = 'tenant-demo',
   } = data;
   
   if (!name || name.trim() === '') {
@@ -175,6 +257,7 @@ function createDepartment(data) {
   
   const department = {
     id,
+    tenantId: tenantId || 'tenant-demo',
     name: name.trim(),
     description: description.trim(),
     agentIds: Array.isArray(agentIds) ? agentIds : [],
@@ -187,7 +270,7 @@ function createDepartment(data) {
   };
   
   departments.set(id, department);
-  // Dados agora estão no banco de dados PostgreSQL
+  persistDepartmentBestEffort(department);
   
   return { success: true, department };
 }
@@ -233,7 +316,7 @@ function updateDepartment(id, updates) {
   if (updated.color) updated.color = updated.color.trim();
   
   departments.set(id, updated);
-  // Dados agora estão no banco de dados PostgreSQL
+  persistDepartmentBestEffort(updated);
   
   return { success: true, department: updated };
 }
@@ -250,7 +333,7 @@ function deleteDepartment(id) {
   }
   
   departments.delete(id);
-  // Dados agora estão no banco de dados PostgreSQL
+  deleteDepartmentBestEffort(id);
   
   return { success: true };
 }
@@ -274,7 +357,7 @@ function addAgentToDepartment(departmentId, agentId) {
   if (!department.agentIds.includes(agentId)) {
     department.agentIds.push(agentId);
     department.updatedAt = new Date().toISOString();
-    // Dados agora estão no banco de dados PostgreSQL
+    persistDepartmentBestEffort(department);
   }
   
   return { success: true, department };
@@ -295,7 +378,7 @@ function removeAgentFromDepartment(departmentId, agentId) {
   if (Array.isArray(department.agentIds)) {
     department.agentIds = department.agentIds.filter(id => id !== agentId);
     department.updatedAt = new Date().toISOString();
-    // Dados agora estão no banco de dados PostgreSQL
+    persistDepartmentBestEffort(department);
   }
   
   return { success: true, department };
@@ -324,6 +407,7 @@ function getDepartmentByQueue(queueName) {
 }
 
 module.exports = {
+  initialize,
   listDepartments,
   getDepartment,
   createDepartment,

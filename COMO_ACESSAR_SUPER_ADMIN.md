@@ -77,7 +77,7 @@ Para alterar a senha do super admin:
 
 1. Faça login como `systemadmin`
 2. Vá para a página de perfil/configurações
-3. Ou edite diretamente em `api/data/agents.json` (não recomendado em produção)
+3. Ou altere diretamente no PostgreSQL (tabela `users`) via um script/admin tool (não recomendado em produção sem auditoria)
 
 ## 📝 Notas
 

@@ -8,7 +8,7 @@ O sistema RAG (Retrieval-Augmented Generation) implementa **isolamento completo 
 
 ### 1. **Armazenamento de Documentos (Node.js)**
 
-Os documentos são armazenados em um arquivo JSON (`api/data/rag_documents.json`) e cada documento possui um campo `tenantId`:
+Os documentos são armazenados no **PostgreSQL** (tabela `rag_documents`) e cada documento possui um campo `tenantId`/`tenant_key`:
 
 ```javascript
 {

@@ -17,10 +17,9 @@
  * - Salvamento automático após operações de escrita
  */
 
-const fs = require('fs');
-const path = require('path');
-const config = require('../utils/config');
 const logger = require('../utils/logger');
+const { getSequelize } = require('../db/sequelize');
+const { Ticket: TicketGetter } = require('../db/models');
 
 /**
  * @typedef {Object} Message
@@ -61,21 +60,111 @@ const tickets = new Map();
 /** @type {Map<string, Set<string>>} */
 const queues = new Map(); // queueName -> Set<ticketId>
 
-// Caminho do arquivo de persistência
-const dataDir = path.join(__dirname, '..', 'data');
-const queuesFile = path.join(dataDir, 'queues.json');
+function dbAvailable() {
+  return !!getSequelize();
+}
 
-/**
- * Garante que o diretório de dados existe.
- */
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+function toDbPayload(ticket) {
+  return {
+    id: ticket.id,
+    tenant_key: ticket.tenantId,
+    session_id: ticket.sessionId,
+    queue: ticket.queue,
+    status: ticket.status,
+    assigned_to: ticket.assignedTo || null,
+    phone_number: ticket.phoneNumber || null,
+    last_user_message: ticket.lastUserMessage || null,
+    unread_count: Number.isFinite(ticket.unreadCount) ? ticket.unreadCount : 0,
+    tags: Array.isArray(ticket.tags) ? ticket.tags : [],
+    category: ticket.category || null,
+    messages: Array.isArray(ticket.messages) ? ticket.messages : [],
+    context: ticket.context || {},
+  };
+}
+
+function fromDbRow(row) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_key,
+    sessionId: row.session_id,
+    queue: row.queue,
+    status: row.status,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+    lastUserMessage: row.last_user_message || null,
+    assignedTo: row.assigned_to || null,
+    phoneNumber: row.phone_number || null,
+    messages: Array.isArray(row.messages) ? row.messages : [],
+    unreadCount: Number.isFinite(row.unread_count) ? row.unread_count : 0,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    category: row.category || null,
+    context: row.context || {},
+  };
+}
+
+async function upsertTicketToDb(ticket) {
+  if (!dbAvailable()) return;
+  const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
+  const payload = toDbPayload(ticket);
+  const now = new Date();
+
+  const existing = await TicketModel.findByPk(ticket.id);
+  if (existing) {
+    await existing.update({ ...payload, updated_at: now });
+  } else {
+    await TicketModel.create({ ...payload, created_at: now, updated_at: now });
   }
 }
 
-// Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
-// Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+async function deleteTicketFromDb(ticketId) {
+  if (!dbAvailable()) return;
+  const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
+  await TicketModel.destroy({ where: { id: ticketId } });
+}
+
+function persistTicketBestEffort(ticket) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    upsertTicketToDb(ticket).catch((err) => {
+      logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', { ticketId: ticket.id, error: err.message });
+    });
+  });
+}
+
+function deleteTicketBestEffort(ticketId) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    deleteTicketFromDb(ticketId).catch((err) => {
+      logger.warn('[QueueService] Falha ao remover ticket no PostgreSQL', { ticketId, error: err.message });
+    });
+  });
+}
+
+/**
+ * Inicializa cache em memória a partir do PostgreSQL (best-effort).
+ * Mantém API síncrona do QueueService, com DB como fonte de verdade.
+ */
+async function initialize() {
+  if (!dbAvailable()) return;
+  try {
+    const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
+    const rows = await TicketModel.findAll();
+
+    tickets.clear();
+    queues.clear();
+
+    for (const row of rows) {
+      const t = fromDbRow(row);
+      tickets.set(t.id, t);
+      if (!queues.has(t.queue)) queues.set(t.queue, new Set());
+      queues.get(t.queue).add(t.id);
+    }
+
+    logger.info('[QueueService] Cache inicializado do PostgreSQL', { tickets: tickets.size, queues: queues.size });
+  } catch (err) {
+    logger.warn('[QueueService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+  }
+}
 
 // Teste de getMetrics após carregar dados (apenas em desenvolvimento)
 if (process.env.NODE_ENV !== 'production') {
@@ -165,8 +254,8 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
   }
   queues.get(queue).add(id);
 
-  // Salva automaticamente
-  // Dados agora estão no banco de dados PostgreSQL
+  // Persistência best-effort em PostgreSQL
+  persistTicketBestEffort(ticket);
 
   return ticket;
 }
@@ -324,6 +413,7 @@ function deleteQueue(queueName, force = false) {
       if (ticket && ticket.status !== 'closed') {
         ticket.status = 'closed';
         ticket.updatedAt = new Date().toISOString();
+        persistTicketBestEffort(ticket);
         deletedTickets++;
       }
     });
@@ -432,8 +522,7 @@ function assignTicket(ticketId, assignedTo) {
   ticket.assignedTo = assignedTo;
   ticket.updatedAt = new Date().toISOString();
 
-  // Salva automaticamente
-  // Dados agora estão no banco de dados PostgreSQL
+  persistTicketBestEffort(ticket);
 
   return ticket;
 }
@@ -457,8 +546,7 @@ function closeTicket(ticketId) {
     queueSet.delete(ticketId);
   }
 
-  // Salva automaticamente
-  // Dados agora estão no banco de dados PostgreSQL
+  persistTicketBestEffort(ticket);
 
   return ticket;
 }
@@ -496,8 +584,7 @@ function updateLastMessage(ticketId, message) {
     ticket.unreadCount = (ticket.unreadCount || 0) + 1;
   }
 
-  // Salva automaticamente
-  // Dados agora estão no banco de dados PostgreSQL
+  persistTicketBestEffort(ticket);
 
   return ticket;
 }
@@ -529,8 +616,7 @@ function addAgentMessage(ticketId, message, agentId = null) {
   ticket.messages.push(messageObj);
   ticket.updatedAt = new Date().toISOString();
 
-  // Salva automaticamente
-  // Dados agora estão no banco de dados PostgreSQL
+  persistTicketBestEffort(ticket);
 
   return ticket;
 }
@@ -548,8 +634,7 @@ function markMessagesAsRead(ticketId) {
   ticket.unreadCount = 0;
   ticket.updatedAt = new Date().toISOString();
 
-  // Salva automaticamente
-  // Dados agora estão no banco de dados PostgreSQL
+  persistTicketBestEffort(ticket);
 
   return ticket;
 }
@@ -637,6 +722,7 @@ function cleanupOldTickets(maxAgeDays = 7) {
       const ticketAge = now - new Date(ticket.updatedAt).getTime();
       if (ticketAge > maxAge) {
         tickets.delete(ticketId);
+        deleteTicketBestEffort(ticketId);
         cleaned++;
       }
     }
@@ -781,6 +867,7 @@ function getMetrics() {
 }
 
 module.exports = {
+  initialize,
   createTicket,
   listQueue,
   listQueues,

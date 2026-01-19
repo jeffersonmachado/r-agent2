@@ -9,11 +9,11 @@
  * NOTA: Arquivos JSON removidos - todos os dados agora estão no banco de dados PostgreSQL
  */
 
-const fs = require('fs');
-const path = require('path');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
 const ragDeduplicationService = require('./ragDeduplicationService');
+const { getSequelize } = require('../db/sequelize');
+const { RagDocument: RagDocumentGetter } = require('../db/models');
 
 // Lazy loading do ragService para evitar dependência circular
 let ragService = null;
@@ -38,14 +38,103 @@ function getRagService() {
   return ragService;
 }
 
-const dataDir = path.join(__dirname, '../data');
-const documentsFile = path.join(dataDir, 'rag_documents.json');
-
 // Cache em memória
 let documents = new Map();
 
 // Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
 // Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
+
+function dbAvailable() {
+  return !!getSequelize();
+}
+
+function toDbPayload(doc) {
+  return {
+    id: doc.id,
+    tenant_key: doc.tenantId || null,
+    title: doc.title || null,
+    content: doc.content || null,
+    metadata: doc.metadata && typeof doc.metadata === 'object' ? doc.metadata : {},
+    permissions: doc.permissions && typeof doc.permissions === 'object' ? doc.permissions : {},
+    status: doc.status || 'active',
+    indexed: !!doc.indexed,
+    indexed_at: doc.indexedAt ? new Date(doc.indexedAt) : null,
+    chunks_count: Number.isFinite(doc.chunksCount) ? doc.chunksCount : 0,
+  };
+}
+
+function fromDbRow(row) {
+  const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
+  return {
+    id: base.id,
+    tenantId: base.tenant_key || null,
+    title: base.title || 'Sem título',
+    content: base.content || '',
+    metadata: base.metadata || {},
+    permissions: base.permissions || {},
+    status: base.status || 'active',
+    indexed: !!base.indexed,
+    indexedAt: base.indexed_at ? new Date(base.indexed_at).toISOString() : null,
+    chunksCount: Number.isFinite(base.chunks_count) ? base.chunks_count : 0,
+  };
+}
+
+async function upsertDocumentToDb(doc) {
+  if (!dbAvailable()) return;
+  const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+  const payload = toDbPayload(doc);
+  const now = new Date();
+
+  const existing = await RagDocumentModel.findByPk(doc.id);
+  if (existing) {
+    await existing.update({ ...payload, updated_at: now });
+  } else {
+    await RagDocumentModel.create({ ...payload, created_at: now, updated_at: now });
+  }
+}
+
+async function deleteDocumentFromDb(id) {
+  if (!dbAvailable()) return;
+  const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+  await RagDocumentModel.destroy({ where: { id } });
+}
+
+function persistDocumentBestEffort(doc) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    upsertDocumentToDb(doc).catch((err) => {
+      logger.warn('[RAGDocuments] Falha ao persistir documento no PostgreSQL', { documentId: doc.id, error: err.message });
+    });
+  });
+}
+
+function deleteDocumentBestEffort(id) {
+  if (!dbAvailable()) return;
+  setImmediate(() => {
+    deleteDocumentFromDb(id).catch((err) => {
+      logger.warn('[RAGDocuments] Falha ao remover documento no PostgreSQL', { documentId: id, error: err.message });
+    });
+  });
+}
+
+/**
+ * Inicializa cache em memória a partir do PostgreSQL (best-effort).
+ */
+async function initialize() {
+  if (!dbAvailable()) return;
+  try {
+    const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+    const rows = await RagDocumentModel.findAll();
+    documents = new Map();
+    for (const row of rows) {
+      const doc = fromDbRow(row);
+      documents.set(doc.id, doc);
+    }
+    logger.info('[RAGDocuments] Cache inicializado do PostgreSQL', { count: documents.size });
+  } catch (err) {
+    logger.warn('[RAGDocuments] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+  }
+}
 
 /**
  * Lista documentos com filtros opcionais.
@@ -211,7 +300,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                   content_hash: contentHash,
                 };
                 documents.set(existingDoc.id, existingDoc);
-                // Dados agora estão no banco de dados PostgreSQL
+                persistDocumentBestEffort(existingDoc);
               }
               
               const ragServiceInstance = getRagService();
@@ -222,7 +311,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                 existingDoc.indexedAt = new Date().toISOString();
                 existingDoc.chunksCount = indexResult.chunksCreated || 0;
                 documents.set(existingDoc.id, existingDoc);
-                // Dados agora estão no banco de dados PostgreSQL
+                persistDocumentBestEffort(existingDoc);
                 
                 logger.info('[RAGDocuments] Documento duplicado indexado com sucesso', {
                   documentId: existingDoc.id,
@@ -289,7 +378,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                   content_hash: contentHash,
                 };
                 documents.set(existingDoc.id, existingDoc);
-                // Dados agora estão no banco de dados PostgreSQL
+                persistDocumentBestEffort(existingDoc);
               }
               
               const ragServiceInstance = getRagService();
@@ -300,7 +389,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                 existingDoc.indexedAt = new Date().toISOString();
                 existingDoc.chunksCount = indexResult.chunksCreated || 0;
                 documents.set(existingDoc.id, existingDoc);
-                // Dados agora estão no banco de dados PostgreSQL
+                persistDocumentBestEffort(existingDoc);
                 
                 logger.info('[RAGDocuments] Documento duplicado (arquivo) indexado com sucesso', {
                   documentId: existingDoc.id,
@@ -388,7 +477,7 @@ async function createDocument(documentData, tenantId, options = {}) {
     };
 
     documents.set(document.id, document);
-    // Dados agora estão no banco de dados PostgreSQL
+    persistDocumentBestEffort(document);
 
     // Indexa automaticamente se solicitado
     if (documentData.autoIndex !== false) {
@@ -413,7 +502,7 @@ async function createDocument(documentData, tenantId, options = {}) {
           document.indexedAt = new Date().toISOString();
           document.chunksCount = indexResult.chunksCreated || 0;
           documents.set(document.id, document);
-          // Dados agora estão no banco de dados PostgreSQL
+          persistDocumentBestEffort(document);
           
           logger.info('[RAGDocuments] Documento indexado com sucesso', {
             documentId: document.id,
@@ -514,7 +603,7 @@ async function updateDocument(documentId, updates) {
 
     document.metadata.updatedAt = new Date().toISOString();
     documents.set(documentId, document);
-    // Dados agora estão no banco de dados PostgreSQL
+    persistDocumentBestEffort(document);
 
     // Reindexa se solicitado e conteúdo mudou
     if (updates.reindex && updates.content !== undefined) {
@@ -524,7 +613,7 @@ async function updateDocument(documentId, updates) {
           document.indexed = true;
           document.indexedAt = new Date().toISOString();
           document.chunksCount = indexResult.chunksCreated || 0;
-          // Dados agora estão no banco de dados PostgreSQL
+          persistDocumentBestEffort(document);
         }
       } catch (indexError) {
         logger.warn('[RAGDocuments] Erro ao reindexar documento:', indexError.message);
@@ -562,7 +651,7 @@ async function deleteDocument(documentId) {
     }
 
     documents.delete(documentId);
-    // Dados agora estão no banco de dados PostgreSQL
+    deleteDocumentBestEffort(documentId);
 
     // TODO: Deletar do vector store também (quando implementado no Python)
 
@@ -640,7 +729,7 @@ async function reindexDocument(documentId) {
       document.indexed = true;
       document.indexedAt = new Date().toISOString();
       document.chunksCount = indexResult.chunksCreated || 0;
-      // Dados agora estão no banco de dados PostgreSQL
+      persistDocumentBestEffort(document);
       
       logger.info('[RAGDocuments] Documento marcado como indexado no BD', {
         documentId: document.id,
@@ -1292,6 +1381,7 @@ async function cleanOrphanedDocuments(tenantId = null, orphanedDocumentIds = [])
 }
 
 module.exports = {
+  initialize,
   listDocuments,
   getDocument,
   findDocumentByUrl,

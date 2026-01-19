@@ -1,5 +1,5 @@
-const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
-const { ActionRecorder } = require('../../tests/rpa/actionRecorder');
+const { RpaTestRunner } = require('../../rpa/rpaTestRunner');
+const { ActionRecorder } = require('../../rpa/actionRecorder');
 // Usa versão de produção do normalizador, que vive em `api/utils`
 const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
 const logger = require('../utils/logger');
@@ -11,7 +11,7 @@ let INJECTABLE_SCRIPT = null;
 function getInjectableScript() {
   if (INJECTABLE_SCRIPT === null) {
     try {
-      const overlayInjector = require('../../tests/rpa/overlayInjector');
+      const overlayInjector = require('../../rpa/overlayInjector');
       INJECTABLE_SCRIPT = overlayInjector.INJECTABLE_SCRIPT;
     } catch (error) {
       logger.warn('Não foi possível carregar overlayInjector', { error: error.message });
@@ -35,6 +35,7 @@ function listRecordings() {
   try {
     // Tenta múltiplos caminhos possíveis (necessário para diferentes contextos de execução)
     const possibleBasePaths = [
+      path.join(__dirname, '../../rpa'), // Novo local (root/rpa)
       path.join(__dirname, '../../tests/rpa'), // De api/services
       path.join(process.cwd(), 'tests/rpa'), // Do diretório raiz do projeto
       path.resolve(__dirname, '../../tests/rpa'), // Resolvido

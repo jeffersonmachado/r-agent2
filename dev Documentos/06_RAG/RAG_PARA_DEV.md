@@ -112,7 +112,7 @@ rag-service/data/vector_store/
 
 ```
 api/data/
-  └── rag_documents.json  ← Todos os documentos (incluindo tenant-demo)
+  └── (DB-only) documentos ficam no PostgreSQL (tabela `rag_documents`)
 ```
 
 ## 🔧 Configuração de Variáveis de Ambiente
@@ -296,8 +296,8 @@ curl http://localhost:8000/rag/health
 # Limpar vector store do tenant-demo
 rm -rf rag-service/data/vector_store/tenant-demo.*
 
-# Limpar documentos RAG (cuidado: remove todos os documentos)
-rm api/data/rag_documents.json
+# Limpar documentos RAG (DB-only): use SQL ou uma rota administrativa
+# Exemplo (cuidado): DELETE FROM rag_documents WHERE tenant_key='tenant-demo';
 ```
 
 ## 🔄 Fluxo Completo em Desenvolvimento
@@ -315,7 +315,7 @@ rm api/data/rag_documents.json
    ↓
 6. Serviço RAG indexa no vector store do tenant-demo
    ↓
-7. Documento salvo em api/data/rag_documents.json
+7. Documento salvo no PostgreSQL (tabela `rag_documents`)
    ↓
 8. Consultas RAG usam vector store do tenant-demo
 ```

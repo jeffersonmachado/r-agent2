@@ -228,9 +228,7 @@ const port = Number(config.get('api.port', 3000));
 
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, 'data');
-const flowsFile = path.join(dataDir, 'flows.json');
 const configFile = path.join(dataDir, 'config.json');
-const conversationsFile = path.join(dataDir, 'conversations.json');
 
 /**
  * Detecta qual gerenciador de processo está sendo usado (PM2, nodemon, ou nenhum).
@@ -613,6 +611,84 @@ function loadFlowsFromFile() {
 function saveFlowsToFile() {
   // Migrado para banco de dados - não salva mais em arquivo JSON
   logger.debug('saveFlowsToFile chamado mas ignorado (dados estão no banco de dados)');
+}
+
+/**
+ * Carrega fluxos do PostgreSQL para o cache em memória.
+ * (DB é fonte de verdade; Map é cache para acesso rápido).
+ */
+async function loadFlowsFromDb() {
+  try {
+    const { getSequelize } = require('./db/sequelize');
+    const sequelize = getSequelize();
+    if (!sequelize) return;
+
+    const { Flow } = require('./db/models');
+    const FlowModel = Flow();
+    const rows = await FlowModel.findAll();
+
+    flows.clear();
+    for (const row of rows) {
+      const data = row.data && typeof row.data === 'object' ? row.data : {};
+      const flowObj = { ...data, id: row.id };
+      if (row.tenant_key && !flowObj.tenantId) flowObj.tenantId = row.tenant_key;
+      if (row.name && !flowObj.name) flowObj.name = row.name;
+      flows.set(row.id, flowObj);
+    }
+
+    logger.info('[Flows] Cache inicializado do PostgreSQL', { count: flows.size });
+  } catch (err) {
+    logger.warn('[Flows] Falha ao carregar fluxos do PostgreSQL', { error: err.message });
+  }
+}
+
+function persistFlowBestEffort(flow) {
+  try {
+    const { getSequelize } = require('./db/sequelize');
+    const sequelize = getSequelize();
+    if (!sequelize) return;
+    const { Flow } = require('./db/models');
+    const FlowModel = Flow();
+
+    setImmediate(() => {
+      const now = new Date();
+      FlowModel.findByPk(flow.id).then((existing) => {
+        const payload = {
+          id: flow.id,
+          tenant_key: flow.tenantId || null,
+          name: flow.name || null,
+          data: flow,
+          updated_at: now,
+        };
+        if (existing) {
+          return existing.update(payload);
+        }
+        return FlowModel.create({ ...payload, created_at: now });
+      }).catch((err) => {
+        logger.warn('[Flows] Falha ao persistir flow no PostgreSQL', { flowId: flow.id, error: err.message });
+      });
+    });
+  } catch (err) {
+    // best-effort
+  }
+}
+
+function deleteFlowBestEffort(flowId) {
+  try {
+    const { getSequelize } = require('./db/sequelize');
+    const sequelize = getSequelize();
+    if (!sequelize) return;
+    const { Flow } = require('./db/models');
+    const FlowModel = Flow();
+
+    setImmediate(() => {
+      FlowModel.destroy({ where: { id: flowId } }).catch((err) => {
+        logger.warn('[Flows] Falha ao remover flow no PostgreSQL', { flowId, error: err.message });
+      });
+    });
+  } catch (err) {
+    // best-effort
+  }
 }
 
 // Dados agora são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
@@ -3238,7 +3314,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       offset: urlObj.searchParams.get('offset') || undefined,
     };
 
-    const result = queryLogs(filters);
+    const result = await queryLogs(filters);
     sendJson(res, 200, result);
     return;
   }
@@ -3257,7 +3333,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const stats = getAuditStats();
+    const stats = await getAuditStats();
     sendJson(res, 200, stats);
     return;
   }
@@ -3366,7 +3442,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       flows.set(flow.id, flow);
-      saveFlowsToFile(); // Salva no arquivo após criar
+      persistFlowBestEffort(flow);
       
       // Dispara webhooks e WebSocket
       const tenantId = req.tenantId || flow.tenantId;
@@ -3502,7 +3578,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       const flow = ensureFlowHasMeta(merged);
       flows.set(id, flow);
-      saveFlowsToFile(); // Salva no arquivo após atualizar
+      persistFlowBestEffort(flow);
       
       // Dispara webhooks e WebSocket
       const tenantId = req.tenantId || flow.tenantId;
@@ -3557,7 +3633,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
     
     flows.delete(id);
-    saveFlowsToFile(); // Salva no arquivo após deletar
+    deleteFlowBestEffort(id);
     
     // Dispara webhooks e WebSocket
     const tenantId = req.tenantId || flow.tenantId;
@@ -3669,8 +3745,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       // Registra para auditoria
       if (result.metadata) {
-        const auditId = registerGeneration(result.metadata);
-        const auditReport = generateAuditReport(result.metadata, { format: 'json' });
+        const auditId = await registerGeneration(result.metadata);
+        // Armazena auditId para vincular ao relatório
+        result.metadata.auditId = auditId;
+        const auditReport = await generateAuditReport({ ...result.metadata, auditId }, { format: 'json' });
         result.metadata.auditId = auditId;
         result.metadata.reportId = auditReport.reportId;
       }
@@ -6885,6 +6963,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     const urlObj = new URL(req.url || '/', 'http://localhost');
     const filters = {
+      tenantId: authResult.agent.tenantId,
       category: urlObj.searchParams.get('category') || undefined,
       tag: urlObj.searchParams.get('tag') || undefined,
       activeOnly: urlObj.searchParams.get('activeOnly') !== 'false',
@@ -6944,7 +7023,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const replies = searchByContext(context, limit);
+      const tenantId = authResult.agent.tenantId;
+      const replies = searchByContext(context, limit).filter((r) => !tenantId || r.tenantId === tenantId);
       sendJson(res, 200, { quickReplies: replies });
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -6969,7 +7049,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const id = decodeURIComponent(pathname.slice('/quick-replies/'.length));
     const reply = getQuickReply(id);
     
-    if (!reply) {
+    if (!reply || (authResult.agent.tenantId && reply.tenantId && reply.tenantId !== authResult.agent.tenantId)) {
       sendJson(res, 404, { error: 'quick_reply_not_found' });
       return;
     }
@@ -7001,6 +7081,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const body = await parseJsonBody(req);
       const result = createQuickReply({
         ...body,
+        tenantId: req.agent.tenantId,
         createdBy: req.agent.id,
       });
 
@@ -7052,6 +7133,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const id = decodeURIComponent(pathname.slice('/quick-replies/'.length));
+      const existing = getQuickReply(id);
+      if (!existing || (req.agent.tenantId && existing.tenantId && existing.tenantId !== req.agent.tenantId)) {
+        sendJson(res, 404, { error: 'quick_reply_not_found' });
+        return;
+      }
+
       const body = await parseJsonBody(req);
       const result = updateQuickReply(id, body);
 
@@ -7097,6 +7184,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const id = decodeURIComponent(pathname.slice('/quick-replies/'.length));
+    const existing = getQuickReply(id);
+    if (!existing || (req.agent.tenantId && existing.tenantId && existing.tenantId !== req.agent.tenantId)) {
+      sendJson(res, 404, { error: 'quick_reply_not_found' });
+      return;
+    }
     const result = deleteQuickReply(id);
 
     if (!result.success) {
@@ -7127,6 +7219,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const id = decodeURIComponent(pathname.slice('/quick-replies/'.length, -'/use'.length));
+    const existing = getQuickReply(id);
+    if (!existing || (req.agent.tenantId && existing.tenantId && existing.tenantId !== req.agent.tenantId)) {
+      sendJson(res, 404, { error: 'quick_reply_not_found' });
+      return;
+    }
     incrementUsage(id);
     sendJson(res, 200, { success: true });
     return;
@@ -7146,6 +7243,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     const urlObj = new URL(req.url || '/', 'http://localhost');
     const filters = {
+      tenantId: authResult.agent.tenantId,
       activeOnly: urlObj.searchParams.get('activeOnly') !== 'false',
       agentId: urlObj.searchParams.get('agentId') || undefined,
     };
@@ -7198,6 +7296,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const body = await parseJsonBody(req);
       const result = createDepartment({
         ...body,
+        tenantId: req.agent.tenantId,
         createdBy: req.agent.id,
       });
 
@@ -10963,6 +11062,27 @@ async function startInitialization() {
         logger.warn('[Init] ⚠️  Aviso ao verificar tenant de demonstração:', demoErr.message);
       }
 
+      // Inicializa tenant_contexts (best-effort)
+      try {
+        const { initializeTenantContexts } = require('./services/tenantService');
+        await initializeTenantContexts();
+        console.log('[Init] ✅ Tenant contexts inicializados');
+        logger.info('[Init] ✅ Tenant contexts inicializados');
+      } catch (ctxErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar tenant contexts:', ctxErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar tenant contexts:', ctxErr.message);
+      }
+
+      // Carrega fluxos persistidos no PostgreSQL (best-effort)
+      try {
+        await loadFlowsFromDb();
+        console.log('[Init] ✅ Fluxos carregados');
+        logger.info('[Init] ✅ Fluxos carregados');
+      } catch (flowInitErr) {
+        console.warn('[Init] ⚠️  Aviso ao carregar fluxos:', flowInitErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao carregar fluxos:', flowInitErr.message);
+      }
+
       try {
         // Inicializa cache do AuthService (necessário para validateToken síncrono)
         const { initialize: initializeAuthService } = require('./services/authService');
@@ -10976,6 +11096,58 @@ async function startInitialization() {
         throw new Error(error);
       }
       
+      // Inicializa cache de tickets/queues (best-effort)
+      try {
+        const { initialize: initializeQueueService } = require('./services/queueService');
+        await initializeQueueService();
+        console.log('[Init] ✅ QueueService inicializado');
+        logger.info('[Init] ✅ QueueService inicializado');
+      } catch (queueInitErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar QueueService:', queueInitErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar QueueService:', queueInitErr.message);
+      }
+
+      // Inicializa caches DB-only (best-effort): departments, quick replies, webhooks, rag documents
+      try {
+        const { initialize: initializeDepartments } = require('./services/departmentsService');
+        await initializeDepartments();
+        console.log('[Init] ✅ DepartmentsService inicializado');
+        logger.info('[Init] ✅ DepartmentsService inicializado');
+      } catch (deptErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar DepartmentsService:', deptErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar DepartmentsService:', deptErr.message);
+      }
+
+      try {
+        const { initialize: initializeQuickReplies } = require('./services/quickRepliesService');
+        await initializeQuickReplies();
+        console.log('[Init] ✅ QuickRepliesService inicializado');
+        logger.info('[Init] ✅ QuickRepliesService inicializado');
+      } catch (qrErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar QuickRepliesService:', qrErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar QuickRepliesService:', qrErr.message);
+      }
+
+      try {
+        const { initialize: initializeWebhooks } = require('./services/webhookService');
+        await initializeWebhooks();
+        console.log('[Init] ✅ WebhookService inicializado');
+        logger.info('[Init] ✅ WebhookService inicializado');
+      } catch (whErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar WebhookService:', whErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar WebhookService:', whErr.message);
+      }
+
+      try {
+        const { initialize: initializeRagDocuments } = require('./services/ragDocumentsService');
+        await initializeRagDocuments();
+        console.log('[Init] ✅ RAGDocumentsService inicializado');
+        logger.info('[Init] ✅ RAGDocumentsService inicializado');
+      } catch (ragDocsErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar RAGDocumentsService:', ragDocsErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar RAGDocumentsService:', ragDocsErr.message);
+      }
+
       // Inicializa providers de IA do banco de dados (após banco estar conectado)
       try {
         console.log('[Init] Inicializando providers de IA do banco de dados...');
