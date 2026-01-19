@@ -118,6 +118,25 @@ function fromDbRow(row) {
   };
 }
 
+/**
+ * Upsert de ticket no cache runtime a partir de uma row Sequelize.
+ * Exportado apenas para serviços internos (ex.: linker omnichannel).
+ *
+ * @param {any} row
+ * @returns {Ticket|null}
+ */
+function upsertTicketFromDbRow(row) {
+  if (!row) return null;
+  const t = fromDbRow(row);
+  if (!t?.id) return null;
+
+  tickets.set(t.id, t);
+  if (!queues.has(t.queue)) queues.set(t.queue, new Set());
+  queues.get(t.queue).add(t.id);
+
+  return t;
+}
+
 async function upsertTicketToDb(ticket) {
   if (!dbAvailable()) return;
   const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
@@ -522,10 +541,37 @@ function getTicket(ticketId) {
  * @returns {Ticket|null}
  */
 function getTicketBySession(sessionId) {
+  const effectiveSessionId = sessionId ? String(sessionId) : null;
+  if (!effectiveSessionId) return null;
+
+  // Compatibilidade: se tenantId vier como 2º argumento, filtra hard por tenant
+  const tenantId = arguments.length > 1 ? (arguments[1] || null) : null;
+
   for (const ticket of tickets.values()) {
-    if (ticket.sessionId === sessionId && ticket.status !== 'closed') {
-      return ticket;
-    }
+    if (!ticket || ticket.status === 'closed') continue;
+    if (ticket.sessionId !== effectiveSessionId) continue;
+    if (tenantId && ticket.tenantId !== tenantId) continue;
+    return ticket;
+  }
+  return null;
+}
+
+/**
+ * Obtém ticket ativo por conversationId (omnichannel), com filtro hard por tenant.
+ *
+ * @param {string} conversationId
+ * @param {string} tenantId
+ * @returns {Ticket|null}
+ */
+function getTicketByConversationId(conversationId, tenantId) {
+  const convId = conversationId ? String(conversationId) : null;
+  const tId = tenantId ? String(tenantId) : null;
+  if (!convId || !tId) return null;
+
+  for (const ticket of tickets.values()) {
+    if (!ticket || ticket.status === 'closed') continue;
+    if (ticket.tenantId !== tId) continue;
+    if (ticket.conversationId === convId) return ticket;
   }
   return null;
 }
@@ -620,6 +666,17 @@ function updateTicket(ticketId, patch = {}) {
   const ticket = tickets.get(ticketId);
   if (!ticket) return null;
 
+  // Se a fila mudou, precisa mover o ticket entre os Sets de filas
+  const nextQueue = patch && patch.queue ? String(patch.queue) : null;
+  const prevQueue = ticket.queue ? String(ticket.queue) : null;
+
+  if (nextQueue && prevQueue && nextQueue !== prevQueue) {
+    const prevSet = queues.get(prevQueue);
+    if (prevSet) prevSet.delete(ticketId);
+    if (!queues.has(nextQueue)) queues.set(nextQueue, new Set());
+    queues.get(nextQueue).add(ticketId);
+  }
+
   Object.assign(ticket, patch);
   ticket.updatedAt = new Date().toISOString();
   persistTicketBestEffort(ticket);
@@ -645,11 +702,24 @@ function updateLastMessage(ticketId, message) {
     ticket.messages = [];
   }
   
+  // Compatibilidade: aceita externalMessageId e timestamp como argumentos opcionais
+  const externalMessageId = arguments.length > 2 ? (arguments[2] || null) : null;
+  const timestampOverride = arguments.length > 3 ? (arguments[3] || null) : null;
+
+  // Idempotência por externalMessageId (se disponível)
+  if (externalMessageId) {
+    const already = ticket.messages.some((m) => m && m.externalMessageId && m.externalMessageId === externalMessageId);
+    if (already) {
+      return ticket;
+    }
+  }
+
   const messageObj = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     text: message,
     sender: 'user',
-    timestamp: new Date().toISOString(),
+    timestamp: timestampOverride || new Date().toISOString(),
+    externalMessageId: externalMessageId || undefined,
   };
   
   ticket.messages.push(messageObj);
@@ -1006,6 +1076,7 @@ module.exports = {
   getQueueInfo,
   getTicket,
   getTicketBySession,
+  getTicketByConversationId,
   assignTicket,
   closeTicket,
   updateTicket,
@@ -1018,5 +1089,7 @@ module.exports = {
   cleanupOldTickets,
   startAutoCleanup,
   getMetrics,
+  // Interno: usado por services omnichannel para repovoar cache runtime.
+  _upsertTicketFromDbRow: upsertTicketFromDbRow,
 };
 

@@ -166,6 +166,7 @@ const channelGatewayService = require('./services/channelGatewayService');
 const { startWorker: startOutboundWorker } = require('./services/outboundQueueService');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
 const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, startAutoReturnToBot } = require('./services/handoverService');
+const { resolveOrCreateTicketFromIncomingMessage } = require('./services/conversationTicketLinkService');
 const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./services/assignmentService');
 const queueDefinitionService = require('./services/queueDefinitionService');
 const closeReasonsService = require('./services/closeReasonsService');
@@ -6366,15 +6367,58 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
               }
               const messages = value.messages || [];
               for (const msg of messages) {
-                // Persiste no gateway (best-effort) antes do processamento do bot
+                // 1) Persiste no gateway (best-effort) e resolve tenant
                 // eslint-disable-next-line no-await-in-loop
-                await channelGatewayService.ingestIncoming('whatsapp', { message: msg, value, raw: body }).catch(() => null);
-                // Processa cada mensagem
+                const ingest = await channelGatewayService.ingestIncoming('whatsapp', { message: msg, value, raw: body }).catch(() => null);
+
+                const tenantId = ingest?.tenantId || 'tenant-demo';
+                const externalConversationId = ingest?.normalized?.conversationKey?.externalId || (msg?.from ? String(msg.from) : null);
+                const messageText = msg?.text?.body ? String(msg.text.body) : '';
+                const externalMessageId = msg?.id ? String(msg.id) : null;
+
+                // 2) Resolve ticket existente (ou cria, se configurado), sem quebrar compatibilidade
+                // eslint-disable-next-line no-await-in-loop
+                const link = await resolveOrCreateTicketFromIncomingMessage(
+                  tenantId,
+                  'whatsapp',
+                  String(externalConversationId || ''),
+                  { phone: msg?.from ? String(msg.from) : null }
+                ).catch(() => null);
+
+                const ticket = link?.ticket || null;
+
+                // 3) Se há ticket em modo humano, NÃO roda engine; apenas registra mensagem (idempotente) e notifica UI
+                if (ticket && ticket.status !== 'closed' && (ticket.mode || 'human') === 'human') {
+                  try {
+                    const { updateLastMessage, getTicket } = require('./services/queueService');
+                    const ts = msg?.timestamp ? Number(msg.timestamp) : null;
+                    const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+                    updateLastMessage(ticket.id, messageText, externalMessageId, iso);
+
+                    const fresh = getTicket(ticket.id);
+                    if (fresh) {
+                      emitEvent('ticket.message.received', {
+                        ticketId: fresh.id,
+                        message: messageText,
+                        sender: 'user',
+                        ticket: fresh,
+                      }, { tenantId: fresh.tenantId, agentId: fresh.assignedTo });
+                    }
+                  } catch (e) {
+                    // best-effort
+                  }
+                  // eslint-disable-next-line no-continue
+                  continue;
+                }
+
+                // 4) Caso contrário, processa normalmente na engine (bot)
                 // eslint-disable-next-line no-await-in-loop
                 await processWhatsAppMessage(msg, value, {
                   flows,
                   sessionEvents,
                   saveSessionEvents: saveSessionEventsToFile,
+                  tenantId,
+                  conversationId: ingest?.persist?.conversationId || null,
                 });
               }
             }

@@ -134,10 +134,10 @@ function createInitialState(flow, sessionId, from) {
  *
  * @param {any} message - Objeto de mensagem do webhook do WhatsApp (value.messages[i])
  * @param {any} value - Objeto "value" completo do webhook (contém metadata da conversation)
- * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void }} deps
+ * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null }} deps
  */
 async function processWhatsAppMessage(message, value, deps) {
-  const { flows, sessionEvents, saveSessionEvents } = deps;
+  const { flows, sessionEvents, saveSessionEvents, tenantId: inboundTenantId, conversationId } = deps || {};
 
   const from = message.from; // número do usuário (ex.: "5511999999999")
   const text = message.text && message.text.body ? String(message.text.body) : '';
@@ -193,7 +193,10 @@ async function processWhatsAppMessage(message, value, deps) {
   let state = sessions.get(sessionId);
 
   // Verifica se já existe ticket ativo (handoff em andamento)
-  const existingTicket = getTicketBySession(sessionId);
+  // Importante: em ambiente multi-tenant, sessionId pode colidir; preferimos filtrar por tenant quando possível.
+  const existingTicket = inboundTenantId
+    ? getTicketBySession(sessionId, inboundTenantId)
+    : getTicketBySession(sessionId);
   // Regra do handover (Fase 2):
   // - ticket.mode=human => engine não responde automaticamente
   // - ticket.mode=bot => engine continua (ticket existe, mas bot está no controle)
@@ -214,8 +217,10 @@ async function processWhatsAppMessage(message, value, deps) {
       recording.save(recordingId);
     }
     
-    // Atualiza última mensagem do usuário no ticket e adiciona ao histórico
-    updateLastMessage(existingTicket.id, text);
+    // Atualiza última mensagem do usuário no ticket e adiciona ao histórico (idempotente por externalMessageId)
+    const ts = message?.timestamp ? Number(message.timestamp) : null;
+    const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+    updateLastMessage(existingTicket.id, text, messageId ? String(messageId) : null, iso);
     
     // Emite evento WebSocket para notificar sobre nova mensagem do usuário
     const ticket = getTicket(existingTicket.id);
@@ -419,12 +424,27 @@ async function processWhatsAppMessage(message, value, deps) {
         // ignora falhas de contagem
       }
 
-      const ticket = createTicket({
-        tenantId: result.state.tenantId, // Usa tenantId do estado da conversa
-        sessionId,
-        queue,
-        lastUserMessage: text,
-        context: {
+      // Se já existe ticket para esta conversa/sessão (ex.: createOnInbound), reutiliza (idempotente).
+      const effectiveTenantId = inboundTenantId || result.state.tenantId;
+      let existing = null;
+      if (conversationId && effectiveTenantId) {
+        try {
+          existing = require('./queueService').getTicketByConversationId(conversationId, effectiveTenantId);
+        } catch (_) {}
+      }
+      if (!existing && effectiveTenantId) {
+        existing = getTicketBySession(sessionId, effectiveTenantId);
+      }
+
+      let ticket = null;
+      if (existing && existing.status !== 'closed') {
+        // Atualiza ticket existente para fila de atendimento e registra última mensagem (idempotente por externalMessageId)
+        const ts = message?.timestamp ? Number(message.timestamp) : null;
+        const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+        updateLastMessage(existing.id, text, messageId ? String(messageId) : null, iso);
+
+        const mergedContext = {
+          ...(existing.context || {}),
           flowId: result.state.flowId,
           escalationReason: result.output.fallbackType || escalationContext.reason || 'unknown',
           escalationAttempt: result.output.attempt || escalationContext.attempt || 1,
@@ -433,12 +453,63 @@ async function processWhatsAppMessage(message, value, deps) {
           allowReturnToBot: result.output.allowReturnToBot !== false,
           safeReturnNode: escalationContext.safeReturnNode || null,
           metadata: {
+            ...(existing.context?.metadata || {}),
             flowVersion: result.state.flowVersion,
             currentNodeId: result.state.currentNodeId,
             channel: result.state.metadata?.channel || 'whatsapp',
           },
-        },
-      });
+        };
+
+        // eslint-disable-next-line global-require
+        const { updateTicket } = require('./queueService');
+        ticket = updateTicket(existing.id, {
+          queue,
+          status: 'waiting',
+          assignedTo: null,
+          conversationId: conversationId || existing.conversationId || null,
+          channelType: existing.channelType || 'whatsapp',
+          context: mergedContext,
+        });
+
+        // Garante takeover e sincroniza conversation (best-effort)
+        try {
+          // eslint-disable-next-line global-require
+          const { takeOver } = require('./handoverService');
+          await takeOver(ticket.id, { id: 'system', username: 'system' }, 'handoff');
+        } catch (_) {}
+      } else {
+        ticket = createTicket({
+          tenantId: result.state.tenantId, // Usa tenantId do estado da conversa
+          sessionId,
+          queue,
+          lastUserMessage: text,
+          context: {
+            flowId: result.state.flowId,
+            escalationReason: result.output.fallbackType || escalationContext.reason || 'unknown',
+            escalationAttempt: result.output.attempt || escalationContext.attempt || 1,
+            botHistory: botMessages,
+            variables: result.state.variables || {},
+            allowReturnToBot: result.output.allowReturnToBot !== false,
+            safeReturnNode: escalationContext.safeReturnNode || null,
+            // Link omnichannel quando disponível
+            conversationId: conversationId || null,
+            channelType: result.state.metadata?.channel || 'whatsapp',
+            mode: 'human',
+            metadata: {
+              flowVersion: result.state.flowVersion,
+              currentNodeId: result.state.currentNodeId,
+              channel: result.state.metadata?.channel || 'whatsapp',
+            },
+          },
+        });
+
+        // Mesmo já sendo "human" por padrão, garantimos sync do channel_conversation
+        try {
+          // eslint-disable-next-line global-require
+          const { takeOver } = require('./handoverService');
+          await takeOver(ticket.id, { id: 'system', username: 'system' }, 'handoff');
+        } catch (_) {}
+      }
 
       // Mensagem informativa para o usuário
       const message = result.output.message || 

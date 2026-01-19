@@ -49,6 +49,8 @@ async function takeOver(ticketId, agent, reason = 'agent_takeover') {
 
   // Se já está em humano, idempotente
   if ((ticket.mode || 'human') === 'human') {
+    // Mesmo idempotente, sincroniza status da conversa (best-effort)
+    await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
   }
 
@@ -79,6 +81,7 @@ async function returnToBot(ticketId, agent, reason = 'user_request') {
 
   // Se já está em bot, idempotente
   if ((ticket.mode || 'human') === 'bot') {
+    await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
   }
 
