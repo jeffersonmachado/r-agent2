@@ -4668,6 +4668,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      // Quota: max_conversas_mes (best-effort)
+      try {
+        const { checkLimit } = require('./services/planLimitsService');
+        const limitCheck = await checkLimit(req.tenantId, 'max_conversas_mes', 1);
+        if (!limitCheck.allowed) {
+          sendJson(res, 403, { error: 'limit_exceeded', message: limitCheck.error, limit: limitCheck.limit, current: limitCheck.current });
+          return;
+        }
+      } catch (e) {
+        // não bloqueia se falhar a contagem
+      }
+
       // Cria o ticket
       const ticket = createTicket({
         tenantId: req.tenantId, // Usa tenantId do agente autenticado
@@ -4788,6 +4800,139 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const defs = queueDefinitionService.listQueues({ tenantId: req.tenantId }).map((q) => q.name);
     const merged = Array.from(new Set([...legacy, ...defs])).sort();
     sendJson(res, 200, merged);
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Channel Accounts (CRUD) - multi-tenant
+  // -----------------------------------------------------------------------
+
+  // GET /channel-accounts
+  if (method === 'GET' && pathname === '/channel-accounts') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const includeConfig = urlObj.searchParams.get('includeConfig') === 'true';
+      const { listAccounts } = require('./services/channelAccountsService');
+      const accounts = await listAccounts({ tenantId: req.tenantId, includeConfig });
+      sendJson(res, 200, { accounts });
+    } catch (err) {
+      logger.error('Erro ao listar channel-accounts', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // POST /channel-accounts
+  if (method === 'POST' && pathname === '/channel-accounts') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { type, externalId, status, config } = body || {};
+      const { createAccount } = require('./services/channelAccountsService');
+      const result = await createAccount({ tenantId: req.tenantId, type, externalId, status, config });
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+      sendJson(res, 201, result);
+    } catch (err) {
+      logger.error('Erro ao criar channel-account', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // PUT /channel-accounts/:id
+  if (method === 'PUT' && pathname.startsWith('/channel-accounts/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/channel-accounts/'.length));
+      const body = await parseJsonBody(req);
+      const { updateAccount } = require('./services/channelAccountsService');
+      const result = await updateAccount({ tenantId: req.tenantId, id, patch: body || {} });
+      if (!result.success) {
+        sendJson(res, result.error === 'not_found' ? 404 : 400, { error: result.error });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao atualizar channel-account', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // DELETE /channel-accounts/:id
+  if (method === 'DELETE' && pathname.startsWith('/channel-accounts/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/channel-accounts/'.length));
+      const { deleteAccount } = require('./services/channelAccountsService');
+      const result = await deleteAccount({ tenantId: req.tenantId, id });
+      if (!result.success) {
+        sendJson(res, result.error === 'not_found' ? 404 : 400, { error: result.error });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao remover channel-account', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
     return;
   }
 

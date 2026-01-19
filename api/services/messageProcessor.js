@@ -51,6 +51,7 @@ const {
 const { ESCALATION_MODES } = require('../../engine/fallbackController');
 const { emitEvent } = require('./websocketService');
 const config = require('../utils/config');
+const { checkLimit } = require('./planLimitsService');
 const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
 const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
 const { ReplaySystem } = require('../../lib/replaySystem');
@@ -404,6 +405,20 @@ async function processWhatsAppMessage(message, value, deps) {
           timestamp: h.timestamp || new Date().toISOString(),
         }));
       
+      // Quota: max_conversas_mes (best-effort) — se exceder, não abre ticket
+      try {
+        const tenantId = result.state.tenantId;
+        const limitCheck = await checkLimit(tenantId, 'max_conversas_mes', 1);
+        if (!limitCheck.allowed) {
+          const denyMsg = 'No momento não podemos abrir um novo atendimento porque o limite de conversas do plano foi atingido. Por favor, fale com o administrador do sistema.';
+          try { await sendTextMessage(from, denyMsg); } catch {}
+          logger.warn('[HANDOFF] Bloqueado por limite de conversas do plano', { tenantId, limit: limitCheck.limit, current: limitCheck.current });
+          return;
+        }
+      } catch (e) {
+        // ignora falhas de contagem
+      }
+
       const ticket = createTicket({
         tenantId: result.state.tenantId, // Usa tenantId do estado da conversa
         sessionId,

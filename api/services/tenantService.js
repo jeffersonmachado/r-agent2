@@ -1258,7 +1258,8 @@ async function getTenantUsage(tenantId) {
       { replacements: { tenant: tenantId } }
     );
 
-    const [[conversationsRow]] = await sequelize.query(
+    // Conversas do mês (canal) — útil para observabilidade
+    const [[channelConversationsRow]] = await sequelize.query(
       `
       SELECT COUNT(*)::int AS count
       FROM channel_conversations
@@ -1268,6 +1269,18 @@ async function getTenantUsage(tenantId) {
       `,
       { replacements: { tenant: tenantId, start: monthStart.toISOString(), end: nextMonthStart.toISOString() } }
     );
+
+    // Conversas do mês (tickets) — usado para quota max_conversas_mes
+    const [[ticketsMonthRow]] = await sequelize.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM tickets
+      WHERE tenant_key = :tenant
+        AND created_at >= :start
+        AND created_at < :end
+      `,
+      { replacements: { tenant: tenantId, start: monthStart.toISOString(), end: nextMonthStart.toISOString() } }
+    ).catch(() => [[{ count: 0 }]]);
 
     const [[ragDocsRow]] = await sequelize.query(
       `
@@ -1285,7 +1298,8 @@ async function getTenantUsage(tenantId) {
       // novos recursos enterprise
       max_agentes: usersRow?.count ?? 0,
       max_canais: channelsRow?.count ?? 0,
-      max_conversas_mes: conversationsRow?.count ?? 0,
+      max_conversas_mes: ticketsMonthRow?.count ?? 0,
+      conversas_canais_mes: channelConversationsRow?.count ?? 0,
       // mantém estrutura anterior
       agentes_ia: 0,
       execucoes_rpa: 0,
