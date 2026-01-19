@@ -162,6 +162,9 @@ const {
   processInstagramMessage,
   sendInstagramMedia,
 } = require('./services/instagramService');
+const channelGatewayService = require('./services/channelGatewayService');
+const { startWorker: startOutboundWorker } = require('./services/outboundQueueService');
+const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
 const {
   getAllTags,
   getAllCategories,
@@ -4410,6 +4413,42 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    // Compatibilidade:
+    // - padrão (sem query) mantém comportamento legado (sessionEvents / replay)
+    // - com ?source=channels, retorna conversas persistidas no Channel Gateway (multi-tenant)
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const source = (urlObj.searchParams.get('source') || '').toLowerCase();
+    if (source === 'channels' || source === 'channel' || source === 'omnichannel') {
+      const permResult = requirePermission(req, 'tickets', 'read');
+      if (!permResult.allowed) {
+        sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+        return;
+      }
+
+      try {
+        const status = urlObj.searchParams.get('status');
+        const channelType = urlObj.searchParams.get('channel') || urlObj.searchParams.get('channelType');
+        const queue = urlObj.searchParams.get('queue');
+        const limit = urlObj.searchParams.get('limit') || '100';
+        const offset = urlObj.searchParams.get('offset') || '0';
+
+        const result = await listChannelConversations({
+          tenantId: req.tenantId,
+          status,
+          channelType,
+          queue,
+          limit,
+          offset,
+        });
+
+        sendJson(res, 200, { conversations: result.items, total: result.total, source: 'channels' });
+      } catch (err) {
+        logger.error('[Conversations] Erro ao listar conversas (channels):', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar conversas (channels)' });
+      }
+      return;
+    }
+
     const permResult = requirePermission(req, 'audit', 'read');
     if (!permResult.allowed) {
       sendJson(res, 403, { error: 'forbidden', message: permResult.error });
@@ -4459,6 +4498,42 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[Conversations] Erro ao listar conversas:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar conversas' });
+    }
+    return;
+  }
+
+  // GET /conversations/:id/messages - Lista mensagens persistidas do Channel Gateway
+  // (não conflita com /conversations/:sessionId legado)
+  if (method === 'GET' && pathname.match(/^\/conversations\/[^\/]+\/messages$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const conversationId = decodeURIComponent(pathname.split('/')[2]);
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit') || '200';
+      const offset = urlObj.searchParams.get('offset') || '0';
+
+      const result = await listConversationMessages({
+        tenantId: req.tenantId,
+        conversationId,
+        limit,
+        offset,
+      });
+
+      sendJson(res, 200, { conversationId, messages: result.items, total: result.total });
+    } catch (err) {
+      logger.error('[Conversations] Erro ao listar mensagens (channels):', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar mensagens (channels)' });
     }
     return;
   }
@@ -5769,8 +5844,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           for (const change of changes) {
             if (change.field === 'messages') {
               const value = change.value || {};
+              // Atualiza status delivery/read/failed quando disponível (best-effort)
+              if (Array.isArray(value.statuses) && value.statuses.length > 0) {
+                // eslint-disable-next-line no-await-in-loop
+                await channelGatewayService.updateStatus('whatsapp', { value }).catch(() => null);
+              }
               const messages = value.messages || [];
               for (const msg of messages) {
+                // Persiste no gateway (best-effort) antes do processamento do bot
+                // eslint-disable-next-line no-await-in-loop
+                await channelGatewayService.ingestIncoming('whatsapp', { message: msg, value, raw: body }).catch(() => null);
                 // Processa cada mensagem
                 // eslint-disable-next-line no-await-in-loop
                 await processWhatsAppMessage(msg, value, {
@@ -5911,6 +5994,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (body.object === 'instagram') {
         const entries = body.entry || [];
         for (const entry of entries) {
+          // Persiste mensagens do webhook (best-effort)
+          const messagingEvents = Array.isArray(entry.messaging) ? entry.messaging : [];
+          for (const messaging of messagingEvents) {
+            // eslint-disable-next-line no-await-in-loop
+            await channelGatewayService.ingestIncoming('instagram', { entry, messaging, raw: body, pageId: entry.id }).catch(() => null);
+          }
           // Processa mensagens do Instagram
           await processInstagramMessage(entry, flows, sessionEvents);
         }
@@ -11206,6 +11295,15 @@ if (require.main === module) {
       console.log(`API server listening on http://0.0.0.0:${port}`);
       logger.info(`API server listening on http://0.0.0.0:${port}`);
     });
+
+    // Worker outbound (best-effort) - inicia após DB + migrations
+    if (process.env.ENABLE_OUTBOUND_WORKER !== 'false') {
+      try {
+        startOutboundWorker({ intervalMs: 1500, batchSize: 25 });
+      } catch (err) {
+        logger.warn('[OutboundQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
+      }
+    }
   }).catch((error) => {
     console.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
     console.error('[Server] Erro:', error);

@@ -22,6 +22,10 @@ const getDepartment = require('./Department');
 const getQuickReply = require('./QuickReply');
 const getWebhook = require('./Webhook');
 const getRagDocument = require('./RagDocument');
+const getChannelAccount = require('./ChannelAccount');
+const getChannelConversation = require('./ChannelConversation');
+const getChannelMessage = require('./ChannelMessage');
+const getOutboundQueueItem = require('./OutboundQueueItem');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -43,6 +47,10 @@ const Department = () => getDepartment();
 const QuickReply = () => getQuickReply();
 const Webhook = () => getWebhook();
 const RagDocument = () => getRagDocument();
+const ChannelAccount = () => getChannelAccount();
+const ChannelConversation = () => getChannelConversation();
+const ChannelMessage = () => getChannelMessage();
+const OutboundQueueItem = () => getOutboundQueueItem();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -71,6 +79,10 @@ function defineRelationships() {
   const QuickReplyModel = QuickReply();
   const WebhookModel = Webhook();
   const RagDocumentModel = RagDocument();
+  const ChannelAccountModel = ChannelAccount();
+  const ChannelConversationModel = ChannelConversation();
+  const ChannelMessageModel = ChannelMessage();
+  const OutboundQueueItemModel = OutboundQueueItem();
 
   // Tenant <-> User (many-to-many via TenantUser)
   TenantModel.belongsToMany(UserModel, {
@@ -164,6 +176,7 @@ function defineRelationships() {
   // No explicit relationships for Ticket (tenant_key-based)
   // No explicit relationships for Flow (tenant_key-based)
   // No explicit relationships for TenantContext/Department/QuickReply/Webhook/RagDocument (tenant_key-based)
+  // No explicit relationships for ChannelAccount/ChannelConversation/ChannelMessage/OutboundQueueItem (tenant_key-based)
 }
 
 module.exports = {
@@ -186,6 +199,10 @@ module.exports = {
   QuickReply,
   Webhook,
   RagDocument,
+  ChannelAccount,
+  ChannelConversation,
+  ChannelMessage,
+  OutboundQueueItem,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -207,4 +224,8 @@ module.exports = {
   getQuickReply,
   getWebhook,
   getRagDocument,
+  getChannelAccount,
+  getChannelConversation,
+  getChannelMessage,
+  getOutboundQueueItem,
 };
