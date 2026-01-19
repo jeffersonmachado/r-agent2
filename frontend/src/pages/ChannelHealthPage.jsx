@@ -95,6 +95,9 @@ export function ChannelHealthPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📡 Saúde de Canais</h1>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <Button onClick={() => navigate('/channel-accounts')} style={{ width: 'auto' }}>
+              Gerenciar Canais
+            </Button>
             <Button onClick={fetchHealth} style={{ width: 'auto' }}>
               Atualizar
             </Button>
