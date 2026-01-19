@@ -155,8 +155,14 @@ export function closeTicket(ticketId) {
 
   return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/close`, {
     method: 'POST',
-    ...(options && (options.closeReasonId || options.closeReasonName)
-      ? { body: JSON.stringify({ closeReasonId: options.closeReasonId, closeReasonName: options.closeReasonName }) }
+    ...(options && (options.closeReasonId || options.closeReasonName || (Array.isArray(options.tags) && options.tags.length > 0))
+      ? {
+        body: JSON.stringify({
+          closeReasonId: options.closeReasonId,
+          closeReasonName: options.closeReasonName,
+          tags: Array.isArray(options.tags) ? options.tags : undefined,
+        }),
+      }
       : {}),
   }).then(
     (ticket) => {

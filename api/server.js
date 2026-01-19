@@ -5542,11 +5542,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     let closeReason = null;
     let closeReasonId = null;
     let closeReasonName = null;
+    let closeTags = null;
     if (hasJsonContentType(req)) {
       try {
         const body = await parseJsonBody(req);
         closeReasonId = body?.closeReasonId ? String(body.closeReasonId) : null;
         closeReasonName = body?.closeReasonName ? String(body.closeReasonName) : null;
+        // tags podem vir como array ["vip","cobranca"] ou string "vip,cobranca"
+        if (Array.isArray(body?.tags)) {
+          closeTags = body.tags.map(t => String(t).trim()).filter(Boolean);
+        } else if (typeof body?.tags === 'string') {
+          closeTags = body.tags.split(',').map(t => String(t).trim()).filter(Boolean);
+        }
       } catch (e) {
         // ignora body inválido
       }
@@ -5600,6 +5607,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         },
       });
     } catch (_) {}
+
+    // Tags no fechamento (opcional): aplica antes de fechar (best-effort)
+    if (closeTags && Array.isArray(closeTags) && closeTags.length > 0) {
+      try {
+        const { addTagToTicket } = require('./services/segmentationService');
+        const unique = Array.from(new Set(closeTags.map(t => String(t).trim().toLowerCase()).filter(Boolean))).slice(0, 20);
+        for (const t of unique) {
+          // eslint-disable-next-line no-await-in-loop
+          addTagToTicket(id, t);
+        }
+      } catch (_) {}
+    }
 
     const closedTicket = closeTicket(id);
     if (!closedTicket) {

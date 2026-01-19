@@ -60,6 +60,7 @@ export function SupportPage() {
   const [closeReasons, setCloseReasons] = useState([]);
   const [selectedCloseReasonId, setSelectedCloseReasonId] = useState('');
   const [selectedCloseReasonName, setSelectedCloseReasonName] = useState('');
+  const [closeTagsInput, setCloseTagsInput] = useState('');
   const [closing, setClosing] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [knownTags, setKnownTags] = useState([]);
@@ -588,6 +589,7 @@ export function SupportPage() {
     setClosingTicketId(ticketId);
     setSelectedCloseReasonId('');
     setSelectedCloseReasonName('');
+    setCloseTagsInput('');
     setShowCloseModal(true);
   };
 
@@ -612,9 +614,16 @@ export function SupportPage() {
 
     setClosing(true);
     try {
+      const tags = (closeTagsInput || '')
+        .split(',')
+        .map((t) => String(t).trim())
+        .filter(Boolean)
+        .slice(0, 20);
+
       await closeTicket(closingTicketId, {
         closeReasonId: selectedCloseReasonId || undefined,
         closeReasonName: selectedCloseReasonName || undefined,
+        tags: tags.length > 0 ? tags : undefined,
       });
       showToastRef.current('Ticket fechado com sucesso', 'success');
       if (selectedTicket?.id === closingTicketId) {
@@ -1373,6 +1382,23 @@ export function SupportPage() {
                   placeholder="Ex: resolvido, sem resposta do cliente..."
                   className="support-form-input"
                 />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Tags (opcional)
+              </label>
+              <input
+                type="text"
+                value={closeTagsInput}
+                onChange={(e) => setCloseTagsInput(e.target.value)}
+                placeholder="Ex: cobrança, prioridade, vip (separadas por vírgula)"
+                className="support-form-input"
+                list="support-known-tags"
+              />
+              <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                Dica: use tags curtas e consistentes.
               </div>
             </div>
 
