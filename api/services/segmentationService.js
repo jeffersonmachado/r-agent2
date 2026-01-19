@@ -16,7 +16,7 @@ const logger = require('../utils/logger');
  * @returns {Array<{tag: string, count: number}>}
  */
 function getAllTags(options = {}) {
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId: options.tenantId });
   const tickets = allTickets.tickets || [];
   
   const tagCounts = {};
@@ -42,7 +42,7 @@ function getAllTags(options = {}) {
  * @returns {Array<{category: string, count: number}>}
  */
 function getAllCategories(options = {}) {
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId: options.tenantId });
   const tickets = allTickets.tickets || [];
   
   const categoryCounts = {};
@@ -72,7 +72,7 @@ function getAllCategories(options = {}) {
  * @returns {Array}
  */
 function filterTickets(filters = {}) {
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId: filters.tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtro por tags

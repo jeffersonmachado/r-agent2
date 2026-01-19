@@ -81,6 +81,11 @@ function requireAuth(req) {
     req.tenantId = validation.agent.tenantId || null; // Extrai tenantId do agente
   }
 
+  // Hardening: para usuários não-super-admin, tenantId é obrigatório
+  if (!isSuperAdmin(validation.agent) && (!req.tenantId || String(req.tenantId).trim() === '')) {
+    return { valid: false, error: 'tenantId ausente no token do agente' };
+  }
+
   return { valid: true, agent: validation.agent, session: validation.session };
 }
 

@@ -18,6 +18,7 @@ const config = require('../utils/config');
 
 const { getSequelize } = require('../db/sequelize');
 const { User, Session } = require('../db/models');
+const { checkLimit } = require('./planLimitsService');
 
 // ---------------------------------------------------------------------------
 // Configurações
@@ -246,6 +247,17 @@ async function createAgent({ tenantId, username, email, password, role, name }) 
   const normalizedRole = normalizeRole(role || 'operator');
 
   await initialize();
+
+  // Plan limits: max_agentes (best-effort)
+  try {
+    const limitCheck = await checkLimit(tenantId, 'max_agentes', 1);
+    if (!limitCheck.allowed) {
+      return { success: false, error: limitCheck.error || 'Limite de agentes excedido' };
+    }
+  } catch (e) {
+    // não bloqueia se houver falha no cálculo de uso
+    logger.warn('[AuthService] Falha ao checar limite de agentes (ignorado)', { tenantId, error: e.message });
+  }
 
   if (!dbAvailable()) {
     // fallback de testes

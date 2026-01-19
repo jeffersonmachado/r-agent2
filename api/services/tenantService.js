@@ -1216,17 +1216,84 @@ async function getTenantUsage(tenantId) {
       return null;
     }
 
-    // TODO: Implementar contagem real de uso do PostgreSQL
-    // Por enquanto retorna estrutura básica
+    const sequelize = getSequelize();
+    if (!sequelize || !isConnected()) {
+      return {
+        tenantId,
+        usuarios: 0,
+        max_agentes: 0,
+        max_canais: 0,
+        max_conversas_mes: 0,
+        agentes_ia: 0,
+        execucoes_rpa: 0,
+        tokens_ia: 0,
+        documentos_rag: 0,
+        storage_mb: 0,
+        periodo: 'mensal',
+      };
+    }
+
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
+    const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+
+    // Contagens principais (best-effort) — baseadas em tabelas já existentes
+    const [[usersRow]] = await sequelize.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM users
+      WHERE tenant_key = :tenant
+        AND is_active = true
+        AND (is_superadmin = false OR is_superadmin IS NULL)
+      `,
+      { replacements: { tenant: tenantId } }
+    );
+
+    const [[channelsRow]] = await sequelize.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM channel_accounts
+      WHERE tenant_key = :tenant
+      `,
+      { replacements: { tenant: tenantId } }
+    );
+
+    const [[conversationsRow]] = await sequelize.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM channel_conversations
+      WHERE tenant_key = :tenant
+        AND created_at >= :start
+        AND created_at < :end
+      `,
+      { replacements: { tenant: tenantId, start: monthStart.toISOString(), end: nextMonthStart.toISOString() } }
+    );
+
+    const [[ragDocsRow]] = await sequelize.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM rag_documents
+      WHERE tenant_key = :tenant
+      `,
+      { replacements: { tenant: tenantId } }
+    ).catch(() => [[{ count: 0 }]]);
+
     return {
       tenantId,
-      usuarios: 0, // TODO: contar usuários ativos do PostgreSQL
-      agentes_ia: 0, // TODO: contar agentes IA
-      execucoes_rpa: 0, // TODO: contar execuções RPA no período
-      tokens_ia: 0, // TODO: contar tokens IA no período
-      documentos_rag: 0, // TODO: contar documentos RAG
-      storage_mb: 0, // TODO: calcular storage usado
+      // compatibilidade com nomes antigos de plano
+      usuarios: usersRow?.count ?? 0,
+      // novos recursos enterprise
+      max_agentes: usersRow?.count ?? 0,
+      max_canais: channelsRow?.count ?? 0,
+      max_conversas_mes: conversationsRow?.count ?? 0,
+      // mantém estrutura anterior
+      agentes_ia: 0,
+      execucoes_rpa: 0,
+      tokens_ia: 0,
+      documentos_rag: ragDocsRow?.count ?? 0,
+      storage_mb: 0,
       periodo: 'mensal',
+      window: { monthStart: monthStart.toISOString(), nextMonthStart: nextMonthStart.toISOString() },
     };
   } catch (err) {
     logger.error('[TenantService] Erro ao obter métricas de uso:', err);

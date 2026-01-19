@@ -19,6 +19,9 @@ const logger = require('../utils/logger');
 const PLAN_LIMITS = {
   free: {
     usuarios: 1,
+    max_agentes: 1,
+    max_canais: 1,
+    max_conversas_mes: 500,
     agentes_ia: 1,
     execucoes_rpa: 10,
     tokens_ia: 10000,
@@ -27,6 +30,9 @@ const PLAN_LIMITS = {
   },
   trial: {
     usuarios: 3,
+    max_agentes: 3,
+    max_canais: 3,
+    max_conversas_mes: 2000,
     agentes_ia: 2,
     execucoes_rpa: 50,
     tokens_ia: 50000,
@@ -35,6 +41,9 @@ const PLAN_LIMITS = {
   },
   pro: {
     usuarios: 10,
+    max_agentes: 10,
+    max_canais: 10,
+    max_conversas_mes: 20000,
     agentes_ia: 5,
     execucoes_rpa: 500,
     tokens_ia: 500000,
@@ -43,6 +52,9 @@ const PLAN_LIMITS = {
   },
   enterprise: {
     usuarios: -1, // Ilimitado
+    max_agentes: -1,
+    max_canais: -1,
+    max_conversas_mes: -1,
     agentes_ia: -1,
     execucoes_rpa: -1,
     tokens_ia: -1,
@@ -69,15 +81,10 @@ function getPlanLimits(plan) {
  * @param {number} amount - Quantidade a verificar (padrão: 1)
  * @returns {{allowed: boolean, error?: string, limit?: number, current?: number}}
  */
-function checkLimit(tenantId, resource, amount = 1) {
-  const tenant = getTenant(tenantId);
+async function checkLimit(tenantId, resource, amount = 1) {
+  const tenant = await getTenant(tenantId);
   if (!tenant) {
     return { allowed: false, error: 'Tenant não encontrado' };
-  }
-
-  // Enterprise não tem limites (ou limites customizados)
-  if (tenant.plan === 'enterprise') {
-    return { allowed: true, limit: -1, current: 0 };
   }
 
   const limits = tenant.limits || getPlanLimits(tenant.plan);
@@ -88,8 +95,7 @@ function checkLimit(tenantId, resource, amount = 1) {
     return { allowed: true, limit: -1, current: 0 };
   }
 
-  // TODO: Obter uso atual do tenant (implementar getTenantUsage)
-  const usage = getTenantUsage(tenantId);
+  const usage = await getTenantUsage(tenantId);
   const current = usage ? (usage[resource] || 0) : 0;
 
   if (current + amount > limit) {
@@ -112,13 +118,13 @@ function checkLimit(tenantId, resource, amount = 1) {
  * @returns {Function} Middleware
  */
 function requireLimit(resource, amount = 1) {
-  return (req, res, sendJson) => {
+  return async (req, res, sendJson) => {
     if (!req.tenantId) {
       sendJson(res, 403, { error: 'tenant_id não resolvido' });
       return false;
     }
 
-    const check = checkLimit(req.tenantId, resource, amount);
+    const check = await checkLimit(req.tenantId, resource, amount);
     if (!check.allowed) {
       sendJson(res, 403, {
         error: 'limit_exceeded',

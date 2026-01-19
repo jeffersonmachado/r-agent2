@@ -8975,7 +8975,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const tags = getAllTags();
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tags = getAllTags({ tenantId: req.tenantId });
     sendJson(res, 200, { tags });
     return;
   }
@@ -8988,7 +8994,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const categories = getAllCategories();
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const categories = getAllCategories({ tenantId: req.tenantId });
     sendJson(res, 200, { categories });
     return;
   }
@@ -9010,6 +9022,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const filters = {
+        tenantId: req.tenantId,
         tags: urlObj.searchParams.get('tags') ? urlObj.searchParams.get('tags').split(',') : undefined,
         category: urlObj.searchParams.get('category') || undefined,
         status: urlObj.searchParams.get('status') || undefined,
@@ -9046,6 +9059,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const filters = {
+        tenantId: req.tenantId,
         tags: urlObj.searchParams.get('tags') ? urlObj.searchParams.get('tags').split(',') : undefined,
         category: urlObj.searchParams.get('category') || undefined,
         status: urlObj.searchParams.get('status') || undefined,
@@ -9084,6 +9098,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/tags'.length));
+      const ticket = getTicket(id);
+      if (!ticket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+      if (req.tenantId && ticket.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+        return;
+      }
       const body = await parseJsonBody(req);
       const { tag } = body || {};
 
@@ -9127,6 +9150,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const ticketId = decodeURIComponent(parts[ticketIndex + 1]);
       const tag = decodeURIComponent(parts[tagIndex + 1]);
 
+      const ticket = getTicket(ticketId);
+      if (!ticket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+      if (req.tenantId && ticket.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+        return;
+      }
+
       const result = removeTagFromTicket(ticketId, tag);
       if (!result.success) {
         badRequest(res, result.error);
@@ -9162,6 +9195,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/category'.length));
+      const ticket = getTicket(id);
+      if (!ticket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+      if (req.tenantId && ticket.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+        return;
+      }
       const body = await parseJsonBody(req);
       const { category } = body || {};
 
