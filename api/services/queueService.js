@@ -69,8 +69,12 @@ function toDbPayload(ticket) {
     id: ticket.id,
     tenant_key: ticket.tenantId,
     session_id: ticket.sessionId,
+    conversation_id: ticket.conversationId || null,
+    channel_type: ticket.channelType || null,
     queue: ticket.queue,
     status: ticket.status,
+    mode: ticket.mode || 'human',
+    pause_reason: ticket.pauseReason || null,
     assigned_to: ticket.assignedTo || null,
     phone_number: ticket.phoneNumber || null,
     last_user_message: ticket.lastUserMessage || null,
@@ -87,8 +91,12 @@ function fromDbRow(row) {
     id: row.id,
     tenantId: row.tenant_key,
     sessionId: row.session_id,
+    conversationId: row.conversation_id || null,
+    channelType: row.channel_type || (row.session_id && String(row.session_id).startsWith('whatsapp_') ? 'whatsapp' : null),
     queue: row.queue,
     status: row.status,
+    mode: row.mode || 'human',
+    pauseReason: row.pause_reason || null,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
     lastUserMessage: row.last_user_message || null,
@@ -217,8 +225,14 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
     id,
     tenantId: effectiveTenantId.trim(),
     sessionId,
+    // Channel Gateway (fase 2): campos novos (best-effort)
+    conversationId: context.conversationId || null,
+    channelType: context.channelType || (sessionId && String(sessionId).startsWith('whatsapp_') ? 'whatsapp' : null),
     queue,
     status: 'waiting',
+    // Compatibilidade: ticket implica atendimento humano por padrão
+    mode: context.mode || 'human',
+    pauseReason: context.pauseReason || null,
     createdAt: now,
     updatedAt: now,
     lastUserMessage: lastUserMessage || null,
@@ -242,6 +256,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
       variables: context.variables || {},
       allowReturnToBot: context.allowReturnToBot !== false, // Default: true
       safeReturnNode: context.safeReturnNode || null,
+      handoverHistory: Array.isArray(context.handoverHistory) ? context.handoverHistory : [],
       ...(context.metadata || {}),
     },
   };
@@ -640,6 +655,51 @@ function markMessagesAsRead(ticketId) {
 }
 
 /**
+ * Atualiza modo de atendimento do ticket (bot|human) e registra histórico.
+ *
+ * @param {string} ticketId
+ * @param {{mode: 'bot'|'human', pauseReason?: string|null, actorId?: string|null, actorUsername?: string|null}} params
+ * @returns {Ticket|null}
+ */
+function setTicketMode(ticketId, params = {}) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  const mode = params.mode === 'bot' ? 'bot' : 'human';
+  const pauseReason = params.pauseReason || null;
+
+  ticket.mode = mode;
+  ticket.pauseReason = pauseReason;
+  ticket.updatedAt = new Date().toISOString();
+
+  if (!ticket.context) ticket.context = {};
+  if (!Array.isArray(ticket.context.handoverHistory)) ticket.context.handoverHistory = [];
+
+  ticket.context.handoverHistory.push({
+    type: mode === 'human' ? 'takeover' : 'return_to_bot',
+    mode,
+    reason: pauseReason,
+    actorId: params.actorId || null,
+    actorUsername: params.actorUsername || null,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Mensagem de sistema para UI/histórico do ticket
+  if (!Array.isArray(ticket.messages)) ticket.messages = [];
+  ticket.messages.push({
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text: mode === 'human'
+      ? `Atendimento assumido por humano${pauseReason ? ` (${pauseReason})` : ''}.`
+      : `Atendimento devolvido ao bot${pauseReason ? ` (${pauseReason})` : ''}.`,
+    sender: 'system',
+    timestamp: new Date().toISOString(),
+  });
+
+  persistTicketBestEffort(ticket);
+  return ticket;
+}
+
+/**
  * Obtém histórico de mensagens de um ticket.
  *
  * @param {string} ticketId
@@ -881,6 +941,7 @@ module.exports = {
   updateLastMessage,
   addAgentMessage,
   markMessagesAsRead,
+  setTicketMode,
   getTicketMessages,
   listAllTickets,
   cleanupOldTickets,

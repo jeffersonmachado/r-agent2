@@ -32,6 +32,14 @@ function getTicketModel() {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      conversation_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      channel_type: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       queue: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -40,6 +48,15 @@ function getTicketModel() {
         type: DataTypes.STRING,
         allowNull: false,
         defaultValue: 'waiting',
+      },
+      mode: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'human',
+      },
+      pause_reason: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
       assigned_to: {
         type: DataTypes.STRING,
@@ -85,6 +102,8 @@ function getTicketModel() {
         { fields: ['tenant_key', 'status'], name: 'tickets_tenant_key_status_idx' },
         { fields: ['tenant_key', 'queue'], name: 'tickets_tenant_key_queue_idx' },
         { fields: ['session_id'], name: 'tickets_session_id_idx' },
+        { fields: ['tenant_key', 'conversation_id'], name: 'tickets_tenant_key_conversation_id_idx' },
+        { fields: ['tenant_key', 'mode'], name: 'tickets_tenant_key_mode_idx' },
         { fields: ['created_at'], name: 'tickets_created_at_idx' },
       ],
     });

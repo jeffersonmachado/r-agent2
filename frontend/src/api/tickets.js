@@ -165,6 +165,42 @@ export function closeTicket(ticketId) {
 }
 
 /**
+ * Assumir atendimento humano (handover bot -> humano).
+ *
+ * @param {string} ticketId
+ * @param {string} [reason]
+ * @returns {Promise<any>}
+ */
+export function takeOverTicket(ticketId, reason = 'agent_takeover') {
+  if (!ticketId) {
+    return Promise.reject(new Error('takeOverTicket: ticketId é obrigatório'));
+  }
+
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/takeover`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+/**
+ * Devolver atendimento ao bot (handover humano -> bot).
+ *
+ * @param {string} ticketId
+ * @param {string} [reason]
+ * @returns {Promise<any>}
+ */
+export function returnToBotTicket(ticketId, reason = 'user_request') {
+  if (!ticketId) {
+    return Promise.reject(new Error('returnToBotTicket: ticketId é obrigatório'));
+  }
+
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/return-to-bot`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+/**
  * Envia mensagem do atendente para o usuário via WhatsApp.
  *
  * @param {string} ticketId

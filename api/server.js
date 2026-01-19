@@ -165,6 +165,7 @@ const {
 const channelGatewayService = require('./services/channelGatewayService');
 const { startWorker: startOutboundWorker } = require('./services/outboundQueueService');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
+const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, startAutoReturnToBot } = require('./services/handoverService');
 const {
   getAllTags,
   getAllCategories,
@@ -5133,6 +5134,126 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sendJson(res, 500, { error: 'internal_error' });
       }
     }
+    return;
+  }
+
+  // POST /tickets/:id/takeover - Assumir atendimento humano (handover bot -> humano)
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/takeover')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/takeover'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    // Valida tenant
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    let reason = 'agent_takeover';
+    if (hasJsonContentType(req)) {
+      try {
+        const body = await parseJsonBody(req);
+        if (body?.reason) reason = String(body.reason);
+      } catch (e) {
+        // ignora body inválido e usa default
+      }
+    }
+
+    const result = await takeOverTicket(id, req.agent, reason);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error || 'handover_failed' });
+      return;
+    }
+
+    // Auditoria
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      tenantId: req.tenantId,
+      action: 'ticket_takeover',
+      resource: 'ticket',
+      resourceId: id,
+      details: { reason },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, result.ticket);
+    return;
+  }
+
+  // POST /tickets/:id/return-to-bot - Devolver atendimento ao bot (handover humano -> bot)
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/return-to-bot')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/return-to-bot'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    // Valida tenant
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    let reason = 'user_request';
+    if (hasJsonContentType(req)) {
+      try {
+        const body = await parseJsonBody(req);
+        if (body?.reason) reason = String(body.reason);
+      } catch (e) {
+        // ignora
+      }
+    }
+
+    const result = await returnTicketToBot(id, req.agent, reason);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error || 'handover_failed' });
+      return;
+    }
+
+    // Auditoria
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      tenantId: req.tenantId,
+      action: 'ticket_return_to_bot',
+      resource: 'ticket',
+      resourceId: id,
+      details: { reason },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, result.ticket);
     return;
   }
 
@@ -11302,6 +11423,16 @@ if (require.main === module) {
         startOutboundWorker({ intervalMs: 1500, batchSize: 25 });
       } catch (err) {
         logger.warn('[OutboundQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
+      }
+    }
+
+    // Auto-return-to-bot (best-effort)
+    if (process.env.ENABLE_AUTO_RETURN_TO_BOT !== 'false') {
+      const inactivityMinutes = parseInt(process.env.AUTO_RETURN_TO_BOT_MINUTES || '30', 10);
+      try {
+        startAutoReturnToBot({ inactivityMinutes, intervalMs: 15000 });
+      } catch (err) {
+        logger.warn('[Handover] Falha ao iniciar autoReturnToBot (ignorado)', { error: err.message });
       }
     }
   }).catch((error) => {

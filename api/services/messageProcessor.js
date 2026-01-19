@@ -193,7 +193,11 @@ async function processWhatsAppMessage(message, value, deps) {
 
   // Verifica se já existe ticket ativo (handoff em andamento)
   const existingTicket = getTicketBySession(sessionId);
-  if (existingTicket && existingTicket.status !== 'closed') {
+  // Regra do handover (Fase 2):
+  // - ticket.mode=human => engine não responde automaticamente
+  // - ticket.mode=bot => engine continua (ticket existe, mas bot está no controle)
+  const ticketMode = existingTicket ? (existingTicket.mode || 'human') : null;
+  if (existingTicket && existingTicket.status !== 'closed' && ticketMode === 'human') {
     if (replay) {
       replay.recordEvent('ticket_active', { ticketId: existingTicket.id });
       replay.stop();

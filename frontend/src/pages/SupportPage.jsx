@@ -8,6 +8,8 @@ import {
   getTicketMessages,
   markTicketAsRead,
   createTicket,
+  takeOverTicket,
+  returnToBotTicket,
 } from '../api/tickets';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
@@ -44,6 +46,7 @@ export function SupportPage() {
   const [newConversationPhone, setNewConversationPhone] = useState('');
   const [newConversationMessage, setNewConversationMessage] = useState('');
   const [newConversationQueue, setNewConversationQueue] = useState('');
+  const [handoverLoading, setHandoverLoading] = useState(false);
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -506,6 +509,45 @@ export function SupportPage() {
     }
   };
 
+  // Handover: bot <-> humano
+  const handleTakeOver = async () => {
+    if (!selectedTicket) return;
+    setHandoverLoading(true);
+    try {
+      const updated = await takeOverTicket(selectedTicket.id, 'agent_takeover');
+      showToastRef.current('Atendimento assumido (modo humano)', 'success', 2500);
+      setSelectedTicket(updated);
+      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      if (loadTicketMessagesRef.current) {
+        loadTicketMessagesRef.current(updated.id);
+      }
+    } catch (error) {
+      logger.error('Erro ao assumir atendimento', error);
+      showToast('Erro ao assumir atendimento', 'error');
+    } finally {
+      setHandoverLoading(false);
+    }
+  };
+
+  const handleReturnToBot = async () => {
+    if (!selectedTicket) return;
+    setHandoverLoading(true);
+    try {
+      const updated = await returnToBotTicket(selectedTicket.id, 'user_request');
+      showToastRef.current('Atendimento devolvido ao bot (modo bot)', 'success', 2500);
+      setSelectedTicket(updated);
+      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      if (loadTicketMessagesRef.current) {
+        loadTicketMessagesRef.current(updated.id);
+      }
+    } catch (error) {
+      logger.error('Erro ao devolver ao bot', error);
+      showToast('Erro ao devolver ao bot', 'error');
+    } finally {
+      setHandoverLoading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -719,9 +761,42 @@ export function SupportPage() {
                   <div>Fila: <strong>{selectedTicket.queue}</strong></div>
                   <div>Telefone: <strong>{formatPhoneNumber(selectedTicket.phoneNumber)}</strong></div>
                   <div>Status: <strong>{selectedTicket.status}</strong></div>
+                  <div>
+                    Modo: <strong>{(selectedTicket.mode || 'human') === 'human' ? 'Humano' : 'Bot'}</strong>
+                    {selectedTicket.pauseReason ? (
+                      <span style={{ color: '#666' }}> • Motivo: {selectedTicket.pauseReason}</span>
+                    ) : null}
+                  </div>
                   <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
                 </div>
               </div>
+
+              {/* Handover Bot <-> Humano */}
+              <div style={{ flexShrink: 0, display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                {(selectedTicket.mode || 'human') === 'bot' ? (
+                  <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-button-full">
+                    Assumir atendimento
+                  </Button>
+                ) : (
+                  <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">
+                    Devolver ao bot
+                  </Button>
+                )}
+              </div>
+
+              {/* Histórico de handover (últimos 5) */}
+              {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 && (
+                <div style={{ marginBottom: '10px', fontSize: '12px', color: '#555' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Histórico de handover</div>
+                  {selectedTicket.context.handoverHistory.slice(-5).map((h, idx) => (
+                    <div key={`${h.timestamp}-${idx}`}>
+                      {formatDate(h.timestamp)} • {h.mode === 'human' ? 'Humano' : 'Bot'}
+                      {h.actorUsername ? ` • ${h.actorUsername}` : ''}
+                      {h.reason ? ` • ${h.reason}` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Histórico de Mensagens */}
               {selectedTicket.status === 'in_progress' && (
