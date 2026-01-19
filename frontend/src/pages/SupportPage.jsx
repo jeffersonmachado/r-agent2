@@ -467,7 +467,21 @@ export function SupportPage() {
     if (typeof body.text === 'string') return body.text;
     if (typeof body.caption === 'string') return body.caption;
     if (body.text && typeof body.text === 'object' && typeof body.text.body === 'string') return body.text.body;
+    // WhatsApp: caption pode vir em body.image.caption / body.document.caption / etc.
+    if (body.image && typeof body.image === 'object' && typeof body.image.caption === 'string') return body.image.caption;
+    if (body.document && typeof body.document === 'object' && typeof body.document.caption === 'string') return body.document.caption;
+    if (body.video && typeof body.video === 'object' && typeof body.video.caption === 'string') return body.video.caption;
     return '';
+  }
+
+  function safeStringify(obj, maxLen = 2000) {
+    try {
+      const s = JSON.stringify(obj, null, 2);
+      if (typeof s !== 'string') return '';
+      return s.length > maxLen ? `${s.slice(0, maxLen)}\n…` : s;
+    } catch {
+      return '';
+    }
   }
 
   function summarizeChannelMessage(channelMsg) {
@@ -492,6 +506,177 @@ export function SupportPage() {
     } catch {
       return '[mensagem]';
     }
+  }
+
+  function renderTimelineMessageContent(msg) {
+    if (!msg || msg.source !== 'channel' || !msg.channel) {
+      return <>{msg?.text}</>;
+    }
+
+    const cm = msg.channel;
+    const type = String(cm?.type || '').toLowerCase();
+    const body = cm?.body || {};
+    const text = safeGetBodyText(body);
+
+    const commonMeta = (() => {
+      // Instagram: attachments normalmente têm payload.url
+      if (Array.isArray(body.attachments) && body.attachments[0]?.payload?.url) {
+        return { url: String(body.attachments[0].payload.url) };
+      }
+      // Outbound Instagram que persistimos: body.url
+      if (typeof body.url === 'string') return { url: body.url };
+      return {};
+    })();
+
+    if (type === 'text') {
+      return <>{text}</>;
+    }
+
+    if (type === 'interactive') {
+      const interactive = body.interactive || body.raw?.interactive || {};
+      const buttonTitle = interactive?.button_reply?.title || null;
+      const listTitle = interactive?.list_reply?.title || null;
+      const chosen = buttonTitle || listTitle;
+
+      return (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>
+            Interativo
+          </div>
+          {chosen ? (
+            <div style={{ marginBottom: '6px' }}>
+              Resposta: <strong>{String(chosen)}</strong>
+            </div>
+          ) : null}
+          <details style={{ marginTop: '6px' }}>
+            <summary style={{ cursor: 'pointer', color: '#555' }}>Ver payload</summary>
+            <pre style={{ marginTop: '8px', fontSize: '12px', whiteSpace: 'pre-wrap' }}>
+              {safeStringify(interactive || body, 3000) || '[sem payload]'}
+            </pre>
+          </details>
+        </div>
+      );
+    }
+
+    if (type === 'image') {
+      const image = body.image || body.raw?.image || {};
+      const caption = safeGetBodyText(body) || '';
+      const url = commonMeta.url || image?.link || null;
+      const mime = image?.mime_type || null;
+      const id = image?.id || null;
+      return (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Imagem</div>
+          {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
+          {url ? (
+            <div style={{ marginTop: '6px' }}>
+              <a href={url} target="_blank" rel="noreferrer">Abrir imagem</a>
+              <div style={{ marginTop: '8px' }}>
+                <img src={url} alt={caption || 'imagem'} style={{ maxWidth: '260px', borderRadius: '8px', border: '1px solid #eee' }} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {mime ? <span>{String(mime)}</span> : null}
+              {mime && id ? <span> • </span> : null}
+              {id ? <span>media_id: <code>{String(id)}</code></span> : null}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (type === 'document') {
+      const doc = body.document || body.raw?.document || {};
+      const caption = safeGetBodyText(body) || '';
+      const url = commonMeta.url || doc?.link || null;
+      const filename = doc?.filename || null;
+      const mime = doc?.mime_type || null;
+      const id = doc?.id || null;
+      return (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Documento</div>
+          {filename ? <div style={{ marginBottom: '4px' }}><strong>{String(filename)}</strong></div> : null}
+          {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
+          {url ? (
+            <a href={url} target="_blank" rel="noreferrer">Abrir documento</a>
+          ) : (
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {mime ? <span>{String(mime)}</span> : null}
+              {mime && id ? <span> • </span> : null}
+              {id ? <span>media_id: <code>{String(id)}</code></span> : null}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (type === 'audio' || type === 'voice') {
+      const audio = body.audio || body.raw?.audio || {};
+      const url = commonMeta.url || audio?.link || null;
+      const mime = audio?.mime_type || null;
+      const id = audio?.id || null;
+      return (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Áudio</div>
+          {url ? (
+            <div>
+              <a href={url} target="_blank" rel="noreferrer">Abrir áudio</a>
+              <div style={{ marginTop: '8px' }}>
+                <audio controls src={url} style={{ width: '260px' }} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {mime ? <span>{String(mime)}</span> : null}
+              {mime && id ? <span> • </span> : null}
+              {id ? <span>media_id: <code>{String(id)}</code></span> : null}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (type === 'video') {
+      const video = body.video || body.raw?.video || {};
+      const caption = safeGetBodyText(body) || '';
+      const url = commonMeta.url || video?.link || null;
+      const mime = video?.mime_type || null;
+      const id = video?.id || null;
+      return (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Vídeo</div>
+          {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
+          {url ? (
+            <div>
+              <a href={url} target="_blank" rel="noreferrer">Abrir vídeo</a>
+              <div style={{ marginTop: '8px' }}>
+                <video controls src={url} style={{ maxWidth: '260px', borderRadius: '8px' }} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {mime ? <span>{String(mime)}</span> : null}
+              {mime && id ? <span> • </span> : null}
+              {id ? <span>media_id: <code>{String(id)}</code></span> : null}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Fallback: mostra texto resumido e payload em detalhes
+    return (
+      <div>
+        <div style={{ marginBottom: '6px' }}>{msg.text}</div>
+        <details>
+          <summary style={{ cursor: 'pointer', color: '#555' }}>Ver payload</summary>
+          <pre style={{ marginTop: '8px', fontSize: '12px', whiteSpace: 'pre-wrap' }}>
+            {safeStringify(body, 3000) || '[sem payload]'}
+          </pre>
+        </details>
+      </div>
+    );
   }
 
   function buildTimelineMessages(ticketMsgs = [], channelMsgs = []) {
@@ -1286,7 +1471,7 @@ export function SupportPage() {
                             ) : null}
                           </div>
                           <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
-                            {msg.text}
+                            {renderTimelineMessageContent(msg)}
                           </div>
                         </div>
                       ))
