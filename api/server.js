@@ -4870,6 +4870,45 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /channel-accounts/:id/test - Testa credenciais do canal (best-effort)
+  // IMPORTANTE: deve vir ANTES do PUT /channel-accounts/:id
+  if (method === 'POST' && pathname.startsWith('/channel-accounts/') && pathname.endsWith('/test')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/channel-accounts/'.length).replace('/test', ''));
+      const { testAccountConnection } = require('./services/channelAccountsService');
+      const result = await testAccountConnection({ tenantId: req.tenantId, id, timeoutMs: 8000 });
+      if (!result.success) {
+        if (result.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found' });
+          return;
+        }
+        if (result.error === 'missing_config') {
+          sendJson(res, 400, { error: 'missing_config', missing: result.missing || [] });
+          return;
+        }
+        sendJson(res, 502, { error: result.error || 'upstream_error', message: result.message, details: result.details, statusCode: result.statusCode });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao testar channel-account', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
   // PUT /channel-accounts/:id
   if (method === 'PUT' && pathname.startsWith('/channel-accounts/')) {
     const authResult = requireAuth(req);

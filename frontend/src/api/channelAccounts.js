@@ -27,3 +27,9 @@ export async function deleteChannelAccount(id) {
   });
 }
 
+export async function testChannelAccount(id) {
+  return fetchJson(`/channel-accounts/${encodeURIComponent(id)}/test`, {
+    method: 'POST',
+  });
+}
+
