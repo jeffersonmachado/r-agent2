@@ -37,7 +37,7 @@ function dbAvailable() {
  * @param {string} [options.endDate] - Data final (ISO string)
  * @returns {Object}
  */
-function getGeneralMetrics(options = {}) {
+async function getGeneralMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
   
   const allTickets = listAllTickets({ tenantId });
