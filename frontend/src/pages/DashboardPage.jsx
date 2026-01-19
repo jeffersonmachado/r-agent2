@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../hooks/useRouter';
 import { useAuth } from '../context/authContext';
 import { NavigationLink } from '../components/NavigationLink';
+import { getGeneralMetrics } from '../api/analytics';
+import logger from '../utils/logger';
 
 /**
  * Página Dashboard - Hub central com todas as funcionalidades
@@ -11,6 +13,52 @@ export function DashboardPage() {
   const { agent } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [kpis, setKpis] = useState(null);
+  const [kpiError, setKpiError] = useState(null);
+  const [kpiLoading, setKpiLoading] = useState(true);
+
+  function formatSecondsCompact(sec) {
+    if (sec === null || sec === undefined) return '-';
+    const n = Number(sec);
+    if (!Number.isFinite(n)) return '-';
+    if (n < 60) return `${Math.round(n)}s`;
+    const m = Math.floor(n / 60);
+    const s = Math.round(n % 60);
+    if (m < 60) return `${m}m ${s}s`;
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    return `${h}h ${mm}m`;
+  }
+
+  function formatPct(x) {
+    if (x === null || x === undefined) return '-';
+    const n = Number(x);
+    if (!Number.isFinite(n)) return '-';
+    return `${(n * 100).toFixed(1)}%`;
+  }
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setKpiLoading(true);
+        setKpiError(null);
+        const data = await getGeneralMetrics();
+        if (!mounted) return;
+        setKpis(data);
+      } catch (err) {
+        logger.error('[Dashboard] Erro ao carregar KPIs', err);
+        if (!mounted) return;
+        setKpiError('Erro ao carregar KPIs');
+        setKpis(null);
+      } finally {
+        if (mounted) setKpiLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const features = [
     {
@@ -267,6 +315,51 @@ export function DashboardPage() {
           Bem-vindo, {agent?.name || agent?.username}! Acesse todas as funcionalidades do sistema.
         </p>
       </div>
+
+      {/* KPIs operacionais (Blip-like) */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+          <div className="text-xs text-text-tertiary">Tickets abertos</div>
+          <div className="text-2xl font-semibold text-text-primary">
+            {kpiLoading ? '…' : (kpis?.openTickets ?? '-')}
+          </div>
+          <div className="text-xs text-text-secondary">waiting + in_progress</div>
+        </div>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+          <div className="text-xs text-text-tertiary">Em atendimento</div>
+          <div className="text-2xl font-semibold text-text-primary">
+            {kpiLoading ? '…' : (kpis?.inProgressTickets ?? '-')}
+          </div>
+          <div className="text-xs text-text-secondary">in_progress</div>
+        </div>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+          <div className="text-xs text-text-tertiary">TME</div>
+          <div className="text-2xl font-semibold text-text-primary">
+            {kpiLoading ? '…' : formatSecondsCompact(kpis?.avgFirstResponseTimeSeconds)}
+          </div>
+          <div className="text-xs text-text-secondary">tempo médio 1ª resposta</div>
+        </div>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+          <div className="text-xs text-text-tertiary">TMA</div>
+          <div className="text-2xl font-semibold text-text-primary">
+            {kpiLoading ? '…' : formatSecondsCompact(kpis?.avgHandlingTimeSeconds)}
+          </div>
+          <div className="text-xs text-text-secondary">tempo médio atendimento</div>
+        </div>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+          <div className="text-xs text-text-tertiary">Contenção</div>
+          <div className="text-2xl font-semibold text-text-primary">
+            {kpiLoading ? '…' : formatPct(kpis?.botContainmentRate)}
+          </div>
+          <div className="text-xs text-text-secondary">conversas sem ticket</div>
+        </div>
+      </div>
+
+      {kpiError ? (
+        <div className="mb-6 p-3 rounded-md bg-status-error/10 border border-status-error/20 text-status-error text-sm">
+          {kpiError}
+        </div>
+      ) : null}
 
       {/* Filtros */}
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
