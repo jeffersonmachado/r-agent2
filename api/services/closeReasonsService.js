@@ -137,10 +137,62 @@ async function createCloseReason({ tenantId, name, createdBy = null }) {
   return { success: true, reason };
 }
 
+function getCloseReasonByName(tenantId, name) {
+  if (!tenantId || !name) return null;
+  const t = String(tenantId);
+  const n = String(name).trim().toLowerCase();
+  if (!n) return null;
+  for (const r of reasons.values()) {
+    if (!r) continue;
+    if (r.tenantId !== t) continue;
+    if (String(r.name || '').trim().toLowerCase() === n) return r;
+  }
+  return null;
+}
+
+async function ensureDefaultsForTenant(tenantId) {
+  if (!tenantId) return;
+  const t = String(tenantId);
+  const existing = Array.from(reasons.values()).filter(r => r && r.tenantId === t);
+  if (existing.length > 0) return;
+
+  const defaults = [
+    'Resolvido',
+    'Dúvida sanada',
+    'Sem resposta do cliente',
+    'Encaminhado para outro canal',
+    // Padrão de compatibilidade para integrações antigas (quando não vem motivo)
+    'Sem motivo informado',
+  ];
+
+  for (const name of defaults) {
+    // eslint-disable-next-line no-await-in-loop
+    const found = getCloseReasonByName(t, name);
+    if (found) continue;
+    // eslint-disable-next-line no-await-in-loop
+    await createCloseReason({ tenantId: t, name, createdBy: 'system' });
+  }
+}
+
+async function getOrCreateCloseReasonByName({ tenantId, name, createdBy = null }) {
+  if (!tenantId) return { success: false, error: 'tenantId é obrigatório' };
+  if (!name || !String(name).trim()) return { success: false, error: 'name é obrigatório' };
+
+  await ensureDefaultsForTenant(tenantId);
+  const existing = getCloseReasonByName(tenantId, name);
+  if (existing) return { success: true, reason: existing, created: false };
+
+  const created = await createCloseReason({ tenantId, name, createdBy });
+  if (!created.success) return created;
+  return { success: true, reason: created.reason, created: true };
+}
+
 module.exports = {
   initialize,
   listCloseReasons,
   getCloseReason,
   createCloseReason,
+  ensureDefaultsForTenant,
+  getOrCreateCloseReasonByName,
 };
 

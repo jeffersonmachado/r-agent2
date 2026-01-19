@@ -5536,38 +5536,70 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    // Motivo de encerramento (opcional, compatível com chamadas antigas sem body)
+    // Motivo de encerramento:
+    // - UI exige, mas mantemos compatibilidade para chamadas antigas sem body.
+    // - Se não vier motivo, usamos/garantimos um motivo padrão do tenant ("Sem motivo informado").
+    let closeReason = null;
+    let closeReasonId = null;
+    let closeReasonName = null;
     if (hasJsonContentType(req)) {
       try {
         const body = await parseJsonBody(req);
-        const closeReasonId = body?.closeReasonId ? String(body.closeReasonId) : null;
-        const closeReasonName = body?.closeReasonName ? String(body.closeReasonName) : null;
-
-        let closeReason = null;
-        if (closeReasonId) {
-          closeReason = closeReasonsService.getCloseReason(closeReasonId);
-        }
-        if (!closeReason && closeReasonName) {
-          closeReason = { id: null, name: closeReasonName };
-        }
-
-        if (closeReason) {
-          // atualiza ticket para que closeTicket escreva system message com motivo
-          const { updateTicket } = require('./services/queueService');
-          updateTicket(id, {
-            context: {
-              ...(ticket.context || {}),
-              closeReason: { id: closeReason.id || null, name: closeReason.name },
-              closeReasonName: closeReason.name,
-              closedBy: { id: req.agent.id, username: req.agent.username },
-              closedAt: new Date().toISOString(),
-            },
-          });
-        }
+        closeReasonId = body?.closeReasonId ? String(body.closeReasonId) : null;
+        closeReasonName = body?.closeReasonName ? String(body.closeReasonName) : null;
       } catch (e) {
         // ignora body inválido
       }
     }
+
+    // Garante que o tenant tenha motivos padrão (best-effort)
+    try {
+      await closeReasonsService.ensureDefaultsForTenant(req.tenantId);
+    } catch (_) {}
+
+    if (closeReasonId) {
+      closeReason = closeReasonsService.getCloseReason(closeReasonId);
+    }
+    if (!closeReason && closeReasonName) {
+      // Garante persistência para o tenant quando o usuário digita um motivo livre
+      try {
+        const created = await closeReasonsService.getOrCreateCloseReasonByName({
+          tenantId: req.tenantId,
+          name: closeReasonName,
+          createdBy: req.agent.id,
+        });
+        if (created?.success) closeReason = created.reason;
+      } catch (_) {
+        closeReason = { id: null, name: closeReasonName };
+      }
+    }
+    if (!closeReason) {
+      // Compatibilidade: sempre encerra com um motivo consistente
+      try {
+        const created = await closeReasonsService.getOrCreateCloseReasonByName({
+          tenantId: req.tenantId,
+          name: 'Sem motivo informado',
+          createdBy: 'system',
+        });
+        if (created?.success) closeReason = created.reason;
+      } catch (_) {
+        closeReason = { id: null, name: 'Sem motivo informado' };
+      }
+    }
+
+    // Atualiza ticket para que closeTicket escreva system message com motivo
+    try {
+      const { updateTicket } = require('./services/queueService');
+      updateTicket(id, {
+        context: {
+          ...(ticket.context || {}),
+          closeReason: closeReason ? { id: closeReason.id || null, name: closeReason.name } : null,
+          closeReasonName: closeReason?.name || null,
+          closedBy: { id: req.agent.id, username: req.agent.username },
+          closedAt: new Date().toISOString(),
+        },
+      });
+    } catch (_) {}
 
     const closedTicket = closeTicket(id);
     if (!closedTicket) {

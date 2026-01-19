@@ -593,6 +593,14 @@ export function SupportPage() {
 
   const handleConfirmClose = async () => {
     if (!closingTicketId) return;
+
+    // Motivo obrigatório (Blip-like): usuário precisa selecionar ou digitar
+    const hasReason = !!(String(selectedCloseReasonId || '').trim() || String(selectedCloseReasonName || '').trim());
+    if (!hasReason) {
+      showToast('Informe o motivo de encerramento', 'warning');
+      return;
+    }
+
     const confirmed = await confirm({
       title: 'Fechar Ticket',
       message: 'Deseja realmente fechar este ticket? Esta ação não pode ser desfeita.',
@@ -1334,7 +1342,7 @@ export function SupportPage() {
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Motivo de encerramento (opcional)
+                Motivo de encerramento *
               </label>
               <select
                 value={selectedCloseReasonId}
