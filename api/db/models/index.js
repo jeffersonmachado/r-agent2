@@ -25,6 +25,7 @@ const getRagDocument = require('./RagDocument');
 const getQueue = require('./Queue');
 const getCloseReason = require('./CloseReason');
 const getTicketTag = require('./TicketTag');
+const getFlowTemplate = require('./FlowTemplate');
 const getChannelAccount = require('./ChannelAccount');
 const getChannelConversation = require('./ChannelConversation');
 const getChannelMessage = require('./ChannelMessage');
@@ -53,6 +54,7 @@ const RagDocument = () => getRagDocument();
 const Queue = () => getQueue();
 const CloseReason = () => getCloseReason();
 const TicketTag = () => getTicketTag();
+const FlowTemplate = () => getFlowTemplate();
 const ChannelAccount = () => getChannelAccount();
 const ChannelConversation = () => getChannelConversation();
 const ChannelMessage = () => getChannelMessage();
@@ -88,6 +90,7 @@ function defineRelationships() {
   const QueueModel = Queue();
   const CloseReasonModel = CloseReason();
   const TicketTagModel = TicketTag();
+  const FlowTemplateModel = FlowTemplate();
   const ChannelAccountModel = ChannelAccount();
   const ChannelConversationModel = ChannelConversation();
   const ChannelMessageModel = ChannelMessage();
@@ -187,6 +190,7 @@ function defineRelationships() {
   // No explicit relationships for TenantContext/Department/QuickReply/Webhook/RagDocument (tenant_key-based)
   // No explicit relationships for Queue (tenant_key-based)
   // No explicit relationships for CloseReason/TicketTag (tenant_key-based)
+  // No explicit relationships for FlowTemplate (tenant_key-based)
   // No explicit relationships for ChannelAccount/ChannelConversation/ChannelMessage/OutboundQueueItem (tenant_key-based)
 }
 
@@ -213,6 +217,7 @@ module.exports = {
   Queue,
   CloseReason,
   TicketTag,
+  FlowTemplate,
   ChannelAccount,
   ChannelConversation,
   ChannelMessage,
@@ -241,6 +246,7 @@ module.exports = {
   getQueue,
   getCloseReason,
   getTicketTag,
+  getFlowTemplate,
   getChannelAccount,
   getChannelConversation,
   getChannelMessage,

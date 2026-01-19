@@ -16,6 +16,24 @@ import { fetchJson } from '../api/client';
 let templatesCache = null;
 let loadPromise = null;
 
+async function fetchMarketplaceTemplateList() {
+  const resp = await fetchJson('/flow-templates', { method: 'GET' });
+  return resp?.templates || [];
+}
+
+async function fetchLegacyTemplateList() {
+  const list = await fetchJson('/templates', { method: 'GET' });
+  return Array.isArray(list) ? list : [];
+}
+
+async function fetchMarketplaceTemplate(id) {
+  return fetchJson(`/flow-templates/${encodeURIComponent(id)}`, { method: 'GET' });
+}
+
+async function fetchLegacyTemplate(id) {
+  return fetchJson(`/templates/${encodeURIComponent(id)}`, { method: 'GET' });
+}
+
 /**
  * Carrega todos os templates dos arquivos JSON
  * Descobre automaticamente quais templates existem no diretório
@@ -34,22 +52,27 @@ async function loadTemplates() {
 
   loadPromise = (async () => {
     try {
-      // Primeiro, obtém a lista de templates disponíveis do backend
-      const templateList = await fetchJson('/templates', {
-        method: 'GET',
-      });
-
-      logger.debug('Lista de templates obtida do backend', { count: templateList.length });
+      // Primeiro tenta o marketplace (DB). Se falhar, usa legado (/templates).
+      let templateList = [];
+      try {
+        templateList = await fetchMarketplaceTemplateList();
+        logger.debug('Lista de templates (marketplace) obtida do backend', { count: templateList.length });
+      } catch (err) {
+        templateList = await fetchLegacyTemplateList();
+        logger.debug('Lista de templates (legado) obtida do backend', { count: templateList.length });
+      }
 
       // Agora carrega cada template completo do backend
       const templates = [];
 
       for (const templateInfo of templateList) {
         try {
-          // Busca o template completo via API do backend
-          const template = await fetchJson(`/templates/${encodeURIComponent(templateInfo.id)}`, {
-            method: 'GET',
-          });
+          let template = null;
+          try {
+            template = await fetchMarketplaceTemplate(templateInfo.id);
+          } catch (err) {
+            template = await fetchLegacyTemplate(templateInfo.id);
+          }
           
           if (template && template.id && template.name && template.flow) {
             templates.push(template);
@@ -148,9 +171,13 @@ export async function deleteTemplate(templateId) {
   logger.info('Removendo template', { templateId });
 
   try {
-    const result = await fetchJson(`/templates/${encodeURIComponent(templateId)}`, {
-      method: 'DELETE',
-    });
+    let result;
+    try {
+      result = await fetchJson(`/flow-templates/${encodeURIComponent(templateId)}`, { method: 'DELETE' });
+    } catch (err) {
+      // fallback legado
+      result = await fetchJson(`/templates/${encodeURIComponent(templateId)}`, { method: 'DELETE' });
+    }
 
     // Limpa o cache após remover
     clearTemplatesCache();
@@ -160,5 +187,26 @@ export async function deleteTemplate(templateId) {
   } catch (error) {
     logger.error('Erro ao remover template', { templateId, error });
     throw error;
+  }
+}
+
+/**
+ * Instala um template criando/persistindo um flow via backend (marketplace).
+ * Fallback: cria flow localmente a partir do template.
+ */
+export async function installFlowFromTemplate(template, customId = null, customName = null) {
+  if (!template) {
+    return Promise.reject(new Error('installFlowFromTemplate: template é obrigatório'));
+  }
+
+  try {
+    const flow = await fetchJson(`/flow-templates/${encodeURIComponent(template.id)}/install`, {
+      method: 'POST',
+      body: JSON.stringify({ id: customId || undefined, name: customName || undefined }),
+    });
+    return flow;
+  } catch (err) {
+    // Fallback local
+    return createFlowFromTemplate(template, customId, customName);
   }
 }

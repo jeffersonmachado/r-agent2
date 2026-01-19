@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { getFlowTemplates, createFlowFromTemplate, clearTemplatesCache, deleteTemplate } from '../templates/flowTemplates';
+import React, { useState, useEffect, useMemo } from 'react';
+import { getFlowTemplates, createFlowFromTemplate, clearTemplatesCache, deleteTemplate, installFlowFromTemplate } from '../templates/flowTemplates';
 import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
 import { Dialog } from './Dialog';
@@ -19,7 +19,9 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
   const [templateToDelete, setTemplateToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [filterText, setFilterText] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   // Carrega templates ao montar o componente ou quando refreshTrigger mudar
   useEffect(() => {
@@ -49,7 +51,7 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
     setCustomId('');
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     logger.info('Botão Criar Fluxo clicado', { 
       hasTemplate: !!selectedTemplate,
       templateId: selectedTemplate?.id,
@@ -62,28 +64,43 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
       return;
     }
 
-    logger.debug('Criando fluxo do template', { 
-      templateId: selectedTemplate.id,
-      templateName: selectedTemplate.name 
-    });
+    setCreating(true);
+    try {
+      logger.debug('Instalando fluxo do template', { 
+        templateId: selectedTemplate.id,
+        templateName: selectedTemplate.name 
+      });
 
-    const flow = createFlowFromTemplate(
-      selectedTemplate,
-      customId || undefined,
-      customName || undefined,
-    );
+      const flow = await installFlowFromTemplate(
+        selectedTemplate,
+        customId || undefined,
+        customName || undefined,
+      );
 
-    logger.info('Fluxo criado do template', { 
-      flowId: flow?.id,
-      flowName: flow?.name,
-      nodeCount: flow?.nodes?.length || 0 
-    });
+      logger.info('Fluxo instalado do template', { 
+        flowId: flow?.id,
+        flowName: flow?.name,
+        nodeCount: flow?.nodes?.length || flow?.data?.nodes?.length || 0
+      });
 
-    if (onTemplateSelected) {
-      logger.debug('Chamando onTemplateSelected callback', { flowId: flow?.id });
-      onTemplateSelected(flow);
-    } else {
-      logger.error('onTemplateSelected não está definido!');
+      if (onTemplateSelected) {
+        logger.debug('Chamando onTemplateSelected callback', { flowId: flow?.id });
+        onTemplateSelected(flow);
+      } else {
+        logger.error('onTemplateSelected não está definido!');
+      }
+    } catch (err) {
+      logger.error('Erro ao instalar fluxo do template, usando fallback local', err);
+      const flow = createFlowFromTemplate(
+        selectedTemplate,
+        customId || undefined,
+        customName || undefined,
+      );
+      if (onTemplateSelected) {
+        onTemplateSelected(flow);
+      }
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -180,12 +197,26 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
             {selectedTemplate.description}
           </div>
 
+          {Array.isArray(selectedTemplate.tags) && selectedTemplate.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedTemplate.tags.map((t) => (
+                <span key={t} className="px-2 py-1 text-[11px] rounded-full bg-bg-tertiary border border-border-default text-text-secondary">
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="text-[11px] text-text-tertiary">
+            Prévia: {selectedTemplate.flow?.nodes?.length || selectedTemplate.flow?.data?.nodes?.length || 0} nós
+          </div>
+
           <div className="flex gap-2 justify-end pt-4">
             <Button variant="ghost" onClick={handleCancel}>
               Cancelar
             </Button>
-            <Button variant="primary" onClick={handleCreate}>
-              Criar Fluxo
+            <Button variant="primary" onClick={handleCreate} disabled={creating}>
+              {creating ? 'Criando...' : 'Criar Fluxo'}
             </Button>
           </div>
         </div>
@@ -226,17 +257,28 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
     );
   }
 
+  const availableTags = useMemo(() => {
+    const set = new Set();
+    for (const t of templates) {
+      for (const tag of (t.tags || [])) set.add(tag);
+    }
+    return Array.from(set).sort();
+  }, [templates]);
+
   // Filtra templates baseado no texto de busca
   const filteredTemplates = templates.filter((template) => {
+    const matchesTag = tagFilter ? (template.tags || []).includes(tagFilter) : true;
     if (!filterText.trim()) {
-      return true;
+      return matchesTag;
     }
     const searchText = filterText.toLowerCase();
-    return (
+    const matchesText = (
       template.name.toLowerCase().includes(searchText) ||
       template.description.toLowerCase().includes(searchText) ||
-      (template.id && template.id.toLowerCase().includes(searchText))
+      (template.id && template.id.toLowerCase().includes(searchText)) ||
+      (template.tags || []).some(t => String(t).toLowerCase().includes(searchText))
     );
+    return matchesTag && matchesText;
   });
 
   return (
@@ -289,6 +331,31 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
               </button>
             )}
           </div>
+
+          {/* Filtro por tags */}
+          {availableTags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setTagFilter('')}
+                className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${tagFilter ? 'bg-bg-tertiary border-border-default text-text-secondary hover:bg-bg-hover' : 'bg-accent-primary/10 border-accent-primary text-accent-primary'}`}
+                title="Mostrar todas"
+              >
+                Todas
+              </button>
+              {availableTags.slice(0, 20).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setTagFilter(tagFilter === tag ? '' : tag)}
+                  className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${tagFilter === tag ? 'bg-accent-primary/10 border-accent-primary text-accent-primary' : 'bg-bg-tertiary border-border-default text-text-secondary hover:bg-bg-hover'}`}
+                  title={`Filtrar por ${tag}`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
           
           {filterText && (
             <div className="text-xs text-text-tertiary">
@@ -331,15 +398,26 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
                   <div className="text-[11px] text-text-tertiary text-center leading-snug">
                     {template.description}
                   </div>
+                  {Array.isArray(template.tags) && template.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 justify-center mt-2">
+                      {template.tags.slice(0, 4).map((t) => (
+                        <span key={t} className="px-2 py-0.5 text-[10px] rounded-full bg-bg-secondary border border-border-default text-text-tertiary">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={(e) => handleDeleteClick(e, template)}
-                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-status-error/10 hover:bg-status-error/20 text-status-error opacity-0 group-hover:opacity-100 transition-opacity duration-fast flex items-center justify-center text-xs font-bold"
-                  title="Remover template"
-                  disabled={deleting}
-                >
-                  ×
-                </button>
+                {(template.tenantId && template.tenantId !== 'system') && (
+                  <button
+                    onClick={(e) => handleDeleteClick(e, template)}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-status-error/10 hover:bg-status-error/20 text-status-error opacity-0 group-hover:opacity-100 transition-opacity duration-fast flex items-center justify-center text-xs font-bold"
+                    title="Remover template"
+                    disabled={deleting}
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             ))}
           </div>

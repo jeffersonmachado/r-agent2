@@ -170,6 +170,7 @@ const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./servi
 const queueDefinitionService = require('./services/queueDefinitionService');
 const closeReasonsService = require('./services/closeReasonsService');
 const ticketInsightService = require('./services/ticketInsightService');
+const flowTemplateMarketplaceService = require('./services/flowTemplateMarketplaceService');
 const {
   getAllTags,
   getAllCategories,
@@ -6364,6 +6365,262 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // Gerenciamento de Templates
   // -----------------------------------------------------------------------
 
+  // -----------------------------------------------------------------------
+  // Template Marketplace (DB) - Fluxos
+  // -----------------------------------------------------------------------
+
+  // GET /flow-templates - Lista templates (globais + do tenant)
+  if (method === 'GET' && pathname === '/flow-templates') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'flows', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const tag = urlObj.searchParams.get('tag') || undefined;
+      const q = urlObj.searchParams.get('q') || urlObj.searchParams.get('search') || undefined;
+      const scope = urlObj.searchParams.get('scope') || 'all';
+      const activeOnly = urlObj.searchParams.get('activeOnly');
+
+      const templates = flowTemplateMarketplaceService.listTemplates({
+        tenantId: req.tenantId,
+        tag,
+        q,
+        scope,
+        activeOnly: activeOnly === null ? true : activeOnly !== 'false',
+      });
+
+      sendJson(res, 200, { templates });
+    } catch (err) {
+      logger.error('Erro ao listar flow-templates', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /flow-templates/:id - Obtém template completo (inclui flow)
+  if (method === 'GET' && pathname.startsWith('/flow-templates/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'flows', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/flow-templates/'.length));
+      if (!id || id.trim() === '') {
+        badRequest(res, 'ID do template é obrigatório');
+        return;
+      }
+
+      const tpl = flowTemplateMarketplaceService.getTemplate({ tenantId: req.tenantId, id });
+      if (!tpl) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      sendJson(res, 200, tpl);
+    } catch (err) {
+      logger.error('Erro ao obter flow-template', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+
+  // POST /flow-templates - Cria template do tenant (body inclui flow)
+  if (method === 'POST' && pathname === '/flow-templates') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'flows', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { id, name, description, icon, tags, flow } = body || {};
+
+      const result = await flowTemplateMarketplaceService.createTemplate({
+        tenantId: req.tenantId,
+        id: id ? String(id) : null,
+        name,
+        description,
+        icon,
+        tags,
+        flow,
+        createdBy: req.agent?.id || null,
+      });
+
+      if (!result.success) {
+        sendJson(res, 400, { error: result.error, details: result.details });
+        return;
+      }
+
+      sendJson(res, 201, { template: result.template });
+    } catch (err) {
+      logger.error('Erro ao criar flow-template', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // POST /flow-templates/:id/install - Cria um flow a partir do template e persiste
+  if (method === 'POST' && pathname.startsWith('/flow-templates/') && pathname.endsWith('/install')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'flows', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const templateId = decodeURIComponent(pathname.slice('/flow-templates/'.length, -'/install'.length));
+      const tpl = flowTemplateMarketplaceService.getTemplate({ tenantId: req.tenantId, id: templateId });
+      if (!tpl) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const customId = body?.id ? String(body.id) : null;
+      const customName = body?.name ? String(body.name) : null;
+
+      const random = crypto.randomBytes(6).toString('hex');
+      const flowId = customId || `${tpl.id}-${Date.now()}-${random}`;
+      const flowName = customName || `${tpl.name} (instalado)`;
+
+      const raw = {
+        ...(tpl.flow || {}),
+        id: flowId,
+        name: flowName,
+        tenantId: req.tenantId,
+        metadata: {
+          ...(tpl.flow?.metadata || {}),
+          createdFromTemplate: tpl.id,
+          createdAt: new Date().toISOString(),
+          createdBy: req.agent?.id || null,
+        },
+      };
+
+      const structureValidation = validateFlowStructure(raw);
+      if (!structureValidation.valid) {
+        badRequest(res, structureValidation.error || 'Estrutura do fluxo inválida');
+        return;
+      }
+
+      if (flows.has(raw.id)) {
+        sendJson(res, 409, {
+          error: 'flow_already_exists',
+          message: `Já existe um fluxo com o id "${raw.id}".`,
+        });
+        return;
+      }
+
+      const flow = ensureFlowHasMeta(raw, req.tenantId);
+
+      const validationResult = validateFlow(flow);
+      const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
+
+      flows.set(flow.id, flow);
+      persistFlowBestEffort(flow);
+
+      const tenantId = req.tenantId || flow.tenantId;
+      triggerWebhooks(tenantId, 'flow.created', {
+        flowId: flow.id,
+        flowName: flow.name,
+        agentId: req.agent?.id,
+        templateId: tpl.id,
+      }).catch((err) => {
+        logger.error('[Webhook] Erro ao disparar webhook para flow.created:', err);
+      });
+
+      emitEvent('flow.created', {
+        flowId: flow.id,
+        flowName: flow.name,
+        agentId: req.agent?.id,
+        templateId: tpl.id,
+      }, { tenantId });
+
+      const response = { ...flow };
+      if (hasValidationErrors) {
+        response.validationWarnings = {
+          valid: false,
+          errors: validationResult.errors,
+        };
+      }
+
+      sendJson(res, 201, response);
+    } catch (err) {
+      logger.error('Erro ao instalar flow-template', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // DELETE /flow-templates/:id - Remove template do tenant (não remove globais)
+  if (method === 'DELETE' && pathname.startsWith('/flow-templates/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'flows', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/flow-templates/'.length));
+      const result = await flowTemplateMarketplaceService.deleteTemplate({ tenantId: req.tenantId, id });
+      if (!result.success) {
+        sendJson(res, result.error === 'not_found' ? 404 : 403, { error: result.error });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao remover flow-template', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
   // GET /templates - Lista todos os templates disponíveis
   if (method === 'GET' && pathname === '/templates') {
     try {
@@ -11539,6 +11796,16 @@ async function startInitialization() {
       } catch (crErr) {
         console.warn('[Init] ⚠️  Aviso ao inicializar CloseReasonsService:', crErr.message);
         logger.warn('[Init] ⚠️  Aviso ao inicializar CloseReasonsService:', crErr.message);
+      }
+
+      // Inicializa marketplace de templates de fluxo (best-effort)
+      try {
+        await flowTemplateMarketplaceService.initialize();
+        console.log('[Init] ✅ FlowTemplateMarketplaceService inicializado');
+        logger.info('[Init] ✅ FlowTemplateMarketplaceService inicializado');
+      } catch (ftErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar FlowTemplateMarketplaceService:', ftErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar FlowTemplateMarketplaceService:', ftErr.message);
       }
 
       try {
