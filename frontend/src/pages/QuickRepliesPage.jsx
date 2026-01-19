@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { listQuickReplies, createQuickReply, updateQuickReply, deleteQuickReply, getCategories, getTags, searchQuickReplies } from '../api/quickReplies';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
@@ -7,6 +7,40 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
 import { formatDateTime } from '../utils/dateFormatter';
+
+function slugify(text) {
+  if (!text) return '';
+  return String(text)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 40);
+}
+
+function extractTemplateVars(text) {
+  if (!text) return [];
+  const vars = new Set();
+  String(text).replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_m, key) => {
+    if (key) vars.add(String(key));
+    return '';
+  });
+  return Array.from(vars.values()).sort();
+}
+
+function applyTemplateVariables(text, variables) {
+  if (!text) return '';
+  const vars = (variables && typeof variables === 'object') ? variables : {};
+  return String(text).replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_m, key) => {
+    const v = vars[key];
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') return String(v);
+    try { return JSON.stringify(v); } catch { return String(v); }
+  });
+}
 
 export function QuickRepliesPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -53,6 +87,22 @@ export function QuickRepliesPage() {
     tags: '',
     category: 'geral',
   });
+  const [previewVarsText, setPreviewVarsText] = useState('{\n  "nome": "Cliente",\n  "protocolo": "12345"\n}');
+  const previewVars = useMemo(() => {
+    try {
+      return JSON.parse(previewVarsText || '{}');
+    } catch {
+      return null;
+    }
+  }, [previewVarsText]);
+
+  const templateVars = useMemo(() => extractTemplateVars(formData.message), [formData.message]);
+  const shortcut = useMemo(() => (formData.title ? `/${slugify(formData.title)}` : ''), [formData.title]);
+  const previewMessage = useMemo(() => {
+    if (!formData.message) return '';
+    if (!previewVars) return formData.message;
+    return applyTemplateVariables(formData.message, previewVars);
+  }, [formData.message, previewVars]);
 
   useEffect(() => {
     loadData();
@@ -141,6 +191,7 @@ export function QuickRepliesPage() {
       category: 'geral',
     });
     setEditingReply(null);
+    setPreviewVarsText('{\n  "nome": "Cliente",\n  "protocolo": "12345"\n}');
   };
 
   const openEditModal = (reply) => {
@@ -267,6 +318,9 @@ export function QuickRepliesPage() {
                 <p className="text-text-secondary mb-3">
                   {reply.message}
                 </p>
+                <div className="text-xs text-text-tertiary mb-2">
+                  Atalho: <code>/{slugify(reply.title)}</code>
+                </div>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {reply.tags?.map(tag => (
                     <span
@@ -322,6 +376,11 @@ export function QuickRepliesPage() {
                   placeholder="Ex: Saudação Inicial"
                   className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
                 />
+                {formData.title ? (
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Atalho sugerido para uso no atendimento: <code>{shortcut}</code>
+                  </div>
+                ) : null}
               </div>
               
               <div>
@@ -331,10 +390,53 @@ export function QuickRepliesPage() {
                 <textarea
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Digite a mensagem..."
+                  placeholder={'Digite a mensagem...\nDica: use variáveis como {{nome}}'}
                   rows={4}
                   className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all resize-y"
                 />
+                <div className="mt-2 text-xs text-text-tertiary">
+                  Variáveis suportadas: <code>{'{{chave}}'}</code> (ex.: <code>{'{{nome}}'}</code>, <code>{'{{protocolo}}'}</code>)
+                  {templateVars.length > 0 ? (
+                    <div className="mt-1">
+                      Detectadas nesta mensagem: {templateVars.map(v => <code key={v} style={{ marginRight: '6px' }}>{`{{${v}}}`}</code>)}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Preview com variáveis */}
+              <div className="bg-bg-secondary border border-border-default rounded-lg p-4">
+                <div className="text-sm font-medium text-text-primary mb-2">Preview (variáveis)</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block mb-2 text-xs font-medium text-text-secondary">
+                      Variáveis (JSON)
+                    </label>
+                    <textarea
+                      value={previewVarsText}
+                      onChange={(e) => setPreviewVarsText(e.target.value)}
+                      rows={6}
+                      className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all resize-y font-mono text-xs"
+                    />
+                    {!previewVars ? (
+                      <div className="text-xs text-status-error mt-1">JSON inválido (o preview usará a mensagem original).</div>
+                    ) : null}
+                  </div>
+                  <div>
+                    <label className="block mb-2 text-xs font-medium text-text-secondary">
+                      Resultado
+                    </label>
+                    <pre
+                      className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary whitespace-pre-wrap break-words text-xs"
+                      style={{ minHeight: '140px' }}
+                    >
+                      {previewMessage || '—'}
+                    </pre>
+                    <div className="text-xs text-text-tertiary mt-2">
+                      No atendimento, as variáveis são preenchidas automaticamente a partir do contexto do ticket (ex.: entidades extraídas).
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div>
