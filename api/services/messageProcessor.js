@@ -41,6 +41,7 @@ const { apiNodeHandler } = require('../../engine/nodes/apiNode');
 const { fallbackNodeHandler } = require('../../engine/nodes/fallbackNode');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const { sendTextMessage } = require('./whatsappService');
+const outboundQueueService = require('./outboundQueueService');
 const logger = require('../utils/logger');
 const { createTicket, getTicketBySession, updateLastMessage, getTicket } = require('./queueService');
 const { 
@@ -143,6 +144,26 @@ async function processWhatsAppMessage(message, value, deps) {
   const text = message.text && message.text.body ? String(message.text.body) : '';
   const messageId = message.id;
   const sessionId = `whatsapp_${from}`;
+
+  async function sendWhatsAppTextBestEffort(to, textToSend) {
+    const effectiveTenantId = inboundTenantId || state?.tenantId || null;
+    // Sem tenantId não conseguimos enfileirar com isolamento; fallback para envio direto (compatibilidade)
+    if (!effectiveTenantId) {
+      await sendTextMessage(to, textToSend);
+      return { queued: false };
+    }
+
+    return outboundQueueService.enqueueOutbound({
+      tenantId: effectiveTenantId,
+      channelType: 'whatsapp',
+      conversationId: conversationId || null,
+      message: {
+        to,
+        type: 'text',
+        body: { text: textToSend },
+      },
+    });
+  }
 
   // Inicializa replay (opcional)
   const shouldRecordReplay = process.env.ENABLE_MESSAGE_REPLAY !== 'false';
@@ -274,7 +295,7 @@ async function processWhatsAppMessage(message, value, deps) {
     if (!defaultFlowId || defaultFlowId === 'ID_DO_FLUXO_PADRAO' || defaultFlowId.includes('SEU_') || defaultFlowId.includes('YOUR_')) {
         logger.error('[ERROR] defaultFlowId não configurado ou é placeholder. Configure flows.defaultFlowId em config.json');
       try {
-        await sendTextMessage(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
+        await sendWhatsAppTextBestEffort(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
       } catch (err) {
         logger.error('[ERROR] Não foi possível enviar mensagem de erro:', err);
       }
@@ -285,7 +306,7 @@ async function processWhatsAppMessage(message, value, deps) {
     if (!flow) {
       logger.error(`[ERROR] Flow "${defaultFlowId}" não encontrado. Verifique se o fluxo existe e se flows.defaultFlowId está correto em config.json`);
       try {
-        await sendTextMessage(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
+        await sendWhatsAppTextBestEffort(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
       } catch (err) {
         logger.error('[ERROR] Não foi possível enviar mensagem de erro:', err);
       }
@@ -299,7 +320,7 @@ async function processWhatsAppMessage(message, value, deps) {
   if (!flow) {
     logger.error(`[ERROR] Flow "${state.flowId}" não encontrado. Verifique se o fluxo existe.`);
     try {
-      await sendTextMessage(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
+      await sendWhatsAppTextBestEffort(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
     } catch (err) {
       logger.error('[ERROR] Não foi possível enviar mensagem de erro:', err);
     }
@@ -416,7 +437,7 @@ async function processWhatsAppMessage(message, value, deps) {
         const limitCheck = await checkLimit(tenantId, 'max_conversas_mes', 1);
         if (!limitCheck.allowed) {
           const denyMsg = 'No momento não podemos abrir um novo atendimento porque o limite de conversas do plano foi atingido. Por favor, fale com o administrador do sistema.';
-          try { await sendTextMessage(from, denyMsg); } catch {}
+          try { await sendWhatsAppTextBestEffort(from, denyMsg); } catch {}
           logger.warn('[HANDOFF] Bloqueado por limite de conversas do plano', { tenantId, limit: limitCheck.limit, current: limitCheck.current });
           return;
         }
@@ -515,7 +536,7 @@ async function processWhatsAppMessage(message, value, deps) {
       const message = result.output.message || 
         'Vou transferir você para um atendente humano. Aguarde um momento, por favor. 📞';
       try {
-        await sendTextMessage(from, message);
+        await sendWhatsAppTextBestEffort(from, message);
       } catch (err) {
         logger.error('[ERROR] Não foi possível enviar mensagem de handoff:', err);
         // Continua mesmo se falhar o envio, pois o ticket já foi criado
@@ -539,7 +560,7 @@ async function processWhatsAppMessage(message, value, deps) {
       const message = result.output.message || 
         'Conectando você com um atendente humano em tempo real...';
       try {
-        await sendTextMessage(from, message);
+        await sendWhatsAppTextBestEffort(from, message);
       } catch (err) {
         logger.error('[ERROR] Não foi possível enviar mensagem de atendimento humano:', err);
         // Continua mesmo se falhar o envio
@@ -572,7 +593,7 @@ async function processWhatsAppMessage(message, value, deps) {
           logger.error('[CDR_VIOLATION] Resposta bloqueada', violationLog);
           
           const safeMessage = getSafeResponse();
-          await sendTextMessage(from, safeMessage);
+          await sendWhatsAppTextBestEffort(from, safeMessage);
           return;
         } else if (cdrValidation.status === 'warn') {
           // Desenvolvimento: apenas loga warning mas permite resposta
@@ -581,7 +602,7 @@ async function processWhatsAppMessage(message, value, deps) {
         }
         
         // Resposta válida ou warning em dev: envia normalmente
-        await sendTextMessage(from, messageText);
+        await sendWhatsAppTextBestEffort(from, messageText);
         
         if (replay) {
           replay.recordEvent('message_sent', {

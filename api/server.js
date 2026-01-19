@@ -17,6 +17,7 @@ const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
 const { verifyWebhook, sendTextMessage } = require('./services/whatsappService');
 const { processWhatsAppMessage } = require('./services/messageProcessor');
+const outboundQueueService = require('./services/outboundQueueService');
 const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
 const logger = require('./utils/logger');
 const {
@@ -4713,16 +4714,21 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           // Adiciona mensagem do agente ao histórico
           addAgentMessage(ticket.id, initialMessage, req.agent.id);
 
-          // Envia mensagem via WhatsApp
-          await sendTextMessage(cleanPhone, initialMessage);
-          logger.info('[Ticket] Ticket criado e mensagem inicial enviada', {
+          // Envia mensagem via Outbound Queue (retry/backoff)
+          await outboundQueueService.enqueueOutbound({
+            tenantId: req.tenantId,
+            channelType: 'whatsapp',
+            conversationId: ticket.conversationId || null,
+            message: { to: cleanPhone, type: 'text', body: { text: initialMessage } },
+          });
+          logger.info('[Ticket] Ticket criado e mensagem inicial enfileirada', {
             ticketId: ticket.id,
             phoneNumber: cleanPhone,
             agentId: req.agent.id,
           });
         } catch (whatsappError) {
           // Se falhar ao enviar, ainda retorna o ticket criado
-          logger.warn('[Ticket] Ticket criado mas falha ao enviar mensagem inicial', {
+          logger.warn('[Ticket] Ticket criado mas falha ao enfileirar mensagem inicial', {
             ticketId: ticket.id,
             phoneNumber: cleanPhone,
             error: whatsappError.message,
@@ -6028,8 +6034,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         logger.warn('[Ticket] Número de telefone não encontrado no ticket, mensagem salva apenas no histórico', { ticketId: id });
       } else {
         try {
-          await sendTextMessage(phoneNumber, message);
-          logger.info('[Ticket] Mensagem enviada via WhatsApp com sucesso', { ticketId: id, phoneNumber });
+          await outboundQueueService.enqueueOutbound({
+            tenantId: req.tenantId,
+            channelType: 'whatsapp',
+            conversationId: ticket.conversationId || null,
+            message: { to: phoneNumber, type: 'text', body: { text: message } },
+          });
+          logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', { ticketId: id, phoneNumber });
         } catch (whatsappError) {
           // Se o erro for de credenciais inválidas, apenas loga um aviso e continua
           // Isso permite que o sistema funcione em modo de desenvolvimento/teste
