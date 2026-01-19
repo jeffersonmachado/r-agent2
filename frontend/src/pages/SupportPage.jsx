@@ -13,6 +13,7 @@ import {
   getTicketAiSummary,
   generateTicketAiSummary,
 } from '../api/tickets';
+import { getConversationMessages } from '../api/conversations';
 import { listQuickReplies, searchQuickReplies, useQuickReply } from '../api/quickReplies';
 import { listCloseReasons } from '../api/closeReasons';
 import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
@@ -66,6 +67,8 @@ export function SupportPage() {
   const [knownTags, setKnownTags] = useState([]);
   const [aiSummary, setAiSummary] = useState(null);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [conversationMessages, setConversationMessages] = useState([]);
+  const [timelineMessages, setTimelineMessages] = useState([]);
 
   const applyTemplateVariables = useCallback((text, variables) => {
     if (!text) return '';
@@ -458,16 +461,129 @@ export function SupportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Apenas no mount inicial
 
+  function safeGetBodyText(body) {
+    if (!body) return '';
+    if (typeof body === 'string') return body;
+    if (typeof body.text === 'string') return body.text;
+    if (typeof body.caption === 'string') return body.caption;
+    if (body.text && typeof body.text === 'object' && typeof body.text.body === 'string') return body.text.body;
+    return '';
+  }
+
+  function summarizeChannelMessage(channelMsg) {
+    const type = String(channelMsg?.type || '').toLowerCase();
+    const body = channelMsg?.body || {};
+    const text = safeGetBodyText(body);
+    if (text) return text;
+
+    if (type === 'image') return '[imagem]';
+    if (type === 'audio' || type === 'voice') return '[áudio]';
+    if (type === 'video') return '[vídeo]';
+    if (type === 'document') return '[documento]';
+    if (type === 'sticker') return '[sticker]';
+    if (type === 'location') return '[localização]';
+    if (type === 'contacts') return '[contatos]';
+    if (type === 'interactive') return '[interativo]';
+    if (type) return `[${type}]`;
+
+    try {
+      const s = JSON.stringify(body);
+      return s.length > 280 ? `${s.slice(0, 280)}…` : s;
+    } catch {
+      return '[mensagem]';
+    }
+  }
+
+  function buildTimelineMessages(ticketMsgs = [], channelMsgs = []) {
+    const byExternal = new Map();
+    const items = [];
+
+    const pushItem = (it) => {
+      items.push(it);
+      if (it.externalMessageId) byExternal.set(it.externalMessageId, it);
+    };
+
+    for (const m of (Array.isArray(ticketMsgs) ? ticketMsgs : [])) {
+      pushItem({
+        key: `t:${m?.id || Math.random().toString(36).slice(2)}`,
+        source: 'ticket',
+        sender: m?.sender || 'system',
+        text: m?.text || '',
+        timestamp: m?.timestamp || null,
+        externalMessageId: m?.externalMessageId || null,
+        deliveryStatus: m?.deliveryStatus || null,
+        raw: m,
+      });
+    }
+
+    for (const cm of (Array.isArray(channelMsgs) ? channelMsgs : [])) {
+      const ext = cm?.externalMessageId || null;
+      const existing = ext ? byExternal.get(ext) : null;
+      const normalizedSender = (cm?.direction === 'in')
+        ? 'user'
+        : (cm?.direction === 'out' ? 'agent' : 'system');
+
+      if (existing) {
+        existing.channel = cm;
+        if (!existing.deliveryStatus && cm?.status) existing.deliveryStatus = cm.status;
+        if ((!existing.text || existing.text === '') && (cm?.type || cm?.body)) {
+          existing.text = summarizeChannelMessage(cm);
+        }
+        continue;
+      }
+
+      pushItem({
+        key: `c:${cm?.id || ext || Math.random().toString(36).slice(2)}`,
+        source: 'channel',
+        sender: normalizedSender,
+        text: summarizeChannelMessage(cm),
+        timestamp: cm?.createdAt || null,
+        externalMessageId: ext,
+        deliveryStatus: cm?.status || null,
+        channel: cm,
+        raw: cm,
+      });
+    }
+
+    items.sort((a, b) => {
+      const ta = a?.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tb = b?.timestamp ? new Date(b.timestamp).getTime() : 0;
+      if (ta !== tb) return ta - tb;
+      return String(a.key).localeCompare(String(b.key));
+    });
+
+    return items;
+  }
+
   // Carrega mensagens do ticket selecionado
-  const loadTicketMessages = useCallback(async (ticketId) => {
+  const loadTicketMessages = useCallback(async (ticketId, conversationId) => {
     if (!ticketId) {
       setTicketMessages([]);
+      setConversationMessages([]);
+      setTimelineMessages([]);
       return;
     }
 
     try {
       const result = await getTicketMessages(ticketId);
       setTicketMessages(result.messages || []);
+
+      let convMsgs = [];
+      if (conversationId) {
+        try {
+          const convResult = await getConversationMessages(conversationId, { limit: 300, offset: 0 });
+          convMsgs = convResult?.messages || [];
+          setConversationMessages(convMsgs);
+        } catch (err) {
+          logger.error('Erro ao carregar mensagens omnichannel (channels)', err);
+          setConversationMessages([]);
+          convMsgs = [];
+        }
+      } else {
+        setConversationMessages([]);
+      }
+
+      setTimelineMessages(buildTimelineMessages(result.messages || [], convMsgs));
       
       // Marca como lidas se ticket está atribuído e em progresso
       setTickets(prevTickets => {
@@ -505,7 +621,7 @@ export function SupportPage() {
   // Carrega mensagens quando ticket é selecionado
   useEffect(() => {
     if (selectedTicket) {
-      loadTicketMessages(selectedTicket.id);
+      loadTicketMessages(selectedTicket.id, selectedTicket.conversationId);
       
       // Preenche automaticamente o campo de atribuição se o ticket estiver waiting
       if (selectedTicket.status === 'waiting' && !assignedTo) {
@@ -516,6 +632,8 @@ export function SupportPage() {
       }
     } else {
       setTicketMessages([]);
+      setConversationMessages([]);
+      setTimelineMessages([]);
       setAssignedTo(''); // Limpa o campo quando nenhum ticket está selecionado
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -538,10 +656,10 @@ export function SupportPage() {
 
   // Scroll automático para o final quando novas mensagens são carregadas
   useEffect(() => {
-    if (messagesContainerRef.current && ticketMessages.length > 0) {
+    if (messagesContainerRef.current && timelineMessages.length > 0) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  }, [ticketMessages]);
+  }, [timelineMessages]);
 
   // Atualiza métricas de status WebSocket
   useEffect(() => {
@@ -1135,14 +1253,14 @@ export function SupportPage() {
                     role="log"
                     aria-label="Histórico de mensagens do ticket"
                   >
-                    {ticketMessages.length === 0 ? (
+                    {timelineMessages.length === 0 ? (
                       <p style={{ color: '#999', fontSize: '12px', textAlign: 'center' }}>
                         Nenhuma mensagem ainda
                       </p>
                     ) : (
-                      ticketMessages.map((msg) => (
+                      timelineMessages.map((msg) => (
                         <div
-                          key={msg.id}
+                          key={msg.key}
                           style={{
                             marginBottom: '12px',
                             padding: '8px',
@@ -1158,6 +1276,7 @@ export function SupportPage() {
                             marginBottom: '4px'
                           }}>
                             {msg.sender === 'user' ? '👤 Usuário' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'}
+                            {msg.source === 'channel' ? <span style={{ marginLeft: '6px', color: '#999' }}>(canal)</span> : null}
                             {' • '}
                             {formatDate(msg.timestamp)}
                             {msg.deliveryStatus ? (
