@@ -1213,6 +1213,37 @@ async function requestHandler(req, res) {
   }
 
   // -----------------------------------------------------------------------
+  // Observabilidade - Channel Health
+  // -----------------------------------------------------------------------
+
+  // GET /system/channel-health - Saúde de canais (por tenant)
+  if (method === 'GET' && pathname === '/system/channel-health') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowMinutes = parseInt(urlObj.searchParams.get('windowMinutes') || '10', 10);
+      const { getChannelHealth } = require('./services/channelHealthService');
+      const health = await getChannelHealth({ tenantId: req.tenantId, windowMinutes });
+      sendJson(res, 200, health);
+    } catch (err) {
+      logger.error('Erro ao obter channel-health:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
   // Autenticação de Agentes
   // -----------------------------------------------------------------------
 
@@ -11912,6 +11943,21 @@ if (require.main === module) {
         startAssignmentWorker({ intervalMs: 15000 });
       } catch (err) {
         logger.warn('[Assignment] Falha ao iniciar worker (ignorado)', { error: err.message });
+      }
+    }
+
+    // Channel Health monitor (best-effort)
+    if (process.env.ENABLE_CHANNEL_HEALTH_MONITOR !== 'false') {
+      try {
+        const { startChannelHealthMonitor } = require('./services/channelHealthService');
+        const intervalMs = parseInt(process.env.CHANNEL_HEALTH_MONITOR_INTERVAL_MS || '60000', 10);
+        const windowMinutes = parseInt(process.env.CHANNEL_HEALTH_WINDOW_MINUTES || '10', 10);
+        const failRateThreshold = parseFloat(process.env.CHANNEL_HEALTH_FAIL_RATE_THRESHOLD || '0.15');
+        const minSamples = parseInt(process.env.CHANNEL_HEALTH_MIN_SAMPLES || '20', 10);
+        const cooldownMinutes = parseInt(process.env.CHANNEL_HEALTH_COOLDOWN_MINUTES || '10', 10);
+        startChannelHealthMonitor({ intervalMs, windowMinutes, failRateThreshold, minSamples, cooldownMinutes });
+      } catch (err) {
+        logger.warn('[ChannelHealth] Falha ao iniciar monitor (ignorado)', { error: err.message });
       }
     }
   }).catch((error) => {

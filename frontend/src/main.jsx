@@ -34,6 +34,7 @@ import { ChatPage } from './pages/ChatPage';
 import { QaPage } from './pages/QaPage';
 import { GenerateSystemPage } from './pages/GenerateSystemPage';
 import { SystemStatusPage } from './pages/SystemStatusPage';
+import { ChannelHealthPage } from './pages/ChannelHealthPage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
@@ -151,6 +152,7 @@ function AppWithAuth() {
   const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
   const isGenerateSystem = currentPath === '/generate-system' || currentPath.startsWith('/generate-system');
   const isSystemStatus = currentPath === '/system-status' || currentPath.startsWith('/system-status');
+  const isChannelHealth = currentPath === '/channel-health' || currentPath.startsWith('/channel-health');
   const isDevDashboard = currentPath === '/dev' || currentPath === '/dev-dashboard' || currentPath.startsWith('/dev');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
@@ -168,7 +170,7 @@ function AppWithAuth() {
     const allRoutes = [
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isDevDashboard, isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -181,7 +183,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -219,6 +221,8 @@ function AppWithAuth() {
       '/chat': '💬 Chat de Teste',
       '/qa': '✅ Painel de Qualidade (QA)',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
+      '/system-status': '📊 Status dos Serviços',
+      '/channel-health': '📡 Saúde de Canais',
       '/dev': '🛠️ Dashboard de Desenvolvimento',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/login': '🔐 Login',
@@ -252,7 +256,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit'];
+  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -332,6 +336,8 @@ function AppWithAuth() {
         <GenerateSystemPage />
       ) : isSystemStatus ? (
         <SystemStatusPage />
+      ) : isChannelHealth ? (
+        <ChannelHealthPage />
       ) : isDevDashboard ? (
         // Rota /dev só é acessível por super-admin
         isSuperAdmin ? (

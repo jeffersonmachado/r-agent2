@@ -79,6 +79,13 @@ export const menuItems = [
     permission: { resource: 'flows', action: 'read' },
   },
   {
+    label: 'Saúde de Canais',
+    path: '/channel-health',
+    icon: '📡',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
     label: 'Configuração',
     path: '/config',
     icon: '⚙️',
