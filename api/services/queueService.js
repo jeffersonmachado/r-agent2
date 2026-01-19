@@ -750,12 +750,21 @@ function addAgentMessage(ticketId, message, agentId = null) {
     ticket.messages = [];
   }
 
+  // Compatibilidade: aceita options como 4º argumento
+  const options = arguments.length > 3 ? (arguments[3] || {}) : {};
+  const clientMessageId = options && options.clientMessageId ? String(options.clientMessageId) : null;
+  const externalMessageId = options && options.externalMessageId ? String(options.externalMessageId) : null;
+  const deliveryStatus = options && options.deliveryStatus ? String(options.deliveryStatus) : null;
+
   const messageObj = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     text: message,
     sender: 'agent',
     agentId: agentId || ticket.assignedTo || 'unknown',
     timestamp: new Date().toISOString(),
+    clientMessageId: clientMessageId || undefined,
+    externalMessageId: externalMessageId || undefined,
+    deliveryStatus: deliveryStatus || undefined,
   };
 
   ticket.messages.push(messageObj);
@@ -773,6 +782,50 @@ function addAgentMessage(ticketId, message, agentId = null) {
 
   persistTicketBestEffort(ticket);
 
+  return ticket;
+}
+
+/**
+ * Atualiza deliveryStatus/externalMessageId de uma mensagem outbound no ticket (best-effort).
+ *
+ * @param {string} ticketId
+ * @param {{clientMessageId?: string|null, externalMessageId?: string|null, deliveryStatus?: string|null}} patch
+ * @returns {Ticket|null}
+ */
+function updateOutboundMessageMeta(ticketId, patch = {}) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+  if (!Array.isArray(ticket.messages) || ticket.messages.length === 0) return ticket;
+
+  const clientMessageId = patch.clientMessageId ? String(patch.clientMessageId) : null;
+  const externalMessageId = patch.externalMessageId ? String(patch.externalMessageId) : null;
+  const deliveryStatus = patch.deliveryStatus ? String(patch.deliveryStatus) : null;
+
+  let changed = false;
+
+  for (let i = ticket.messages.length - 1; i >= 0; i--) {
+    const m = ticket.messages[i];
+    if (!m || m.sender !== 'agent') continue;
+
+    const matchClient = clientMessageId && m.clientMessageId && m.clientMessageId === clientMessageId;
+    const matchExternal = externalMessageId && m.externalMessageId && m.externalMessageId === externalMessageId;
+    if (!matchClient && !matchExternal) continue;
+
+    if (externalMessageId && !m.externalMessageId) {
+      m.externalMessageId = externalMessageId;
+      changed = true;
+    }
+    if (deliveryStatus && m.deliveryStatus !== deliveryStatus) {
+      m.deliveryStatus = deliveryStatus;
+      changed = true;
+    }
+    break;
+  }
+
+  if (!changed) return ticket;
+
+  ticket.updatedAt = new Date().toISOString();
+  persistTicketBestEffort(ticket);
   return ticket;
 }
 
@@ -1082,6 +1135,7 @@ module.exports = {
   updateTicket,
   updateLastMessage,
   addAgentMessage,
+  updateOutboundMessageMeta,
   markMessagesAsRead,
   setTicketMode,
   getTicketMessages,

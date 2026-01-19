@@ -17,6 +17,8 @@ const { getSequelize } = require('../db/sequelize');
 const { OutboundQueueItem, ChannelConversation, ChannelMessage } = require('../db/models');
 const { sendTextMessage } = require('./whatsappService');
 const { sendInstagramMessage, sendInstagramMedia } = require('./instagramService');
+const { updateOutboundMessageMeta, getTicket } = require('./queueService');
+const { emitEvent } = require('./websocketService');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -240,6 +242,24 @@ async function processDue({ limit = 25 } = {}) {
         last_error: null,
         updated_at: new Date(),
       });
+
+      // Best-effort: sincroniza status "sent" no histórico do ticket (UI atual)
+      try {
+        const meta = row.message?.meta || {};
+        const ticketId = meta.ticketId ? String(meta.ticketId) : null;
+        const clientMessageId = meta.clientMessageId ? String(meta.clientMessageId) : null;
+        const externalMessageId = result.externalMessageId ? String(result.externalMessageId) : null;
+        if (ticketId) {
+          const updatedTicket = updateOutboundMessageMeta(ticketId, { clientMessageId, externalMessageId, deliveryStatus: 'sent' });
+          if (updatedTicket) {
+            emitEvent('ticket.updated', {
+              ticketId: updatedTicket.id,
+              ticket: updatedTicket,
+              change: { type: 'message_status', externalMessageId, status: 'sent' },
+            }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
+          }
+        }
+      } catch (_) {}
     } catch (err) {
       failed++;
       const attempts = (row.attempts || 0) + 1;
@@ -252,6 +272,24 @@ async function processDue({ limit = 25 } = {}) {
         last_error: err.message,
         updated_at: new Date(),
       });
+
+      // Best-effort: marca falha no histórico do ticket quando houver correlação
+      try {
+        const meta = row.message?.meta || {};
+        const ticketId = meta.ticketId ? String(meta.ticketId) : null;
+        const clientMessageId = meta.clientMessageId ? String(meta.clientMessageId) : null;
+        if (ticketId) {
+          const updatedTicket = updateOutboundMessageMeta(ticketId, { clientMessageId, deliveryStatus: 'failed' });
+          if (updatedTicket) {
+            emitEvent('ticket.updated', {
+              ticketId: updatedTicket.id,
+              ticket: updatedTicket,
+              change: { type: 'message_status', status: 'failed', error: err.message },
+            }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
+          }
+        }
+      } catch (_) {}
+
       logger.warn('[OutboundQueue] Falha ao enviar item, agendando retry', {
         id: row.id,
         tenantId: row.tenant_key,

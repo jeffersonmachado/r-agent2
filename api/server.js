@@ -83,6 +83,7 @@ const {
   startAutoCleanup,
   getMetrics,
   addAgentMessage,
+  updateOutboundMessageMeta,
   markMessagesAsRead,
   getTicketMessages,
 } = require('./services/queueService');
@@ -4711,15 +4712,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // Se há mensagem inicial, envia e adiciona ao histórico
       if (initialMessage && initialMessage !== '') {
         try {
+          const clientMessageId = `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
           // Adiciona mensagem do agente ao histórico
-          addAgentMessage(ticket.id, initialMessage, req.agent.id);
+          addAgentMessage(ticket.id, initialMessage, req.agent.id, { clientMessageId, deliveryStatus: 'pending' });
 
           // Envia mensagem via Outbound Queue (retry/backoff)
           await outboundQueueService.enqueueOutbound({
             tenantId: req.tenantId,
             channelType: 'whatsapp',
             conversationId: ticket.conversationId || null,
-            message: { to: cleanPhone, type: 'text', body: { text: initialMessage } },
+            message: { to: cleanPhone, type: 'text', body: { text: initialMessage }, meta: { ticketId: ticket.id, clientMessageId } },
           });
           logger.info('[Ticket] Ticket criado e mensagem inicial enfileirada', {
             ticketId: ticket.id,
@@ -6009,7 +6011,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // Usa agentId do agente autenticado
       const agentId = req.agent.id;
       try {
-        const updatedTicket = addAgentMessage(id, message, agentId);
+        const clientMessageId = `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        const updatedTicket = addAgentMessage(id, message, agentId, { clientMessageId, deliveryStatus: 'pending' });
         if (!updatedTicket) {
           logger.warn('[Ticket] Não foi possível adicionar mensagem ao histórico (ticket não encontrado)', { ticketId: id });
           sendJson(res, 404, { error: 'ticket_not_found' });
@@ -6034,11 +6037,21 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         logger.warn('[Ticket] Número de telefone não encontrado no ticket, mensagem salva apenas no histórico', { ticketId: id });
       } else {
         try {
+          // Recupera clientMessageId da última mensagem do agente para correlacionar com o worker
+          const lastAgent = Array.isArray(ticket.messages)
+            ? [...ticket.messages].reverse().find((m) => m && m.sender === 'agent' && m.deliveryStatus === 'pending')
+            : null;
+          const clientMessageId = lastAgent?.clientMessageId || `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+          // Se não tinha no histórico, registra agora (best-effort)
+          if (!lastAgent?.clientMessageId) {
+            updateOutboundMessageMeta(id, { clientMessageId, deliveryStatus: 'pending' });
+          }
+
           await outboundQueueService.enqueueOutbound({
             tenantId: req.tenantId,
             channelType: 'whatsapp',
             conversationId: ticket.conversationId || null,
-            message: { to: phoneNumber, type: 'text', body: { text: message } },
+            message: { to: phoneNumber, type: 'text', body: { text: message }, meta: { ticketId: id, clientMessageId } },
           });
           logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', { ticketId: id, phoneNumber });
         } catch (whatsappError) {

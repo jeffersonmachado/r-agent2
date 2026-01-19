@@ -1143,6 +1143,11 @@ export function SupportPage() {
                             {msg.sender === 'user' ? '👤 Usuário' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'}
                             {' • '}
                             {formatDate(msg.timestamp)}
+                            {msg.deliveryStatus ? (
+                              <span style={{ marginLeft: '8px', color: '#888' }}>
+                                [{String(msg.deliveryStatus)}]
+                              </span>
+                            ) : null}
                           </div>
                           <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
                             {msg.text}

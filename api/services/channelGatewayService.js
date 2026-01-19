@@ -20,6 +20,7 @@ const { getSequelize } = require('../db/sequelize');
 const { ChannelAccount, ChannelConversation, ChannelMessage } = require('../db/models');
 const { encrypt, decrypt } = require('../utils/crypto');
 const { getTicketBySession } = require('./queueService');
+const { getTicketByConversationId, updateOutboundMessageMeta } = require('./queueService');
 const outboundQueueService = require('./outboundQueueService');
 
 function dbAvailable() {
@@ -383,6 +384,27 @@ async function updateStatus(channelType, statusPayload, options = {}) {
 
     await row.update({ status, updated_at: new Date() });
     updated++;
+
+    // Best-effort: propaga status para o ledger do ticket (UI atual)
+    try {
+      const conversationId = row.conversation_id ? String(row.conversation_id) : null;
+      if (conversationId) {
+        const ticket = getTicketByConversationId(conversationId, tenantId);
+        if (ticket) {
+          const patched = updateOutboundMessageMeta(ticket.id, { externalMessageId, deliveryStatus: status });
+          if (patched) {
+            // Lazy require para evitar ciclos
+            // eslint-disable-next-line global-require
+            const { emitEvent } = require('./websocketService');
+            emitEvent('ticket.updated', {
+              ticketId: patched.id,
+              ticket: patched,
+              change: { type: 'message_status', externalMessageId, status },
+            }, { tenantId: patched.tenantId, agentId: patched.assignedTo });
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   return { updated };
