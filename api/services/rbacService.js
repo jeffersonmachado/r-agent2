@@ -318,16 +318,23 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
   ],
-
-  // Compatibilidade com roles antigos
-  supervisor: [
-    // Mapeia para manager (definido acima)
-  ],
-
-  agent: [
-    // Mapeia para operator (definido acima)
-  ],
 };
+
+/**
+ * Normaliza roles para compatibilidade e consistência.
+ * - supervisor -> manager
+ * - agent -> operator
+ *
+ * @param {string} role
+ * @returns {string|null}
+ */
+function normalizeRole(role) {
+  if (!role) return null;
+  const r = String(role).toLowerCase();
+  if (r === 'supervisor') return 'manager';
+  if (r === 'agent') return 'operator';
+  return r;
+}
 
 /**
  * Verifica se um agente tem permissão para uma ação em um recurso.
@@ -342,13 +349,12 @@ function hasPermission(agent, resource, action) {
     return false;
   }
 
-  let role = agent.role.toLowerCase();
-  
-  // Migra roles antigos
-  if (role === 'supervisor') {
-    role = 'manager';
-  } else if (role === 'agent') {
-    role = 'operator';
+  const role = normalizeRole(agent.role);
+  if (!role) return false;
+
+  // Super-admin: permissões globais (RBAC não deve bloquear; isolamento de tenant é tratado separadamente)
+  if (role === 'super_admin') {
+    return true;
   }
 
   const permissions = ROLE_PERMISSIONS[role] || [];
@@ -361,8 +367,8 @@ function hasPermission(agent, resource, action) {
 /**
  * Verifica se um agente pode acessar um ticket específico.
  * Regras:
- * - Admin e supervisor: podem acessar qualquer ticket
- * - Agent: apenas tickets atribuídos a ele ou não atribuídos
+ * - super_admin/owner/admin/manager: podem acessar qualquer ticket
+ * - operator (antigo agent): apenas tickets atribuídos a ele ou não atribuídos
  *
  * @param {Object} agent - Agente
  * @param {Object} ticket - Ticket (deve ter campo 'assignedTo')
@@ -373,13 +379,16 @@ function canAccessTicket(agent, ticket) {
     return false;
   }
 
-  // Admin e supervisor podem acessar qualquer ticket
-  if (agent.role === 'admin' || agent.role === 'supervisor') {
+  const role = normalizeRole(agent.role);
+  if (!role) return false;
+
+  // Papéis com acesso amplo
+  if (role === 'super_admin' || role === 'owner' || role === 'admin' || role === 'manager') {
     return true;
   }
 
-  // Agent pode acessar apenas tickets atribuídos a ele ou não atribuídos
-  if (agent.role === 'agent') {
+  // Operator pode acessar apenas tickets atribuídos a ele ou não atribuídos
+  if (role === 'operator') {
     return !ticket.assignedTo || ticket.assignedTo === agent.id || ticket.assignedTo === agent.username;
   }
 
@@ -389,8 +398,8 @@ function canAccessTicket(agent, ticket) {
 /**
  * Verifica se um agente pode modificar um ticket específico.
  * Regras:
- * - Admin e supervisor: podem modificar qualquer ticket
- * - Agent: apenas tickets atribuídos a ele
+ * - super_admin/owner/admin/manager: podem modificar qualquer ticket
+ * - operator (antigo agent): apenas tickets atribuídos a ele
  *
  * @param {Object} agent - Agente
  * @param {Object} ticket - Ticket
@@ -401,13 +410,16 @@ function canModifyTicket(agent, ticket) {
     return false;
   }
 
-  // Admin e supervisor podem modificar qualquer ticket
-  if (agent.role === 'admin' || agent.role === 'supervisor') {
+  const role = normalizeRole(agent.role);
+  if (!role) return false;
+
+  // Papéis com acesso amplo
+  if (role === 'super_admin' || role === 'owner' || role === 'admin' || role === 'manager') {
     return true;
   }
 
-  // Agent pode modificar apenas tickets atribuídos a ele
-  if (agent.role === 'agent') {
+  // Operator pode modificar apenas tickets atribuídos a ele
+  if (role === 'operator') {
     return ticket.assignedTo === agent.id || ticket.assignedTo === agent.username;
   }
 
@@ -421,7 +433,13 @@ function canModifyTicket(agent, ticket) {
  * @returns {Permission[]}
  */
 function getRolePermissions(role) {
-  return ROLE_PERMISSIONS[role.toLowerCase()] || [];
+  const normalized = normalizeRole(role);
+  if (!normalized) return [];
+  if (normalized === 'super_admin') {
+    // Super-admin tem permissões globais; retorna um "superset" útil para UI/debug
+    return ROLE_PERMISSIONS.owner || [];
+  }
+  return ROLE_PERMISSIONS[normalized] || [];
 }
 
 /**

@@ -82,6 +82,11 @@ __tests__/
 *.test.js
 *.spec.js
 
+# RPA runtime (necessário em produção)
+# Re-inclui apenas o subset usado pelo backend (evita mandar todos os testes).
+!tests/rpa/
+!tests/rpa/**
+
 # Outros
 .editorconfig
 .eslintrc*

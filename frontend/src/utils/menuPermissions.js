@@ -296,6 +296,11 @@ export function hasPermission(agent, resource, action) {
     return false;
   }
 
+  // Super Admin tem acesso total (alinha com o backend)
+  if (isSuperAdmin(agent)) {
+    return true;
+  }
+
   let role = agent.role.toLowerCase();
   
   // Migra roles antigos
@@ -356,6 +361,11 @@ export function getVisibleMenuItems(agent) {
   }
 
   return menuItems.filter((item) => {
+    // Super Admin vê todos os itens do menu
+    if (isSuperAdmin(agent)) {
+      return true;
+    }
+
     // Se o item tem restrição de roles, verifica primeiro
     if (item.roles && Array.isArray(item.roles)) {
       const agentRole = agent.role?.toLowerCase();

@@ -2084,6 +2084,58 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /tenants/:id/plan-usage - Retorna plano + limites efetivos + uso (deve vir ANTES da rota genérica /tenants/:id)
+  // Também suporta /tenants/current/plan-usage para o tenant do agente autenticado.
+  if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/plan-usage')) {
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      let tenantId = decodeURIComponent(pathname.slice('/tenants/'.length).replace('/plan-usage', ''));
+      if (tenantId === 'current') {
+        tenantId = authResult.agent?.tenantId;
+      }
+      if (!tenantId || tenantId === 'current') {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId ausente ou inválido' });
+        return;
+      }
+
+      // Apenas owner/admin (ou super-admin) podem ver limites/uso do plano
+      const agent = authResult.agent || req.agent;
+      const isSuperAdminUser = isSuperAdmin(agent);
+      if (!isSuperAdminUser && agent?.role !== 'owner' && agent?.role !== 'admin') {
+        sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem ver plano/uso' });
+        return;
+      }
+
+      const { getTenant, getTenantUsage } = require('./services/tenantService');
+      const { getPlanLimits } = require('./services/planLimitsService');
+
+      const tenant = await getTenant(tenantId);
+      if (!tenant) {
+        sendJson(res, 404, { error: 'tenant_not_found' });
+        return;
+      }
+
+      const usage = await getTenantUsage(tenantId);
+      const limits = tenant.limits || getPlanLimits(tenant.plan);
+
+      sendJson(res, 200, {
+        tenantId,
+        plan: tenant.plan || 'trial',
+        limits,
+        usage,
+      });
+    } catch (err) {
+      logger.error('Erro ao obter plano/uso do tenant:', err);
+      sendJson(res, 500, { error: 'Erro ao obter plano/uso', message: err.message });
+    }
+    return;
+  }
+
   // GET /tenants/:id/ai-provider-status - Verifica se tenant tem provider de IA válido (deve vir ANTES da rota genérica /tenants/:id)
   if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/ai-provider-status')) {
     const authResult = requireAuth(req);
@@ -8029,54 +8081,6 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
-  // GET /tenants/current/plan-usage - Retorna plano + limites efetivos + uso (tenant atual)
-  if (method === 'GET' && pathname === '/tenants/current/plan-usage') {
-    try {
-      const authResult = requireAuth(req);
-      if (!authResult.valid) {
-        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-        return;
-      }
-
-      const tenantId = authResult.agent.tenantId;
-      if (!tenantId || tenantId === 'current') {
-        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido' });
-        return;
-      }
-
-      // Apenas owner/admin (ou super-admin) podem ver limites/uso do plano
-      const isSuperAdminUser = isSuperAdmin(authResult.agent);
-      if (!isSuperAdminUser && authResult.agent.role !== 'owner' && authResult.agent.role !== 'admin') {
-        sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem ver plano/uso' });
-        return;
-      }
-
-      const { getTenant } = require('./services/tenantService');
-      const { getPlanLimits } = require('./services/planLimitsService');
-      const { getTenantUsage } = require('./services/tenantService');
-
-      const tenant = await getTenant(tenantId);
-      if (!tenant) {
-        sendJson(res, 404, { error: 'tenant_not_found' });
-        return;
-      }
-
-      const usage = await getTenantUsage(tenantId);
-      const limits = tenant.limits || getPlanLimits(tenant.plan);
-
-      sendJson(res, 200, {
-        tenantId,
-        plan: tenant.plan || 'trial',
-        limits,
-        usage,
-      });
-    } catch (err) {
-      logger.error('Erro ao obter plano/uso do tenant atual:', err);
-      sendJson(res, 500, { error: 'Erro ao obter plano/uso', message: err.message });
-    }
-    return;
-  }
-
   // PUT /tenants/current/ai-config - Salva configuração de IA do tenant atual
   if (method === 'PUT' && pathname === '/tenants/current/ai-config') {
     if (!hasJsonContentType(req)) {
@@ -8111,7 +8115,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Verifica permissão (owner/admin podem alterar)
-      const permResult = requirePermission(req, 'tenants', 'update');
+      // IA do tenant é tratada como "config" no RBAC (admin tem config:update; tenant:update é só owner)
+      const permResult = requirePermission(req, 'config', 'update');
       const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
       if (!permResult.allowed && !isSuperAdmin) {
         sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar configurações de IA' });
@@ -8168,7 +8173,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Verifica permissão (owner/admin podem alterar)
-      const permResult = requirePermission(req, 'tenants', 'update');
+      // IA do tenant é tratada como "config" no RBAC (admin tem config:update; tenant:update é só owner)
+      const permResult = requirePermission(req, 'config', 'update');
       const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
       if (!permResult.allowed && !isSuperAdmin) {
         sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar credenciais de IA' });
@@ -8268,7 +8274,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Verifica permissão (owner/admin podem alterar)
-      const permResult = requirePermission(req, 'tenants', 'update');
+      // IA do tenant é tratada como "config" no RBAC (admin tem config:update; tenant:update é só owner)
+      const permResult = requirePermission(req, 'config', 'update');
       if (!permResult.allowed && !isSuperAdmin) {
         sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar configurações de IA' });
         return;
@@ -8315,7 +8322,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Verifica permissão (owner/admin podem alterar)
-      const permResult = requirePermission(req, 'tenants', 'update');
+      // IA do tenant é tratada como "config" no RBAC (admin tem config:update; tenant:update é só owner)
+      const permResult = requirePermission(req, 'config', 'update');
       if (!permResult.allowed && !isSuperAdmin) {
         sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para alterar credenciais de IA' });
         return;
@@ -9613,7 +9621,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       };
       if (!options.tenantId) return;
 
-      const metrics = getAllMetrics(options);
+      const metrics = await getAllMetrics(options);
       sendJson(res, 200, metrics);
     } catch (err) {
       logger.error('Erro ao obter métricas:', err);
@@ -9644,7 +9652,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
 
-      const metrics = getGeneralMetrics(options);
+      const metrics = await getGeneralMetrics(options);
       sendJson(res, 200, metrics);
     } catch (err) {
       logger.error('Erro ao obter métricas gerais:', err);
@@ -9675,7 +9683,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
 
-      const metrics = getAgentMetrics(options);
+      const metrics = await getAgentMetrics(options);
       sendJson(res, 200, { agents: metrics });
     } catch (err) {
       logger.error('Erro ao obter métricas de agentes:', err);
@@ -12816,6 +12824,25 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     // quando formulários HTML padrão fazem submit sem JavaScript
     if (method === 'GET' || (method === 'POST' && !req.headers['content-type']?.includes('application/json'))) {
       try {
+        // -------------------------------------------------------------------
+        // DEV: não servir index.html cru do filesystem
+        // Motivo: em dev, o frontend roda no Vite e precisa do preamble do
+        // React Refresh (injetado no HTML pelo Vite/@vitejs/plugin-react).
+        // Servir o index.html estático daqui causa:
+        // "@vitejs/plugin-react can't detect preamble. Something is wrong."
+        // -------------------------------------------------------------------
+        const acceptHeader = req.headers.accept || '';
+        const isDev = process.env.NODE_ENV !== 'production';
+        const isHtmlNavigation = acceptHeader.includes('text/html');
+
+        if (isDev && method === 'GET' && isHtmlNavigation) {
+          const frontendPort = Number(process.env.FRONTEND_PORT || 5173);
+          const location = `http://localhost:${frontendPort}${req.url || pathname || '/'}`;
+          res.writeHead(302, { Location: location });
+          res.end();
+          return;
+        }
+
         const frontendIndexPath = path.join(__dirname, '..', 'frontend', 'index.html');
         
         // Verifica se o arquivo existe

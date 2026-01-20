@@ -65,8 +65,10 @@ function frontendRoutesPlugin() {
                           url.startsWith('/onboarding') ||
                           url.startsWith('/admin') ||
                           url.startsWith('/dev') ||
-                          url.startsWith('/analytics') ||
-                          url.startsWith('/export') ||
+                          // /analytics e /export (sem subcaminho) são rotas de página
+                          // Já os endpoints de API ficam em /analytics/* e /export/*
+                          url.startsWith('/analytics/') ||
+                          url.startsWith('/export/') ||
                           url.startsWith('/conversations') ||
                           url.startsWith('/tests') || // /tests/rpa/replay é API
                           (url.startsWith('/rpa/') && url !== '/rpa-test') || // /rpa/recordings é API, mas /rpa-test é página
@@ -328,12 +330,18 @@ const viteConfig = defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '^/analytics': {
+      // IMPORTANTE:
+      // - /analytics (sem barra no final) é página do frontend
+      // - /analytics/* são endpoints da API (ex: /analytics/metrics)
+      '^/analytics/': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
       },
-      '^/export': {
+      // Mesma regra para export:
+      // - /export é página
+      // - /export/* é API
+      '^/export/': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,

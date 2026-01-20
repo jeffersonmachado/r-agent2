@@ -69,6 +69,31 @@ run_ssh_cmd() {
     return $exit_code
 }
 
+# Função para executar um script multi-linha via stdin (evita problemas de aspas/newlines)
+run_ssh_script() {
+    local remote_script="$1"
+    local description="${2:-Executando script SSH}"
+
+    echo -e "${YELLOW}[COMANDO SSH]${NC} $description"
+    echo -e "${YELLOW}[COMANDO SSH]${NC} (enviando via stdin para bash -s)"
+    echo ""
+
+    # Importante: não canalizar diretamente para grep aqui, senão perdemos o exit code correto.
+    # Pipeline: printf | ssh | grep  -> ssh é PIPESTATUS[1]
+    printf "%s\n" "$remote_script" | \
+      $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "bash -s" 2>&1 | grep -vE "(Warning|Permanently)" || true
+    local exit_code=${PIPESTATUS[1]}
+
+    echo ""
+    if [ $exit_code -eq 0 ]; then
+        echo -e "${GREEN}[RESULTADO]${NC} Script SSH executado com sucesso (exit code: $exit_code)"
+    else
+        echo -e "${RED}[RESULTADO]${NC} Script SSH falhou (exit code: $exit_code)"
+    fi
+    echo ""
+    return $exit_code
+}
+
 # Variáveis padrão (valores padrão definidos aqui)
 DEPLOY_HOST="${DEPLOY_HOST:-10.10.2.30}"
 SSH_PASSWORD="${SSH_PASSWORD:-resu100gabao}"
@@ -327,6 +352,7 @@ SYNC_PATHS=(
     "package-lock.json"
     "env.example"
     "api"
+    "rpa"
     "frontend"
     "engine"
     "rag-service"
@@ -382,8 +408,10 @@ echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando se .env existe"
 echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"test -f ${REMOTE_DIR}/.env\""
 echo -e "${YELLOW}[COMANDO REMOTO]${NC} test -f ${REMOTE_DIR}/.env"
 echo ""
-if ! $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "test -f ${REMOTE_DIR}/.env" 2>&1 | grep -vE "(Warning|Permanently)" > /dev/null; then
-    ENV_TEST_EXIT=${PIPESTATUS[0]}
+
+# IMPORTANTE: não canalizar para grep; `test -f` não imprime nada e isso causa falso negativo.
+if ! $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "test -f ${REMOTE_DIR}/.env" >/dev/null 2>&1; then
+    ENV_TEST_EXIT=$?
     echo -e "${GREEN}[RESULTADO]${NC} .env não encontrado (exit code: $ENV_TEST_EXIT)"
     echo ""
     warn ".env não encontrado. Criando a partir de env.example (sem pausa interativa)..."
@@ -397,10 +425,48 @@ if ! $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "test -f ${REMOTE_DIR}/.env" 2>&1 | 
     echo -e "${GREEN}[RESULTADO]${NC} .env criado (exit code: $ENV_CREATE_EXIT)"
     warn "IMPORTANTE: edite o arquivo .env no servidor quando tiver tempo (mas o deploy continua)."
 else
-    ENV_TEST_EXIT=${PIPESTATUS[0]}
+    ENV_TEST_EXIT=0
     echo -e "${GREEN}[RESULTADO]${NC} .env encontrado (exit code: $ENV_TEST_EXIT)"
     info "✅ Arquivo .env encontrado"
 fi
+echo ""
+
+# Garante que ENCRYPTION_KEY exista no .env remoto (necessário para salvar credenciais criptografadas)
+section "Garantindo ENCRYPTION_KEY no .env"
+info "Verificando se ENCRYPTION_KEY está definida no .env do servidor..."
+REMOTE_ENCRYPTION_SCRIPT=$(cat <<EOF
+set -e
+cd "${REMOTE_DIR}"
+if [ ! -f .env ]; then
+  echo ".env não encontrado"
+  exit 1
+fi
+
+current="\$(grep -E '^ENCRYPTION_KEY=' .env | tail -n 1 | cut -d= -f2- | tr -d ' \r\n' || true)"
+if [ -n "\$current" ]; then
+  echo "ENCRYPTION_KEY já definida"
+  exit 0
+fi
+
+# Gera uma chave forte (32 bytes em base64) via Docker (não depende de openssl/node instalados no host)
+key="\$(docker run --rm node:22-alpine node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")"
+if [ -z "\$key" ]; then
+  echo "Falha ao gerar ENCRYPTION_KEY"
+  exit 1
+fi
+
+if grep -qE '^ENCRYPTION_KEY=' .env; then
+  # Escapa chars especiais para uso no sed
+  esc="\$(printf '%s' "\$key" | sed -e 's/[\\\/&|]/\\&/g')"
+  sed -i "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=\$esc|" .env
+else
+  printf "\nENCRYPTION_KEY=%s\n" "\$key" >> .env
+fi
+
+echo "ENCRYPTION_KEY gerada e salva em .env"
+EOF
+)
+run_ssh_script "$REMOTE_ENCRYPTION_SCRIPT" "Garantindo ENCRYPTION_KEY no .env (sem expor o valor)"
 echo ""
 
 # Pull de imagens base se solicitado

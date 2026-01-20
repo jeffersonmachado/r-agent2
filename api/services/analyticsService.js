@@ -208,10 +208,13 @@ async function getGeneralMetrics(options = {}) {
  * @param {string} [options.endDate]
  * @returns {Array}
  */
-function getAgentMetrics(options = {}) {
+async function getAgentMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
   
-  const agents = listAgents(tenantId);
+  const agentsRaw = await listAgents(tenantId);
+  const agents = Array.isArray(agentsRaw)
+    ? agentsRaw
+    : (agentsRaw && Array.isArray(agentsRaw.agents) ? agentsRaw.agents : []);
   const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
@@ -528,10 +531,10 @@ function getTrendMetrics(options = {}) {
  * @param {Object} options
  * @returns {Object}
  */
-function getAllMetrics(options = {}) {
+async function getAllMetrics(options = {}) {
   return {
-    general: getGeneralMetrics(options),
-    agents: getAgentMetrics(options),
+    general: await getGeneralMetrics(options),
+    agents: await getAgentMetrics(options),
     departments: getDepartmentMetrics(options),
     queues: getQueueMetrics(options),
     trends: getTrendMetrics(options),

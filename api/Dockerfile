@@ -19,6 +19,7 @@ RUN npm ci --only=production && \
 # Copia código da aplicação
 COPY engine/ ./engine/
 COPY api/ ./api/
+COPY rpa/ ./rpa/
 COPY infra/ ./infra/
 COPY contracts/ ./contracts/
 COPY config/ ./config/
@@ -38,7 +39,7 @@ EXPOSE 3000
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Copia entrypoint
 COPY api/entrypoint.sh ./api/entrypoint.sh

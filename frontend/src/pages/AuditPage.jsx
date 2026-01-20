@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast';
 import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
 import { ConversationHistoryModal } from '../components/ConversationHistoryModal';
+import { hasPermission, isSuperAdmin } from '../utils/menuPermissions';
 
 export function AuditPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -40,7 +41,9 @@ export function AuditPage() {
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState(null);
 
-  const canViewAudit = currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor';
+  // Alinha com o RBAC do backend + migração de roles (supervisor->manager, agent->operator)
+  const canViewAudit =
+    isSuperAdmin(currentAgent) || hasPermission(currentAgent, 'audit', 'read');
 
   const loadConversations = async () => {
     try {
