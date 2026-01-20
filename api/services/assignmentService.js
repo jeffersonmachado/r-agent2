@@ -110,6 +110,32 @@ async function resolveCandidateAgentIds(tenantId, queueName) {
   return candidateIds.sort();
 }
 
+/**
+ * Escolhe um agente para uma fila (sem efetivar assign).
+ * Exportado para uso por routingService (evita duplicação).
+ *
+ * @param {{tenantId:string, queueName:string}} params
+ * @returns {Promise<{agentId:string|null, strategy:'manual'|'round_robin'|'least_busy', candidateIds:string[]}>}
+ */
+async function chooseAgentForQueue({ tenantId, queueName }) {
+  if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
+  if (!queueName || typeof queueName !== 'string') throw new Error('queueName é obrigatório');
+
+  const strategy = await resolveQueueStrategy(tenantId, queueName);
+  const candidateIds = await resolveCandidateAgentIds(tenantId, queueName);
+  if (strategy === 'manual') return { agentId: null, strategy, candidateIds };
+  if (candidateIds.length === 0) return { agentId: null, strategy, candidateIds };
+
+  let chosen = null;
+  if (strategy === 'round_robin') {
+    chosen = pickRoundRobin(tenantId, queueName, candidateIds);
+  } else if (strategy === 'least_busy') {
+    chosen = pickLeastBusy(tenantId, candidateIds);
+  }
+
+  return { agentId: chosen || null, strategy, candidateIds };
+}
+
 async function autoAssign(ticketId) {
   const ticket = getTicket(ticketId);
   if (!ticket) return { success: false, error: 'ticket_not_found' };
@@ -119,20 +145,11 @@ async function autoAssign(ticketId) {
 
   const tenantId = ticket.tenantId;
   const queueName = ticket.queue;
-  const strategy = await resolveQueueStrategy(tenantId, queueName);
+  const pick = await chooseAgentForQueue({ tenantId, queueName });
+  const strategy = pick.strategy;
   if (strategy === 'manual') return { success: true, ticket, skipped: 'manual' };
-
-  const candidateIds = await resolveCandidateAgentIds(tenantId, queueName);
-  if (candidateIds.length === 0) return { success: true, ticket, skipped: 'no_candidates' };
-
-  let chosen = null;
-  if (strategy === 'round_robin') {
-    chosen = pickRoundRobin(tenantId, queueName, candidateIds);
-  } else if (strategy === 'least_busy') {
-    chosen = pickLeastBusy(tenantId, candidateIds);
-  }
-
-  if (!chosen) return { success: true, ticket, skipped: 'no_choice' };
+  if (!pick.agentId) return { success: true, ticket, skipped: pick.candidateIds.length === 0 ? 'no_candidates' : 'no_choice' };
+  const chosen = pick.agentId;
 
   const updated = assignTicket(ticketId, chosen);
   if (!updated) return { success: false, error: 'assign_failed' };
@@ -260,6 +277,7 @@ function stopAssignmentWorker() {
 }
 
 module.exports = {
+  chooseAgentForQueue,
   autoAssign,
   reassignIfOffline,
   reassignOfflineTicketsForTenant,

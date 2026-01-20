@@ -23,6 +23,7 @@ const { listAgents } = require('./authService');
 const { queryLogs } = require('./auditService');
 const { listDepartments } = require('./departmentsService');
 const { listQueues } = require('./queueService');
+const queueDefinitionService = require('./queueDefinitionService');
 const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation } = require('../db/models');
 
@@ -362,9 +363,29 @@ function getDepartmentMetrics(options = {}) {
 function getQueueMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
   
-  const queues = listQueues();
   const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
+
+  // Determina filas relevantes para o tenant:
+  // - filas vistas nos tickets (runtime)
+  // - filas definidas no DB (queueDefinitionService)
+  const queueNames = new Set();
+  try {
+    for (const t of tickets) {
+      if (t?.queue) queueNames.add(String(t.queue));
+    }
+  } catch (_) {}
+  try {
+    if (tenantId) {
+      for (const q of queueDefinitionService.listQueues({ tenantId, activeOnly: false })) {
+        if (q?.name) queueNames.add(String(q.name));
+      }
+    }
+  } catch (_) {}
+  // Compat: inclui filas do runtime legado (pode conter nomes globais)
+  try {
+    for (const qName of (listQueues() || [])) queueNames.add(String(qName));
+  } catch (_) {}
   
   // Filtra por período
   if (startDate || endDate) {
@@ -379,7 +400,7 @@ function getQueueMetrics(options = {}) {
   const queueStats = {};
   
   // Inicializa estatísticas para cada fila
-  for (const queueName of queues) {
+  for (const queueName of Array.from(queueNames.values())) {
     queueStats[queueName] = {
       queueName,
       totalTickets: 0,

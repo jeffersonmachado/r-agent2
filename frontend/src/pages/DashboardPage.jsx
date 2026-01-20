@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../hooks/useRouter';
 import { useAuth } from '../context/authContext';
 import { NavigationLink } from '../components/NavigationLink';
-import { getGeneralMetrics } from '../api/analytics';
+import { getGeneralMetrics, getQueueMetrics } from '../api/analytics';
 import logger from '../utils/logger';
 
 /**
@@ -14,6 +14,7 @@ export function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [kpis, setKpis] = useState(null);
+  const [queuesKpis, setQueuesKpis] = useState(null);
   const [kpiError, setKpiError] = useState(null);
   const [kpiLoading, setKpiLoading] = useState(true);
 
@@ -43,14 +44,19 @@ export function DashboardPage() {
       try {
         setKpiLoading(true);
         setKpiError(null);
-        const data = await getGeneralMetrics();
+        const [data, qData] = await Promise.all([
+          getGeneralMetrics(),
+          getQueueMetrics(),
+        ]);
         if (!mounted) return;
         setKpis(data);
+        setQueuesKpis(qData);
       } catch (err) {
         logger.error('[Dashboard] Erro ao carregar KPIs', err);
         if (!mounted) return;
         setKpiError('Erro ao carregar KPIs');
         setKpis(null);
+        setQueuesKpis(null);
       } finally {
         if (mounted) setKpiLoading(false);
       }
@@ -305,6 +311,18 @@ export function DashboardPage() {
     return filtered.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
   }, [searchTerm, selectedCategory]);
 
+  const backlogTop = useMemo(() => {
+    const list = Array.isArray(queuesKpis?.queues) ? queuesKpis.queues : [];
+    return list
+      .map((q) => ({
+        queueName: q.queueName,
+        waiting: Number(q.waitingTickets) || 0,
+        inProgress: Number(q.inProgressTickets) || 0,
+      }))
+      .sort((a, b) => (b.waiting + b.inProgress) - (a.waiting + a.inProgress))
+      .slice(0, 5);
+  }, [queuesKpis]);
+
   return (
     <div className="support-page">
       <div className="support-header">
@@ -353,6 +371,31 @@ export function DashboardPage() {
           </div>
           <div className="text-xs text-text-secondary">conversas sem ticket</div>
         </div>
+      </div>
+
+      {/* Backlog por fila (Blip-like) */}
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <span>📥</span>
+          <span>Backlog por fila</span>
+        </h3>
+        {kpiLoading ? (
+          <div className="text-sm text-text-secondary">Carregando…</div>
+        ) : (backlogTop.length === 0 ? (
+          <div className="text-sm text-text-secondary">Sem dados de filas para exibir.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            {backlogTop.map((q) => (
+              <div key={q.queueName} className="bg-bg-secondary rounded-lg border border-border-default p-4">
+                <div className="text-xs text-text-tertiary truncate">{q.queueName}</div>
+                <div className="text-lg font-semibold text-text-primary">{q.waiting + q.inProgress}</div>
+                <div className="text-xs text-text-secondary">
+                  waiting: {q.waiting} · in_progress: {q.inProgress}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
 
       {kpiError ? (

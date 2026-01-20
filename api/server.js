@@ -6856,6 +6856,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
                 // 3) Se há ticket em modo humano, NÃO roda engine; apenas registra mensagem e notifica UI
                 if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
+                  // Fase 3: se entrou em atendimento humano e ainda não está atribuído, tenta auto-assign
+                  if ((effectiveTicket.mode || 'bot') === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
+                    autoAssignTicket(effectiveTicket.id).catch(() => null);
+                  }
                   try {
                     emitEvent('ticket.message.received', {
                       ticketId: effectiveTicket.id,
@@ -7069,6 +7073,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
             // 3) Se ticket em modo humano, NÃO roda engine; apenas notifica UI
             if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
+              // Fase 3: se entrou em atendimento humano e ainda não está atribuído, tenta auto-assign
+              if ((effectiveTicket.mode || 'bot') === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
+                autoAssignTicket(effectiveTicket.id).catch(() => null);
+              }
               try {
                 emitEvent('ticket.message.received', {
                   ticketId: effectiveTicket.id,

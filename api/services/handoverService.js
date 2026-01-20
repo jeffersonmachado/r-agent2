@@ -16,6 +16,7 @@ const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation } = require('../db/models');
 const { getTicket, setTicketMode } = require('./queueService');
 const { emitEvent } = require('./websocketService');
+const { autoAssign } = require('./assignmentService');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -61,6 +62,10 @@ async function takeOver(ticketId, agent, reason = 'agent_takeover') {
     actorId: agent?.id || null,
     actorUsername: agent?.username || null,
   });
+
+  // Fase 3: quando entra em atendimento humano, tenta auto-assign (best-effort)
+  // (apenas se status waiting e sem assignedTo; a própria autoAssign cuida de validar).
+  autoAssign(updated.id).catch(() => null);
 
   // Best-effort: sincroniza conversa omnichannel
   await updateConversationStatusBestEffort(updated);
