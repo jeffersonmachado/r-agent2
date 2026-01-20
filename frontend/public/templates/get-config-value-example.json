@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó get_config_value para ler valores da configuração",
   "icon": "⚙️",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "get-config-value-example",
     "name": "Obter Valor da Config",
     "version": 1,

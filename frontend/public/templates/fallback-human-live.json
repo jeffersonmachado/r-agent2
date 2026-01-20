@@ -4,7 +4,7 @@
   "description": "Template demonstrando fallback com escalada para atendimento humano em tempo real (modo síncrono)",
   "icon": "💬",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "fallback-human-live",
     "name": "Fallback com Atendimento Humano Síncrono",
     "version": 1,

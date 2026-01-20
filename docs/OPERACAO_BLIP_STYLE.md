@@ -26,7 +26,7 @@ Este guia é um checklist prático para operar o `r-agent2` com robustez e previ
 
 - **Webhooks**:
   - Webhooks são não autenticados. Produção deve ter `channel_accounts` configurado para resolver `tenantId` de forma segura.
-  - Acompanhe dados do fallback (ex.: `tenant-demo`) e bloqueie por política de rollout quando necessário.
+  - Acompanhe dados de tentativas de fallback e **bloqueie** por política de rollout quando necessário (não existe tenant default em produção).
 
 ## 4) WhatsApp Cloud — fluxo recomendado
 

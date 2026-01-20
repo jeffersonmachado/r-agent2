@@ -40,6 +40,15 @@ function frontendRoutesPlugin() {
         // - /config pode ser tanto API quanto página (depende do Accept header)
         const isApiRoute = url.startsWith('/tickets') || 
                           url.startsWith('/queues') || 
+                          url.startsWith('/segmentation') ||
+                          url.startsWith('/quick-replies') ||
+                          url.startsWith('/close-reasons') ||
+                          url.startsWith('/departments') ||
+                          url.startsWith('/bulk-campaigns') ||
+                          url.startsWith('/channel-accounts') ||
+                          url.startsWith('/whatsapp') ||
+                          url.startsWith('/ai') ||
+                          url.startsWith('/flow-templates') ||
                           url.startsWith('/flows') || 
                           url.startsWith('/health') || 
                           url.startsWith('/version') || 
@@ -158,6 +167,51 @@ const viteConfig = defineConfig({
         secure: false,
       },
       '^/queues': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/segmentation': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/quick-replies': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/close-reasons': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/departments': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/bulk-campaigns': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/channel-accounts': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/whatsapp': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/ai': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/flow-templates': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
@@ -389,6 +443,10 @@ const viteConfig = defineConfig({
   define: {
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
       process.env.VITE_API_BASE_URL || config.frontend?.apiBaseUrl || ''
+    ),
+    // Porta da API para fallback no DEV (ex: WebSocket direto, sem depender do proxy)
+    'import.meta.env.VITE_API_DEV_PORT': JSON.stringify(
+      Number(process.env.API_PORT || config.api?.port || 3000)
     ),
     'import.meta.env.VITE_BASE_PATH': JSON.stringify(
       process.env.VITE_BASE_PATH || ''

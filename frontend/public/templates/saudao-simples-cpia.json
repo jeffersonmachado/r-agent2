@@ -4,7 +4,7 @@
   "description": "Template baseado em Saudação Simples (cópia) com fallback integrado",
   "icon": "📋",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "simple-greeting-1766890136471-47p9",
     "name": "Saudação Simples (cópia)",
     "version": 1,

@@ -129,6 +129,11 @@ describe('webhook WhatsApp (idempotência)', () => {
     const match = msgs.filter((m) => m && m.externalMessageId === 'wamid.in.1');
     expect(match.length).toBe(1);
 
+    // Engine deve ficar bloqueada quando ticket.mode=human
+    // eslint-disable-next-line global-require
+    const { processWhatsAppMessage } = require('../../api/services/messageProcessor');
+    expect(processWhatsAppMessage).not.toHaveBeenCalled();
+
     await new Promise((resolve) => server.close(resolve));
   });
 });

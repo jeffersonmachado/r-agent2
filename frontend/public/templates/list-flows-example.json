@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó list_flows para listar fluxos disponíveis",
   "icon": "📑",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "list-flows-example",
     "name": "Listar Fluxos",
     "version": 1,
@@ -27,7 +27,7 @@
         "id": "list-flows",
         "type": "list_flows",
         "config": {
-          "tenantId": "tenant-demo",
+          "tenantId": "<tenant-id>",
           "nameFilter": "",
           "outputVariable": "flows_list"
         },

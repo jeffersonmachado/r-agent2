@@ -17,7 +17,7 @@ Objetivo: deixar o `SupportPage` operacionalmente “pronto para produção”, 
   - Ações ficam visíveis também como **mensagens `system`** no histórico do ticket (ex.: “Tag adicionada: cobrança”).
 
 - **Motivos de encerramento**
-  - Tabela `close_reasons` (por tenant) com defaults para `tenant-demo`.
+  - Tabela `close_reasons` (por tenant) sem defaults automáticos (seed explícito por tenant).
   - UI de encerramento exibe um modal com:
     - seleção de motivo via `GET /close-reasons`
     - campo texto livre alternativo

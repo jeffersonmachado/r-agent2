@@ -11,7 +11,7 @@ O sistema usa dois tipos de identificadores para tenants:
 
 ### Use `tenant_key` para:
 - ✅ URLs públicas e APIs REST
-- ✅ Query parameters no frontend (`?tenant=tenant-demo`)
+- ✅ Query parameters no frontend (`?tenant=<tenant-key>`)
 - ✅ Logs e mensagens de erro
 - ✅ Identificação por clientes
 - ✅ Integrações externas (webhooks, APIs)
@@ -30,7 +30,7 @@ O sistema usa dois tipos de identificadores para tenants:
 const { findTenantByIdentifier } = require('./services/tenantService');
 
 // Aceita tanto tenant_key quanto UUID
-const tenant = await findTenantByIdentifier('tenant-demo');  // ✅
+const tenant = await findTenantByIdentifier('tenant-acme');  // ✅
 const tenant = await findTenantByIdentifier('a1b2c3d4-...'); // ✅
 ```
 
@@ -45,14 +45,14 @@ A função `findTenantByIdentifier()`:
 
 ### ✅ Correto: Usar tenant_key em APIs
 ```javascript
-// GET /tenants/tenant-demo/ai-config
-const tenantKey = req.params.tenantKey; // "tenant-demo"
+// GET /tenants/tenant-acme/ai-config
+const tenantKey = req.params.tenantKey; // "tenant-acme"
 const tenant = await findTenantByIdentifier(tenantKey);
 ```
 
 ### ✅ Correto: Usar tenant_key em frontend
 ```javascript
-navigate(`/config?tab=ai&tenant=tenant-demo`);
+navigate(`/config?tab=ai&tenant=tenant-acme`);
 ```
 
 ### ✅ Correto: Usar id em foreign keys
@@ -66,10 +66,10 @@ await TenantAISetting.create({
 ### ❌ Evitar: Misturar identificadores
 ```javascript
 // ❌ Não faça isso
-const tenant = await Tenant.findOne({ where: { id: 'tenant-demo' } });
+const tenant = await Tenant.findOne({ where: { id: 'tenant-acme' } });
 
 // ✅ Faça isso
-const tenant = await findTenantByIdentifier('tenant-demo');
+const tenant = await findTenantByIdentifier('tenant-acme');
 ```
 
 ## Serviços que Seguem a Convenção

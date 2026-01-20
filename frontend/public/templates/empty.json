@@ -4,7 +4,7 @@
   "description": "Comece do zero com um fluxo em branco (com fallback integrado)",
   "icon": "📄",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "new-flow",
     "name": "Novo Fluxo",
     "version": 1,

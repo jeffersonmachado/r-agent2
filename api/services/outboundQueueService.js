@@ -12,16 +12,30 @@
 'use strict';
 
 const crypto = require('crypto');
+const os = require('os');
 const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { OutboundQueueItem, ChannelConversation, ChannelMessage } = require('../db/models');
+const { TicketEvent } = require('../db/models');
 const { sendTextMessage } = require('./whatsappService');
 const { sendInstagramMessage, sendInstagramMedia } = require('./instagramService');
 const { updateOutboundMessageMeta, getTicket } = require('./queueService');
 const { emitEvent } = require('./websocketService');
+const { logAction } = require('./auditService');
+const config = require('../utils/config');
 
 function dbAvailable() {
   return !!getSequelize();
+}
+
+function allowDirectSendWithoutDb() {
+  // HARDENING: envio direto sem DB é perigoso (perde auditoria/retry).
+  // Em produção, só é permitido via flag explícita.
+  return String(process.env.ALLOW_DIRECT_SEND_WITHOUT_DB || '').toLowerCase() === 'true';
+}
+
+function isProduction() {
+  return String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 }
 
 function newId(prefix) {
@@ -33,6 +47,17 @@ function computeBackoffSeconds(attempts) {
   const base = Math.min(Math.pow(2, Math.max(0, attempts)) * 2, 300);
   const jitter = Math.random() * Math.min(5, base * 0.2);
   return Math.max(2, Math.round(base + jitter));
+}
+
+function getProcessingBy() {
+  return `${os.hostname()}:${process.pid}`;
+}
+
+function getProcessingTimeoutMs() {
+  const raw = process.env.OUTBOUND_PROCESSING_TIMEOUT_MS;
+  const n = raw ? Number(raw) : NaN;
+  if (Number.isFinite(n) && n > 1000) return n;
+  return 2 * 60 * 1000; // 2 min (default)
 }
 
 async function enqueueOutbound({ tenantId, channelType, channelAccountId = null, conversationId = null, message }) {
@@ -47,10 +72,27 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
   }
 
   if (!dbAvailable()) {
-    // Sem DB, tenta enviar imediatamente (best-effort)
-    logger.warn('[OutboundQueue] DB indisponível. Tentando envio direto (sem retry).', { tenantId, channelType });
+    // HARDENING: em produção, não permitir "fallback perigoso" (envio direto sem persistência).
+    // Exceção: ALLOW_DIRECT_SEND_WITHOUT_DB=true (uso emergencial e consciente).
+    if (isProduction() && !allowDirectSendWithoutDb()) {
+      const err = new Error('db_unavailable_no_direct_send');
+      err.code = 'db_unavailable_no_direct_send';
+      logger.error('[OutboundQueue] DB indisponível em produção; envio direto bloqueado', {
+        tenantId,
+        channelType,
+        allowDirect: false,
+      });
+      throw err;
+    }
+
+    logger.warn('[OutboundQueue] DB indisponível; usando envio direto (sem retry/persistência).', {
+      tenantId,
+      channelType,
+      env: process.env.NODE_ENV || 'unknown',
+      allowDirect: allowDirectSendWithoutDb(),
+    });
     await deliverOutbound({ tenantId, channelType, message });
-    return { queued: false };
+    return { queued: false, direct: true };
   }
 
   const Model = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
@@ -80,25 +122,95 @@ async function deliverOutbound({ tenantId, channelType, message }) {
   if (channelType === 'whatsapp') {
     const to = message.to;
     const kind = message.type || 'text';
-    if (kind !== 'text') {
-      throw new Error(`Outbound WhatsApp: type "${kind}" ainda não suportado`);
+    if (kind === 'text') {
+      const text = message.body?.text || message.body?.body || message.text;
+      if (!to || !text) throw new Error('Outbound WhatsApp requer {to, body.text}');
+      const result = await sendTextMessage(to, text);
+      const externalMessageId = result?.messages?.[0]?.id || null;
+      await persistOutboundMessage({
+        tenantId,
+        channelType,
+        to,
+        type: 'text',
+        body: { text },
+        externalMessageId,
+        status: 'sent',
+      }).catch((err) => {
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+      });
+      return { success: true, externalMessageId };
     }
-    const text = message.body?.text || message.body?.body || message.text;
-    if (!to || !text) throw new Error('Outbound WhatsApp requer {to, body.text}');
-    const result = await sendTextMessage(to, text);
-    const externalMessageId = result?.messages?.[0]?.id || null;
-    await persistOutboundMessage({
-      tenantId,
-      channelType,
-      to,
-      type: 'text',
-      body: { text },
-      externalMessageId,
-      status: 'sent',
-    }).catch((err) => {
-      logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
-    });
-    return { success: true, externalMessageId };
+
+    if (kind === 'template') {
+      const templateName = message.body?.templateName || message.body?.name || message.templateName;
+      const languageCode = message.body?.languageCode || message.body?.language || message.languageCode || 'pt_BR';
+      const parameters = Array.isArray(message.body?.parameters) ? message.body.parameters : (Array.isArray(message.parameters) ? message.parameters : []);
+      if (!to || !templateName) throw new Error('Outbound WhatsApp template requer {to, body.templateName}');
+
+      const phoneNumberId = config.get('whatsapp.phoneNumberId');
+      const accessToken = config.get('whatsapp.accessToken');
+      if (!phoneNumberId || !accessToken) throw new Error('Credenciais do WhatsApp não configuradas');
+
+      const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: String(to).replace(/^\+/, ''),
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: languageCode || 'pt_BR' },
+        },
+      };
+
+      if (parameters && parameters.length > 0) {
+        payload.template.components = [
+          {
+            type: 'body',
+            parameters: parameters.map((param) => ({
+              type: 'text',
+              text: String(param),
+            })),
+          },
+        ];
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `WhatsApp API error: ${response.status}`);
+      }
+
+      const data = await response.json().catch(() => ({}));
+      const externalMessageId = data?.messages?.[0]?.id || null;
+
+      await persistOutboundMessage({
+        tenantId,
+        channelType,
+        to,
+        type: 'template',
+        body: {
+          templateName,
+          languageCode: languageCode || 'pt_BR',
+          parameters,
+        },
+        externalMessageId,
+        status: 'sent',
+      }).catch((err) => {
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+      });
+
+      return { success: true, externalMessageId };
+    }
+
+    throw new Error(`Outbound WhatsApp: type "${kind}" ainda não suportado`);
   }
 
   if (channelType === 'instagram') {
@@ -150,6 +262,37 @@ async function deliverOutbound({ tenantId, channelType, message }) {
   throw new Error(`channelType "${channelType}" não suportado em outbound`);
 }
 
+function computeReasonCode(err) {
+  if (!err) return null;
+  const code = err.code ? String(err.code) : null;
+  if (code) return code;
+  const msg = String(err.message || '').toLowerCase();
+  if (msg.includes('outside_window_24h')) return 'outside_window_24h';
+  if (msg.includes('outside the allowed window') || msg.includes('24 hour') || msg.includes('requires a template')) return 'outside_window_24h';
+  if (msg.includes('credentials')) return 'credentials_invalid';
+  if (msg.includes('timeout')) return 'timeout';
+  return 'send_failed';
+}
+
+async function createTicketEventForOutboundBestEffort({ tenantId, ticketId, type, payload }) {
+  if (!tenantId || !ticketId || !type) return;
+  if (!dbAvailable()) return;
+  try {
+    const Model = typeof TicketEvent === 'function' ? TicketEvent() : TicketEvent;
+    const now = new Date();
+    await Model.create({
+      id: newId('tev'),
+      tenant_key: tenantId,
+      ticket_id: ticketId,
+      type,
+      payload: payload && typeof payload === 'object' ? payload : {},
+      created_by: 'system',
+      created_at: now,
+      updated_at: now,
+    });
+  } catch (_) {}
+}
+
 async function persistOutboundMessage({ tenantId, channelType, to, type, body, externalMessageId, status }) {
   if (!dbAvailable()) return;
   if (!tenantId || !channelType || !to) return;
@@ -184,23 +327,43 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
   // Idempotência por external_message_id (quando existir)
   if (externalMessageId) {
     const existing = await MessageModel.findOne({
-      where: { tenant_key: tenantId, external_message_id: String(externalMessageId) },
+      where: { tenant_key: tenantId, channel_type: channelType, external_message_id: String(externalMessageId) },
     });
     if (existing) return;
   }
 
-  await MessageModel.create({
-    id: newId('msg'),
-    tenant_key: tenantId,
-    conversation_id: conversation.id,
-    direction: 'out',
-    type: type || 'text',
-    body: body || {},
-    external_message_id: externalMessageId ? String(externalMessageId) : null,
-    status: status || 'sent',
-    created_at: now,
-    updated_at: now,
-  });
+  try {
+    await MessageModel.create({
+      id: newId('msg'),
+      tenant_key: tenantId,
+      conversation_id: conversation.id,
+      channel_type: channelType,
+      direction: 'out',
+      type: type || 'text',
+      body: body || {},
+      external_message_id: externalMessageId ? String(externalMessageId) : null,
+      status: status || 'sent',
+      created_at: now,
+      updated_at: now,
+    });
+  } catch (err) {
+    const msg = String(err?.message || '');
+    const pgCode = err?.original?.code ? String(err.original.code) : null;
+    if (
+      err?.name === 'SequelizeUniqueConstraintError' ||
+      pgCode === '23505' ||
+      msg.includes('channel_messages_tenant_channel_type_external_msg_id_uq') ||
+      msg.includes('duplicate key')
+    ) {
+      logger.debug('[OutboundQueue] Duplicate message ignored', {
+        tenantId,
+        channelType,
+        externalMessageId: externalMessageId ? String(externalMessageId) : null,
+      });
+      return;
+    }
+    throw err;
+  }
 }
 
 async function processDue({ limit = 25 } = {}) {
@@ -211,24 +374,63 @@ async function processDue({ limit = 25 } = {}) {
   const Op = sequelize.constructor.Op;
   const now = new Date();
 
-  const rows = await Model.findAll({
-    where: {
-      status: ['pending', 'failed'],
-      next_attempt_at: { [Op.lte]: now },
-    },
-    order: [['next_attempt_at', 'ASC']],
-    limit,
+  // 1) Requeue best-effort de itens presos em "sending" (crash/restart).
+  // Não tocamos itens já enviados (external_message_id != null).
+  const processingTimeoutMs = getProcessingTimeoutMs();
+  const staleBefore = new Date(Date.now() - processingTimeoutMs);
+  try {
+    await Model.update(
+      {
+        status: 'pending',
+        processing_at: null,
+        processing_by: null,
+        next_attempt_at: now,
+        updated_at: now,
+      },
+      {
+        where: {
+          status: 'sending',
+          external_message_id: { [Op.is]: null },
+          processing_at: { [Op.lte]: staleBefore },
+        },
+      }
+    );
+  } catch (_) {}
+
+  // 2) Claim de lote com lock + skipLocked (cluster-safe).
+  const processingBy = getProcessingBy();
+  const claimedRows = await sequelize.transaction(async (t) => {
+    const dueRows = await Model.findAll({
+      where: {
+        status: ['pending', 'failed'],
+        next_attempt_at: { [Op.lte]: now },
+        external_message_id: { [Op.is]: null },
+      },
+      order: [['next_attempt_at', 'ASC']],
+      limit,
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+      skipLocked: true,
+    });
+
+    const claimAt = new Date();
+    for (const r of dueRows) {
+      // eslint-disable-next-line no-await-in-loop
+      await r.update(
+        { status: 'sending', processing_at: claimAt, processing_by: processingBy, updated_at: claimAt },
+        { transaction: t }
+      );
+    }
+
+    return dueRows;
   });
 
   let sent = 0;
   let failed = 0;
   let skipped = 0;
 
-  for (const row of rows) {
+  for (const row of claimedRows) {
     try {
-      // marca como sending
-      await row.update({ status: 'sending', updated_at: new Date() });
-
       const result = await deliverOutbound({
         tenantId: row.tenant_key,
         channelType: row.channel_type,
@@ -240,6 +442,8 @@ async function processDue({ limit = 25 } = {}) {
         status: 'sent',
         external_message_id: result.externalMessageId || row.external_message_id || null,
         last_error: null,
+        processing_at: null,
+        processing_by: null,
         updated_at: new Date(),
       });
 
@@ -262,14 +466,73 @@ async function processDue({ limit = 25 } = {}) {
       } catch (_) {}
     } catch (err) {
       failed++;
+      const reasonCode = computeReasonCode(err);
       const attempts = (row.attempts || 0) + 1;
       const backoffSeconds = computeBackoffSeconds(attempts);
       const nextAttemptAt = new Date(Date.now() + backoffSeconds * 1000);
+
+      // Fallback 24h (WhatsApp): se texto falhar por janela, tenta enfileirar template (best-effort)
+      try {
+        const isWhatsApp = row.channel_type === 'whatsapp';
+        const msgType = row.message?.type || row.message?.messageType || null;
+        const hasTemplateFallback = reasonCode === 'outside_window_24h' && isWhatsApp && (!msgType || msgType === 'text');
+        if (hasTemplateFallback) {
+          const fallbackTemplateName = process.env.WHATSAPP_FALLBACK_TEMPLATE_NAME || config.get('whatsapp.fallbackTemplateName', 'hello_world');
+          const to = row.message?.to;
+          const meta = row.message?.meta || {};
+          if (to && fallbackTemplateName) {
+            // Enfileira template como novo item (não reusa o mesmo row para não conflitar com status de envio)
+            // eslint-disable-next-line no-await-in-loop
+            await enqueueOutbound({
+              tenantId: row.tenant_key,
+              channelType: 'whatsapp',
+              channelAccountId: row.channel_account_id || null,
+              conversationId: row.conversation_id || null,
+              message: {
+                to,
+                type: 'template',
+                body: {
+                  templateName: String(fallbackTemplateName),
+                  languageCode: 'pt_BR',
+                  parameters: [],
+                },
+                meta: { ...meta, fallbackFromOutboundId: row.id, fallbackReason: reasonCode },
+              },
+            }).catch(() => null);
+
+            // Auditoria + TicketEvent
+            const ticketId = meta.ticketId ? String(meta.ticketId) : null;
+            if (ticketId) {
+              logAction({
+                agentId: 'system',
+                username: 'system',
+                tenantId: row.tenant_key,
+                action: 'whatsapp_outside_window_fallback_template',
+                resource: 'ticket',
+                resourceId: ticketId,
+                details: { outboundId: row.id, to, templateName: fallbackTemplateName, reasonCode },
+                ipAddress: 'system',
+                userAgent: 'system',
+              });
+              await createTicketEventForOutboundBestEffort({
+                tenantId: row.tenant_key,
+                ticketId,
+                type: 'whatsapp.fallback_template',
+                payload: { outboundId: row.id, to, templateName: fallbackTemplateName, reasonCode },
+              });
+            }
+          }
+        }
+      } catch (_) {}
+
       await row.update({
         status: 'failed',
         attempts,
         next_attempt_at: nextAttemptAt,
         last_error: err.message,
+        reason_code: reasonCode,
+        processing_at: null,
+        processing_by: null,
         updated_at: new Date(),
       });
 
@@ -301,7 +564,7 @@ async function processDue({ limit = 25 } = {}) {
     }
   }
 
-  return { processed: rows.length, sent, failed, skipped };
+  return { processed: claimedRows.length, sent, failed, skipped };
 }
 
 let workerTimer = null;

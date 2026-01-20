@@ -11,6 +11,8 @@ import {
   takeOverTicket,
   returnToBotTicket,
   pauseTicket,
+  resumeTicket,
+  getTicketDeliveryFailures,
   getTicketAiSummary,
   generateTicketAiSummary,
 } from '../api/tickets';
@@ -74,8 +76,12 @@ export function SupportPage() {
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [conversationMessages, setConversationMessages] = useState([]);
   const [timelineMessages, setTimelineMessages] = useState([]);
+  const [ticketEvents, setTicketEvents] = useState([]);
   const [ticketAuditLogs, setTicketAuditLogs] = useState([]);
   const [ticketAuditLoading, setTicketAuditLoading] = useState(false);
+  const [showDeliveryFailuresModal, setShowDeliveryFailuresModal] = useState(false);
+  const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
+  const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
 
   const applyTemplateVariables = useCallback((text, variables) => {
     if (!text) return '';
@@ -795,12 +801,14 @@ export function SupportPage() {
       setTicketMessages([]);
       setConversationMessages([]);
       setTimelineMessages([]);
+      setTicketEvents([]);
       return;
     }
 
     try {
       const result = await getTicketMessages(ticketId);
       setTicketMessages(result.messages || []);
+      setTicketEvents(Array.isArray(result?.events) ? result.events : []);
 
       let convMsgs = [];
       if (conversationId) {
@@ -851,6 +859,26 @@ export function SupportPage() {
       logger.error('Erro ao carregar mensagens', error);
     }
   }, []); // Sem dependências - usa state setters funcionais
+
+  const extractedEntities = React.useMemo(() => {
+    const texts = [];
+    for (const m of (Array.isArray(timelineMessages) ? timelineMessages : [])) {
+      if (!m) continue;
+      if (typeof m.text === 'string' && m.text.trim()) texts.push(m.text);
+      const bodyText = m?.channel?.body?.text;
+      if (typeof bodyText === 'string' && bodyText.trim()) texts.push(bodyText);
+    }
+    const blob = texts.join('\n');
+    if (!blob) return { emails: [], cpfs: [], cnpjs: [], phones: [], urls: [] };
+
+    const emails = Array.from(new Set((blob.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(s => s.toLowerCase()))).slice(0, 10);
+    const urls = Array.from(new Set((blob.match(/https?:\/\/[^\s)]+/gi) || []))).slice(0, 10);
+    const cpfs = Array.from(new Set((blob.match(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g) || []).map(s => s.replace(/\D/g, '')))).slice(0, 10);
+    const cnpjs = Array.from(new Set((blob.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g) || []).map(s => s.replace(/\D/g, '')))).slice(0, 10);
+    const phones = Array.from(new Set((blob.match(/\b\+?55\s*\(?\d{2}\)?\s*\d{4,5}-?\d{4}\b/g) || []).map(s => s.replace(/\s+/g, ' ').trim()))).slice(0, 10);
+
+    return { emails, cpfs, cnpjs, phones, urls };
+  }, [timelineMessages]);
 
   // Carrega mensagens quando ticket é selecionado
   useEffect(() => {
@@ -1117,6 +1145,47 @@ export function SupportPage() {
     }
   };
 
+  const handleResume = async () => {
+    if (!selectedTicket) return;
+    setHandoverLoading(true);
+    try {
+      const updated = await resumeTicket(selectedTicket.id, 'resume');
+      showToastRef.current('Atendimento retomado (modo humano)', 'success', 2500);
+      setSelectedTicket(updated);
+      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      if (loadTicketsRef.current) {
+        loadTicketsRef.current();
+      }
+      if (loadTicketMessagesRef.current) {
+        loadTicketMessagesRef.current(updated.id);
+      }
+    } catch (error) {
+      logger.error('Erro ao retomar atendimento', error);
+      showToast('Erro ao retomar atendimento', 'error');
+    } finally {
+      setHandoverLoading(false);
+    }
+  };
+
+  const openDeliveryFailures = async () => {
+    if (!selectedTicket) return;
+    setShowDeliveryFailuresModal(true);
+    setDeliveryFailuresLoading(true);
+    try {
+      const data = await getTicketDeliveryFailures(selectedTicket.id);
+      setDeliveryFailures({
+        outboundQueue: Array.isArray(data?.outboundQueue) ? data.outboundQueue : [],
+        channelMessages: Array.isArray(data?.channelMessages) ? data.channelMessages : [],
+      });
+    } catch (err) {
+      logger.error('Erro ao carregar falhas de entrega', err);
+      showToast('Erro ao carregar falhas de entrega', 'error');
+      setDeliveryFailures({ outboundQueue: [], channelMessages: [] });
+    } finally {
+      setDeliveryFailuresLoading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -1146,6 +1215,18 @@ export function SupportPage() {
     if (m === 'human') return { label: 'HUMANO', bg: '#fff7ed', fg: '#9a3412' };
     if (m === 'paused') return { label: 'PAUSADO', bg: '#f3f4f6', fg: '#374151' };
     return { label: 'BOT', bg: '#ecfdf5', fg: '#065f46' };
+  };
+
+  const getDeliveryStatusBadge = (deliveryStatusRaw) => {
+    const s = deliveryStatusRaw ? String(deliveryStatusRaw).toLowerCase() : '';
+    if (!s) return null;
+    if (s === 'pending') return { text: '…', title: 'Pendente', color: '#6b7280' };
+    if (s === 'sent') return { text: '✓', title: 'Enviado', color: '#6b7280' };
+    if (s === 'delivered') return { text: '✓✓', title: 'Entregue', color: '#6b7280' };
+    if (s === 'read') return { text: '✓✓', title: 'Lido', color: '#2563eb' };
+    if (s === 'failed') return { text: '!', title: 'Falhou', color: '#b91c1c' };
+    // fallback
+    return { text: s, title: s, color: '#6b7280' };
   };
 
   return (
@@ -1372,7 +1453,7 @@ export function SupportPage() {
                     ) : null}
                     {(selectedTicket.mode || 'bot') === 'paused' ? (
                       <>
-                        <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-button-full">
+                        <Button onClick={handleResume} disabled={handoverLoading} className="support-button-full">
                           Retomar (humano)
                         </Button>
                         <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">
@@ -1380,6 +1461,17 @@ export function SupportPage() {
                         </Button>
                       </>
                     ) : null}
+
+                    {/* Falhas de entrega (WhatsApp/Instagram outbound) */}
+                    <Button
+                      onClick={openDeliveryFailures}
+                      disabled={deliveryFailuresLoading}
+                      className="support-button-full"
+                      style={{ background: 'var(--color-bg-secondary)' }}
+                      title="Ver falhas de entrega do outbound"
+                    >
+                      {deliveryFailuresLoading ? 'Carregando falhas...' : 'Falhas de entrega'}
+                    </Button>
                   </div>
 
               {/* Histórico de handover (últimos 5) */}
@@ -1451,11 +1543,22 @@ export function SupportPage() {
                             {msg.source === 'channel' ? <span style={{ marginLeft: '6px', color: '#999' }}>(canal)</span> : null}
                             {' • '}
                             {formatDate(msg.timestamp)}
-                            {msg.deliveryStatus ? (
-                              <span style={{ marginLeft: '8px', color: '#888' }}>
-                                [{String(msg.deliveryStatus)}]
-                              </span>
-                            ) : null}
+                            {(() => {
+                              // Mostra badge apenas para outbound do atendente/bot
+                              const isOutbound = msg.sender === 'agent' || msg.sender === 'bot';
+                              if (!isOutbound) return null;
+                              const badge = getDeliveryStatusBadge(msg.deliveryStatus);
+                              if (!badge) return null;
+                              return (
+                                <span
+                                  style={{ marginLeft: '8px', color: badge.color, fontWeight: 700 }}
+                                  title={badge.title}
+                                  aria-label={`Status de entrega: ${badge.title}`}
+                                >
+                                  {badge.text}
+                                </span>
+                              );
+                            })()}
                           </div>
                           <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
                             {renderTimelineMessageContent(msg)}
@@ -1683,6 +1786,56 @@ export function SupportPage() {
                   </div>
 
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Entidades</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                      {(extractedEntities.emails.length === 0
+                        && extractedEntities.cpfs.length === 0
+                        && extractedEntities.cnpjs.length === 0
+                        && extractedEntities.phones.length === 0
+                        && extractedEntities.urls.length === 0) ? (
+                          <div style={{ color: 'var(--color-text-tertiary)' }}>Nada detectado automaticamente.</div>
+                        ) : (
+                          <>
+                            {extractedEntities.emails.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>E-mails</div>
+                                {extractedEntities.emails.map((e) => <div key={e}><code>{e}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.phones.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Telefones</div>
+                                {extractedEntities.phones.map((p) => <div key={p}><code>{p}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.cpfs.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>CPF</div>
+                                {extractedEntities.cpfs.map((c) => <div key={c}><code>{c}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.cnpjs.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>CNPJ</div>
+                                {extractedEntities.cnpjs.map((c) => <div key={c}><code>{c}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.urls.length > 0 ? (
+                              <div style={{ marginBottom: '0px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>URLs</div>
+                                {extractedEntities.urls.map((u) => (
+                                  <div key={u}>
+                                    <a href={u} target="_blank" rel="noreferrer">{u}</a>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
                       {(selectedTicket.tags || []).length === 0 ? (
@@ -1754,6 +1907,27 @@ export function SupportPage() {
                     </div>
                   ) : null}
 
+                  {Array.isArray(ticketEvents) && ticketEvents.length > 0 ? (
+                    <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+                      <div style={{ fontWeight: 700, marginBottom: '8px' }}>Eventos do ticket</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                        {ticketEvents.slice(0, 20).map((ev) => (
+                          <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                              <div style={{ fontWeight: 600 }}>{ev.type}</div>
+                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(ev.createdAt)}</div>
+                            </div>
+                            {ev?.payload ? (
+                              <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>
+                                {typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                       <div style={{ fontWeight: 700 }}>Auditoria</div>
@@ -1795,6 +1969,127 @@ export function SupportPage() {
 
       <ToastContainer />
       <ConfirmDialog />
+
+      {/* Modal: Falhas de entrega */}
+      {showDeliveryFailuresModal && (
+        <div
+          className="support-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delivery-failures-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeliveryFailuresModal(false);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowDeliveryFailuresModal(false);
+            }
+          }}
+        >
+          <div className="support-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2 id="delivery-failures-title" style={{ marginTop: 0 }}>
+              Falhas de entrega
+            </h2>
+
+            <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+              Mostra itens com erro no outbound e mensagens do canal marcadas como <strong>failed</strong>.
+            </div>
+
+            {deliveryFailuresLoading ? (
+              <div style={{ padding: '12px 0' }}>Carregando...</div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Outbound queue</div>
+                  {deliveryFailures.outboundQueue.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma falha registrada.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '220px', overflowY: 'auto' }}>
+                      {deliveryFailures.outboundQueue.map((it) => {
+                        const text = it?.message?.body?.text || it?.message?.body?.body || it?.message?.text || '';
+                        const to = it?.message?.to || null;
+                        const reasonCode = it?.reason_code || it?.reasonCode || null;
+                        return (
+                          <div key={it.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                              <strong>{it.channel_type}</strong> • {it.status} • tentativas: {it.attempts ?? '-'}
+                              {to ? ` • para: ${to}` : ''}
+                            </div>
+                            {reasonCode ? (
+                              <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '6px' }}>
+                                reason_code: <strong>{String(reasonCode)}</strong>
+                              </div>
+                            ) : null}
+                            <div style={{ fontSize: '13px', marginBottom: '6px', whiteSpace: 'pre-wrap' }}>
+                              {text ? text : <span style={{ color: '#999' }}>(sem texto)</span>}
+                            </div>
+                            {it.last_error ? (
+                              <div style={{ fontSize: '12px', color: '#b91c1c', marginBottom: '8px' }}>
+                                {String(it.last_error).slice(0, 500)}
+                              </div>
+                            ) : null}
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                              <Button
+                                onClick={async () => {
+                                  if (!selectedTicket) return;
+                                  if (!text || !String(text).trim()) {
+                                    showToast('Não há texto para reenviar', 'warning');
+                                    return;
+                                  }
+                                  try {
+                                    await sendTicketMessage(selectedTicket.id, String(text));
+                                    showToastRef.current('Reenvio solicitado', 'success', 2500);
+                                  } catch (err) {
+                                    logger.error('Erro ao reenviar', err);
+                                    showToast('Erro ao reenviar mensagem', 'error');
+                                  }
+                                }}
+                              >
+                                Reenviar
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Channel messages (failed)</div>
+                  {deliveryFailures.channelMessages.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma mensagem do canal marcada como failed.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
+                      {deliveryFailures.channelMessages.map((m) => (
+                        <div key={m.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
+                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                            <strong>{m.channel_type}</strong> • {m.status} • {m.created_at ? new Date(m.created_at).toLocaleString('pt-BR') : ''}
+                          </div>
+                          <div style={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>
+                            {m?.body?.text ? String(m.body.text) : JSON.stringify(m.body || {})}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={() => setShowDeliveryFailuresModal(false)}
+                    style={{ background: 'var(--color-bg-secondary)' }}
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal de Encerramento com Motivo */}
       {showCloseModal && (

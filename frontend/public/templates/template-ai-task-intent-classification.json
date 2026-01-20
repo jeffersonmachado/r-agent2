@@ -4,7 +4,7 @@
   "description": "Template demonstrando a tarefa de Classificação de Intenção (intent_classification) do nó ai_task",
   "icon": "🎯",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "template-ai-task-intent-classification",
     "name": "Template - Classificação de Intenção",
     "version": 1,

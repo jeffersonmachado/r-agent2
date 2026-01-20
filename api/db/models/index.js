@@ -30,6 +30,8 @@ const getChannelAccount = require('./ChannelAccount');
 const getChannelConversation = require('./ChannelConversation');
 const getChannelMessage = require('./ChannelMessage');
 const getOutboundQueueItem = require('./OutboundQueueItem');
+const getTicketEvent = require('./TicketEvent');
+const getQueueAssignmentState = require('./QueueAssignmentState');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -59,6 +61,8 @@ const ChannelAccount = () => getChannelAccount();
 const ChannelConversation = () => getChannelConversation();
 const ChannelMessage = () => getChannelMessage();
 const OutboundQueueItem = () => getOutboundQueueItem();
+const TicketEvent = () => getTicketEvent();
+const QueueAssignmentState = () => getQueueAssignmentState();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -222,6 +226,8 @@ module.exports = {
   ChannelConversation,
   ChannelMessage,
   OutboundQueueItem,
+  TicketEvent,
+  QueueAssignmentState,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -251,4 +257,6 @@ module.exports = {
   getChannelConversation,
   getChannelMessage,
   getOutboundQueueItem,
+  getTicketEvent,
+  getQueueAssignmentState,
 };

@@ -70,7 +70,7 @@ Funções:
 
 - `normalizeIncoming(channelType, payload)`
 - `ingestIncoming(channelType, payload, { tenantId? })`  
-  - resolve tenant para webhooks via `channel_accounts.external_id` (fallback: `tenant-demo`)
+  - resolve tenant para webhooks via `channel_accounts.external_id` (**sem fallback** em produção)
   - persiste `channel_conversations` e `channel_messages`
 - `updateStatus(channelType, statusPayload)` (WhatsApp: `value.statuses[]`)
 - `sendMessage(channelType, account, messageNormalized)` (enfileira em `outbound_queue`)
@@ -115,7 +115,7 @@ Mensagens persistidas:
 - Webhooks (sem token): resolução por `channel_accounts.external_id`:
   - WhatsApp: `value.metadata.phone_number_id`
   - Instagram: `entry.id` (page id)
-  - fallback: `tenant-demo` (compatibilidade)
+  - sem fallback default (compatibilidade via 401/403 quando tenant não resolve)
 
 ## Idempotência
 

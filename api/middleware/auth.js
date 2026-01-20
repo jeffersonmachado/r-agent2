@@ -75,15 +75,11 @@ function requireAuth(req) {
     if (headerTenantId && headerTenantId.trim()) {
       req.tenantId = headerTenantId.trim();
     } else {
-      req.tenantId = validation.agent.tenantId || null;
+      // Hardening: super-admin deve selecionar tenant explicitamente via header (evita operar "silenciosamente" no tenant do usuário)
+      req.tenantId = null;
     }
   } else {
     req.tenantId = validation.agent.tenantId || null; // Extrai tenantId do agente
-  }
-
-  // Hardening: para usuários não-super-admin, tenantId é obrigatório
-  if (!isSuperAdmin(validation.agent) && (!req.tenantId || String(req.tenantId).trim() === '')) {
-    return { valid: false, error: 'tenantId ausente no token do agente' };
   }
 
   return { valid: true, agent: validation.agent, session: validation.session };

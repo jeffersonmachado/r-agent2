@@ -20,7 +20,7 @@ O modelo de Tenant inclui os seguintes campos obrigatórios:
 
 ```json
 {
-  "id": "tenant-demo",
+  "id": "tenant-acme",
   "name": "Tenant Demo",
   "site": "https://example.com",
   "ramo_atividade": "Tecnologia e Software - Desenvolvimento de soluções...",
@@ -55,7 +55,7 @@ O `tenant_context` é uma estrutura persistida vinculada ao `tenant_id`, contend
 
 ```json
 {
-  "tenantId": "tenant-demo",
+  "tenantId": "tenant-acme",
   "ramo_atividade": "Tecnologia e Software - Desenvolvimento...",
   "objetivo": "Automatizar o atendimento ao cliente com IA...",
   "site_oficial": "https://example.com",

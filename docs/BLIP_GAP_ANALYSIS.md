@@ -27,7 +27,7 @@ Este documento consolida:
   - No banco, a maioria dos modelos usa `tenant_key`.
   - Em rotas autenticadas, `req.tenantId` é aplicado em várias operações.
   - Rate limit por tenant em `api/middleware/tenantRateLimit`.
-  - Observação: alguns fluxos de webhook têm **fallback `tenant-demo`** quando não há mapeamento de conta de canal (ver “o que falta”).
+  - Observação: webhooks **não devem ter fallback de tenant**; se não houver mapeamento de conta de canal, a API deve rejeitar (401/403) para evitar cross-tenant.
 
 ### Omnichannel / Channel Gateway (já existe)
 
@@ -40,7 +40,7 @@ Existe um “gateway” omnichannel que normaliza e persiste mensagens, com idem
 - **Serviço principal**: `api/services/channelGatewayService.js`
   - Normaliza inbound (WhatsApp/Instagram).
   - **Idempotência por `external_message_id`**: índice unique `channel_messages_tenant_external_msg_id_uq`.
-  - Resolve `tenantId` de webhook via `channel_accounts.external_id` (fallback para `tenant-demo`).
+  - Resolve `tenantId` de webhook via `channel_accounts.external_id` (sem fallback em produção).
   - Suporta `updateStatus('whatsapp')` (sent/delivered/read/failed) atualizando `channel_messages.status`.
 
 ### Tickets / Filas / Atendimento humano (já existe)
@@ -443,7 +443,7 @@ A API é roteada por `if (method === 'X' && pathname ...)` e documentada no pró
    - Se vierem `value.statuses`: chama `channelGatewayService.updateStatus('whatsapp', { value })` (best-effort) para atualizar `channel_messages.status`.
    - Para cada `value.messages[]`:
      - chama `channelGatewayService.ingestIncoming('whatsapp', { message: msg, value, raw })` para:
-       - resolver `tenantId` (via `channel_accounts.external_id` ou fallback `tenant-demo`)
+       - resolver `tenantId` (via `channel_accounts.external_id`; sem fallback)
        - criar/atualizar `channel_conversations`
        - inserir `channel_messages` (idempotente por `external_message_id`)
      - chama `processWhatsAppMessage(msg, value, deps)` (`api/services/messageProcessor.js`) para engine e handoff.
@@ -511,7 +511,7 @@ Resultado:
 ### 3) Multi-tenant “hard block” em todo o pipeline
 
 Gaps:
-- Webhooks podem cair no **fallback `tenant-demo`** se `channel_accounts` não estiver configurado (risco de cross-tenant / dados misturados).
+- Webhooks podem falhar se `channel_accounts` não estiver configurado (comportamento esperado para evitar cross-tenant).
 - `queueService.getTicketBySession(sessionId)` varre todos os tickets em memória sem receber `tenantId` (risco operacional em cenários de múltiplos tenants).
 
 ### 4) Robustez WhatsApp “no dia a dia” (fila outbound usada em TODO outbound)
@@ -602,7 +602,7 @@ Backend já tem `GET /system/channel-health`. Gap: **página dedicada** e padrã
 ## Riscos e como mitigamos
 
 - **Cross-tenant via webhook sem account**:
-  - risco: fallback `tenant-demo` misturar dados
+  - risco: tenant não resolvido misturar dados (mitigado: bloquear request)
   - mitigação: exigir `channel_accounts` ativo para produção; logs/alertas; rejeitar webhook sem mapeamento (feature-flag)
 
 - **Duplicação de mensagens em tickets**:

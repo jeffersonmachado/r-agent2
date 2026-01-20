@@ -25,15 +25,15 @@
 
 **Exemplo de logs:**
 ```
-[INFO] [RAGDocuments] Verificando disponibilidade do RAG Service { tenantId: 'tenant-demo' }
-[INFO] [RAGDocuments] RAG Service disponível { isAvailable: true, tenantId: 'tenant-demo' }
-[INFO] [RAGDocuments] URL do RAG Service { serviceUrl: 'http://localhost:8000', tenantId: 'tenant-demo' }
+[INFO] [RAGDocuments] Verificando disponibilidade do RAG Service { tenantId: 'tenant-acme' }
+[INFO] [RAGDocuments] RAG Service disponível { isAvailable: true, tenantId: 'tenant-acme' }
+[INFO] [RAGDocuments] URL do RAG Service { serviceUrl: 'http://localhost:8000', tenantId: 'tenant-acme' }
 [INFO] [RAGDocuments] Buscando estatísticas do vector store { healthUrl: '...', tenantId: '...', dbIndexed: 33, dbTotal: 33 }
-[INFO] [RAGDocuments] Resposta do vector store { status: 200, ok: true, tenantId: 'tenant-demo' }
-[INFO] [RAGDocuments] Dados do vector store recebidos { vectorData: {...}, tenantId: 'tenant-demo' }
-[INFO] [RAGDocuments] Comparando BD vs Vector Store { tenantId: 'tenant-demo', dbIndexed: 33, vectorIndexed: 0, difference: 33 }
-[WARN] [RAGDocuments] INCONSISTÊNCIA DETECTADA: BD à frente { tenantId: 'tenant-demo', dbIndexed: 33, vectorIndexed: 0, syncDifference: 33 }
-[INFO] [RAGDocuments] Estatísticas finais retornadas { tenantId: 'tenant-demo', total: 33, indexed: 33, notIndexed: 0, syncStatus: 'db_ahead', syncDifference: 33, ... }
+[INFO] [RAGDocuments] Resposta do vector store { status: 200, ok: true, tenantId: 'tenant-acme' }
+[INFO] [RAGDocuments] Dados do vector store recebidos { vectorData: {...}, tenantId: 'tenant-acme' }
+[INFO] [RAGDocuments] Comparando BD vs Vector Store { tenantId: 'tenant-acme', dbIndexed: 33, vectorIndexed: 0, difference: 33 }
+[WARN] [RAGDocuments] INCONSISTÊNCIA DETECTADA: BD à frente { tenantId: 'tenant-acme', dbIndexed: 33, vectorIndexed: 0, syncDifference: 33 }
+[INFO] [RAGDocuments] Estatísticas finais retornadas { tenantId: 'tenant-acme', total: 33, indexed: 33, notIndexed: 0, syncStatus: 'db_ahead', syncDifference: 33, ... }
 ```
 
 ### 2. Logs Melhorados no Frontend (`frontend/src/pages/RAGDocumentsPage.jsx`)
@@ -49,9 +49,9 @@
 
 **Exemplo de logs:**
 ```
-[INFO] [RAGDocumentsPage] Documentos carregados { totalDocuments: 33, tenantId: 'tenant-demo', ... }
+[INFO] [RAGDocumentsPage] Documentos carregados { totalDocuments: 33, tenantId: 'tenant-acme', ... }
 [INFO] [RAGDocumentsPage] Estatísticas recebidas {
-  tenantId: 'tenant-demo',
+  tenantId: 'tenant-acme',
   stats: {...},
   total: 33,
   indexed: 33,

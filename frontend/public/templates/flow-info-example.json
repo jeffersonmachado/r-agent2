@@ -4,7 +4,7 @@
   "description": "Obtém informações de outro fluxo e usa em decisões",
   "icon": "📋",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "flow-info-example",
     "name": "Info de Outro Fluxo",
     "version": 1,

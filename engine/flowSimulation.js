@@ -180,6 +180,16 @@ async function simulateFlow(flow, options) {
     enableScreenshots: false,
   });
 
+  // Recording visual é opcional. Em simulação (especialmente em testes),
+  // usamos um recorder no-op para evitar falhas por dependências ausentes.
+  const recordingId = `recording-${flow.id}-${Date.now()}`;
+  const recording = {
+    recordAction: () => {},
+    recordCustom: () => {},
+    stop: () => {},
+    save: () => null,
+  };
+
   const replayId = `simulate-${flow.id}-${Date.now()}`;
   replay.start(replayId, {
     flowId: flow.id,

@@ -209,7 +209,7 @@ Crie um fluxo de teste que use o nó AI:
 
 ```json
 {
-  "tenantId": "tenant-demo",
+  "tenantId": "tenant-acme",
   "id": "test-cdr",
   "name": "Teste CDR",
   "version": 1,

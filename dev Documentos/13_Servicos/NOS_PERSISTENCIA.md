@@ -49,7 +49,7 @@ Obtém informações de outro fluxo e salva em uma variável.
   "id": "id-do-fluxo",
   "name": "Nome do Fluxo",
   "version": 1,
-  "tenantId": "tenant-demo",
+  "tenantId": "tenant-acme",
   "nodeCount": 5,
   "found": true
 }
@@ -113,7 +113,7 @@ Lista fluxos disponíveis com filtros opcionais.
 **Config:**
 ```json
 {
-  "tenantId": "tenant-demo",
+  "tenantId": "tenant-acme",
   "nameFilter": "suporte",
   "outputVariable": "flows_list"
 }
@@ -130,7 +130,7 @@ Lista fluxos disponíveis com filtros opcionais.
     "id": "flow-1",
     "name": "Fluxo de Suporte",
     "version": 1,
-    "tenantId": "tenant-demo"
+    "tenantId": "tenant-acme"
   }
 ]
 ```

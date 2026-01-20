@@ -1,25 +1,68 @@
 /**
- * Serviço de handover bot <-> humano (padrão Blip).
+ * Servi?o de handover bot <-> humano (padr?o Blip).
  *
  * Regras:
- * - Se ticket.mode = 'human', engine NÃO deve responder automaticamente.
+ * - Se ticket.mode = 'human', engine N?O deve responder automaticamente.
  * - Se ticket.mode = 'bot', mensagens seguem para engine e o humano pode acompanhar.
  *
- * Este service atualiza o ticket, registra histórico e sincroniza status na tabela
+ * Este service atualiza o ticket, registra hist?rico e sincroniza status na tabela
  * channel_conversations (best-effort).
  */
 
 'use strict';
 
+const crypto = require('crypto');
 const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
-const { ChannelConversation } = require('../db/models');
+const { ChannelConversation, TicketEvent } = require('../db/models');
 const { getTicket, setTicketMode } = require('./queueService');
 const { emitEvent } = require('./websocketService');
 const { autoAssign } = require('./assignmentService');
+const { logAction } = require('./auditService');
 
 function dbAvailable() {
   return !!getSequelize();
+}
+
+function newId(prefix) {
+  return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+}
+
+async function createTicketEventBestEffort({ tenantId, ticketId, type, payload, createdBy = null } = {}) {
+  if (!tenantId || !ticketId || !type) return;
+  if (!dbAvailable()) return;
+  try {
+    const Model = typeof TicketEvent === 'function' ? TicketEvent() : TicketEvent;
+    const now = new Date();
+    await Model.create({
+      id: newId('tev'),
+      tenant_key: tenantId,
+      ticket_id: ticketId,
+      type: String(type),
+      payload: payload && typeof payload === 'object' ? payload : {},
+      created_by: createdBy ? String(createdBy) : null,
+      created_at: now,
+      updated_at: now,
+    });
+  } catch (err) {
+    logger.debug('[Handover] Falha ao persistir ticket_event (ignorado)', { error: err.message });
+  }
+}
+
+function auditBestEffort({ ticket, agent, action, reason }) {
+  try {
+    logAction({
+      agentId: agent?.id || null,
+      username: agent?.username || null,
+      tenantId: ticket?.tenantId || null,
+      action,
+      resource: 'ticket',
+      resourceId: ticket?.id || null,
+      details: { reason: reason || null, mode: ticket?.mode || null },
+      ipAddress: 'internal',
+      userAgent: 'internal',
+    });
+  } catch (_) {}
 }
 
 async function updateConversationStatusBestEffort(ticket) {
@@ -48,14 +91,14 @@ async function takeOver(ticketId, agent, reason = 'agent_takeover') {
   const ticket = getTicket(ticketId);
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
-  // Se já está em humano, idempotente
+  // Se j? est? em humano, idempotente
   if ((ticket.mode || 'bot') === 'human') {
     // Mesmo idempotente, sincroniza status da conversa (best-effort)
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
   }
 
-  // Atualiza modo e registra histórico
+  // Atualiza modo e registra hist?rico
   const updated = setTicketMode(ticketId, {
     mode: 'human',
     pauseReason: reason || 'agent_takeover',
@@ -64,11 +107,21 @@ async function takeOver(ticketId, agent, reason = 'agent_takeover') {
   });
 
   // Fase 3: quando entra em atendimento humano, tenta auto-assign (best-effort)
-  // (apenas se status waiting e sem assignedTo; a própria autoAssign cuida de validar).
+  // (apenas se status waiting e sem assignedTo; a pr?pria autoAssign cuida de validar).
   autoAssign(updated.id).catch(() => null);
 
   // Best-effort: sincroniza conversa omnichannel
   await updateConversationStatusBestEffort(updated);
+
+  // Auditoria + TicketEvent (best-effort)
+  auditBestEffort({ ticket: updated, agent, action: 'ticket_takeover', reason });
+  await createTicketEventBestEffort({
+    tenantId: updated.tenantId,
+    ticketId: updated.id,
+    type: 'handover.takeover',
+    payload: { mode: 'human', reason: updated.pauseReason || reason || null, actorId: agent?.id || null, actorUsername: agent?.username || null },
+    createdBy: agent?.id || null,
+  });
 
   // Evento WebSocket para atualizar UI
   emitEvent('ticket.updated', {
@@ -84,7 +137,7 @@ async function returnToBot(ticketId, agent, reason = 'user_request') {
   const ticket = getTicket(ticketId);
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
-  // Se já está em bot, idempotente
+  // Se j? est? em bot, idempotente
   if ((ticket.mode || 'bot') === 'bot') {
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
@@ -98,6 +151,15 @@ async function returnToBot(ticketId, agent, reason = 'user_request') {
   });
 
   await updateConversationStatusBestEffort(updated);
+
+  auditBestEffort({ ticket: updated, agent, action: 'ticket_return_to_bot', reason });
+  await createTicketEventBestEffort({
+    tenantId: updated.tenantId,
+    ticketId: updated.id,
+    type: 'handover.return_to_bot',
+    payload: { mode: 'bot', reason: updated.pauseReason || reason || null, actorId: agent?.id || null, actorUsername: agent?.username || null },
+    createdBy: agent?.id || null,
+  });
 
   emitEvent('ticket.updated', {
     ticketId: updated.id,
@@ -127,10 +189,59 @@ async function setPaused(ticketId, agent, reason = 'outside_window') {
 
   await updateConversationStatusBestEffort(updated);
 
+  auditBestEffort({ ticket: updated, agent, action: 'ticket_pause', reason });
+  await createTicketEventBestEffort({
+    tenantId: updated.tenantId,
+    ticketId: updated.id,
+    type: 'handover.pause',
+    payload: { mode: 'paused', reason: updated.pauseReason || reason || null, actorId: agent?.id || null, actorUsername: agent?.username || null },
+    createdBy: agent?.id || null,
+  });
+
   emitEvent('ticket.updated', {
     ticketId: updated.id,
     ticket: updated,
     change: { type: 'handover', mode: 'paused', reason: updated.pauseReason || null },
+  }, { tenantId: updated.tenantId, agentId: updated.assignedTo || agent?.id });
+
+  return { success: true, ticket: updated };
+}
+
+async function resumeHuman(ticketId, agent, reason = 'resume') {
+  const ticket = getTicket(ticketId);
+  if (!ticket) return { success: false, error: 'ticket_not_found' };
+
+  // Se j? est? em humano, idempotente
+  if ((ticket.mode || 'bot') === 'human') {
+    await updateConversationStatusBestEffort(ticket);
+    return { success: true, ticket };
+  }
+
+  const updated = setTicketMode(ticketId, {
+    mode: 'human',
+    pauseReason: reason || 'resume',
+    actorId: agent?.id || null,
+    actorUsername: agent?.username || null,
+  });
+
+  // Ao retomar humano, tenta auto-assign (best-effort)
+  autoAssign(updated.id).catch(() => null);
+
+  await updateConversationStatusBestEffort(updated);
+
+  auditBestEffort({ ticket: updated, agent, action: 'ticket_resume', reason });
+  await createTicketEventBestEffort({
+    tenantId: updated.tenantId,
+    ticketId: updated.id,
+    type: 'handover.resume',
+    payload: { mode: 'human', reason: updated.pauseReason || reason || null, actorId: agent?.id || null, actorUsername: agent?.username || null },
+    createdBy: agent?.id || null,
+  });
+
+  emitEvent('ticket.updated', {
+    ticketId: updated.id,
+    ticket: updated,
+    change: { type: 'handover', mode: 'human', reason: updated.pauseReason || null },
   }, { tenantId: updated.tenantId, agentId: updated.assignedTo || agent?.id });
 
   return { success: true, ticket: updated };
@@ -144,7 +255,7 @@ function startAutoReturnToBot({ inactivityMinutes = 30, intervalMs = 15000 } = {
 
   autoReturnTimer = setInterval(async () => {
     try {
-      // Varre tickets em memória via queueService (fonte do runtime)
+      // Varre tickets em mem?ria via queueService (fonte do runtime)
       // Import local para evitar ciclo em load inicial
       // eslint-disable-next-line global-require
       const { listAllTickets } = require('./queueService');
@@ -182,6 +293,7 @@ module.exports = {
   takeOver,
   returnToBot,
   setPaused,
+  resumeHuman,
   startAutoReturnToBot,
   stopAutoReturnToBot,
 };

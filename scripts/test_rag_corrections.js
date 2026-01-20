@@ -12,7 +12,11 @@ const https = require('https');
 const { URL } = require('url');
 
 const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:9000';
-const TENANT_ID = process.env.TENANT_ID || 'tenant-demo';
+const TENANT_ID = process.env.TENANT_ID;
+if (!TENANT_ID) {
+  console.error('❌ TENANT_ID é obrigatório (export TENANT_ID=<tenant-id>)');
+  process.exit(1);
+}
 
 let testResults = {
   passed: 0,

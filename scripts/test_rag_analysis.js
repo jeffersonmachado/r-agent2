@@ -9,7 +9,11 @@ const https = require('https');
 const { URL } = require('url');
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
-const TENANT_ID = process.env.TENANT_ID || 'tenant-demo';
+const TENANT_ID = process.env.TENANT_ID;
+if (!TENANT_ID) {
+  console.error('❌ TENANT_ID é obrigatório (export TENANT_ID=<tenant-id>)');
+  process.exit(1);
+}
 
 // Credenciais padrão (ajuste se necessário)
 const USERNAME = process.env.USERNAME || 'admin';

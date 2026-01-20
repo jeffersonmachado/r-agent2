@@ -29,10 +29,14 @@ async function suggestResponse(context) {
       quickReplies: [],
     };
   }
+
+  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+    throw new Error('tenantId é obrigatório');
+  }
   
   try {
     // Primeiro, busca respostas rápidas relevantes
-    const quickReplies = searchByContext(userMessage, 3);
+    const quickReplies = searchByContext(userMessage, tenantId, 3);
     
     // Prepara contexto para IA
     const historyText = conversationHistory
@@ -58,7 +62,7 @@ Gere 3 sugestões de resposta curtas (máximo 2 frases cada), uma por linha, sem
 
 Apenas as 3 sugestões, uma por linha:`;
     
-    const aiResponse = await generateAiResponse(prompt, tenantId || 'default', {
+    const aiResponse = await generateAiResponse(prompt, tenantId, {
       sessionId: ticketId ? `ticket_${ticketId}` : undefined,
     });
     
@@ -85,7 +89,7 @@ Apenas as 3 sugestões, uma por linha:`;
   } catch (error) {
     logger.error('[AISuggestion] Erro ao gerar sugestões:', error);
     // Em caso de erro, retorna apenas respostas rápidas
-    const quickReplies = searchByContext(userMessage, 3);
+    const quickReplies = searchByContext(userMessage, tenantId, 3);
     return {
       suggestions: [],
       quickReplies: quickReplies.map(qr => ({
@@ -116,6 +120,10 @@ async function rewriteMessage(options) {
       improvements: [],
     };
   }
+
+  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+    throw new Error('tenantId é obrigatório');
+  }
   
   try {
     const toneDescriptions = {
@@ -143,7 +151,7 @@ Reescreva esta mensagem de forma mais ${toneDesc}, mantendo o mesmo significado 
 
 Apenas a mensagem reescrita, sem explicações adicionais:`;
     
-    const aiResponse = await generateAiResponse(prompt, tenantId || 'default');
+    const aiResponse = await generateAiResponse(prompt, tenantId);
     
     let rewritten = message;
     const improvements = [];

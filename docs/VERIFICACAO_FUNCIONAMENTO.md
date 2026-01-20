@@ -113,7 +113,7 @@ O tenant DEVE ter configuração específica no `config.json`:
       "apiKey": "sk-..."
     },
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "primary": "openai"
       }
     }

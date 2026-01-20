@@ -22,6 +22,7 @@ const { encrypt, decrypt } = require('../utils/crypto');
 const { getTicketBySession } = require('./queueService');
 const { getTicketByConversationId, updateOutboundMessageMeta } = require('./queueService');
 const outboundQueueService = require('./outboundQueueService');
+const { OutboundQueueItem } = require('../db/models');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -58,11 +59,10 @@ function encryptConfig(configObj) {
 
 async function resolveTenantForWebhook(channelType, payload) {
   // Webhooks não vêm autenticados: tentamos resolver via channel_accounts.external_id
-  // Fallback: tenant-demo (compatibilidade)
-  const fallbackTenantId = 'tenant-demo';
-
   try {
-    if (!dbAvailable()) return { tenantId: fallbackTenantId, account: null };
+    // HARDENING: sem DB, não há como resolver tenant com segurança.
+    // Em produção, NUNCA deve haver fallback implícito de tenant em webhooks.
+    if (!dbAvailable()) return { tenantId: null, account: null };
 
     const AccountModel = typeof ChannelAccount === 'function' ? ChannelAccount() : ChannelAccount;
 
@@ -73,7 +73,7 @@ async function resolveTenantForWebhook(channelType, payload) {
       externalId = payload?.pageId || payload?.entry?.id || payload?.page_id || null;
     }
 
-    if (!externalId) return { tenantId: fallbackTenantId, account: null };
+    if (!externalId) return { tenantId: null, account: null };
 
     const account = await AccountModel.findOne({
       where: {
@@ -84,15 +84,16 @@ async function resolveTenantForWebhook(channelType, payload) {
       order: [['created_at', 'DESC']],
     });
 
-    if (!account) return { tenantId: fallbackTenantId, account: null };
+    if (!account) return { tenantId: null, account: null };
 
     return {
       tenantId: account.tenant_key,
       account,
     };
   } catch (err) {
-    logger.warn('[ChannelGateway] Falha ao resolver tenant do webhook, usando fallback', { channelType, error: err.message });
-    return { tenantId: fallbackTenantId, account: null };
+    // HARDENING: erro ao resolver tenant => ignora (caller deve descartar com segurança).
+    logger.warn('[ChannelGateway] Falha ao resolver tenant do webhook; ignorando', { channelType, error: err.message });
+    return { tenantId: null, account: null };
   }
 }
 
@@ -280,6 +281,7 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
     const existing = await MessageModel.findOne({
       where: {
         tenant_key: tenantId,
+        channel_type: channelType,
         external_message_id: externalMessageId,
       },
     });
@@ -293,6 +295,7 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
       id: newId('msg'),
       tenant_key: tenantId,
       conversation_id: conversation.id,
+      channel_type: channelType,
       direction: messageNormalized.direction,
       type: messageNormalized.type,
       body: messageNormalized.body || {},
@@ -305,7 +308,15 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
     return { persisted: true, idempotent: false, conversationId: conversation.id, messageId: created.id };
   } catch (err) {
     // Protege contra race: unique violation em external_message_id
-    if (String(err.message || '').includes('channel_messages_tenant_external_msg_id_uq') || String(err.message || '').includes('duplicate key')) {
+    const msg = String(err.message || '');
+    const pgCode = err?.original?.code ? String(err.original.code) : null;
+    if (
+      err?.name === 'SequelizeUniqueConstraintError' ||
+      pgCode === '23505' ||
+      msg.includes('channel_messages_tenant_channel_type_external_msg_id_uq') ||
+      msg.includes('duplicate key')
+    ) {
+      logger.debug('[ChannelGateway] Duplicate message ignored', { tenantId, channelType, externalMessageId });
       return { persisted: true, idempotent: true, conversationId: conversation.id, messageId: null };
     }
     throw err;
@@ -325,6 +336,11 @@ async function ingestIncoming(channelType, payload, options = {}) {
 
   const normalized = normalizeIncoming(channelType, payload);
   normalized.conversationKey.tenantId = tenantId;
+
+  // HARDENING: sem tenant resolvido, não persiste e deixa o caller decidir (server deve ignorar).
+  if (!tenantId) {
+    return { tenantId: null, account: null, normalized, persist: { persisted: false, reason: 'tenant_unresolved' } };
+  }
 
   const persist = await persistIncoming({
     tenantId,
@@ -363,13 +379,23 @@ async function updateStatus(channelType, statusPayload, options = {}) {
   if (channelType !== 'whatsapp') return { updated: 0, reason: 'not_implemented' };
 
   const resolved = await resolveTenantForWebhook(channelType, statusPayload);
-  const tenantId = options.tenantId || resolved.tenantId || 'tenant-demo';
+  const tenantId = options.tenantId || resolved.tenantId || null;
+  if (!tenantId) {
+    const valueForLog = statusPayload?.value || statusPayload?.change?.value || statusPayload?.payload?.value || statusPayload || {};
+    logger.warn('[ChannelGateway] Status recebido sem tenant resolvido; ignorando', {
+      channelType,
+      phone_number_id: valueForLog?.metadata?.phone_number_id || null,
+      statusesCount: Array.isArray(valueForLog?.statuses) ? valueForLog.statuses.length : 0,
+    });
+    return { updated: 0, reason: 'tenant_unresolved' };
+  }
 
   const value = statusPayload?.value || statusPayload?.change?.value || statusPayload?.payload?.value || statusPayload || {};
   const statuses = Array.isArray(value.statuses) ? value.statuses : [];
   if (statuses.length === 0) return { updated: 0 };
 
   const MessageModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
+  const OutModel = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
   let updated = 0;
 
   for (const st of statuses) {
@@ -378,12 +404,29 @@ async function updateStatus(channelType, statusPayload, options = {}) {
     if (!externalMessageId || !status) continue;
 
     const row = await MessageModel.findOne({
-      where: { tenant_key: tenantId, external_message_id: externalMessageId },
+      where: { tenant_key: tenantId, channel_type: channelType, external_message_id: externalMessageId },
     });
     if (!row) continue;
 
     await row.update({ status, updated_at: new Date() });
     updated++;
+
+    // Atualiza status no outbound_queue (quando houver correlação por external_message_id).
+    // Importante: outboundQueueService.processDue só reprocessa itens SEM external_message_id,
+    // então marcar "failed" aqui não causa retries de mensagens já enviadas ao canal.
+    try {
+      const outRow = await OutModel.findOne({
+        where: { tenant_key: tenantId, channel_type: channelType, external_message_id: externalMessageId },
+        order: [['updated_at', 'DESC']],
+      });
+      if (outRow) {
+        await outRow.update({
+          status,
+          last_error: status === 'failed' ? (st?.errors ? JSON.stringify(st.errors).slice(0, 4000) : (outRow.last_error || 'delivery_failed')) : outRow.last_error,
+          updated_at: new Date(),
+        }).catch(() => null);
+      }
+    } catch (_) {}
 
     // Best-effort: propaga status para o ledger do ticket (UI atual)
     try {

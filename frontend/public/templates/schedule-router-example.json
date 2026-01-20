@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó schedule_router para rotear baseado em horário comercial",
   "icon": "🕐",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "schedule-router-example",
     "name": "Roteador por Horário",
     "version": 1,

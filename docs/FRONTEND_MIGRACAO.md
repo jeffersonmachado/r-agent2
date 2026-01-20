@@ -15,7 +15,7 @@ const aiConfig = config.ai; // Pode conter API keys (RISCO!)
 **Depois (tenant-aware):**
 ```javascript
 // ✅ Novo - lê configuração por tenant
-const tenantKey = getCurrentTenantKey(); // Ex: "tenant-demo"
+const tenantKey = getCurrentTenantKey(); // Ex: "tenant-acme"
 const response = await fetch(`/tenants/${tenantKey}/ai-config`);
 const aiConfig = await response.json();
 // aiConfig não contém API keys (seguro)

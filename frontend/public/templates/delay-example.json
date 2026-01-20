@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó delay para aguardar antes de continuar o fluxo",
   "icon": "⏱️",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "delay-example",
     "name": "Exemplo de Aguardar",
     "version": 1,

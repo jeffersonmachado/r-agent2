@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó set_variable para definir e atualizar variáveis",
   "icon": "📝",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "set-variable-example",
     "name": "Definir Variáveis",
     "version": 1,

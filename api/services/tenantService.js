@@ -159,123 +159,7 @@ async function initializeTenantContexts() {
 // Diretório raiz do projeto (para executar scripts auxiliares)
 const projectRoot = path.join(__dirname, '..', '..');
 
-/**
- * Verifica se existem dados do tenant-demo.
- * 
- * NOTA: Esta função foi simplificada - dados agora estão no banco de dados PostgreSQL.
- * A verificação deve ser feita diretamente no banco de dados.
- * 
- * @returns {boolean} false (sempre retorna false, pois dados estão no banco)
- */
-async function hasDemoTenantData(tenantKey = 'tenant-demo') {
-  const sequelize = getSequelize();
-  if (!sequelize || !isConnected()) return false;
-
-  try {
-    const { Flow } = getModels();
-    const anyFlow = await Flow.findOne({ where: { tenant_key: tenantKey } });
-    return !!anyFlow;
-  } catch (err) {
-    logger.warn('[TenantService] Falha ao verificar dados do tenant-demo no PostgreSQL', { error: err.message });
-    return false;
-  }
-}
-
-/**
- * Executa o seed do tenant-demo em background
- */
-function runDemoTenantSeed() {
-  try {
-    logger.info('[TenantService] Iniciando seed completo para tenant-demo via scripts/seed-tenant-demo-db.js...');
-    const seedProcess = spawn('node', ['scripts/seed-tenant-demo-db.js'], {
-      cwd: projectRoot,
-      stdio: 'ignore',
-      detached: true,
-    });
-
-    seedProcess.on('error', (err) => {
-      logger.error('[TenantService] Erro ao iniciar seed para tenant-demo:', {
-        error: err.message,
-      });
-    });
-
-    // Não bloqueia o boot da API; apenas logamos quando terminar, se possível
-    seedProcess.unref();
-  } catch (err) {
-    logger.error('[TenantService] Exceção ao disparar seed para tenant-demo:', {
-      error: err.message,
-    });
-  }
-}
-
-/**
- * Garante que o tenant de demonstração (`tenant-demo`) exista e tenha dados.
- * 
- * Este tenant é usado como ambiente de demonstração e desenvolvimento.
- * Se não existir no PostgreSQL, é criado automaticamente com
- * dados padrão seguros.
- * Se existir mas não tiver dados (agentes, fluxos, etc.), executa o seed.
- */
-async function ensureDemoTenantExists() {
-  const DEMO_TENANT_ID = 'tenant-demo';
-  let tenantCreated = false;
-
-  logger.info('[TenantService] Verificando tenant-demo e seus dados...');
-
-  try {
-    // Verifica se o tenant existe no PostgreSQL usando findTenantByIdentifier diretamente
-    // para evitar problemas com formatação de retorno
-    const existingTenantRaw = await findTenantByIdentifier(DEMO_TENANT_ID);
-    const existingTenant = existingTenantRaw ? await getTenant(DEMO_TENANT_ID) : null;
-    
-    if (!existingTenant) {
-      logger.info('[TenantService] Tenant de demonstração não encontrado. Criando tenant-demo padrão...');
-      logger.debug('[TenantService] Tentando criar tenant-demo com tenant_key:', DEMO_TENANT_ID);
-
-      const result = await createTenant({
-        tenant_key: DEMO_TENANT_ID, // Usa tenant_key em vez de id
-        name: 'Tenant Demo',
-        site: 'https://demo.example.com',
-        ramo_atividade: 'Tecnologia e Software - Plataforma de demonstração',
-        objetivo: 'Demonstração e desenvolvimento da plataforma',
-        plan: 'trial',
-        settings: {},
-        branding: {},
-      });
-
-      if (!result.success) {
-        logger.error('[TenantService] Falha ao criar tenant-demo padrão:', {
-          error: result.error,
-          details: result,
-        });
-        return; // Não continua se não conseguiu criar o tenant
-      }
-      
-      logger.info('[TenantService] Tenant-demo criado com sucesso:', {
-        tenant_key: DEMO_TENANT_ID,
-        tenant_id: result.tenant?.id,
-      });
-      
-      logger.info('[TenantService] Tenant-demo criado automaticamente com sucesso.');
-      tenantCreated = true;
-    } else {
-      logger.info('[TenantService] Tenant-demo já existe.');
-    }
-  } catch (err) {
-    logger.error('[TenantService] Erro ao verificar/criar tenant-demo:', err);
-    return;
-  }
-
-  // Verifica se existem dados do tenant-demo
-  const hasData = await hasDemoTenantData(DEMO_TENANT_ID);
-  if (!hasData) {
-    logger.info('[TenantService] Dados do tenant-demo não encontrados. Seed automático desabilitado (DB-only).');
-  } else if (tenantCreated) {
-    logger.info('[TenantService] Tenant-demo recém-criado. Seed automático desabilitado (DB-only).');
-  } else {
-    logger.info('[TenantService] Tenant-demo e seus dados já existem. Nenhuma ação necessária.');
-  }
-}
+// Blindagem produção: não existe mais seed/fallback automático de tenant.
 
 /**
  * Valida URL.
@@ -343,8 +227,7 @@ function getDefaultLimits(plan) {
 
 // Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
 // Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
-// Garante que o tenant de demonstração sempre exista (deferido para quando o servidor iniciar)
-// ensureDemoTenantExists() será chamado pelo server.js após conectar ao PostgreSQL
+// Blindagem produção: não há criação/seed automático de tenant.
 
 /**
  * Cria ou atualiza o tenant_context automaticamente quando um tenant é criado/atualizado.
@@ -819,7 +702,7 @@ async function listTenants() {
  * Helper: Busca tenant por tenant_key ou id (UUID).
  * Padroniza a busca de tenants em todo o sistema.
  * 
- * @param {string} identifier - tenant_key (ex: "tenant-demo") ou id (UUID)
+ * @param {string} identifier - tenant_key (ex: "tenant-acme") ou id (UUID)
  * @returns {Promise<Tenant|null>} Instância do Sequelize ou null
  */
 async function findTenantByIdentifier(identifier) {
@@ -876,7 +759,7 @@ async function findTenantByIdentifier(identifier) {
  * CONVENÇÃO: Esta função aceita tenant_key (string legível) ou id (UUID).
  * Prefira usar tenant_key em APIs públicas e URLs.
  *
- * @param {string} tenantId - tenant_key (ex: "tenant-demo") ou id (UUID)
+ * @param {string} tenantId - tenant_key (ex: "tenant-acme") ou id (UUID)
  * @returns {Promise<Tenant|null>}
  */
 async function getTenant(tenantId) {
@@ -1317,7 +1200,6 @@ async function getTenantUsage(tenantId) {
 
 module.exports = {
   initializeTenantContexts,
-  ensureDemoTenantExists,
   createTenant,
   updateTenant,
   listTenants,

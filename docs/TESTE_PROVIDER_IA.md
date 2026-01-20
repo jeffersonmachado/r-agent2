@@ -4,18 +4,18 @@
 
 ### 1. Teste: Endpoint sem Configuração Específica
 
-**Cenário**: Tenant `tenant-demo` sem configuração específica no `config.json`
+**Cenário**: Tenant `tenant-acme` sem configuração específica no `config.json`
 
 **Comando**:
 ```bash
-GET /tenants/tenant-demo/ai-provider-status
+GET /tenants/tenant-acme/ai-provider-status
 ```
 
 **Resultado**:
 ```json
 {
   "hasValidProvider": false,
-  "tenantId": "tenant-demo"
+  "tenantId": "tenant-acme"
 }
 ```
 
@@ -27,12 +27,12 @@ GET /tenants/tenant-demo/ai-provider-status
 
 ### 2. Teste: Endpoint com Configuração Específica
 
-**Cenário**: Tenant `tenant-demo` com configuração específica:
+**Cenário**: Tenant `tenant-acme` com configuração específica:
 ```json
 {
   "ai": {
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "primary": "openai"
       }
     }
@@ -42,14 +42,14 @@ GET /tenants/tenant-demo/ai-provider-status
 
 **Comando**:
 ```bash
-GET /tenants/tenant-demo/ai-provider-status
+GET /tenants/tenant-acme/ai-provider-status
 ```
 
 **Resultado**:
 ```json
 {
   "hasValidProvider": true,
-  "tenantId": "tenant-demo"
+  "tenantId": "tenant-acme"
 }
 ```
 

@@ -476,7 +476,9 @@ const schemas = {
         required: true,
         minLength: 1,
         maxLength: 100,
-        pattern: /^[a-zA-Z0-9_\-\.]+$/,
+        // Aceita username simples (legado) OU email (ex.: systemadmin@exemplo.com)
+        // Mantém bloqueio para strings com '@' que não sejam email válido (ex.: "user@123")
+        pattern: /^([a-zA-Z0-9_\-\.]+|[^\s@]+@[^\s@]+\.[^\s@]+)$/,
       },
       password: {
         type: 'string',

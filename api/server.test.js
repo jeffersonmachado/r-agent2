@@ -1,5 +1,4 @@
 const http = require('http');
-const { createServer } = require('./server');
 
 /**
  * Helper para fazer requisições HTTP simples contra o servidor em teste.
@@ -68,8 +67,17 @@ describe('API server (api/server.js)', () => {
   /** @type {http.Server} */
   let server;
   let port;
+  let createServer;
 
   beforeAll((done) => {
+    // Estes testes validam comportamento base/compatibilidade do servidor.
+    // Força ambiente "development" para não aplicar rate limiting por tenant.
+    process.env.NODE_ENV = 'development';
+    delete process.env.STRICT_TENANT_MODE;
+    jest.resetModules();
+
+    // eslint-disable-next-line global-require
+    ({ createServer } = require('./server'));
     server = createServer();
     server.listen(0, () => {
       const address = server.address();
@@ -83,16 +91,33 @@ describe('API server (api/server.js)', () => {
   });
 
   afterAll((done) => {
-    if (server) {
-      // Fecha todas as conexões pendentes antes de fechar o servidor
-      server.closeAllConnections();
-      server.close(() => {
-        // Aguarda um pouco para garantir que todas as conexões foram fechadas
-        setTimeout(done, 100);
-      });
-    } else {
+    const finalize = async () => {
+      try {
+        // Fecha conexão com o banco (evita handles abertos no Jest)
+        // eslint-disable-next-line global-require
+        const db = require('./db/index');
+        if (db && typeof db.close === 'function') {
+          await db.close();
+        }
+      } catch {
+        // best-effort
+      }
       done();
+    };
+
+    if (!server) {
+      finalize();
+      return;
     }
+
+    // Fecha todas as conexões pendentes antes de fechar o servidor
+    server.closeAllConnections();
+    server.close(() => {
+      // Aguarda um pouco para garantir que todas as conexões foram fechadas
+      setTimeout(() => {
+        finalize();
+      }, 100);
+    });
   });
 
   test('GET /health deve retornar status ok', async () => {
@@ -201,8 +226,9 @@ describe('API server (api/server.js)', () => {
       name: 'Fluxo de teste',
       version: 1,
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'Olá' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 
@@ -265,8 +291,9 @@ describe('API server (api/server.js)', () => {
       id: flowId,
       name: 'Primeira versão',
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'v1' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     });
     expect([200, 201]).toContain(createRes.status);
@@ -277,8 +304,9 @@ describe('API server (api/server.js)', () => {
       tenantId: 'tenant-demo',
       name: 'Segunda versão',
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'v2' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     });
     expect(putRes2.status).toBe(200);
@@ -300,8 +328,9 @@ describe('API server (api/server.js)', () => {
       id: flowId,
       name: 'Fluxo para deletar',
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'del' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     });
     // POST retorna 201 (Created) quando cria com sucesso
@@ -359,22 +388,21 @@ describe('API server (api/server.js)', () => {
     expect(res.body).toHaveProperty('error', 'session_not_found');
   });
 
-  test('POST /flows com fluxo sem tenantId usa tenant-demo', async () => {
+  test('POST /flows com fluxo sem tenantId retorna 403 tenant_required', async () => {
     const uniqueId = `flow-no-tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const flowWithoutTenant = {
       id: uniqueId,
       name: 'Fluxo sem tenant',
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'x' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 
     const res = await request(port, 'POST', '/flows', flowWithoutTenant);
-    // POST retorna 201 (Created) quando cria com sucesso
-    expect([200, 201]).toContain(res.status);
-    expect(res.body).toHaveProperty('tenantId', 'tenant-demo');
-    expect(res.body).toHaveProperty('id', uniqueId);
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error', 'tenant_required');
   });
 
   test('POST /flows com fluxo sem id gera id automaticamente', async () => {
@@ -382,8 +410,9 @@ describe('API server (api/server.js)', () => {
       tenantId: 'tenant-demo',
       name: 'Fluxo sem id',
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'x' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 
@@ -403,8 +432,9 @@ describe('API server (api/server.js)', () => {
       id: flowId,
       name: 'Fluxo inicial',
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'init' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     });
 
@@ -413,8 +443,9 @@ describe('API server (api/server.js)', () => {
       tenantId: 'tenant-demo',
       name: 'Teste ID',
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'id' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 
@@ -432,8 +463,9 @@ describe('API server (api/server.js)', () => {
       name: 'Fluxo para simulação',
       version: 1,
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'sim' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 
@@ -456,8 +488,9 @@ describe('API server (api/server.js)', () => {
       name: 'Fluxo para teste de limite',
       version: 1,
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'limit' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 
@@ -479,7 +512,11 @@ describe('API server (api/server.js)', () => {
       id: 'flow-tenant-1',
       name: 'Fluxo Tenant 1',
       version: 1,
-      nodes: [{ id: 'start', type: 'start', next: 'end' }, { id: 'end', type: 'end' }],
+      nodes: [
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 't1' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
+      ],
     };
 
     const flow2 = {
@@ -487,7 +524,11 @@ describe('API server (api/server.js)', () => {
       id: 'flow-tenant-2',
       name: 'Fluxo Tenant 2',
       version: 1,
-      nodes: [{ id: 'start', type: 'start', next: 'end' }, { id: 'end', type: 'end' }],
+      nodes: [
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 't2' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
+      ],
     };
 
     await request(port, 'POST', '/flows', flow1);
@@ -507,8 +548,9 @@ describe('API server (api/server.js)', () => {
       name: 'Fluxo válido',
       version: 1,
       nodes: [
-        { id: 'start', type: 'start', next: 'end' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'msg' },
+        { id: 'msg', type: 'message', config: { text: 'ok' }, next: 'end' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 
@@ -526,8 +568,8 @@ describe('API server (api/server.js)', () => {
       name: 'Fluxo inválido',
       version: 1,
       nodes: [
-        { id: 'start', type: 'start', next: 'missing' },
-        { id: 'end', type: 'end' },
+        { id: 'start', type: 'start', config: {}, next: 'missing' },
+        { id: 'end', type: 'end', config: {}, next: null },
       ],
     };
 

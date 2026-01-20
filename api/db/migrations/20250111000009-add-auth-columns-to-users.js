@@ -5,7 +5,7 @@
  * - username (unique, nullable to preserve existing rows)
  * - role (string, default 'admin')
  * - is_active (boolean, default true)
- * - tenant_key (string, default 'tenant-demo' for backward compatibility)
+ * - tenant_key (string, nullable; must be provided by the app)
  *
  * NOTE: We keep is_superadmin as the canonical superadmin flag.
  */
@@ -80,7 +80,6 @@ module.exports = {
       await queryInterface.addColumn('users', 'tenant_key', {
         type: Sequelize.STRING,
         allowNull: true,
-        defaultValue: 'tenant-demo',
       });
       await addIndexIfNotExists(queryInterface, 'users', ['tenant_key'], {
         name: 'users_tenant_key_idx',

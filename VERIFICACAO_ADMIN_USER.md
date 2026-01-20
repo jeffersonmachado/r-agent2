@@ -6,12 +6,12 @@
 **Username:** `admin`  
 **Email:** `admin@example.com`  
 **Role:** `admin`  
-**Tenant ID:** `tenant-demo`  
+**Tenant ID:** `tenant-acme`
 **Status:** `active`
 
 ---
 
-## 📊 Estatísticas de Documentos RAG (tenant-demo)
+## 📊 Estatísticas de Documentos RAG (tenant-acme)
 
 ### Banco de Dados (JSON)
 - **Total de Documentos:** 33
@@ -29,7 +29,7 @@
 
 ### 1. Frontend (`RAGDocumentsPage.jsx`)
 ```javascript
-const tenantId = agent?.tenantId || null;  // "tenant-demo" para admin
+const tenantId = agent?.tenantId || null;  // "tenant-acme" para admin (exemplo)
 ```
 
 ### 2. API (`getDocumentsStats`)
@@ -52,16 +52,16 @@ if tenant_id:
 ## 🔄 Fluxo de Dados para Admin
 
 ```
-Admin (tenant-demo)
+Admin (tenant-acme)
     ↓
-Frontend: agent.tenantId = "tenant-demo"
+Frontend: agent.tenantId = "tenant-acme"
     ↓
-GET /rag/documents/stats?tenantId=tenant-demo
+GET /rag/documents/stats  (tenant vem do token/sessão)
     ↓
-Backend: Filtra docs com tenantId = "tenant-demo"
+Backend: Filtra docs com tenantId = "tenant-acme"
     ├─→ BD: 33 docs indexados
-    └─→ GET /rag/health?tenant_id=tenant-demo
-        └─→ Vector Store: Busca índice "tenant-demo.index"
+    └─→ GET /rag/health?tenant_id=tenant-acme
+        └─→ Vector Store: Busca índice "tenant-acme.index"
             └─→ Retorna: 0 docs (INCONSISTÊNCIA!)
 ```
 
@@ -77,7 +77,7 @@ Backend: Filtra docs com tenantId = "tenant-demo"
 ### Causa Provável
 1. Os documentos foram marcados como indexados no BD, mas a indexação no vector store falhou
 2. O vector store foi limpo/resetado após a indexação
-3. O índice do tenant-demo não foi criado ou foi perdido
+3. O índice do tenant-acme não foi criado ou foi perdido
 
 ---
 
@@ -122,11 +122,15 @@ http://localhost:5173/rag-documents
 ### 2. Verificar Endpoint Diretamente
 ```bash
 # Estatísticas do BD
-curl http://localhost:3000/rag/documents/stats?tenantId=tenant-demo
+curl -H "Authorization: Bearer <TOKEN_DO_ADMIN>" http://localhost:3000/rag/documents/stats
 
 # Estatísticas do Vector Store
-curl http://localhost:8000/rag/health?tenant_id=tenant-demo
+curl http://localhost:8000/rag/health?tenant_id=tenant-acme
 ```
+
+### Nota (super-admin)
+
+- Para consultar/operar em um tenant específico como super-admin, use o header `X-Tenant-Id` (ex.: `-H "X-Tenant-Id: tenant-acme"`).
 
 ### 3. Sincronizar Documentos
 1. Acesse `/rag-documents`
@@ -160,7 +164,7 @@ curl http://localhost:8000/rag/health?tenant_id=tenant-demo
 @router.get("/health")
 async def health_check(tenant_id: Optional[str] = Query(None)):
     if tenant_id:
-        vector_store = get_vector_store(tenant_id)  # "tenant-demo"
+        vector_store = get_vector_store(tenant_id)  # "tenant-acme"
         stats = vector_store.get_stats()
 ```
 
@@ -171,14 +175,14 @@ async function getDocumentsStats(tenantId = null) {
   let docs = Array.from(documents.values());
   
   if (tenantId) {
-    docs = docs.filter(doc => doc.tenantId === tenantId);  // "tenant-demo"
+    docs = docs.filter(doc => doc.tenantId === tenantId);  // "tenant-acme"
   }
 ```
 
 ### 3. Frontend Passa TenantId
 ```javascript
 // frontend/src/pages/RAGDocumentsPage.jsx
-const tenantId = agent?.tenantId || null;  // "tenant-demo"
+const tenantId = agent?.tenantId || null;  // "tenant-acme"
 const stats = await getDocumentsStats(tenantId);
 ```
 
@@ -186,14 +190,14 @@ const stats = await getDocumentsStats(tenantId);
 
 ## ✅ Checklist de Validação para Admin
 
-- [x] Usuário admin identificado: `tenant-demo`
+- [x] Usuário admin identificado: `tenant-acme`
 - [x] Documentos filtrados corretamente por tenant
 - [x] Estatísticas do BD: 33 docs indexados
 - [x] Estatísticas do Vector Store: 0 docs (inconsistência)
 - [x] Detecção de inconsistência funcionando
 - [x] Botão de sincronização aparece
 - [x] Reindexação de inconsistentes implementada
-- [x] Endpoint `/rag/health` aceita `tenant_id=tenant-demo`
+- [x] Endpoint `/rag/health` aceita `tenant_id=tenant-acme`
 
 ---
 
@@ -207,10 +211,10 @@ const stats = await getDocumentsStats(tenantId);
 2. **Verificar Logs:**
    ```bash
    # Backend
-   tail -f api/logs/*.log | grep "tenant-demo"
+   tail -f api/logs/*.log | grep "tenant-acme"
    
    # RAG Service
-   tail -f rag-service/logs/*.log | grep "tenant-demo"
+   tail -f rag-service/logs/*.log | grep "tenant-acme"
    ```
 
 3. **Validar Sincronização:**
@@ -221,5 +225,5 @@ const stats = await getDocumentsStats(tenantId);
 ---
 
 **Data da Verificação:** 2025-01-05  
-**Usuário:** admin (tenant-demo)  
+**Usuário:** admin (tenant-acme)
 **Status:** ⚠️ Inconsistência detectada - Aguardando sincronização

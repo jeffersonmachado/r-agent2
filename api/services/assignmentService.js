@@ -14,6 +14,7 @@
 
 'use strict';
 
+const crypto = require('crypto');
 const logger = require('../utils/logger');
 const { listAllTickets, getTicket, assignTicket } = require('./queueService');
 const { listAgents } = require('./authService');
@@ -22,6 +23,8 @@ const queueDefinitionService = require('./queueDefinitionService');
 const { emitEvent, getOnlineAgentsByTenant, isAgentOnline } = require('./websocketService');
 const { triggerWebhooks } = require('./webhookService');
 const { logAction } = require('./auditService');
+const { getSequelize } = require('../db/sequelize');
+const { QueueAssignmentState } = require('../db/models');
 
 /** @type {Map<string, number>} */
 const rrCursor = new Map(); // key = `${tenantId}:${queueName}` => index
@@ -41,11 +44,64 @@ function isEligibleAgent(agent) {
   return agent.role === 'operator' || agent.role === 'manager' || agent.role === 'admin' || agent.role === 'owner';
 }
 
-function pickRoundRobin(tenantId, queueName, agentIds) {
+function dbAvailable() {
+  return !!getSequelize();
+}
+
+function newId(prefix = 'qas') {
+  return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+}
+
+async function getAndBumpRoundRobinCursorDb(tenantId, queueName) {
+  if (!dbAvailable()) return null;
+  try {
+    const Model = typeof QueueAssignmentState === 'function' ? QueueAssignmentState() : QueueAssignmentState;
+    const now = new Date();
+
+    // Transação simples para reduzir colisões (best-effort)
+    const sequelize = Model.sequelize;
+    return await sequelize.transaction(async (t) => {
+      const existing = await Model.findOne({
+        where: { tenant_key: tenantId, queue_name: queueName },
+        lock: t.LOCK.UPDATE,
+        transaction: t,
+      });
+
+      if (!existing) {
+        const created = await Model.create({
+          id: newId('qas'),
+          tenant_key: tenantId,
+          queue_name: queueName,
+          cursor: 0,
+          updated_by: 'system',
+          created_at: now,
+          updated_at: now,
+        }, { transaction: t });
+        return Number(created.cursor) || 0;
+      }
+
+      const current = Number.isFinite(existing.cursor) ? existing.cursor : 0;
+      await existing.update({ cursor: current + 1, updated_by: 'system', updated_at: now }, { transaction: t });
+      return current;
+    });
+  } catch (err) {
+    logger.debug('[Assignment] Falha ao obter cursor RR do DB (fallback para memória)', { tenantId, queueName, error: err.message });
+    return null;
+  }
+}
+
+async function pickRoundRobin(tenantId, queueName, agentIds) {
+  if (agentIds.length === 0) return null;
+
+  // Preferir DB (cluster-safe-ish). Fallback para memória.
+  const dbIdx = await getAndBumpRoundRobinCursorDb(tenantId, queueName);
+  if (Number.isFinite(dbIdx)) {
+    return agentIds[dbIdx % agentIds.length] || null;
+  }
+
   const key = `${tenantId}:${queueName}`;
   const idx = rrCursor.get(key) || 0;
-  if (agentIds.length === 0) return null;
-  const next = agentIds[idx % agentIds.length];
+  const next = agentIds[idx % agentIds.length] || null;
   rrCursor.set(key, (idx + 1) % agentIds.length);
   return next;
 }
@@ -128,7 +184,7 @@ async function chooseAgentForQueue({ tenantId, queueName }) {
 
   let chosen = null;
   if (strategy === 'round_robin') {
-    chosen = pickRoundRobin(tenantId, queueName, candidateIds);
+    chosen = await pickRoundRobin(tenantId, queueName, candidateIds);
   } else if (strategy === 'least_busy') {
     chosen = pickLeastBusy(tenantId, candidateIds);
   }

@@ -186,7 +186,7 @@ Um provider é considerado válido quando **pelo menos uma** das seguintes condi
       "apiKey": "sk-ant-..."
     },
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "primary": "openai",
         "secondary": "anthropic"
       },
@@ -269,15 +269,15 @@ const handleTenantSelected = async (tenant) => {
 O sistema gera logs detalhados em cada etapa:
 
 ```
-[DEBUG] Verificando provider de IA para tenant { tenantId: 'tenant-demo', hasTenantProvider: false, hasValidProvider: true }
-[INFO] Status de provider de IA do tenant { tenantId: 'tenant-demo', hasValidProvider: true }
+[DEBUG] Verificando provider de IA para tenant { tenantId: 'tenant-acme', hasTenantProvider: false, hasValidProvider: true }
+[INFO] Status de provider de IA do tenant { tenantId: 'tenant-acme', hasValidProvider: true }
 ```
 
 ### Logs do Frontend
 
 ```
-[Login] Verificando provider de IA para o tenant selecionado: tenant-demo
-[Login] Resposta completa da verificação: { hasValidProvider: true, tenantId: 'tenant-demo' }
+[Login] Verificando provider de IA para o tenant selecionado: tenant-acme
+[Login] Resposta completa da verificação: { hasValidProvider: true, tenantId: 'tenant-acme' }
 [Login] ✅ Tenant tem provider de IA válido, continuando para /support
 ```
 

@@ -32,30 +32,6 @@ function fromDbRow(row) {
   };
 }
 
-async function seedDefaultsIfEmpty() {
-  const defaults = [
-    { id: 'cr-001', name: 'Resolvido' },
-    { id: 'cr-002', name: 'Dúvida sanada' },
-    { id: 'cr-003', name: 'Sem resposta do cliente' },
-    { id: 'cr-004', name: 'Encaminhado para outro canal' },
-  ];
-
-  for (const d of defaults) {
-    const item = {
-      id: d.id,
-      tenantId: 'tenant-demo',
-      name: d.name,
-      active: true,
-      createdBy: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    reasons.set(item.id, item);
-    // best-effort persist
-    persistBestEffort(item);
-  }
-}
-
 async function initialize() {
   if (!dbAvailable()) return;
   try {
@@ -67,8 +43,8 @@ async function initialize() {
       reasons.set(r.id, r);
     }
     if (reasons.size === 0) {
-      await seedDefaultsIfEmpty();
-      logger.info('[CloseReasons] Nenhum motivo encontrado. Defaults criados.', { count: reasons.size });
+      // Blindagem: não cria defaults automáticos em produção (multi-tenant obrigatório)
+      logger.info('[CloseReasons] Nenhum motivo encontrado. Nenhum default será criado automaticamente.', { count: 0 });
     } else {
       logger.info('[CloseReasons] Cache inicializado do PostgreSQL', { count: reasons.size });
     }

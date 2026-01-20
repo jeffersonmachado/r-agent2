@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó options para exibir opções interativas ao usuário",
   "icon": "🔘",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "options-example",
     "name": "Exemplo de Opções",
     "version": 1,

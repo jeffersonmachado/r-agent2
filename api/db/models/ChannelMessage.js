@@ -32,6 +32,11 @@ function getChannelMessageModel() {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      channel_type: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'unknown',
+      },
       direction: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -60,7 +65,8 @@ function getChannelMessageModel() {
       underscored: true,
       indexes: [
         { fields: ['tenant_key', 'conversation_id', 'created_at'], name: 'channel_messages_tenant_conv_created_idx' },
-        { fields: ['tenant_key', 'external_message_id'], name: 'channel_messages_tenant_external_msg_id_uq', unique: true },
+        // Índice UNIQUE parcial é criado via migration; mantemos definição lógica aqui.
+        { fields: ['tenant_key', 'channel_type', 'external_message_id'], name: 'channel_messages_tenant_channel_type_external_msg_id_uq', unique: true },
       ],
     });
   }

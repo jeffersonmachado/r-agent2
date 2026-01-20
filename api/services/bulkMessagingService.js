@@ -17,11 +17,12 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
-const { sendTextMessage } = require('./whatsappService');
+const outboundQueueService = require('./outboundQueueService');
 
 /**
  * @typedef {Object} BulkCampaign
  * @property {string} id - ID único da campanha
+ * @property {string} tenantId - ID do tenant (obrigatório)
  * @property {string} name - Nome da campanha
  * @property {string} message - Mensagem a ser enviada
  * @property {string[]} phoneNumbers - Lista de números de telefone
@@ -72,6 +73,12 @@ function ensureDataDir() {
  */
 function listCampaigns(filters = {}) {
   let results = Array.from(campaigns.values());
+
+  // Blindagem: listagem sempre deve ser tenant-aware
+  if (!filters.tenantId || typeof filters.tenantId !== 'string' || filters.tenantId.trim() === '') {
+    return [];
+  }
+  results = results.filter((c) => c.tenantId === filters.tenantId);
   
   if (filters.status) {
     results = results.filter(c => c.status === filters.status);
@@ -109,6 +116,7 @@ function getCampaign(id) {
  */
 function createCampaign(data) {
   const { 
+    tenantId,
     name, 
     message, 
     phoneNumbers, 
@@ -117,6 +125,10 @@ function createCampaign(data) {
     createdBy 
   } = data;
   
+  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+    return { success: false, error: 'tenantId é obrigatório' };
+  }
+
   if (!name || name.trim() === '') {
     return { success: false, error: 'Nome da campanha é obrigatório' };
   }
@@ -162,6 +174,7 @@ function createCampaign(data) {
   
   const campaign = {
     id,
+    tenantId: tenantId.trim(),
     name: name.trim(),
     message: message.trim(),
     phoneNumbers: validPhoneNumbers,
@@ -206,6 +219,7 @@ function updateCampaign(id, updates) {
     ...existing,
     ...updates,
     id, // Garante que o ID não seja alterado
+    tenantId: existing.tenantId, // Blindagem: tenant não pode ser alterado
     updatedAt: new Date().toISOString(),
   };
   
@@ -336,6 +350,14 @@ async function startSendingProcess(campaignId) {
   if (!campaign || campaign.status !== 'sending') {
     return;
   }
+
+  if (!campaign.tenantId || typeof campaign.tenantId !== 'string' || campaign.tenantId.trim() === '') {
+    logger.error('[BulkMessaging] tenantId ausente na campanha; abortando envio', { campaignId });
+    campaign.status = 'paused';
+    campaign.updatedAt = new Date().toISOString();
+    stopSendingProcess(campaignId);
+    return;
+  }
   
   // Calcula intervalo entre envios (em ms)
   const intervalMs = (60 * 1000) / campaign.rateLimit; // Mensagens por minuto
@@ -375,7 +397,19 @@ async function startSendingProcess(campaignId) {
     currentIndex++;
     
     try {
-      await sendTextMessage(phoneNumber, campaign.message);
+      // Regra (Fase 2): qualquer envio WhatsApp deve passar pela fila.
+      await outboundQueueService.enqueueOutbound({
+        tenantId: campaign.tenantId,
+        channelType: 'whatsapp',
+        conversationId: null,
+        message: {
+          to: phoneNumber,
+          type: 'text',
+          body: { text: campaign.message },
+          meta: { campaignId },
+        },
+      });
+      // Mantém compatibilidade do serviço: "sent" aqui significa "enfileirado para envio".
       campaign.deliveryStatus[phoneNumber] = 'sent';
       campaign.sentCount++;
       campaign.pendingCount--;

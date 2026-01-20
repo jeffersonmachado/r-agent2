@@ -4,7 +4,7 @@
   "description": "Fluxo que coleta informações do usuário com fallback integrado",
   "icon": "📝",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "user-input",
     "name": "Coleta de Dados",
     "version": 1,

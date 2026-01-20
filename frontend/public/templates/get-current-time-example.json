@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó get_current_time para obter data e hora atual",
   "icon": "🕐",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "get-current-time-example",
     "name": "Exemplo de Data/Hora Atual",
     "version": 1,

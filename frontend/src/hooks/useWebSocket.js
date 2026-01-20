@@ -77,8 +77,10 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
                         (window.location.hostname === 'localhost' && window.location.port !== '80' && window.location.port !== '443' && !window.location.port.includes('8086'));
       
       if (isViteDev) {
-        // Desenvolvimento: usa localhost:3000
-        return 'ws://localhost:3000/ws';
+        // Desenvolvimento (Vite): usa a porta da API do config.json (via define do Vite)
+        // Fallback para 3000 se não estiver disponível.
+        const devPort = Number(import.meta.env.VITE_API_DEV_PORT || 3000);
+        return `ws://localhost:${devPort}/ws`;
       }
     }
     

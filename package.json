@@ -127,7 +127,7 @@
     "rag:fix-port": "sudo ./scripts/fix-rag-port.sh",
     "fix": "sudo ./scripts/clean-restart-services.sh",
     "reset:all": "./scripts/reset-all.sh",
-    "reset:all:yes": "./scripts/reset-all.sh tenant-demo --yes"
+    "reset:all:yes": "./scripts/reset-all.sh $TENANT_ID --yes"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",

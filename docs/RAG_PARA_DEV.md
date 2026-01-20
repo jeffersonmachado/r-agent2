@@ -6,9 +6,9 @@ Este documento explica como configurar e usar o RAG em ambiente de desenvolvimen
 
 ## 🏗️ Configuração de Desenvolvimento
 
-### **Tenant Padrão: `tenant-demo`**
+### **Tenant (obrigatório)**
 
-Em desenvolvimento, o sistema usa o tenant `tenant-demo` por padrão:
+Em desenvolvimento (assim como em produção), **não há tenant padrão**. Use sempre um `tenantId` explícito (ex.: `tenant-acme`):
 
 ```javascript
 // api/data/config.json
@@ -19,7 +19,7 @@ Em desenvolvimento, o sistema usa o tenant `tenant-demo` por padrão:
     "serviceUrl": "http://localhost:8000",  // ← Serviço RAG local
     "timeout": 5000,
     "tenants": {
-      "tenant-demo": {  // ← Configuração específica do tenant-demo
+      "tenant-acme": {  // ← Configuração específica do tenant
         "serviceUrl": "http://localhost:8000",
         "timeout": 5000,
         "domains": {
@@ -104,8 +104,8 @@ O frontend estará disponível em: `http://localhost:5173`
 
 ```
 rag-service/data/vector_store/
-  ├── tenant-demo.index          ← Índice FAISS do tenant-demo
-  └── tenant-demo.metadata.json  ← Metadados dos chunks do tenant-demo
+  ├── <tenant-id>.index          ← Índice FAISS do tenant
+  └── <tenant-id>.metadata.json  ← Metadados dos chunks do tenant
 ```
 
 ### **Documentos RAG**
@@ -176,7 +176,7 @@ curl -X POST http://localhost:8000/rag/index \
   -d '{
     "document": {
       "id": "doc-test-001",
-      "tenantId": "tenant-demo",
+      "tenantId": "<tenant-id>",
       "title": "Documento de Teste",
       "content": "Este é um documento de teste para o RAG em desenvolvimento.",
       "metadata": {
@@ -208,7 +208,7 @@ curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
   -d '{
     "query": "O que é um documento de teste?",
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "filters": {},
     "options": {
       "topK": 5,
@@ -239,7 +239,7 @@ curl -X POST http://localhost:8000/rag/query \
 
 ```bash
 # Via API Node.js
-curl http://localhost:3000/api/rag/documents?tenantId=tenant-demo
+curl http://localhost:3000/api/rag/documents?tenantId=<tenant-id>
 ```
 
 ## 📝 Usando o RAG no Frontend (Desenvolvimento)
@@ -251,13 +251,13 @@ curl http://localhost:3000/api/rag/documents?tenantId=tenant-demo
 3. Os arquivos serão automaticamente:
    - Processados (OCR, extração de texto, etc.)
    - Categorizados por IA
-   - Indexados no RAG do `tenant-demo`
+   - Indexados no RAG do `<tenant-id>`
 
 ### **Consulta RAG em Chat**
 
 O RAG é usado automaticamente quando:
 - Um nó AI está configurado com `useRag: true`
-- O fluxo está rodando no tenant `tenant-demo`
+- O fluxo está rodando no tenant `<tenant-id>`
 - O serviço RAG está disponível em `http://localhost:8000`
 
 ## 🐛 Debugging em Desenvolvimento
@@ -293,8 +293,8 @@ curl http://localhost:8000/rag/health
 ### **4. Limpar Dados de Desenvolvimento**
 
 ```bash
-# Limpar vector store do tenant-demo
-rm -rf rag-service/data/vector_store/tenant-demo.*
+# Limpar vector store do tenant
+rm -rf rag-service/data/vector_store/<tenant-id>.*
 
 # Limpar documentos RAG (cuidado: remove todos os documentos)
 # NOTA: Documentos agora estão no banco de dados PostgreSQL
@@ -310,15 +310,15 @@ rm -rf rag-service/data/vector_store/tenant-demo.*
    ↓
 3. API processa arquivo (OCR, extração, etc.)
    ↓
-4. API cria documento com tenantId="tenant-demo"
+4. API cria documento com tenantId="<tenant-id>"
    ↓
 5. API chama serviço RAG em localhost:8000
    ↓
-6. Serviço RAG indexa no vector store do tenant-demo
+6. Serviço RAG indexa no vector store do tenant
    ↓
 7. Documento salvo no banco de dados PostgreSQL (tabela `rag_documents` ou similar)
    ↓
-8. Consultas RAG usam vector store do tenant-demo
+8. Consultas RAG usam vector store do tenant
 ```
 
 ## 🎯 Dicas para Desenvolvimento
@@ -341,7 +341,7 @@ Em desenvolvimento, é comum limpar e recriar dados:
 rm -rf rag-service/data/vector_store/*
 
 # Recriar documentos de teste
-node scripts/seed.js --tenant=tenant-demo
+node scripts/seed.js --tenant=<tenant-id>
 ```
 
 ### **3. Usar Modo Debug**
@@ -364,7 +364,7 @@ Use o seed para criar dados de teste:
 
 ```bash
 # Criar dados de exemplo
-node scripts/seed.js --tenant=tenant-demo
+node scripts/seed.js --tenant=<tenant-id>
 
 # Isso cria:
 # - Documentos RAG de exemplo
@@ -378,7 +378,7 @@ node scripts/seed.js --tenant=tenant-demo
 
 ```bash
 # Via API Node.js
-curl http://localhost:3000/api/rag/documents/stats?tenantId=tenant-demo
+curl http://localhost:3000/api/rag/documents/stats?tenantId=<tenant-id>
 ```
 
 **Resposta:**
@@ -421,7 +421,7 @@ uvicorn main:app --reload
 
 - Verificar se o serviço RAG está rodando
 - Verificar logs da API Node.js
-- Verificar se `tenantId` está correto (`tenant-demo`)
+- Verificar se `tenantId` está correto (`<tenant-id>`)
 - Verificar se o conteúdo do documento não está vazio
 
 ### **3. Consultas RAG retornam vazio**
@@ -456,11 +456,11 @@ cd frontend && npm start
 # Verificar saúde do RAG
 curl http://localhost:8000/rag/health
 
-# Listar documentos do tenant-demo
-curl http://localhost:3000/api/rag/documents?tenantId=tenant-demo
+# Listar documentos do tenant
+curl http://localhost:3000/api/rag/documents?tenantId=<tenant-id>
 
 # Limpar e recriar dados
 rm -rf rag-service/data/vector_store/*
-node scripts/seed.js --tenant=tenant-demo
+node scripts/seed.js --tenant=<tenant-id>
 ```
 

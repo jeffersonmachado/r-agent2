@@ -55,7 +55,7 @@ O serviço RAG Python (`rag-service`) agora lê suas configurações do `config.
       }
     },
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "serviceUrl": "http://localhost:9000",
         "timeout": 5000,
         "domains": {

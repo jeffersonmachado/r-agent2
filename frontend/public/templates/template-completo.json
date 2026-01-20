@@ -4,7 +4,7 @@
   "description": "Template demonstrando todas as funcionalidades disponíveis no sistema: mensagens, inputs, roteamento, variáveis, IA, handoff, persistência, fallback e mais",
   "icon": "🎯",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "template-completo",
     "name": "Template Completo - Todas as Funcionalidades",
     "version": 1,
@@ -49,7 +49,7 @@
         "id": "list-flows-example",
         "type": "list_flows",
         "config": {
-          "tenantId": "tenant-demo",
+          "tenantId": "<tenant-id>",
           "nameFilter": "",
           "outputVariable": "available_flows"
         },

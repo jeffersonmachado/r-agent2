@@ -168,7 +168,13 @@ const channelNormalizationService = require('./services/channelNormalizationServ
 const channelGatewayService = require('./services/channelGatewayService');
 const outboundWorker = require('./services/outboundWorker');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
-const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, setPaused: pauseTicket, startAutoReturnToBot } = require('./services/handoverService');
+const {
+  takeOver: takeOverTicket,
+  returnToBot: returnTicketToBot,
+  setPaused: pauseTicket,
+  resumeHuman: resumeHumanTicket,
+  startAutoReturnToBot,
+} = require('./services/handoverService');
 const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = require('./services/conversationTicketLinkService');
 const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./services/assignmentService');
 const queueDefinitionService = require('./services/queueDefinitionService');
@@ -474,14 +480,15 @@ async function initializeSystemAdmin() {
     const { User, TenantUser, Tenant } = require('./db/models');
     const crypto = require('crypto');
     
-    // Função para hash de senha (mesma lógica do authService)
-    function hashPassword(password, salt = null) {
-      const actualSalt = salt || crypto.randomBytes(16).toString('hex');
+    // Função para hash de senha (compatível com api/services/authService.js)
+    // Formato: sha256:<salt>:<hash>
+    function hashPassword(password) {
+      const salt = crypto.randomBytes(16).toString('hex');
       const hash = crypto
         .createHash('sha256')
-        .update(password + actualSalt)
+        .update(String(password) + salt)
         .digest('hex');
-      return { hash, salt: actualSalt };
+      return `sha256:${salt}:${hash}`;
     }
     
     const sequelize = getSequelize();
@@ -505,6 +512,30 @@ async function initializeSystemAdmin() {
       
       if (existingUser) {
         userId = existingUser.id;
+
+        // Auto-correção (compatibilidade):
+        // Versões anteriores criavam `password_hash` como sha256(password+salt) mas salvavam apenas o hash (perdendo o salt),
+        // o que torna o login impossível. Se detectarmos esse formato legado (64 hex), reescrevemos para o formato suportado:
+        // sha256:<salt>:<hash>
+        try {
+          const stored = existingUser.password_hash;
+          const looksLikeLegacySaltedButBroken = typeof stored === 'string' && /^[a-f0-9]{64}$/i.test(stored);
+          if (looksLikeLegacySaltedButBroken) {
+            await existingUser.update({
+              password_hash: hashPassword('Admin123!'),
+              username: existingUser.username || 'systemadmin',
+              role: existingUser.role || 'super_admin',
+              is_active: existingUser.is_active !== false,
+              status: existingUser.status || 'active',
+              is_superadmin: true,
+              tenant_key: existingUser.tenant_key || 'system',
+            });
+            logger.warn('[Init] 🔧 Corrigido password_hash legado do systemadmin para formato compatível (sha256:salt:hash)');
+          }
+        } catch (e) {
+          logger.warn('[Init] Falha ao tentar corrigir password_hash legado do systemadmin (ignorado)', { error: e.message });
+        }
+
         // Verifica se está associado ao tenant system
         const tenantUser = await TenantUserModel.findOne({
           where: {
@@ -549,8 +580,7 @@ async function initializeSystemAdmin() {
         }
         
         // Cria ou atualiza o usuário
-        const { hash, salt } = hashPassword('Admin123!');
-        const passwordHash = hash; // O banco usa password_hash, não precisa do salt separado
+        const passwordHash = hashPassword('Admin123!');
         
         if (!userId) {
           // Cria novo usuário
@@ -558,6 +588,10 @@ async function initializeSystemAdmin() {
             name: 'Administrador do Sistema',
             email: 'systemadmin@exemplo.com',
             password_hash: passwordHash,
+            username: 'systemadmin',
+            role: 'super_admin',
+            is_active: true,
+            status: 'active',
             is_superadmin: true,
             tenant_key: 'system',
           });
@@ -5551,6 +5585,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     // - Mantém compatibilidade retornando "messages" (ledger do ticket)
     // - Adiciona "timeline" com mensagens do canal (channel_messages) quando houver conversationId
     let timeline = null;
+    let events = null;
     try {
       const conversationId = ticket.conversationId || null;
       if (conversationId && req.tenantId) {
@@ -5591,7 +5626,128 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       timeline = null; // best-effort
     }
 
-    sendJson(res, 200, { ticketId: id, messages, timeline });
+    // Ticket Events (best-effort): timeline operacional consultável
+    try {
+      if (req.tenantId) {
+        const { TicketEvent } = require('./db/models');
+        const Model = typeof TicketEvent === 'function' ? TicketEvent() : TicketEvent;
+        const rows = await Model.findAll({
+          where: { tenant_key: req.tenantId, ticket_id: id },
+          order: [['created_at', 'DESC']],
+          limit: 100,
+        });
+        events = rows.map((r) => ({
+          id: r.id,
+          type: r.type,
+          payload: r.payload || {},
+          createdBy: r.created_by || null,
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : (r.createdAt?.toISOString?.() || null),
+        }));
+      }
+    } catch (_) {
+      events = null;
+    }
+
+    sendJson(res, 200, { ticketId: id, messages, timeline, events });
+    return;
+  }
+
+  // GET /tickets/:id/delivery-failures - Lista falhas de entrega (outbound + channel_messages)
+  if (method === 'GET' && pathname.startsWith('/tickets/') && pathname.endsWith('/delivery-failures')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/delivery-failures'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    // Valida tenant
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    // Verifica se pode acessar o ticket
+    if (!canAccessTicket(req.agent, ticket)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você não tem permissão para acessar este ticket' });
+      return;
+    }
+
+    try {
+      const tenantId = req.tenantId;
+      const conversationId = ticket.conversationId || null;
+
+      // Best-effort: sem DB ou sem conversationId, retorna vazio
+      if (!tenantId || !conversationId) {
+        sendJson(res, 200, {
+          ticketId: id,
+          conversationId,
+          outboundQueue: [],
+          channelMessages: [],
+        });
+        return;
+      }
+
+      const { OutboundQueueItem, ChannelMessage } = require('./db/models');
+      const OutModel = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
+      const MsgModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
+      const sequelize = OutModel?.sequelize || MsgModel?.sequelize || null;
+
+      if (!sequelize) {
+        sendJson(res, 200, {
+          ticketId: id,
+          conversationId,
+          outboundQueue: [],
+          channelMessages: [],
+        });
+        return;
+      }
+
+      const [outboundQueue] = await sequelize.query(
+        `SELECT id, channel_type, status, attempts, next_attempt_at, last_error, reason_code, external_message_id, message, created_at, updated_at
+         FROM outbound_queue
+         WHERE tenant_key = :t
+           AND (status = 'failed' OR last_error IS NOT NULL)
+           AND (message->'meta'->>'ticketId') = :ticketId
+         ORDER BY updated_at DESC
+         LIMIT 50`,
+        { replacements: { t: tenantId, ticketId: id } }
+      );
+
+      const [channelMessages] = await sequelize.query(
+        `SELECT id, conversation_id, channel_type, direction, type, body, external_message_id, status, created_at
+         FROM channel_messages
+         WHERE tenant_key = :t
+           AND conversation_id = :c
+           AND direction = 'out'
+           AND status = 'failed'
+         ORDER BY created_at DESC
+         LIMIT 50`,
+        { replacements: { t: tenantId, c: conversationId } }
+      );
+
+      sendJson(res, 200, {
+        ticketId: id,
+        conversationId,
+        outboundQueue: Array.isArray(outboundQueue) ? outboundQueue : [],
+        channelMessages: Array.isArray(channelMessages) ? channelMessages : [],
+      });
+    } catch (err) {
+      logger.error('Erro ao obter delivery-failures:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
     return;
   }
 
@@ -5860,6 +6016,65 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       username: req.agent.username,
       tenantId: req.tenantId,
       action: 'ticket_pause',
+      resource: 'ticket',
+      resourceId: id,
+      details: { reason },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, result.ticket);
+    return;
+  }
+
+  // POST /tickets/:id/resume - Retomar atendimento humano (remove paused)
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/resume')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/resume'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    // Valida tenant
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    let reason = 'resume';
+    if (hasJsonContentType(req)) {
+      try {
+        const body = await parseJsonBody(req);
+        if (body?.reason) reason = String(body.reason);
+      } catch (e) {
+        // ignora
+      }
+    }
+
+    const result = await resumeHumanTicket(id, req.agent, reason);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error || 'handover_failed' });
+      return;
+    }
+
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      tenantId: req.tenantId,
+      action: 'ticket_resume',
       resource: 'ticket',
       resourceId: id,
       details: { reason },
@@ -6830,6 +7045,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
                   // eslint-disable-next-line no-continue
                   continue;
                 }
+
+                // HARDENING (CRÍTICO): idempotência inbound.
+                // Se o gateway marcou a mensagem como duplicada (já persistida), NÃO processa ticket/engine novamente.
+                if (ingest?.persist?.idempotent === true) {
+                  // eslint-disable-next-line no-continue
+                  continue;
+                }
                 const externalConversationId = normalized?.externalConversationId
                   || ingest?.normalized?.conversationKey?.externalId
                   || (msg?.from ? String(msg.from) : null);
@@ -7049,6 +7271,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
                 senderId: messaging?.sender?.id ? String(messaging.sender.id) : null,
                 externalMessageId: normalized?.externalMessageId || messaging?.message?.mid || null,
               });
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            // HARDENING (CRÍTICO): idempotência inbound.
+            if (ingest?.persist?.idempotent === true) {
               // eslint-disable-next-line no-continue
               continue;
             }
@@ -12708,6 +12936,19 @@ async function startInitialization() {
       } catch (relErr) {
         console.warn('[Init] ⚠️  Aviso ao definir relacionamentos:', relErr.message);
         logger.warn('[Init] ⚠️  Aviso ao definir relacionamentos:', relErr.message);
+      }
+
+      // Em DEV, garantimos um super-admin padrão para facilitar bootstrap.
+      // Em produção, NÃO criamos usuário automaticamente (hardening).
+      try {
+        const isProd = process.env.NODE_ENV === 'production';
+        const disabled = process.env.DISABLE_SYSTEMADMIN_BOOTSTRAP === 'true';
+        if (!isProd && !disabled) {
+          await initializeSystemAdmin();
+        }
+      } catch (sysAdminErr) {
+        console.warn('[Init] ⚠️  Aviso ao inicializar systemadmin (ignorado):', sysAdminErr.message);
+        logger.warn('[Init] ⚠️  Aviso ao inicializar systemadmin (ignorado):', sysAdminErr.message);
       }
       
       // Blindagem produção: não cria/seed de tenant automaticamente (multi-tenant obrigatório).

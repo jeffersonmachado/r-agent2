@@ -9,7 +9,7 @@
 
 const config = require('../utils/config');
 const logger = require('../utils/logger');
-const { sendTextMessage } = require('./whatsappService');
+const outboundQueueService = require('./outboundQueueService');
 
 /**
  * Envia mensagem usando template do WhatsApp Business API.
@@ -19,68 +19,40 @@ const { sendTextMessage } = require('./whatsappService');
  * @param {Array} parameters - Parâmetros do template
  * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
  */
-async function sendTemplateMessage(to, templateName, languageCode = 'pt_BR', parameters = []) {
+async function sendTemplateMessage(to, templateName, languageCode = 'pt_BR', parameters = [], options = {}) {
   try {
-    const phoneNumberId = config.get('whatsapp.phoneNumberId');
-    const accessToken = config.get('whatsapp.accessToken');
-    
-    if (!phoneNumberId || !accessToken) {
-      throw new Error('Credenciais do WhatsApp não configuradas');
+    // HARDENING: templates também devem passar pela fila outbound (auditoria/retry).
+    // OBS: deliverOutbound(whatsapp) implementa type='template'.
+    const tenantId = options?.tenantId || null;
+    if (!tenantId) {
+      // Este endpoint normalmente é chamado a partir do painel autenticado (req.tenantId),
+      // mas mantemos fallback defensivo aqui.
+      throw new Error('tenantId não resolvido para envio de template');
     }
-    
-    const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
-    
-    const body = {
-      messaging_product: 'whatsapp',
-      to: to.replace(/^\+/, ''), // Remove + se presente
-      type: 'template',
-      template: {
-        name: templateName,
-        language: {
-          code: languageCode,
+
+    const enqueueRes = await outboundQueueService.enqueueOutbound({
+      tenantId,
+      channelType: 'whatsapp',
+      message: {
+        to,
+        type: 'template',
+        body: {
+          templateName,
+          languageCode: languageCode || 'pt_BR',
+          parameters: Array.isArray(parameters) ? parameters : [],
         },
       },
-    };
-    
-    // Adiciona componentes se houver parâmetros
-    if (parameters && parameters.length > 0) {
-      body.template.components = [
-        {
-          type: 'body',
-          parameters: parameters.map(param => ({
-            type: typeof param === 'number' ? 'text' : 'text',
-            text: String(param),
-          })),
-        },
-      ];
-    }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(body),
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `WhatsApp API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    logger.info('[WhatsAppTemplate] Mensagem template enviada com sucesso', {
+
+    logger.info('[WhatsAppTemplate] Template enfileirado', {
       to,
       templateName,
-      messageId: data.messages?.[0]?.id,
+      queued: !!enqueueRes?.queued,
+      itemId: enqueueRes?.itemId || null,
+      direct: !!enqueueRes?.direct,
     });
-    
-    return {
-      success: true,
-      messageId: data.messages?.[0]?.id,
-    };
+
+    return { success: true, queued: !!enqueueRes?.queued, itemId: enqueueRes?.itemId || null };
   } catch (error) {
     logger.error('[WhatsAppTemplate] Erro ao enviar template:', error);
     return {

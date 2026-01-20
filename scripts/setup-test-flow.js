@@ -13,8 +13,13 @@ const PORT = config.get('api.port', 3000);
 console.log('🔧 Configurando Fluxo de Teste\n');
 
 // Cria um fluxo mínimo válido (sem fallback para evitar problemas de validação)
+const TENANT_ID = process.env.TENANT_ID;
+if (!TENANT_ID) {
+  console.error('❌ TENANT_ID é obrigatório (export TENANT_ID=<tenant-id>)');
+  process.exit(1);
+}
 const flowData = {
-  tenantId: 'tenant-demo',
+  tenantId: TENANT_ID,
   id: 'teste-whatsapp',
   name: 'Teste WhatsApp',
   version: 1,

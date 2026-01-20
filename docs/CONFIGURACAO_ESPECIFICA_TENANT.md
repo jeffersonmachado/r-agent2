@@ -20,7 +20,7 @@
       "apiKey": "sk-ant-..."
     },
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "primary": "openai",
         "secondary": "anthropic"
       },
@@ -33,7 +33,7 @@
 ```
 
 Neste caso:
-- `tenant-demo` tem configuração específica: usa OpenAI como primário e Anthropic como secundário
+- `tenant-acme` tem configuração específica: usa OpenAI como primário e Anthropic como secundário
 - `tenant-prod` tem configuração específica: usa Anthropic como primário
 
 ### ❌ SEM Configuração Específica
@@ -96,7 +96,7 @@ if (!tenantAiConfig || !tenantAiConfig.primary) {
 ### Configuração Específica (ai.tenants[tenantId])
 - **Onde**: `config.json` → `ai.tenants[tenantId]`
 - **O que define**: Qual provider cada tenant deve usar
-- **Exemplo**: `"tenant-demo": { "primary": "openai" }`
+- **Exemplo**: `"tenant-acme": { "primary": "openai" }`
 - **Vantagem**: Cada tenant pode usar um provider diferente
 - **Obrigatório**: Não (mas recomendado)
 
@@ -146,7 +146,7 @@ if (!tenantAiConfig || !tenantAiConfig.primary) {
   "ai": {
     "openai": { "apiKey": "sk-..." },
     "tenants": {
-      "tenant-demo": { "primary": "openai" }
+      "tenant-acme": { "primary": "openai" }
     }
   }
 }
@@ -154,7 +154,7 @@ if (!tenantAiConfig || !tenantAiConfig.primary) {
 
 **Resultado:**
 - ✅ Tenant tem configuração específica
-- ✅ Sistema usa `getAiProviderForTenant('tenant-demo')`
+- ✅ Sistema usa `getAiProviderForTenant('tenant-acme')`
 - ✅ Retorna provider OpenAI registrado
 
 ### Cenário 2: Tenant SEM configuração específica

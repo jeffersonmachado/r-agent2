@@ -4,7 +4,7 @@
   "description": "Fluxo que transfere para atendimento humano com fallback integrado",
   "icon": "👤",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "handoff-support",
     "name": "Transferência para Suporte",
     "version": 1,

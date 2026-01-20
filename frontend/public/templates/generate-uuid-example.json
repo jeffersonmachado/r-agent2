@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó generate_uuid para gerar identificadores únicos",
   "icon": "🆔",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "generate-uuid-example",
     "name": "Exemplo de Gerar UUID",
     "version": 1,

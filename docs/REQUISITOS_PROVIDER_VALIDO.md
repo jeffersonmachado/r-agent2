@@ -24,7 +24,7 @@ Este documento explica exatamente o que é necessário para que `hasValidProvide
       "apiKey": "sk-..."  // ← OBRIGATÓRIO: API key do OpenAI
     },
     "tenants": {
-      "tenant-demo": {    // ← ID do tenant
+      "tenant-acme": {    // ← ID do tenant
         "primary": "openai"  // ← OBRIGATÓRIO: Provider primário
       }
     }
@@ -175,7 +175,7 @@ if (!hasTenantProvider) {
       "apiKey": "sk-proj-abc123..."
     },
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "primary": "openai"
       }
     }
@@ -237,7 +237,7 @@ if (!hasTenantProvider) {
       "apiKey": ""  // ← VAZIO
     },
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "primary": "openai"  // ← Configurado, mas provider não registrado
       }
     }

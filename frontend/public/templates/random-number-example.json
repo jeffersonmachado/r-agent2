@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó random_number para gerar números aleatórios",
   "icon": "🎲",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "random-number-example",
     "name": "Exemplo de Número Aleatório",
     "version": 1,

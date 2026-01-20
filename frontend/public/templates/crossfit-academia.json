@@ -4,7 +4,7 @@
   "description": "Template completo para atendimento de uma academia de CrossFit com informações sobre planos, horários, agendamento, suporte e fallback integrado",
   "icon": "💪",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "crossfit-academia",
     "name": "Atendimento Academia CrossFit",
     "version": 1,

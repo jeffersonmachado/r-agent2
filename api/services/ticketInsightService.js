@@ -31,7 +31,7 @@ Contexto do ticket:
 - id: ${ticket.id}
 - fila: ${ticket.queue}
 - status: ${ticket.status}
-- modo: ${ticket.mode || 'human'}
+- modo: ${ticket.mode || 'bot'}
 - telefone: ${ticket.phoneNumber}
 - tags: ${(ticket.tags || []).join(', ')}
 - variáveis: ${JSON.stringify(vars)}

@@ -4,7 +4,7 @@
   "description": "Fluxo que usa AI para responder ao usuário com fallback integrado",
   "icon": "🤖",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "ai-assistant",
     "name": "Assistente com AI",
     "version": 1,

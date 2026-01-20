@@ -4,7 +4,7 @@
   "description": "Template demonstrando a tarefa de Extração de Entidades (entity_extraction) do nó ai_task",
   "icon": "🔍",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "template-ai-task-entity-extraction",
     "name": "Template - Extração de Entidades",
     "version": 1,

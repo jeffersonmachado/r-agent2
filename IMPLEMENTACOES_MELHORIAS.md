@@ -200,7 +200,7 @@ DELETE /webhooks/:id
 {
   "event": "ticket.created",
   "timestamp": "2024-01-01T00:00:00.000Z",
-  "tenantId": "tenant-demo",
+  "tenantId": "tenant-acme",
   "data": {
     "ticketId": "ticket-123",
     "queue": "suporte",

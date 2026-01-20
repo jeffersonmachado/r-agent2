@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó get_user_info para obter informações do usuário",
   "icon": "👤",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "get-user-info-example",
     "name": "Exemplo de Info do Usuário",
     "version": 1,

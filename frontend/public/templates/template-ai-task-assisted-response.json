@@ -4,7 +4,7 @@
   "description": "Template demonstrando a tarefa de Resposta Assistida (assisted_response) do nó ai_task",
   "icon": "💬",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "template-ai-task-assisted-response",
     "name": "Template - Resposta Assistida",
     "version": 1,

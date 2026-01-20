@@ -28,7 +28,7 @@ const logger = require('../utils/logger');
  * Reutiliza a função do tenantService para garantir consistência.
  * CONVENÇÃO: Prefira usar tenant_key em APIs públicas e URLs.
  * 
- * @param {string} identifier - tenant_key (ex: "tenant-demo") ou id (UUID)
+ * @param {string} identifier - tenant_key (ex: "tenant-acme") ou id (UUID)
  * @returns {Promise<Tenant|null>} Instância do Sequelize ou null
  */
 async function findTenantByIdentifier(identifier) {

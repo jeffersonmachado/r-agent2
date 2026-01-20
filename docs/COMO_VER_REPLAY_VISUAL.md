@@ -29,7 +29,7 @@ O script mostra:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📋 Informações:
-   Session ID: sim-tenant-demo-flow-welcome-1234567890
+   Session ID: sim-tenant-acme-flow-welcome-1234567890
    Flow ID: flow-welcome
    Total de mensagens: 3
 

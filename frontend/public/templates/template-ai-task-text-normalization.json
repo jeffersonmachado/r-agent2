@@ -4,7 +4,7 @@
   "description": "Template demonstrando a tarefa de Normalização de Texto (text_normalization) do nó ai_task com fallback integrado",
   "icon": "📝",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "template-ai-task-text-normalization",
     "name": "Template - Normalização de Texto",
     "version": 1,

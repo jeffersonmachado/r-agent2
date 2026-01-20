@@ -81,6 +81,31 @@ async function sendTextMessage(to, text) {
     text: { body: text },
   };
 
+  function buildWhatsAppError(statusCode, rawBody, parsed) {
+    const err = new Error(`WhatsApp API error: ${statusCode} - ${rawBody}`);
+    err.statusCode = statusCode;
+    err.details = parsed || null;
+    // Meta pode retornar code/subcode em error
+    const code = parsed?.error?.code ?? null;
+    const subcode = parsed?.error?.error_subcode ?? null;
+    const message = parsed?.error?.message ? String(parsed.error.message) : String(rawBody || '');
+    err.wa_code = code;
+    err.wa_subcode = subcode;
+
+    // Heurística operacional: janela 24h expirada / precisa template
+    const m = message.toLowerCase();
+    const looksLikeOutsideWindow = m.includes('outside the allowed window')
+      || m.includes('24 hour')
+      || m.includes('24-hour')
+      || m.includes('requires a template')
+      || m.includes('message failed because it was outside')
+      || m.includes('131047'); // aparece em alguns payloads/logs
+    if (looksLikeOutsideWindow) {
+      err.code = 'outside_window_24h';
+    }
+    return err;
+  }
+
   return new Promise((resolve, reject) => {
     const options = {
       method: 'POST',
@@ -99,7 +124,13 @@ async function sendTextMessage(to, text) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(data ? JSON.parse(data) : {});
         } else {
-          reject(new Error(`WhatsApp API error: ${res.statusCode} - ${data}`));
+          let parsed = null;
+          try {
+            parsed = data ? JSON.parse(data) : null;
+          } catch (_) {
+            parsed = null;
+          }
+          reject(buildWhatsAppError(res.statusCode, data, parsed));
         }
       });
     });
@@ -124,6 +155,7 @@ function verifyWebhook(mode, token) {
 module.exports = {
   sendTextMessage,
   verifyWebhook,
+  areCredentialsValid,
 };
 
 

@@ -4,7 +4,7 @@
   "description": "Template básico de saudação com sistema de fallback integrado. Demonstra como proteger um fluxo simples contra erros.",
   "icon": "🔄",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "simple-greeting-with-fallback",
     "name": "Saudação Simples com Fallback",
     "version": 1,

@@ -12,7 +12,8 @@
 
 ### 2. Middleware de Validação de Tenant
 - ✅ Middleware `tenantValidation.js` criado
-- ✅ Extração de tenant_id de JWT, header ou query
+- ✅ Resolução de tenant por sessão/token autenticado (agent.tenantId)
+- ✅ Para **super-admin**, suporte opcional a override via header `X-Tenant-Id` (sem fallback automático)
 - ✅ Validação de existência e status do tenant
 - ✅ Bloqueio de acesso cruzado entre tenants
 - ✅ Adiciona req.tenantId e req.tenant ao request
@@ -98,7 +99,8 @@
 - **Compatibilidade**: Sistema mantém compatibilidade com código existente
 - **Migração**: Migração automática de dados antigos para novo formato
 - **Roles Antigos**: Roles antigos (supervisor, agent) são mapeados automaticamente
-- **Tenant Padrão**: Sistema usa `tenant-demo` como padrão para dados antigos
+- **Tenant Padrão**: **não existe tenant padrão** em produção; `tenantId` deve ser sempre resolvido por autenticação (ou `X-Tenant-Id` para super-admin)
+- **STRICT_TENANT_MODE**: em produção, `STRICT_TENANT_MODE=true` bloqueia qualquer comportamento “silencioso” sem tenant
 
 ## 🎯 Próximos Passos
 

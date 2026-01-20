@@ -133,7 +133,11 @@ async function testFullLearningDataEndpoint() {
   log('\n📋 Testando endpoint de dados completos de aprendizado...', 'cyan');
   
   try {
-    const tenantId = 'tenant-demo';
+    const tenantId = process.env.TENANT_ID;
+    if (!tenantId) {
+      log('✗ TENANT_ID é obrigatório (export TENANT_ID=<tenant-id>)', 'red');
+      return false;
+    }
     const response = await makeRequest(`${RAG_SERVICE_URL}/rag/learning/full-data/${tenantId}`);
     
     if (response.status === 200 && response.data.success) {
@@ -162,7 +166,11 @@ async function testCleanInvalidQueriesEndpoint() {
   log('\n📋 Testando endpoint de limpeza de queries inválidas...', 'cyan');
   
   try {
-    const tenantId = 'tenant-demo';
+    const tenantId = process.env.TENANT_ID;
+    if (!tenantId) {
+      log('✗ TENANT_ID é obrigatório (export TENANT_ID=<tenant-id>)', 'red');
+      return false;
+    }
     const response = await makeRequest(
       `${RAG_SERVICE_URL}/rag/learning/clean-invalid-queries/${tenantId}`,
       { method: 'POST' }
@@ -186,7 +194,11 @@ async function testAdaptationEndpoint() {
   log('\n📋 Testando endpoint de adaptação de regras...', 'cyan');
   
   try {
-    const tenantId = 'tenant-demo';
+    const tenantId = process.env.TENANT_ID;
+    if (!tenantId) {
+      log('✗ TENANT_ID é obrigatório (export TENANT_ID=<tenant-id>)', 'red');
+      return false;
+    }
     const response = await makeRequest(
       `${RAG_SERVICE_URL}/rag/learning/validation-rules/adapt/${tenantId}`,
       { method: 'POST' }

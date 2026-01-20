@@ -28,13 +28,13 @@ npm run reset:all:yes
 ./scripts/reset-all.sh tenant-ecommerce
 
 # Sem confirmação
-./scripts/reset-all.sh tenant-demo --yes
+./scripts/reset-all.sh <tenant-id> --yes
 ```
 
 ## Parâmetros
 
-1. **Tenant ID** (opcional, padrão: `tenant-demo`)
-   - `tenant-demo` - Tenant Demo
+1. **Tenant ID** (obrigatório)
+   - Ex.: `tenant-acme`
    - `tenant-ecommerce` - E-commerce Store
    - `tenant-saude` - Clínica de Saúde
 

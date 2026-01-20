@@ -230,6 +230,38 @@ export function pauseTicket(ticketId, reason = 'outside_window') {
 }
 
 /**
+ * Retomar atendimento humano (remove paused).
+ *
+ * @param {string} ticketId
+ * @param {string} [reason]
+ * @returns {Promise<any>}
+ */
+export function resumeTicket(ticketId, reason = 'resume') {
+  if (!ticketId) {
+    return Promise.reject(new Error('resumeTicket: ticketId é obrigatório'));
+  }
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/resume`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+/**
+ * Lista falhas de entrega do ticket (outbound_queue + channel_messages failed).
+ *
+ * @param {string} ticketId
+ * @returns {Promise<{ticketId: string, conversationId: string|null, outboundQueue: any[], channelMessages: any[]}>}
+ */
+export function getTicketDeliveryFailures(ticketId) {
+  if (!ticketId) {
+    return Promise.reject(new Error('getTicketDeliveryFailures: ticketId é obrigatório'));
+  }
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/delivery-failures`, {
+    method: 'GET',
+  });
+}
+
+/**
  * Envia mensagem do atendente para o usuário via WhatsApp.
  *
  * @param {string} ticketId

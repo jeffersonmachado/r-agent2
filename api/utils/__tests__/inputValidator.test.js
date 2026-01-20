@@ -281,6 +281,15 @@ describe('inputValidator', () => {
       expect(valid.password).toBe('pass123');
     });
 
+    test('schemas.login aceita email como username', () => {
+      const valid = validateInput(
+        { username: 'systemadmin@exemplo.com', password: 'Admin123!' },
+        schemas.login
+      );
+      expect(valid.username).toBe('systemadmin@exemplo.com');
+      expect(valid.password).toBe('Admin123!');
+    });
+
     test('schemas.login rejeita username inválido', () => {
       expect(() => {
         validateInput({ username: 'user@123', password: 'pass' }, schemas.login);

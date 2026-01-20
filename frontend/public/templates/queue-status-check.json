@@ -4,7 +4,7 @@
   "description": "Verifica status da fila antes de fazer handoff",
   "icon": "📊",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "queue-status-check",
     "name": "Verificar Status da Fila",
     "version": 1,

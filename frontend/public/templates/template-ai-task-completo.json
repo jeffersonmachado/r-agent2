@@ -4,7 +4,7 @@
   "description": "Template completo demonstrando todas as 4 tarefas disponíveis no nó ai_task: Classificação de Intenção, Extração de Entidades, Normalização de Texto e Resposta Assistida",
   "icon": "🤖",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "template-ai-task-completo",
     "name": "Template - Todas as Ações de ai_task",
     "version": 1,

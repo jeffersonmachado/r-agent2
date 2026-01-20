@@ -42,7 +42,7 @@ Adicione a seção `ai` ao arquivo de configuração:
       "model": "claude-3-sonnet-20240229"
     },
     "tenants": {
-      "tenant-demo": {
+      "tenant-acme": {
         "primary": "openai",
         "fallback": "fallback"
       },
@@ -100,7 +100,7 @@ curl -X POST http://localhost:3000/api/ai/generate \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Olá, como você está?",
-    "tenantId": "tenant-demo",
+    "tenantId": "tenant-acme",
     "sessionId": "session-123",
     "flowId": "flow-456",
     "nodeId": "node-789"

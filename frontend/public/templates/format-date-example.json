@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó format_date para formatar datas",
   "icon": "📅",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "format-date-example",
     "name": "Exemplo de Formatar Data",
     "version": 1,

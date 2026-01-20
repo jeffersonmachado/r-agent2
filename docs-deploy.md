@@ -150,7 +150,7 @@ A API expõe os seguintes endpoints:
 curl -X POST http://localhost:3000/flows/validate \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "tenant-demo",
+    "tenantId": "tenant-acme",
     "id": "flow-1",
     "name": "Meu Fluxo",
     "version": 1,

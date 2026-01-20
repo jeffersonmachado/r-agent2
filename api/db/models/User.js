@@ -92,9 +92,11 @@ function getUserModel() {
       },
       tenant_key: {
         type: DataTypes.STRING,
-        allowNull: true,
-        defaultValue: 'tenant-demo',
-        comment: 'Tenant principal do usuário (compatibilidade: modo single-tenant)',
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
+        comment: 'Tenant principal do usuário (multi-tenant obrigatório)',
       },
       is_superadmin: {
         type: DataTypes.BOOLEAN,

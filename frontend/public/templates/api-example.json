@@ -4,7 +4,7 @@
   "description": "Exemplo de uso do nó api para fazer chamadas HTTP a APIs externas",
   "icon": "🌐",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "api-example",
     "name": "Exemplo de API",
     "version": 1,

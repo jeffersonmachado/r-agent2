@@ -111,7 +111,7 @@ function buildAgentFromUserRow(userRow) {
 
   return {
     id: userRow.id,
-    tenantId: userRow.tenant_key || 'tenant-demo',
+    tenantId: userRow.tenant_key || null,
     username: userRow.username || (userRow.email ? userRow.email.split('@')[0] : null),
     email: userRow.email,
     role,
@@ -131,26 +131,8 @@ async function ensureDefaultAdminIfEmpty() {
   const count = await UserModel.count();
   if (count > 0) return;
 
-  logger.warn('[AuthService] Nenhum usuário encontrado. Criando admin padrão (admin/Admin123!)');
-
-  const now = new Date();
-  const passwordHash = hashPassword('Admin123!');
-
-  await UserModel.create({
-    username: 'admin',
-    name: 'Administrador',
-    email: 'admin@example.com',
-    password_hash: passwordHash,
-    role: 'owner',
-    is_active: true,
-    status: 'active',
-    tenant_key: 'tenant-demo',
-    is_superadmin: false,
-    mfa_enabled: false,
-    last_login_at: null,
-  });
-
-  // O cache será preenchido pelo load subsequente na initialize()
+  // Blindagem produção: não cria usuário/admin default automaticamente.
+  logger.warn('[AuthService] Nenhum usuário encontrado. Seed/bootstrapping deve criar usuários explicitamente.');
 }
 
 async function loadCachesFromDb() {
@@ -504,6 +486,13 @@ async function login(username, password, ipAddress = 'unknown', userAgent = 'unk
     return { success: false, error: 'Credenciais inválidas' };
   }
 
+  // Hardening multi-tenant: usuário não-super-admin deve ter tenant associado.
+  // (Não existe fallback para tenant-demo em runtime.)
+  if (!agent.tenantId && agent.role !== 'super_admin') {
+    logger.warn('[AuthService] Login bloqueado: usuário sem tenant', { username: agent.username, agentId: agent.id });
+    return { success: false, error: 'tenant_required' };
+  }
+
   // Remove sessões antigas antes de criar a nova
   if (dbAvailable()) {
     await cleanupOldSessions(agent.id, Math.max(1, MAX_SESSIONS_PER_AGENT - 1));
@@ -647,10 +636,14 @@ function validateToken(token) {
 // RPA Token login
 // ---------------------------------------------------------------------------
 
-async function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'unknown') {
+async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', userAgent = 'unknown') {
   if (!rpaToken || typeof rpaToken !== 'string') {
     return { success: false, error: 'Token RPA é obrigatório' };
   }
+  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+    return { success: false, error: 'tenantId é obrigatório' };
+  }
+  const effectiveTenantId = tenantId.trim();
 
   let expectedToken = null;
   try {
@@ -679,7 +672,7 @@ async function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'u
 
   let rpaAgent = null;
   for (const a of agents.values()) {
-    if (a.username === username) {
+    if (a.username === username && a.tenantId === effectiveTenantId) {
       rpaAgent = a;
       break;
     }
@@ -687,7 +680,7 @@ async function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'u
 
   if (dbAvailable()) {
     const UserModel = typeof User === 'function' ? User() : User;
-    const row = await UserModel.findOne({ where: { username } });
+    const row = await UserModel.findOne({ where: { username, tenant_key: effectiveTenantId } });
     if (!row) {
       const created = await UserModel.create({
         username,
@@ -697,7 +690,7 @@ async function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'u
         role: 'operator',
         is_active: true,
         status: 'active',
-        tenant_key: 'tenant-demo',
+        tenant_key: effectiveTenantId,
         is_superadmin: false,
         mfa_enabled: false,
       });
@@ -711,7 +704,7 @@ async function loginWithRpaToken(rpaToken, ipAddress = 'unknown', userAgent = 'u
     const id = `rpa-${Date.now()}`;
     rpaAgent = {
       id,
-      tenantId: 'tenant-demo',
+      tenantId: effectiveTenantId,
       username,
       email,
       role: 'operator',

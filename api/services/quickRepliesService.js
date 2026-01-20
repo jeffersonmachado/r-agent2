@@ -34,9 +34,12 @@ function dbAvailable() {
 }
 
 function toDbPayload(reply) {
+  if (!reply || !reply.tenantId || typeof reply.tenantId !== 'string' || reply.tenantId.trim() === '') {
+    throw new Error('tenantId é obrigatório para QuickReply');
+  }
   return {
     id: reply.id,
-    tenant_key: reply.tenantId || 'tenant-demo',
+    tenant_key: reply.tenantId,
     title: reply.title,
     message: reply.message,
     tags: Array.isArray(reply.tags) ? reply.tags : [],
@@ -102,86 +105,7 @@ function deleteQuickReplyBestEffort(id) {
 }
 
 /**
- * Cria respostas rápidas padrão.
- */
-function createDefaultQuickReplies() {
-  const defaults = [
-    {
-      id: 'qr-001',
-      tenantId: 'tenant-demo',
-      title: 'Saudação Inicial',
-      message: 'Olá! Como posso ajudá-lo hoje?',
-      tags: ['saudacao', 'inicio', 'boas-vindas'],
-      category: 'saudacao',
-      usageCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-      active: true,
-    },
-    {
-      id: 'qr-002',
-      tenantId: 'tenant-demo',
-      title: 'Despedida',
-      message: 'Obrigado por entrar em contato! Tenha um ótimo dia!',
-      tags: ['despedida', 'fim', 'agradecimento'],
-      category: 'despedida',
-      usageCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-      active: true,
-    },
-    {
-      id: 'qr-003',
-      tenantId: 'tenant-demo',
-      title: 'Transferindo para Especialista',
-      message: 'Vou transferir você para um especialista que poderá ajudá-lo melhor.',
-      tags: ['transferencia', 'especialista'],
-      category: 'transferencia',
-      usageCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-      active: true,
-    },
-    {
-      id: 'qr-004',
-      tenantId: 'tenant-demo',
-      title: 'Solicitando Informações',
-      message: 'Para que eu possa ajudá-lo melhor, preciso de algumas informações. Pode me informar?',
-      tags: ['informacao', 'dados', 'coleta'],
-      category: 'coleta',
-      usageCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-      active: true,
-    },
-    {
-      id: 'qr-005',
-      tenantId: 'tenant-demo',
-      title: 'Problema Resolvido',
-      message: 'Fico feliz em saber que conseguimos resolver seu problema! Se precisar de mais alguma coisa, estou à disposição.',
-      tags: ['resolucao', 'sucesso', 'satisfacao'],
-      category: 'resolucao',
-      usageCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-      active: true,
-    },
-  ];
-  
-  for (const reply of defaults) {
-    quickReplies.set(reply.id, reply);
-    persistQuickReplyBestEffort(reply);
-  }
-}
-
-/**
  * Inicializa cache em memória a partir do PostgreSQL (best-effort).
- * Se não houver dados, cria defaults para tenant-demo.
  */
 async function initialize() {
   if (!dbAvailable()) return;
@@ -195,8 +119,8 @@ async function initialize() {
     }
 
     if (quickReplies.size === 0) {
-      createDefaultQuickReplies();
-      logger.info('[QuickRepliesService] Nenhuma quick reply encontrada. Defaults criados.', { count: quickReplies.size });
+      // Blindagem: não cria defaults automáticos em produção (multi-tenant obrigatório)
+      logger.info('[QuickRepliesService] Nenhuma quick reply encontrada. Nenhum default será criado automaticamente.', { count: 0 });
     } else {
       logger.info('[QuickRepliesService] Cache inicializado do PostgreSQL', { count: quickReplies.size });
     }
@@ -273,7 +197,11 @@ function getQuickReply(id) {
  * @returns {{success: boolean, quickReply?: QuickReply, error?: string}}
  */
 function createQuickReply(data) {
-  const { title, message, tags = [], category = 'geral', createdBy = null, tenantId = 'tenant-demo' } = data;
+  const { title, message, tags = [], category = 'geral', createdBy = null, tenantId = null } = data;
+  
+  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+    return { success: false, error: 'tenantId é obrigatório' };
+  }
   
   if (!title || !message) {
     return { success: false, error: 'Título e mensagem são obrigatórios' };
@@ -284,7 +212,7 @@ function createQuickReply(data) {
   
   const quickReply = {
     id,
-    tenantId: tenantId || 'tenant-demo',
+    tenantId,
     title: title.trim(),
     message: message.trim(),
     tags: Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()) : [],
@@ -381,8 +309,15 @@ function incrementUsage(id) {
  * @param {number} [limit=5] - Limite de resultados
  * @returns {QuickReply[]}
  */
-function searchByContext(context, limit = 5) {
+function searchByContext(context, tenantIdOrLimit = 5, maybeLimit = 5) {
   if (!context || typeof context !== 'string') {
+    return [];
+  }
+
+  const tenantId = typeof tenantIdOrLimit === 'string' ? tenantIdOrLimit : null;
+  const limit = typeof tenantIdOrLimit === 'number' ? tenantIdOrLimit : (typeof maybeLimit === 'number' ? maybeLimit : 5);
+  if (!tenantId) {
+    // Blindagem: sem tenant, não retorna nada (evita vazamento cross-tenant)
     return [];
   }
   
@@ -391,7 +326,7 @@ function searchByContext(context, limit = 5) {
   
   // Calcula score para cada resposta rápida
   const scored = Array.from(quickReplies.values())
-    .filter(r => r.active !== false)
+    .filter(r => r.active !== false && r.tenantId === tenantId)
     .map(reply => {
       let score = 0;
       const replyText = `${reply.title} ${reply.message} ${(reply.tags || []).join(' ')}`.toLowerCase();

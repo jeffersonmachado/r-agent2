@@ -63,7 +63,19 @@ function getOutboundQueueItemModel() {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      reason_code: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       external_message_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      processing_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      processing_by: {
         type: DataTypes.STRING,
         allowNull: true,
       },

@@ -4,7 +4,7 @@
   "description": "Fluxo com roteamento baseado em condições e fallback integrado",
   "icon": "🔀",
   "flow": {
-    "tenantId": "tenant-demo",
+    "tenantId": "<tenant-id>",
     "id": "router-basic",
     "name": "Router Básico",
     "version": 1,
