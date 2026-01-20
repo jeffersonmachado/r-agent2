@@ -33,16 +33,26 @@ const SYSTEM_NODES = [
   'get_user_info',
 ];
 
+// Nós interativos/externos que fazem parte do schema e da engine
+const EXTRA_NODES = [
+  'fallback',
+  'api',
+  'options',
+];
+
 const TYPE_COMPATIBILITY = {
-  start: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
-  message: ['user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
-  user_input: ['router', 'schedule_router', 'message', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
-  router: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
-  schedule_router: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
-  set_variable: ['message', 'user_input', 'router', 'schedule_router', 'handoff', 'ai', 'ai_task', 'end', ...SYSTEM_NODES],
-  ai: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'end', ...SYSTEM_NODES],
-  ai_task: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'end', ...SYSTEM_NODES],
+  start: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'options', 'api', 'end', ...SYSTEM_NODES],
+  message: ['user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'options', 'api', 'fallback', 'end', ...SYSTEM_NODES],
+  user_input: ['router', 'schedule_router', 'message', 'set_variable', 'handoff', 'ai', 'ai_task', 'options', 'api', 'fallback', 'end', ...SYSTEM_NODES],
+  options: ['router', 'schedule_router', 'message', 'set_variable', 'handoff', 'ai', 'ai_task', 'api', 'fallback', 'end', ...SYSTEM_NODES],
+  api: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'options', 'fallback', 'end', ...SYSTEM_NODES],
+  router: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'options', 'api', 'fallback', 'end', ...SYSTEM_NODES],
+  schedule_router: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'options', 'api', 'fallback', 'end', ...SYSTEM_NODES],
+  set_variable: ['message', 'user_input', 'router', 'schedule_router', 'handoff', 'ai', 'ai_task', 'options', 'api', 'fallback', 'end', ...SYSTEM_NODES],
+  ai: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'options', 'api', 'fallback', 'end', ...SYSTEM_NODES],
+  ai_task: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'options', 'api', 'fallback', 'end', ...SYSTEM_NODES],
   handoff: ['end'],
+  fallback: ['message', 'handoff', 'end'],
   get_flow_info: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
   get_queue_status: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],
   get_config_value: ['message', 'user_input', 'router', 'schedule_router', 'set_variable', 'handoff', 'ai', 'ai_task', 'end'],

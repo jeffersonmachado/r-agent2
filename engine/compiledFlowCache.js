@@ -89,6 +89,22 @@ function getOrCompileFlow(flow) {
     throw new Error('getOrCompileFlow: flow inválido');
   }
 
+  // Hardening: se o fluxo foi gerado por IA, revalida antes de compilar/executar.
+  // (Execução só ocorre após aprovação, mas ainda assim revalidamos como blindagem final.)
+  const isAiFlow = flow?.metadata?.generatedBy === 'ai' || flow?.metadata?.generated === true;
+  if (isAiFlow) {
+    const { validateFlow } = require('./validator');
+    const res = validateFlow(flow);
+    if (!res || res.valid !== true) {
+      const err = new Error('getOrCompileFlow: fluxo de IA inválido para execução (revalidação falhou)');
+      // @ts-ignore
+      err.code = 'AI_FLOW_INVALID_AT_EXECUTION';
+      // @ts-ignore
+      err.details = { errors: res?.errors || [] };
+      throw err;
+    }
+  }
+
   const key = makeKey(flow.tenantId, flow.id, flow.version);
   const existing = cache.get(key);
   if (existing) {

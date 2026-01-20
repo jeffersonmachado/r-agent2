@@ -86,6 +86,19 @@ async function executeStep(state, compiledFlow, options) {
     );
   }
 
+  // Safe-mode: bloqueia execução de fluxos marcados como "requiresReview"
+  // (ex.: gerados por IA) a menos que o chamador habilite explicitamente.
+  const requiresReview = compiledFlow && compiledFlow.metadata && compiledFlow.metadata.requiresReview === true;
+  const allowUnreviewed = deps && deps.allowUnreviewedAiFlow === true;
+  if (requiresReview && !allowUnreviewed) {
+    const err = new Error('Fluxo está em safe-mode e requer revisão humana (requiresReview=true)');
+    // @ts-ignore
+    err.code = 'FLOW_REQUIRES_REVIEW';
+    // @ts-ignore
+    err.type = 'flow';
+    throw err;
+  }
+
   // Regras de versionamento:
   // - Sessões usam sempre uma versão fixa.
   // - Se o estado tiver flowVersion, ele deve coincidir com a

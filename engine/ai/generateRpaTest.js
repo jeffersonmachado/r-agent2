@@ -19,6 +19,7 @@ const path = require('path');
 const { validateGeneratedPlan } = require('./validateGeneratedPlan');
 const logger = require('../../api/utils/logger');
 const config = require('../../api/utils/config');
+const { buildAiEnvelope, validateAiEnvelopeOrThrow, validateByContract } = require('./aiEnvelope');
 
 // Caminho do prompt oficial
 // Corrigido: usa caminho absoluto baseado na raiz do projeto
@@ -49,43 +50,35 @@ function loadPrompt() {
 function simulateAiGeneration(userInput, prompt) {
   // SIMULAÇÃO: Retorna um plano RPA básico válido
   // Em produção, aqui seria a chamada real à IA com o prompt
+  const baseUrl = config.get('api.baseUrl') || config.get('frontend.apiBaseUrl') || 'http://localhost:3000';
   return {
     id: `test-${Date.now()}`,
     name: `IA - Teste RPA - ${userInput.substring(0, 50)}`,
-    type: "test",
-    source: "flow",
-    flowId: "flow-1",
-    flowVersion: "1.0.0",
-    generatedBy: "ai",
-    editable: true,
+    version: '1.0',
+    type: 'rpa_test_plan',
     metadata: {
       generatedAt: new Date().toISOString(),
-      dependenciesResolved: false,
-      seedsExecuted: [],
-      pathTaken: [],
-      version: "1.0.0"
+      generatedBy: 'ai',
+      status: 'draft',
+      requiresReview: true,
     },
-    version: "1.0.0",
     context: {
-      application: "chatbot",
-      mode: "test-only"
+      application: 'chatbot',
+      mode: 'test-only',
     },
     steps: [
       {
-        type: "navigate",
-        selector: "body",
-        value: config.get('api.baseUrl') || config.get('frontend.apiBaseUrl') || 'http://localhost:3000',
-        description: "Navegar para aplicação",
-        critical: true
+        action: 'navigate',
+        target: baseUrl,
+        value: '',
+        timeout: 15000,
       }
     ],
     assertions: [
       {
-        step: 1,
-        type: "visible",
-        selector: "body",
-        expected: true,
-        description: "Página carregada"
+        type: 'visible',
+        selector: 'body',
+        value: 'true',
       }
     ]
   };
@@ -105,8 +98,17 @@ function simulateAiGeneration(userInput, prompt) {
  */
 async function generateRpaTest(userInput, options = {}) {
   if (!userInput || typeof userInput !== 'string') {
+    const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('rpa_test', {}, {
+      valid: false,
+      errors: [{ type: 'INVALID_INPUT', message: 'Input do usuário deve ser uma string não vazia' }],
+      warnings: [],
+      qualityScore: 0,
+      riskFlags: ['INVALID_INPUT'],
+    }, options?._aiMeta || {}));
+
     return {
       success: false,
+      envelope,
       error: {
         type: 'INVALID_INPUT',
         message: 'Input do usuário deve ser uma string não vazia'
@@ -124,7 +126,28 @@ async function generateRpaTest(userInput, options = {}) {
     logger.debug('[generateRpaTest] Plano gerado (simulado)', { planId: generatedPlan.id });
 
     // 3. Validação OBRIGATÓRIA pelo gate
-    const validation = validateGeneratedPlan(generatedPlan, 'rpa');
+    const gateValidation = validateGeneratedPlan(generatedPlan, 'rpa');
+
+    // 3.1 Validação OBRIGATÓRIA por contrato (AJV)
+    const contractPath = 'api/data/rag/rpa/rpa.schema.json';
+    const contractValidation = validateByContract(contractPath, generatedPlan);
+
+    /** @type {any} */
+    const validation = {
+      ...gateValidation,
+      valid: gateValidation.valid === true && contractValidation.valid === true,
+      errors: [
+        ...(Array.isArray(gateValidation.errors) ? gateValidation.errors : []),
+        ...(contractValidation.valid
+          ? []
+          : [{
+            type: 'AJV_CONTRACT_VALIDATION_FAILED',
+            message: `Plano RPA não passou no contrato AJV (${contractPath})`,
+            rule: 'CONTRACT_AJV',
+            details: contractValidation.errors || [],
+          }]),
+      ],
+    };
     
     if (!validation.valid) {
       logger.warn('[generateRpaTest] Plano rejeitado pelo gate', {
@@ -132,9 +155,17 @@ async function generateRpaTest(userInput, options = {}) {
         errors: validation.errors
       });
 
+      const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope(
+        'rpa_test',
+        generatedPlan,
+        validation,
+        options?._aiMeta || {},
+      ));
+
       return {
         success: false,
         validation,
+        envelope,
         error: {
           type: 'VALIDATION_FAILED',
           message: 'Plano gerado não passou na validação do gate',
@@ -149,7 +180,15 @@ async function generateRpaTest(userInput, options = {}) {
       domain: validation.domain
     });
 
-    // 4. Plano válido - pode ser encaminhado para executor RPA
+    // 4. Envelope padronizado (obrigatório) + contrato AJV (envelope)
+    const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope(
+      'rpa_test',
+      generatedPlan,
+      validation,
+      options?._aiMeta || {},
+    ));
+
+    // 5. Plano válido - pode ser encaminhado para executor RPA
     // NOTA: O executor RPA já existe (api/services/rpaService.js)
     // Aqui apenas retornamos o plano validado
     // A execução real deve ser feita pelo chamador usando o executor existente
@@ -158,13 +197,28 @@ async function generateRpaTest(userInput, options = {}) {
       success: true,
       plan: generatedPlan,
       validation,
+      envelope,
       promptVersion: '1.0.0' // Versão do prompt utilizado
     };
 
   } catch (error) {
     logger.error('[generateRpaTest] Erro na geração', { error: error.message, stack: error.stack });
+    const envelope = (() => {
+      try {
+        return validateAiEnvelopeOrThrow(buildAiEnvelope('rpa_test', {}, {
+          valid: false,
+          errors: [{ type: 'GENERATION_ERROR', message: error.message }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['GENERATION_ERROR'],
+        }, options?._aiMeta || {}));
+      } catch {
+        return null;
+      }
+    })();
     return {
       success: false,
+      envelope,
       error: {
         type: 'GENERATION_ERROR',
         message: error.message,

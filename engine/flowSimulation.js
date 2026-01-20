@@ -273,6 +273,8 @@ async function simulateFlow(flow, options) {
       deps: {
         registry, // Passa registry para handlers que precisam (ex: subflow)
         replay, // Passa replay para o executeStep registrar ações
+        // Simulação/preview é permitido mesmo para fluxos em safe-mode
+        allowUnreviewedAiFlow: true,
       },
     });
     const stepEndTime = new Date().toISOString();

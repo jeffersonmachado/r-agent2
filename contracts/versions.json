@@ -12,6 +12,7 @@
           "active": true,
           "files": [
             "contracts/ia/ia-generation-result.schema.json",
+            "contracts/ia/ai-output-envelope.schema.json",
             "contracts/ia/ia-public-interface.json"
           ],
           "meta": {

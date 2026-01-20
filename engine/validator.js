@@ -741,7 +741,7 @@ function validateSemanticRules(flow) {
   // Valida que o fluxo tem pelo menos um nó de ação
   // Nós estruturais: start, end, router (apenas roteiam, não executam ações)
   // Nós de ação: todos os outros tipos (message, user_input, ai_task, set_variable, handoff, ai, fallback, api, options, etc.)
-  const structuralNodeTypes = ['start', 'end', 'router'];
+  const structuralNodeTypes = ['start', 'end', 'router', 'schedule_router'];
   const actionNodes = (flow.nodes || []).filter(n => n && n.type && !structuralNodeTypes.includes(n.type));
   
   if (actionNodes.length === 0) {
@@ -769,11 +769,25 @@ function validateNodeStructures(flow) {
     'message',
     'user_input',
     'router',
+    'schedule_router',
     'set_variable',
     'handoff',
     'ai',
     'ai_task',
     'fallback',
+    'options',
+    'api',
+    // system/persistence nodes
+    'get_flow_info',
+    'get_queue_status',
+    'get_config_value',
+    'list_flows',
+    'get_current_time',
+    'generate_uuid',
+    'delay',
+    'format_date',
+    'random_number',
+    'get_user_info',
     'end',
   ];
 
