@@ -40,7 +40,6 @@ const {
 const { apiNodeHandler } = require('../../engine/nodes/apiNode');
 const { fallbackNodeHandler } = require('../../engine/nodes/fallbackNode');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
-const { sendTextMessage } = require('./whatsappService');
 const outboundQueueService = require('./outboundQueueService');
 const logger = require('../utils/logger');
 const { createTicket, getTicketBySession, updateLastMessage, getTicket } = require('./queueService');
@@ -135,27 +134,34 @@ function createInitialState(flow, sessionId, from) {
  *
  * @param {any} message - Objeto de mensagem do webhook do WhatsApp (value.messages[i])
  * @param {any} value - Objeto "value" completo do webhook (contém metadata da conversation)
- * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null }} deps
+ * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null, channelType?: string|null }} deps
  */
 async function processWhatsAppMessage(message, value, deps) {
   const { flows, sessionEvents, saveSessionEvents, tenantId: inboundTenantId, conversationId } = deps || {};
+  const effectiveChannelType = (deps && deps.channelType && String(deps.channelType).trim())
+    ? String(deps.channelType).trim()
+    : 'whatsapp';
 
   const from = message.from; // número do usuário (ex.: "5511999999999")
   const text = message.text && message.text.body ? String(message.text.body) : '';
   const messageId = message.id;
-  const sessionId = `whatsapp_${from}`;
+  const sessionId = `${effectiveChannelType}_${from}`;
 
   async function sendWhatsAppTextBestEffort(to, textToSend) {
-    const effectiveTenantId = inboundTenantId || state?.tenantId || null;
-    // Sem tenantId não conseguimos enfileirar com isolamento; fallback para envio direto (compatibilidade)
+    const effectiveTenantId = inboundTenantId || state?.tenantId;
     if (!effectiveTenantId) {
-      await sendTextMessage(to, textToSend);
-      return { queued: false };
+      logger.warn('[MessageProcessor] TenantId ausente; outbound ignorado (best-effort)', {
+        to,
+        messageId: messageId ? String(messageId) : null,
+        conversationId: conversationId || null,
+        sessionId,
+      });
+      return null;
     }
 
     return outboundQueueService.enqueueOutbound({
       tenantId: effectiveTenantId,
-      channelType: 'whatsapp',
+      channelType: effectiveChannelType,
       conversationId: conversationId || null,
       message: {
         to,
@@ -211,17 +217,25 @@ async function processWhatsAppMessage(message, value, deps) {
     });
   }
 
+  if (!inboundTenantId || typeof inboundTenantId !== 'string' || inboundTenantId.trim() === '') {
+    // Blindagem: nunca processa inbound sem tenant explícito (evita cross-tenant)
+    logger.warn('[MessageProcessor] TenantId ausente no inbound; mensagem ignorada', {
+      from,
+      messageId: messageId ? String(messageId) : null,
+      conversationId: conversationId || null,
+    });
+    return;
+  }
+
   let state = sessions.get(sessionId);
 
   // Verifica se já existe ticket ativo (handoff em andamento)
   // Importante: em ambiente multi-tenant, sessionId pode colidir; preferimos filtrar por tenant quando possível.
-  const existingTicket = inboundTenantId
-    ? getTicketBySession(sessionId, inboundTenantId)
-    : getTicketBySession(sessionId);
+  const existingTicket = getTicketBySession(sessionId, inboundTenantId);
   // Regra do handover (Fase 2):
   // - ticket.mode=human => engine não responde automaticamente
   // - ticket.mode=bot => engine continua (ticket existe, mas bot está no controle)
-  const ticketMode = existingTicket ? (existingTicket.mode || 'human') : null;
+  const ticketMode = existingTicket ? (existingTicket.mode || 'bot') : null;
   if (existingTicket && existingTicket.status !== 'closed' && ticketMode === 'human') {
     if (replay) {
       replay.recordEvent('ticket_active', { ticketId: existingTicket.id });
@@ -314,6 +328,11 @@ async function processWhatsAppMessage(message, value, deps) {
     }
 
     state = createInitialState(flow, sessionId, from);
+    // Ajusta canal (sem quebrar compatibilidade): para canais não-whatsapp,
+    // mantém o mesmo pipeline mas muda o metadado do canal.
+    if (state && state.metadata) {
+      state.metadata.channel = effectiveChannelType;
+    }
   }
 
   const flow = flows.get(state.flowId);
@@ -358,7 +377,7 @@ async function processWhatsAppMessage(message, value, deps) {
     input: {
       text,
       messageId,
-      channel: 'whatsapp',
+      channel: effectiveChannelType,
       raw: message,
       aiProvider, // Injeta provider de IA
     },

@@ -15,7 +15,7 @@ const config = require('./utils/config');
 const { validateFlow, addUiMessage } = require('../engine/validator');
 const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
-const { verifyWebhook, sendTextMessage } = require('./services/whatsappService');
+const { verifyWebhook } = require('./services/whatsappService');
 const { processWhatsAppMessage } = require('./services/messageProcessor');
 const outboundQueueService = require('./services/outboundQueueService');
 const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
@@ -164,11 +164,12 @@ const {
   processInstagramMessage,
   sendInstagramMedia,
 } = require('./services/instagramService');
+const channelNormalizationService = require('./services/channelNormalizationService');
 const channelGatewayService = require('./services/channelGatewayService');
-const { startWorker: startOutboundWorker } = require('./services/outboundQueueService');
+const outboundWorker = require('./services/outboundWorker');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
 const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, startAutoReturnToBot } = require('./services/handoverService');
-const { resolveOrCreateTicketFromIncomingMessage } = require('./services/conversationTicketLinkService');
+const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = require('./services/conversationTicketLinkService');
 const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./services/assignmentService');
 const queueDefinitionService = require('./services/queueDefinitionService');
 const closeReasonsService = require('./services/closeReasonsService');
@@ -398,7 +399,9 @@ function cleanupOldSessions() {
 }
 
 // Inicia limpeza periódica de sessões
-setInterval(cleanupOldSessions, SESSION_CLEANUP_INTERVAL);
+const _cleanupSessionsTimer = setInterval(cleanupOldSessions, SESSION_CLEANUP_INTERVAL);
+// Não manter o processo vivo apenas por timers (ajuda testes/Jest e shutdown limpo)
+if (typeof _cleanupSessionsTimer.unref === 'function') _cleanupSessionsTimer.unref();
 
 // Inicia limpeza periódica de tickets fechados antigos
 // Remove tickets fechados com mais de 7 dias, a cada 1 hora
@@ -556,6 +559,7 @@ async function initializeSystemAdmin() {
             email: 'systemadmin@exemplo.com',
             password_hash: passwordHash,
             is_superadmin: true,
+            tenant_key: 'system',
           });
           userId = newUser.id;
           logger.info('[Init] ✅ Usuário systemadmin criado no PostgreSQL');
@@ -665,9 +669,14 @@ function persistFlowBestEffort(flow) {
     setImmediate(() => {
       const now = new Date();
       FlowModel.findByPk(flow.id).then((existing) => {
+        if (!flow.tenantId || typeof flow.tenantId !== 'string' || flow.tenantId.trim() === '') {
+          // Hardening: nunca persiste registros sem tenant (evita dados órfãos/cross-tenant)
+          logger.warn('[Flows] Ignorando persistência: flow sem tenantId', { flowId: flow.id });
+          return null;
+        }
         const payload = {
           id: flow.id,
-          tenant_key: flow.tenantId || null,
+          tenant_key: flow.tenantId,
           name: flow.name || null,
           data: flow,
           updated_at: now,
@@ -805,6 +814,41 @@ function badRequest(res, msg) {
 }
 
 // ---------------------------------------------------------------------------
+// Hardening multi-tenant (STRICT_TENANT_MODE)
+// ---------------------------------------------------------------------------
+
+function parseBooleanEnv(value, defaultValue = false) {
+  if (value === undefined || value === null) return defaultValue;
+  const v = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'y', 'on'].includes(v)) return true;
+  if (['0', 'false', 'no', 'n', 'off'].includes(v)) return false;
+  return defaultValue;
+}
+
+// Default: true em produção; false fora de produção (somente dev/test).
+const STRICT_TENANT_MODE = parseBooleanEnv(
+  process.env.STRICT_TENANT_MODE,
+  process.env.NODE_ENV === 'production'
+);
+
+/**
+ * Exige tenantId resolvido a partir do agente autenticado (req.agent/req.tenantId).
+ * - Para super-admin, req.tenantId pode vir de X-Tenant-Id (middleware/auth).
+ * - Sem tenantId: 403 tenant_required.
+ */
+function requireTenant(req, res) {
+  const superAdmin = req?.agent ? isSuperAdmin(req.agent) : false;
+  // Hardening: super-admin só resolve tenant via header (req.tenantId).
+  const tenantIdRaw = superAdmin ? (req?.tenantId || null) : (req?.tenantId || req?.agent?.tenantId || null);
+  const tenantId = typeof tenantIdRaw === 'string' ? tenantIdRaw.trim() : null;
+  if (!tenantId) {
+    sendJson(res, 403, { error: 'tenant_required' });
+    return null;
+  }
+  return tenantId;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers de domínio (FlowDefinition)
 // ---------------------------------------------------------------------------
 
@@ -855,7 +899,7 @@ function ensureFlowHasMeta(rawFlow, tenantId = null) {
   const flow = rawFlow && typeof rawFlow === 'object' ? { ...rawFlow } : {};
 
   if (!flow.tenantId || typeof flow.tenantId !== 'string' || flow.tenantId.trim() === '') {
-    // Tenant deve ser fornecido - não há mais fallback para tenant-demo
+    // Tenant deve ser fornecido - não há fallback padrão em produção
     // Se não vier, será definido pelo middleware de validação via req.tenantId
     flow.tenantId = tenantId || null;
   } else {
@@ -1131,10 +1175,14 @@ async function requestHandler(req, res) {
   // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
   const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket'];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
+  // Webhooks de provedores (inbound) não podem ser bloqueados por falta de tenant no início:
+  // tenant é resolvido por channel_accounts e, se não resolver, deve retornar 200 OK com log warn.
+  const providerWebhookRoutes = ['/webhooks/whatsapp', '/webhooks/messenger', '/webhooks/instagram'];
   const superAdminRoutes = pathname.startsWith('/super-admin');
   
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
   const isAuthRoute = authRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+  const isProviderWebhookRoute = providerWebhookRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
   const isSuperAdminRoute = superAdminRoutes;
   
   // Aplica rate limiting apenas em rotas que não são públicas, de auth ou super-admin
@@ -1142,7 +1190,7 @@ async function requestHandler(req, res) {
   const nodeEnv = config.get('nodeEnv', process.env.NODE_ENV || 'development');
   const isDevelopment = nodeEnv === 'development';
   
-  if (!isPublicRoute && !isAuthRoute && !isSuperAdminRoute && method !== 'OPTIONS' && !isDevelopment) {
+  if (!isPublicRoute && !isAuthRoute && !isProviderWebhookRoute && !isSuperAdminRoute && method !== 'OPTIONS' && !isDevelopment) {
     try {
       const allowed = await tenantRateLimitMiddleware(req, res, sendJson);
       if (!allowed) {
@@ -1157,7 +1205,7 @@ async function requestHandler(req, res) {
       });
       // Continua processamento (fail-open em caso de erro)
     }
-  } else if (isDevelopment && !isPublicRoute && !isAuthRoute && !isSuperAdminRoute && method !== 'OPTIONS') {
+  } else if (isDevelopment && !isPublicRoute && !isAuthRoute && !isProviderWebhookRoute && !isSuperAdminRoute && method !== 'OPTIONS') {
     // Em desenvolvimento, loga mas não bloqueia
     logger.debug('[Server] Rate limit desativado em desenvolvimento', { pathname, method });
   }
@@ -1238,7 +1286,51 @@ async function requestHandler(req, res) {
       const windowMinutes = parseInt(urlObj.searchParams.get('windowMinutes') || '10', 10);
       const { getChannelHealth } = require('./services/channelHealthService');
       const health = await getChannelHealth({ tenantId: req.tenantId, windowMinutes });
-      sendJson(res, 200, health);
+
+      // Extensões blip-like (mantém compatibilidade adicionando campos)
+      const { areCredentialsValid } = require('./services/whatsappService');
+
+      let outboundPendingCount = 0;
+      let outboundFailedCount = 0;
+      let recentErrors = [];
+
+      try {
+        const { OutboundQueueItem } = require('./db/models');
+        const Model = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
+        const sequelize = Model.sequelize;
+
+        const [pending] = await sequelize.query(
+          `SELECT COUNT(*)::int AS c FROM outbound_queue WHERE tenant_key = :t AND status = 'pending'`,
+          { replacements: { t: req.tenantId } }
+        );
+        outboundPendingCount = pending?.[0]?.c ?? 0;
+
+        const [failed] = await sequelize.query(
+          `SELECT COUNT(*)::int AS c FROM outbound_queue WHERE tenant_key = :t AND status = 'failed'`,
+          { replacements: { t: req.tenantId } }
+        );
+        outboundFailedCount = failed?.[0]?.c ?? 0;
+
+        const [errs] = await sequelize.query(
+          `SELECT id, channel_type, last_error, attempts, next_attempt_at, updated_at
+           FROM outbound_queue
+           WHERE tenant_key = :t AND last_error IS NOT NULL
+           ORDER BY updated_at DESC
+           LIMIT 10`,
+          { replacements: { t: req.tenantId } }
+        );
+        recentErrors = Array.isArray(errs) ? errs : [];
+      } catch (_) {}
+
+      sendJson(res, 200, {
+        ...health,
+        whatsapp: { areCredentialsValid: areCredentialsValid() },
+        outbound: {
+          pendingCount: outboundPendingCount,
+          failedCount: outboundFailedCount,
+          recentErrors,
+        },
+      });
     } catch (err) {
       logger.error('Erro ao obter channel-health:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
@@ -1320,9 +1412,14 @@ async function requestHandler(req, res) {
     try {
       const body = await parseJsonBody(req);
       const rpaToken = body.token || body.rpaToken;
+      const tenantId = body.tenantId;
 
       if (!rpaToken) {
         badRequest(res, 'Token RPA é obrigatório');
+        return;
+      }
+      if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+        badRequest(res, 'tenantId é obrigatório');
         return;
       }
 
@@ -1330,7 +1427,7 @@ async function requestHandler(req, res) {
       const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'RPA-Automation';
 
-      const result = await loginWithRpaToken(rpaToken, ipAddress, userAgent);
+      const result = await loginWithRpaToken(rpaToken, tenantId, ipAddress, userAgent);
 
       if (!result.success) {
         sendJson(res, 401, { error: 'rpa_authentication_failed', message: result.error });
@@ -1682,7 +1779,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const tenantIdForAI = tenantId || req.agent?.tenantId || 'tenant-demo';
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const tenantIdForAI = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : (isSuperAdminUser && tenantId ? String(tenantId).trim() : null);
+      if (!tenantIdForAI) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
       
       logger.info('[System] Sugerindo descrição por IA', { 
         name: name || 'N/A',
@@ -3350,7 +3454,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       action: urlObj.searchParams.get('action') || undefined,
       resource: urlObj.searchParams.get('resource') || undefined,
       resourceId: urlObj.searchParams.get('resourceId') || undefined,
-      tenantId: req.tenantId || urlObj.searchParams.get('tenantId') || undefined, // Filtra por tenant do agente autenticado
+      // Hardening: tenant é sempre resolvido pelo agente (ou X-Tenant-Id para super-admin via middleware/auth)
+      tenantId: req.tenantId || undefined,
       startDate: urlObj.searchParams.get('startDate') || undefined,
       endDate: urlObj.searchParams.get('endDate') || undefined,
       limit: urlObj.searchParams.get('limit') || undefined,
@@ -3387,14 +3492,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
   // GET /flows
   if (method === 'GET' && pathname === '/flows') {
-    // Se autenticado, filtra por tenant do agente
     const authResult = requireAuth(req);
-    if (authResult.valid && req.tenantId) {
-      const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === req.tenantId);
+    if (STRICT_TENANT_MODE) {
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+      const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === tenantId);
       sendJson(res, 200, tenantFlows);
     } else {
-      // Sem autenticação, retorna todos (compatibilidade)
-      sendJson(res, 200, Array.from(flows.values()));
+      // DEV/compatibilidade: se autenticado, filtra por tenant do agente; caso contrário, retorna todos
+      if (authResult.valid && req.tenantId) {
+        const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === req.tenantId);
+        sendJson(res, 200, tenantFlows);
+      } else {
+        sendJson(res, 200, Array.from(flows.values()));
+      }
     }
     return;
   }
@@ -3409,11 +3524,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
     
-    // Valida tenant se autenticado
     const authResult = requireAuth(req);
-    if (authResult.valid && req.tenantId && flow.tenantId !== req.tenantId) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-      return;
+    if (STRICT_TENANT_MODE) {
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+      if (flow.tenantId !== tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+        return;
+      }
+    } else {
+      // DEV/compatibilidade: valida tenant apenas se autenticado
+      if (authResult.valid && req.tenantId && flow.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+        return;
+      }
     }
     
     sendJson(res, 200, flow);
@@ -3438,13 +3566,32 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Se autenticado, garante que tenantId do fluxo seja o mesmo do agente
       const authResult = requireAuth(req);
-      if (authResult.valid && req.tenantId) {
-        body.tenantId = req.tenantId; // Força tenantId do agente
+      let tenantId = null;
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+        body.tenantId = tenantId; // força tenant do agente (ou X-Tenant-Id do super-admin)
+      } else {
+        // DEV/compatibilidade: se autenticado, força tenantId do agente; se não, exige tenantId explícito no body
+        if (authResult.valid && req.tenantId) body.tenantId = req.tenantId;
+        if (!body.tenantId || typeof body.tenantId !== 'string' || body.tenantId.trim() === '') {
+          sendJson(res, 403, { error: 'tenant_required' });
+          return;
+        }
+        tenantId = String(body.tenantId).trim();
+        body.tenantId = tenantId;
       }
 
-      const flow = ensureFlowHasMeta(body, req.tenantId);
+      const flow = ensureFlowHasMeta(body, tenantId);
+      if (!flow.tenantId) {
+        sendJson(res, 403, { error: 'tenant_required' });
+        return;
+      }
 
       // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
       // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
@@ -3488,8 +3635,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       persistFlowBestEffort(flow);
       
       // Dispara webhooks e WebSocket
-      const tenantId = req.tenantId || flow.tenantId;
-      triggerWebhooks(tenantId, 'flow.created', {
+      triggerWebhooks(flow.tenantId, 'flow.created', {
         flowId: flow.id,
         flowName: flow.name,
         agentId: req.agent?.id,
@@ -3501,7 +3647,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         flowId: flow.id,
         flowName: flow.name,
         agentId: req.agent?.id,
-      }, { tenantId });
+      }, { tenantId: flow.tenantId });
       
       // ✅ Retorna o fluxo criado, incluindo erros de validação se houver
       // Isso permite que o frontend exiba os erros mas não bloqueia a criação
@@ -3554,16 +3700,30 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Valida tenant se autenticado
       const authResult = requireAuth(req);
-      if (authResult.valid && req.tenantId && existingFlow.tenantId !== req.tenantId) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-        return;
-      }
-
-      // Se autenticado, garante que tenantId do fluxo seja o mesmo do agente
-      if (authResult.valid && req.tenantId) {
-        body.tenantId = req.tenantId; // Força tenantId do agente
+      let tenantId = null;
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+        if (existingFlow.tenantId !== tenantId) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+          return;
+        }
+        body.tenantId = tenantId; // força tenant do agente
+      } else {
+        // DEV/compatibilidade: valida tenant se autenticado
+        if (authResult.valid && req.tenantId && existingFlow.tenantId !== req.tenantId) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+          return;
+        }
+        if (authResult.valid && req.tenantId) body.tenantId = req.tenantId;
+        tenantId = (body.tenantId && typeof body.tenantId === 'string' && body.tenantId.trim())
+          ? body.tenantId.trim()
+          : (existingFlow.tenantId || null);
       }
 
       // Valida consistência: se body.id existe, deve corresponder ao id da URL
@@ -3619,13 +3779,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const flow = ensureFlowHasMeta(merged);
+      const flow = ensureFlowHasMeta(merged, tenantId);
+      if (!flow.tenantId) {
+        sendJson(res, 403, { error: 'tenant_required' });
+        return;
+      }
       flows.set(id, flow);
       persistFlowBestEffort(flow);
       
       // Dispara webhooks e WebSocket
-      const tenantId = req.tenantId || flow.tenantId;
-      triggerWebhooks(tenantId, 'flow.updated', {
+      triggerWebhooks(flow.tenantId, 'flow.updated', {
         flowId: flow.id,
         flowName: flow.name,
         agentId: req.agent?.id,
@@ -3637,7 +3800,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         flowId: flow.id,
         flowName: flow.name,
         agentId: req.agent?.id,
-      }, { tenantId });
+      }, { tenantId: flow.tenantId });
       
       sendJson(res, 200, flow);
     } catch (err) {
@@ -3668,19 +3831,31 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
     
-    // Valida tenant se autenticado
     const authResult = requireAuth(req);
-    if (authResult.valid && req.tenantId && flow.tenantId !== req.tenantId) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-      return;
+    if (STRICT_TENANT_MODE) {
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+      if (flow.tenantId !== tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+        return;
+      }
+    } else {
+      // DEV/compatibilidade: valida tenant se autenticado
+      if (authResult.valid && req.tenantId && flow.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+        return;
+      }
     }
     
     flows.delete(id);
     deleteFlowBestEffort(id);
     
     // Dispara webhooks e WebSocket
-    const tenantId = req.tenantId || flow.tenantId;
-    triggerWebhooks(tenantId, 'flow.deleted', {
+    triggerWebhooks(flow.tenantId, 'flow.deleted', {
       flowId: flow.id,
       flowName: flow.name,
       agentId: req.agent?.id,
@@ -3692,7 +3867,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       flowId: flow.id,
       flowName: flow.name,
       agentId: req.agent?.id,
-    }, { tenantId });
+    }, { tenantId: flow.tenantId });
     
     sendJson(res, 200, { success: true, deletedId: id });
     return;
@@ -3771,9 +3946,23 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Obtém tenantId do agente autenticado se disponível
       const authResult = requireAuth(req);
-      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      let finalTenantId = null;
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        finalTenantId = requireTenant(req, res);
+        if (!finalTenantId) return;
+      } else {
+        finalTenantId = (authResult.valid && req.tenantId) || body.tenantId || null;
+        if (!finalTenantId || typeof finalTenantId !== 'string' || finalTenantId.trim() === '') {
+          sendJson(res, 403, { error: 'tenant_required' });
+          return;
+        }
+        finalTenantId = finalTenantId.trim();
+      }
 
       // Usa orquestrador de geração
       const result = await orchestrateGeneration(body, {
@@ -3824,9 +4013,23 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Obtém tenantId do agente autenticado se disponível
       const authResult = requireAuth(req);
-      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      let finalTenantId = null;
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        finalTenantId = requireTenant(req, res);
+        if (!finalTenantId) return;
+      } else {
+        finalTenantId = (authResult.valid && req.tenantId) || body.tenantId || null;
+        if (!finalTenantId || typeof finalTenantId !== 'string' || finalTenantId.trim() === '') {
+          sendJson(res, 403, { error: 'tenant_required' });
+          return;
+        }
+        finalTenantId = finalTenantId.trim();
+      }
 
       // Usa orquestrador em modo DRY-RUN
       const result = await orchestrateGeneration(body, {
@@ -3871,9 +4074,23 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Obtém tenantId do agente autenticado se disponível
       const authResult = requireAuth(req);
-      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      let finalTenantId = null;
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        finalTenantId = requireTenant(req, res);
+        if (!finalTenantId) return;
+      } else {
+        finalTenantId = (authResult.valid && req.tenantId) || body.tenantId || null;
+        if (!finalTenantId || typeof finalTenantId !== 'string' || finalTenantId.trim() === '') {
+          sendJson(res, 403, { error: 'tenant_required' });
+          return;
+        }
+        finalTenantId = finalTenantId.trim();
+      }
       const userId = req.agent?.id || req.agent?.username || finalTenantId;
 
       // Determina tipo de operação baseado no payload
@@ -3928,9 +4145,23 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Obtém tenantId do agente autenticado se disponível
       const authResult = requireAuth(req);
-      const finalTenantId = body.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      let finalTenantId = null;
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        finalTenantId = requireTenant(req, res);
+        if (!finalTenantId) return;
+      } else {
+        finalTenantId = (authResult.valid && req.tenantId) || body.tenantId || null;
+        if (!finalTenantId || typeof finalTenantId !== 'string' || finalTenantId.trim() === '') {
+          sendJson(res, 403, { error: 'tenant_required' });
+          return;
+        }
+        finalTenantId = finalTenantId.trim();
+      }
       const userId = req.agent?.id || req.agent?.username || finalTenantId;
       const agentId = req.agent?.id;
 
@@ -4026,9 +4257,26 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Obtém tenantId
       const authResult = requireAuth(req);
-      const tenantId = flow.tenantId || (authResult.valid && req.tenantId) || 'demo-tenant';
+      let tenantId = null;
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+        if (flow.tenantId !== tenantId) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+          return;
+        }
+      } else {
+        tenantId = (authResult.valid && req.tenantId) || flow.tenantId || null;
+        if (!tenantId) {
+          sendJson(res, 403, { error: 'tenant_required' });
+          return;
+        }
+      }
 
       // Importa serviços
       const { analyzeFlowDependencies, resolveDependencies } = require('./services/rpaTestDependencyAnalyzer');
@@ -5281,7 +5529,52 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const messages = getTicketMessages(id);
-    sendJson(res, 200, { ticketId: id, messages });
+
+    // Omnichannel timeline (fase 1):
+    // - Mantém compatibilidade retornando "messages" (ledger do ticket)
+    // - Adiciona "timeline" com mensagens do canal (channel_messages) quando houver conversationId
+    let timeline = null;
+    try {
+      const conversationId = ticket.conversationId || null;
+      if (conversationId && req.tenantId) {
+        const channelRes = await listConversationMessages({
+          tenantId: req.tenantId,
+          conversationId,
+          limit: '1000',
+          offset: '0',
+        });
+        const channelItems = (channelRes?.items || []).map((m) => ({
+          source: 'channel',
+          channelType: ticket.channelType || null,
+          direction: m.direction,
+          type: m.type,
+          text: typeof m.body?.text === 'string' ? m.body.text : null,
+          body: m.body || {},
+          externalMessageId: m.externalMessageId || null,
+          timestamp: m.createdAt || null,
+        }));
+        const ticketItems = (messages || []).map((m) => ({
+          source: 'ticket',
+          channelType: ticket.channelType || null,
+          direction: m.sender === 'agent' || m.sender === 'bot' ? 'out' : 'in',
+          type: 'text',
+          text: m.text || '',
+          body: { text: m.text || '' },
+          externalMessageId: m.externalMessageId || m.id || null,
+          timestamp: m.timestamp || null,
+        }));
+
+        timeline = [...ticketItems, ...channelItems].sort((a, b) => {
+          const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+          const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          return ta - tb;
+        });
+      }
+    } catch (_) {
+      timeline = null; // best-effort
+    }
+
+    sendJson(res, 200, { ticketId: id, messages, timeline });
     return;
   }
 
@@ -6442,14 +6735,36 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
               }
               const messages = value.messages || [];
               for (const msg of messages) {
+                const normalizedArr = channelNormalizationService.normalizeWhatsAppIncoming({ message: msg, value, raw: body });
+                const normalized = normalizedArr && normalizedArr[0] ? normalizedArr[0] : null;
+
                 // 1) Persiste no gateway (best-effort) e resolve tenant
                 // eslint-disable-next-line no-await-in-loop
                 const ingest = await channelGatewayService.ingestIncoming('whatsapp', { message: msg, value, raw: body }).catch(() => null);
 
-                const tenantId = ingest?.tenantId || 'tenant-demo';
-                const externalConversationId = ingest?.normalized?.conversationKey?.externalId || (msg?.from ? String(msg.from) : null);
-                const messageText = msg?.text?.body ? String(msg.text.body) : '';
-                const externalMessageId = msg?.id ? String(msg.id) : null;
+                // HARDENING (CRÍTICO): sem tenant resolvido (phone_number_id não cadastrado/ativo),
+                // ignoramos a mensagem. Nunca processar engine e nunca criar ticket sem tenant.
+                const tenantId = ingest?.tenantId || null;
+                if (!tenantId) {
+                  logger.warn('[Webhook WhatsApp] Mensagem ignorada: tenant não resolvido (channel_account ausente/inativo)', {
+                    phone_number_id: value?.metadata?.phone_number_id || null,
+                    from: msg?.from ? String(msg.from) : null,
+                    externalMessageId: msg?.id ? String(msg.id) : null,
+                  });
+                  // eslint-disable-next-line no-continue
+                  continue;
+                }
+                const externalConversationId = normalized?.externalConversationId
+                  || ingest?.normalized?.conversationKey?.externalId
+                  || (msg?.from ? String(msg.from) : null);
+                const messageText = typeof normalized?.text === 'string'
+                  ? normalized.text
+                  : (msg?.text?.body ? String(msg.text.body) : '');
+                const externalMessageId = normalized?.externalMessageId || (msg?.id ? String(msg.id) : null);
+                const iso = normalized?.timestamp || (() => {
+                  const ts = msg?.timestamp ? Number(msg.timestamp) : null;
+                  return ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+                })();
 
                 // 2) Resolve ticket existente (ou cria, se configurado), sem quebrar compatibilidade
                 // eslint-disable-next-line no-await-in-loop
@@ -6462,23 +6777,33 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
                 const ticket = link?.ticket || null;
 
-                // 3) Se há ticket em modo humano, NÃO roda engine; apenas registra mensagem (idempotente) e notifica UI
-                if (ticket && ticket.status !== 'closed' && (ticket.mode || 'human') === 'human') {
+                // 2.1) Registra inbound no "ledger" do ticket (idempotente por externalMessageId)
+                // (channel_messages já é persistido no ingestIncoming).
+                let updatedTicket = null;
+                if (ticket && ticket.id) {
                   try {
-                    const { updateLastMessage, getTicket } = require('./services/queueService');
-                    const ts = msg?.timestamp ? Number(msg.timestamp) : null;
-                    const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
-                    updateLastMessage(ticket.id, messageText, externalMessageId, iso);
+                    updatedTicket = appendTicketMessage(ticket.id, {
+                      direction: 'in',
+                      text: messageText,
+                      externalMessageId,
+                      timestamp: iso,
+                    });
+                  } catch (_) {
+                    updatedTicket = ticket;
+                  }
+                }
 
-                    const fresh = getTicket(ticket.id);
-                    if (fresh) {
-                      emitEvent('ticket.message.received', {
-                        ticketId: fresh.id,
-                        message: messageText,
-                        sender: 'user',
-                        ticket: fresh,
-                      }, { tenantId: fresh.tenantId, agentId: fresh.assignedTo });
-                    }
+                const effectiveTicket = updatedTicket || ticket;
+
+                // 3) Se há ticket em modo humano, NÃO roda engine; apenas registra mensagem e notifica UI
+                if (effectiveTicket && effectiveTicket.status !== 'closed' && (effectiveTicket.mode || 'bot') === 'human') {
+                  try {
+                    emitEvent('ticket.message.received', {
+                      ticketId: effectiveTicket.id,
+                      message: messageText,
+                      sender: 'user',
+                      ticket: effectiveTicket,
+                    }, { tenantId: effectiveTicket.tenantId, agentId: effectiveTicket.assignedTo });
                   } catch (e) {
                     // best-effort
                   }
@@ -6494,6 +6819,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
                   saveSessionEvents: saveSessionEventsToFile,
                   tenantId,
                   conversationId: ingest?.persist?.conversationId || null,
+                  channelType: 'whatsapp',
                 });
               }
             }
@@ -6628,14 +6954,95 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (body.object === 'instagram') {
         const entries = body.entry || [];
         for (const entry of entries) {
-          // Persiste mensagens do webhook (best-effort)
           const messagingEvents = Array.isArray(entry.messaging) ? entry.messaging : [];
           for (const messaging of messagingEvents) {
+            const normalizedArr = channelNormalizationService.normalizeInstagramIncoming({ entry, messaging, raw: body, pageId: entry.id });
+            const normalized = normalizedArr && normalizedArr[0] ? normalizedArr[0] : null;
+
+            // 1) Persiste no gateway (best-effort) e resolve tenant
             // eslint-disable-next-line no-await-in-loop
-            await channelGatewayService.ingestIncoming('instagram', { entry, messaging, raw: body, pageId: entry.id }).catch(() => null);
+            const ingest = await channelGatewayService.ingestIncoming('instagram', { entry, messaging, raw: body, pageId: entry.id }).catch(() => null);
+            const tenantId = ingest?.tenantId || null;
+            if (!tenantId) {
+              logger.warn('[Webhook Instagram] Mensagem ignorada: tenant não resolvido (channel_account ausente/inativo)', {
+                page_id: entry?.id || null,
+                senderId: messaging?.sender?.id ? String(messaging.sender.id) : null,
+                externalMessageId: normalized?.externalMessageId || messaging?.message?.mid || null,
+              });
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            const externalConversationId = normalized?.externalConversationId
+              || ingest?.normalized?.conversationKey?.externalId
+              || (messaging?.sender?.id ? String(messaging.sender.id) : null);
+            const messageText = typeof normalized?.text === 'string'
+              ? normalized.text
+              : (messaging?.message?.text ? String(messaging.message.text) : '');
+            const externalMessageId = normalized?.externalMessageId || (messaging?.message?.mid ? String(messaging.message.mid) : null);
+            const iso = normalized?.timestamp || (messaging?.timestamp ? new Date(Number(messaging.timestamp)).toISOString() : null);
+
+            // 2) Resolve ticket existente (ou cria, se configurado)
+            // eslint-disable-next-line no-await-in-loop
+            const link = await resolveOrCreateTicketFromIncomingMessage(
+              tenantId,
+              'instagram',
+              String(externalConversationId || ''),
+              { contactId: externalConversationId || null }
+            ).catch(() => null);
+            const ticket = link?.ticket || null;
+
+            // 2.1) Ledger do ticket (idempotente por externalMessageId)
+            let updatedTicket = null;
+            if (ticket && ticket.id) {
+              try {
+                updatedTicket = appendTicketMessage(ticket.id, {
+                  direction: 'in',
+                  text: messageText,
+                  externalMessageId,
+                  timestamp: iso,
+                });
+              } catch (_) {
+                updatedTicket = ticket;
+              }
+            }
+            const effectiveTicket = updatedTicket || ticket;
+
+            // 3) Se ticket em modo humano, NÃO roda engine; apenas notifica UI
+            if (effectiveTicket && effectiveTicket.status !== 'closed' && (effectiveTicket.mode || 'bot') === 'human') {
+              try {
+                emitEvent('ticket.message.received', {
+                  ticketId: effectiveTicket.id,
+                  message: messageText,
+                  sender: 'user',
+                  ticket: effectiveTicket,
+                }, { tenantId: effectiveTicket.tenantId, agentId: effectiveTicket.assignedTo });
+              } catch (e) {}
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            // 4) Processa na engine (pipeline compartilhado), usando channelType=instagram
+            const senderId = messaging?.sender?.id ? String(messaging.sender.id) : (externalConversationId ? String(externalConversationId) : 'unknown');
+            const compatibleMessage = {
+              from: senderId,
+              id: externalMessageId || `ig-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+              text: { body: messageText || '' },
+              type: 'text',
+              timestamp: messaging?.timestamp ? Math.floor(Number(messaging.timestamp) / 1000) : undefined,
+            };
+            const compatibleValue = { metadata: { phone_number_id: entry?.id ? String(entry.id) : null } };
+
+            // eslint-disable-next-line no-await-in-loop
+            await processWhatsAppMessage(compatibleMessage, compatibleValue, {
+              flows,
+              sessionEvents,
+              saveSessionEvents: saveSessionEventsToFile,
+              tenantId,
+              conversationId: ingest?.persist?.conversationId || null,
+              channelType: 'instagram',
+            });
           }
-          // Processa mensagens do Instagram
-          await processInstagramMessage(entry, flows, sessionEvents);
         }
       }
 
@@ -7988,9 +8395,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
     const urlObj = new URL(req.url || '/', 'http://localhost');
     const filters = {
-      tenantId: authResult.agent.tenantId,
+      tenantId,
       category: urlObj.searchParams.get('category') || undefined,
       tag: urlObj.searchParams.get('tag') || undefined,
       activeOnly: urlObj.searchParams.get('activeOnly') !== 'false',
@@ -8010,7 +8420,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const categories = getCategories();
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    // Hardening: retorna categorias apenas do tenant atual
+    const categories = Array.from(
+      new Set(listQuickReplies({ tenantId, activeOnly: false }).map(r => r.category).filter(Boolean))
+    ).sort();
     sendJson(res, 200, { categories });
     return;
   }
@@ -8023,7 +8439,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const tags = getTags();
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    // Hardening: retorna tags apenas do tenant atual
+    const tags = Array.from(
+      new Set((listQuickReplies({ tenantId, activeOnly: false }).flatMap(r => Array.isArray(r.tags) ? r.tags : [])).filter(Boolean))
+    ).sort();
     sendJson(res, 200, { tags });
     return;
   }
@@ -8035,6 +8457,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
 
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -8050,8 +8475,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const tenantId = authResult.agent.tenantId;
-      const replies = searchByContext(context, limit).filter((r) => !tenantId || r.tenantId === tenantId);
+      const replies = searchByContext(context, tenantId, limit);
       sendJson(res, 200, { quickReplies: replies });
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -8073,10 +8497,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
     const id = decodeURIComponent(pathname.slice('/quick-replies/'.length));
     const reply = getQuickReply(id);
     
-    if (!reply || (authResult.agent.tenantId && reply.tenantId && reply.tenantId !== authResult.agent.tenantId)) {
+    if (!reply || reply.tenantId !== tenantId) {
       sendJson(res, 404, { error: 'quick_reply_not_found' });
       return;
     }
@@ -8093,6 +8520,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
     const permResult = requirePermission(req, 'quick_replies', 'create');
     if (!permResult.allowed) {
       sendJson(res, 403, { error: 'forbidden', message: permResult.error });
@@ -8108,7 +8538,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const body = await parseJsonBody(req);
       const result = createQuickReply({
         ...body,
-        tenantId: req.agent.tenantId,
+        tenantId,
         createdBy: req.agent.id,
       });
 
@@ -8147,6 +8577,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
     const permResult = requirePermission(req, 'quick_replies', 'update');
     if (!permResult.allowed) {
       sendJson(res, 403, { error: 'forbidden', message: permResult.error });
@@ -8161,13 +8594,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const id = decodeURIComponent(pathname.slice('/quick-replies/'.length));
       const existing = getQuickReply(id);
-      if (!existing || (req.agent.tenantId && existing.tenantId && existing.tenantId !== req.agent.tenantId)) {
+      if (!existing || existing.tenantId !== tenantId) {
         sendJson(res, 404, { error: 'quick_reply_not_found' });
         return;
       }
 
       const body = await parseJsonBody(req);
-      const result = updateQuickReply(id, body);
+      // Hardening: não permite alterar tenantId por payload
+      const updates = body && typeof body === 'object' ? { ...body } : {};
+      delete updates.tenantId;
+      const result = updateQuickReply(id, updates);
 
       if (!result.success) {
         badRequest(res, result.error);
@@ -8204,6 +8640,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
     const permResult = requirePermission(req, 'quick_replies', 'delete');
     if (!permResult.allowed) {
       sendJson(res, 403, { error: 'forbidden', message: permResult.error });
@@ -8212,7 +8651,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     const id = decodeURIComponent(pathname.slice('/quick-replies/'.length));
     const existing = getQuickReply(id);
-    if (!existing || (req.agent.tenantId && existing.tenantId && existing.tenantId !== req.agent.tenantId)) {
+    if (!existing || existing.tenantId !== tenantId) {
       sendJson(res, 404, { error: 'quick_reply_not_found' });
       return;
     }
@@ -8245,9 +8684,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
     const id = decodeURIComponent(pathname.slice('/quick-replies/'.length, -'/use'.length));
     const existing = getQuickReply(id);
-    if (!existing || (req.agent.tenantId && existing.tenantId && existing.tenantId !== req.agent.tenantId)) {
+    if (!existing || existing.tenantId !== tenantId) {
       sendJson(res, 404, { error: 'quick_reply_not_found' });
       return;
     }
@@ -8542,7 +8984,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const urlObj = new URL(req.url || '/', 'http://localhost');
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
     const filters = {
+      tenantId,
       status: urlObj.searchParams.get('status') || undefined,
       createdBy: urlObj.searchParams.get('createdBy') || undefined,
     };
@@ -8574,6 +9019,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (campaign.tenantId !== tenantId) {
+      // Evita vazamento de existência cross-tenant
+      sendJson(res, 404, { error: 'campaign_not_found' });
+      return;
+    }
+
     sendJson(res, 200, { campaign });
     return;
   }
@@ -8599,8 +9052,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
+      const tenantId = req.agent?.tenantId ? String(req.agent.tenantId).trim() : null;
+      if (!tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
       const result = createCampaign({
         ...body,
+        tenantId,
         createdBy: req.agent.id,
       });
 
@@ -9172,11 +9631,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const effectiveTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : (isSuperAdminUser && tenantId ? String(tenantId).trim() : null);
+      if (!effectiveTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
       const result = await suggestResponse({
         userMessage,
         conversationHistory: conversationHistory || [],
         ticketId,
-        tenantId,
+        tenantId: effectiveTenantId,
       });
 
       sendJson(res, 200, result);
@@ -9212,11 +9680,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const effectiveTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : (isSuperAdminUser && tenantId ? String(tenantId).trim() : null);
+      if (!effectiveTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
       const result = await rewriteMessage({
         message,
         tone: tone || 'professional',
         context,
-        tenantId,
+        tenantId: effectiveTenantId,
       });
 
       sendJson(res, 200, result);
@@ -9252,10 +9729,19 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const effectiveTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : (isSuperAdminUser && tenantId ? String(tenantId).trim() : null);
+      if (!effectiveTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
       const result = await rewriteMultipleMessages({
         messages,
         tone: tone || 'professional',
-        tenantId,
+        tenantId: effectiveTenantId,
       });
 
       sendJson(res, 200, { results: result });
@@ -9713,7 +10199,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         to,
         templateName,
         languageCode || 'pt_BR',
-        parameters || []
+        parameters || [],
+        { tenantId: req.tenantId }
       );
 
       if (!result.success) {
@@ -9749,8 +10236,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const url = new URL(req.url || '/', 'http://localhost');
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
       const filters = {
-        tenantId: url.searchParams.get('tenantId') || req.tenantId,
+        tenantId,
         source: url.searchParams.get('source') || null,
         category: url.searchParams.get('category') || null,
         productId: url.searchParams.get('productId') || null,
@@ -9783,13 +10272,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
-      const url = new URL(req.url || '/', 'http://localhost');
-      const tenantId = url.searchParams.get('tenantId') || req.tenantId;
-      
-      if (!tenantId) {
-        sendJson(res, 400, { error: 'tenantId é obrigatório' });
-        return;
-      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
 
       const { getDeduplicationStats } = require('./services/ragDeduplicationService');
       const stats = getDeduplicationStats(tenantId);
@@ -9817,8 +10301,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
-      const url = new URL(req.url || '/', 'http://localhost');
-      const tenantId = url.searchParams.get('tenantId') || req.tenantId;
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
       const stats = await getDocumentsStats(tenantId);
       sendJson(res, 200, stats);
     } catch (err) {
@@ -12125,16 +12609,7 @@ async function startInitialization() {
         logger.warn('[Init] ⚠️  Aviso ao definir relacionamentos:', relErr.message);
       }
       
-      try {
-        // Garante que o tenant de demonstração existe
-        const { ensureDemoTenantExists } = require('./services/tenantService');
-        await ensureDemoTenantExists();
-        console.log('[Init] ✅ Tenant de demonstração verificado');
-        logger.info('[Init] ✅ Tenant de demonstração verificado');
-      } catch (demoErr) {
-        console.warn('[Init] ⚠️  Aviso ao verificar tenant de demonstração:', demoErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao verificar tenant de demonstração:', demoErr.message);
-      }
+      // Blindagem produção: não cria/seed de tenant automaticamente (multi-tenant obrigatório).
 
       // Inicializa tenant_contexts (best-effort)
       try {
@@ -12272,12 +12747,14 @@ async function startInitialization() {
 // Salva conversas antes de encerrar o servidor
 process.on('SIGINT', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
+  try { outboundWorker.stop(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
+  try { outboundWorker.stop(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
@@ -12314,7 +12791,7 @@ if (require.main === module) {
     // Worker outbound (best-effort) - inicia após DB + migrations
     if (process.env.ENABLE_OUTBOUND_WORKER !== 'false') {
       try {
-        startOutboundWorker({ intervalMs: 1500, batchSize: 25 });
+        outboundWorker.start({ intervalMs: 1500, batchSize: 25 });
       } catch (err) {
         logger.warn('[OutboundQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
       }
