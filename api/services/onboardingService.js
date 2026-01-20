@@ -10,6 +10,7 @@
 const { getTenant, updateTenant } = require('./tenantService');
 const { createAgent } = require('./authService');
 const { createQueue } = require('./queueService');
+const flowTemplateMarketplaceService = require('./flowTemplateMarketplaceService');
 const logger = require('../utils/logger');
 
 /**
@@ -229,7 +230,46 @@ function startOnboarding(tenantId) {
  * @param {string} tenantId - ID do tenant
  * @returns {{success: boolean, created?: Object, error?: string}}
  */
-function createInitialTemplates(tenantId) {
+function normalizeSegment(raw) {
+  if (!raw) return 'geral';
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return 'geral';
+  return s;
+}
+
+function getOnboardingTemplatePlan(segment) {
+  // Seleção "curada" por segmento (best-effort).
+  // IDs são os globais do marketplace: mkt-<id>
+  const base = [
+    'mkt-lead-captacao',
+    'mkt-handover-padrao',
+    'mkt-faq-rag',
+    'mkt-suporte-tecnico-triagem',
+  ];
+
+  const bySegment = {
+    ecommerce: [...base, 'mkt-status-pedido-servico', 'mkt-atualizacao-cadastral'],
+    varejo: [...base, 'mkt-status-pedido-servico', 'mkt-cobranca'],
+    servicos: [...base, 'mkt-agendamento', 'mkt-status-pedido-servico'],
+    saude: [...base, 'mkt-agendamento', 'mkt-atualizacao-cadastral'],
+    educacao: [...base, 'mkt-onboarding-cliente', 'mkt-agendamento'],
+    financeiro: [...base, 'mkt-cobranca', 'mkt-atualizacao-cadastral'],
+    cobranca: [...base, 'mkt-cobranca'],
+    academia: [...base, 'mkt-agendamento', 'mkt-onboarding-cliente'],
+  };
+
+  return {
+    segment,
+    templateIds: Array.from(new Set(bySegment[segment] || [...base, 'mkt-onboarding-cliente'])),
+  };
+}
+
+function stableTenantTemplateId(tenantId, globalTemplateId) {
+  // Ex: onb-<tenantId>-mkt-lead-captacao
+  return `onb-${tenantId}-${String(globalTemplateId).replace(/[^a-zA-Z0-9_-]/g, '')}`.slice(0, 180);
+}
+
+async function createInitialTemplates(tenantId, options = {}) {
   const tenant = getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
@@ -239,8 +279,12 @@ function createInitialTemplates(tenantId) {
     const created = {
       queues: [],
       quickReplies: [],
-      flows: [],
+      templates: [],
+      flows: [], // mantido por compatibilidade (não criamos flows aqui)
     };
+
+    const segment = normalizeSegment(options.segment || tenant.settings?.segment || tenant.settings?.industry || tenant.settings?.vertical);
+    const plan = getOnboardingTemplatePlan(segment);
 
     // Cria fila padrão
     try {
@@ -263,6 +307,9 @@ function createInitialTemplates(tenantId) {
         { text: 'Olá! Como posso ajudar?', category: 'saudacao' },
         { text: 'Obrigado pelo contato!', category: 'agradecimento' },
         { text: 'Vou verificar isso para você.', category: 'processamento' },
+        { text: 'Só um instante enquanto eu valido as informações.', category: 'processamento' },
+        { text: 'Você pode me informar seu nome e CPF/CNPJ?', category: 'cadastro' },
+        { text: 'Entendi. Vou encaminhar para um atendente humano.', category: 'handover' },
       ];
 
       for (const qr of quickReplies) {
@@ -282,10 +329,57 @@ function createInitialTemplates(tenantId) {
       logger.warn('[Onboarding] Erro ao criar respostas rápidas', { tenantId, error: err.message });
     }
 
+    // Cria templates de fluxo do tenant com base no catálogo global (por segmento)
+    try {
+      for (const globalId of plan.templateIds) {
+        try {
+          const globalTpl = flowTemplateMarketplaceService.getTemplate({ tenantId, id: globalId });
+          if (!globalTpl?.flow) continue;
+          const tplId = stableTenantTemplateId(tenantId, globalId);
+
+          // eslint-disable-next-line no-await-in-loop
+          const tplResult = await flowTemplateMarketplaceService.createTemplate({
+            tenantId,
+            id: tplId,
+            name: globalTpl.name,
+            description: globalTpl.description || '',
+            icon: globalTpl.icon || '📋',
+            tags: Array.from(new Set([...(globalTpl.tags || []), 'onboarding', `segment:${plan.segment}`])),
+            flow: globalTpl.flow,
+            createdBy: 'system',
+          });
+          if (tplResult.success) created.templates.push(tplResult.template);
+        } catch (err) {
+          // best-effort
+        }
+      }
+    } catch (err) {
+      logger.warn('[Onboarding] Erro ao criar templates de fluxo do tenant', { tenantId, segment, error: err.message });
+    }
+
+    // Marca templatesCreated no tenant (best-effort)
+    try {
+      const onboarding = tenant.settings?.onboarding || {};
+      const settings = {
+        ...tenant.settings,
+        onboarding: {
+          ...onboarding,
+          templatesCreated: true,
+          templatesCreatedAt: onboarding.templatesCreatedAt || new Date().toISOString(),
+          templatesSegment: plan.segment,
+        },
+      };
+      updateTenant(tenantId, { settings });
+    } catch (err) {
+      // best-effort
+    }
+
     logger.info('[Onboarding] Templates iniciais criados', {
       tenantId,
       queues: created.queues.length,
       quickReplies: created.quickReplies.length,
+      templates: created.templates.length,
+      segment: plan.segment,
     });
 
     return {
@@ -310,7 +404,7 @@ function createInitialTemplates(tenantId) {
  * @param {string} tenantId - ID do tenant
  * @returns {{success: boolean, onboarding?: Object, error?: string}}
  */
-function completeOnboarding(tenantId) {
+async function completeOnboarding(tenantId) {
   const tenant = getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
@@ -327,7 +421,11 @@ function completeOnboarding(tenantId) {
 
   // Cria templates iniciais se ainda não foram criados
   if (!onboarding.templatesCreated) {
-    createInitialTemplates(tenantId);
+    try {
+      await createInitialTemplates(tenantId);
+    } catch {
+      // best-effort
+    }
   }
 
   const settings = {

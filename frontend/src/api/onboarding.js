@@ -40,8 +40,10 @@ export async function completeOnboarding() {
 /**
  * Cria templates iniciais
  */
-export async function createInitialTemplates() {
+export async function createInitialTemplates(options = undefined) {
+  const hasBody = !!(options && typeof options === 'object' && Object.keys(options).length > 0);
   return fetchJson('/onboarding/create-templates', {
     method: 'POST',
+    ...(hasBody ? { body: JSON.stringify(options) } : {}),
   });
 }

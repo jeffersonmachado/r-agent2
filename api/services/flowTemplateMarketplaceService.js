@@ -67,18 +67,98 @@ function newId(prefix = 'tpl') {
 
 function getSeedSpec() {
   // Mapeia templates existentes em frontend/public/templates para o marketplace.
-  // Mantém 10 padrões, com tags alinhadas ao pedido (lead, agendamento, cobrança, pesquisa satisfação, faq_rag, etc.).
+  // Mantém 10 padrões "Blip-like", com tags alinhadas ao pedido:
+  // - captação lead
+  // - agendamento
+  // - cobrança
+  // - pesquisa satisfação
+  // - FAQ + RAG
+  // - handover padrão
+  // - suporte técnico triagem
+  // - onboarding cliente
+  // - atualização cadastral
+  // - status de pedido/serviço
   return [
-    { file: 'simple-greeting.json', tags: ['lead', 'saudacao', 'inicio'], icon: '👋' },
-    { file: 'schedule-router-example.json', tags: ['agendamento', 'roteamento'], icon: '📅' },
-    { file: 'queue-status-check.json', tags: ['suporte', 'fila', 'sla'], icon: '🎫' },
-    { file: 'handoff-support.json', tags: ['handover', 'humano', 'suporte'], icon: '🧑‍💼' },
-    { file: 'template-ai-task-entity-extraction.json', tags: ['lead', 'dados', 'entidades'], icon: '🧾' },
-    { file: 'template-ai-task-intent-classification.json', tags: ['lead', 'intent', 'triagem'], icon: '🧭' },
-    { file: 'template-ai-task-assisted-response.json', tags: ['faq_rag', 'resposta', 'assistido'], icon: '🤖' },
-    { file: 'user-input.json', tags: ['pesquisa_satisfacao', 'coleta'], icon: '📝' },
-    { file: 'template-completo.json', tags: ['completo', 'base'], icon: '🧩' },
-    { file: 'teste-whatsapp-atendimento.json', tags: ['cobranca', 'atendimento', 'whatsapp'], icon: '💬' },
+    {
+      id: 'lead-captacao',
+      file: 'template-ai-task-entity-extraction.json',
+      name: 'Captação de lead (cadastro rápido)',
+      description: 'Saudação + coleta de dados (nome, email, interesse) com extração de entidades para follow-up.',
+      tags: ['lead', 'captacao', 'cadastro', 'entidades'],
+      icon: '🧲',
+    },
+    {
+      id: 'agendamento',
+      file: 'schedule-router-example.json',
+      name: 'Agendamento (roteamento por intenção)',
+      description: 'Roteia para opções de agenda, confirma horário e cria contexto para atendimento/triagem.',
+      tags: ['agendamento', 'roteamento', 'triagem'],
+      icon: '📅',
+    },
+    {
+      id: 'cobranca',
+      file: 'teste-whatsapp-atendimento.json',
+      name: 'Cobrança (negociação e lembrete)',
+      description: 'Fluxo base para lembretes, negociação e encaminhamento para humano quando necessário.',
+      tags: ['cobranca', 'financeiro', 'atendimento'],
+      icon: '💳',
+    },
+    {
+      id: 'pesquisa-satisfacao',
+      file: 'user-input.json',
+      name: 'Pesquisa de satisfação (CSAT/NPS)',
+      description: 'Coleta feedback do cliente e registra respostas no contexto.',
+      tags: ['pesquisa_satisfacao', 'csat', 'nps', 'coleta'],
+      icon: '📝',
+    },
+    {
+      id: 'faq-rag',
+      file: 'template-ai-task-assisted-response.json',
+      name: 'FAQ + RAG (resposta assistida)',
+      description: 'Usa IA para sugerir respostas baseadas em base de conhecimento (RAG) e contexto.',
+      tags: ['faq_rag', 'rag', 'faq', 'ia', 'assistido'],
+      icon: '🤖',
+    },
+    {
+      id: 'handover-padrao',
+      file: 'handoff-support.json',
+      name: 'Handover padrão (bot → humano)',
+      description: 'Escalonamento para atendimento humano com contexto e orientação operacional.',
+      tags: ['handover', 'humano', 'atendimento', 'suporte'],
+      icon: '🧑‍💼',
+    },
+    {
+      id: 'suporte-tecnico-triagem',
+      file: 'template-ai-task-intent-classification.json',
+      name: 'Suporte técnico (triagem por intenção)',
+      description: 'Classifica intenção e direciona para filas/roteamento; ideal para suporte técnico.',
+      tags: ['suporte', 'triagem', 'intent', 'roteamento', 'tecnico'],
+      icon: '🧰',
+    },
+    {
+      id: 'onboarding-cliente',
+      file: 'template-completo.json',
+      name: 'Onboarding do cliente (primeiros passos)',
+      description: 'Fluxo base para orientar primeiros passos, capturar dados e preparar atendimento.',
+      tags: ['onboarding', 'cliente', 'inicio', 'completo'],
+      icon: '🚀',
+    },
+    {
+      id: 'atualizacao-cadastral',
+      file: 'get-user-info-example.json',
+      name: 'Atualização cadastral',
+      description: 'Coleta/consulta dados do usuário e atualiza variáveis do contexto para uso posterior.',
+      tags: ['cadastro', 'atualizacao_cadastral', 'dados', 'perfil'],
+      icon: '🪪',
+    },
+    {
+      id: 'status-pedido-servico',
+      file: 'api-example.json',
+      name: 'Status de pedido/serviço',
+      description: 'Consulta status via API e responde ao cliente; inclui fallback e mensagens claras.',
+      tags: ['status', 'pedido', 'servico', 'api'],
+      icon: '📦',
+    },
   ];
 }
 
@@ -118,11 +198,12 @@ async function upsertToDbBestEffort(tpl) {
   }
 }
 
-async function seedSystemTemplatesIfEmpty() {
+async function seedSystemTemplatesBestEffort() {
   if (!dbAvailable()) return;
   const FlowTemplateModel = model();
-  const count = await FlowTemplateModel.count({ where: { tenant_key: 'system' } });
-  if (count > 0) return;
+  // Importante: não limita a "se estiver vazio".
+  // Queremos garantir que os templates padrão existam mesmo após upgrades (best-effort).
+  // Não removemos templates existentes, apenas upsert dos padrões definidos em getSeedSpec().
 
   const specs = getSeedSpec();
   let created = 0;
@@ -134,7 +215,7 @@ async function seedSystemTemplatesIfEmpty() {
     const validation = validateFlow(loaded.flow);
     if (!validation.valid && validation.errors?.length) {
       logger.warn('[FlowTemplateMarketplace] Seed template falhou validação, pulando', {
-        id: loaded.id,
+        id: spec.id || loaded.id,
         file: spec.file,
         errorCount: validation.errors.length,
       });
@@ -142,10 +223,10 @@ async function seedSystemTemplatesIfEmpty() {
     }
 
     const tpl = {
-      id: `mkt-${loaded.id}`,
+      id: `mkt-${spec.id || loaded.id}`,
       tenantId: 'system',
-      name: loaded.name,
-      description: loaded.description || '',
+      name: spec.name || loaded.name,
+      description: spec.description || loaded.description || '',
       icon: spec.icon || loaded.icon || '📋',
       tags: spec.tags || [],
       flow: loaded.flow,
@@ -175,7 +256,7 @@ async function initialize() {
       cache.set(tpl.id, tpl);
     }
 
-    await seedSystemTemplatesIfEmpty();
+    await seedSystemTemplatesBestEffort();
   } catch (err) {
     logger.warn('[FlowTemplateMarketplace] Falha ao inicializar cache', { error: err.message });
   }

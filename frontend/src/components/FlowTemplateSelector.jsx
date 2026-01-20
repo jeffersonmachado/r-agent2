@@ -20,8 +20,19 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
   const [deleting, setDeleting] = useState(false);
   const [filterText, setFilterText] = useState('');
   const [tagFilter, setTagFilter] = useState('');
+  const [scopeFilter, setScopeFilter] = useState('all'); // all | global | tenant
   const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  const safeStringify = (obj, maxLen = 12000) => {
+    try {
+      const s = JSON.stringify(obj, null, 2);
+      if (typeof s !== 'string') return '';
+      return s.length > maxLen ? `${s.slice(0, maxLen)}\n…` : s;
+    } catch {
+      return '';
+    }
+  };
 
   // Carrega templates ao montar o componente ou quando refreshTrigger mudar
   useEffect(() => {
@@ -211,6 +222,15 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
             Prévia: {selectedTemplate.flow?.nodes?.length || selectedTemplate.flow?.data?.nodes?.length || 0} nós
           </div>
 
+          <details className="text-xs text-text-secondary">
+            <summary className="cursor-pointer text-text-tertiary">
+              Ver preview do fluxo (JSON)
+            </summary>
+            <pre className="mt-2 p-3 bg-bg-tertiary rounded-md border border-border-default overflow-auto max-h-[280px] text-[11px] text-text-secondary">
+              {safeStringify(selectedTemplate.flow) || '[sem preview]'}
+            </pre>
+          </details>
+
           <div className="flex gap-2 justify-end pt-4">
             <Button variant="ghost" onClick={handleCancel}>
               Cancelar
@@ -268,8 +288,13 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
   // Filtra templates baseado no texto de busca
   const filteredTemplates = templates.filter((template) => {
     const matchesTag = tagFilter ? (template.tags || []).includes(tagFilter) : true;
+    const matchesScope = scopeFilter === 'all'
+      ? true
+      : (scopeFilter === 'global'
+        ? (template.tenantId === 'system' || template.scope === 'global')
+        : (template.tenantId && template.tenantId !== 'system'));
     if (!filterText.trim()) {
-      return matchesTag;
+      return matchesTag && matchesScope;
     }
     const searchText = filterText.toLowerCase();
     const matchesText = (
@@ -278,7 +303,7 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
       (template.id && template.id.toLowerCase().includes(searchText)) ||
       (template.tags || []).some(t => String(t).toLowerCase().includes(searchText))
     );
-    return matchesTag && matchesText;
+    return matchesTag && matchesScope && matchesText;
   });
 
   return (
@@ -330,6 +355,21 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
                 ×
               </button>
             )}
+          </div>
+
+          {/* Filtro por escopo */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-xs text-text-tertiary">Escopo:</div>
+            <select
+              value={scopeFilter}
+              onChange={(e) => setScopeFilter(e.target.value)}
+              className="px-3 py-2 text-xs bg-bg-tertiary border border-border-default rounded-md text-text-secondary"
+              aria-label="Filtrar templates por escopo"
+            >
+              <option value="all">Todos</option>
+              <option value="global">Catálogo (global)</option>
+              <option value="tenant">Meus templates</option>
+            </select>
           </div>
 
           {/* Filtro por tags */}
@@ -392,6 +432,9 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
                   className="w-full"
                 >
                   <div className="text-3xl mb-2 text-center">{template.icon}</div>
+                    <div className="text-[10px] text-text-tertiary text-center mb-1">
+                      {(template.tenantId && template.tenantId !== 'system') ? 'MEU TEMPLATE' : 'GLOBAL'}
+                    </div>
                   <div className="text-sm font-semibold text-text-primary mb-1 text-center">
                     {template.name}
                   </div>
@@ -401,9 +444,18 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
                   {Array.isArray(template.tags) && template.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 justify-center mt-2">
                       {template.tags.slice(0, 4).map((t) => (
-                        <span key={t} className="px-2 py-0.5 text-[10px] rounded-full bg-bg-secondary border border-border-default text-text-tertiary">
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTagFilter(tagFilter === t ? '' : t);
+                            }}
+                            className="px-2 py-0.5 text-[10px] rounded-full bg-bg-secondary border border-border-default text-text-tertiary hover:bg-bg-hover transition-colors"
+                            title={`Filtrar por ${t}`}
+                          >
                           {t}
-                        </span>
+                          </button>
                       ))}
                     </div>
                   )}

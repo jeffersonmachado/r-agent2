@@ -17,6 +17,7 @@ export function OnboardingPage() {
 
   const [onboarding, setOnboarding] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [segment, setSegment] = useState('');
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -71,7 +72,7 @@ export function OnboardingPage() {
 
   const handleCreateTemplates = async () => {
     try {
-      await onboardingApi.createInitialTemplates();
+      await onboardingApi.createInitialTemplates(segment ? { segment } : undefined);
       showToast('Templates criados com sucesso!', 'success');
       await handleCompleteStep('index_documents');
     } catch (err) {
@@ -136,6 +137,30 @@ export function OnboardingPage() {
 
       {/* Checklist */}
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6">
+        <div className="mb-6 flex items-center gap-3 flex-wrap">
+          <div className="text-sm text-text-secondary">
+            Segmento (opcional):
+          </div>
+          <select
+            value={segment}
+            onChange={(e) => setSegment(e.target.value)}
+            className="px-3 py-2 text-sm bg-bg-tertiary border border-border-default rounded-md text-text-secondary"
+            aria-label="Selecionar segmento para templates iniciais"
+          >
+            <option value="">Automático (geral)</option>
+            <option value="ecommerce">E-commerce</option>
+            <option value="varejo">Varejo</option>
+            <option value="servicos">Serviços</option>
+            <option value="saude">Saúde</option>
+            <option value="educacao">Educação</option>
+            <option value="financeiro">Financeiro</option>
+            <option value="cobranca">Cobrança</option>
+            <option value="academia">Academia</option>
+          </select>
+          <div className="text-xs text-text-tertiary">
+            Afeta quais templates de fluxo serão criados para o seu tenant.
+          </div>
+        </div>
         <h2 className="text-xl font-semibold mb-4">Checklist de Configuração</h2>
         <div className="space-y-4">
           {onboarding.steps?.map((step) => (

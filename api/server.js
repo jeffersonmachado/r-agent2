@@ -2988,7 +2988,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const result = completeOnboarding(req.tenantId);
+    const result = await completeOnboarding(req.tenantId);
     if (!result.success) {
       sendJson(res, 400, { error: result.error });
       return;
@@ -3027,7 +3027,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
-    const result = createInitialTemplates(req.tenantId);
+    // Body opcional (compatível): { segment?: string }
+    let options = {};
+    if (hasJsonContentType(req)) {
+      try {
+        const body = await parseJsonBody(req);
+        if (body && typeof body === 'object') {
+          if (body.segment) options.segment = String(body.segment);
+        }
+      } catch (err) {
+        if (err instanceof SyntaxError) {
+          badRequest(res, 'JSON inválido no corpo da requisição');
+          return;
+        }
+        // best-effort: ignora body se falhar
+      }
+    }
+
+    const result = await createInitialTemplates(req.tenantId, options);
     if (!result.success) {
       sendJson(res, 400, { error: result.error });
       return;

@@ -35,7 +35,8 @@ Model:
 
 `api/services/flowTemplateMarketplaceService.js`
 - Mantém **cache em memória** (`Map`) para leitura rápida.
-- `initialize()`: carrega do DB e faz **seed** de 10 templates globais (best-effort) lendo arquivos existentes em `frontend/public/templates`.
+- `initialize()`: carrega do DB e faz **seed best-effort** de 10 templates globais (catálogo “Blip-like”) lendo arquivos existentes em `frontend/public/templates`.
+  - O seed é **idempotente (upsert)**: garante que os 10 templates padrão existam mesmo após upgrades.
 - `listTemplates({ tenantId, tag, q, scope })`: retorna listagem sem o campo `flow`.
 - `getTemplate({ tenantId, id })`: retorna template completo (inclui `flow`) respeitando isolamento tenant.
 - `createTemplate({ tenantId, ... })`: cria template do tenant com validação (`validateFlow`).
@@ -61,6 +62,16 @@ Legado (arquivos):
 - `GET /templates/:id`
 - `POST /templates`
 - `DELETE /templates/:id`
+
+### Onboarding + Segmento
+
+O endpoint `POST /onboarding/create-templates` aceita body opcional:
+
+- `{ "segment": "ecommerce" | "varejo" | "servicos" | "saude" | "educacao" | "financeiro" | "cobranca" | "academia" }`
+
+E cria (best-effort) templates de fluxo **do tenant** no marketplace a partir do catálogo global, adicionando tags:
+- `onboarding`
+- `segment:<segment>`
 
 ### Frontend (FlowTemplateSelector)
 
