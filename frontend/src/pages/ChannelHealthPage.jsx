@@ -21,6 +21,12 @@ function formatSeconds(x) {
   return `${m}m ${s}s`;
 }
 
+function formatNumber(x, digits = 0) {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return '-';
+  return digits > 0 ? n.toFixed(digits) : String(Math.round(n));
+}
+
 function badgeClass(status) {
   switch (status) {
     case 'healthy':
@@ -88,6 +94,8 @@ export function ChannelHealthPage() {
 
   const channels = health?.channels ? Object.values(health.channels) : [];
   const alerts = health?.alerts || [];
+  const outbound = health?.outbound || null;
+  const waCredsOk = health?.whatsapp?.areCredentialsValid;
 
   return (
     <div className="support-page">
@@ -122,6 +130,38 @@ export function ChannelHealthPage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+          <div className="text-sm text-text-secondary">Credenciais WhatsApp</div>
+          <div className="text-xl font-semibold text-text-primary">
+            {waCredsOk === true ? 'Válidas' : waCredsOk === false ? 'Inválidas' : 'Desconhecido'}
+          </div>
+          <div className="text-xs text-text-tertiary">
+            {waCredsOk === true
+              ? 'Envio habilitado'
+              : waCredsOk === false
+                ? 'Configure credenciais reais'
+                : 'Sem dados'}
+          </div>
+        </div>
+
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+          <div className="text-sm text-text-secondary">Outbound pendentes (DB)</div>
+          <div className="text-xl font-semibold text-text-primary">
+            {outbound?.pendingCount ?? 0}
+          </div>
+          <div className="text-xs text-text-tertiary">Itens com status <code>pending</code></div>
+        </div>
+
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+          <div className="text-sm text-text-secondary">Outbound falhas (DB)</div>
+          <div className="text-xl font-semibold text-text-primary">
+            {outbound?.failedCount ?? 0}
+          </div>
+          <div className="text-xs text-text-tertiary">Itens com status <code>failed</code></div>
+        </div>
+      </div>
+
       {error && (
         <div className="p-3 rounded-md bg-status-error/10 border border-status-error/20 text-status-error text-sm mb-6">
           {error}
@@ -153,12 +193,28 @@ export function ChannelHealthPage() {
                 <div className="text-sm text-text-secondary space-y-1">
                   <div>
                     <strong>Contas</strong>: {c.accounts?.active ?? 0} ativas / {c.accounts?.total ?? 0} total
+                    {c.diagnostics ? (
+                      <span className="text-xs text-text-tertiary">
+                        {' '}• config OK: {c.diagnostics.configOkActive ?? 0}/{c.diagnostics.active ?? c.accounts?.active ?? 0}
+                      </span>
+                    ) : null}
                   </div>
+                  {(c.channelType === 'whatsapp' && c.diagnostics?.whatsappQualityRatings && c.diagnostics.whatsappQualityRatings.length > 0) ? (
+                    <div className="text-xs text-text-tertiary">
+                      <strong>WABA quality</strong>: {c.diagnostics.whatsappQualityRatings.join(', ')}
+                    </div>
+                  ) : null}
                   <div>
                     <strong>Outbound (janela)</strong>: {c.delivery?.outFailed ?? 0} falhas / {c.delivery?.outTotal ?? 0} envios ({formatPct(c.delivery?.failRate || 0)})
                   </div>
                   <div>
-                    <strong>Fila outbound</strong>: {c.outboundQueue?.pending ?? 0} pendentes • {c.outboundQueue?.dueNow ?? 0} vencidos • oldest {formatSeconds(c.outboundQueue?.oldestPendingSeconds)}
+                    <strong>Fila outbound</strong>: {c.outboundQueue?.pending ?? 0} pendentes • {c.outboundQueue?.dueNow ?? 0} vencidos • retrying {c.outboundQueue?.retrying ?? 0} • oldest {formatSeconds(c.outboundQueue?.oldestPendingSeconds)}
+                  </div>
+                  <div className="text-xs text-text-tertiary">
+                    attempts: max {c.outboundQueue?.maxAttempts ?? 0} • avg {formatNumber(c.outboundQueue?.avgAttempts, 1)} • overdue max {formatSeconds(c.outboundQueue?.overdueMaxSeconds)} • sending {c.outboundQueue?.sending ?? 0}
+                    {c.outboundQueue?.sendingAgeMaxSeconds ? (
+                      <span> • sending age max {formatSeconds(c.outboundQueue?.sendingAgeMaxSeconds)}</span>
+                    ) : null}
                   </div>
                   {c.reason ? (
                     <div className="text-xs text-text-tertiary">Motivo: {c.reason}</div>
@@ -173,6 +229,29 @@ export function ChannelHealthPage() {
             <div className="text-sm text-text-secondary">
               Pendentes: <strong>{health?.outboundQueue?.totals?.pending ?? 0}</strong> • Vencidos: <strong>{health?.outboundQueue?.totals?.dueNow ?? 0}</strong> • Oldest: <strong>{formatSeconds(health?.outboundQueue?.totals?.oldestPendingSeconds)}</strong>
             </div>
+          </div>
+
+          <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg mb-6">
+            <div className="text-xl font-semibold text-text-primary mb-2">Erros recentes (outbound)</div>
+            {(outbound?.recentErrors && outbound.recentErrors.length > 0) ? (
+              <div className="space-y-2">
+                {outbound.recentErrors.map((e) => (
+                  <div key={e.id} className="p-3 rounded-md border border-border-default bg-bg-tertiary">
+                    <div className="text-sm text-text-primary font-medium">
+                      {e.channel_type} • attempts: {e.attempts ?? 0}
+                    </div>
+                    <div className="text-xs text-text-secondary" style={{ whiteSpace: 'pre-wrap' }}>
+                      {e.last_error || '-'}
+                    </div>
+                    <div className="text-xs text-text-tertiary">
+                      next: {e.next_attempt_at ? String(e.next_attempt_at) : '-'} • updated: {e.updated_at ? String(e.updated_at) : '-'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-text-secondary text-sm">Nenhum erro recente.</div>
+            )}
           </div>
 
           <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
