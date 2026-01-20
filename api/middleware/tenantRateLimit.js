@@ -20,6 +20,11 @@ const logger = require('../utils/logger');
  * Limites de requisições por minuto por plano.
  */
 const RATE_LIMITS_BY_PLAN = {
+  // Alias "basic" (SaaS) -> limites similares ao trial
+  basic: {
+    points: 500,
+    duration: 60,
+  },
   free: {
     points: 100,
     duration: 60, // 60 segundos
@@ -263,6 +268,7 @@ async function tenantUserRateLimitMiddleware(req, res, sendJson) {
 
   // Limites por usuário são menores que por tenant
   const userLimits = {
+    basic: { points: 100, duration: 60 },
     free: { points: 20, duration: 60 },
     trial: { points: 100, duration: 60 },
     pro: { points: 500, duration: 60 },

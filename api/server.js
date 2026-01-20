@@ -8814,8 +8814,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
 
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
     const id = decodeURIComponent(pathname.slice('/departments/'.length));
-    const department = getDepartment(id);
+    const department = getDepartment(id, tenantId);
     
     if (!department) {
       sendJson(res, 404, { error: 'department_not_found' });
@@ -9376,9 +9379,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const options = {
+        tenantId: requireTenant(req, res),
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
+      if (!options.tenantId) return;
 
       const metrics = getAllMetrics(options);
       sendJson(res, 200, metrics);
@@ -9565,7 +9570,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
       const options = {
+        tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
         status: urlObj.searchParams.get('status') || undefined,
@@ -9602,7 +9610,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
       const options = {
+        tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
@@ -9637,7 +9648,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
       const options = {
+        tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
@@ -9671,7 +9685,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const urlObj = new URL(req.url || '/', 'http://localhost');
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
       const options = {
+        tenantId,
         startDate: urlObj.searchParams.get('startDate') || undefined,
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };

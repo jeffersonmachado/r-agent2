@@ -66,9 +66,9 @@ function arrayToCSV(data, columns) {
  * @returns {string}
  */
 function exportTicketsCSV(options = {}) {
-  const { startDate, endDate, status, queue } = options;
+  const { startDate, endDate, status, queue, tenantId } = options;
   
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtra tickets
@@ -189,9 +189,9 @@ function exportMetricsCSV(options = {}) {
  * @returns {Object}
  */
 function exportConversationsJSON(options = {}) {
-  const { startDate, endDate } = options;
+  const { startDate, endDate, tenantId } = options;
   
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtra por período

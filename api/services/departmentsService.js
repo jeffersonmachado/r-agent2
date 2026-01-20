@@ -34,9 +34,12 @@ function dbAvailable() {
 }
 
 function toDbPayload(dept) {
+  if (!dept || !dept.tenantId || typeof dept.tenantId !== 'string' || dept.tenantId.trim() === '') {
+    throw new Error('tenantId é obrigatório para Department');
+  }
   return {
     id: dept.id,
-    tenant_key: dept.tenantId || 'tenant-demo',
+    tenant_key: dept.tenantId,
     name: dept.name,
     description: dept.description || null,
     agent_ids: Array.isArray(dept.agentIds) ? dept.agentIds : [],
@@ -102,60 +105,7 @@ function deleteDepartmentBestEffort(id) {
 }
 
 /**
- * Cria departamentos padrão.
- */
-function createDefaultDepartments() {
-  const defaults = [
-    {
-      id: 'dept-001',
-      tenantId: 'tenant-demo',
-      name: 'Atendimento Geral',
-      description: 'Departamento de atendimento geral ao cliente',
-      agentIds: [],
-      queueNames: ['suporte'],
-      color: '#3B82F6',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-    },
-    {
-      id: 'dept-002',
-      tenantId: 'tenant-demo',
-      name: 'Vendas',
-      description: 'Departamento de vendas e comercial',
-      agentIds: [],
-      queueNames: ['vendas'],
-      color: '#10B981',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-    },
-    {
-      id: 'dept-003',
-      tenantId: 'tenant-demo',
-      name: 'Suporte Técnico',
-      description: 'Departamento de suporte técnico',
-      agentIds: [],
-      queueNames: ['tecnico'],
-      color: '#F59E0B',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: null,
-    },
-  ];
-  
-  for (const dept of defaults) {
-    departments.set(dept.id, dept);
-    persistDepartmentBestEffort(dept);
-  }
-}
-
-/**
  * Inicializa cache em memória a partir do PostgreSQL (best-effort).
- * Se não houver dados, cria defaults para tenant-demo.
  */
 async function initialize() {
   if (!dbAvailable()) return;
@@ -169,8 +119,8 @@ async function initialize() {
     }
 
     if (departments.size === 0) {
-      createDefaultDepartments();
-      logger.info('[DepartmentsService] Nenhum departamento encontrado. Defaults criados.', { count: departments.size });
+      // Blindagem: não cria defaults automáticos em produção (multi-tenant obrigatório)
+      logger.info('[DepartmentsService] Nenhum departamento encontrado. Nenhum default será criado automaticamente.', { count: 0 });
     } else {
       logger.info('[DepartmentsService] Cache inicializado do PostgreSQL', { count: departments.size });
     }
@@ -212,10 +162,14 @@ function listDepartments(filters = {}) {
 /**
  * Obtém um departamento por ID.
  * @param {string} id
+ * @param {string} [tenantId] - Se fornecido, valida isolamento multi-tenant
  * @returns {Department|null}
  */
-function getDepartment(id) {
-  return departments.get(id) || null;
+function getDepartment(id, tenantId = null) {
+  const dept = departments.get(id) || null;
+  if (!dept) return null;
+  if (tenantId && dept.tenantId && dept.tenantId !== tenantId) return null;
+  return dept;
 }
 
 /**
@@ -237,16 +191,20 @@ function createDepartment(data) {
     queueNames = [], 
     color = '#3B82F6',
     createdBy = null,
-    tenantId = 'tenant-demo',
+    tenantId = null,
   } = data;
   
+  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+    return { success: false, error: 'tenantId é obrigatório' };
+  }
+
   if (!name || name.trim() === '') {
     return { success: false, error: 'Nome do departamento é obrigatório' };
   }
   
   // Verifica se já existe departamento com o mesmo nome
   const existing = Array.from(departments.values()).find(
-    d => d.name.toLowerCase() === name.toLowerCase().trim()
+    d => d.tenantId === tenantId && d.name.toLowerCase() === name.toLowerCase().trim()
   );
   if (existing) {
     return { success: false, error: 'Já existe um departamento com este nome' };
@@ -257,7 +215,7 @@ function createDepartment(data) {
   
   const department = {
     id,
-    tenantId: tenantId || 'tenant-demo',
+    tenantId,
     name: name.trim(),
     description: description.trim(),
     agentIds: Array.isArray(agentIds) ? agentIds : [],

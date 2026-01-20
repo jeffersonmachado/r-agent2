@@ -17,6 +17,18 @@ const logger = require('../utils/logger');
  * Limites padrão por plano.
  */
 const PLAN_LIMITS = {
+  // "basic" (SaaS) - mais próximo de um trial, mas pago
+  basic: {
+    usuarios: 3,
+    max_agentes: 3,
+    max_canais: 3,
+    max_conversas_mes: 2000,
+    agentes_ia: 2,
+    execucoes_rpa: 50,
+    tokens_ia: 50000,
+    documentos_rag: 50,
+    storage_mb: 500,
+  },
   free: {
     usuarios: 1,
     max_agentes: 1,
@@ -87,8 +99,12 @@ async function checkLimit(tenantId, resource, amount = 1) {
     return { allowed: false, error: 'Tenant não encontrado' };
   }
 
+  // Compatibilidade: alguns lugares chamam "max_mensagens_mes" (mensagens/mês),
+  // mas internamente usamos "max_conversas_mes" como quota mensal principal.
+  const normalizedResource = (resource === 'max_mensagens_mes') ? 'max_conversas_mes' : resource;
+
   const limits = tenant.limits || getPlanLimits(tenant.plan);
-  const limit = limits[resource];
+  const limit = limits[normalizedResource];
 
   // Se limite é -1, é ilimitado
   if (limit === -1) {
@@ -96,12 +112,12 @@ async function checkLimit(tenantId, resource, amount = 1) {
   }
 
   const usage = await getTenantUsage(tenantId);
-  const current = usage ? (usage[resource] || 0) : 0;
+  const current = usage ? (usage[normalizedResource] || 0) : 0;
 
   if (current + amount > limit) {
     return {
       allowed: false,
-      error: `Limite de ${resource} excedido. Limite: ${limit}, Atual: ${current}, Tentativa: ${amount}`,
+      error: `Limite de ${normalizedResource} excedido. Limite: ${limit}, Atual: ${current}, Tentativa: ${amount}`,
       limit,
       current,
     };

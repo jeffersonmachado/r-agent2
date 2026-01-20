@@ -22,6 +22,7 @@ const config = require('../utils/config');
 const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation, Ticket: TicketGetter } = require('../db/models');
 const queueService = require('./queueService');
+const { checkLimit } = require('./planLimitsService');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -83,7 +84,9 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   // Compatibilidade / rollout seguro:
   // - por padrão, NÃO cria ticket automaticamente para todo inbound (evita inundar a UI atual)
   // - quando habilitado, cria ticket "bot" e vincula à conversa.
-  const createOnInbound = config.get('tickets.createOnInbound', false) === true;
+  // Blip-like: por padrão cria ticket no inbound, mas permite desligar via config.
+  // Mantém compatibilidade via flag, mas evita "sistema sem tickets" quando não configurado.
+  const createOnInbound = config.get('tickets.createOnInbound', true) === true;
 
   const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
   const now = new Date();
@@ -132,6 +135,20 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     if (existing && existing.status !== 'closed') {
       return { conversation: null, ticket: existing, createdTicket: false };
     }
+
+    // Quota mensal (best-effort): evita explosão de tickets quando createOnInbound está ligado.
+    try {
+      const limitCheck = await checkLimit(effectiveTenantId, 'max_conversas_mes', 1);
+      if (!limitCheck.allowed) {
+        logger.warn('[ConversationTicketLink] Quota excedida; não criando ticket (sem DB)', {
+          tenantId: effectiveTenantId,
+          resource: 'max_conversas_mes',
+          limit: limitCheck.limit,
+          current: limitCheck.current,
+        });
+        return { conversation: null, ticket: null, createdTicket: false };
+      }
+    } catch (_) {}
 
     const defaultQueue = config.get('flows.defaultQueue', 'default');
     const ticket = queueService.createTicket({
@@ -206,6 +223,20 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   if (!createOnInbound) {
     return { conversation, ticket: null, createdTicket: false };
   }
+
+  // Quota mensal (best-effort): limita criação de tickets/“conversas” por mês.
+  try {
+    const limitCheck = await checkLimit(effectiveTenantId, 'max_conversas_mes', 1);
+    if (!limitCheck.allowed) {
+      logger.warn('[ConversationTicketLink] Quota excedida; não criando ticket (DB)', {
+        tenantId: effectiveTenantId,
+        resource: 'max_conversas_mes',
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+      });
+      return { conversation, ticket: null, createdTicket: false };
+    }
+  } catch (_) {}
 
   const defaultQueue = config.get('flows.defaultQueue', 'default');
   const sessionId = channelType === 'whatsapp'
