@@ -110,8 +110,8 @@ function createNodeRegistry() {
  * @returns {import('../../engine/flowTypes').ConversationState}
  */
 function createInitialState(flow, sessionId, from) {
-  const compiledFlow = getOrCompileFlow(flow);
-  const startNode = compiledFlow.nodes.find((n) => n.type === 'start');
+  const nodes = Array.isArray(flow?.nodes) ? flow.nodes : [];
+  const startNode = nodes.find((n) => n && n.type === 'start');
 
   return {
     tenantId: flow.tenantId,
@@ -346,7 +346,23 @@ async function processWhatsAppMessage(message, value, deps) {
     return;
   }
 
-  const compiledFlow = getOrCompileFlow(flow);
+  let compiledFlow;
+  try {
+    compiledFlow = getOrCompileFlow(flow);
+  } catch (err) {
+    if (err?.code === 'AI_FLOW_INVALID_AT_EXECUTION') {
+      logger.warn('[MessageProcessor] Execução bloqueada: fluxo de IA inválido na revalidação', {
+        flowId: state.flowId,
+        tenantId: state.tenantId,
+        errors: err?.details?.errors || null,
+      });
+      try {
+        await sendWhatsAppTextBestEffort(from, 'Este fluxo foi gerado por IA mas ainda não está consistente para execução. Um administrador precisa revisar/ajustar antes de ativar.');
+      } catch {}
+      return;
+    }
+    throw err;
+  }
   const registry = createNodeRegistry();
 
   // Executa UM passo com input do usuário
@@ -372,21 +388,40 @@ async function processWhatsAppMessage(message, value, deps) {
   }
   
   const stepStartTime = new Date().toISOString();
-  const result = await executeStep(state, compiledFlow, {
-    registry,
-    input: {
-      text,
-      messageId,
-      channel: effectiveChannelType,
-      raw: message,
-      aiProvider, // Injeta provider de IA
-    },
-    deps: {
-      persistence: persistenceServices,
-      registry, // Passa registry para handlers que precisam (ex: subflow)
-      replay, // Passa replay para o executeStep registrar ações
-    },
-  });
+  let result;
+  try {
+    // eslint-disable-next-line no-await-in-loop
+    result = await executeStep(state, compiledFlow, {
+      registry,
+      input: {
+        text,
+        messageId,
+        channel: effectiveChannelType,
+        raw: message,
+        aiProvider, // Injeta provider de IA
+      },
+      deps: {
+        persistence: persistenceServices,
+        registry, // Passa registry para handlers que precisam (ex: subflow)
+        replay, // Passa replay para o executeStep registrar ações
+      },
+    });
+  } catch (err) {
+    const code = err && (err.code || err?.message);
+    if (code === 'FLOW_REQUIRES_REVIEW' || (err?.code === 'FLOW_REQUIRES_REVIEW')) {
+      logger.warn('[MessageProcessor] Execução bloqueada: fluxo em safe-mode (requiresReview)', {
+        flowId: state.flowId,
+        tenantId: state.tenantId,
+      });
+      try {
+        await sendWhatsAppTextBestEffort(from, 'Este fluxo está em revisão e ainda não pode ser executado. Um administrador precisa aprovar antes da ativação.');
+      } catch (sendErr) {
+        logger.error('[MessageProcessor] Falha ao enviar aviso de revisão', sendErr);
+      }
+      return;
+    }
+    throw err;
+  }
   const stepEndTime = new Date().toISOString();
 
   // Registra execução no replay

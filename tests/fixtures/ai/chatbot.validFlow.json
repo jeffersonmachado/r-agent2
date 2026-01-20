@@ -1,0 +1,19 @@
+{
+  "tenantId": "tenant-demo",
+  "id": "flow-demo",
+  "name": "Fluxo Demo",
+  "version": 1,
+  "metadata": {
+    "generatedBy": "ai",
+    "generated": true,
+    "status": "draft",
+    "requiresReview": true
+  },
+  "nodes": [
+    { "id": "start_1", "type": "start", "config": {}, "next": "message_1" },
+    { "id": "message_1", "type": "message", "config": { "text": "Olá!" }, "next": "fallback_1" },
+    { "id": "fallback_1", "type": "fallback", "config": { "maxAttempts": 3, "escalationMode": "ticket" }, "next": "end_1" },
+    { "id": "end_1", "type": "end", "config": {} }
+  ]
+}
+

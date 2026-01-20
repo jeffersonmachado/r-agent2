@@ -344,7 +344,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
  * @param {Object} [params.branding] - Branding personalizado
  * @returns {{success: boolean, tenant?: Tenant, error?: string}}
  */
-async function createTenant({ id, tenant_key, name, site, ramo_atividade, objetivo, plan = 'trial', settings = {}, branding = {} }) {
+async function createTenant({ id, tenant_key, name, site, ramo_atividade, objetivo, plan = 'trial', status = null, limits = null, settings = {}, branding = {}, _aiSafeMode = false }) {
   // Validações
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return { success: false, error: 'Nome é obrigatório' };
@@ -370,6 +370,12 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
   const validPlans = ['free', 'trial', 'pro', 'enterprise'];
   if (!validPlans.includes(plan)) {
     return { success: false, error: `Plano inválido. Use: ${validPlans.join(', ')}` };
+  }
+  
+  // Valida status (inclui pending_review para safe-mode)
+  const validStatuses = ['pending_review', 'trial', 'active', 'suspended', 'terminated'];
+  if (status !== null && status !== undefined && !validStatuses.includes(status)) {
+    return { success: false, error: `Status inválido. Use: ${validStatuses.join(', ')}` };
   }
 
   const sequelize = getSequelize();
@@ -399,6 +405,11 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
       return { success: false, error: 'Já existe um tenant com este site' };
     }
 
+    // Determina status final:
+    // - Safe-mode por IA SEMPRE nasce em pending_review
+    // - Caso contrário, usa status explicitado ou derivado do plano
+    const finalStatus = _aiSafeMode ? 'pending_review' : (status || (plan === 'trial' ? 'trial' : 'active'));
+
     // Calcula expiração do trial se for trial
     let trialExpiresAt = null;
     if (plan === 'trial') {
@@ -406,6 +417,14 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
       trialExpires.setDate(trialExpires.getDate() + 14); // 14 dias
       trialExpiresAt = trialExpires;
     }
+
+    // Limites finais:
+    // - Safe-mode por IA pode fornecer limites conservadores
+    // - Caso contrário, usa defaults por plano
+    const defaultLimits = getDefaultLimits(plan);
+    const finalLimits = (limits && typeof limits === 'object' && !Array.isArray(limits))
+      ? limits
+      : defaultLimits;
 
     // Cria tenant no PostgreSQL
     const { Tenant } = getModels();
@@ -415,9 +434,9 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
       site: site.trim(),
       ramo_atividade: ramo_atividade.trim(),
       objetivo: objetivo.trim(),
-      status: plan === 'trial' ? 'trial' : 'active',
+      status: finalStatus,
       plan: plan,
-      limits: getDefaultLimits(plan),
+      limits: finalLimits || {},
       settings: settings || {},
       branding: branding || {},
       suspendedAt: null,
@@ -439,7 +458,7 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
       site: tenantData.site || null,
       ramo_atividade: tenantData.ramo_atividade || null,
       objetivo: tenantData.objetivo || null,
-      active: tenantStatus !== 'suspended' && tenantStatus !== 'terminated',
+      active: tenantStatus !== 'pending_review' && tenantStatus !== 'suspended' && tenantStatus !== 'terminated',
       status: tenantStatus,
       plan: tenantPlan,
       limits: tenantData.limits || {},
@@ -455,9 +474,12 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     syncTenantContext(tenantKey, ramo_atividade.trim(), objetivo.trim(), site.trim());
 
     // Indexa site como fonte institucional canônica (assíncrono, não bloqueia)
-    indexSiteAsInstitutionalSource(tenantKey, site.trim()).catch(err => {
-      logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, err);
-    });
+    // Hardening: em safe-mode/pending_review, NÃO ativa integrações externas automaticamente.
+    if (tenantStatus !== 'pending_review') {
+      indexSiteAsInstitutionalSource(tenantKey, site.trim()).catch(err => {
+        logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, err);
+      });
+    }
 
     logger.info(`[TenantService] Tenant criado: ${tenantKey} (${name}), plano: ${plan}`);
 
@@ -534,7 +556,7 @@ async function updateTenant(tenantId, updates) {
     }
 
     if (updates.status !== undefined) {
-      const validStatuses = ['trial', 'active', 'suspended', 'terminated'];
+      const validStatuses = ['pending_review', 'trial', 'active', 'suspended', 'terminated'];
       if (!validStatuses.includes(updates.status)) {
         return { success: false, error: `Status inválido. Use: ${validStatuses.join(', ')}` };
       }

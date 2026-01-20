@@ -49,7 +49,7 @@ function getTenantModel() {
     allowNull: true,
   },
   status: {
-    type: DataTypes.ENUM('trial', 'active', 'suspended', 'terminated'),
+    type: DataTypes.ENUM('pending_review', 'trial', 'active', 'suspended', 'terminated'),
     defaultValue: 'trial',
     allowNull: false,
   },

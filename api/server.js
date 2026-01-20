@@ -1685,7 +1685,7 @@ async function requestHandler(req, res) {
 
     try {
       const body = await parseJsonBody(req);
-      const { description } = body;
+      const { description, create = false } = body;
 
       if (!description || typeof description !== 'string' || description.trim().length === 0) {
         badRequest(res, 'Descrição é obrigatória');
@@ -1759,23 +1759,197 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         tenantData.site = 'https://exemplo.com';
       }
 
-      // Valida entrada usando schema
-      const { validateInput, schemas } = require('./utils/inputValidator');
-      try {
-        validateInput(tenantData, schemas.createTenant);
-      } catch (validationError) {
-        badRequest(res, `Dados gerados inválidos: ${validationError.message}`);
+      // ----------------------------
+      // Safe-mode + contrato + semântica (obrigatório)
+      // ----------------------------
+      const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+      const fs = require('fs');
+      const path = require('path');
+      const contractsDir = path.join(__dirname, '..', 'contracts');
+      const tenantContractPath = path.join(contractsDir, 'tenant.contract.json');
+      const tenantContract = JSON.parse(fs.readFileSync(tenantContractPath, 'utf8'));
+      const { slugifyTenantKey, createTenantAiDraft } = require('./services/tenantAiDraft');
+
+      async function ensureUniqueTenantKey(baseKey) {
+        const { getSequelize } = require('./db/sequelize');
+        const sequelize = getSequelize();
+        if (!sequelize) return baseKey;
+        const { Tenant } = require('./db/models');
+        const TenantModel = Tenant();
+        let key = baseKey;
+        for (let i = 0; i < 10; i += 1) {
+          // eslint-disable-next-line no-await-in-loop
+          const existing = await TenantModel.findOne({ where: { tenant_key: key } });
+          if (!existing) return key;
+          key = `${baseKey}-${Math.random().toString(36).slice(2, 6)}`.slice(0, 50);
+        }
+        return null;
+      }
+
+      const baseTenantKey = slugifyTenantKey(tenantData.name);
+      const uniqueTenantKey = await ensureUniqueTenantKey(baseTenantKey);
+      if (!uniqueTenantKey) {
+        sendJson(res, 409, { error: 'tenant_key_conflict', message: 'Não foi possível gerar tenant_key único' });
+        return;
+      }
+
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      const draftRes = createTenantAiDraft(tenantData, {
+        tenantContractPath: 'contracts/tenant.contract.json',
+        tenant_key: uniqueTenantKey,
+      });
+
+      const tenantDraft = draftRes.tenantDraft;
+
+      const aiMeta = {
+        provider: { name: null, model: null, temperature: null },
+        input: {
+          prompt_summary: 'tenants.generate-by-ai',
+          user_goal: description,
+          context: { tenantId: 'system' },
+        },
+        audit: {
+          request_id: requestId,
+          seed: null,
+          tenant_id: 'system',
+          user_id: req.agent?.id || req.agent?.username || null,
+        },
+        rawModelOutput: aiText,
+      };
+
+      const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', tenantDraft, {
+        valid: draftRes.valid === true,
+        errors: draftRes.errors || [],
+        warnings: draftRes.warnings || [],
+        qualityScore: draftRes.qualityScore ?? (draftRes.valid ? 100 : 0),
+        riskFlags: draftRes.riskFlags || [],
+      }, aiMeta));
+
+      if (!draftRes.valid) {
+        // Persistência/auditoria best-effort (falha)
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          appendGeneration({
+            envelope,
+            valid: false,
+            domain: 'tenant',
+            requestId,
+          });
+        } catch (e) {
+          // best-effort
+        }
+        try {
+          const { logFailure } = require('../engine/ai/aiTelemetry');
+          logFailure({
+            domain: 'tenant',
+            requestId,
+            promptUsed: 'tenants.generate-by-ai',
+            stage: 'TENANT_DRAFT_INVALID',
+            errors: draftRes.errors || [],
+          });
+        } catch (_) {}
+
+        // Auditoria (DB) best-effort
+        try {
+          await registerGeneration({
+            tenantId: 'system',
+            payload: { description, createRequested: !!create },
+            context: { sources: [] },
+            artifacts: { tenantKey: tenantDraft?.tenant_key || null },
+            contract: { version: tenantContract?.version || '1.0.0', hash: null },
+            envelope,
+            error: { type: 'TENANT_DRAFT_INVALID', errors: draftRes.errors || [] },
+          });
+        } catch (_) {}
+
+        sendJson(res, 400, { envelope, error: { code: 'tenant_ai_validation_failed', message: 'Tenant gerado não passou por contrato/semântica/safe-mode', details: draftRes.errors } });
         return;
       }
 
       logger.info('[Tenants] Tenant gerado por IA com sucesso', { 
-        name: tenantData.name,
-        site: tenantData.site 
+        name: tenantDraft.name,
+        site: tenantDraft.site,
+        tenant_key: tenantDraft.tenant_key,
+        createRequested: !!create,
       });
 
-      sendJson(res, 200, { 
-        tenant: tenantData,
-        generated: true
+      // Persistência/auditoria best-effort do envelope completo
+      let aiAuditId = null;
+      try {
+        const { appendGeneration } = require('../qa/aiGenerationStore');
+        aiAuditId = appendGeneration({ envelope, valid: true, domain: 'tenant', requestId });
+      } catch (e) {
+        // best-effort
+      }
+
+      try {
+        const { logSuccess } = require('../engine/ai/aiTelemetry');
+        logSuccess({
+          domain: 'tenant',
+          requestId,
+          promptUsed: 'tenants.generate-by-ai',
+          qualityScore: envelope?.validation?.qualityScore ?? null,
+          riskFlags: envelope?.validation?.riskFlags || [],
+        });
+      } catch (_) {}
+
+      // Auditoria (DB) best-effort
+      let auditGenerationId = null;
+      try {
+        auditGenerationId = await registerGeneration({
+          tenantId: 'system',
+          payload: { description, createRequested: !!create },
+          context: { sources: [] },
+          artifacts: { tenantKey: tenantDraft?.tenant_key || null },
+          contract: { version: tenantContract?.version || '1.0.0', hash: null },
+          envelope,
+        });
+      } catch (_) {
+        // best-effort
+      }
+
+      // Se solicitado, cria o tenant em etapas (base -> context). NUNCA ativa automaticamente.
+      let createdTenant = null;
+      if (create === true) {
+        const { createTenant } = require('./services/tenantService');
+        const createResult = await createTenant({
+          tenant_key: tenantDraft.tenant_key,
+          name: tenantDraft.name,
+          site: tenantDraft.site,
+          ramo_atividade: tenantDraft.ramo_atividade,
+          objetivo: tenantDraft.objetivo,
+          plan: tenantDraft.plan,
+          status: tenantDraft.status,
+          limits: tenantDraft.limits,
+          settings: tenantDraft.settings,
+          branding: tenantDraft.branding,
+          _aiSafeMode: true,
+        });
+        if (!createResult.success) {
+          sendJson(res, 500, {
+            error: 'tenant_create_failed',
+            message: createResult.error || 'Erro ao criar tenant (safe-mode)',
+            tenantDraft,
+            envelope,
+            auditId: aiAuditId,
+          });
+          return;
+        }
+        createdTenant = createResult.tenant;
+      }
+
+      sendJson(res, 200, {
+        generated: true,
+        auditId: aiAuditId,
+        auditGenerationId,
+        envelope,
+        tenantDraft,
+        tenant: tenantDraft, // compatibilidade
+        created: !!createdTenant,
+        createdTenant,
       });
     } catch (err) {
       logger.error('[Tenants] Erro ao gerar tenant por IA:', err);
@@ -2774,6 +2948,42 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /super-admin/ai-generations - Lista gerações por IA (audit store JSONL)
+  if (method === 'GET' && pathname === '/super-admin/ai-generations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar esta área' });
+      return;
+    }
+    try {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const domain = url.searchParams.get('domain');
+      const validParam = url.searchParams.get('valid');
+      const valid = validParam === null ? undefined : (validParam === 'true');
+      const startDate = url.searchParams.get('startDate') || null;
+      const endDate = url.searchParams.get('endDate') || null;
+      const limit = url.searchParams.get('limit') || '200';
+
+      const { listAiGenerations } = require('../qa/aiGenerationStore');
+      const result = listAiGenerations({
+        ...(domain ? { domain } : {}),
+        ...(valid !== undefined ? { valid } : {}),
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+        limit,
+      });
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao listar gerações por IA (Super Admin):', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
   // GET /super-admin/tenants/:id/metrics - Obtém métricas detalhadas de um tenant
   if (method === 'GET' && pathname.includes('/metrics') && pathname.startsWith('/super-admin/tenants/')) {
     const authResult = requireAuth(req);
@@ -3700,6 +3910,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
       const isAiGenerated = flow.metadata?.generatedBy === 'ai' || flow.metadata?.generated === true;
       if (isAiGenerated) {
+        // Safe-mode obrigatório: todo fluxo de IA nasce como draft e exige revisão humana.
+        flow.metadata = {
+          ...(flow.metadata && typeof flow.metadata === 'object' ? flow.metadata : {}),
+          generatedBy: 'ai',
+          generated: true,
+          status: 'draft',
+          requiresReview: true,
+        };
         const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
         try {
           validateGeneratedPlanOrThrow(flow, 'chatbot');
@@ -3852,6 +4070,23 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // Se o fluxo foi gerado por IA, deve passar pelo gate antes de ser atualizado
       const isAiGenerated = merged.metadata?.generatedBy === 'ai' || merged.metadata?.generated === true;
       if (isAiGenerated) {
+        // Safe-mode permanece até aprovação explícita (admin/super-admin).
+        const requestedApprove = body?.metadata?.approveAiGenerated === true;
+        const canApprove = !!(authResult.valid && (isSuperAdmin(req.agent) || req.agent.role === 'admin'));
+        const keepRequiresReview = !(requestedApprove && canApprove);
+
+        merged.metadata = {
+          ...(merged.metadata && typeof merged.metadata === 'object' ? merged.metadata : {}),
+          generatedBy: 'ai',
+          generated: true,
+          status: keepRequiresReview ? 'draft' : 'active',
+          requiresReview: keepRequiresReview,
+        };
+        // Não persistir flag de aprovação no fluxo
+        if (merged.metadata && Object.prototype.hasOwnProperty.call(merged.metadata, 'approveAiGenerated')) {
+          delete merged.metadata.approveAiGenerated;
+        }
+
         const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
         try {
           validateGeneratedPlanOrThrow(merged, 'chatbot');
@@ -4025,6 +4260,136 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       } else {
         logger.error('Erro ao validar fluxo:', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao validar fluxo' });
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Preview / Diff de fluxo (read-only, safe)
+  // -----------------------------------------------------------------------
+  // POST /flows/preview
+  if (method === 'POST' && pathname === '/flows/preview') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { flow, baseFlowId = null } = body || {};
+      if (!flow || typeof flow !== 'object') {
+        badRequest(res, 'Campo "flow" é obrigatório e deve ser um FlowDefinition');
+        return;
+      }
+
+      const structureValidation = validateFlowStructure(flow);
+      if (!structureValidation.valid) {
+        sendJson(res, 200, {
+          ok: false,
+          valid: false,
+          errors: [{ code: 'INVALID_FLOW_STRUCTURE', message: structureValidation.error || 'Estrutura do fluxo inválida' }],
+        });
+        return;
+      }
+
+      function collectEdges(f) {
+        const edges = [];
+        const nodes = Array.isArray(f.nodes) ? f.nodes : [];
+        for (const n of nodes) {
+          if (!n || !n.id) continue;
+          if (typeof n.next === 'string') edges.push({ from: n.id, to: n.next });
+          else if (Array.isArray(n.next)) {
+            for (const to of n.next) if (typeof to === 'string') edges.push({ from: n.id, to });
+          }
+          if (n.type === 'router' && Array.isArray(n?.config?.rules)) {
+            for (const r of n.config.rules) if (r && typeof r.next === 'string') edges.push({ from: n.id, to: r.next });
+          }
+          if (n.type === 'schedule_router' && Array.isArray(n?.config?.schedules)) {
+            for (const s of n.config.schedules) if (s && typeof s.next === 'string') edges.push({ from: n.id, to: s.next });
+            if (typeof n?.config?.defaultNext === 'string') edges.push({ from: n.id, to: n.config.defaultNext });
+          }
+        }
+        return edges;
+      }
+
+      function summarize(f) {
+        const nodes = Array.isArray(f.nodes) ? f.nodes : [];
+        const edges = collectEdges(f);
+        const byType = {};
+        for (const n of nodes) {
+          const t = n?.type || 'unknown';
+          byType[t] = (byType[t] || 0) + 1;
+        }
+        return {
+          id: f.id || null,
+          tenantId: f.tenantId || null,
+          version: f.version || null,
+          nodeCount: nodes.length,
+          edgeCount: edges.length,
+          nodesByType: byType,
+          hasFallback: !!byType.fallback,
+          hasApiNode: !!byType.api,
+          requiresReview: f?.metadata?.requiresReview === true,
+          status: f?.metadata?.status || null,
+        };
+      }
+
+      const base = baseFlowId ? flows.get(String(baseFlowId)) : null;
+      const edges = collectEdges(flow);
+      const summary = summarize(flow);
+      const diff = base ? (() => {
+        const baseEdges = collectEdges(base);
+        const baseNodeMap = new Map((base.nodes || []).filter(Boolean).map(n => [n.id, n]));
+        const nextNodeMap = new Map((flow.nodes || []).filter(Boolean).map(n => [n.id, n]));
+
+        const addedNodes = [];
+        const removedNodes = [];
+        const changedNodes = [];
+
+        for (const [id, n] of nextNodeMap.entries()) {
+          if (!baseNodeMap.has(id)) addedNodes.push(id);
+          else {
+            const before = baseNodeMap.get(id);
+            if (JSON.stringify(before) !== JSON.stringify(n)) changedNodes.push(id);
+          }
+        }
+        for (const [id] of baseNodeMap.entries()) {
+          if (!nextNodeMap.has(id)) removedNodes.push(id);
+        }
+
+        const edgeKey = (e) => `${e.from}->${e.to}`;
+        const baseSet = new Set(baseEdges.map(edgeKey));
+        const nextSet = new Set(edges.map(edgeKey));
+        const addedEdges = [];
+        const removedEdges = [];
+        for (const k of nextSet) if (!baseSet.has(k)) addedEdges.push(k);
+        for (const k of baseSet) if (!nextSet.has(k)) removedEdges.push(k);
+
+        return {
+          baseFlowId,
+          addedNodes,
+          removedNodes,
+          changedNodes,
+          addedEdges,
+          removedEdges,
+        };
+      })() : null;
+
+      sendJson(res, 200, {
+        ok: true,
+        valid: true,
+        summary,
+        edges,
+        diff,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err.message && err.message.includes('excede o tamanho máximo')) {
+        badRequest(res, err.message);
+      } else {
+        logger.error('Erro ao gerar preview/diff do fluxo:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao gerar preview/diff do fluxo' });
       }
     }
     return;
@@ -6826,6 +7191,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
       const body = await parseJsonBody(req);
       const { userInput, options = {} } = body || {};
 
@@ -6835,11 +7208,47 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       logger.info('[API] Geração de chatbot via wrapper', {
-        inputLength: userInput.length
+        inputLength: userInput.length,
+        tenantId,
       });
 
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      const aiMeta = {
+        provider: { name: null, model: null, temperature: null },
+        input: {
+          prompt_summary: 'chatbot.generator.prompt.md',
+          user_goal: userInput,
+          context: { tenantId, options },
+        },
+        audit: {
+          request_id: requestId,
+          seed: null,
+          tenant_id: tenantId,
+          user_id: req.agent?.id || req.agent?.username || null,
+        },
+        rawModelOutput: null,
+      };
+
       // Chama wrapper oficial
-      const wrapperResult = await generateChatbotFlow(userInput, options);
+      const wrapperResult = await generateChatbotFlow(userInput, { ...options, tenantId, _aiMeta: aiMeta });
+
+      // Envelope é obrigatório (fallback defensivo)
+      const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+      const envelope = (() => {
+        try {
+          if (wrapperResult && wrapperResult.envelope) return validateAiEnvelopeOrThrow(wrapperResult.envelope);
+        } catch (_) {}
+        // fallback: envelope mínimo com erro
+        return validateAiEnvelopeOrThrow(buildAiEnvelope(
+          'chatbot_flow',
+          wrapperResult?.flow || {},
+          wrapperResult?.validation || { valid: false, errors: [{ type: 'ENVELOPE_MISSING', message: 'Envelope ausente' }], warnings: [], qualityScore: 0, riskFlags: ['ENVELOPE_MISSING'] },
+          aiMeta,
+        ));
+      })();
 
       // Converte para formato IaGenerationResult
       const iaResult = {
@@ -6856,17 +7265,106 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         iaResult.data = {
           flow: wrapperResult.flow,
           validation: wrapperResult.validation,
+          envelope,
           promptVersion: wrapperResult.promptVersion
         };
+
+        // Auditoria + telemetria (success)
+        try {
+          const { logSuccess } = require('../engine/ai/aiTelemetry');
+          logSuccess({
+            domain: 'chatbot_flow',
+            requestId,
+            promptUsed: iaResult.meta.prompt,
+            qualityScore: envelope?.validation?.qualityScore ?? null,
+            riskFlags: envelope?.validation?.riskFlags || [],
+          });
+        } catch (_) {}
+
+        // Auditoria (DB) best-effort
+        try {
+          const auditGenerationId = await registerGeneration({
+            tenantId,
+            payload: { userInput },
+            context: { sources: [] },
+            artifacts: { flowId: wrapperResult.flow?.id || null },
+            contract: { version: '1.0.0', hash: null },
+            envelope,
+          });
+          iaResult.meta.auditGenerationId = auditGenerationId;
+        } catch (_) {
+          // best-effort
+        }
+
+        // Persistência/auditoria best-effort
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          const auditId = appendGeneration({
+            envelope,
+            valid: true,
+            domain: 'chatbot_flow',
+            requestId,
+          });
+          iaResult.meta.auditId = auditId;
+        } catch (e) {
+          // best-effort
+        }
       } else {
         iaResult.errors = wrapperResult.error ? [{
           code: wrapperResult.error.type || 'GENERATION_ERROR',
           message: wrapperResult.error.message || 'Erro na geração',
           source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
         }] : [];
+
+        // Auditoria + telemetria (failure)
+        try {
+          const { logFailure } = require('../engine/ai/aiTelemetry');
+          logFailure({
+            domain: 'chatbot_flow',
+            requestId,
+            promptUsed: iaResult.meta.prompt,
+            stage: wrapperResult.error?.type || 'unknown',
+            errors: wrapperResult.validation?.errors || wrapperResult.error?.errors || iaResult.errors || [],
+          });
+        } catch (_) {}
+
+        // Auditoria (DB) best-effort
+        try {
+          const auditGenerationId = await registerGeneration({
+            tenantId,
+            payload: { userInput },
+            context: { sources: [] },
+            artifacts: { flowId: wrapperResult.flow?.id || null },
+            contract: { version: '1.0.0', hash: null },
+            envelope,
+            error: wrapperResult.error || null,
+          });
+          iaResult.meta.auditGenerationId = auditGenerationId;
+        } catch (_) {
+          // best-effort
+        }
+
+        // Persistência/auditoria best-effort (falha)
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          const auditId = appendGeneration({
+            envelope,
+            valid: false,
+            domain: 'chatbot_flow',
+            requestId,
+          });
+          iaResult.meta.auditId = auditId;
+        } catch (e) {
+          // best-effort
+        }
       }
 
-      sendJson(res, wrapperResult.success ? 200 : 400, iaResult);
+      // Resposta compatível + nova forma obrigatória
+      const response = wrapperResult.success
+        ? { envelope, flow: wrapperResult.flow, ...iaResult }
+        : { envelope, error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' }, ...iaResult };
+
+      sendJson(res, wrapperResult.success ? 200 : 400, response);
     } catch (err) {
       logger.error('[API] Erro ao gerar chatbot', { error: err.message, stack: err.stack });
       sendJson(res, 500, {
@@ -6895,6 +7393,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
       const body = await parseJsonBody(req);
       const { userInput, options = {} } = body || {};
 
@@ -6904,11 +7410,46 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       logger.info('[API] Geração de RPA via wrapper', {
-        inputLength: userInput.length
+        inputLength: userInput.length,
+        tenantId,
       });
 
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      const aiMeta = {
+        provider: { name: null, model: null, temperature: null },
+        input: {
+          prompt_summary: 'rpa.generator.prompt.md',
+          user_goal: userInput,
+          context: { tenantId, options },
+        },
+        audit: {
+          request_id: requestId,
+          seed: null,
+          tenant_id: tenantId,
+          user_id: req.agent?.id || req.agent?.username || null,
+        },
+        rawModelOutput: null,
+      };
+
       // Chama wrapper oficial
-      const wrapperResult = await generateRpaTest(userInput, options);
+      const wrapperResult = await generateRpaTest(userInput, { ...options, tenantId, _aiMeta: aiMeta });
+
+      // Envelope é obrigatório (fallback defensivo)
+      const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+      const envelope = (() => {
+        try {
+          if (wrapperResult && wrapperResult.envelope) return validateAiEnvelopeOrThrow(wrapperResult.envelope);
+        } catch (_) {}
+        return validateAiEnvelopeOrThrow(buildAiEnvelope(
+          'rpa_test',
+          wrapperResult?.plan || {},
+          wrapperResult?.validation || { valid: false, errors: [{ type: 'ENVELOPE_MISSING', message: 'Envelope ausente' }], warnings: [], qualityScore: 0, riskFlags: ['ENVELOPE_MISSING'] },
+          aiMeta,
+        ));
+      })();
 
       // Converte para formato IaGenerationResult
       const iaResult = {
@@ -6925,17 +7466,105 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         iaResult.data = {
           plan: wrapperResult.plan,
           validation: wrapperResult.validation,
+          envelope,
           promptVersion: wrapperResult.promptVersion
         };
+
+        // Telemetria (success)
+        try {
+          const { logSuccess } = require('../engine/ai/aiTelemetry');
+          logSuccess({
+            domain: 'rpa_test',
+            requestId,
+            promptUsed: iaResult.meta.prompt,
+            qualityScore: envelope?.validation?.qualityScore ?? null,
+            riskFlags: envelope?.validation?.riskFlags || [],
+          });
+        } catch (_) {}
+
+        // Auditoria (DB) best-effort
+        try {
+          const auditGenerationId = await registerGeneration({
+            tenantId,
+            payload: { userInput },
+            context: { sources: [] },
+            artifacts: { rpaTestId: wrapperResult.plan?.id || null },
+            contract: { version: '1.0.0', hash: null },
+            envelope,
+          });
+          iaResult.meta.auditGenerationId = auditGenerationId;
+        } catch (_) {
+          // best-effort
+        }
+
+        // Persistência/auditoria best-effort
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          const auditId = appendGeneration({
+            envelope,
+            valid: true,
+            domain: 'rpa_test',
+            requestId,
+          });
+          iaResult.meta.auditId = auditId;
+        } catch (e) {
+          // best-effort
+        }
       } else {
         iaResult.errors = wrapperResult.error ? [{
           code: wrapperResult.error.type || 'GENERATION_ERROR',
           message: wrapperResult.error.message || 'Erro na geração',
           source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
         }] : [];
+
+        // Telemetria (failure)
+        try {
+          const { logFailure } = require('../engine/ai/aiTelemetry');
+          logFailure({
+            domain: 'rpa_test',
+            requestId,
+            promptUsed: iaResult.meta.prompt,
+            stage: wrapperResult.error?.type || 'unknown',
+            errors: wrapperResult.validation?.errors || wrapperResult.error?.errors || iaResult.errors || [],
+          });
+        } catch (_) {}
+
+        // Auditoria (DB) best-effort
+        try {
+          const auditGenerationId = await registerGeneration({
+            tenantId,
+            payload: { userInput },
+            context: { sources: [] },
+            artifacts: { rpaTestId: wrapperResult.plan?.id || null },
+            contract: { version: '1.0.0', hash: null },
+            envelope,
+            error: wrapperResult.error || null,
+          });
+          iaResult.meta.auditGenerationId = auditGenerationId;
+        } catch (_) {
+          // best-effort
+        }
+
+        // Persistência/auditoria best-effort (falha)
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          const auditId = appendGeneration({
+            envelope,
+            valid: false,
+            domain: 'rpa_test',
+            requestId,
+          });
+          iaResult.meta.auditId = auditId;
+        } catch (e) {
+          // best-effort
+        }
       }
 
-      sendJson(res, wrapperResult.success ? 200 : 400, iaResult);
+      const response = wrapperResult.success
+        ? { envelope, rpaTest: wrapperResult.plan, ...iaResult }
+        : { envelope, error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' }, ...iaResult };
+
+      sendJson(res, wrapperResult.success ? 200 : 400, response);
     } catch (err) {
       logger.error('[API] Erro ao gerar RPA', { error: err.message, stack: err.stack });
       sendJson(res, 500, {
