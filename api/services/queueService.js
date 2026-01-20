@@ -73,8 +73,12 @@ function toDbPayload(ticket) {
     channel_type: ticket.channelType || null,
     queue: ticket.queue,
     status: ticket.status,
-    mode: ticket.mode || 'human',
+    mode: ticket.mode || 'bot',
     pause_reason: ticket.pauseReason || null,
+    takeover_at: ticket.takeoverAt ? new Date(ticket.takeoverAt) : null,
+    return_to_bot_at: ticket.returnToBotAt ? new Date(ticket.returnToBotAt) : null,
+    takeover_reason: ticket.takeoverReason || null,
+    return_reason: ticket.returnReason || null,
     first_response_at: ticket.firstResponseAt ? new Date(ticket.firstResponseAt) : null,
     resolved_at: ticket.resolvedAt ? new Date(ticket.resolvedAt) : null,
     waiting_time_seconds: Number.isFinite(ticket.waitingTimeSeconds) ? ticket.waitingTimeSeconds : null,
@@ -99,8 +103,12 @@ function fromDbRow(row) {
     channelType: row.channel_type || (row.session_id && String(row.session_id).startsWith('whatsapp_') ? 'whatsapp' : null),
     queue: row.queue,
     status: row.status,
-    mode: row.mode || 'human',
+    mode: row.mode || 'bot',
     pauseReason: row.pause_reason || null,
+    takeoverAt: row.takeover_at ? new Date(row.takeover_at).toISOString() : null,
+    returnToBotAt: row.return_to_bot_at ? new Date(row.return_to_bot_at).toISOString() : null,
+    takeoverReason: row.takeover_reason || null,
+    returnReason: row.return_reason || null,
     firstResponseAt: row.first_response_at ? new Date(row.first_response_at).toISOString() : null,
     resolvedAt: row.resolved_at ? new Date(row.resolved_at).toISOString() : null,
     waitingTimeSeconds: Number.isFinite(row.waiting_time_seconds) ? row.waiting_time_seconds : null,
@@ -260,6 +268,10 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
     // Compatibilidade: ticket implica atendimento humano por padrão
     mode: context.mode || 'human',
     pauseReason: context.pauseReason || null,
+    takeoverAt: context.takeoverAt || null,
+    returnToBotAt: context.returnToBotAt || null,
+    takeoverReason: context.takeoverReason || null,
+    returnReason: context.returnReason || null,
     createdAt: now,
     updatedAt: now,
     lastUserMessage: lastUserMessage || null,
@@ -851,30 +863,42 @@ function markMessagesAsRead(ticketId) {
  * Atualiza modo de atendimento do ticket (bot|human) e registra histórico.
  *
  * @param {string} ticketId
- * @param {{mode: 'bot'|'human', pauseReason?: string|null, actorId?: string|null, actorUsername?: string|null}} params
+ * @param {{mode: 'bot'|'human'|'paused', pauseReason?: string|null, actorId?: string|null, actorUsername?: string|null}} params
  * @returns {Ticket|null}
  */
 function setTicketMode(ticketId, params = {}) {
   const ticket = tickets.get(ticketId);
   if (!ticket) return null;
 
-  const mode = params.mode === 'bot' ? 'bot' : 'human';
+  const mode = (params.mode === 'bot' || params.mode === 'human' || params.mode === 'paused')
+    ? params.mode
+    : 'human';
   const pauseReason = params.pauseReason || null;
 
   ticket.mode = mode;
   ticket.pauseReason = pauseReason;
-  ticket.updatedAt = new Date().toISOString();
+  const nowIso = new Date().toISOString();
+  ticket.updatedAt = nowIso;
+
+  // Campos explícitos (Blip-like)
+  if (mode === 'human') {
+    ticket.takeoverAt = nowIso;
+    ticket.takeoverReason = pauseReason;
+  } else if (mode === 'bot') {
+    ticket.returnToBotAt = nowIso;
+    ticket.returnReason = pauseReason;
+  }
 
   if (!ticket.context) ticket.context = {};
   if (!Array.isArray(ticket.context.handoverHistory)) ticket.context.handoverHistory = [];
 
   ticket.context.handoverHistory.push({
-    type: mode === 'human' ? 'takeover' : 'return_to_bot',
+    type: mode === 'human' ? 'takeover' : (mode === 'bot' ? 'return_to_bot' : 'paused'),
     mode,
     reason: pauseReason,
     actorId: params.actorId || null,
     actorUsername: params.actorUsername || null,
-    timestamp: new Date().toISOString(),
+    timestamp: nowIso,
   });
 
   // Mensagem de sistema para UI/histórico do ticket
@@ -883,9 +907,11 @@ function setTicketMode(ticketId, params = {}) {
     id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     text: mode === 'human'
       ? `Atendimento assumido por humano${pauseReason ? ` (${pauseReason})` : ''}.`
-      : `Atendimento devolvido ao bot${pauseReason ? ` (${pauseReason})` : ''}.`,
+      : (mode === 'bot'
+        ? `Atendimento devolvido ao bot${pauseReason ? ` (${pauseReason})` : ''}.`
+        : `Atendimento pausado${pauseReason ? ` (${pauseReason})` : ''}.`),
     sender: 'system',
-    timestamp: new Date().toISOString(),
+    timestamp: nowIso,
   });
 
   persistTicketBestEffort(ticket);
@@ -1006,6 +1032,8 @@ function startAutoCleanup(intervalHours = 1, maxAgeDays = 7) {
   const intervalId = setInterval(() => {
     cleanupOldTickets(maxAgeDays);
   }, intervalMs);
+  // Não manter o processo vivo apenas por timers (ajuda testes/Jest e shutdown limpo)
+  if (typeof intervalId.unref === 'function') intervalId.unref();
 
   logger.info(`[QueueService] Limpeza automática iniciada: a cada ${intervalHours}h, removendo tickets fechados com mais de ${maxAgeDays} dias`);
 

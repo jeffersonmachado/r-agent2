@@ -58,6 +58,22 @@ function getTicketModel() {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      takeover_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      return_to_bot_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      takeover_reason: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      return_reason: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       first_response_at: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -120,6 +136,8 @@ function getTicketModel() {
         { fields: ['session_id'], name: 'tickets_session_id_idx' },
         { fields: ['tenant_key', 'conversation_id'], name: 'tickets_tenant_key_conversation_id_idx' },
         { fields: ['tenant_key', 'mode'], name: 'tickets_tenant_key_mode_idx' },
+        { fields: ['tenant_key', 'takeover_at'], name: 'tickets_tenant_key_takeover_at_idx' },
+        { fields: ['tenant_key', 'return_to_bot_at'], name: 'tickets_tenant_key_return_to_bot_at_idx' },
         { fields: ['tenant_key', 'first_response_at'], name: 'tickets_tenant_key_first_response_at_idx' },
         { fields: ['tenant_key', 'resolved_at'], name: 'tickets_tenant_key_resolved_at_idx' },
         { fields: ['created_at'], name: 'tickets_created_at_idx' },

@@ -236,7 +236,7 @@ async function processWhatsAppMessage(message, value, deps) {
   // - ticket.mode=human => engine não responde automaticamente
   // - ticket.mode=bot => engine continua (ticket existe, mas bot está no controle)
   const ticketMode = existingTicket ? (existingTicket.mode || 'bot') : null;
-  if (existingTicket && existingTicket.status !== 'closed' && ticketMode === 'human') {
+  if (existingTicket && existingTicket.status !== 'closed' && (ticketMode === 'human' || ticketMode === 'paused')) {
     if (replay) {
       replay.recordEvent('ticket_active', { ticketId: existingTicket.id });
       replay.stop();
@@ -270,7 +270,7 @@ async function processWhatsAppMessage(message, value, deps) {
       }, { tenantId, agentId: ticket.assignedTo });
     }
     
-    // Não processa mensagens do bot durante atendimento humano assíncrono
+    // Não processa mensagens do bot durante atendimento humano/pausado assíncrono
     // O atendente deve responder manualmente via painel
     // A mensagem já foi adicionada ao histórico e será exibida na interface
     return;

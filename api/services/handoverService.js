@@ -33,7 +33,7 @@ async function updateConversationStatusBestEffort(ticket) {
     if (!row) return;
 
     await row.update({
-      status: ticket.mode === 'human' ? 'human' : 'bot',
+      status: ticket.mode === 'human' ? 'human' : (ticket.mode === 'paused' ? 'paused' : 'bot'),
       current_ticket_id: ticket.id,
       last_message_at: new Date(),
       updated_at: new Date(),
@@ -48,7 +48,7 @@ async function takeOver(ticketId, agent, reason = 'agent_takeover') {
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
   // Se já está em humano, idempotente
-  if ((ticket.mode || 'human') === 'human') {
+  if ((ticket.mode || 'bot') === 'human') {
     // Mesmo idempotente, sincroniza status da conversa (best-effort)
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
@@ -80,7 +80,7 @@ async function returnToBot(ticketId, agent, reason = 'user_request') {
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
   // Se já está em bot, idempotente
-  if ((ticket.mode || 'human') === 'bot') {
+  if ((ticket.mode || 'bot') === 'bot') {
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
   }
@@ -103,6 +103,34 @@ async function returnToBot(ticketId, agent, reason = 'user_request') {
   return { success: true, ticket: updated };
 }
 
+async function setPaused(ticketId, agent, reason = 'outside_window') {
+  const ticket = getTicket(ticketId);
+  if (!ticket) return { success: false, error: 'ticket_not_found' };
+
+  // Idempotente
+  if ((ticket.mode || 'bot') === 'paused') {
+    await updateConversationStatusBestEffort(ticket);
+    return { success: true, ticket };
+  }
+
+  const updated = setTicketMode(ticketId, {
+    mode: 'paused',
+    pauseReason: reason || 'outside_window',
+    actorId: agent?.id || null,
+    actorUsername: agent?.username || null,
+  });
+
+  await updateConversationStatusBestEffort(updated);
+
+  emitEvent('ticket.updated', {
+    ticketId: updated.id,
+    ticket: updated,
+    change: { type: 'handover', mode: 'paused', reason: updated.pauseReason || null },
+  }, { tenantId: updated.tenantId, agentId: updated.assignedTo || agent?.id });
+
+  return { success: true, ticket: updated };
+}
+
 let autoReturnTimer = null;
 
 function startAutoReturnToBot({ inactivityMinutes = 30, intervalMs = 15000 } = {}) {
@@ -120,7 +148,7 @@ function startAutoReturnToBot({ inactivityMinutes = 30, intervalMs = 15000 } = {
       const now = Date.now();
       for (const t of tickets) {
         if (!t || t.status === 'closed') continue;
-        if ((t.mode || 'human') !== 'human') continue;
+        if ((t.mode || 'bot') !== 'human') continue;
 
         const last = new Date(t.updatedAt || t.createdAt || 0).getTime();
         if (!last) continue;
@@ -148,6 +176,7 @@ function stopAutoReturnToBot() {
 module.exports = {
   takeOver,
   returnToBot,
+  setPaused,
   startAutoReturnToBot,
   stopAutoReturnToBot,
 };

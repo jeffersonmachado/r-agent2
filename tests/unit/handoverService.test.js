@@ -58,5 +58,27 @@ describe('handoverService', () => {
     expect(res.ticket.mode).toBe('bot');
     expect(emitEvent).toHaveBeenCalled();
   });
+
+  test('setPaused muda ticket.mode para paused (idempotente) e emite evento', async () => {
+    const ticket = { id: 't1', tenantId: 'tenant-1', mode: 'bot', assignedTo: 'a1' };
+    const updatedTicket = { ...ticket, mode: 'paused', pauseReason: 'outside_window', context: { handoverHistory: [] }, messages: [] };
+
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
+    jest.doMock('../../api/db/models', () => ({}));
+    jest.doMock('../../api/services/queueService', () => ({
+      getTicket: jest.fn(() => ticket),
+      setTicketMode: jest.fn(() => updatedTicket),
+    }));
+    const emitEvent = jest.fn();
+    jest.doMock('../../api/services/websocketService', () => ({ emitEvent }));
+
+    // eslint-disable-next-line global-require
+    const { setPaused } = require('../../api/services/handoverService');
+
+    const res = await setPaused('t1', { id: 'a1', username: 'agent1' }, 'outside_window');
+    expect(res.success).toBe(true);
+    expect(res.ticket.mode).toBe('paused');
+    expect(emitEvent).toHaveBeenCalled();
+  });
 });
 

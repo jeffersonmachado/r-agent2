@@ -168,7 +168,7 @@ const channelNormalizationService = require('./services/channelNormalizationServ
 const channelGatewayService = require('./services/channelGatewayService');
 const outboundWorker = require('./services/outboundWorker');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
-const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, startAutoReturnToBot } = require('./services/handoverService');
+const { takeOver: takeOverTicket, returnToBot: returnTicketToBot, setPaused: pauseTicket, startAutoReturnToBot } = require('./services/handoverService');
 const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = require('./services/conversationTicketLinkService');
 const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./services/assignmentService');
 const queueDefinitionService = require('./services/queueDefinitionService');
@@ -5795,6 +5795,65 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /tickets/:id/pause - Pausar atendimento (ex.: fora janela 24h / compliance)
+  if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/pause')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/tickets/'.length, -'/pause'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    // Valida tenant
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    let reason = 'outside_window';
+    if (hasJsonContentType(req)) {
+      try {
+        const body = await parseJsonBody(req);
+        if (body?.reason) reason = String(body.reason);
+      } catch (e) {
+        // ignora
+      }
+    }
+
+    const result = await pauseTicket(id, req.agent, reason);
+    if (!result.success) {
+      sendJson(res, 400, { error: result.error || 'handover_failed' });
+      return;
+    }
+
+    logAction({
+      agentId: req.agent.id,
+      username: req.agent.username,
+      tenantId: req.tenantId,
+      action: 'ticket_pause',
+      resource: 'ticket',
+      resourceId: id,
+      details: { reason },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    });
+
+    sendJson(res, 200, result.ticket);
+    return;
+  }
+
   // POST /tickets/:id/close - Fecha um ticket
   if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/close')) {
     const authResult = requireAuth(req);
@@ -6796,7 +6855,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
                 const effectiveTicket = updatedTicket || ticket;
 
                 // 3) Se há ticket em modo humano, NÃO roda engine; apenas registra mensagem e notifica UI
-                if (effectiveTicket && effectiveTicket.status !== 'closed' && (effectiveTicket.mode || 'bot') === 'human') {
+                if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
                   try {
                     emitEvent('ticket.message.received', {
                       ticketId: effectiveTicket.id,
@@ -7009,7 +7068,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
             const effectiveTicket = updatedTicket || ticket;
 
             // 3) Se ticket em modo humano, NÃO roda engine; apenas notifica UI
-            if (effectiveTicket && effectiveTicket.status !== 'closed' && (effectiveTicket.mode || 'bot') === 'human') {
+            if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
               try {
                 emitEvent('ticket.message.received', {
                   ticketId: effectiveTicket.id,
