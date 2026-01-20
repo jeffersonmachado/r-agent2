@@ -1679,7 +1679,26 @@ async function requestHandler(req, res) {
     }
 
     if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
+      try {
+        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+          ? String(req.headers['x-request-id']).trim()
+          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'INVALID_CONTENT_TYPE', message: 'Content-Type deve ser application/json' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INVALID_CONTENT_TYPE'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: null, context: {} },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 400, { envelope, error: { code: 'INVALID_CONTENT_TYPE', message: 'Content-Type deve ser application/json' } });
+      } catch (_) {
+        badRequest(res, 'Content-Type deve ser application/json');
+      }
       return;
     }
 
@@ -1688,9 +1707,28 @@ async function requestHandler(req, res) {
       const { description, create = false } = body;
 
       if (!description || typeof description !== 'string' || description.trim().length === 0) {
-        badRequest(res, 'Descrição é obrigatória');
+        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+          ? String(req.headers['x-request-id']).trim()
+          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'INVALID_INPUT', message: 'Descrição é obrigatória' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INVALID_INPUT'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: null, context: {} },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 400, { envelope, error: { code: 'INVALID_INPUT', message: 'Descrição é obrigatória' } });
         return;
       }
+
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
       // Usa tenant 'system' para geração por IA
       const systemTenantId = 'system';
@@ -1720,8 +1758,38 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       logger.info('[Tenants] Gerando tenant por IA', { description: description.substring(0, 100) });
 
-      const aiResult = await generateAiResponse(prompt, systemTenantId, {});
-      const aiText = aiResult.text || '';
+      let aiText = '';
+      try {
+        const aiResult = await generateAiResponse(prompt, systemTenantId, {});
+        aiText = aiResult.text || '';
+      } catch (providerErr) {
+        // Sempre retorna envelope + erro (mesmo sem provider configurado)
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'AI_PROVIDER_ERROR', message: providerErr.message || 'Falha ao chamar provider de IA' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['AI_PROVIDER_ERROR'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: description, context: { tenantId: 'system' } },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+          rawModelOutput: null,
+        }));
+
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          appendGeneration({ envelope, valid: false, domain: 'tenant', requestId });
+        } catch (_) {}
+        try {
+          const { logFailure } = require('../engine/ai/aiTelemetry');
+          logFailure({ domain: 'tenant', requestId, promptUsed: 'tenants.generate-by-ai', stage: 'AI_PROVIDER_ERROR', errors: [{ message: providerErr.message }] });
+        } catch (_) {}
+
+        sendJson(res, 500, { envelope, error: { code: 'AI_PROVIDER_ERROR', message: providerErr.message || 'Falha ao chamar provider de IA' } });
+        return;
+      }
 
       // Tenta extrair JSON da resposta da IA
       let tenantData;
@@ -1738,19 +1806,39 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           aiText, 
           error: parseError.message 
         });
-        sendJson(res, 500, { 
-          error: 'Erro ao processar resposta da IA',
-          details: 'A IA não retornou um JSON válido. Tente novamente com uma descrição mais detalhada.'
-        });
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'AI_OUTPUT_PARSE_ERROR', message: parseError.message || 'Falha ao parsear JSON do modelo' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['AI_OUTPUT_PARSE_ERROR'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: description, context: { tenantId: 'system', raw_model_output: aiText } },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+          rawModelOutput: aiText,
+        }));
+        sendJson(res, 500, { envelope, error: { code: 'AI_OUTPUT_PARSE_ERROR', message: 'A IA não retornou um JSON válido. Tente novamente com uma descrição mais detalhada.' } });
         return;
       }
 
       // Valida dados gerados
       if (!tenantData.name || !tenantData.ramo_atividade || !tenantData.objetivo) {
-        sendJson(res, 500, { 
-          error: 'Dados incompletos',
-          details: 'A IA não gerou todos os campos necessários. Tente novamente.'
-        });
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'AI_OUTPUT_INCOMPLETE', message: 'A IA não gerou todos os campos necessários' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['AI_OUTPUT_INCOMPLETE'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: description, context: { tenantId: 'system', raw_model_output: aiText } },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+          rawModelOutput: aiText,
+        }));
+        sendJson(res, 500, { envelope, error: { code: 'AI_OUTPUT_INCOMPLETE', message: 'A IA não gerou todos os campos necessários. Tente novamente.' } });
         return;
       }
 
@@ -1792,10 +1880,6 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sendJson(res, 409, { error: 'tenant_key_conflict', message: 'Não foi possível gerar tenant_key único' });
         return;
       }
-
-      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
-        ? String(req.headers['x-request-id']).trim()
-        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
       const draftRes = createTenantAiDraft(tenantData, {
         tenantContractPath: 'contracts/tenant.contract.json',
@@ -7203,7 +7287,22 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const { userInput, options = {} } = body || {};
 
       if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
-        badRequest(res, 'Campo "userInput" é obrigatório e deve ser uma string não vazia');
+        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+          ? String(req.headers['x-request-id']).trim()
+          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('chatbot_flow', {}, {
+          valid: false,
+          errors: [{ type: 'INVALID_INPUT', message: 'Campo \"userInput\" é obrigatório e deve ser uma string não vazia' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INVALID_INPUT'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'chatbot.generator.prompt.md', user_goal: null, context: { tenantId, options } },
+          audit: { request_id: requestId, seed: null, tenant_id: tenantId, user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 400, { envelope, error: { code: 'INVALID_INPUT', message: 'Campo "userInput" é obrigatório e deve ser uma string não vazia' } });
         return;
       }
 
@@ -7367,20 +7466,26 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, wrapperResult.success ? 200 : 400, response);
     } catch (err) {
       logger.error('[API] Erro ao gerar chatbot', { error: err.message, stack: err.stack });
-      sendJson(res, 500, {
-        success: false,
-        domain: 'chatbot',
-        meta: {
-          prompt: 'chatbot.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        },
-        errors: [{
-          code: 'INTERNAL_ERROR',
-          message: err.message || 'Erro interno ao gerar chatbot',
-          source: 'validator'
-        }]
-      });
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      try {
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('chatbot_flow', {}, {
+          valid: false,
+          errors: [{ type: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar chatbot' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INTERNAL_ERROR'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'chatbot.generator.prompt.md', user_goal: null, context: {} },
+          audit: { request_id: requestId, seed: null, tenant_id: req.tenantId || null, user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 500, { envelope, error: { code: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar chatbot' } });
+      } catch (_) {
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar chatbot' });
+      }
     }
     return;
   }
@@ -7405,7 +7510,22 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const { userInput, options = {} } = body || {};
 
       if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
-        badRequest(res, 'Campo "userInput" é obrigatório e deve ser uma string não vazia');
+        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+          ? String(req.headers['x-request-id']).trim()
+          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('rpa_test', {}, {
+          valid: false,
+          errors: [{ type: 'INVALID_INPUT', message: 'Campo \"userInput\" é obrigatório e deve ser uma string não vazia' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INVALID_INPUT'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'rpa.generator.prompt.md', user_goal: null, context: { tenantId, options } },
+          audit: { request_id: requestId, seed: null, tenant_id: tenantId, user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 400, { envelope, error: { code: 'INVALID_INPUT', message: 'Campo "userInput" é obrigatório e deve ser uma string não vazia' } });
         return;
       }
 
@@ -7567,20 +7687,26 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, wrapperResult.success ? 200 : 400, response);
     } catch (err) {
       logger.error('[API] Erro ao gerar RPA', { error: err.message, stack: err.stack });
-      sendJson(res, 500, {
-        success: false,
-        domain: 'rpa',
-        meta: {
-          prompt: 'rpa.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        },
-        errors: [{
-          code: 'INTERNAL_ERROR',
-          message: err.message || 'Erro interno ao gerar RPA',
-          source: 'validator'
-        }]
-      });
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      try {
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('rpa_test', {}, {
+          valid: false,
+          errors: [{ type: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar RPA' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INTERNAL_ERROR'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'rpa.generator.prompt.md', user_goal: null, context: {} },
+          audit: { request_id: requestId, seed: null, tenant_id: req.tenantId || null, user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 500, { envelope, error: { code: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar RPA' } });
+      } catch (_) {
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar RPA' });
+      }
     }
     return;
   }
