@@ -10,6 +10,7 @@ import {
   createTicket,
   takeOverTicket,
   returnToBotTicket,
+  pauseTicket,
   getTicketAiSummary,
   generateTicketAiSummary,
 } from '../api/tickets';
@@ -17,6 +18,7 @@ import { getConversationMessages } from '../api/conversations';
 import { listQuickReplies, searchQuickReplies, useQuickReply } from '../api/quickReplies';
 import { listCloseReasons } from '../api/closeReasons';
 import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
+import { queryAuditLogs } from '../api/audit';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -56,6 +58,9 @@ export function SupportPage() {
   const [quickReplySuggestions, setQuickReplySuggestions] = useState([]);
   const [quickReplySlashResults, setQuickReplySlashResults] = useState([]);
   const [quickReplySlashOpen, setQuickReplySlashOpen] = useState(false);
+  const [quickReplyCategories, setQuickReplyCategories] = useState([]);
+  const [quickReplySelectedCategory, setQuickReplySelectedCategory] = useState('');
+  const [quickReplyCategoryItems, setQuickReplyCategoryItems] = useState([]);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closingTicketId, setClosingTicketId] = useState(null);
   const [closeReasons, setCloseReasons] = useState([]);
@@ -69,6 +74,8 @@ export function SupportPage() {
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [conversationMessages, setConversationMessages] = useState([]);
   const [timelineMessages, setTimelineMessages] = useState([]);
+  const [ticketAuditLogs, setTicketAuditLogs] = useState([]);
+  const [ticketAuditLoading, setTicketAuditLoading] = useState(false);
 
   const applyTemplateVariables = useCallback((text, variables) => {
     if (!text) return '';
@@ -127,7 +134,7 @@ export function SupportPage() {
       return;
     }
     const q = txt.slice(1);
-    listQuickReplies({ search: q, activeOnly: true })
+    listQuickReplies({ search: q, activeOnly: true, category: quickReplySelectedCategory || undefined })
       .then((resp) => {
         const list = resp?.quickReplies || [];
         setQuickReplySlashResults(list.slice(0, 8));
@@ -309,7 +316,13 @@ export function SupportPage() {
 
   const insertQuickReply = useCallback(async (reply) => {
     if (!reply) return;
-    const variables = selectedTicket?.context?.variables || {};
+    const baseVars = selectedTicket?.context?.variables || {};
+    const variables = {
+      ...baseVars,
+      ticketId: selectedTicket?.id || '',
+      telefone: selectedTicket?.phoneNumber || '',
+      fila: selectedTicket?.queue || '',
+    };
     const rendered = applyTemplateVariables(reply.message || '', variables);
 
     setMessageText((prev) => {
@@ -323,6 +336,42 @@ export function SupportPage() {
     setQuickReplySlashResults([]);
     try { await useQuickReply(reply.id); } catch {}
   }, [applyTemplateVariables, selectedTicket]);
+
+  useEffect(() => {
+    // Carrega categorias (best-effort) para quick replies
+    // (para o operador filtrar por categoria no console)
+    import('../api/quickReplies')
+      .then((m) => m.getCategories())
+      .then((resp) => setQuickReplyCategories(resp?.categories || []))
+      .catch(() => setQuickReplyCategories([]));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTicket || selectedTicket.status !== 'in_progress') {
+      setQuickReplyCategoryItems([]);
+      return;
+    }
+    // Carrega quick replies da categoria escolhida (best-effort)
+    listQuickReplies({
+      category: quickReplySelectedCategory || undefined,
+      activeOnly: true,
+    })
+      .then((resp) => setQuickReplyCategoryItems((resp?.quickReplies || []).slice(0, 12)))
+      .catch(() => setQuickReplyCategoryItems([]));
+  }, [selectedTicket?.id, selectedTicket?.status, quickReplySelectedCategory]);
+
+  useEffect(() => {
+    // Auditoria do ticket (visível no console)
+    if (!selectedTicket?.id) {
+      setTicketAuditLogs([]);
+      return;
+    }
+    setTicketAuditLoading(true);
+    queryAuditLogs({ resource: 'ticket', resourceId: selectedTicket.id, limit: 50, offset: 0 })
+      .then((resp) => setTicketAuditLogs(resp?.items || resp?.logs || []))
+      .catch(() => setTicketAuditLogs([]))
+      .finally(() => setTicketAuditLoading(false));
+  }, [selectedTicket?.id]);
 
   const updateTicketLocal = useCallback((ticket) => {
     if (!ticket?.id) return;
@@ -1010,6 +1059,9 @@ export function SupportPage() {
       showToastRef.current('Atendimento assumido (modo humano)', 'success', 2500);
       setSelectedTicket(updated);
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      if (loadTicketsRef.current) {
+        loadTicketsRef.current();
+      }
       if (loadTicketMessagesRef.current) {
         loadTicketMessagesRef.current(updated.id);
       }
@@ -1029,12 +1081,37 @@ export function SupportPage() {
       showToastRef.current('Atendimento devolvido ao bot (modo bot)', 'success', 2500);
       setSelectedTicket(updated);
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      if (loadTicketsRef.current) {
+        loadTicketsRef.current();
+      }
       if (loadTicketMessagesRef.current) {
         loadTicketMessagesRef.current(updated.id);
       }
     } catch (error) {
       logger.error('Erro ao devolver ao bot', error);
       showToast('Erro ao devolver ao bot', 'error');
+    } finally {
+      setHandoverLoading(false);
+    }
+  };
+
+  const handlePause = async () => {
+    if (!selectedTicket) return;
+    setHandoverLoading(true);
+    try {
+      const updated = await pauseTicket(selectedTicket.id, 'outside_window');
+      showToastRef.current('Atendimento pausado', 'success', 2500);
+      setSelectedTicket(updated);
+      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      if (loadTicketsRef.current) {
+        loadTicketsRef.current();
+      }
+      if (loadTicketMessagesRef.current) {
+        loadTicketMessagesRef.current(updated.id);
+      }
+    } catch (error) {
+      logger.error('Erro ao pausar atendimento', error);
+      showToast('Erro ao pausar atendimento', 'error');
     } finally {
       setHandoverLoading(false);
     }
@@ -1062,6 +1139,13 @@ export function SupportPage() {
     if (status === 'waiting') return 'waiting';
     if (status === 'in_progress') return 'in_progress';
     return 'closed';
+  };
+
+  const getModeLabel = (mode) => {
+    const m = (mode || 'bot');
+    if (m === 'human') return { label: 'HUMANO', bg: '#fff7ed', fg: '#9a3412' };
+    if (m === 'paused') return { label: 'PAUSADO', bg: '#f3f4f6', fg: '#374151' };
+    return { label: 'BOT', bg: '#ecfdf5', fg: '#065f46' };
   };
 
   return (
@@ -1181,6 +1265,21 @@ export function SupportPage() {
                           ? 'Em atendimento'
                           : 'Fechado'}
                     </span>
+                    <span
+                      style={{
+                        marginLeft: '8px',
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        border: '1px solid #ddd',
+                        background: getModeLabel(ticket.mode).bg,
+                        color: getModeLabel(ticket.mode).fg,
+                      }}
+                      aria-label={`Modo: ${(ticket.mode || 'bot') === 'human' ? 'HUMANO' : 'BOT'}`}
+                      title="Modo do ticket"
+                    >
+                      {getModeLabel(ticket.mode).label}
+                    </span>
                   </div>
                   <div className="support-ticket-phone" aria-label={`Telefone: ${formatPhoneNumber(ticket.phoneNumber)}`}>
                     📞 {formatPhoneNumber(ticket.phoneNumber)}
@@ -1232,168 +1331,56 @@ export function SupportPage() {
         <div className="support-details-panel">
           {selectedTicket ? (
             <>
-              <div style={{ flexShrink: 0 }}>
-                <h3 className="support-details-title">
-                  Ticket #{selectedTicket.id.slice(0, 12)}
-                  {selectedTicket.unreadCount > 0 && (
-                    <span style={{
-                      marginLeft: '10px',
-                      background: '#e74c3c',
-                      color: 'white',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: 'normal'
-                    }}>
-                      {selectedTicket.unreadCount} nova(s)
-                    </span>
-                  )}
-                </h3>
-                <div className="support-details-info">
-                  <div>Fila: <strong>{selectedTicket.queue}</strong></div>
-                  <div>Telefone: <strong>{formatPhoneNumber(selectedTicket.phoneNumber)}</strong></div>
-                  <div>Status: <strong>{selectedTicket.status}</strong></div>
-                  <div>
-                    Modo: <strong>{(selectedTicket.mode || 'human') === 'human' ? 'Humano' : 'Bot'}</strong>
-                    {selectedTicket.pauseReason ? (
-                      <span style={{ color: '#666' }}> • Motivo: {selectedTicket.pauseReason}</span>
+              <div style={{ display: 'flex', gap: '14px', minHeight: 0 }}>
+                {/* Coluna principal (timeline + ações) */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ flexShrink: 0 }}>
+                    <h3 className="support-details-title">
+                      Ticket #{selectedTicket.id.slice(0, 12)}
+                      {selectedTicket.unreadCount > 0 && (
+                        <span style={{
+                          marginLeft: '10px',
+                          background: '#e74c3c',
+                          color: 'white',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'normal'
+                        }}>
+                          {selectedTicket.unreadCount} nova(s)
+                        </span>
+                      )}
+                    </h3>
+                  </div>
+
+                  {/* Handover Bot <-> Humano */}
+                  <div style={{ flexShrink: 0, display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                    {(selectedTicket.mode || 'bot') === 'bot' ? (
+                      <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-button-full">
+                        Assumir atendimento
+                      </Button>
+                    ) : null}
+                    {(selectedTicket.mode || 'bot') === 'human' ? (
+                      <>
+                        <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">
+                          Devolver ao bot
+                        </Button>
+                        <Button onClick={handlePause} disabled={handoverLoading} className="support-button-full">
+                          Pausar
+                        </Button>
+                      </>
+                    ) : null}
+                    {(selectedTicket.mode || 'bot') === 'paused' ? (
+                      <>
+                        <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-button-full">
+                          Retomar (humano)
+                        </Button>
+                        <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">
+                          Devolver ao bot
+                        </Button>
+                      </>
                     ) : null}
                   </div>
-                  {selectedTicket?.context?.closeReasonName ? (
-                    <div>Último encerramento: <strong>{selectedTicket.context.closeReasonName}</strong></div>
-                  ) : null}
-                  {selectedTicket.conversationId ? (
-                    <div>ConversationId: <strong>{selectedTicket.conversationId}</strong></div>
-                  ) : null}
-                  {selectedTicket.channelType ? (
-                    <div>Canal: <strong>{selectedTicket.channelType}</strong></div>
-                  ) : null}
-                  <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
-                </div>
-
-                {/* Tags */}
-                <div style={{ marginTop: '10px' }}>
-                  <div style={{ fontWeight: 600, marginBottom: '6px' }}>Tags</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-                    {(selectedTicket.tags || []).length === 0 ? (
-                      <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
-                    ) : (
-                      (selectedTicket.tags || []).map((t) => (
-                        <span
-                          key={t}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '4px 10px',
-                            borderRadius: '999px',
-                            border: '1px solid var(--color-border-default)',
-                            background: 'var(--color-bg-secondary)',
-                            fontSize: '12px',
-                          }}
-                        >
-                          {t}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTag(t)}
-                            style={{
-                              border: 'none',
-                              background: 'transparent',
-                              cursor: 'pointer',
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                            aria-label={`Remover tag ${t}`}
-                            title="Remover"
-                          >
-                            ✕
-                          </button>
-                        </span>
-                      ))
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      placeholder="Adicionar tag (ex: cobrança)"
-                      className="support-form-input"
-                      list="support-known-tags"
-                    />
-                    <datalist id="support-known-tags">
-                      {knownTags.slice(0, 50).map((t) => (
-                        <option key={t} value={t} />
-                      ))}
-                    </datalist>
-                    <Button onClick={handleAddTag} style={{ width: 'auto' }}>
-                      Adicionar
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Entidades/variáveis extraídas */}
-                <div style={{ marginTop: '14px' }}>
-                  <div style={{ fontWeight: 600, marginBottom: '6px' }}>Entidades extraídas</div>
-                  {selectedTicket?.context?.variables && typeof selectedTicket.context.variables === 'object' && Object.keys(selectedTicket.context.variables).length > 0 ? (
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                      {Object.entries(selectedTicket.context.variables).slice(0, 12).map(([k, v]) => (
-                        <div key={k} style={{ marginBottom: '4px' }}>
-                          <strong>{k}</strong>: {typeof v === 'string' ? v : JSON.stringify(v)}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Nenhuma variável disponível</div>
-                  )}
-                </div>
-
-                {/* Resumo IA */}
-                <div style={{ marginTop: '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                    <div style={{ fontWeight: 600 }}>Resumo IA</div>
-                    <Button onClick={handleGenerateAiSummary} disabled={aiSummaryLoading} style={{ width: 'auto' }}>
-                      {aiSummaryLoading ? 'Gerando...' : (aiSummary?.text ? 'Atualizar' : 'Gerar')}
-                    </Button>
-                  </div>
-                  {aiSummary?.text ? (
-                    <pre style={{
-                      margin: 0,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      fontSize: '12px',
-                      background: 'var(--color-bg-secondary)',
-                      border: '1px solid var(--color-border-default)',
-                      borderRadius: '10px',
-                      padding: '10px',
-                      color: 'var(--color-text-primary)',
-                    }}>
-                      {aiSummary.text}
-                    </pre>
-                  ) : (
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                      Nenhum resumo ainda. Clique em “Gerar”.
-                    </div>
-                  )}
-                  {aiSummary?.generatedAt ? (
-                    <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
-                      Gerado em {formatDate(aiSummary.generatedAt)}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Handover Bot <-> Humano */}
-              <div style={{ flexShrink: 0, display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                {(selectedTicket.mode || 'human') === 'bot' ? (
-                  <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-button-full">
-                    Assumir atendimento
-                  </Button>
-                ) : (
-                  <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">
-                    Devolver ao bot
-                  </Button>
-                )}
-              </div>
 
               {/* Histórico de handover (últimos 5) */}
               {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 && (
@@ -1409,8 +1396,8 @@ export function SupportPage() {
                 </div>
               )}
 
-              {/* Histórico de Mensagens */}
-              {selectedTicket.status === 'in_progress' && (
+                  {/* Histórico de Mensagens */}
+                  {selectedTicket.status === 'in_progress' && (
                 <div style={{
                   marginTop: '20px',
                   marginBottom: '20px',
@@ -1478,10 +1465,10 @@ export function SupportPage() {
                     )}
                   </div>
                 </div>
-              )}
+                  )}
 
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {selectedTicket.status === 'waiting' && (
+                  <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {selectedTicket.status === 'waiting' && (
                   <div className="support-form-group">
                     <label htmlFor="assign-ticket-input" className="support-form-label">
                       Atribuir para:
@@ -1505,13 +1492,58 @@ export function SupportPage() {
                       Atribuir Ticket
                     </Button>
                   </div>
-                )}
+                    )}
 
-                {selectedTicket.status === 'in_progress' && (
+                    {selectedTicket.status === 'in_progress' && (
                   <div className="support-form-group">
                     <label htmlFor="send-message-textarea" className="support-form-label">
                       Enviar mensagem:
                     </label>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Quick Replies</div>
+                      <select
+                        value={quickReplySelectedCategory}
+                        onChange={(e) => setQuickReplySelectedCategory(e.target.value)}
+                        className="support-form-select"
+                        style={{ maxWidth: '280px' }}
+                        aria-label="Filtrar quick replies por categoria"
+                      >
+                        <option value="">Todas as categorias</option>
+                        {quickReplyCategories.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {(quickReplyCategoryItems.length > 0) && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginBottom: '6px' }}>
+                          Atalhos por categoria
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {quickReplyCategoryItems.map((qr) => (
+                            <button
+                              key={qr.id}
+                              type="button"
+                              onClick={() => insertQuickReply(qr)}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '999px',
+                                border: '1px solid var(--color-border-default)',
+                                background: 'var(--color-bg-secondary)',
+                                color: 'var(--color-text-primary)',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                              }}
+                              title={qr.message}
+                            >
+                              {qr.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {(quickReplySuggestions.length > 0) && (
                       <div style={{ marginBottom: '10px' }}>
                         <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginBottom: '6px' }}>
@@ -1606,15 +1638,151 @@ export function SupportPage() {
                       Pressione Ctrl+Enter (ou Cmd+Enter no Mac) para enviar
                     </small>
                   </div>
-                )}
+                    )}
 
-                <Button
-                  onClick={() => handleClose(selectedTicket.id)}
-                  className="support-button-danger"
-                  aria-label="Fechar ticket"
-                >
-                  Fechar Ticket
-                </Button>
+                    <Button
+                      onClick={() => handleClose(selectedTicket.id)}
+                      className="support-button-danger"
+                      aria-label="Fechar ticket"
+                    >
+                      Fechar Ticket
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Sidebar (console do operador) */}
+                <div style={{ width: '340px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontWeight: 700 }}>Contato</div>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        border: '1px solid #ddd',
+                        background: getModeLabel(selectedTicket.mode).bg,
+                        color: getModeLabel(selectedTicket.mode).fg,
+                      }}>
+                        {getModeLabel(selectedTicket.mode).label}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                      <div>📞 <strong>{formatPhoneNumber(selectedTicket.phoneNumber)}</strong></div>
+                      <div>Fila: <strong>{selectedTicket.queue}</strong></div>
+                      <div>Status: <strong>{selectedTicket.status}</strong></div>
+                      {selectedTicket.pauseReason ? (
+                        <div>Motivo: <strong>{selectedTicket.pauseReason}</strong></div>
+                      ) : null}
+                      {selectedTicket?.context?.closeReasonName ? (
+                        <div>Close reason: <strong>{selectedTicket.context.closeReasonName}</strong></div>
+                      ) : null}
+                      {selectedTicket.channelType ? <div>Canal: <strong>{selectedTicket.channelType}</strong></div> : null}
+                      {selectedTicket.conversationId ? <div>ConversationId: <code>{selectedTicket.conversationId}</code></div> : null}
+                      <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                      {(selectedTicket.tags || []).length === 0 ? (
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
+                      ) : (
+                        (selectedTicket.tags || []).map((t) => (
+                          <span
+                            key={t}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              border: '1px solid var(--color-border-default)',
+                              background: 'var(--color-bg-secondary)',
+                              fontSize: '12px',
+                            }}
+                          >
+                            {t}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTag(t)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                color: 'var(--color-text-tertiary)',
+                              }}
+                              aria-label={`Remover tag ${t}`}
+                              title="Remover"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        placeholder="Adicionar tag (ex: cobrança)"
+                        className="support-form-input"
+                        list="support-known-tags"
+                      />
+                      <Button onClick={handleAddTag} style={{ width: 'auto' }}>
+                        Adicionar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
+                    <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                      <div style={{ fontWeight: 700, marginBottom: '8px' }}>Handover & atribuições</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        {selectedTicket.context.handoverHistory.slice(-8).reverse().map((h, idx) => (
+                          <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
+                            <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</div>
+                            <div>
+                              <strong>{h.type}</strong> • {h.mode}
+                              {h.actorUsername ? ` • ${h.actorUsername}` : ''}
+                              {h.reason ? ` • ${h.reason}` : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontWeight: 700 }}>Auditoria</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                        {ticketAuditLoading ? 'Carregando…' : `${ticketAuditLogs.length} item(ns)`}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                      {ticketAuditLoading ? (
+                        <div>Carregando…</div>
+                      ) : (ticketAuditLogs.length === 0 ? (
+                        <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
+                      ) : (
+                        ticketAuditLogs.map((l, idx) => (
+                          <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                              <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
+                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(l.timestamp || l.createdAt)}</div>
+                            </div>
+                            <div style={{ marginTop: '4px' }}>
+                              {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
+                              {l.details ? <span style={{ color: 'var(--color-text-tertiary)' }}> • {typeof l.details === 'string' ? l.details : JSON.stringify(l.details)}</span> : null}
+                            </div>
+                          </div>
+                        ))
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           ) : (

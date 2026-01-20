@@ -213,6 +213,23 @@ export function returnToBotTicket(ticketId, reason = 'user_request') {
 }
 
 /**
+ * Pausar atendimento (modo paused).
+ *
+ * @param {string} ticketId
+ * @param {string} [reason]
+ * @returns {Promise<any>}
+ */
+export function pauseTicket(ticketId, reason = 'outside_window') {
+  if (!ticketId) {
+    return Promise.reject(new Error('pauseTicket: ticketId é obrigatório'));
+  }
+  return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/pause`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+/**
  * Envia mensagem do atendente para o usuário via WhatsApp.
  *
  * @param {string} ticketId
