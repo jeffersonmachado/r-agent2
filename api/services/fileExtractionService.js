@@ -63,6 +63,65 @@ async function extractPdfText(buffer, options = {}) {
 }
 
 /**
+ * Extrai texto de imagem via OCR (tesseract.js).
+ *
+ * @param {Buffer} buffer
+ * @param {{ timeoutMs?: number }} [options]
+ * @returns {Promise<{ text: string, warnings: Array<{code: string, message: string, details?: any}> }>}
+ */
+async function extractImageTextOcr(buffer, options = {}) {
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 15000;
+  /** @type {Array<{code: string, message: string, details?: any}>} */
+  const warnings = [];
+
+  let createWorker;
+  try {
+    // eslint-disable-next-line global-require
+    ({ createWorker } = require('tesseract.js'));
+  } catch (err) {
+    warnings.push({
+      code: 'OCR_FAILED',
+      message: 'tesseract.js não está disponível para OCR.',
+      details: { error: err.message },
+    });
+    return { text: '', warnings };
+  }
+
+  const run = async () => {
+    const worker = await createWorker();
+    try {
+      // por+eng cobre PT-BR e alguns casos mistos
+      await worker.loadLanguage('por+eng');
+      await worker.initialize('por+eng');
+      const res = await worker.recognize(buffer);
+      const text = res?.data?.text ? String(res.data.text).trim() : '';
+      if (!text) {
+        warnings.push({
+          code: 'OCR_NO_TEXT',
+          message: 'OCR executado, mas nenhum texto foi encontrado na imagem.',
+        });
+      }
+      return text;
+    } finally {
+      try { await worker.terminate(); } catch { /* ignora */ }
+    }
+  };
+
+  try {
+    const text = await withTimeout(run(), timeoutMs, 'OCR');
+    return { text, warnings };
+  } catch (err) {
+    warnings.push({
+      code: 'OCR_FAILED',
+      message: 'Falha ao executar OCR na imagem.',
+      details: { error: err.message || String(err) },
+    });
+    logger.warn('[FileExtraction] OCR failed', { error: err.message });
+    return { text: '', warnings };
+  }
+}
+
+/**
  * Extração de texto por tipo de arquivo.
  *
  * @param {{ buffer: Buffer, mimeType: string, filename: string }} file
@@ -89,14 +148,20 @@ async function extractTextFromFile(file, options = {}) {
     return { extractedText: pdf.text, warnings };
   }
 
-  // OCR será implementado no próximo commit (mantém pipeline robusto)
   if (mimeType.startsWith('image/')) {
-    warnings.push({
-      code: 'OCR_DISABLED',
-      message: 'OCR ainda não foi executado para esta imagem. Indexando metadados mínimos.',
-      details: { mimeType, filename },
-    });
-    return { extractedText: '', warnings };
+    const useOcr = options.useOcr === true;
+    if (!useOcr) {
+      warnings.push({
+        code: 'OCR_DISABLED',
+        message: 'OCR está desabilitado (USE_OCR!=true). Indexando metadados mínimos.',
+        details: { mimeType, filename },
+      });
+      return { extractedText: '', warnings };
+    }
+
+    const ocr = await extractImageTextOcr(file.buffer, { timeoutMs });
+    warnings.push(...ocr.warnings);
+    return { extractedText: ocr.text, warnings };
   }
 
   // Texto simples (best-effort)
@@ -125,5 +190,6 @@ async function extractTextFromFile(file, options = {}) {
 module.exports = {
   extractTextFromFile,
   extractPdfText,
+  extractImageTextOcr,
 };
 
