@@ -41,6 +41,7 @@ function buildApiError({ code, message, httpStatus, retryable = false, details =
   const traceId = (req && req.id) ? String(req.id) : null;
   const safeTraceId = traceId && traceId.trim() ? traceId.trim() : 'unknown';
   return {
+    ok: false,
     success: false,
     error: {
       code: code || 'INTERNAL_ERROR',

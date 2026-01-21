@@ -3,6 +3,7 @@ import { scrapeUrl, scrapeUrls } from '../api/webScraping';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
+import { toastError, toastWarn } from '../utils/toastHelpers';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
 
@@ -138,6 +139,14 @@ export function WebScrapingPage() {
         }));
 
         showToast(`URL raspada com sucesso! ${result.indexed ? `${result.chunksCreated} chunks criados.` : ''}`, 'success');
+        if (Array.isArray(result?.warnings) && result.warnings.length > 0) {
+          toastWarn(
+            showToast,
+            'Extração parcial no web scraping',
+            'Houve avisos durante a extração. Continuamos com o melhor conteúdo disponível.',
+            { warnings: result.warnings, url: result.url }
+          );
+        }
         setResults([result]);
         setUrl('');
       } catch (error) {
@@ -148,7 +157,7 @@ export function WebScrapingPage() {
           failed: 1,
           current: null,
         }));
-        showToast(`Erro ao raspar URL: ${error.message}`, 'error');
+        toastError(showToast, 'Erro ao raspar URL', error.message, { error });
         setResults([{
           success: false,
           url: url.trim(),
@@ -256,10 +265,23 @@ export function WebScrapingPage() {
           `Raspagem concluída! ${successCount} sucesso, ${failCount} falhas.`,
           successCount > 0 ? 'success' : 'error'
         );
+        try {
+          const allWarnings = allResults.flatMap(r => (Array.isArray(r?.warnings) ? r.warnings : []));
+          if (allWarnings.length > 0) {
+            toastWarn(
+              showToast,
+              'Extração parcial no web scraping',
+              'Algumas URLs retornaram avisos durante a extração. Continuamos com o melhor conteúdo disponível.',
+              { warnings: allWarnings.slice(0, 30) }
+            );
+          }
+        } catch {
+          // ignora
+        }
         setUrls('');
       } catch (error) {
         logger.error('Erro ao raspar URLs:', error);
-        showToast(`Erro ao raspar URLs: ${error.message}`, 'error');
+        toastError(showToast, 'Erro ao raspar URLs', error.message, { error });
         setProgress(prev => ({
           ...prev,
           current: null,
@@ -735,7 +757,11 @@ export function WebScrapingPage() {
                     {result.error && (
                       <div className="mt-3 p-3 bg-status-error/10 border border-status-error/30 rounded">
                         <p className="text-sm text-status-error font-medium">Erro:</p>
-                        <p className="text-xs text-status-error mt-1">{result.error}</p>
+                        <p className="text-xs text-status-error mt-1">
+                          {typeof result.error === 'string'
+                            ? result.error
+                            : (result.error?.message || 'Erro desconhecido')}
+                        </p>
                       </div>
                     )}
                   </div>

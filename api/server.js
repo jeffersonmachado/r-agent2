@@ -2248,15 +2248,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           'Para melhorar a descrição automaticamente, indexe o site e/ou envie arquivos (PDFs e imagens com texto) para o RAG.',
         ].join(' ');
 
-        sendJson(res, 200, {
-          suggestion,
-          warnings: [
-            {
-              code: 'NO_INDEXED_CONTEXT_FALLBACK',
-              message: 'Extração/indexação ainda não gerou contexto suficiente. Usamos um fallback mínimo baseado no nome/domínio.',
-            },
-          ],
-        });
+        const warnings = [
+          {
+            code: 'NO_INDEXED_CONTEXT_FALLBACK',
+            message: 'Extração/indexação ainda não gerou contexto suficiente. Usamos um fallback mínimo baseado no nome/domínio.',
+          },
+        ];
+        const payload = { suggestion, warnings };
+        sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
         return;
       }
 
@@ -2296,7 +2295,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       if (!suggestedDescription.trim()) {
         sendApiError(res, buildApiError({
-          code: 'INTERNAL_ERROR',
+          code: 'DESCRIPTION_FAILED',
           message: 'A IA não retornou uma descrição sugerida',
           httpStatus: 500,
           retryable: true,
@@ -2323,7 +2322,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         responsePayload.contextSources = contextSources;
       }
 
-      sendJson(res, 200, responsePayload);
+      const payload = responsePayload;
+      sendJson(res, 200, { ok: true, data: payload, warnings: [], ...payload });
     } catch (err) {
       logger.error('[System] Erro ao sugerir descrição:', err);
       if (err instanceof SyntaxError) {
@@ -2337,7 +2337,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }), setCorsHeaders);
       } else {
         sendApiError(res, buildApiError({
-          code: 'INTERNAL_ERROR',
+          code: 'DESCRIPTION_FAILED',
           message: err.message || 'Erro ao sugerir descrição por IA',
           httpStatus: 500,
           retryable: true,
@@ -11875,18 +11875,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       if (result.isDuplicate) {
-        sendJson(res, 200, {
-          ...result.document,
-          isDuplicate: true,
-          warnings,
-        });
+        const payload = { ...result.document, isDuplicate: true, warnings };
+        sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
         return;
       }
 
-      sendJson(res, 201, {
-        ...result.document,
-        warnings,
-      });
+      const payload = { ...result.document, warnings };
+      sendJson(res, 201, { ok: true, data: payload, warnings, ...payload });
     } catch (err) {
       logger.error('Erro ao fazer upload e extrair arquivo:', err);
       sendApiError(res, buildApiError({
@@ -12614,7 +12609,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown',
       });
-      sendJson(res, 200, result);
+      const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+      sendJson(res, 200, { ok: true, data: result, warnings, ...result });
     } catch (err) {
       // Trata erro de rate limit
       if (err.code === 'RATE_LIMIT_EXCEEDED') {
@@ -12631,12 +12627,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       logger.error('Erro ao raspar URL:', err);
+      // Erros de validação devem ser 400
+      const msg = (err && err.message) ? String(err.message) : 'Erro ao raspar URL';
+      const isBadRequest = msg.toLowerCase().includes('url inválida') || msg.toLowerCase().includes('url invalida');
       sendApiError(res, buildApiError({
-        code: 'INTERNAL_ERROR',
-        message: err.message || 'Erro interno ao raspar URL',
-        httpStatus: 500,
-        retryable: true,
-        details: { tenantId: req.tenantId || null },
+        code: 'SCRAPE_FAILED',
+        message: msg || 'Falha ao raspar URL',
+        httpStatus: isBadRequest ? 400 : 500,
+        retryable: !isBadRequest,
+        details: { tenantId: req.tenantId || null, url: body?.url || null },
         req,
       }), setCorsHeaders);
     }
@@ -12716,12 +12715,32 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       });
       // Status code: 200 se 100% sucesso, 207 se houve qualquer falha (inclui 0 sucesso)
       const statusCode = successCount === total ? 200 : 207;
-      sendJson(res, statusCode, payload);
+      const warnings = [];
+      if (statusCode === 207) {
+        warnings.push({
+          code: 'PARTIAL_SUCCESS',
+          message: 'Extração parcial: usamos fallback quando necessário e continuamos com o melhor conteúdo disponível.',
+        });
+      }
+      try {
+        const warningItems = (Array.isArray(payload.results) ? payload.results : [])
+          .flatMap((r) => (Array.isArray(r?.warnings) ? r.warnings : []));
+        if (warningItems.length > 0) {
+          warnings.push({
+            code: 'EXTRACTION_WARNINGS',
+            message: 'Algumas URLs retornaram avisos durante a extração.',
+            details: { count: warningItems.length },
+          });
+        }
+      } catch {
+        // ignora
+      }
+      sendJson(res, statusCode, { ok: true, data: payload, warnings, ...payload });
     } catch (err) {
       logger.error('Erro ao raspar URLs:', err);
       sendApiError(res, buildApiError({
-        code: 'INTERNAL_ERROR',
-        message: err.message || 'Erro interno ao raspar URLs',
+        code: 'SCRAPE_FAILED',
+        message: err.message || 'Falha ao raspar URLs',
         httpStatus: 500,
         retryable: true,
         details: { tenantId: req.tenantId || null },

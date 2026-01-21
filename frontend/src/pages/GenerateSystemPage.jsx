@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
+import { handlePipelineApiError } from '../utils/apiErrorHandler';
+import { toastWarn } from '../utils/toastHelpers';
 import { Button } from '../styles/Button';
 import { Input, Textarea } from '../styles/Input';
 import { generateAndValidate, checkRateLimit } from '../api/system';
@@ -12,6 +14,7 @@ import { fetchJson } from '../api/client';
 import { Dialog } from '../components/Dialog';
 import * as tenantsApi from '../api/tenants';
 import logger from '../utils/logger';
+import { getFallbackFlag } from '../utils/fallbacksConfig';
 import { getRpaReplay } from '../api/flows';
 import { executeRpaRecording } from '../api/rpa';
 
@@ -86,6 +89,7 @@ export function GenerateSystemPage() {
   const [pipelineStatus, setPipelineStatus] = useState({
     providerValidated: false,
     ragValidated: false,
+    webScraping: false,
     descriptionSuggested: false,
     filesInferred: false,
     payloadValid: false,
@@ -103,6 +107,7 @@ export function GenerateSystemPage() {
   const [pipelineDetails, setPipelineDetails] = useState({
     providerValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
     ragValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+    webScraping: { status: 'pending', timestamp: null, message: null, progress: 0 },
     descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
     filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
     payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -164,14 +169,16 @@ export function GenerateSystemPage() {
         };
       } else if (typeof value === 'object' && value !== null) {
         // Se for um objeto com detalhes
-        const status = value.status || 'pending';
+        const { status: rawStatus, timestamp: rawTimestamp, message: rawMessage, progress: rawProgress, ...rest } = value;
+        const status = rawStatus || 'pending';
         // Atualiza status simples: true apenas se completed, false caso contrário
         statusUpdateSimple[key] = status === 'completed';
         detailsUpdate[key] = {
           status: status,
-          timestamp: value.timestamp || timestamp,
-          message: value.message || getStepMessage(key, status),
-          progress: value.progress !== undefined ? value.progress : (status === 'completed' ? 100 : 0),
+          timestamp: rawTimestamp || timestamp,
+          message: rawMessage || getStepMessage(key, status),
+          progress: rawProgress !== undefined ? rawProgress : (status === 'completed' ? 100 : 0),
+          ...rest,
         };
       }
     });
@@ -214,6 +221,11 @@ export function GenerateSystemPage() {
         completed: 'Serviço RAG validado',
         in_progress: 'Validando serviço RAG...',
         error: 'Serviço RAG não disponível',
+      },
+      webScraping: {
+        completed: 'Web scraping concluído',
+        in_progress: 'Raspando URLs (web scraping)...',
+        error: 'Nenhuma URL foi raspada com sucesso',
       },
       descriptionSuggested: {
         completed: 'Descrição sugerida pela IA',
@@ -517,6 +529,7 @@ export function GenerateSystemPage() {
       const resetStatus = {
         providerValidated: false,
         ragValidated: false,
+        webScraping: false,
         descriptionSuggested: false,
         filesInferred: false,
         payloadValid: false,
@@ -535,6 +548,7 @@ export function GenerateSystemPage() {
       setPipelineDetails({
         providerValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
         ragValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        webScraping: { status: 'pending', timestamp: null, message: null, progress: 0 },
         descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
         filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
         payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -547,6 +561,11 @@ export function GenerateSystemPage() {
         rpaExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
         approved: { status: 'pending', timestamp: null, message: null, progress: 0 },
       });
+
+      // tenantId validado para chamadas subsequentes (sem fallback global)
+      let validatedTenantId = null;
+      // Guard para evitar rodar scraping duas vezes no mesmo fluxo
+      let webScrapingDone = false;
 
       // Validação do provider de IA ANTES de iniciar processamento
       try {
@@ -577,29 +596,20 @@ export function GenerateSystemPage() {
           return;
         }
         
-        // Faz uma chamada de teste para verificar se o provider está disponível para este tenant
-        // Se falhar, significa que o tenant não tem provider configurado
+        // Verifica se o provider/credenciais do tenant estão válidos (chamada real ao provider),
+        // sem acionar endpoints pesados (ex.: /system/suggest-description consulta RAG e pode demorar).
         try {
           logger.info('[TenantMode] Verificando se provider está disponível para o tenant', { tenantId });
-          const testResponse = await fetchJson('/system/suggest-description', {
+          const testResponse = await fetchJson(`/tenants/${encodeURIComponent(tenantId)}/ai-credentials/test`, {
             method: 'POST',
-            body: JSON.stringify({ 
-              prompt: 'test',
-              name: 'test',
-              tenantId: tenantId
-            }),
-            timeoutMs: 5000
+            body: JSON.stringify({}),
+            timeoutMs: 8000,
           });
           
-          // Se chegou aqui, o provider está disponível para o tenant
-          logger.info('[TenantMode] Provider disponível para o tenant', { tenantId });
-        } catch (testError) {
-          // Se falhar com erro de provider não configurado, para o processamento
-          const errorMessage = testError.body?.message || testError.message || '';
-          if (errorMessage.includes('Nenhum provider de IA configurado')) {
-            const errorMsg = `Provider de IA não configurado para o tenant "${tenantId}". Configure um provider de IA para este tenant antes de usar esta funcionalidade.`;
-            logger.error('[TenantMode] Provider de IA não configurado para o tenant', { tenantId, errorMessage });
-            
+          if (!testResponse?.valid) {
+            const errorMsg = `Provider de IA inválido/não configurado para o tenant "${tenantId}": ${testResponse?.error || 'erro desconhecido'}`;
+            logger.error('[TenantMode] Provider de IA inválido/não configurado para o tenant', { tenantId, testResponse });
+
             updatePipelineWithDetails({ 
               providerValidated: { 
                 status: 'error', 
@@ -608,12 +618,35 @@ export function GenerateSystemPage() {
                 timestamp: new Date().toISOString()
               }
             }, 'provider-validation-error');
-            
+
             showToast(errorMsg, 'error', 10000);
+
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                try {
+                  navigate(`/config?tab=ai&tenant=${encodeURIComponent(tenantId)}`);
+                } catch (err) {
+                  logger.error('[TenantMode] Falha ao navegar para /config (fallback window.location)', err);
+                  (async () => {
+                    const allowHardRedirect = await getFallbackFlag('frontendNavigationHardRedirect', false);
+                    if (!allowHardRedirect) return;
+                    const basePath = window.location.pathname.split('/generate-system')[0] || '';
+                    window.location.href = `${basePath}/config?tab=ai&tenant=${encodeURIComponent(tenantId)}`;
+                  })();
+                }
+              }, 300);
+            });
+
             setExecuting(false);
             return;
           }
-          // Se for outro erro (timeout, servidor, etc), também para para evitar problemas
+
+          // Se chegou aqui, o provider está disponível para o tenant
+          validatedTenantId = tenantId;
+          logger.info('[TenantMode] Provider disponível para o tenant', { tenantId, provider: testResponse?.provider || null });
+        } catch (testError) {
+          // Se for erro de rede/timeout/servidor, para para evitar problemas
+          const errorMessage = testError.body?.message || testError.message || '';
           const errorMsg = `Erro ao verificar provider de IA para o tenant "${tenantId}": ${errorMessage}`;
           logger.error('[TenantMode] Erro ao verificar provider', { tenantId, error: testError });
           
@@ -643,9 +676,6 @@ export function GenerateSystemPage() {
             timestamp: new Date().toISOString()
           }
         }, 'provider-validation');
-        
-        // Armazena o tenantId validado para usar em todas as chamadas subsequentes (sem fallback)
-        const validatedTenantId = tenantId;
       } catch (providerError) {
         logger.error('[TenantMode] Erro ao validar provider de IA', providerError);
         const errorMsg = 'Erro ao verificar configuração do provider de IA. Verifique se o servidor está respondendo.';
@@ -728,250 +758,103 @@ export function GenerateSystemPage() {
         setExecuting(false);
         return;
       }
-      
-      // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
-      if (executionMode === 'dry-run') {
-        // Se descrição está vazia, executa a sugestão
-        if (!description || !description.trim()) {
-          try {
-            // ETAPA 1: Processa web scraping ANTES de sugerir descrição (se houver URLs)
-            const validUrls = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
-            
-            if (useWebScraping && validUrls.length > 0) {
-              updatePipelineWithDetails({ 
-                filesInferred: { status: 'in_progress', progress: 0, message: `Processando web scraping de ${validUrls.length} URL(s)...` }
-              }, 'web-scraping');
-              
-              logger.info('[Pipeline] Processando web scraping antes de sugerir descrição', { 
-                urlsCount: validUrls.length,
-                urls: validUrls 
-              });
-              
-              try {
-                // Processa web scraping em batch
-                const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    urls: validUrls,
-                    autoIndex: true, // Indexa automaticamente no RAG
-                    source: 'web_scraping',
-                    category: 'general',
-                    tenantId: validatedTenantId,
-                  }),
-                });
-                
-                if (scrapingResponse && Array.isArray(scrapingResponse.results)) {
-                  const successCount = scrapingResponse.results.filter(r => r.success).length;
-                  logger.info('[Pipeline] Web scraping processado', { 
-                    total: validUrls.length,
-                    success: successCount,
-                    failed: validUrls.length - successCount
-                  });
-                  
-                  updatePipelineWithDetails({ 
-                    filesInferred: { 
-                      status: 'completed', 
-                      progress: 100, 
-                      message: `Web scraping concluído: ${successCount}/${validUrls.length} URL(s) processada(s) e indexadas`,
-                      timestamp: new Date().toISOString()
-                    }
-                  }, 'web-scraping');
-                  
-                  // Aguarda um pouco para garantir que o conteúdo foi indexado
-                  // Aumenta o tempo de espera para garantir que a indexação foi concluída
-                  logger.info('[Pipeline] Aguardando indexação completar...', { 
-                    waitTime: 2000 
-                  });
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                } else {
-                  logger.warn('[Pipeline] Resposta de web scraping inválida', scrapingResponse);
-                }
-              } catch (scrapingError) {
-                logger.error('[Pipeline] Erro ao processar web scraping', scrapingError);
-                updatePipelineWithDetails({ 
-                  filesInferred: { 
-                    status: 'error', 
-                    progress: 0, 
-                    message: 'Erro ao processar web scraping. Continuando sem conteúdo...',
-                    timestamp: new Date().toISOString()
-                  }
-                }, 'web-scraping-error');
-                // Continua mesmo se web scraping falhar
-              }
-            }
-            
-            // ETAPA 2: Sugere descrição usando conteúdo indexado (arquivos + web scraping)
-            updatePipelineWithDetails({ 
-              descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição com IA usando conteúdo indexado...' }
-            }, 'description-suggestion');
-            
-            // Chama API para sugerir descrição (que agora consulta RAG automaticamente)
-            const suggestionResponse = await fetchJson('/system/suggest-description', {
-              method: 'POST',
-              body: JSON.stringify({ 
-                prompt: `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`,
-                name: name.trim(),
-                tenantId: validatedTenantId,
-                urls: validUrls // Envia URLs para referência
-              }),
-            });
-            
-            if (suggestionResponse?.suggestion) {
-              // Atualiza a descrição com a sugestão
-              const suggestedDescription = suggestionResponse.suggestion.trim();
-              setDescription(suggestedDescription);
-              
-              updatePipelineWithDetails({ 
-                descriptionSuggested: { 
-                  status: 'completed', 
-                  progress: 100, 
-                  message: 'Descrição sugerida pela IA e aplicada automaticamente',
-                  timestamp: new Date().toISOString()
-                }
-              }, 'description-suggestion');
-              
-              logger.info('[Pipeline] Descrição sugerida e aplicada', { 
-                suggestedLength: suggestedDescription.length 
-              });
-            } else {
-              throw new Error('A IA não retornou uma descrição sugerida');
-            }
-          } catch (suggestionError) {
-            logger.error('[Pipeline] Erro ao sugerir descrição', suggestionError);
-            updatePipelineWithDetails({ 
-              descriptionSuggested: { 
-                status: 'error', 
-                progress: 0, 
-                message: 'Erro ao sugerir descrição. Continuando sem descrição...',
-                timestamp: new Date().toISOString()
-              }
-            }, 'description-suggestion');
-            // Continua mesmo se a sugestão falhar
-          }
-        } else {
-          // Descrição já preenchida, marca como concluída (não precisa sugerir)
-          updatePipelineWithDetails({ 
-            descriptionSuggested: { 
-              status: 'completed', 
-              progress: 100, 
-              message: 'Descrição já fornecida pelo usuário',
-              timestamp: new Date().toISOString()
-            }
-          }, 'description-suggestion');
-        }
-      }
+      // Observação: a sugestão de descrição (dry-run) acontece no fluxo principal abaixo.
+      // Mantemos apenas UM pipeline de (arquivos -> scraping -> sugestão) para evitar duplicidade.
 
       try {
         // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
         let finalDescription = description.trim();
         
+        // ETAPA 0 (tenant): sempre processa arquivos pendentes ANTES de web scraping / sugestão.
+        // Também marca o step como concluído quando não houver arquivos pendentes,
+        // para o pipeline visual não ficar "pendente" indefinidamente.
+        const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
+        if (pendingFiles.length > 0) {
+          logger.info('[TenantMode] Processando arquivos pendentes antes de continuar pipeline', {
+            pendingFilesCount: pendingFiles.length,
+            files: pendingFiles.map(f => ({ id: f.id, name: f.name })),
+          });
+          
+          updatePipelineWithDetails({
+            filesInferred: { status: 'in_progress', progress: 0, message: `Processando ${pendingFiles.length} arquivo(s) antes de continuar...` }
+          }, 'file-processing');
+          
+          const fileProcessingPromises = pendingFiles.map(async (fileObj, index) => {
+            try {
+              const progress = Math.round(((index + 1) / pendingFiles.length) * 100);
+              setPipelineDetails(prev => ({
+                ...prev,
+                filesInferred: {
+                  status: 'in_progress',
+                  timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
+                  message: `Processando arquivo ${index + 1}/${pendingFiles.length}: ${fileObj.name}`,
+                  progress,
+                },
+              }));
+              
+              const inferredCategory = await inferFileCategoryWithAI(fileObj.file);
+              setUploadedFiles(prev => prev.map(f =>
+                f.id === fileObj.id ? { ...f, category: inferredCategory } : f
+              ));
+              
+              await handleFileUpload({ ...fileObj, category: inferredCategory });
+            } catch (error) {
+              logger.error(`[TenantMode] Erro ao processar arquivo ${fileObj.name}`, {
+                error: error.message,
+                stack: error.stack,
+                fileId: fileObj.id,
+              });
+              setUploadedFiles(prev => prev.map(f =>
+                f.id === fileObj.id
+                  ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' }
+                  : f
+              ));
+            }
+          });
+          
+          await Promise.all(fileProcessingPromises);
+          
+          updatePipelineWithDetails({
+            filesInferred: {
+              status: 'completed',
+              progress: 100,
+              message: `${pendingFiles.length} arquivo(s) processado(s) e indexado(s) no RAG`,
+              timestamp: new Date().toISOString()
+            }
+          }, 'file-processing');
+          
+          // Aguarda indexação completar
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          updatePipelineWithDetails({
+            filesInferred: {
+              status: 'completed',
+              progress: 100,
+              message: 'Nenhum arquivo pendente para inferir/indexar',
+              timestamp: new Date().toISOString(),
+            }
+          }, 'file-processing');
+        }
+        
         if (executionMode === 'dry-run') {
           // Se descrição está vazia, executa a sugestão
           if (!description.trim()) {
           try {
-            // ETAPA 0: Processa arquivos pendentes ANTES de sugerir descrição (se houver arquivos)
-            const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
-            if (pendingFiles.length > 0) {
-              logger.info('[TenantMode] Processando arquivos pendentes antes de sugerir descrição', {
-                pendingFilesCount: pendingFiles.length,
-                files: pendingFiles.map(f => ({ id: f.id, name: f.name })),
-              });
-              
-              updatePipelineWithDetails({ 
-                filesInferred: { status: 'in_progress', progress: 0, message: `Processando ${pendingFiles.length} arquivo(s) antes de sugerir descrição...` }
-              }, 'file-processing');
-              
-              // Processa arquivos em paralelo para acelerar
-              const fileProcessingPromises = pendingFiles.map(async (fileObj, index) => {
-                try {
-                  logger.debug(`[TenantMode] Processando arquivo ${index + 1}/${pendingFiles.length}`, {
-                    fileName: fileObj.name,
-                    fileId: fileObj.id,
-                  });
-                  
-                  // Atualiza progresso
-                  const progress = Math.round(((index + 1) / pendingFiles.length) * 100);
-                  setPipelineDetails(prev => ({
-                    ...prev,
-                    filesInferred: {
-                      status: 'in_progress',
-                      timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
-                      message: `Processando arquivo ${index + 1}/${pendingFiles.length}: ${fileObj.name}`,
-                      progress: progress,
-                    },
-                  }));
-                  
-                  // Infere categoria
-                  logger.debug(`[TenantMode] Inferindo categoria para arquivo ${fileObj.name}`);
-                  const inferredCategory = await inferFileCategoryWithAI(fileObj.file);
-                  logger.info(`[TenantMode] Categoria inferida: ${inferredCategory}`, {
-                    fileName: fileObj.name,
-                    category: inferredCategory,
-                  });
-                  
-                  // Atualiza a categoria do arquivo no estado
-                  setUploadedFiles(prev => prev.map(f => 
-                    f.id === fileObj.id ? { ...f, category: inferredCategory } : f
-                  ));
-                  
-                  // Cria uma cópia do objeto com a categoria inferida para usar no upload
-                  const fileObjWithCategory = {
-                    ...fileObj,
-                    category: inferredCategory,
-                  };
-                  
-                  // Faz upload imediatamente após inferir
-                  logger.debug(`[TenantMode] Fazendo upload do arquivo ${fileObj.name}`);
-                  await handleFileUpload(fileObjWithCategory);
-                  logger.info(`[TenantMode] Upload concluído para arquivo ${fileObj.name}`);
-                } catch (error) {
-                  logger.error(`[TenantMode] Erro ao processar arquivo ${fileObj.name}`, {
-                    error: error.message,
-                    stack: error.stack,
-                    fileId: fileObj.id,
-                  });
-                  // Marca como erro no estado
-                  setUploadedFiles(prev => prev.map(f => 
-                    f.id === fileObj.id 
-                      ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' } 
-                      : f
-                  ));
-                }
-              });
-              
-              // Aguarda todos os arquivos serem processados
-              await Promise.all(fileProcessingPromises);
-              
-              logger.info('[TenantMode] Todos os arquivos processados antes de sugerir descrição', {
-                totalFiles: uploadedFiles.length,
-                processedFiles: pendingFiles.length,
-                successFiles: uploadedFiles.filter(f => f.status === 'success').length,
-                errorFiles: uploadedFiles.filter(f => f.status === 'error').length,
-              });
-              
-              updatePipelineWithDetails({ 
-                filesInferred: { 
-                  status: 'completed', 
-                  progress: 100, 
-                  message: `${pendingFiles.length} arquivo(s) processado(s) e indexado(s) no RAG`,
-                  timestamp: new Date().toISOString()
-                }
-              }, 'file-processing');
-              
-              // Aguarda um pouco para garantir que o conteúdo foi indexado no RAG
-              logger.info('[TenantMode] Aguardando indexação dos arquivos completar...', { 
-                waitTime: 2000 
-              });
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
+            // Arquivos já foram processados na ETAPA 0 acima.
             
             // ETAPA 1: Processa web scraping ANTES de sugerir descrição (se houver URLs)
             const validUrls = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
             
             if (useWebScraping && validUrls.length > 0) {
+              webScrapingDone = true;
               updatePipelineWithDetails({ 
-                filesInferred: { status: 'in_progress', progress: 0, message: `Processando web scraping de ${validUrls.length} URL(s)...` }
-              }, 'web-scraping');
+                webScraping: {
+                  status: 'in_progress',
+                  progress: 0,
+                  message: `Processando web scraping de ${validUrls.length} URL(s)...`,
+                  urlsTotal: validUrls.length,
+                }
+              }, 'webScrapingStarted');
               
               logger.info('[TenantMode] Processando web scraping antes de sugerir descrição', { 
                 urlsCount: validUrls.length,
@@ -979,6 +862,7 @@ export function GenerateSystemPage() {
               });
               
               try {
+                const scrapingStartedAt = Date.now();
                 // Processa web scraping em batch
                 const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
                   method: 'POST',
@@ -990,19 +874,81 @@ export function GenerateSystemPage() {
                     tenantId: validatedTenantId,
                   }),
                 });
+                const durationMs = Date.now() - scrapingStartedAt;
                 
                 if (scrapingResponse && Array.isArray(scrapingResponse.results)) {
-                  const successCount = scrapingResponse.results.filter(r => r.success).length;
-                  const duplicateCount = scrapingResponse.results.filter(r => r.success && r.isDuplicate).length;
-                  const newCount = successCount - duplicateCount;
+                  const successCount = Number.isFinite(scrapingResponse?.success)
+                    ? Number(scrapingResponse.success)
+                    : scrapingResponse.results.filter(r => r.success).length;
+                  const failedCount = Number.isFinite(scrapingResponse?.failed)
+                    ? Number(scrapingResponse.failed)
+                    : (validUrls.length - successCount);
+                  const duplicateCount = Number.isFinite(scrapingResponse?.duplicates)
+                    ? Number(scrapingResponse.duplicates)
+                    : scrapingResponse.results.filter(r => r.success && r.isDuplicate).length;
+                  const newCount = Number.isFinite(scrapingResponse?.new)
+                    ? Number(scrapingResponse.new)
+                    : (successCount - duplicateCount);
+
+                  const errorSummary = Array.isArray(scrapingResponse?.errorSummary)
+                    ? scrapingResponse.errorSummary
+                    : scrapingResponse.results
+                        .filter(r => !r.success)
+                        .map(r => ({
+                          url: r.url,
+                          name: r.error?.name || 'Error',
+                          message: r.error?.message || (typeof r.error === 'string' ? r.error : 'Erro desconhecido'),
+                        }));
                   
-                  logger.info('[TenantMode] Web scraping processado', { 
-                    total: validUrls.length,
-                    success: successCount,
-                    new: newCount,
-                    duplicates: duplicateCount,
-                    failed: validUrls.length - successCount
+                  logger.info('[Pipeline][webScraping] Web scraping concluído', {
+                    urlsTotal: validUrls.length,
+                    successCount,
+                    failedCount,
+                    durationMs,
+                    errorSummary,
                   });
+
+                  // Toast warning quando houver extração parcial (fallbacks / avisos por URL)
+                  try {
+                    const allWarnings = scrapingResponse.results
+                      .flatMap(r => (Array.isArray(r?.warnings) ? r.warnings : []));
+                    if (allWarnings.length > 0) {
+                      const usedPlaywright = allWarnings.some(w => w?.code === 'PLAYWRIGHT_FALLBACK_USED');
+                      toastWarn(
+                        showToast,
+                        'Extração parcial no web scraping',
+                        usedPlaywright
+                          ? 'Algumas URLs exigiram fallback Playwright para conteúdo carregado por JavaScript.'
+                          : 'Algumas URLs retornaram avisos durante a extração. Continuamos com o melhor conteúdo disponível.',
+                        { warnings: allWarnings.slice(0, 20) }
+                      );
+                    }
+                  } catch {
+                    // ignora
+                  }
+
+                  // Gate: não continua se nenhuma URL foi raspada com sucesso
+                  if (successCount === 0) {
+                    showToast('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.', 'error', 10000);
+                    console.error('[TenantMode][webScraping] Nenhuma URL raspada com sucesso. Resumo de erros:', errorSummary);
+
+                    updatePipelineWithDetails({
+                      webScraping: {
+                        status: 'error',
+                        progress: 0,
+                        message: 'Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.',
+                        timestamp: new Date().toISOString(),
+                        urlsTotal: validUrls.length,
+                        successCount,
+                        failedCount,
+                        durationMs,
+                        errorSummary,
+                      }
+                    }, 'webScrapingCompleted');
+
+                    setExecuting(false);
+                    return;
+                  }
                   
                   let message = `Web scraping concluído: ${successCount}/${validUrls.length} URL(s) processada(s)`;
                   if (duplicateCount > 0) {
@@ -1012,13 +958,18 @@ export function GenerateSystemPage() {
                   }
                   
                   updatePipelineWithDetails({ 
-                    filesInferred: { 
+                    webScraping: { 
                       status: 'completed', 
                       progress: 100, 
                       message: message,
-                      timestamp: new Date().toISOString()
+                      timestamp: new Date().toISOString(),
+                      urlsTotal: validUrls.length,
+                      successCount,
+                      failedCount,
+                      durationMs,
+                      errorSummary,
                     }
-                  }, 'web-scraping');
+                  }, 'webScrapingCompleted');
                   
                   // Aguarda um pouco para garantir que o conteúdo foi indexado
                   // Aumenta o tempo de espera para garantir que a indexação foi concluída
@@ -1032,14 +983,17 @@ export function GenerateSystemPage() {
               } catch (scrapingError) {
                 logger.error('[TenantMode] Erro ao processar web scraping', scrapingError);
                 updatePipelineWithDetails({ 
-                  filesInferred: { 
+                  webScraping: { 
                     status: 'error', 
                     progress: 0, 
-                    message: 'Erro ao processar web scraping. Continuando sem conteúdo...',
+                    message: 'Erro ao processar web scraping. Verifique os logs do scraping.',
                     timestamp: new Date().toISOString()
                   }
-                }, 'web-scraping-error');
-                // Continua mesmo se web scraping falhar
+                }, 'webScrapingCompleted');
+
+                showToast('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.', 'error', 10000);
+                setExecuting(false);
+                return;
               }
             }
             
@@ -1076,15 +1030,33 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             }
             
             // Chama API para sugerir descrição do tenant
+            const uploadedFileNames = Array.from(new Set(
+              uploadedFiles
+                .map(f => (typeof f?.name === 'string' ? f.name.trim() : ''))
+                .filter(Boolean)
+            ));
+
             const suggestionResponse = await fetchJson('/system/suggest-description', {
               method: 'POST',
               body: JSON.stringify({ 
                 prompt: promptText,
                 name: name.trim(),
                 tenantId: validatedTenantId,
-                urls: validUrls // Envia URLs para possível uso futuro no backend
+                urls: validUrls, // Envia URLs para referência
+                fileNames: uploadedFileNames, // Ajuda o backend a montar query do RAG incluindo docs enviados
               }),
+              timeoutMs: 60000,
             });
+
+            // Toast warning se o backend retornou fallback/avisos
+            if (Array.isArray(suggestionResponse?.warnings) && suggestionResponse.warnings.length > 0) {
+              toastWarn(
+                showToast,
+                'Descrição gerada com avisos',
+                'A descrição foi gerada com fallback/extração parcial. Você pode melhorar indexando o site e anexando arquivos.',
+                { warnings: suggestionResponse.warnings }
+              );
+            }
             
             if (suggestionResponse?.suggestion) {
               finalDescription = suggestionResponse.suggestion.trim();
@@ -1122,25 +1094,16 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             }
           } catch (suggestionError) {
             logger.error('[TenantMode] Erro ao sugerir descrição', suggestionError);
-            
-            // Extrai mensagem de erro
-            let errorMsg = 'Erro ao sugerir descrição. Não é possível continuar sem descrição.';
-            if (suggestionError.body?.message) {
-              errorMsg = suggestionError.body.message;
-            } else if (suggestionError.message) {
-              errorMsg = suggestionError.message;
-            }
-            
-            updatePipelineWithDetails({ 
-              descriptionSuggested: { 
-                status: 'error', 
-                progress: 0, 
-                message: errorMsg,
-                timestamp: new Date().toISOString()
-              }
-            }, 'description-suggestion-error');
-            
-            showToast(errorMsg, 'error', 10000);
+
+            const info = handlePipelineApiError(suggestionError, {
+              showToast,
+              updatePipelineWithDetails,
+              stepKey: 'descriptionSuggested',
+              defaultMessage: 'Erro ao sugerir descrição. Não é possível continuar sem descrição.',
+              source: 'description-suggestion-error',
+            });
+
+            // Em tenant mode, sem descrição não pode continuar
             setExecuting(false);
             return;
           }
@@ -1157,6 +1120,126 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           }
         } else {
           finalDescription = description.trim();
+        }
+
+        // Web scraping (tenant): roda mesmo quando descrição já foi fornecida (gate obrigatório)
+        const validUrlsForScraping = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
+        if (useWebScraping && validUrlsForScraping.length > 0 && !webScrapingDone) {
+          webScrapingDone = true;
+          updatePipelineWithDetails({
+            webScraping: {
+              status: 'in_progress',
+              progress: 0,
+              message: `Processando web scraping de ${validUrlsForScraping.length} URL(s)...`,
+              urlsTotal: validUrlsForScraping.length,
+            }
+          }, 'webScrapingStarted');
+
+          const scrapingStartedAt = Date.now();
+          try {
+            const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
+              method: 'POST',
+              body: JSON.stringify({
+                urls: validUrlsForScraping,
+                autoIndex: true,
+                source: 'web_scraping',
+                category: 'general',
+                tenantId: validatedTenantId,
+              }),
+            });
+            const durationMs = Date.now() - scrapingStartedAt;
+
+            const results = Array.isArray(scrapingResponse?.results) ? scrapingResponse.results : [];
+            const successCount = Number.isFinite(scrapingResponse?.success)
+              ? Number(scrapingResponse.success)
+              : results.filter(r => r.success).length;
+            const failedCount = Number.isFinite(scrapingResponse?.failed)
+              ? Number(scrapingResponse.failed)
+              : (validUrlsForScraping.length - successCount);
+            const errorSummary = Array.isArray(scrapingResponse?.errorSummary)
+              ? scrapingResponse.errorSummary
+              : results
+                  .filter(r => !r.success)
+                  .map(r => ({
+                    url: r.url,
+                    name: r.error?.name || 'Error',
+                    message: r.error?.message || (typeof r.error === 'string' ? r.error : 'Erro desconhecido'),
+                  }));
+
+            logger.info('[Pipeline][webScraping] Web scraping concluído', {
+              urlsTotal: validUrlsForScraping.length,
+              successCount,
+              failedCount,
+              durationMs,
+              errorSummary,
+            });
+
+            if (successCount === 0) {
+              showToast('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.', 'error', 10000);
+              console.error('[TenantMode][webScraping] Nenhuma URL raspada com sucesso. Resumo de erros:', errorSummary);
+
+              updatePipelineWithDetails({
+                webScraping: {
+                  status: 'error',
+                  progress: 0,
+                  message: 'Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.',
+                  timestamp: new Date().toISOString(),
+                  urlsTotal: validUrlsForScraping.length,
+                  successCount,
+                  failedCount,
+                  durationMs,
+                  errorSummary,
+                }
+              }, 'webScrapingCompleted');
+
+              setExecuting(false);
+              return;
+            }
+
+            updatePipelineWithDetails({
+              webScraping: {
+                status: 'completed',
+                progress: 100,
+                message: `Web scraping concluído: ${successCount}/${validUrlsForScraping.length} URL(s) processada(s)`,
+                timestamp: new Date().toISOString(),
+                urlsTotal: validUrlsForScraping.length,
+                successCount,
+                failedCount,
+                durationMs,
+                errorSummary,
+              }
+            }, 'webScrapingCompleted');
+
+            // Aguarda indexação completar
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (scrapingError) {
+            const durationMs = Date.now() - scrapingStartedAt;
+            logger.error('[TenantMode] Erro ao processar web scraping', scrapingError);
+
+            showToast('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.', 'error', 10000);
+            console.error('[TenantMode][webScraping] Falha no scraping (request crash). URLs:', validUrlsForScraping, scrapingError);
+
+            updatePipelineWithDetails({
+              webScraping: {
+                status: 'error',
+                progress: 0,
+                message: 'Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.',
+                timestamp: new Date().toISOString(),
+                urlsTotal: validUrlsForScraping.length,
+                successCount: 0,
+                failedCount: validUrlsForScraping.length,
+                durationMs,
+                errorSummary: validUrlsForScraping.map((u) => ({
+                  url: u,
+                  name: scrapingError?.name || 'Error',
+                  message: scrapingError?.message || 'Erro ao chamar scraping',
+                })),
+              }
+            }, 'webScrapingCompleted');
+
+            setExecuting(false);
+            return;
+          }
         }
         
         // Gera tenant por IA usando a descrição (sugerida ou fornecida)
@@ -1393,10 +1476,25 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         // Extrai mensagem de erro de forma mais robusta
         let errorMessage = 'Erro ao gerar tenant por IA';
         
-        if (err.body) {
-          errorMessage = err.body.message || err.body.details || err.body.error || errorMessage;
-        } else if (err.message) {
+        const body = err?.body;
+        if (body) {
+          errorMessage =
+            body?.error?.message ||
+            body?.message ||
+            body?.details ||
+            body?.error ||
+            errorMessage;
+        } else if (err?.message) {
           errorMessage = err.message;
+        }
+
+        // Garante string (evita crash em errorMessage.includes quando vier object/array)
+        if (typeof errorMessage !== 'string') {
+          try {
+            errorMessage = JSON.stringify(errorMessage);
+          } catch {
+            errorMessage = String(errorMessage);
+          }
         }
         
         // Mensagens mais amigáveis para erros comuns
@@ -1420,6 +1518,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
     
     // Reseta pipeline status
     const resetStatus = {
+      webScraping: false,
       descriptionSuggested: false,
       filesInferred: false,
       payloadValid: false,
@@ -1436,6 +1535,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
     
     // Reseta pipeline details
     setPipelineDetails({
+      webScraping: { status: 'pending', timestamp: null, message: null, progress: 0 },
       descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
       filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
       payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -1467,6 +1567,11 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         
         // Gera descrição sugerida usando IA via API
         const suggestionPrompt = `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
+        const uploadedFileNames = Array.from(new Set(
+          uploadedFiles
+            .map(f => (typeof f?.name === 'string' ? f.name.trim() : ''))
+            .filter(Boolean)
+        ));
         
         // Chama API para sugerir descrição (sem fallback de tenantId)
         const suggestionResponse = await fetchJson('/system/suggest-description', {
@@ -1474,8 +1579,10 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           body: JSON.stringify({ 
             prompt: suggestionPrompt,
             name: name.trim(),
-            tenantId: agent.tenantId
+            tenantId: agent.tenantId,
+            fileNames: uploadedFileNames,
           }),
+          timeoutMs: 60000,
         });
         
         if (suggestionResponse?.suggestion) {
@@ -1500,15 +1607,21 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         }
       } catch (suggestionError) {
         logger.error('[Pipeline] Erro ao sugerir descrição', suggestionError);
-        updatePipelineWithDetails({ 
-          descriptionSuggested: { 
-            status: 'error', 
-            progress: 0, 
-            message: 'Erro ao sugerir descrição. Continuando sem descrição...',
-            timestamp: new Date().toISOString()
-          }
-        }, 'description-suggestion');
-        // Continua mesmo se a sugestão falhar
+        const info = handlePipelineApiError(suggestionError, {
+          showToast,
+          updatePipelineWithDetails,
+          stepKey: 'descriptionSuggested',
+          defaultMessage: 'Erro ao sugerir descrição.',
+          source: 'description-suggestion',
+        });
+
+        // Sem contexto indexado: aborta pipeline (não deve seguir)
+        if (info.code === 'NO_INDEXED_CONTEXT') {
+          setExecuting(false);
+          return;
+        }
+
+        // Continua mesmo se a sugestão falhar (outros erros)
       }
     }
     
@@ -1927,8 +2040,19 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             }
           }, 'server-unavailable');
         } else {
-          setError(err.message || 'Erro desconhecido');
-          showToast(`Erro: ${err.message || 'Erro desconhecido'}`, 'error');
+          if (err?.code) {
+            const info = handlePipelineApiError(err, {
+              showToast,
+              updatePipelineWithDetails,
+              stepKey: 'aiExecuted',
+              defaultMessage: err.message || 'Erro na execução do pipeline',
+              source: 'execute-error',
+            });
+            setError(info.message || 'Erro na execução do pipeline');
+          } else {
+            setError(err.message || 'Erro desconhecido');
+            showToast(`Erro: ${err.message || 'Erro desconhecido'}`, 'error');
+          }
         }
       }
     } finally {
@@ -2135,6 +2259,16 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         },
         autoIndex: true, // Indexa automaticamente no RAG
       });
+
+      // Toast warning quando houver extração parcial (PDF/OCR/etc.)
+      if (Array.isArray(result?.warnings) && result.warnings.length > 0) {
+        toastWarn(
+          showToast,
+          'Arquivo indexado com avisos',
+          'A extração do conteúdo foi parcial. Indexamos metadados mínimos quando necessário.',
+          { warnings: result.warnings, fileName: fileObj.name }
+        );
+      }
       
       logger.info('[FileUpload] Upload concluído', {
         fileName: fileObj.name,
@@ -3017,8 +3151,9 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                 { key: 'providerValidated', label: 'Provider de IA validado' },
                 { key: 'ragValidated', label: 'Serviço RAG validado' },
               ] : []),
-              ...(needsDescriptionSuggestion ? [{ key: 'descriptionSuggested', label: 'Sugerir descrição' }] : []),
               { key: 'filesInferred', label: 'Arquivos inferidos e indexados' },
+              ...(isTenantMode && useWebScraping ? [{ key: 'webScraping', label: 'Web scraping' }] : []),
+              ...(needsDescriptionSuggestion ? [{ key: 'descriptionSuggested', label: 'Sugerir descrição' }] : []),
               { key: 'payloadValid', label: 'Payload válido' },
               { key: 'contractValid', label: 'Contrato válido' },
               { key: 'contextBuilt', label: 'Contexto montado' },
