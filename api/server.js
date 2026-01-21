@@ -20,6 +20,7 @@ const { processWhatsAppMessage } = require('./services/messageProcessor');
 const outboundQueueService = require('./services/outboundQueueService');
 const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
 const logger = require('./utils/logger');
+const { buildApiError, sendApiError } = require('./utils/apiError');
 const {
   login: authLogin,
   logout: authLogout,
@@ -208,6 +209,7 @@ const {
   getDocumentsStats,
 } = require('./services/ragDocumentsService');
 const ragService = require('./services/ragService');
+const { buildDiverseRagContext } = require('./services/ragContextBuilder');
 const { parseMultipartFormData } = require('./utils/multipartParser');
 const {
   scrapeUrl,
@@ -805,8 +807,10 @@ function setCorsHeaders(res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id, X-Request-Id');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
+  // Permite que o browser leia o traceId
+  res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
   
   // Security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -998,6 +1002,13 @@ function hasJsonContentType(req) {
  */
 async function requestHandler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
+  // Garante traceId em TODA requisição
+  try {
+    const { requestIdMiddleware } = require('./middleware/requestId');
+    requestIdMiddleware(req, res);
+  } catch {
+    // ignora (não deve bloquear request)
+  }
 
   // Handle CORS preflight requests
   if (method === 'OPTIONS') {
@@ -2064,7 +2075,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { prompt, name, tenantId, urls } = body;
+      const { prompt, name, tenantId, urls, fileNames } = body;
 
       if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
         badRequest(res, 'Prompt é obrigatório');
@@ -2072,9 +2083,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       const isSuperAdminUser = isSuperAdmin(req.agent);
-      const tenantIdForAI = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+      // Importante: para super-admin, permite operar em um tenant alvo via body.tenantId
+      // (ex.: UI troca tenant no frontend sem emitir novo token; o token ainda é do "system")
+      const requestedTenantId = tenantId ? String(tenantId).trim() : null;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
         ? String(req.agent.tenantId).trim()
-        : (isSuperAdminUser && tenantId ? String(tenantId).trim() : null);
+        : null;
+      const tenantIdForAI = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
       if (!tenantIdForAI) {
         sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
         return;
@@ -2083,12 +2098,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       logger.info('[System] Sugerindo descrição por IA', { 
         name: name || 'N/A',
         tenantId: tenantIdForAI,
-        hasUrls: Array.isArray(urls) && urls.length > 0
+        hasUrls: Array.isArray(urls) && urls.length > 0,
+        filesCount: Array.isArray(fileNames) ? fileNames.length : 0,
       });
 
       // Primeiro, consulta RAG para obter conteúdo indexado sobre o tenant/sistema
+      // com diversidade por fonte (arquivos enviados + web scraping).
       let ragContext = '';
+      let indexedChunks = 0;
+      let contextSources = [];
+      let contextSummary = null;
       try {
+        const safeFileNames = Array.isArray(fileNames)
+          ? fileNames
+              .filter(f => typeof f === 'string' && f.trim())
+              .map(f => f.trim().slice(0, 80))
+              .slice(0, 8)
+          : [];
+
         // Constrói query mais específica baseada no nome e URLs
         let ragQuery = '';
         if (name && Array.isArray(urls) && urls.length > 0) {
@@ -2119,100 +2146,163 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         } else {
           ragQuery = 'Informações sobre o sistema ou tenant';
         }
+
+        // Se houver arquivos enviados, adiciona nomes como pistas para o RAG recuperar também documentos
+        if (safeFileNames.length > 0) {
+          ragQuery = `${ragQuery} documentos arquivos ${safeFileNames.join(' ')}`;
+        }
         
         logger.debug('[System] Consultando RAG para obter contexto', { 
           query: ragQuery, 
           tenantId: tenantIdForAI,
           name,
-          urlsCount: Array.isArray(urls) ? urls.length : 0
+          urlsCount: Array.isArray(urls) ? urls.length : 0,
+          fileNamesCount: Array.isArray(fileNames) ? fileNames.length : 0,
         });
-        
-        const ragResult = await ragService.queryRag(ragQuery, tenantIdForAI, {}, {
-          topK: 10, // Aumenta para pegar mais contexto
-          minScore: 0.25, // Score ainda mais baixo para pegar mais contexto
-          maxTokens: 3000, // Mais tokens para ter mais informações
+
+        const diverse = await buildDiverseRagContext({
+          query: ragQuery,
+          tenantId: tenantIdForAI,
+          totalK: 10,
+          minUploaded: 3,
+          minWeb: 3,
+          minScore: 0.25,
+          maxTokens: 3000,
         });
-        
-        if (ragResult.success) {
-          // Prioriza sources se disponíveis, senão usa response
-          if (ragResult.sources && ragResult.sources.length > 0) {
-            // Extrai conteúdo relevante dos chunks retornados
-            // Sources podem ter: content, text, chunk, excerpt, ou similar
-            const relevantChunks = ragResult.sources
-              .filter(s => {
-                const score = s.score || s.relevance_score || s.similarity || 0;
-                return score >= 0.25; // Score mais baixo para pegar mais contexto
-              })
-              .slice(0, 8) // Aumenta para 8 chunks mais relevantes
-              .map(s => {
-                // O campo correto é 'excerpt' conforme o modelo Source do Python
-                // Mas também tenta outros campos para compatibilidade
-                const content = s.excerpt || s.content || s.text || s.chunk || s.snippet || '';
-                return content;
-              })
-              .filter(c => c && c.trim() && c.length > 20); // Filtra conteúdos muito curtos
-            
-            if (relevantChunks.length > 0) {
-              ragContext = `\n\nCONTEXTO EXTRAÍDO DOS ARQUIVOS INDEXADOS:\n${relevantChunks.join('\n\n---\n\n')}\n\n`;
-              logger.info('[System] Contexto RAG obtido com sucesso', { 
-                chunksCount: relevantChunks.length,
-                totalLength: ragContext.length,
-                sourcesCount: ragResult.sources.length,
-                avgChunkLength: Math.round(relevantChunks.reduce((sum, c) => sum + c.length, 0) / relevantChunks.length)
-              });
-            } else {
-              logger.debug('[System] RAG retornou sources mas sem conteúdo extraível suficiente', { 
-                sourcesCount: ragResult.sources.length,
-                sampleSource: ragResult.sources[0] ? Object.keys(ragResult.sources[0]) : [],
-                sampleContent: ragResult.sources[0] ? (ragResult.sources[0].content || ragResult.sources[0].text || '').substring(0, 100) : ''
-              });
-            }
-          }
-          
-          // Se não conseguiu extrair contexto dos sources mas há uma resposta gerada, usa ela
-          if (!ragContext && ragResult.response && ragResult.response.trim()) {
-            ragContext = `\n\nINFORMAÇÕES EXTRAÍDAS DOS ARQUIVOS INDEXADOS:\n${ragResult.response}\n\n`;
-            logger.info('[System] Usando resposta RAG como contexto (sources não disponíveis)', { 
-              responseLength: ragResult.response.length 
-            });
-          }
-        } else {
-          logger.debug('[System] RAG não retornou resultados ou está vazio', { 
-            success: ragResult.success,
-            sourcesCount: ragResult.sources?.length || 0,
-            hasResponse: !!ragResult.response,
-            error: ragResult.error
+
+        ragContext = diverse.ragContext ? `\n\n${diverse.ragContext}\n\n` : '';
+        contextSources = Array.isArray(diverse.contextSources) ? diverse.contextSources : [];
+        contextSummary = diverse.contextSummary || null;
+        indexedChunks = contextSources.length;
+
+        if (ragContext && ragContext.trim()) {
+          logger.info('[SuggestDescription] Context sources summary', {
+            total: contextSummary?.total ?? contextSources.length,
+            uploaded: contextSummary?.uploaded ?? contextSources.filter(s => s.sourceType === 'uploaded_file').length,
+            web: contextSummary?.web ?? contextSources.filter(s => s.sourceType === 'web_scraping').length,
+            uploadedSources: contextSummary?.uploadedSources ?? [],
+            webSources: contextSummary?.webSources ?? [],
+            topScores: contextSummary?.topScores ?? undefined,
           });
         }
       } catch (ragError) {
-        logger.warn('[System] Erro ao consultar RAG (continuando sem contexto)', { 
-          error: ragError.message 
-        });
-        // Continua sem contexto RAG se houver erro
+        logger.warn('[System] Erro ao consultar RAG', { error: ragError.message });
+        sendApiError(res, buildApiError({
+          code: 'INTERNAL_ERROR',
+          message: 'Erro ao consultar RAG',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: tenantIdForAI, urls: Array.isArray(urls) ? urls : [], reason: ragError.message },
+          req,
+        }), setCorsHeaders);
+        return;
       }
 
-      // Monta prompt final com contexto RAG se disponível
-      let finalPrompt = prompt;
-      
-      if (ragContext) {
-        // Se há contexto RAG, usa ele como fonte principal
-        finalPrompt = `${prompt}\n\n${ragContext}\n\nIMPORTANTE: Use APENAS as informações do contexto extraído dos arquivos indexados acima. Não invente informações que não estejam no contexto. Se o contexto não contiver informações suficientes, seja cauteloso e mencione apenas o que está disponível.`;
-      } else if (Array.isArray(urls) && urls.length > 0) {
-        // Se não há RAG mas há URLs, menciona as URLs (mas não acessa diretamente)
-        finalPrompt = `${prompt}\n\nURLs do site para referência: ${urls.join(', ')}\n\nIMPORTANTE: Use apenas informações que foram indexadas dos arquivos enviados ou do web scraping desses sites. Não invente informações.`;
-      } else {
-        // Sem RAG nem URLs, instrui a ser muito cauteloso
-        finalPrompt = `${prompt}\n\nIMPORTANTE: Não há conteúdo indexado disponível. Seja muito cauteloso e não invente informações específicas. Use apenas inferências genéricas baseadas no nome.`;
+      // Sem contexto indexado: usa fallback mínimo SE houver qualquer fonte (site ou arquivos).
+      // Só retorna 422 se o tenant realmente não tiver site nem arquivos.
+      if (!ragContext || !ragContext.trim()) {
+        const safeUrls = Array.isArray(urls) ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5) : [];
+        const safeFiles = Array.isArray(fileNames) ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10) : [];
+        let tenantSite = '';
+        let tenantName = (name && String(name).trim()) ? String(name).trim() : '';
+        try {
+          const tenant = await getTenant(tenantIdForAI);
+          tenantSite = tenant?.site ? String(tenant.site).trim() : '';
+          if (!tenantName && tenant?.name) tenantName = String(tenant.name).trim();
+        } catch (err) {
+          // best-effort: não bloqueia fallback
+          logger.debug('[SuggestDescription] Falha ao obter tenant para fallback', { tenantId: tenantIdForAI, error: err.message });
+        }
+
+        const hasAnySource = safeUrls.length > 0 || safeFiles.length > 0 || !!tenantSite;
+        if (!hasAnySource) {
+          sendApiError(res, buildApiError({
+            code: 'NO_INDEXED_CONTEXT',
+            message: 'Nenhum contexto indexado disponível para sugerir descrição',
+            httpStatus: 422,
+            retryable: false,
+            details: {
+              tenantId: tenantIdForAI,
+              urls: safeUrls,
+              fileNames: safeFiles,
+              indexedChunks: indexedChunks || 0,
+            },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+
+        const domainFromUrl = (u) => {
+          try {
+            return new URL(u).hostname.replace(/^www\./i, '');
+          } catch {
+            return '';
+          }
+        };
+        const domain = domainFromUrl(safeUrls[0]) || domainFromUrl(tenantSite) || '';
+        const safeTenantName = tenantName || 'este tenant';
+        const domainNote = domain ? ` (${domain})` : '';
+        const suggestion = [
+          `O ${safeTenantName}${domainNote} é um estúdio voltado para bem-estar e saúde.`,
+          'No momento, ainda não há conteúdo suficiente indexado no RAG para uma descrição detalhada.',
+          'Para melhorar a descrição automaticamente, indexe o site e/ou envie arquivos (PDFs e imagens com texto) para o RAG.',
+        ].join(' ');
+
+        sendJson(res, 200, {
+          suggestion,
+          warnings: [
+            {
+              code: 'NO_INDEXED_CONTEXT_FALLBACK',
+              message: 'Extração/indexação ainda não gerou contexto suficiente. Usamos um fallback mínimo baseado no nome/domínio.',
+            },
+          ],
+        });
+        return;
       }
+
+      // Monta prompt final: SEMPRE baseado no contexto indexado (RAG).
+      const debugRequested = body && body.debug === true;
+      const uploadedUsed = contextSummary?.uploaded ?? contextSources.filter(s => s.sourceType === 'uploaded_file').length;
+      const webUsed = contextSummary?.web ?? contextSources.filter(s => s.sourceType === 'web_scraping').length;
+      const hasAnyContext = (uploadedUsed + webUsed) > 0;
+      const uploadedMissingNote = uploadedUsed === 0
+        ? '\nOBSERVAÇÃO: Não há conteúdo relevante de arquivos enviados no contexto. No texto final, declare explicitamente que os arquivos enviados não continham informações suficientes para complementar a descrição.'
+        : '';
+      const webMissingNote = webUsed === 0
+        ? '\nOBSERVAÇÃO: Não há conteúdo relevante de web scraping no contexto. No texto final, declare explicitamente que não foi possível extrair informações suficientes do site.'
+        : '';
+      const contextCountsLine = `CONTAGEM DO CONTEXTO (para evitar conclusão incorreta): web_scraping=${webUsed}, arquivos_enviados=${uploadedUsed}.`;
+
+      const finalPrompt = [
+        prompt,
+        '',
+        ragContext,
+        '',
+        'INSTRUÇÕES IMPORTANTES (OBRIGATÓRIAS):',
+        contextCountsLine,
+        '- Use obrigatoriamente múltiplas fontes: conteúdo de WEB SCRAPING + conteúdo de ARQUIVOS ENVIADOS (quando houver).',
+        '- Não invente informações. Use apenas o que está nos trechos de contexto.',
+        '- Se os arquivos enviados não contiverem informação relevante, declare isso explicitamente no texto final.',
+        '- Se houver QUALQUER informação útil nos trechos (mesmo parcial), você DEVE incluir na descrição (ex.: telefones, e-mail, endereço, horários, serviços, planos, preços, formas de pagamento/PIX, WhatsApp, CNPJ, redes sociais).',
+        hasAnyContext
+          ? '- NÃO diga que "não foi encontrado conteúdo relevante" se a contagem do contexto acima indicar web_scraping>0 ou arquivos_enviados>0. Em vez disso, descreva o que foi encontrado, deixando claro o que não foi encontrado.'
+          : '- Se a contagem do contexto acima indicar web_scraping=0 e arquivos_enviados=0, escreva uma descrição curta e genérica baseada apenas no nome e domínio fornecidos (sem inventar detalhes), e recomende adicionar fontes (site/arquivos).',
+        uploadedMissingNote,
+        webMissingNote,
+      ].join('\n');
 
       const aiResult = await generateAiResponse(finalPrompt, tenantIdForAI, {});
       const suggestedDescription = aiResult.text || '';
 
       if (!suggestedDescription.trim()) {
-        sendJson(res, 500, { 
-          error: 'Erro ao processar resposta da IA',
-          details: 'A IA não retornou uma descrição sugerida.'
-        });
+        sendApiError(res, buildApiError({
+          code: 'INTERNAL_ERROR',
+          message: 'A IA não retornou uma descrição sugerida',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: tenantIdForAI },
+          req,
+        }), setCorsHeaders);
         return;
       }
 
@@ -2220,18 +2310,40 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         length: suggestedDescription.length 
       });
 
-      sendJson(res, 200, { 
-        suggestion: suggestedDescription.trim()
-      });
+      const responsePayload = { suggestion: suggestedDescription.trim() };
+      if (debugRequested) {
+        responsePayload.contextSourcesSummary = {
+          total: contextSummary?.total ?? contextSources.length,
+          uploaded: uploadedUsed,
+          web: webUsed,
+          uploadedSources: contextSummary?.uploadedSources ?? [],
+          webSources: contextSummary?.webSources ?? [],
+          topScores: contextSummary?.topScores ?? undefined,
+        };
+        responsePayload.contextSources = contextSources;
+      }
+
+      sendJson(res, 200, responsePayload);
     } catch (err) {
       logger.error('[System] Erro ao sugerir descrição:', err);
       if (err instanceof SyntaxError) {
-        badRequest(res, 'JSON inválido no corpo da requisição');
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
       } else {
-        sendJson(res, 500, { 
-          error: 'internal_error',
-          message: err.message || 'Erro ao sugerir descrição por IA'
-        });
+        sendApiError(res, buildApiError({
+          code: 'INTERNAL_ERROR',
+          message: err.message || 'Erro ao sugerir descrição por IA',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
       }
     }
     return;
@@ -2413,7 +2525,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const { getAiProviderForTenant } = require('../engine/aiProviderManager');
-      const { getAIConfig, getDecryptedAPIKey } = require('./services/tenantAIService');
+      const { getAIConfig } = require('./services/tenantAIService');
+      const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
       
       // Busca configuração de IA do tenant no banco de dados
       const tenantAiConfig = await getAIConfig(tenantId);
@@ -2434,113 +2547,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       
-      // Obtém o provider específico do tenant
+      // Garante que a config do tenant esteja carregada no runtime (memória),
+      // para evitar "falso positivo" de status quando a execução real não encontra provider.
+      await ensureTenantAiConfigLoaded(tenantId);
+
+      // Obtém o provider específico do tenant (mesma lógica usada na execução real)
       const provider = getAiProviderForTenant(tenantId);
       
       // Verifica se o provider é válido
-      const hasValidProvider = provider !== null && 
-                              typeof provider === 'object' && 
-                              typeof provider.generate === 'function';
-      
-      // Se o provider não estiver registrado, testa o token do provider configurado
-      let finalIsValid = hasValidProvider;
-      
-      if (!hasValidProvider && tenantAiConfig.primary) {
-        const primaryProvider = tenantAiConfig.primary;
-        // Busca API key do banco de dados (criptografada)
-        const apiKey = await getDecryptedAPIKey(tenantId, primaryProvider);
-        
-        if (apiKey && apiKey.trim()) {
-          logger.debug('Provider não registrado, testando token do provider configurado', {
-            tenantId,
-            primaryProvider,
-            hasApiKey: !!apiKey,
-          });
-          
-          // Testa o token do provider primário configurado
-          try {
-            if (primaryProvider === 'openai') {
-              const response = await fetch('https://api.openai.com/v1/models', {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${apiKey.trim()}`,
-                },
-                signal: AbortSignal.timeout(10000),
-              });
-              
-              if (response.ok) {
-                const data = await response.json().catch(() => null);
-                finalIsValid = !!(data && Array.isArray(data.data));
-                logger.info('Token OpenAI testado com sucesso', {
-                  tenantId,
-                  isValid: finalIsValid,
-                  hasData: !!data,
-                  isArray: Array.isArray(data?.data),
-                });
-              } else {
-                const errorData = await response.json().catch(() => ({}));
-                logger.warn('Token OpenAI inválido', {
-                  tenantId,
-                  status: response.status,
-                  error: errorData.error?.message || response.statusText,
-                });
-                finalIsValid = false;
-              }
-            } else if (primaryProvider === 'anthropic') {
-              const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                  'x-api-key': apiKey.trim(),
-                  'anthropic-version': '2023-06-01',
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  model: 'claude-3-haiku-20240307',
-                  max_tokens: 10,
-                  messages: [{ role: 'user', content: 'test' }],
-                }),
-                signal: AbortSignal.timeout(10000),
-              });
-              
-              if (response.ok) {
-                const data = await response.json().catch(() => null);
-                finalIsValid = !!(data && data.content);
-                logger.info('Token Anthropic testado com sucesso', {
-                  tenantId,
-                  isValid: finalIsValid,
-                  hasData: !!data,
-                  hasContent: !!data?.content,
-                });
-              } else {
-                const errorData = await response.json().catch(() => ({}));
-                logger.warn('Token Anthropic inválido', {
-                  tenantId,
-                  status: response.status,
-                  error: errorData.error?.message || response.statusText,
-                });
-                finalIsValid = false;
-              }
-            }
-          } catch (err) {
-            logger.warn('Erro ao testar token do provider', {
-              tenantId,
-              provider: primaryProvider,
-              error: err.message,
-            });
-            finalIsValid = false;
-          }
-        } else {
-          logger.warn('API key não encontrada para o provider configurado', {
-            tenantId,
-            primaryProvider,
-          });
-          finalIsValid = false;
-        }
-      }
+      const finalIsValid = provider !== null &&
+                           typeof provider === 'object' &&
+                           typeof provider.generate === 'function';
       
       logger.debug('Verificando provider de IA para tenant', {
         tenantId,
-        hasValidProvider,
         finalIsValid,
         primaryProvider: tenantAiConfig?.primary,
       });
@@ -2557,8 +2577,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       logger.info('Status final de provider de IA do tenant', {
         tenantId,
         hasValidProvider: finalIsValid,
-        providerRegistrado: hasValidProvider,
-        providerTestado: !hasValidProvider && tenantAiConfig?.primary,
+        providerRegistrado: finalIsValid,
       });
       
       const responseData = { 
@@ -4745,6 +4764,30 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Retorna resultado completo
+      // Se o pipeline falhou, retorna como erro com envelope (409/424)
+      if (result && result.success === false) {
+        const errorsText = Array.isArray(result.errors) ? result.errors.join(' | ') : '';
+        const providerNotAvailable = /api key não configurada|openai não configurado|não configurad/i.test(errorsText);
+        const httpStatus = providerNotAvailable ? 424 : 409;
+        const code = providerNotAvailable ? 'PROVIDER_NOT_AVAILABLE' : 'PIPELINE_ABORTED';
+        const message = result.motivo || (providerNotAvailable ? 'Provider de IA não disponível' : 'Pipeline abortado');
+
+        sendApiError(res, buildApiError({
+          code,
+          message,
+          httpStatus,
+          retryable: false,
+          details: {
+            tenantId: finalTenantId,
+            executionId: result.executionId,
+            errors: Array.isArray(result.errors) ? result.errors : [],
+            warnings: Array.isArray(result.warnings) ? result.warnings : [],
+          },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
       sendJson(res, 200, result);
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -4762,7 +4805,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         });
       } else {
         logger.error('Erro em generate-and-validate:', err);
-        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno em generate-and-validate' });
+        sendApiError(res, buildApiError({
+          code: 'INTERNAL_ERROR',
+          message: err.message || 'Erro interno em generate-and-validate',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.tenantId || null },
+          req,
+        }), setCorsHeaders);
       }
     }
     return;
@@ -8724,21 +8774,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }
         
         // Sanitiza a configuração: remove apiKey e seção ai completa para evitar vazamento
+        // OBS: API keys globais foram removidas; credenciais são por-tenant (DB) e nunca devem aparecer aqui.
         // A configuração de IA por tenant deve ser obtida via endpoint específico
         const sanitizedConfig = JSON.parse(JSON.stringify(configData)); // Deep copy
         
-        // Remove apiKey de qualquer provider de IA
-        if (sanitizedConfig.ai) {
-          if (sanitizedConfig.ai.openai && sanitizedConfig.ai.openai.apiKey) {
-            delete sanitizedConfig.ai.openai.apiKey;
-          }
-          if (sanitizedConfig.ai.anthropic && sanitizedConfig.ai.anthropic.apiKey) {
-            delete sanitizedConfig.ai.anthropic.apiKey;
-          }
-          // Remove a seção ai completamente para evitar confusão
-          // A configuração de IA deve ser obtida via /tenants/:tenantId/ai-config
-          delete sanitizedConfig.ai;
-        }
+        // Remove a seção ai completamente para evitar confusão/vazamento.
+        // A configuração de IA do tenant e credenciais devem ser obtidas via endpoints de tenant.
+        if (sanitizedConfig.ai) delete sanitizedConfig.ai;
         
         sendJson(res, 200, sanitizedConfig);
       } catch (err) {
@@ -8968,6 +9010,145 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /tenants/current/ai-credentials/test - Valida credenciais salvas (criptografadas) do tenant atual
+  // IMPORTANTE: Esta validação SEMPRE usa chamadas diretas à API, nunca usa fallback
+  if (method === 'POST' && pathname === '/tenants/current/ai-credentials/test') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      let tenantId = authResult.agent.tenantId;
+      if (tenantId === 'current') {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido: "current" não é um tenant válido.' });
+        return;
+      }
+      if (!tenantId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Agente não possui tenantId' });
+        return;
+      }
+
+      // RBAC: config:update ou super-admin
+      const permResult = requirePermission(req, 'config', 'update');
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para validar credenciais de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const providerFromBody = body?.provider ? String(body.provider).trim() : null;
+
+      const { getAIConfig, getDecryptedAPIKey } = require('./services/tenantAIService');
+      const aiCfg = await getAIConfig(tenantId);
+
+      // A validação automática deve refletir o runtime: precisa de provider primário CONFIGURADO no tenant.
+      const configuredPrimary = aiCfg?.primary || aiCfg?.provider || null;
+      if (!aiCfg?.configured || !configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: null,
+          error: 'Provider primário não configurado (salve a configuração de IA do tenant)',
+        });
+        return;
+      }
+
+      // Se o client informou provider, ele deve bater com o primário configurado; senão, usa o primário.
+      const providerToTest = providerFromBody || configuredPrimary;
+      if (providerFromBody && providerFromBody !== configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: providerFromBody,
+          error: `Provider informado (${providerFromBody}) difere do provider primário configurado (${configuredPrimary}). Salve a configuração de IA.`,
+        });
+        return;
+      }
+
+      if (providerToTest !== 'openai' && providerToTest !== 'anthropic') {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Provider não suportado' });
+        return;
+      }
+
+      const apiKey = await getDecryptedAPIKey(tenantId, providerToTest);
+      if (!apiKey || !String(apiKey).trim()) {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Credenciais não encontradas para este provider' });
+        return;
+      }
+
+      const cleanApiKey = String(apiKey).trim();
+      let isValid = false;
+      let error = null;
+
+      try {
+        if (providerToTest === 'openai') {
+          const response = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${cleanApiKey}` },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && Array.isArray(data.data)) isValid = true;
+            else error = 'Resposta inválida da API OpenAI';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        } else if (providerToTest === 'anthropic') {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': cleanApiKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'test' }],
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && data.content) isValid = true;
+            else error = 'Resposta inválida da API Anthropic';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        }
+      } catch (validationError) {
+        if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
+          error = 'Timeout ao validar credenciais. Verifique sua conexão com a internet.';
+        } else if (validationError.name === 'TypeError' && String(validationError.message || '').includes('fetch')) {
+          error = 'Erro de conexão. Verifique sua conexão com a internet.';
+        } else {
+          error = validationError.message || 'Erro ao validar credenciais';
+        }
+      }
+
+      sendJson(res, 200, { success: true, valid: isValid, provider: providerToTest, error: error || null });
+    } catch (err) {
+      logger.error('Erro ao validar credenciais de IA do tenant atual', err);
+      sendJson(res, 500, { success: false, error: 'Erro ao validar credenciais', message: err.message });
+    }
+    return;
+  }
+
   // GET /tenants/:tenantKey/ai-config - Obtém configuração de IA do tenant (sem segredos)
   if (method === 'GET' && pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/)) {
     const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/);
@@ -9117,6 +9298,141 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       } else {
         sendJson(res, 500, { error: 'Erro ao salvar credenciais de IA', message: err.message });
       }
+    }
+    return;
+  }
+
+  // POST /tenants/:tenantKey/ai-credentials/test - Valida credenciais salvas (criptografadas) do tenant
+  // IMPORTANTE: Esta validação SEMPRE usa chamadas diretas à API, nunca usa fallback
+  if (method === 'POST' && pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/)) {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/);
+    const tenantKey = match[1];
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!isSuperAdmin && authResult.agent.tenantId !== tenantKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado a este tenant' });
+        return;
+      }
+
+      // RBAC: config:update ou super-admin
+      const permResult = requirePermission(req, 'config', 'update');
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para validar credenciais de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const providerFromBody = body?.provider ? String(body.provider).trim() : null;
+
+      const { getAIConfig, getDecryptedAPIKey } = require('./services/tenantAIService');
+      const aiCfg = await getAIConfig(tenantKey);
+
+      const configuredPrimary = aiCfg?.primary || aiCfg?.provider || null;
+      if (!aiCfg?.configured || !configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: null,
+          error: 'Provider primário não configurado (salve a configuração de IA do tenant)',
+        });
+        return;
+      }
+
+      const providerToTest = providerFromBody || configuredPrimary;
+      if (providerFromBody && providerFromBody !== configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: providerFromBody,
+          error: `Provider informado (${providerFromBody}) difere do provider primário configurado (${configuredPrimary}). Salve a configuração de IA.`,
+        });
+        return;
+      }
+
+      if (providerToTest !== 'openai' && providerToTest !== 'anthropic') {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Provider não suportado' });
+        return;
+      }
+
+      const apiKey = await getDecryptedAPIKey(tenantKey, providerToTest);
+      if (!apiKey || !String(apiKey).trim()) {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Credenciais não encontradas para este provider' });
+        return;
+      }
+
+      const cleanApiKey = String(apiKey).trim();
+      let isValid = false;
+      let error = null;
+
+      try {
+        if (providerToTest === 'openai') {
+          const response = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${cleanApiKey}` },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && Array.isArray(data.data)) isValid = true;
+            else error = 'Resposta inválida da API OpenAI';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        } else if (providerToTest === 'anthropic') {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': cleanApiKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'test' }],
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && data.content) isValid = true;
+            else error = 'Resposta inválida da API Anthropic';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        }
+      } catch (validationError) {
+        if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
+          error = 'Timeout ao validar credenciais. Verifique sua conexão com a internet.';
+        } else if (validationError.name === 'TypeError' && String(validationError.message || '').includes('fetch')) {
+          error = 'Erro de conexão. Verifique sua conexão com a internet.';
+        } else {
+          error = validationError.message || 'Erro ao validar credenciais';
+        }
+      }
+
+      sendJson(res, 200, { success: true, valid: isValid, provider: providerToTest, error: error || null });
+    } catch (err) {
+      logger.error('Erro ao validar credenciais de IA do tenant', err);
+      sendJson(res, 500, { success: false, error: 'Erro ao validar credenciais', message: err.message });
     }
     return;
   }
@@ -12165,7 +12481,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       logger.error('Erro ao raspar URL:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message });
+      sendApiError(res, buildApiError({
+        code: 'INTERNAL_ERROR',
+        message: err.message || 'Erro interno ao raspar URL',
+        httpStatus: 500,
+        retryable: true,
+        details: { tenantId: req.tenantId || null },
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -12203,6 +12526,35 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         tags: body.tags || [],
         tenantId: req.tenantId,
       });
+
+      const total = body.urls.length;
+      const successCount = (Array.isArray(results) ? results : []).filter(r => r && r.success).length;
+      const failedCount = total - successCount;
+      const duplicatesCount = (Array.isArray(results) ? results : []).filter(r => r && r.success && r.isDuplicate).length;
+      const newCount = successCount - duplicatesCount;
+
+      const errorSummary = (Array.isArray(results) ? results : [])
+        .filter(r => r && !r.success)
+        .map((r) => {
+          const err = (r.error && typeof r.error === 'object')
+            ? r.error
+            : { name: 'Error', message: r.error ? String(r.error) : 'Erro desconhecido' };
+          return {
+            url: r.url,
+            name: err.name || 'Error',
+            message: err.message || 'Erro desconhecido',
+          };
+        });
+
+      const payload = {
+        total,
+        success: successCount,
+        failed: failedCount,
+        new: Math.max(0, newCount),
+        duplicates: Math.max(0, duplicatesCount),
+        results: Array.isArray(results) ? results : [],
+        errorSummary: Array.isArray(errorSummary) ? errorSummary : [],
+      };
       logAction({
         agentId: req.agent.id,
         username: req.agent.username,
@@ -12212,10 +12564,19 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown',
       });
-      sendJson(res, 200, { results });
+      // Status code: 200 se 100% sucesso, 207 se houve qualquer falha (inclui 0 sucesso)
+      const statusCode = successCount === total ? 200 : 207;
+      sendJson(res, statusCode, payload);
     } catch (err) {
       logger.error('Erro ao raspar URLs:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message });
+      sendApiError(res, buildApiError({
+        code: 'INTERNAL_ERROR',
+        message: err.message || 'Erro interno ao raspar URLs',
+        httpStatus: 500,
+        retryable: true,
+        details: { tenantId: req.tenantId || null },
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -13634,7 +13995,19 @@ function createServer() {
     // Garante que erros não derrubem o processo.
     requestHandler(req, res).catch((err) => {
       logger.error('Erro inesperado ao processar requisição', err);
-      sendJson(res, 500, { error: 'internal_error' });
+      try {
+        const { buildApiError, sendApiError } = require('./utils/apiError');
+        sendApiError(res, buildApiError({
+          code: 'INTERNAL_ERROR',
+          message: 'Erro interno',
+          httpStatus: 500,
+          retryable: false,
+          details: { message: err?.message },
+          req,
+        }), setCorsHeaders);
+      } catch {
+        sendJson(res, 500, { error: 'internal_error' });
+      }
     });
   });
 
