@@ -11751,6 +11751,156 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /rag/documents/upload - Upload (multipart) com extração server-side (PDF/OCR)
+  if (method === 'POST' && pathname === '/rag/documents/upload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const contentType = String(req.headers['content-type'] || '');
+    if (!contentType.toLowerCase().includes('multipart/form-data')) {
+      badRequest(res, 'Content-Type deve ser multipart/form-data');
+      return;
+    }
+
+    try {
+      const { fields, files } = await parseMultipartFormData(req);
+      const file = Array.isArray(files) ? files[0] : null;
+      if (!file) {
+        badRequest(res, 'Arquivo é obrigatório');
+        return;
+      }
+
+      const tenantId = (fields && fields.tenantId) ? String(fields.tenantId).trim() : (req.tenantId || req.agent?.tenantId);
+      if (!tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      // Limite simples de tamanho (10MB)
+      const maxSizeBytes = 10 * 1024 * 1024;
+      if (Number(file.size || 0) > maxSizeBytes) {
+        sendApiError(res, buildApiError({
+          code: 'FILE_TOO_LARGE',
+          message: 'Arquivo muito grande. Tamanho máximo: 10MB.',
+          httpStatus: 400,
+          retryable: false,
+          details: { fileName: file.filename, fileSize: file.size, maxSizeBytes },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      // eslint-disable-next-line global-require
+      const { extractTextFromFile } = require('./services/fileExtractionService');
+
+      // Parse de metadados/tags (best-effort)
+      let metadataFromField = {};
+      try {
+        if (fields && fields.metadata) {
+          metadataFromField = JSON.parse(String(fields.metadata));
+        }
+      } catch {
+        metadataFromField = {};
+      }
+      let tags = [];
+      try {
+        if (fields && fields.tags) {
+          const parsed = JSON.parse(String(fields.tags));
+          tags = Array.isArray(parsed) ? parsed : [];
+        }
+      } catch {
+        tags = (fields && fields.tags) ? [String(fields.tags)] : [];
+      }
+
+      const extraction = await extractTextFromFile({
+        buffer: file.buffer,
+        mimeType: file.mimeType,
+        filename: file.filename,
+      }, {
+        timeoutMs: 15000,
+        useOcr: String(process.env.USE_OCR || '').toLowerCase() === 'true',
+      });
+
+      const extractedText = (extraction.extractedText || '').trim();
+      const warnings = Array.isArray(extraction.warnings) ? extraction.warnings : [];
+      const finalText = extractedText || 'Sem texto extraído. Indexando metadados do arquivo.';
+      if (!extractedText) {
+        warnings.push({
+          code: 'NO_TEXT_EXTRACTED',
+          message: 'Sem texto extraído. Indexando metadados do arquivo.',
+          details: { fileName: file.filename, mimeType: file.mimeType },
+        });
+      }
+
+      const nowIso = new Date().toISOString();
+      const documentData = {
+        title: file.filename || 'Arquivo enviado',
+        content: finalText,
+        metadata: {
+          source: (fields && fields.source) ? String(fields.source).trim() : 'file',
+          category: (fields && fields.category) ? String(fields.category).trim() : null,
+          tags,
+          fileName: file.filename,
+          filename: file.filename,
+          mime: file.mimeType,
+          fileType: file.mimeType,
+          fileSize: file.size,
+          uploadedAt: nowIso,
+          extractionWarnings: warnings,
+          ...metadataFromField,
+        },
+        autoIndex: !(fields && String(fields.autoIndex).toLowerCase() === 'false'),
+      };
+
+      const result = await createDocument(documentData, tenantId);
+      if (!result.success) {
+        sendApiError(res, buildApiError({
+          code: 'RAG_INDEX_FAILED',
+          message: result.error || 'Falha ao criar/indexar documento no RAG',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId, fileName: file.filename, mimeType: file.mimeType },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      if (result.isDuplicate) {
+        sendJson(res, 200, {
+          ...result.document,
+          isDuplicate: true,
+          warnings,
+        });
+        return;
+      }
+
+      sendJson(res, 201, {
+        ...result.document,
+        warnings,
+      });
+    } catch (err) {
+      logger.error('Erro ao fazer upload e extrair arquivo:', err);
+      sendApiError(res, buildApiError({
+        code: 'FILE_UPLOAD_FAILED',
+        message: err.message || 'Erro ao processar upload de arquivo',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
   // POST /rag/documents - Cria documento
   if (method === 'POST' && pathname === '/rag/documents') {
     const authResult = requireAuth(req);

@@ -167,9 +167,17 @@ export async function fetchJson(path, init) {
     // Inclui headers de autenticação se disponível
     const authHeaders = getAuthHeaders();
     
-    // Prepara os headers, garantindo que Content-Type seja sempre application/json
-    // quando há um body (para requisições POST, PUT, PATCH)
+    // Prepara os headers.
+    // Regra: só força Content-Type=application/json quando o body NÃO é FormData.
     const hasBody = init && (init.body !== undefined && init.body !== null);
+    const isFormDataBody = (() => {
+      try {
+        // FormData só existe no browser/test env; em ambientes sem FormData, cai no catch.
+        return hasBody && typeof FormData !== 'undefined' && init.body instanceof FormData;
+      } catch {
+        return false;
+      }
+    })();
     
     // Merge dos headers: primeiro os headers customizados, depois auth, depois Content-Type e Accept (para garantir que sejam sempre definidos)
     const mergedHeaders = {
@@ -177,8 +185,8 @@ export async function fetchJson(path, init) {
       ...authHeaders,
       // Sempre envia Accept: application/json para garantir que a API retorne JSON
       'Accept': 'application/json',
-      // Garante que Content-Type seja application/json se houver body
-      ...(hasBody && { 'Content-Type': 'application/json' }),
+      // Garante que Content-Type seja application/json se houver body e NÃO for FormData
+      ...(hasBody && !isFormDataBody && { 'Content-Type': 'application/json' }),
     };
     
     // Remove headers do init para evitar sobrescrita, mas mantém timeoutMs
@@ -197,17 +205,35 @@ export async function fetchJson(path, init) {
       timeoutMs, // Passa timeoutMs explicitamente
     });
 
+    // Alguns testes mockam `headers` como objeto simples (sem entries()).
+    let responseHeadersObj = {};
+    try {
+      if (response?.headers && typeof response.headers.entries === 'function') {
+        responseHeadersObj = Object.fromEntries(response.headers.entries());
+      } else if (response?.headers && typeof response.headers.forEach === 'function') {
+        const tmp = {};
+        response.headers.forEach((v, k) => { tmp[k] = v; });
+        responseHeadersObj = tmp;
+      }
+    } catch {
+      responseHeadersObj = {};
+    }
+
     console.log('[HTTP Client] 📥 Resposta recebida:', {
       url: response.url,
       status: response.status,
       statusText: response.statusText,
       ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries()),
+      headers: responseHeadersObj,
     });
 
-    const contentType = response.headers.get('Content-Type') || '';
+    const contentType = (response?.headers && typeof response.headers.get === 'function'
+      ? response.headers.get('Content-Type')
+      : '') || '';
     const isJson = contentType.includes('application/json');
 
+    // HTTP 207 (Multi-Status) é considerado sucesso pelo fetch (ok=true),
+    // e deve ser tratado como resposta válida pelo frontend.
     if (!response.ok) {
       console.log('[HTTP Client] ❌ Resposta não OK:', {
         status: response.status,
@@ -277,7 +303,7 @@ export async function fetchJson(path, init) {
           isOnLoginPage,
           errorBody,
           responseUrl: response.url,
-          headers: Object.fromEntries(response.headers.entries()),
+          headers: responseHeadersObj,
         };
         
         console.error('[HTTP Client] ⚠️⚠️⚠️ ERRO 401 (Unauthorized) DETECTADO ⚠️⚠️⚠️', logData);
@@ -330,6 +356,40 @@ export async function fetchJson(path, init) {
         }
       }
 
+      // Se a API retornou um Error Envelope padronizado, normaliza e propaga
+      // um erro tratável por `code` no restante do frontend.
+      if (
+        isJson &&
+        errorBody &&
+        typeof errorBody === 'object' &&
+        errorBody.success === false &&
+        errorBody.error &&
+        typeof errorBody.error === 'object' &&
+        typeof errorBody.error.code === 'string'
+      ) {
+        const apiErr = errorBody.error;
+        const error = new Error(apiErr.message || `Erro HTTP ${response.status}`);
+        // @ts-ignore
+        error.code = apiErr.code;
+        // @ts-ignore
+        error.details = apiErr.details;
+        // @ts-ignore
+        error.httpStatus = apiErr.httpStatus || response.status;
+        // @ts-ignore
+        error.retryable = !!apiErr.retryable;
+        // @ts-ignore
+        error.traceId = apiErr.traceId;
+        // @ts-ignore
+        error.timestamp = apiErr.timestamp;
+        // @ts-ignore
+        error.status = apiErr.httpStatus || response.status;
+        // @ts-ignore
+        error.body = errorBody;
+        // @ts-ignore
+        error.url = url;
+        throw error;
+      }
+
       const error = new Error(
         `Erro HTTP ${response.status} ao chamar ${url}${
           errorBody ? ` - ${JSON.stringify(errorBody)}` : ''
@@ -380,6 +440,19 @@ export async function fetchJson(path, init) {
       result = textResult;
     } else {
       result = /** @type {T} */ (await response.json());
+    }
+
+    // Anexa status HTTP sem quebrar compatibilidade (não-enumerável)
+    if (result && typeof result === 'object') {
+      try {
+        Object.defineProperty(result, '__httpStatus', {
+          value: response.status,
+          enumerable: false,
+          configurable: true,
+        });
+      } catch {
+        // ignora (ex.: objeto congelado)
+      }
     }
 
     // Log estruturado com URL final resolvida
