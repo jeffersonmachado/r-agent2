@@ -675,7 +675,7 @@ async function scrapeUrl(url, options = {}) {
     if (replay) {
       replay.recordEvent('scraping_completed', {
         documentId,
-        contentLength: content.length,
+        contentLength: indexableContent.length,
         indexed,
       });
       replay.stop();
