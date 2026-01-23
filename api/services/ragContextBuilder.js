@@ -260,8 +260,20 @@ async function buildDiverseRagContext({
   });
 
   if (ragRes && ragRes.success === false && ragRes.error) {
-    // Falha real do RAG (ex.: crash no serviço Python) deve virar 500 no endpoint, não 422.
-    throw new Error(`RAG_QUERY_FAILED: ${ragRes.error}`);
+    const msg = safeString(ragRes.error);
+    // “Sem chunks” não é falha do serviço: deve ser tratado como falta de contexto.
+    const noChunks = /nenhum\s+chunk|no\s+chunk|0\s+chunk|chunks?\s+found\s*:\s*0|score\s+suficiente/i.test(msg);
+    if (!noChunks) {
+      // Falha real do RAG (ex.: crash no serviço Python) deve virar 500 no endpoint, não 422.
+      throw new Error(`RAG_QUERY_FAILED: ${ragRes.error}`);
+    }
+    logger.debug('[RAGContextBuilder] RAG retornou sem chunks (tratado como contexto vazio)', { tenantId, query });
+    return {
+      ragContext: '',
+      contextSources: [],
+      contextSummary: summarize([]),
+      notes: ['Nenhum contexto indexado relevante foi encontrado para esta consulta.'],
+    };
   }
 
   const raw = Array.isArray(ragRes?.sources) ? ragRes.sources : [];
