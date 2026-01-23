@@ -94,12 +94,15 @@ function buildContextSource(s) {
   const chunkId = getChunkId(s);
   const hash = sha256(normalizeForHash(rawText));
 
+  // Texto completo (limitado) para extração estruturada; `excerpt` é apenas para UI/debug leve.
+  const text = rawText.length > 1400 ? `${rawText.slice(0, 1400)}...` : rawText;
   const excerpt = rawText.length > 380 ? `${rawText.slice(0, 380)}...` : rawText;
 
   return {
     sourceType,
     sourceId,
     score,
+    text,
     excerpt,
     chunkId: chunkId || null,
     hash,
