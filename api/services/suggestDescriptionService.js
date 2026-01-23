@@ -3,6 +3,7 @@ const { buildDiverseRagContext } = require('./ragContextBuilder');
 const { buildEntityProfile } = require('./entityProfileService');
 const { generateAiResponse } = require('./aiProviderService');
 const { getTenant } = require('./tenantService');
+const { getEphemeralContext } = require('./ephemeralRagContextService');
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
@@ -175,6 +176,8 @@ function buildTechnicalReport({ profile, contextSources }) {
  *  name?: string|null,
  *  urls?: string[],
  *  fileNames?: string[],
+ *  executionId?: string|null,
+ *  contextMode?: 'auto'|'persisted'|'ephemeral',
  *  mode?: 'institutional'|'technical',
  *  debug?: boolean,
  * }} input
@@ -187,13 +190,45 @@ async function suggestDescription(input) {
   const urls = Array.isArray(input?.urls) ? input.urls : [];
   const fileNames = Array.isArray(input?.fileNames) ? input.fileNames : [];
   const debugRequested = input?.debug === true;
+  const executionId = safeString(input?.executionId).trim() || null;
+  const contextMode = (input?.contextMode === 'ephemeral' || input?.contextMode === 'persisted') ? input.contextMode : 'auto';
 
   let tenant = null;
   try { tenant = await getTenant(tenantId); } catch { tenant = null; }
   const tenantName = safeString(input?.name || tenant?.name || '').trim();
   const tenantWebsite = safeString(tenant?.site || '').trim() || null;
 
-  // Passo A: recuperar topK chunks com diversidade (web + arquivos)
+  // Passo A: recuperar chunks (ephemeral via Redis+TTL ou persistidos via RAG)
+  /** @type {any[]} */
+  let contextSources = [];
+  let contextSummary = null;
+
+  if (executionId && (contextMode === 'auto' || contextMode === 'ephemeral')) {
+    const eph = await getEphemeralContext({ tenantId, executionId });
+    if (eph.found && Array.isArray(eph.chunks) && eph.chunks.length > 0) {
+      contextSources = eph.chunks;
+      contextSummary = {
+        total: contextSources.length,
+        uploaded: contextSources.filter(s => s.sourceType === 'uploaded_file').length,
+        web: contextSources.filter(s => s.sourceType === 'web_scraping').length,
+        uploadedSources: [],
+        webSources: [],
+        topScores: { uploaded: [], web: [] },
+      };
+      logger.info('[SuggestDescription] Usando contexto efêmero (dry-run)', {
+        tenantId,
+        executionId,
+        used: eph.used,
+        chunks: contextSources.length,
+      });
+    } else if (contextMode === 'ephemeral') {
+      logger.info('[SuggestDescription] Contexto efêmero não encontrado; tratando como vazio', { tenantId, executionId });
+      contextSources = [];
+      contextSummary = { total: 0, uploaded: 0, web: 0, uploadedSources: [], webSources: [], topScores: { uploaded: [], web: [] } };
+    }
+  }
+
+  if (!contextSources.length && (contextMode === 'auto' || contextMode === 'persisted')) {
   const urlDomains = urls
     .map((u) => {
       try {
@@ -234,8 +269,9 @@ async function suggestDescription(input) {
     maxTokens: 3000,
   });
 
-  const contextSources = Array.isArray(diverse.contextSources) ? diverse.contextSources : [];
-  const contextSummary = diverse.contextSummary || null;
+    contextSources = Array.isArray(diverse.contextSources) ? diverse.contextSources : [];
+    contextSummary = diverse.contextSummary || null;
+  }
 
   // Sem contexto indexado relevante
   if (!contextSources.length) {

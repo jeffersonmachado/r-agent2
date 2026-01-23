@@ -765,6 +765,10 @@ export function GenerateSystemPage() {
       try {
         // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
         let finalDescription = description.trim();
+        const dryRunExecutionId = (executionMode === 'dry-run')
+          ? ((typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `dryrun-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+          : null;
+        const ephemeralChunks = [];
         
         // ETAPA 0 (tenant): sempre processa arquivos pendentes ANTES de web scraping / sugestão.
         // Também marca o step como concluído quando não houver arquivos pendentes,
@@ -800,7 +804,14 @@ export function GenerateSystemPage() {
                 f.id === fileObj.id ? { ...f, category: inferredCategory } : f
               ));
               
-              await handleFileUpload({ ...fileObj, category: inferredCategory });
+              const uploadRes = await handleFileUpload({ ...fileObj, category: inferredCategory });
+              if (executionMode === 'dry-run' && uploadRes && uploadRes.ok && uploadRes.text) {
+                ephemeralChunks.push({
+                  sourceType: uploadRes.sourceType || 'uploaded_file',
+                  sourceId: uploadRes.sourceId || fileObj.name,
+                  text: uploadRes.text,
+                });
+              }
             } catch (error) {
               logger.error(`[TenantMode] Erro ao processar arquivo ${fileObj.name}`, {
                 error: error.message,
@@ -864,18 +875,73 @@ export function GenerateSystemPage() {
             
             if (useWebScraping && validUrls.length > 0) {
               webScrapingDone = true;
-              // Dry-run: não chama scraping (evita side effects no banco/RAG)
-              updatePipelineWithDetails({
+              updatePipelineWithDetails({ 
                 webScraping: {
-                  status: 'completed',
-                  progress: 100,
-                  message: `Dry-run: web scraping ignorado (não indexa no RAG).`,
-                  timestamp: new Date().toISOString(),
+                  status: 'in_progress',
+                  progress: 0,
+                  message: `Processando web scraping (dry-run) de ${validUrls.length} URL(s)...`,
                   urlsTotal: validUrls.length,
-                  successCount: 0,
-                  failedCount: 0,
                 }
-              }, 'webScrapingCompleted');
+              }, 'webScrapingStarted');
+
+              try {
+                const scrapingStartedAt = Date.now();
+                const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    urls: validUrls,
+                    dryRun: true,
+                    autoIndex: false,
+                    source: 'web_scraping',
+                    category: 'general',
+                    tenantId: validatedTenantId,
+                  }),
+                });
+                const durationMs = Date.now() - scrapingStartedAt;
+
+                const results = Array.isArray(scrapingResponse?.results) ? scrapingResponse.results : [];
+                const successCount = Number.isFinite(scrapingResponse?.success)
+                  ? Number(scrapingResponse.success)
+                  : results.filter(r => r && r.success).length;
+                const failedCount = Number.isFinite(scrapingResponse?.failed)
+                  ? Number(scrapingResponse.failed)
+                  : (validUrls.length - successCount);
+
+                // Captura texto extraído para contexto efêmero
+                for (const r of results) {
+                  const url = r?.url;
+                  const text = (r?.extractedText || '').trim();
+                  if (url && text && text.length >= 20) {
+                    ephemeralChunks.push({ sourceType: 'web_scraping', sourceId: url, text });
+                  }
+                }
+
+                updatePipelineWithDetails({
+                  webScraping: {
+                    status: 'completed',
+                    progress: 100,
+                    message: `Web scraping (dry-run) concluído: ${successCount}/${validUrls.length} URL(s) processada(s)`,
+                    timestamp: new Date().toISOString(),
+                    urlsTotal: validUrls.length,
+                    successCount,
+                    failedCount,
+                    durationMs,
+                  }
+                }, 'webScrapingCompleted');
+              } catch (scrapingError) {
+                logger.warn('[TenantMode] Web scraping dry-run falhou (continuando)', scrapingError);
+                updatePipelineWithDetails({
+                  webScraping: {
+                    status: 'completed',
+                    progress: 100,
+                    message: 'Web scraping (dry-run) falhou. Continuando sem conteúdo do site.',
+                    timestamp: new Date().toISOString(),
+                    urlsTotal: validUrls.length,
+                    successCount: 0,
+                    failedCount: validUrls.length,
+                  }
+                }, 'webScrapingCompleted');
+              }
             } else if (useWebScraping && validUrls.length > 0 && executionMode !== 'dry-run') {
               webScrapingDone = true;
               updatePipelineWithDetails({ 
@@ -1032,6 +1098,25 @@ export function GenerateSystemPage() {
             updatePipelineWithDetails({ 
               descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição do tenant com IA usando conteúdo indexado...' }
             }, 'description-suggestion');
+
+            // Dry-run: envia evidências para Redis+TTL e pede sugestão baseada no contexto efêmero.
+            if (executionMode === 'dry-run' && dryRunExecutionId) {
+              try {
+                await fetchJson('/rag/ephemeral/context', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    tenantId: validatedTenantId,
+                    executionId: dryRunExecutionId,
+                    chunks: ephemeralChunks,
+                    replace: true,
+                  }),
+                  timeoutMs: 15000,
+                });
+              } catch (e) {
+                logger.warn('[TenantMode] Falha ao persistir contexto efêmero (Redis). Continuando com fallback.', e);
+              }
+            }
             
             // O backend gera a descrição (institucional ou técnica) via RAG + consolidação.
             
@@ -1050,6 +1135,7 @@ export function GenerateSystemPage() {
                 urls: validUrls, // Envia URLs para referência
                 fileNames: uploadedFileNames, // Ajuda o backend a montar query do RAG incluindo docs enviados
                 mode: descriptionMode,
+                ...(executionMode === 'dry-run' && dryRunExecutionId ? { executionId: dryRunExecutionId, contextMode: 'ephemeral' } : {}),
               }),
               timeoutMs: 60000,
             });
@@ -2295,7 +2381,12 @@ export function GenerateSystemPage() {
             : f
         ));
         showToast(`Arquivo "${fileObj.name}" processado (dry-run: não indexado no RAG).`, 'info', 6000);
-        return;
+        return {
+          ok: true,
+          sourceType: 'uploaded_file',
+          sourceId: fileObj.name,
+          text: extractedContent,
+        };
       }
 
       // Obtém tenantId do agente (obrigatório para indexação correta, sem fallback)
@@ -2399,6 +2490,7 @@ export function GenerateSystemPage() {
       ));
 
       showToast(`Erro ao processar arquivo "${fileObj.name}": ${error.message}`, 'error');
+      return { ok: false, error: error.message || 'Erro ao processar arquivo' };
     }
   };
 

@@ -2075,7 +2075,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { name, tenantId, urls, fileNames, mode } = body;
+      const { name, tenantId, urls, fileNames, mode, executionId, contextMode } = body;
 
       const isSuperAdminUser = isSuperAdmin(req.agent);
       // Importante: para super-admin, permite operar em um tenant alvo via body.tenantId
@@ -2140,6 +2140,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         name: (name && String(name).trim()) ? String(name).trim() : null,
         urls: safeUrls,
         fileNames: safeFiles,
+        executionId: (executionId && String(executionId).trim()) ? String(executionId).trim() : null,
+        contextMode: (contextMode && String(contextMode).trim()) ? String(contextMode).trim() : 'auto',
         mode: mode === 'technical' ? 'technical' : 'institutional',
         debug: debugRequested,
       });
@@ -2184,6 +2186,70 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           req,
         }), setCorsHeaders);
       }
+    }
+    return;
+  }
+
+  // POST /rag/ephemeral/context - Armazena contexto efêmero (Redis+TTL) para dry-run
+  if (method === 'POST' && pathname === '/rag/ephemeral/context') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'rag', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const tenantIdFromBody = body?.tenantId ? String(body.tenantId).trim() : null;
+      const executionId = body?.executionId ? String(body.executionId).trim() : null;
+      const chunks = Array.isArray(body?.chunks) ? body.chunks : [];
+      const ttlSeconds = body?.ttlSeconds;
+      const replace = body?.replace === true;
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const requestedTenantId = tenantIdFromBody;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      const tenantIdFinal = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
+      if (!tenantIdFinal) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      if (!executionId) {
+        badRequest(res, 'executionId é obrigatório');
+        return;
+      }
+
+      const { upsertEphemeralContext } = require('./services/ephemeralRagContextService');
+      const result = await upsertEphemeralContext({
+        tenantId: tenantIdFinal,
+        executionId,
+        chunks,
+        ttlSeconds,
+        replace,
+      });
+
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[EphemeralContext] Erro ao armazenar contexto efêmero', err);
+      sendApiError(res, buildApiError({
+        code: 'EPHEMERAL_CONTEXT_FAILED',
+        message: err.message || 'Erro ao armazenar contexto efêmero',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
