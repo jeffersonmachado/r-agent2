@@ -2075,12 +2075,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { prompt, name, tenantId, urls, fileNames } = body;
-
-      if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-        badRequest(res, 'Prompt é obrigatório');
-        return;
-      }
+      const { name, tenantId, urls, fileNames, mode } = body;
 
       const isSuperAdminUser = isSuperAdmin(req.agent);
       // Importante: para super-admin, permite operar em um tenant alvo via body.tenantId
@@ -2098,205 +2093,61 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       logger.info('[System] Sugerindo descrição por IA', { 
         name: name || 'N/A',
         tenantId: tenantIdForAI,
+        mode: mode === 'technical' ? 'technical' : 'institutional',
         hasUrls: Array.isArray(urls) && urls.length > 0,
         filesCount: Array.isArray(fileNames) ? fileNames.length : 0,
       });
 
-      // Primeiro, consulta RAG para obter conteúdo indexado sobre o tenant/sistema
-      // com diversidade por fonte (arquivos enviados + web scraping).
-      let ragContext = '';
-      let indexedChunks = 0;
-      let contextSources = [];
-      let contextSummary = null;
+      const debugRequested = body && body.debug === true;
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10)
+        : [];
+
+      // Só retorna 422 se realmente não houver qualquer fonte (site nem urls nem arquivos).
+      let tenantSite = '';
       try {
-        const safeFileNames = Array.isArray(fileNames)
-          ? fileNames
-              .filter(f => typeof f === 'string' && f.trim())
-              .map(f => f.trim().slice(0, 80))
-              .slice(0, 8)
-          : [];
+        const { getTenant } = require('./services/tenantService');
+        const tenant = await getTenant(tenantIdForAI);
+        tenantSite = tenant?.site ? String(tenant.site).trim() : '';
+      } catch (err) {
+        logger.debug('[SuggestDescription] Falha ao obter tenant para checar fontes', { tenantId: tenantIdForAI, error: err.message });
+      }
 
-        // Constrói query mais específica baseada no nome e URLs
-        let ragQuery = '';
-        if (name && Array.isArray(urls) && urls.length > 0) {
-          // Se tem nome e URLs, busca por conteúdo relacionado ao nome e às URLs
-          const urlDomains = urls.map(url => {
-            try {
-              const urlObj = new URL(url);
-              return urlObj.hostname.replace('www.', '');
-            } catch {
-              return url;
-            }
-          }).filter(Boolean);
-          ragQuery = `${name} ${urlDomains.join(' ')} informações sobre serviços produtos`;
-        } else if (name) {
-          // Se tem apenas nome, busca por informações sobre o nome
-          ragQuery = `Informações sobre ${name} serviços produtos empresa negócio`;
-        } else if (Array.isArray(urls) && urls.length > 0) {
-          // Se tem apenas URLs, busca por conteúdo das URLs
-          const urlDomains = urls.map(url => {
-            try {
-              const urlObj = new URL(url);
-              return urlObj.hostname.replace('www.', '');
-            } catch {
-              return url;
-            }
-          }).filter(Boolean);
-          ragQuery = `${urlDomains.join(' ')} informações conteúdo site`;
-        } else {
-          ragQuery = 'Informações sobre o sistema ou tenant';
-        }
-
-        // Se houver arquivos enviados, adiciona nomes como pistas para o RAG recuperar também documentos
-        if (safeFileNames.length > 0) {
-          ragQuery = `${ragQuery} documentos arquivos ${safeFileNames.join(' ')}`;
-        }
-        
-        logger.debug('[System] Consultando RAG para obter contexto', { 
-          query: ragQuery, 
-          tenantId: tenantIdForAI,
-          name,
-          urlsCount: Array.isArray(urls) ? urls.length : 0,
-          fileNamesCount: Array.isArray(fileNames) ? fileNames.length : 0,
-        });
-
-        const diverse = await buildDiverseRagContext({
-          query: ragQuery,
-          tenantId: tenantIdForAI,
-          totalK: 10,
-          minUploaded: 3,
-          minWeb: 3,
-          minScore: 0.25,
-          maxTokens: 3000,
-        });
-
-        ragContext = diverse.ragContext ? `\n\n${diverse.ragContext}\n\n` : '';
-        contextSources = Array.isArray(diverse.contextSources) ? diverse.contextSources : [];
-        contextSummary = diverse.contextSummary || null;
-        indexedChunks = contextSources.length;
-
-        if (ragContext && ragContext.trim()) {
-          logger.info('[SuggestDescription] Context sources summary', {
-            total: contextSummary?.total ?? contextSources.length,
-            uploaded: contextSummary?.uploaded ?? contextSources.filter(s => s.sourceType === 'uploaded_file').length,
-            web: contextSummary?.web ?? contextSources.filter(s => s.sourceType === 'web_scraping').length,
-            uploadedSources: contextSummary?.uploadedSources ?? [],
-            webSources: contextSummary?.webSources ?? [],
-            topScores: contextSummary?.topScores ?? undefined,
-          });
-        }
-      } catch (ragError) {
-        logger.warn('[System] Erro ao consultar RAG', { error: ragError.message });
+      const hasAnySource = safeUrls.length > 0 || safeFiles.length > 0 || !!tenantSite;
+      if (!hasAnySource) {
         sendApiError(res, buildApiError({
-          code: 'INTERNAL_ERROR',
-          message: 'Erro ao consultar RAG',
-          httpStatus: 500,
-          retryable: true,
-          details: { tenantId: tenantIdForAI, urls: Array.isArray(urls) ? urls : [], reason: ragError.message },
+          code: 'NO_INDEXED_CONTEXT',
+          message: 'Nenhum contexto indexado disponível para sugerir descrição',
+          httpStatus: 422,
+          retryable: false,
+          details: {
+            tenantId: tenantIdForAI,
+            urls: safeUrls,
+            fileNames: safeFiles,
+            indexedChunks: 0,
+          },
           req,
         }), setCorsHeaders);
         return;
       }
 
-      // Sem contexto indexado: usa fallback mínimo SE houver qualquer fonte (site ou arquivos).
-      // Só retorna 422 se o tenant realmente não tiver site nem arquivos.
-      if (!ragContext || !ragContext.trim()) {
-        const safeUrls = Array.isArray(urls) ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5) : [];
-        const safeFiles = Array.isArray(fileNames) ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10) : [];
-        let tenantSite = '';
-        let tenantName = (name && String(name).trim()) ? String(name).trim() : '';
-        try {
-          const tenant = await getTenant(tenantIdForAI);
-          tenantSite = tenant?.site ? String(tenant.site).trim() : '';
-          if (!tenantName && tenant?.name) tenantName = String(tenant.name).trim();
-        } catch (err) {
-          // best-effort: não bloqueia fallback
-          logger.debug('[SuggestDescription] Falha ao obter tenant para fallback', { tenantId: tenantIdForAI, error: err.message });
-        }
+      const { suggestDescription } = require('./services/suggestDescriptionService');
+      const { payload, warnings } = await suggestDescription({
+        tenantId: tenantIdForAI,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        mode: mode === 'technical' ? 'technical' : 'institutional',
+        debug: debugRequested,
+      });
 
-        const hasAnySource = safeUrls.length > 0 || safeFiles.length > 0 || !!tenantSite;
-        if (!hasAnySource) {
-          sendApiError(res, buildApiError({
-            code: 'NO_INDEXED_CONTEXT',
-            message: 'Nenhum contexto indexado disponível para sugerir descrição',
-            httpStatus: 422,
-            retryable: false,
-            details: {
-              tenantId: tenantIdForAI,
-              urls: safeUrls,
-              fileNames: safeFiles,
-              indexedChunks: indexedChunks || 0,
-            },
-            req,
-          }), setCorsHeaders);
-          return;
-        }
-
-        const domainFromUrl = (u) => {
-          try {
-            return new URL(u).hostname.replace(/^www\./i, '');
-          } catch {
-            return '';
-          }
-        };
-        const domain = domainFromUrl(safeUrls[0]) || domainFromUrl(tenantSite) || '';
-        const safeTenantName = tenantName || 'este tenant';
-        const domainNote = domain ? ` (${domain})` : '';
-        const suggestion = [
-          `O ${safeTenantName}${domainNote} é um estúdio voltado para bem-estar e saúde.`,
-          'No momento, ainda não há conteúdo suficiente indexado no RAG para uma descrição detalhada.',
-          'Para melhorar a descrição automaticamente, indexe o site e/ou envie arquivos (PDFs e imagens com texto) para o RAG.',
-        ].join(' ');
-
-        const warnings = [
-          {
-            code: 'NO_INDEXED_CONTEXT_FALLBACK',
-            message: 'Extração/indexação ainda não gerou contexto suficiente. Usamos um fallback mínimo baseado no nome/domínio.',
-          },
-        ];
-        const payload = { suggestion, warnings };
-        sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
-        return;
-      }
-
-      // Monta prompt final: SEMPRE baseado no contexto indexado (RAG).
-      const debugRequested = body && body.debug === true;
-      const uploadedUsed = contextSummary?.uploaded ?? contextSources.filter(s => s.sourceType === 'uploaded_file').length;
-      const webUsed = contextSummary?.web ?? contextSources.filter(s => s.sourceType === 'web_scraping').length;
-      const hasAnyContext = (uploadedUsed + webUsed) > 0;
-      const uploadedMissingNote = uploadedUsed === 0
-        ? '\nOBSERVAÇÃO: Não há conteúdo relevante de arquivos enviados no contexto. No texto final, declare explicitamente que os arquivos enviados não continham informações suficientes para complementar a descrição.'
-        : '';
-      const webMissingNote = webUsed === 0
-        ? '\nOBSERVAÇÃO: Não há conteúdo relevante de web scraping no contexto. No texto final, declare explicitamente que não foi possível extrair informações suficientes do site.'
-        : '';
-      const contextCountsLine = `CONTAGEM DO CONTEXTO (para evitar conclusão incorreta): web_scraping=${webUsed}, arquivos_enviados=${uploadedUsed}.`;
-
-      const finalPrompt = [
-        prompt,
-        '',
-        ragContext,
-        '',
-        'INSTRUÇÕES IMPORTANTES (OBRIGATÓRIAS):',
-        contextCountsLine,
-        '- Use obrigatoriamente múltiplas fontes: conteúdo de WEB SCRAPING + conteúdo de ARQUIVOS ENVIADOS (quando houver).',
-        '- Não invente informações. Use apenas o que está nos trechos de contexto.',
-        '- Se os arquivos enviados não contiverem informação relevante, declare isso explicitamente no texto final.',
-        '- Se houver QUALQUER informação útil nos trechos (mesmo parcial), você DEVE incluir na descrição (ex.: telefones, e-mail, endereço, horários, serviços, planos, preços, formas de pagamento/PIX, WhatsApp, CNPJ, redes sociais).',
-        hasAnyContext
-          ? '- NÃO diga que "não foi encontrado conteúdo relevante" se a contagem do contexto acima indicar web_scraping>0 ou arquivos_enviados>0. Em vez disso, descreva o que foi encontrado, deixando claro o que não foi encontrado.'
-          : '- Se a contagem do contexto acima indicar web_scraping=0 e arquivos_enviados=0, escreva uma descrição curta e genérica baseada apenas no nome e domínio fornecidos (sem inventar detalhes), e recomende adicionar fontes (site/arquivos).',
-        uploadedMissingNote,
-        webMissingNote,
-      ].join('\n');
-
-      const aiResult = await generateAiResponse(finalPrompt, tenantIdForAI, {});
-      const suggestedDescription = aiResult.text || '';
-
-      if (!suggestedDescription.trim()) {
+      if (!payload?.suggestion || !String(payload.suggestion).trim()) {
         sendApiError(res, buildApiError({
           code: 'DESCRIPTION_FAILED',
-          message: 'A IA não retornou uma descrição sugerida',
+          message: 'Não foi possível gerar uma descrição sugerida',
           httpStatus: 500,
           retryable: true,
           details: { tenantId: tenantIdForAI },
@@ -2306,24 +2157,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       logger.info('[System] Descrição sugerida com sucesso', { 
-        length: suggestedDescription.length 
+        length: String(payload.suggestion || '').length,
+        mode: payload.mode,
+        confidence: payload.confidence,
       });
 
-      const responsePayload = { suggestion: suggestedDescription.trim() };
-      if (debugRequested) {
-        responsePayload.contextSourcesSummary = {
-          total: contextSummary?.total ?? contextSources.length,
-          uploaded: uploadedUsed,
-          web: webUsed,
-          uploadedSources: contextSummary?.uploadedSources ?? [],
-          webSources: contextSummary?.webSources ?? [],
-          topScores: contextSummary?.topScores ?? undefined,
-        };
-        responsePayload.contextSources = contextSources;
-      }
-
-      const payload = responsePayload;
-      sendJson(res, 200, { ok: true, data: payload, warnings: [], ...payload });
+      sendJson(res, 200, { ok: true, data: payload, warnings: warnings || [], ...payload });
     } catch (err) {
       logger.error('[System] Erro ao sugerir descrição:', err);
       if (err instanceof SyntaxError) {
@@ -11665,6 +11504,97 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /rag/health - Health do RAG (Node): compara BD vs vector store e retorna warning se inconsistente
+  if (method === 'GET' && pathname === '/rag/health') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+      const autoRepair = url.searchParams.get('autoRepair') === 'true';
+
+      const { getRagHealth } = require('./services/ragDocumentsService');
+      const health = await getRagHealth(tenantId, { autoRepair });
+
+      // status code: 200 sempre, mas inclui status=warning para UI
+      sendJson(res, 200, health);
+    } catch (err) {
+      logger.error('Erro ao obter rag health:', err);
+      sendApiError(res, buildApiError({
+        code: 'INTERNAL_ERROR',
+        message: 'Erro ao obter health do RAG',
+        httpStatus: 500,
+        retryable: true,
+        details: { message: err.message },
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
+  // POST /rag/documents/clean-orphans - Limpa documentos órfãos do vector store (vector_ahead)
+  if (method === 'POST' && pathname === '/rag/documents/clean-orphans') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
+      const body = await parseJsonBody(req);
+      const { documentIds } = body || {};
+
+      const ragDocuments = require('./services/ragDocumentsService');
+
+      // Se o caller fornecer IDs, usa a limpeza direta; senão, detecta automaticamente.
+      let result;
+      if (Array.isArray(documentIds) && documentIds.length > 0) {
+        result = await ragDocuments.cleanOrphanedDocuments(tenantId, documentIds.map(String));
+        sendJson(res, 200, result);
+        return;
+      }
+
+      result = await ragDocuments.detectAndCleanOrphanedVectorDocuments(tenantId);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao limpar documentos órfãos:', err);
+      sendApiError(res, buildApiError({
+        code: 'INTERNAL_ERROR',
+        message: 'Erro ao limpar documentos órfãos do vector store',
+        httpStatus: 500,
+        retryable: true,
+        details: { message: err.message },
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
   // GET /rag/deduplication/stats - Estatísticas de deduplicação
   if (method === 'GET' && pathname === '/rag/deduplication/stats') {
     const authResult = requireAuth(req);
@@ -11735,12 +11665,65 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      // GET /rag/documents/:id/download - Download do binário original (quando existir)
+      if (pathname.endsWith('/download')) {
+        const tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+
+        const rawId = decodeURIComponent(pathname.slice('/rag/documents/'.length).replace(/\/download$/, ''));
+        const { getDocumentFileFromDb } = require('./services/ragDocumentsService');
+        const fileRow = await getDocumentFileFromDb(rawId, tenantId);
+        if (!fileRow || !fileRow.data) {
+          sendJson(res, 404, { error: 'file_not_found', message: 'Arquivo original não encontrado no banco de dados' });
+          return;
+        }
+
+        const filename = (fileRow.filename || `documento-${rawId}`).replace(/[\r\n"]/g, '_');
+        const mimeType = fileRow.mimeType || 'application/octet-stream';
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        if (Number.isFinite(fileRow.sizeBytes)) {
+          res.setHeader('Content-Length', String(fileRow.sizeBytes));
+        }
+        res.writeHead(200);
+        res.end(fileRow.data);
+        return;
+      }
+
+      // Para GET /rag/documents/:id, exige tenant e valida ownership
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
       const documentId = decodeURIComponent(pathname.slice('/rag/documents/'.length));
       const document = getDocument(documentId);
       
-      if (!document) {
+      if (!document || (document.tenantId && document.tenantId !== tenantId)) {
         sendJson(res, 404, { error: 'document_not_found' });
         return;
+      }
+
+      // Se for documento de upload (source=file), confirma (best-effort) se há binário no BD
+      // e anexa metadata.originalBinary para a UI (sem expor o binário aqui).
+      try {
+        const meta = document.metadata || {};
+        const looksLikeFileUpload = meta.source === 'file' || !!meta.fileName || !!meta.filename;
+        if (looksLikeFileUpload && (!meta.originalBinary || meta.originalBinary.stored !== true)) {
+          const { getDocumentFileFromDb } = require('./services/ragDocumentsService');
+          const fileRow = await getDocumentFileFromDb(documentId, tenantId);
+          if (fileRow && fileRow.data) {
+            document.metadata = {
+              ...meta,
+              originalBinary: {
+                stored: true,
+                filename: fileRow.filename || meta.fileName || meta.filename || null,
+                mimeType: fileRow.mimeType || meta.mime || meta.fileType || null,
+                sizeBytes: Number.isFinite(fileRow.sizeBytes) ? fileRow.sizeBytes : null,
+              },
+            };
+          }
+        }
+      } catch {
+        // best-effort: não bloqueia GET do documento
       }
 
       sendJson(res, 200, document);
@@ -11821,17 +11804,46 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         tags = (fields && fields.tags) ? [String(fields.tags)] : [];
       }
 
-      const extraction = await extractTextFromFile({
-        buffer: file.buffer,
-        mimeType: file.mimeType,
-        filename: file.filename,
-      }, {
-        timeoutMs: 15000,
-        useOcr: String(process.env.USE_OCR || '').toLowerCase() === 'true',
-      });
+      const normalizeExtractedText = (value) => (typeof value === 'string' ? value.trim() : '');
+      const looksLikePlaceholder = (text) => {
+        if (!text) return false;
+        // Placeholder gerado no frontend quando a extração falha
+        if (text.includes('Não foi possível extrair conteúdo automaticamente')) return true;
+        if (text.startsWith('[Arquivo:') && text.includes('Não foi possível extrair')) return true;
+        return false;
+      };
 
-      const extractedText = (extraction.extractedText || '').trim();
-      const warnings = Array.isArray(extraction.warnings) ? extraction.warnings : [];
+      // Se o frontend já enviou conteúdo extraído (OCR/PDF/etc.), priorizamos isso.
+      // Motivo: em dev/prod o OCR server-side pode estar desabilitado (USE_OCR!=true),
+      // mas o cliente pode ter conseguido extrair texto.
+      const clientProvidedExtracted = normalizeExtractedText(
+        (metadataFromField && (metadataFromField.extractedContent || metadataFromField.extractedText)) || ''
+      );
+      const hasMeaningfulClientText = !!clientProvidedExtracted && clientProvidedExtracted.length >= 10 && !looksLikePlaceholder(clientProvidedExtracted);
+
+      /** @type {{ extractedText: string, warnings: Array<any>, source: 'client'|'server'|'none' }} */
+      let extractionResult = { extractedText: '', warnings: [], source: 'none' };
+
+      if (hasMeaningfulClientText) {
+        extractionResult = { extractedText: clientProvidedExtracted, warnings: [], source: 'client' };
+      } else {
+        const extraction = await extractTextFromFile({
+          buffer: file.buffer,
+          mimeType: file.mimeType,
+          filename: file.filename,
+        }, {
+          timeoutMs: 15000,
+          useOcr: String(process.env.USE_OCR || '').toLowerCase() === 'true',
+        });
+        extractionResult = {
+          extractedText: normalizeExtractedText(extraction.extractedText),
+          warnings: Array.isArray(extraction.warnings) ? extraction.warnings : [],
+          source: 'server',
+        };
+      }
+
+      const extractedText = extractionResult.extractedText;
+      const warnings = extractionResult.warnings;
       const finalText = extractedText || 'Sem texto extraído. Indexando metadados do arquivo.';
       if (!extractedText) {
         warnings.push({
@@ -11855,6 +11867,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           fileType: file.mimeType,
           fileSize: file.size,
           uploadedAt: nowIso,
+          // Para UI: texto extraído puro (OCR/PDF) quando disponível
+          extractedText,
+          extractedContent: extractedText,
+          extractionSource: extractionResult.source,
           extractionWarnings: warnings,
           ...metadataFromField,
         },
@@ -11874,13 +11890,56 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      // Salva binário original no BD (best-effort)
+      try {
+        const ragDocumentsService = require('./services/ragDocumentsService');
+        await ragDocumentsService.upsertDocumentFileToDb({
+          documentId: result.document.id,
+          tenantId,
+          filename: file.filename,
+          mimeType: file.mimeType,
+          sizeBytes: Number(file.size || 0),
+          data: file.buffer,
+        });
+
+        // Marca no metadata (best-effort) para a UI saber que há binário disponível
+        try {
+          await ragDocumentsService.updateDocument(result.document.id, {
+            metadata: {
+              originalBinary: {
+                stored: true,
+                filename: file.filename,
+                mimeType: file.mimeType,
+                sizeBytes: Number(file.size || 0),
+                storedAt: new Date().toISOString(),
+              },
+            },
+          });
+        } catch {
+          // ignore
+        }
+      } catch (e) {
+        logger.warn('[RAGDocuments] Falha ao salvar binário original no BD (best-effort)', {
+          tenantId,
+          documentId: result.document?.id,
+          error: e.message,
+        });
+      }
+
       if (result.isDuplicate) {
         const payload = { ...result.document, isDuplicate: true, warnings };
         sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
         return;
       }
 
-      const payload = { ...result.document, warnings };
+      const payload = { ...result.document, warnings, indexing: result.indexing || null };
+
+      // Sucesso parcial: upload/extraiu/criou, mas indexação falhou
+      if (result.indexing && result.indexing.attempted && result.indexing.success === false) {
+        sendJson(res, 207, { ok: true, data: payload, warnings, ...payload });
+        return;
+      }
+
       sendJson(res, 201, { ok: true, data: payload, warnings, ...payload });
     } catch (err) {
       logger.error('Erro ao fazer upload e extrair arquivo:', err);
@@ -11922,6 +11981,27 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       if (!result.success) {
         sendJson(res, 400, { error: 'creation_failed', message: result.error });
+        return;
+      }
+
+      // Se a criação funcionou mas a indexação falhou, retorna 207 com aviso (sem quebrar criação).
+      // O frontend pode exibir toast com base em `indexing.errorCode`.
+      if (result.indexing && result.indexing.attempted && result.indexing.success === false) {
+        logAction({
+          agentId: req.agent.id,
+          username: req.agent.username,
+          action: 'rag_document_create_index_failed',
+          resource: 'rag_document',
+          resourceId: result.document.id,
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+
+        // 207 Multi-Status: indica sucesso parcial (criou, mas não indexou)
+        sendJson(res, 207, {
+          ...result.document,
+          indexing: result.indexing,
+        });
         return;
       }
 
@@ -12074,7 +12154,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const result = await reindexDocument(documentId);
 
       if (!result.success) {
-        sendJson(res, 400, { error: 'reindex_failed', message: result.error });
+        sendApiError(res, buildApiError({
+          code: result.errorCode || 'RAG_INDEX_FAILED',
+          message: result.error || 'Falha ao reindexar documento no RAG',
+          httpStatus: 500,
+          retryable: true,
+          details: { documentId, tenantId: req.tenantId || req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
         return;
       }
 
@@ -12139,6 +12226,43 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('Erro ao reindexar documentos em lote:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/reindex-all?tenantId=... - Reindex completo do tenant (zera rag_chunks e reprocessa)
+  if (method === 'POST' && pathname === '/rag/reindex-all') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      const tenantId = url.searchParams.get('tenantId') || requireTenant(req, res);
+      if (!tenantId) return;
+
+      const { reindexAllTenant } = require('./services/ragDocumentsService');
+      const result = await reindexAllTenant(String(tenantId));
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao reindexar tenant:', err);
+      sendApiError(res, buildApiError({
+        code: 'RAG_REINDEX_ALL_FAILED',
+        message: 'Erro ao reindexar tenant',
+        httpStatus: 500,
+        retryable: true,
+        details: { message: err.message },
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -14461,6 +14585,15 @@ if (require.main === module) {
       } catch (err) {
         logger.warn('[OutboundQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
       }
+    }
+
+    // Reconciliação automática de consistência RAG (BD <-> Vector Store) - best-effort
+    // Objetivo: evitar que inconsistências persistam (órfãos no vector store / BD à frente)
+    try {
+      const { startRagConsistencyWorker } = require('./services/ragConsistencyWorker');
+      startRagConsistencyWorker();
+    } catch (err) {
+      logger.warn('[RAGReconcile] Falha ao iniciar worker (ignorado)', { error: err.message });
     }
 
     // Auto-return-to-bot (best-effort)
