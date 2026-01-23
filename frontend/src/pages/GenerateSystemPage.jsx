@@ -780,16 +780,18 @@ export function GenerateSystemPage() {
             filesInferred: { status: 'in_progress', progress: 0, message: `Processando ${pendingFiles.length} arquivo(s) antes de continuar...` }
           }, 'file-processing');
           
-          const fileProcessingPromises = pendingFiles.map(async (fileObj, index) => {
+          // Importante: esse processamento roda em paralelo. Não podemos usar `index` como proxy de progresso,
+          // pois um arquivo "do final" pode terminar antes e setar 100% indevidamente.
+          let processedCount = 0;
+          const fileProcessingPromises = pendingFiles.map(async (fileObj) => {
             try {
-              const progress = Math.round(((index + 1) / pendingFiles.length) * 100);
               setPipelineDetails(prev => ({
                 ...prev,
                 filesInferred: {
                   status: 'in_progress',
                   timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
-                  message: `Processando arquivo ${index + 1}/${pendingFiles.length}: ${fileObj.name}`,
-                  progress,
+                  message: `Iniciando processamento: ${fileObj.name}`,
+                  progress: prev.filesInferred.progress || 0,
                 },
               }));
               
@@ -810,6 +812,18 @@ export function GenerateSystemPage() {
                   ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' }
                   : f
               ));
+            } finally {
+              processedCount += 1;
+              const progress = Math.round((processedCount / pendingFiles.length) * 100);
+              setPipelineDetails(prev => ({
+                ...prev,
+                filesInferred: {
+                  status: 'in_progress',
+                  timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
+                  message: `Processados ${processedCount}/${pendingFiles.length} arquivo(s) (último: ${fileObj.name})`,
+                  progress,
+                },
+              }));
             }
           });
           
@@ -819,7 +833,9 @@ export function GenerateSystemPage() {
             filesInferred: {
               status: 'completed',
               progress: 100,
-              message: `${pendingFiles.length} arquivo(s) processado(s) e indexado(s) no RAG`,
+              message: executionMode === 'dry-run'
+                ? `${pendingFiles.length} arquivo(s) processado(s) (dry-run: não indexado(s) no RAG)`
+                : `${pendingFiles.length} arquivo(s) processado(s) e indexado(s) no RAG`,
               timestamp: new Date().toISOString()
             }
           }, 'file-processing');
@@ -847,6 +863,20 @@ export function GenerateSystemPage() {
             const validUrls = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
             
             if (useWebScraping && validUrls.length > 0) {
+              webScrapingDone = true;
+              // Dry-run: não chama scraping (evita side effects no banco/RAG)
+              updatePipelineWithDetails({
+                webScraping: {
+                  status: 'completed',
+                  progress: 100,
+                  message: `Dry-run: web scraping ignorado (não indexa no RAG).`,
+                  timestamp: new Date().toISOString(),
+                  urlsTotal: validUrls.length,
+                  successCount: 0,
+                  failedCount: 0,
+                }
+              }, 'webScrapingCompleted');
+            } else if (useWebScraping && validUrls.length > 0 && executionMode !== 'dry-run') {
               webScrapingDone = true;
               updatePipelineWithDetails({ 
                 webScraping: {
@@ -1114,6 +1144,19 @@ export function GenerateSystemPage() {
         const validUrlsForScraping = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
         if (useWebScraping && validUrlsForScraping.length > 0 && !webScrapingDone) {
           webScrapingDone = true;
+          if (executionMode === 'dry-run') {
+            updatePipelineWithDetails({
+              webScraping: {
+                status: 'completed',
+                progress: 100,
+                message: `Dry-run: web scraping ignorado (não indexa no RAG).`,
+                timestamp: new Date().toISOString(),
+                urlsTotal: validUrlsForScraping.length,
+                successCount: 0,
+                failedCount: 0,
+              }
+            }, 'webScrapingCompleted');
+          } else {
           updatePipelineWithDetails({
             webScraping: {
               status: 'in_progress',
@@ -1227,6 +1270,7 @@ export function GenerateSystemPage() {
 
             setExecuting(false);
             return;
+          }
           }
         }
         
@@ -2232,6 +2276,26 @@ export function GenerateSystemPage() {
             contentPreview: extractedContent.substring(0, 100),
           });
         }
+      }
+
+      // DRY-RUN: não grava no banco / não indexa no RAG. Mantém apenas extração local para UX.
+      if (executionMode === 'dry-run') {
+        setUploadedFiles(prev => prev.map(f =>
+          f.id === fileObj.id
+            ? {
+                ...f,
+                status: 'success',
+                documentId: null,
+                preview: preview,
+                progress: 100,
+                extractedContent: extractedContent, // mantém para visualização
+                isDuplicate: false,
+                dryRun: true,
+              }
+            : f
+        ));
+        showToast(`Arquivo "${fileObj.name}" processado (dry-run: não indexado no RAG).`, 'info', 6000);
+        return;
       }
 
       // Obtém tenantId do agente (obrigatório para indexação correta, sem fallback)

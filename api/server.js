@@ -11768,6 +11768,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      const isDryRun = fields && String(fields.dryRun || '').toLowerCase() === 'true';
+
       // Limite simples de tamanho (10MB)
       const maxSizeBytes = 10 * 1024 * 1024;
       if (Number(file.size || 0) > maxSizeBytes) {
@@ -11851,6 +11853,22 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           message: 'Sem texto extraído. Indexando metadados do arquivo.',
           details: { fileName: file.filename, mimeType: file.mimeType },
         });
+      }
+
+      // DRY-RUN: não cria documento nem grava binário no BD.
+      if (isDryRun) {
+        const payload = {
+          dryRun: true,
+          tenantId,
+          fileName: file.filename,
+          mimeType: file.mimeType,
+          sizeBytes: Number(file.size || 0),
+          extractedText,
+          warnings,
+          message: 'DRY-RUN: extração concluída, sem persistência no RAG/BD.',
+        };
+        sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
+        return;
       }
 
       const nowIso = new Date().toISOString();
@@ -12788,12 +12806,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         badRequest(res, 'URLs é obrigatório e deve ser um array não vazio');
         return;
       }
+      const isDryRun = body && body.dryRun === true;
       const results = await scrapeUrls(body.urls, {
         contentSelector: body.contentSelector,
         removeSelectors: body.removeSelectors,
         timeout: body.timeout || 30000,
         concurrency: body.concurrency || 3,
-        autoIndex: body.autoIndex !== false,
+        // DRY-RUN: nunca indexa (evita side effects no RAG/BD)
+        autoIndex: isDryRun ? false : (body.autoIndex !== false),
         source: body.source || 'web_scraping',
         category: body.category,
         tags: body.tags || [],
@@ -12827,16 +12847,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         duplicates: Math.max(0, duplicatesCount),
         results: Array.isArray(results) ? results : [],
         errorSummary: Array.isArray(errorSummary) ? errorSummary : [],
+        dryRun: isDryRun,
       };
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'web_scraping_batch',
-        resource: 'web_scraping',
-        details: { urlsCount: body.urls.length },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
+      // DRY-RUN: não grava auditoria no BD.
+      if (!isDryRun) {
+        logAction({
+          agentId: req.agent.id,
+          username: req.agent.username,
+          action: 'web_scraping_batch',
+          resource: 'web_scraping',
+          details: { urlsCount: body.urls.length },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      }
       // Status code: 200 se 100% sucesso, 207 se houve qualquer falha (inclui 0 sucesso)
       const statusCode = successCount === total ? 200 : 207;
       const warnings = [];
@@ -12844,6 +12868,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         warnings.push({
           code: 'PARTIAL_SUCCESS',
           message: 'Extração parcial: usamos fallback quando necessário e continuamos com o melhor conteúdo disponível.',
+        });
+      }
+      if (isDryRun) {
+        warnings.push({
+          code: 'DRY_RUN_NO_INDEX',
+          message: 'DRY-RUN: scraping executado sem indexação/persistência.',
         });
       }
       try {
