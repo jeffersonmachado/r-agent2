@@ -10,7 +10,7 @@ import { generateAndValidate, checkRateLimit } from '../api/system';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { uploadDocument } from '../api/ragDocuments';
 import { processFile } from '../utils/fileProcessor';
-import { fetchJson } from '../api/client';
+import { fetchBlob, fetchJson } from '../api/client';
 import { Dialog } from '../components/Dialog';
 import * as tenantsApi from '../api/tenants';
 import logger from '../utils/logger';
@@ -76,6 +76,7 @@ export function GenerateSystemPage() {
   // Dados básicos
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionMode, setDescriptionMode] = useState('institutional'); // 'institutional' | 'technical'
 
   // BLOCO 4 - Validações Automáticas
   const [validationStatus, setValidationStatus] = useState({
@@ -1002,32 +1003,7 @@ export function GenerateSystemPage() {
               descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição do tenant com IA usando conteúdo indexado...' }
             }, 'description-suggestion');
             
-            // Prepara prompt melhorado que considera URLs de scraping se disponíveis
-            let promptText;
-            
-            if (validUrls.length > 0) {
-              // Se houver URLs, instrui a IA a usar o conteúdo real do site
-              promptText = `Com base no nome do tenant "${name.trim()}" e no conteúdo do site ${validUrls[0]}, sugira uma descrição detalhada e completa para este tenant. 
-
-IMPORTANTE: 
-- Use APENAS informações reais do site fornecido
-- Não invente informações que não estejam no site
-- Se o site não estiver acessível ou não tiver informações suficientes, seja cauteloso e mencione apenas o que é evidente
-- A descrição deve explicar o tipo de empresa, ramo de atividade e objetivos baseado no conteúdo real do site
-
-Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
-            } else {
-              // Sem URLs, usa prompt mais cauteloso
-              promptText = `Com base no nome do tenant "${name.trim()}", sugira uma descrição detalhada e completa para este tenant. 
-
-IMPORTANTE: 
-- Seja cauteloso e não invente informações específicas
-- Use apenas inferências genéricas baseadas no nome
-- A descrição deve ser genérica e mencionar que mais informações são necessárias
-- Explique o tipo de empresa, ramo de atividade e objetivos de forma genérica
-
-Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
-            }
+            // O backend gera a descrição (institucional ou técnica) via RAG + consolidação.
             
             // Chama API para sugerir descrição do tenant
             const uploadedFileNames = Array.from(new Set(
@@ -1039,11 +1015,11 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             const suggestionResponse = await fetchJson('/system/suggest-description', {
               method: 'POST',
               body: JSON.stringify({ 
-                prompt: promptText,
                 name: name.trim(),
                 tenantId: validatedTenantId,
                 urls: validUrls, // Envia URLs para referência
                 fileNames: uploadedFileNames, // Ajuda o backend a montar query do RAG incluindo docs enviados
+                mode: descriptionMode,
               }),
               timeoutMs: 60000,
             });
@@ -1055,6 +1031,18 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                 'Descrição gerada com avisos',
                 'A descrição foi gerada com fallback/extração parcial. Você pode melhorar indexando o site e anexando arquivos.',
                 { warnings: suggestionResponse.warnings }
+              );
+            }
+
+            const confidence = (typeof suggestionResponse?.confidence === 'number')
+              ? suggestionResponse.confidence
+              : (typeof suggestionResponse?.entityProfile?.confidence === 'number' ? suggestionResponse.entityProfile.confidence : null);
+            if (confidence !== null && confidence < 0.5) {
+              toastWarn(
+                showToast,
+                'Poucas evidências para descrição',
+                'A descrição foi gerada com baixa confiança. Para melhorar, indexe mais conteúdo (site/arquivos) no RAG.',
+                { confidence }
               );
             }
             
@@ -1565,8 +1553,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição com IA...' }
         }, 'description-suggestion');
         
-        // Gera descrição sugerida usando IA via API
-        const suggestionPrompt = `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
+        // Gera descrição sugerida via RAG + consolidação (backend)
         const uploadedFileNames = Array.from(new Set(
           uploadedFiles
             .map(f => (typeof f?.name === 'string' ? f.name.trim() : ''))
@@ -1577,13 +1564,34 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         const suggestionResponse = await fetchJson('/system/suggest-description', {
           method: 'POST',
           body: JSON.stringify({ 
-            prompt: suggestionPrompt,
             name: name.trim(),
             tenantId: agent.tenantId,
             fileNames: uploadedFileNames,
+            mode: descriptionMode,
           }),
           timeoutMs: 60000,
         });
+
+        if (Array.isArray(suggestionResponse?.warnings) && suggestionResponse.warnings.length > 0) {
+          toastWarn(
+            showToast,
+            'Descrição gerada com avisos',
+            'A descrição foi gerada com baixa evidência/extração parcial. Você pode melhorar anexando mais arquivos ou indexando o site.',
+            { warnings: suggestionResponse.warnings }
+          );
+        }
+
+        const confidence = (typeof suggestionResponse?.confidence === 'number')
+          ? suggestionResponse.confidence
+          : (typeof suggestionResponse?.entityProfile?.confidence === 'number' ? suggestionResponse.entityProfile.confidence : null);
+        if (confidence !== null && confidence < 0.5) {
+          toastWarn(
+            showToast,
+            'Poucas evidências para descrição',
+            'A descrição foi gerada com baixa confiança. Para melhorar, indexe mais conteúdo (site/arquivos) no RAG.',
+            { confidence }
+          );
+        }
         
         if (suggestionResponse?.suggestion) {
           // Atualiza a descrição com a sugestão
@@ -2262,11 +2270,23 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
 
       // Toast warning quando houver extração parcial (PDF/OCR/etc.)
       if (Array.isArray(result?.warnings) && result.warnings.length > 0) {
+        const warnings = result.warnings;
+        const codes = Array.from(new Set(
+          warnings
+            .map(w => (w && typeof w === 'object' ? w.code : null))
+            .filter(Boolean)
+        ));
+        const codePreview = codes.slice(0, 4).join(', ');
+        const moreCodes = codes.length > 4 ? ` (+${codes.length - 4})` : '';
+        const summary = codes.length > 0
+          ? `Avisos (${warnings.length}): ${codePreview}${moreCodes}.`
+          : `Avisos (${warnings.length}).`;
+
         toastWarn(
           showToast,
           'Arquivo indexado com avisos',
-          'A extração do conteúdo foi parcial. Indexamos metadados mínimos quando necessário.',
-          { warnings: result.warnings, fileName: fileObj.name }
+          `${summary}\nA extração do conteúdo foi parcial. Indexamos metadados mínimos quando necessário.`,
+          { warnings, fileName: fileObj.name, documentId: result.document?.id || result.id }
         );
       }
       
@@ -2320,6 +2340,40 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
 
   const removeUploadedFile = (fileId) => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const downloadRagOriginalFile = async (documentId, filenameHint = null, mode = 'download') => {
+    if (!documentId) return;
+    try {
+      const path = `/rag/documents/${encodeURIComponent(documentId)}/download`;
+      const res = await fetchBlob(path, { method: 'GET', timeoutMs: 45000 });
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      if (mode === 'open') {
+        window.open(objectUrl, '_blank', 'noopener,noreferrer');
+        // Revoga depois para dar tempo do navegador carregar
+        setTimeout(() => {
+          try { URL.revokeObjectURL(objectUrl); } catch {}
+        }, 15000);
+        return;
+      }
+
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filenameHint || `documento-${documentId}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      const status = e?.status;
+      if (status === 404) {
+        showToast('Arquivo original não encontrado no banco (404).', 'warning', 7000);
+        return;
+      }
+      showToast('Não foi possível baixar/abrir o arquivo original do RAG.', 'error', 8000);
+    }
   };
 
   /**
@@ -3038,6 +3092,17 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   ? 'Descrição *' 
                   : 'Descrição (opcional no modo dry-run)'}
             </label>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm text-text-secondary">Modo da sugestão:</span>
+              <select
+                value={descriptionMode}
+                onChange={(e) => setDescriptionMode(e.target.value)}
+                className="px-3 py-2 rounded-lg bg-bg-secondary border border-border-default text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+              >
+                <option value="institutional">Institucional (padrão)</option>
+                <option value="technical">Técnico (auditoria)</option>
+              </select>
+            </div>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -3606,6 +3671,32 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   <div className="col-span-2">
                     <span className="text-text-tertiary">ID do Documento RAG:</span>
                     <p className="text-text-primary font-mono text-xs break-all">{selectedFileDetails.documentId}</p>
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        className="text-xs px-2 py-1 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary"
+                        onClick={() => downloadRagOriginalFile(
+                          selectedFileDetails.documentId,
+                          selectedFileDetails.name,
+                          'open'
+                        )}
+                        title="Abrir o arquivo original salvo no RAG em nova aba"
+                      >
+                        🔎 Abrir original (RAG)
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs px-2 py-1 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary"
+                        onClick={() => downloadRagOriginalFile(
+                          selectedFileDetails.documentId,
+                          selectedFileDetails.name,
+                          'download'
+                        )}
+                        title="Baixar o arquivo original salvo no RAG"
+                      >
+                        ⬇️ Baixar original (RAG)
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
