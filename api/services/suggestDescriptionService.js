@@ -193,9 +193,39 @@ async function suggestDescription(input) {
   const tenantName = safeString(input?.name || tenant?.name || '').trim();
   const tenantWebsite = safeString(tenant?.site || '').trim() || null;
 
-  // Passo A: recuperar topK chunks com diversidade
+  // Passo A: recuperar topK chunks com diversidade (web + arquivos)
+  const urlDomains = urls
+    .map((u) => {
+      try {
+        return new URL(u).hostname.replace(/^www\./i, '');
+      } catch {
+        return '';
+      }
+    })
+    .filter(Boolean)
+    .slice(0, 4);
+
+  const safeFileNames = fileNames
+    .map(f => safeString(f).trim().slice(0, 80))
+    .filter(Boolean)
+    .slice(0, 8);
+
+  let ragQuery = '';
+  if (tenantName && urlDomains.length > 0) {
+    ragQuery = `${tenantName} ${urlDomains.join(' ')} informações sobre serviços produtos`;
+  } else if (tenantName) {
+    ragQuery = `Informações sobre ${tenantName} serviços produtos empresa negócio`;
+  } else if (urlDomains.length > 0) {
+    ragQuery = `${urlDomains.join(' ')} informações conteúdo site`;
+  } else {
+    ragQuery = 'Informações sobre o tenant';
+  }
+  if (safeFileNames.length > 0) {
+    ragQuery = `${ragQuery} documentos arquivos ${safeFileNames.join(' ')}`;
+  }
+
   const diverse = await buildDiverseRagContext({
-    query: tenantName ? `Informações sobre ${tenantName} serviços produtos empresa` : 'Informações sobre o tenant',
+    query: ragQuery,
     tenantId,
     totalK: 10,
     minUploaded: 3,
