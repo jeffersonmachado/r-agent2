@@ -12,6 +12,7 @@ const { RateLimiterRedis, RateLimiterMemory } = require('rate-limiter-flexible')
 const { getRateLimitClient, isRedisAvailable } = require('../redis/rateLimitClient');
 const { getPolicy } = require('./policies');
 const logger = require('../../api/utils/logger');
+const config = require('../../api/utils/config');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -96,6 +97,7 @@ function getLimiter(operationType) {
   }
 
   let limiter;
+  const allowRedisToMemoryFallback = config.get('fallbacks.rateLimitRedisToMemory', false) === true;
 
   // Tenta usar Redis, fallback para memória
   const redisClient = getRateLimitClient();
@@ -110,6 +112,9 @@ function getLimiter(operationType) {
         blockDuration: 0, // Não bloqueia permanentemente, apenas retorna erro
       });
     } catch (err) {
+      if (!allowRedisToMemoryFallback) {
+        throw err;
+      }
       logger.error('[RateLimit] ERRO ao criar limiter Redis, usando memória', { 
         error: err.message,
         errorStack: err.stack,
@@ -148,6 +153,9 @@ function getLimiter(operationType) {
       });
       // Em produção, lança erro ao invés de usar fallback silencioso
       throw new Error(`Rate limiting requer Redis em produção. Redis não disponível para operação: ${operationType}`);
+    }
+    if (!allowRedisToMemoryFallback) {
+      throw new Error(`Redis não disponível e fallback Redis→memória está desabilitado (fallbacks.rateLimitRedisToMemory=false) para operação: ${operationType}`);
     }
     logger.error('[RateLimit] ERRO: Redis não disponível, usando limiter em memória (APENAS DESENVOLVIMENTO)', { 
       operationType,

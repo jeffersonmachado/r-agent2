@@ -1,0 +1,477 @@
+{
+  "tenantId": "studio-oly",
+  "synonyms": {},
+  "queryPatterns": {
+    "successful": [
+      {
+        "query": "Fluxo Gerado\nsiga o tenat fluxo gerado siga",
+        "success": true,
+        "confidence": 0.5185523841954401,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T04:53:34.368612"
+      },
+      {
+        "query": "Fluxo Gerado\nsiga a tenant fluxo gerado siga",
+        "success": true,
+        "confidence": 0.546126751842613,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T04:54:15.052952"
+      },
+      {
+        "query": "Fluxo Gerado\npadrão fluxo gerado padrão",
+        "success": true,
+        "confidence": 0.5417248168479825,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T13:18:53.143804"
+      },
+      {
+        "query": "Fluxo Gerado\npadrão fluxo gerado padrão",
+        "success": true,
+        "confidence": 0.5417248168479825,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T13:51:15.392952"
+      },
+      {
+        "query": "Fluxo Gerado\nquero que gere um fluxo para fazer todo o atendimento fluxo gerado quero",
+        "success": true,
+        "confidence": 0.4739221833488004,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T14:00:42.597529"
+      },
+      {
+        "query": "Fluxo Gerado\natender a tudo fluxo gerado atender",
+        "success": true,
+        "confidence": 0.5473369179964157,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T14:22:19.506982"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T15:34:47.485398"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T16:27:08.835660"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-01-31T16:32:59.979042"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T11:57:43.052317"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T12:34:43.548471"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T12:49:43.088185"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T13:34:46.438275"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T13:41:01.516129"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T14:45:59.480689"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T18:41:41.624701"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T18:57:04.660021"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T19:27:30.573633"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-01T19:50:46.132491"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T00:28:31.800900"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T01:29:49.327056"
+      },
+      {
+        "query": "Fluxo Gerado\natender todo o negócio fluxo gerado atender",
+        "success": true,
+        "confidence": 0.508705323720052,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T02:02:17.009501"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T03:53:32.027939"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T04:07:34.639306"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T04:14:27.011481"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T04:23:23.420262"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T04:26:10.417402"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T05:16:07.942225"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T05:17:58.348511"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T05:31:57.132159"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T06:42:34.520663"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T06:43:30.393684"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T10:43:22.569603"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T10:44:20.996896"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T11:04:14.320039"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T11:04:45.682177"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T12:07:46.206628"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T12:08:42.800321"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T14:38:41.766306"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T14:38:46.781152"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T15:10:51.702842"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T15:18:30.098766"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T15:21:50.387767"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T15:31:12.194234"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T15:47:54.737483"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T16:10:18.120081"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T16:14:50.224597"
+      },
+      {
+        "query": "Fluxo Gerado\ncomplemento fluxo gerado complemento",
+        "success": true,
+        "confidence": 0.48295551362679956,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T16:15:07.333982"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T16:23:35.567615"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T16:24:49.799656"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T17:19:31.743361"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T17:19:35.588859"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T17:53:19.192254"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T17:53:21.421080"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T18:22:14.277096"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T18:22:19.430141"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:03:24.729018"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:03:28.720294"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:27:38.271973"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:27:43.612062"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:31:02.695281"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:31:07.634776"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:40:06.561058"
+      },
+      {
+        "query": "Fluxo Gerado\ncompleto fluxo gerado completo",
+        "success": true,
+        "confidence": 0.49086785313832804,
+        "chunksFound": 6,
+        "timestamp": "2026-02-02T19:40:11.338740"
+      }
+    ],
+    "failed": []
+  },
+  "promptVariations": [],
+  "metrics": {
+    "totalQueries": 64,
+    "successfulQueries": 64,
+    "failedQueries": 0,
+    "avgConfidence": 0.4902020281915615,
+    "lastUpdated": "2026-02-02T19:40:11.338704"
+  },
+  "config": {
+    "minScore": 0.45,
+    "topK": 6,
+    "chunkOverlap": 75
+  },
+  "learningCycles": {
+    "total": 0,
+    "lastCycle": null,
+    "cycles": []
+  },
+  "createdAt": "2026-01-31T04:53:34.368469",
+  "updatedAt": "2026-02-02T19:40:11.338807"
+}

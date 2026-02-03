@@ -110,7 +110,7 @@ async function fetchWithRetry(path, init, maxRetries = 3, retryDelay = 1000) {
   throw lastError;
 }
 
-export function generateAndValidate(payload, onProgress = null) {
+export function generateAndValidate(payload) {
   if (!payload || typeof payload !== 'object') {
     return Promise.reject(new Error('generateAndValidate: payload é obrigatório'));
   }
@@ -121,21 +121,6 @@ export function generateAndValidate(payload, onProgress = null) {
     executionMode: payload.executionMode || 'dry-run',
   });
 
-  // Simula progresso inicial
-  if (onProgress) {
-    onProgress({
-      payloadValid: true,
-      contractValid: false,
-      contextBuilt: false,
-      aiExecuted: false,
-      flowGenerated: false,
-      seedGenerated: false,
-      rpaGenerated: false,
-      rpaExecuted: false,
-      approved: false,
-    });
-  }
-
   // Em modo real, usa retry para lidar com reinicializações do servidor
   const fetchFn = payload.executionMode === 'real' 
     ? (path, init) => fetchWithRetry(path, init, 3, 2000) // 3 tentativas, 2s, 4s, 6s
@@ -144,9 +129,10 @@ export function generateAndValidate(payload, onProgress = null) {
   return fetchFn('/system/generate-and-validate', {
     method: 'POST',
     body: JSON.stringify(payload),
-    // Timeout aumentado para 180 segundos pois o processo completo pode demorar
-    // (validação, geração, RPA, etc)
-    timeoutMs: 180000,
+    // Timeout aumentado pois o processo completo pode demorar
+    // (validação, geração, execução RPA em modo visual, etc).
+    // Em especial no modo bootstrap + execução real, o navegador pode ficar aberto aguardando login.
+    timeoutMs: 1800000,
   }).then(
     (result) => {
       const logData = { 
@@ -160,22 +146,6 @@ export function generateAndValidate(payload, onProgress = null) {
       }
       
       logger.info('Geração e validação concluídas', logData);
-      
-      // Atualiza progresso final
-      if (onProgress) {
-        onProgress({
-          payloadValid: true,
-          contractValid: true,
-          contextBuilt: true,
-          aiExecuted: result?.flowGenerated || false,
-          flowGenerated: result?.flowGenerated || false,
-          seedGenerated: result?.seedGenerated || false,
-          rpaGenerated: result?.rpaGenerated || false,
-          rpaExecuted: result?.rpaExecuted || false,
-          approved: result?.success && result?.rpaPassed || false,
-        });
-      }
-      
       return result;
     },
     (error) => {

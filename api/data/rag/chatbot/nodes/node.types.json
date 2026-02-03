@@ -86,6 +86,27 @@
           }
         }
       },
+      "semantic_router": {
+        "description": "Macro: combina classificação semântica (intent_classification) com roteamento por threshold de confiança. Roteia para 'main' quando confidence >= threshold; caso contrário, 'fallback'.",
+        "required": false,
+        "config": {
+          "confidenceThreshold": {
+            "type": "number",
+            "required": false,
+            "minimum": 0,
+            "maximum": 1,
+            "defaultValue": 0.6,
+            "description": "Nível mínimo de confiança (0.0 a 1.0) para seguir o caminho principal"
+          },
+          "examples": {
+            "type": "array",
+            "required": false,
+            "items": { "type": "string" },
+            "defaultValue": [],
+            "description": "Exemplos/expressões que indicam o caminho principal (main)"
+          }
+        }
+      },
       "ai_task": {
         "description": "Identifica a intenção do usuário baseado nas palavras que ele digita.",
         "required": false,
@@ -146,6 +167,13 @@
           }
         }
       },
+      "merge": {
+        "description": "Nó de mesclagem (convergência). No-op em runtime: apenas encaminha para o próximo nó. Usado pelo FlowNormalizer para garantir que nós proibidos não recebam múltiplas entradas.",
+        "required": false,
+        "hasInputs": true,
+        "hasOutputs": true,
+        "config": {}
+      },
       "ai": {
         "description": "Processa a entrada usando IA e gera uma resposta contextual.",
         "required": false,
@@ -175,6 +203,59 @@
         },
         "errorPorts": true,
         "supportsTimeout": true
+      },
+      "rag_answer": {
+        "description": "Macro: resposta baseada em RAG (pgvector) reutilizando o nó de IA existente (ai) com useRag=true.",
+        "required": false,
+        "config": {
+          "topK": {
+            "type": "number",
+            "required": false,
+            "minimum": 1,
+            "maximum": 50,
+            "defaultValue": 5,
+            "description": "Quantidade de chunks a recuperar no RAG"
+          },
+          "promptTemplate": {
+            "type": "string",
+            "required": false,
+            "defaultValue": "",
+            "description": "Template do prompt para a IA (use {{variavel}} para interpolação)"
+          },
+          "temperature": {
+            "type": "number",
+            "required": false,
+            "minimum": 0,
+            "maximum": 2,
+            "defaultValue": 0.2,
+            "description": "Temperatura (UI-only por enquanto; o serviço RAG usa configuração global)"
+          }
+        },
+        "errorPorts": true,
+        "supportsTimeout": true
+      },
+      "business_entry": {
+        "description": "Macro: lê entidades de negócio (services) do contexto efêmero por executionId e apresenta opções automaticamente. Se não houver services, segue para 'skip'.",
+        "required": false,
+        "config": {}
+      },
+      "subflow": {
+        "description": "Chama outro fluxo como subfluxo. O subfluxo é executado completamente e retorna ao fluxo principal. Dados são compartilhados via contexto flat. Sem recursão, sem paralelismo.",
+        "required": false,
+        "config": {
+          "flowId": {
+            "type": "string",
+            "required": true,
+            "description": "ID do fluxo que será chamado como subfluxo"
+          },
+          "timeout": {
+            "type": "number",
+            "required": false,
+            "minimum": 0,
+            "maximum": 300000,
+            "description": "Timeout em milissegundos para execução do subfluxo (0..300000)"
+          }
+        }
       },
       "fallback": {
         "description": "Nó de fallback centralizado. Gerencia erros, tentativas e escalada para humano.",

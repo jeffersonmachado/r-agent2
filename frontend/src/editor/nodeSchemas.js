@@ -104,6 +104,43 @@ export const NODE_SCHEMAS = {
     },
   },
 
+  merge: {
+    type: 'merge',
+    label: 'Merge',
+    icon: '⟲',
+    color: '#7A7A7A',
+    description: 'Nó estrutural de convergência (no-op). Usado para mesclar múltiplas entradas em um único caminho antes de nós que não suportam convergência.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      // No designer, `next` pode ser resolvido por conexões; aqui só garantimos que o nó existe.
+      // A validação estrutural completa é feita pelo backend e pelo validator da engine.
+      if (!nodeId || typeof nodeId !== 'string' || nodeId.trim() === '') {
+        errors.push({
+          code: 'INVALID_NODE_ID',
+          message: `Nó merge inválido: id ausente`,
+          nodeIds: [],
+        });
+      }
+      return errors;
+    },
+  },
+
   message: {
     type: 'message',
     label: 'Mensagem',
@@ -261,10 +298,13 @@ export const NODE_SCHEMAS = {
      */
     getOutputs(node) {
       const outputs = [];
+      const config = (node && typeof node === 'object')
+        ? (node.config || node.data?.config || node.data?.config || null)
+        : null;
       
       // Adiciona uma saída para cada regra
-      if (node.config && Array.isArray(node.config.rules)) {
-        node.config.rules.forEach((rule, index) => {
+      if (config && Array.isArray(config.rules)) {
+        config.rules.forEach((rule, index) => {
           // Gera uma label descritiva baseada na condição
           let label = `Regra ${index + 1}`;
           if (rule.condition) {
@@ -291,6 +331,13 @@ export const NODE_SCHEMAS = {
         label: 'Padrão',
         socketName: DEFAULT_SOCKET_NAME,
       });
+
+      // Saída opcional para loops controlados (quando o limite de tentativas é excedido)
+      outputs.push({
+        key: 'limit_exceeded',
+        label: 'Limite excedido',
+        socketName: DEFAULT_SOCKET_NAME,
+      });
       
       return outputs;
     },
@@ -301,6 +348,23 @@ export const NODE_SCHEMAS = {
         label: 'Quais são as regras para decidir o caminho?',
         description: 'Configure as regras que determinam para onde o fluxo vai. O Roteador usa apenas igualdade simples (===) contra valores categóricos. Normalize dados antes: números → faixas ("baixo", "medio", "alto"), datas → períodos ("hoje", "passado", "futuro"), objetos → propriedades achatadas. Use "always" na última regra para fallback.',
         required: true,
+      },
+      {
+        key: 'loopMaxAttempts',
+        type: 'number',
+        label: 'Limite de tentativas (loop)',
+        description: 'Quando este nó faz parte de um loop intencional (ex.: voltar ao menu), define quantas vezes ele pode ser executado antes de seguir pelo socket "Limite excedido".',
+        required: false,
+        defaultValue: 3,
+        placeholder: '3',
+        validate: (value) => {
+          if (value === null || value === undefined || value === '') return null; // usa default
+          const n = Number(value);
+          if (!Number.isFinite(n) || n < 1 || n > 10) {
+            return { code: 'LOOP_MAX_ATTEMPTS_INVALID', message: 'loopMaxAttempts deve ser um número entre 1 e 10.' };
+          }
+          return null;
+        },
       },
     ],
     validate(node) {
@@ -342,6 +406,30 @@ export const NODE_SCHEMAS = {
             nodeIds: [nodeId],
           });
         }
+
+        // Valida loopMaxAttempts quando o socket "limit_exceeded" estiver conectado
+        const nextObj = node.next;
+        const hasLimitExceededConnection =
+          nextObj &&
+          typeof nextObj === 'object' &&
+          !Array.isArray(nextObj) &&
+          typeof nextObj.limit_exceeded === 'string' &&
+          nextObj.limit_exceeded.trim() !== '';
+        if (hasLimitExceededConnection) {
+          const raw = node.config?.loopMaxAttempts;
+          const maxAttempts = raw === undefined || raw === null || raw === '' ? 3 : Number(raw);
+          if (!Number.isFinite(maxAttempts) || maxAttempts < 1 || maxAttempts > 10) {
+            errors.push({
+              code: 'LOOP_MAX_ATTEMPTS_INVALID',
+              message: `Nó roteador "${nodeId}" tem "config.loopMaxAttempts" inválido (deve ser entre 1 e 10).`,
+              messageUi: `Defina um limite de tentativas válido (1..10) para o loop controlado.`,
+              nodeIds: [nodeId],
+              severity: 'error',
+              details: { loopMaxAttempts: raw },
+            });
+          }
+        }
+
         // Valida cada regra
         for (let i = 0; i < node.config.rules.length; i += 1) {
           const rule = node.config.rules[i];
@@ -494,6 +582,78 @@ export const NODE_SCHEMAS = {
     },
   },
 
+  semantic_router: {
+    type: 'semantic_router',
+    label: 'Semantic Router',
+    icon: '🧠',
+    color: '#9B59B6',
+    description: 'Macro: classifica o texto (semântica) e roteia por threshold de confiança. Vai para "Main" quando confidence >= threshold; senão vai para "Fallback".',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      { key: 'main', label: 'Main', socketName: DEFAULT_SOCKET_NAME },
+      { key: 'fallback', label: 'Fallback', socketName: DEFAULT_SOCKET_NAME },
+    ],
+    properties: [
+      {
+        key: 'confidenceThreshold',
+        type: 'number',
+        label: 'Threshold de confiança',
+        description: 'Nível mínimo de confiança (0 a 1) para seguir o caminho Main.',
+        required: false,
+        defaultValue: 0.6,
+        placeholder: '0.6',
+      },
+      {
+        key: 'examples',
+        type: 'json',
+        label: 'Exemplos (main)',
+        description: 'Lista de exemplos/expressões que indicam o caminho Main. Formato: ["exemplo 1", "exemplo 2"].',
+        required: false,
+        defaultValue: [],
+        placeholder: `[
+  "quero contratar",
+  "preciso de um serviço",
+  "gostaria de orçamento"
+]`,
+        rows: 6,
+        expectedType: 'array',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+
+      const t = node.config?.confidenceThreshold;
+      if (t !== undefined) {
+        const n = Number(t);
+        if (Number.isNaN(n) || n < 0 || n > 1) {
+          errors.push({
+            code: 'SEMANTIC_ROUTER_INVALID_THRESHOLD',
+            message: `Nó semantic_router "${nodeId}" tem confidenceThreshold inválido (0..1).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+
+      const ex = node.config?.examples;
+      if (ex !== undefined && !Array.isArray(ex)) {
+        errors.push({
+          code: 'SEMANTIC_ROUTER_INVALID_EXAMPLES',
+          message: `Nó semantic_router "${nodeId}" tem examples inválido (deve ser array).`,
+          nodeIds: [nodeId],
+        });
+      }
+
+      return errors;
+    },
+  },
+
   ai_task: {
     type: 'ai_task',
     label: 'Intenção',
@@ -522,10 +682,13 @@ export const NODE_SCHEMAS = {
      */
     getOutputs(node) {
       const outputs = [];
+      const config = (node && typeof node === 'object')
+        ? (node.config || node.data?.config || node.data?.config || null)
+        : null;
       
       // Adiciona uma saída para cada intenção permitida (apenas para intent_classification)
-      if (node.config && node.config.task === 'intent_classification' && Array.isArray(node.config.allowedOutputs)) {
-        node.config.allowedOutputs.forEach((intent) => {
+      if (config && config.task === 'intent_classification' && Array.isArray(config.allowedOutputs)) {
+        config.allowedOutputs.forEach((intent) => {
           outputs.push({
             key: `intent_${intent}`,
             label: intent,
@@ -1025,6 +1188,108 @@ export const NODE_SCHEMAS = {
         }
       }
       
+      return errors;
+    },
+  },
+
+  rag_answer: {
+    type: 'rag_answer',
+    label: 'RAG Answer',
+    icon: '📚',
+    color: '#16A085',
+    description: 'Macro: responde usando RAG (pgvector) reutilizando o nó IA com useRag=true.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    properties: [
+      {
+        key: 'topK',
+        type: 'number',
+        label: 'TopK (chunks)',
+        description: 'Quantidade de chunks a recuperar no RAG.',
+        required: false,
+        defaultValue: 5,
+        placeholder: '5',
+      },
+      {
+        key: 'promptTemplate',
+        type: 'textarea',
+        label: 'Template do Prompt',
+        description: 'Template do prompt para o RAG/IA. Use {{variavel}} para interpolação (ex: {{user_input}}).',
+        required: false,
+        placeholder: 'Responda baseado no contexto do tenant. Pergunta: {{user_input}}',
+        rows: 6,
+      },
+      {
+        key: 'temperature',
+        type: 'number',
+        label: 'Temperature (UI)',
+        description: 'Temperatura (UI-only por enquanto; o serviço RAG usa configuração global).',
+        required: false,
+        defaultValue: 0.2,
+        placeholder: '0.2',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (node.config?.topK !== undefined) {
+        const n = Number(node.config.topK);
+        if (Number.isNaN(n) || n < 1 || n > 50) {
+          errors.push({
+            code: 'RAG_ANSWER_INVALID_TOPK',
+            message: `Nó rag_answer "${nodeId}" tem topK inválido (1..50).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      if (node.config?.temperature !== undefined) {
+        const n = Number(node.config.temperature);
+        if (Number.isNaN(n) || n < 0 || n > 2) {
+          errors.push({
+            code: 'RAG_ANSWER_INVALID_TEMPERATURE',
+            message: `Nó rag_answer "${nodeId}" tem temperature inválida (0..2).`,
+            nodeIds: [nodeId],
+          });
+        }
+      }
+      return errors;
+    },
+  },
+
+  business_entry: {
+    type: 'business_entry',
+    label: 'Business Entry',
+    icon: '🏢',
+    color: '#E67E22',
+    description: 'Macro: lê serviços (entities.services) do contexto efêmero (executionId) e apresenta opções automaticamente. Se não houver serviços, segue por Skip.',
+    inputs: [
+      {
+        key: 'in',
+        label: 'Anterior',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
+    ],
+    outputs: [
+      { key: 'selected', label: 'Selected', socketName: DEFAULT_SOCKET_NAME },
+      { key: 'skip', label: 'Skip', socketName: DEFAULT_SOCKET_NAME },
+    ],
+    properties: [],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      // Sem config obrigatória por ora.
       return errors;
     },
   },
@@ -1658,10 +1923,13 @@ export const NODE_SCHEMAS = {
      */
     getOutputs(node) {
       const outputs = [];
+      const config = (node && typeof node === 'object')
+        ? (node.config || node.data?.config || node.data?.config || null)
+        : null;
       
       // Adiciona uma saída para cada horário configurado
-      if (node.config && Array.isArray(node.config.schedules)) {
-        node.config.schedules.forEach((schedule, index) => {
+      if (config && Array.isArray(config.schedules)) {
+        config.schedules.forEach((schedule, index) => {
           // Gera uma label descritiva baseada no horário
           let label = `Horário ${index + 1}`;
           if (schedule.days && schedule.startTime && schedule.endTime) {
@@ -2429,42 +2697,50 @@ export const NODE_SCHEMAS = {
         socketName: DEFAULT_SOCKET_NAME,
       },
     ],
-    // Outputs são gerados dinamicamente baseados em config.options
+    // IMPORTANTE (alinhado com engine/validator.js):
+    // - O nó `options` SEMPRE segue pelo caminho principal `out` após capturar a escolha.
+    // - O roteamento por valor selecionado deve ser feito com um nó `router` depois do `options`.
+    // - `fallback` e `limit_exceeded` são saídas auxiliares.
     outputs: [
+      {
+        key: 'out',
+        label: 'Próximo',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
       {
         key: 'fallback',
         label: 'Fallback',
         socketName: DEFAULT_SOCKET_NAME,
       },
+      {
+        key: 'limit_exceeded',
+        label: 'Limite excedido',
+        socketName: DEFAULT_SOCKET_NAME,
+      },
     ],
     /**
-     * Gera outputs dinâmicos baseados nas opções configuradas
+     * Outputs do nó `options` (alinhados com o modelo da engine)
      * @param {Object} node - Nó completo
      * @returns {Array} Array de outputs
      */
     getOutputs(node) {
-      const outputs = [];
-      
-      // Adiciona uma saída para cada opção
-      if (node.config && Array.isArray(node.config.options)) {
-        node.config.options.forEach((option, index) => {
-          const label = option.label || option.id || `Opção ${index + 1}`;
-          outputs.push({
-            key: `option_${option.id || index}`,
-            label: label,
-            socketName: DEFAULT_SOCKET_NAME,
-          });
-        });
-      }
-      
-      // Sempre adiciona saída de fallback
-      outputs.push({
-        key: 'fallback',
-        label: 'Fallback',
-        socketName: DEFAULT_SOCKET_NAME,
-      });
-      
-      return outputs;
+      return [
+        {
+          key: 'out',
+          label: 'Próximo',
+          socketName: DEFAULT_SOCKET_NAME,
+        },
+        {
+          key: 'fallback',
+          label: 'Fallback',
+          socketName: DEFAULT_SOCKET_NAME,
+        },
+        {
+          key: 'limit_exceeded',
+          label: 'Limite excedido',
+          socketName: DEFAULT_SOCKET_NAME,
+        },
+      ];
     },
     properties: [
       {
@@ -2518,6 +2794,23 @@ export const NODE_SCHEMAS = {
         required: false,
         defaultValue: false,
       },
+      {
+        key: 'loopMaxAttempts',
+        type: 'number',
+        label: 'Limite de tentativas (loop)',
+        description: 'Quando este nó faz parte de um loop intencional (ex.: voltar ao menu), define quantas vezes ele pode ser exibido/executado antes de seguir pelo socket "Limite excedido".',
+        required: false,
+        defaultValue: 3,
+        placeholder: '3',
+        validate: (value) => {
+          if (value === null || value === undefined || value === '') return null; // usa default
+          const n = Number(value);
+          if (!Number.isFinite(n) || n < 1 || n > 10) {
+            return { code: 'LOOP_MAX_ATTEMPTS_INVALID', message: 'loopMaxAttempts deve ser um número entre 1 e 10.' };
+          }
+          return null;
+        },
+      },
     ],
     validate(node) {
       const errors = [];
@@ -2565,10 +2858,21 @@ export const NODE_SCHEMAS = {
         });
       } else {
         // Valida que há conexão de fallback
-        const hasFallbackConnection = node.next && (
-          (typeof node.next === 'string' && node.next.trim() !== '') ||
-          (Array.isArray(node.next) && node.next.some(n => n && typeof n === 'string' && n.trim() !== ''))
-        );
+        // IMPORTANTE: no editor, quando há múltiplas saídas conectadas, `next` vira um port-map:
+        //   next = { out: 'X', fallback: 'Y', ... }
+        // Então precisamos aceitar tanto:
+        // - string/array (engine-like simples)
+        // - object/port-map (engine-like por porta)
+        const nextObj = node.next;
+        const hasFallbackConnection =
+          !!nextObj && (
+            (typeof nextObj === 'string' && nextObj.trim() !== '') ||
+            (Array.isArray(nextObj) && nextObj.some(n => n && typeof n === 'string' && n.trim() !== '')) ||
+            (typeof nextObj === 'object' && !Array.isArray(nextObj) && (
+              (typeof nextObj.fallback === 'string' && nextObj.fallback.trim() !== '') ||
+              (Array.isArray(nextObj.fallback) && nextObj.fallback.some(n => n && typeof n === 'string' && n.trim() !== ''))
+            ))
+          );
         if (!hasFallbackConnection) {
           errors.push({
             code: 'OPTIONS_MISSING_FALLBACK',
@@ -2637,10 +2941,34 @@ export const NODE_SCHEMAS = {
           });
         }
       }
+
+      // Valida loopMaxAttempts quando o socket "limit_exceeded" estiver conectado
+      const nextObj = node.next;
+      const hasLimitExceededConnection =
+        nextObj &&
+        typeof nextObj === 'object' &&
+        !Array.isArray(nextObj) &&
+        typeof nextObj.limit_exceeded === 'string' &&
+        nextObj.limit_exceeded.trim() !== '';
+      if (hasLimitExceededConnection) {
+        const raw = config.loopMaxAttempts;
+        const maxAttempts = raw === undefined || raw === null || raw === '' ? 3 : Number(raw);
+        if (!Number.isFinite(maxAttempts) || maxAttempts < 1 || maxAttempts > 10) {
+          errors.push({
+            code: 'LOOP_MAX_ATTEMPTS_INVALID',
+            message: `Nó de opções "${nodeId}" tem "config.loopMaxAttempts" inválido (deve ser entre 1 e 10).`,
+            messageUi: `Defina um limite de tentativas válido (1..10) para o loop controlado.`,
+            nodeIds: [nodeId],
+            severity: 'error',
+            details: { loopMaxAttempts: raw },
+          });
+        }
+      }
       
       return errors;
     },
   },
+
 };
 
 /**

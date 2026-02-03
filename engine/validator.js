@@ -206,6 +206,26 @@ function addUiMessage(error) {
       case 'AI_INVALID_OUTPUT_VARIABLE_NAME':
         return 'O nome da variável de saída do nó de IA é inválido. O nome deve começar com letra ou sublinhado (_) e conter apenas letras, números e sublinhados.';
       
+      // Nó Subflow
+      case 'SUBFLOW_MISSING_CONFIG':
+        return 'O nó de subfluxo não tem configuração. Preencha o campo "config.flowId".';
+      case 'SUBFLOW_MISSING_FLOW_ID':
+        return 'O nó de subfluxo precisa de um "config.flowId" (string não vazia).';
+      case 'SUBFLOW_INVALID_TIMEOUT':
+        return 'O nó de subfluxo tem timeout inválido. Use um número entre 0 e 300000ms.';
+
+      // Nó Options
+      case 'OPTIONS_MISSING_NEXT':
+        return 'O nó de opções precisa estar conectado a um próximo nó (campo "next").';
+      case 'OPTIONS_MISSING_OUT_PORT':
+        return 'O nó de opções precisa ter um caminho principal. Defina next.out apontando para um nó existente.';
+      case 'OPTIONS_MISSING_FALLBACK_PORT':
+        return 'O nó de opções precisa ter um caminho de fallback. Defina next.fallback apontando para um nó existente.';
+
+      // Nó Merge
+      case 'MERGE_MISSING_NEXT':
+        return 'O nó merge precisa ter um campo "next" apontando para o próximo nó.';
+
       default:
         return technicalMessage || 'Foi encontrado um problema na definição do fluxo. Revise a configuração dos nós destacados.';
     }
@@ -417,6 +437,7 @@ function validateDisconnectedNodes(flow, edges) {
  */
 function validateInvalidLoops(flow, edges) {
   const nodeIds = new Set((flow.nodes || []).map((n) => n.id));
+  const nodeMap = buildNodeMap(flow);
 
   const adj = new Map();
   for (const id of nodeIds) {
@@ -432,6 +453,32 @@ function validateInvalidLoops(flow, edges) {
   const stack = new Set();
 
   /**
+   * Um loop é considerado "controlado" quando:
+   * - existe pelo menos um nó do ciclo (router/options) com uma saída "limit_exceeded"
+   * - e essa saída aponta para um nó FORA do próprio ciclo
+   *
+   * Isso permite casos intencionais como "voltar ao menu" sem risco de execução infinita.
+   *
+   * @param {string[]} cyclePath
+   */
+  function isControlledLoop(cyclePath) {
+    const cycleSet = new Set(cyclePath);
+    for (const id of cyclePath) {
+      const node = nodeMap.get(id);
+      const type = node?.type || null;
+      if (type !== 'router' && type !== 'options') continue;
+      const next = node?.next;
+      if (!next || typeof next !== 'object' || Array.isArray(next)) continue;
+      const target = next.limit_exceeded;
+      if (typeof target !== 'string' || !target.trim()) continue;
+      if (!cycleSet.has(target)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * DFS para encontrar ciclos.
    *
    * @param {string} nodeId
@@ -443,14 +490,18 @@ function validateInvalidLoops(flow, edges) {
       // primeira ocorrência do nodeId até o final.
       const idx = path.indexOf(nodeId);
       const cyclePath = path.slice(idx);
-      errors.push(addUiMessage({
-        code: 'INVALID_LOOP',
-        message: 'Loop inválido detectado no fluxo.',
-        nodeIds: cyclePath,
-        details: {
-          cyclePath,
-        },
-      }));
+      // Se o ciclo for controlado via saída limit_exceeded para fora do ciclo, aceitamos.
+      if (!isControlledLoop(cyclePath)) {
+        errors.push(addUiMessage({
+          code: 'INVALID_LOOP',
+          message: 'Loop inválido detectado no fluxo.',
+          nodeIds: cyclePath,
+          details: {
+            cyclePath,
+            hint: 'Para permitir um loop intencional, conecte o socket "limit_exceeded" de um nó do ciclo (router/options) para fora do ciclo e defina loopMaxAttempts.',
+          },
+        }));
+      }
       return;
     }
     if (visited.has(nodeId)) return;
@@ -768,15 +819,20 @@ function validateNodeStructures(flow) {
     'start',
     'message',
     'user_input',
+    'merge',
     'router',
+    'semantic_router',
     'schedule_router',
     'set_variable',
     'handoff',
     'ai',
+    'rag_answer',
     'ai_task',
     'fallback',
     'options',
     'api',
+    'business_entry',
+    'subflow',
     // system/persistence nodes
     'get_flow_info',
     'get_queue_status',
@@ -858,12 +914,35 @@ function analyzeVariableUsage(flow) {
   const used = new Map(); // varName -> [nodeIds que usam]
 
   for (const node of flow.nodes || []) {
-    // Variáveis definidas em set_variable
-    if (node.type === 'set_variable' && node.config && node.config.assignments) {
-      const assignments = node.config.assignments;
-      for (const varName of Object.keys(assignments)) {
+    // ----------------------------
+    // Variáveis DEFINIDAS (fontes)
+    // ----------------------------
+    // Regra geral: qualquer nó que produz um valor e o armazena em uma variável deve
+    // contar como "definido" para evitar falsos positivos em VAR_NEVER_DEFINED.
+
+    // set_variable define 1..N variáveis
+    if (node.type === 'set_variable' && node.config && node.config.assignments && typeof node.config.assignments === 'object') {
+      for (const varName of Object.keys(node.config.assignments)) {
         defined.add(varName);
       }
+    }
+
+    // user_input captura texto do usuário para uma variável
+    if (node.type === 'user_input' && node.config && typeof node.config.variable === 'string' && node.config.variable.trim()) {
+      defined.add(node.config.variable.trim());
+    }
+
+    // options armazena a opção selecionada em uma variável
+    if (node.type === 'options' && node.config && typeof node.config.variable === 'string' && node.config.variable.trim()) {
+      defined.add(node.config.variable.trim());
+    }
+
+    // ai / api / system nodes podem escrever em outputVariable (quando suportado)
+    const outputVar = node?.config && typeof node.config.outputVariable === 'string'
+      ? node.config.outputVariable.trim()
+      : '';
+    if (outputVar) {
+      defined.add(outputVar);
     }
 
     // Variáveis usadas em router
@@ -910,6 +989,23 @@ function validateNodeConfig(node, flow = null) {
   const nodeId = node.id || 'unknown';
 
   switch (node.type) {
+    case 'merge': {
+      // Nó merge é estrutural/no-op: exige apenas next válido.
+      const hasValidNext =
+        typeof node.next === 'string' ||
+        Array.isArray(node.next) ||
+        (node.next && typeof node.next === 'object' && (node.next.out || Object.keys(node.next).length > 0));
+
+      if (!node.next || !hasValidNext) {
+        errors.push(addUiMessage({
+          code: 'MERGE_MISSING_NEXT',
+          message: `Nó merge "${nodeId}" deve ter um campo "next" apontando para o próximo nó.`,
+          nodeIds: [nodeId],
+        }));
+      }
+      break;
+    }
+
     case 'message': {
       if (!node.config || typeof node.config !== 'object') {
         errors.push(addUiMessage({
@@ -1461,6 +1557,79 @@ function validateNodeConfig(node, flow = null) {
               details: {
                 confidenceThreshold: node.config.confidenceThreshold,
               },
+            }));
+          }
+        }
+      }
+      break;
+    }
+
+    case 'subflow': {
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push(addUiMessage({
+          code: 'SUBFLOW_MISSING_CONFIG',
+          message: `Nó de subfluxo "${nodeId}" deve ter um campo "config" com "flowId".`,
+          nodeIds: [nodeId],
+        }));
+      } else if (!node.config.flowId || typeof node.config.flowId !== 'string' || node.config.flowId.trim() === '') {
+        errors.push(addUiMessage({
+          code: 'SUBFLOW_MISSING_FLOW_ID',
+          message: `Nó de subfluxo "${nodeId}" deve ter "config.flowId" (string não vazia).`,
+          nodeIds: [nodeId],
+        }));
+      }
+
+      if (node.config && node.config.timeout !== undefined) {
+        const timeout = Number(node.config.timeout);
+        if (!Number.isFinite(timeout) || timeout < 0 || timeout > 300000) {
+          errors.push(addUiMessage({
+            code: 'SUBFLOW_INVALID_TIMEOUT',
+            message: `Nó de subfluxo "${nodeId}" tem timeout inválido (deve ser entre 0 e 300000ms).`,
+            nodeIds: [nodeId],
+            details: { timeout: node.config.timeout },
+          }));
+        }
+      }
+      break;
+    }
+
+    case 'options': {
+      // Regra hardening: options é um nó interativo e NÃO pode ficar sem next.
+      // Se ficar sem next, o grafo tende a ficar desconectado (NODE_DISCONNECTED)
+      // e a execução fica “presa” após a seleção.
+      const hasOptions =
+        !!node.config &&
+        typeof node.config === 'object' &&
+        Array.isArray(node.config.options) &&
+        node.config.options.length > 0;
+
+      // Só aplicamos a regra quando o nó está “de fato” configurado para uso.
+      if (hasOptions) {
+        if (!node.next) {
+          errors.push(addUiMessage({
+            code: 'OPTIONS_MISSING_NEXT',
+            message: `Nó de opções "${nodeId}" deve ter um campo "next" (conexão de saída).`,
+            nodeIds: [nodeId],
+          }));
+        } else if (typeof node.next === 'object' && !Array.isArray(node.next)) {
+          // Port-map recomendado: exigir out e fallback quando o usuário escolhe por opções.
+          const outVal = node.next.out;
+          const fbVal = node.next.fallback;
+          const hasOut = typeof outVal === 'string' ? outVal.trim() !== '' : Array.isArray(outVal) ? outVal.length > 0 : false;
+          const hasFallback = typeof fbVal === 'string' ? fbVal.trim() !== '' : Array.isArray(fbVal) ? fbVal.length > 0 : false;
+
+          if (!hasOut) {
+            errors.push(addUiMessage({
+              code: 'OPTIONS_MISSING_OUT_PORT',
+              message: `Nó de opções "${nodeId}" deve ter next.out apontando para um próximo nó.`,
+              nodeIds: [nodeId],
+            }));
+          }
+          if (!hasFallback) {
+            errors.push(addUiMessage({
+              code: 'OPTIONS_MISSING_FALLBACK_PORT',
+              message: `Nó de opções "${nodeId}" deve ter next.fallback apontando para um nó de fallback.`,
+              nodeIds: [nodeId],
             }));
           }
         }

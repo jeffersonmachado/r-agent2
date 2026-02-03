@@ -116,9 +116,8 @@ LLM_PROVIDER=openai
 LLM_MODEL=gpt-3.5-turbo
 OPENAI_API_KEY=sk-...  # Opcional
 
-# Vector Store
-VECTOR_STORE_TYPE=faiss
-VECTOR_STORE_PATH=./data/vector_store
+# Banco de dados (vector store Postgres/pgvector)
+DATABASE_URL=postgresql://user:pass@localhost:5432/ragent
 ```
 
 ### 3. Iniciar o Serviço RAG
@@ -148,7 +147,7 @@ curl http://localhost:8000/rag/health
 ```json
 {
   "status": "healthy",
-  "vectorStore": "faiss",
+  "vectorStore": "postgres",
   "embeddingModel": "sentence-transformers/all-MiniLM-L6-v2",
   "indexedDocuments": 0,
   "indexedChunks": 0
@@ -823,6 +822,6 @@ chmod +x test_rag.sh
 ## Referências
 
 - [Documentação FastAPI](https://fastapi.tiangolo.com/)
-- [FAISS Documentation](https://github.com/facebookresearch/faiss)
+- [pgvector](https://github.com/pgvector/pgvector)
 - [Sentence Transformers](https://www.sbert.net/)
 

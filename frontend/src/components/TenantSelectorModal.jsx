@@ -11,7 +11,60 @@ import { listTenants } from '../api/tenants';
 import { listAllTenants } from '../api/superAdmin';
 import logger from '../utils/logger';
 
-export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
+const LAST_TENANT_KEY = 'auth_last_tenant_id';
+const EFFECTIVE_TENANT_KEY = 'auth_effective_tenant_id';
+
+function readLastTenantId() {
+  try {
+    const v = localStorage.getItem(LAST_TENANT_KEY);
+    return v && typeof v === 'string' && v.trim() ? v.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistLastTenantId(tenantId) {
+  try {
+    if (tenantId && typeof tenantId === 'string') {
+      localStorage.setItem(LAST_TENANT_KEY, tenantId);
+    }
+  } catch {
+    // ignora
+  }
+}
+
+function persistEffectiveTenantId(tenantId) {
+  try {
+    if (tenantId && typeof tenantId === 'string') {
+      localStorage.setItem(EFFECTIVE_TENANT_KEY, tenantId);
+    }
+  } catch {
+    // ignora
+  }
+}
+
+function normalizeTenant(t) {
+  if (!t || typeof t !== 'object') return null;
+  const rawId = t.id ?? t.tenant_key ?? t.tenantId ?? t.tenantKey ?? t.identifier ?? null;
+  const id = rawId != null ? String(rawId).trim() : '';
+  if (!id) return null;
+  return {
+    ...t,
+    id,
+    name: t.name ?? t.nome ?? t.displayName ?? null,
+    plan: t.plan ?? t.plano ?? null,
+  };
+}
+
+export function TenantSelectorModal({
+  isOpen,
+  onSelect,
+  onClose,
+  tenantsOverride = null,
+  requireExplicitSelection = false,
+  autoConfirmOnTenantClick = false,
+  disallowTenantIds = [],
+}) {
   const { theme } = useTheme();
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,12 +72,34 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
   const [error, setError] = useState('');
   const [filterText, setFilterText] = useState('');
 
+  const tenantsOverrideKey = Array.isArray(tenantsOverride)
+    ? tenantsOverride.map((t) => String(t?.id || '')).join('|')
+    : '';
+
+  const confirmTenant = (tenantOrId) => {
+    const tenantObj =
+      tenantOrId && typeof tenantOrId === 'object'
+        ? tenantOrId
+        : { id: String(tenantOrId || '').trim(), name: String(tenantOrId || '').trim() };
+    if (!tenantObj?.id) return;
+    persistLastTenantId(tenantObj.id);
+    persistEffectiveTenantId(tenantObj.id);
+    onSelect(tenantObj);
+  };
+
   // Limpa o filtro quando o modal é fechado
   useEffect(() => {
     if (!isOpen) {
       setFilterText('');
     }
   }, [isOpen]);
+
+  // Em modo de seleção explícita, não permite “herdar” tenant anterior ao abrir.
+  useEffect(() => {
+    if (isOpen && requireExplicitSelection) {
+      setSelectedTenantId(null);
+    }
+  }, [isOpen, requireExplicitSelection]);
 
   // Carrega lista de tenants
   useEffect(() => {
@@ -35,7 +110,52 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
       setError('');
       try {
         console.log('[TenantSelectorModal] Iniciando carregamento de tenants...');
+
+        const lastTenantId = requireExplicitSelection ? null : readLastTenantId();
         
+        // Modo override (ex.: usuários não super-admin): não chama APIs.
+        // Espera um array [{id, name?, plan?}, ...]
+        if (Array.isArray(tenantsOverride)) {
+          console.log('[TenantSelectorModal] Usando tenantsOverride (sem chamadas de API)...', tenantsOverride);
+          const tenantsList = tenantsOverride.map(normalizeTenant).filter(Boolean);
+          if (!Array.isArray(tenantsList)) {
+            setError('Formato de resposta inválido');
+            return;
+          }
+
+          // Ordena: "system" primeiro, depois os demais por nome
+          const sortedTenants = [...tenantsList].sort((a, b) => {
+            if (a.id === 'system') return -1;
+            if (b.id === 'system') return 1;
+            return (a.name || a.id).localeCompare(b.name || b.id, 'pt-BR');
+          });
+
+          setTenants(sortedTenants);
+
+          if (requireExplicitSelection) {
+            setSelectedTenantId(null);
+          } else {
+            // Pré-seleção:
+            // 1) último tenant usado (se ainda existir na lista)
+            // 2) "system" (fallback histórico)
+            // 3) primeiro tenant da lista
+            const hasLast = lastTenantId && sortedTenants.some((t) => t.id === lastTenantId);
+            if (hasLast) {
+              setSelectedTenantId(lastTenantId);
+            } else {
+              const systemTenant = sortedTenants.find((t) => t.id === 'system');
+              if (systemTenant) {
+                setSelectedTenantId('system');
+              } else if (sortedTenants.length > 0) {
+                setSelectedTenantId(sortedTenants[0].id);
+              } else {
+                setSelectedTenantId(null);
+              }
+            }
+          }
+          return;
+        }
+
         // Tenta usar a rota de super-admin primeiro, depois fallback para tenants normal
         let result;
         try {
@@ -67,14 +187,16 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
         }
         
         console.log('[TenantSelectorModal] Resultado bruto:', result);
-        const tenantsList = result.tenants || result || [];
-        console.log('[TenantSelectorModal] Lista de tenants extraída:', tenantsList);
+        const rawTenantsList = result.tenants || result || [];
+        console.log('[TenantSelectorModal] Lista de tenants extraída:', rawTenantsList);
         
-        if (!Array.isArray(tenantsList)) {
-          console.error('[TenantSelectorModal] Resultado não é um array:', tenantsList);
+        if (!Array.isArray(rawTenantsList)) {
+          console.error('[TenantSelectorModal] Resultado não é um array:', rawTenantsList);
           setError('Formato de resposta inválido');
           return;
         }
+
+        const tenantsList = rawTenantsList.map(normalizeTenant).filter(Boolean);
         
         // Ordena: "system" primeiro, depois os demais por nome
         const sortedTenants = [...tenantsList].sort((a, b) => {
@@ -86,16 +208,30 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
         console.log('[TenantSelectorModal] Tenants ordenados:', sortedTenants);
         setTenants(sortedTenants);
         
-        // Pré-seleciona "system" se existir
-        const systemTenant = sortedTenants.find(t => t.id === 'system');
-        if (systemTenant) {
-          console.log('[TenantSelectorModal] Pré-selecionando tenant system');
-          setSelectedTenantId('system');
-        } else if (sortedTenants.length > 0) {
-          console.log('[TenantSelectorModal] Pré-selecionando primeiro tenant:', sortedTenants[0].id);
-          setSelectedTenantId(sortedTenants[0].id);
+        if (requireExplicitSelection) {
+          setSelectedTenantId(null);
         } else {
-          console.warn('[TenantSelectorModal] Nenhum tenant encontrado');
+          // Pré-seleção:
+          // 1) último tenant usado (se ainda existir na lista)
+          // 2) "system" (fallback histórico)
+          // 3) primeiro tenant da lista
+          const hasLast = lastTenantId && sortedTenants.some((t) => t.id === lastTenantId);
+          if (hasLast) {
+            console.log('[TenantSelectorModal] Pré-selecionando último tenant usado:', lastTenantId);
+            setSelectedTenantId(lastTenantId);
+          } else {
+            const systemTenant = sortedTenants.find((t) => t.id === 'system');
+            if (systemTenant) {
+              console.log('[TenantSelectorModal] Pré-selecionando tenant system');
+              setSelectedTenantId('system');
+            } else if (sortedTenants.length > 0) {
+              console.log('[TenantSelectorModal] Pré-selecionando primeiro tenant:', sortedTenants[0].id);
+              setSelectedTenantId(sortedTenants[0].id);
+            } else {
+              console.warn('[TenantSelectorModal] Nenhum tenant encontrado');
+              setSelectedTenantId(null);
+            }
+          }
         }
       } catch (err) {
         console.error('[TenantSelectorModal] Erro ao carregar tenants:', err);
@@ -107,12 +243,18 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
     };
 
     loadTenants();
-  }, [isOpen]);
+  }, [isOpen, tenantsOverrideKey, requireExplicitSelection]);
 
   const handleSelect = () => {
     if (selectedTenantId) {
-      const selectedTenant = tenants.find(t => t.id === selectedTenantId);
-      onSelect(selectedTenant);
+      // Tenta encontrar o tenant completo na lista; se não achar (dados inconsistentes),
+      // cria um fallback para ainda permitir prosseguir.
+      let selectedTenant = tenants.find((t) => t.id === selectedTenantId) || null;
+      if (!selectedTenant) {
+        selectedTenant = { id: selectedTenantId, name: selectedTenantId };
+      }
+
+      confirmTenant(selectedTenant);
     }
   };
 
@@ -159,6 +301,14 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
     const tenantId = (tenant.id || '').toLowerCase();
     return tenantName.includes(searchTerm) || tenantId.includes(searchTerm);
   });
+
+  const isTenantDisallowed = (tenantId) => {
+    try {
+      return Array.isArray(disallowTenantIds) && disallowTenantIds.includes(tenantId);
+    } catch {
+      return false;
+    }
+  };
 
   const modalContent = (
     <div
@@ -326,12 +476,20 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
               {filteredTenants.map((tenant) => {
                 const isSelected = selectedTenantId === tenant.id;
                 const isSystem = tenant.id === 'system';
+                const isDisallowed = isTenantDisallowed(tenant.id);
 
                 return (
                   <button
                     key={tenant.id}
                     type="button"
-                    onClick={() => setSelectedTenantId(tenant.id)}
+                    disabled={isDisallowed}
+                    onClick={() => {
+                      if (isDisallowed) return;
+                      setSelectedTenantId(tenant.id);
+                      if (autoConfirmOnTenantClick && !isDisallowed) {
+                        confirmTenant(tenant);
+                      }
+                    }}
                     style={{
                       padding: '16px',
                       background: isSelected
@@ -344,20 +502,21 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
                       }`,
                       borderRadius: '8px',
                       textAlign: 'left',
-                      cursor: 'pointer',
+                      cursor: isDisallowed ? 'not-allowed' : 'pointer',
+                      opacity: isDisallowed ? 0.55 : 1,
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) {
+                      if (!isSelected && !isDisallowed) {
                         e.currentTarget.style.background = theme.colors.bg.hover;
                         e.currentTarget.style.borderColor = theme.colors.border.hover;
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected) {
+                      if (!isSelected && !isDisallowed) {
                         e.currentTarget.style.background = theme.colors.bg.primary;
                         e.currentTarget.style.borderColor = theme.colors.border.default;
                       }
@@ -405,6 +564,21 @@ export function TenantSelectorModal({ isOpen, onSelect, onClose }) {
                             }}
                           >
                             SYSTEM
+                          </span>
+                        )}
+                        {isDisallowed && (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 6px',
+                              background: theme.colors.bg.tertiary,
+                              color: theme.colors.text.secondary,
+                              borderRadius: '4px',
+                              fontWeight: 500,
+                              border: `1px solid ${theme.colors.border.default}`,
+                            }}
+                          >
+                            indisponível
                           </span>
                         )}
                       </div>

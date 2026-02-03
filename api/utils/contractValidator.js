@@ -203,6 +203,44 @@ function validateGenerationContract(payload) {
     }
   }
 
+  // Valida includeQuestions
+  if (payload.includeQuestions !== undefined && typeof payload.includeQuestions !== 'boolean') {
+    errors.push('Campo "includeQuestions" deve ser um boolean');
+  }
+
+  // Valida questions (apenas se includeQuestions = true)
+  if (payload.includeQuestions === true) {
+    if (!Array.isArray(payload.questions)) {
+      errors.push('Campo "questions" deve ser um array quando includeQuestions = true');
+    } else {
+      const normalized = payload.questions
+        .map((q) => (typeof q === 'string' ? q.trim() : ''))
+        .filter((q) => q.length > 0);
+
+      if (normalized.length === 0) {
+        errors.push('Campo "questions" deve conter pelo menos 1 pergunta quando includeQuestions = true');
+      }
+
+      const tooLong = normalized.filter((q) => q.length > 220);
+      if (tooLong.length > 0) {
+        errors.push('Campo "questions" contém perguntas muito longas (máx 220 caracteres por item)');
+      }
+
+      if (normalized.length > 50) {
+        errors.push('Campo "questions" excede o limite de 50 perguntas');
+      }
+
+      if (new Set(normalized).size !== normalized.length) {
+        errors.push('Campo "questions" não pode conter valores duplicados');
+      }
+    }
+  } else {
+    // Se includeQuestions = false, questions deve estar vazio ou não definido
+    if (Array.isArray(payload.questions) && payload.questions.length > 0) {
+      errors.push('Campo "questions" não deve ser fornecido quando includeQuestions = false');
+    }
+  }
+
   // REGRA FUNDAMENTAL: A IA NUNCA decide usar RAG ou scraping
   // Se useRag ou useWebScraping não estiverem explicitamente definidos, devem ser false
   if (payload.useRag === undefined) {

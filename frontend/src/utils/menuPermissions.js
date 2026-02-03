@@ -35,6 +35,12 @@ export const menuItems = [
     permission: { resource: 'quick_replies', action: 'read' },
   },
   {
+    label: 'FAQ',
+    path: '/faq',
+    icon: '❓',
+    permission: { resource: 'rag', action: 'update' },
+  },
+  {
     label: 'Departamentos',
     path: '/departments',
     icon: '🏢',

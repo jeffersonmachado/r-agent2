@@ -33,6 +33,25 @@ describe('Tenant AI Draft - contrato + semântica + safe-mode', () => {
     expect(res.tenantDraft.settings.webScrapingEnabled).toBe(false);
   });
 
+  test('createTenantAiDraft deve truncar objetivo/ramo_atividade quando ultrapassar maxLength do contrato', () => {
+    const long = 'x'.repeat(800);
+    const res = createTenantAiDraft({
+      name: 'Empresa Longa',
+      site: 'https://example.com',
+      ramo_atividade: `Ramo ${long}`,
+      objetivo: `Objetivo ${long}`,
+    }, {
+      tenantContractPath: 'contracts/tenant.contract.json',
+      tenant_key: 'empresa-longa',
+    });
+
+    expect(res.tenantDraft.objetivo.length).toBeLessThanOrEqual(500);
+    expect(res.tenantDraft.ramo_atividade.length).toBeLessThanOrEqual(500);
+    expect(res.warnings.some(w => w.code === 'FIELDS_TRUNCATED')).toBe(true);
+    // AJV não deve falhar por maxLength
+    expect(res.errors.some(e => e.code === 'TENANT_CONTRACT_AJV_FAILED')).toBe(false);
+  });
+
   test('deve rejeitar draft com campo sensível (apiKey)', () => {
     const p = path.join(__dirname, '../fixtures/ai/tenant.draft.withSecret.json');
     const draft = JSON.parse(fs.readFileSync(p, 'utf8'));

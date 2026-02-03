@@ -183,7 +183,8 @@ class AdaptiveLearningService:
         
         # Retorna regras padrão se não conseguir carregar
         logger.warning("Usando regras de validação padrão")
-        return self._get_default_validation_rules()
+        self.validation_rules = self._get_default_validation_rules()
+        return self.validation_rules
     
     def _get_default_validation_rules(self) -> Dict:
         """Retorna regras de validação padrão."""
@@ -445,7 +446,11 @@ class AdaptiveLearningService:
         data = self.load_learning_data(tenant_id)
         
         # Atualiza métricas
-        metrics = data["metrics"]
+        metrics = data.get("metrics") or {}
+        # Compatibilidade defensiva: arquivos antigos podem ter "metrics": null
+        if not isinstance(metrics, dict):
+            metrics = {}
+        data["metrics"] = metrics
         metrics["totalQueries"] = metrics.get("totalQueries", 0) + 1
         
         if success:
@@ -476,11 +481,29 @@ class AdaptiveLearningService:
         }
         
         if success:
+            query_patterns = data.get("queryPatterns") or {"successful": [], "failed": []}
+            if not isinstance(query_patterns, dict):
+                query_patterns = {"successful": [], "failed": []}
+            if not isinstance(query_patterns.get("successful"), list):
+                query_patterns["successful"] = []
+            if not isinstance(query_patterns.get("failed"), list):
+                query_patterns["failed"] = []
+            data["queryPatterns"] = query_patterns
+
             data["queryPatterns"]["successful"].append(query_pattern)
             # Mantém apenas últimas 100 queries bem-sucedidas
             if len(data["queryPatterns"]["successful"]) > 100:
                 data["queryPatterns"]["successful"] = data["queryPatterns"]["successful"][-100:]
         else:
+            query_patterns = data.get("queryPatterns") or {"successful": [], "failed": []}
+            if not isinstance(query_patterns, dict):
+                query_patterns = {"successful": [], "failed": []}
+            if not isinstance(query_patterns.get("successful"), list):
+                query_patterns["successful"] = []
+            if not isinstance(query_patterns.get("failed"), list):
+                query_patterns["failed"] = []
+            data["queryPatterns"] = query_patterns
+
             data["queryPatterns"]["failed"].append(query_pattern)
             # Mantém apenas últimas 50 queries falhadas para análise
             if len(data["queryPatterns"]["failed"]) > 50:
@@ -558,8 +581,12 @@ class AdaptiveLearningService:
         Retorna configurações otimizadas.
         """
         data = self.load_learning_data(tenant_id)
-        metrics = data.get("metrics", {})
-        current_config = data.get("config", {})
+        metrics = data.get("metrics") or {}
+        if not isinstance(metrics, dict):
+            metrics = {}
+        current_config = data.get("config") or {}
+        if not isinstance(current_config, dict):
+            current_config = {}
         
         total = metrics.get("totalQueries", 0)
         if total < 10:  # Precisa de pelo menos 10 queries para otimizar
@@ -584,7 +611,12 @@ class AdaptiveLearningService:
         new_top_k = current_top_k
         
         # Analisa queries falhadas para ver se precisam de mais chunks
-        failed_queries = data.get("queryPatterns", {}).get("failed", [])
+        query_patterns = data.get("queryPatterns") or {}
+        if not isinstance(query_patterns, dict):
+            query_patterns = {}
+        failed_queries = query_patterns.get("failed") or []
+        if not isinstance(failed_queries, list):
+            failed_queries = []
         if failed_queries:
             avg_chunks_failed = sum(q.get("chunksFound", 0) for q in failed_queries[-10:]) / min(10, len(failed_queries))
             if avg_chunks_failed < 2:  # Poucos chunks encontrados
@@ -643,8 +675,15 @@ class AdaptiveLearningService:
         data = self.load_learning_data(tenant_id)
         
         # Analisa padrões de queries bem-sucedidas
-        successful = data.get("queryPatterns", {}).get("successful", [])
-        failed = data.get("queryPatterns", {}).get("failed", [])
+        query_patterns = data.get("queryPatterns") or {}
+        if not isinstance(query_patterns, dict):
+            query_patterns = {}
+        successful = query_patterns.get("successful") or []
+        failed = query_patterns.get("failed") or []
+        if not isinstance(successful, list):
+            successful = []
+        if not isinstance(failed, list):
+            failed = []
         
         # Se há muitas falhas recentes, ajusta prompt para ser mais permissivo
         recent_failed = [q for q in failed if self._is_recent(q.get("timestamp", ""))]
@@ -673,7 +712,9 @@ class AdaptiveLearningService:
     def get_metrics(self, tenant_id: str) -> Dict:
         """Retorna métricas de aprendizado para um tenant."""
         data = self.load_learning_data(tenant_id)
-        metrics = data.get("metrics", {})
+        metrics = data.get("metrics") or {}
+        if not isinstance(metrics, dict):
+            metrics = {}
         learning_cycles = data.get("learningCycles", {})
         
         total = metrics.get("totalQueries", 0)
@@ -700,8 +741,8 @@ class AdaptiveLearningService:
             "learningCycles": learning_cycles.get("total", 0),
             "lastCycle": learning_cycles.get("lastCycle"),
             "synonymsCount": len(data.get("synonyms", {})),
-            "successfulPatterns": len(data.get("queryPatterns", {}).get("successful", [])),
-            "failedPatterns": len(data.get("queryPatterns", {}).get("failed", []))
+            "successfulPatterns": len((data.get("queryPatterns") or {}).get("successful") or []),
+            "failedPatterns": len((data.get("queryPatterns") or {}).get("failed") or [])
         }
     
     def adapt_validation_rules(self, tenant_id: str) -> bool:
@@ -753,8 +794,15 @@ class AdaptiveLearningService:
         
         # Analisa padrões de queries para ajustar regras
         data = self.load_learning_data(tenant_id)
-        successful = data.get("queryPatterns", {}).get("successful", [])
-        failed = data.get("queryPatterns", {}).get("failed", [])
+        query_patterns = data.get("queryPatterns") or {}
+        if not isinstance(query_patterns, dict):
+            query_patterns = {}
+        successful = query_patterns.get("successful") or []
+        failed = query_patterns.get("failed") or []
+        if not isinstance(successful, list):
+            successful = []
+        if not isinstance(failed, list):
+            failed = []
         
         # Analisa quais regras estão rejeitando queries válidas ou aceitando inválidas
         rule_performance = self._analyze_rule_performance(successful, failed)

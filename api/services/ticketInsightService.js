@@ -6,6 +6,7 @@
 'use strict';
 
 const logger = require('../utils/logger');
+const config = require('../utils/config');
 const { getTicket, getTicketMessages, updateTicket } = require('./queueService');
 const { generateAiResponse } = require('./aiProviderService');
 
@@ -67,6 +68,11 @@ async function generateAiSummary({ ticketId, tenantId, agent }) {
     const result = await generateAiResponse(prompt, tenantId, { purpose: 'ticket_ai_summary', ticketId });
     text = result?.text || '';
   } catch (err) {
+    const allowHeuristicFallback = config.get('fallbacks.ticketInsightHeuristic', false) === true;
+    if (!allowHeuristicFallback) {
+      logger.warn('[TicketInsight] Falha ao gerar resumo por IA (sem fallback heurístico)', { error: err.message });
+      return { success: false, error: 'ai_summary_failed', message: err.message };
+    }
     logger.warn('[TicketInsight] Falha ao gerar resumo por IA (fallback heurístico)', { error: err.message });
     text = heuristicSummary(ticket, messages);
   }

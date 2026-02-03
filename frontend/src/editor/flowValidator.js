@@ -46,8 +46,8 @@ function addUiMessage(error) {
     STRUCTURAL_LOOP: 'Loop estrutural detectado no fluxo. Verifique as conexões.',
     INVALID_FLOW_STRUCTURE: 'Estrutura do fluxo inválida.',
     PROHIBITED_MULTIPLE_INPUTS: nodeIds.length > 0
-      ? `Nó "${nodeIds[0]}" tem múltiplas entradas. Múltiplas entradas são permitidas apenas em nós de convergência simples (Fim, Transferência).`
-      : 'Nós com múltiplas entradas detectados. Use apenas em nós de convergência simples.',
+      ? `Nó "${nodeIds[0]}" tem múltiplas entradas. Múltiplas entradas são permitidas apenas em nós de convergência simples (Fim, Transferência, Merge).`
+      : 'Nós com múltiplas entradas detectados. Use apenas em nós de convergência simples (Fim, Transferência, Merge).',
     PROHIBITED_MULTIPLE_INPUTS_DECISION: nodeIds.length > 0
       ? `Nó decisório "${nodeIds[0]}" não pode ter múltiplas entradas. Nós decisórios (Roteador, Opções, Intenção) devem ter apenas uma entrada.`
       : 'Nós decisórios com múltiplas entradas detectados.',
@@ -469,7 +469,7 @@ function validateMultipleInputs(flow, edges) {
   });
   
   // Nós que permitem múltiplas entradas (apenas convergência simples, passivos)
-  const allowedMultipleInputs = new Set(['end', 'handoff']);
+  const allowedMultipleInputs = new Set(['end', 'handoff', 'merge']);
   
   // Nós decisórios (não podem ter múltiplas entradas)
   const decisionNodes = new Set(['router', 'schedule_router', 'options', 'ai_task']);
@@ -496,8 +496,8 @@ function validateMultipleInputs(flow, edges) {
       if (!allowedMultipleInputs.has(nodeType)) {
         errors.push(addUiMessage({
           code: 'PROHIBITED_MULTIPLE_INPUTS',
-          message: `Nó "${nodeId}" (tipo: ${nodeType}) tem ${count} entradas. Múltiplas entradas são permitidas apenas em nós de convergência simples (end, handoff).`,
-          messageUi: `❌ Nó "${nodeId}" tem múltiplas entradas. Isso não é permitido para sincronização. Use apenas em nós de convergência simples (Fim, Transferência).`,
+          message: `Nó "${nodeId}" (tipo: ${nodeType}) tem ${count} entradas. Múltiplas entradas são permitidas apenas em nós de convergência simples (end, handoff, merge).`,
+          messageUi: `❌ Nó "${nodeId}" tem múltiplas entradas. Isso não é permitido para sincronização. Use apenas em nós de convergência simples (Fim, Transferência, Merge).`,
           nodeIds: [nodeId],
           severity: 'error',
           details: { nodeType, inputCount: count },

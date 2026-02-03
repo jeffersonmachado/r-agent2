@@ -5,6 +5,24 @@ import { Input } from '../styles/Input';
 import { Dialog } from './Dialog';
 import logger from '../utils/logger';
 
+function summarizeValidationBySeverity(validationWarnings) {
+  const errors = Array.isArray(validationWarnings?.errors) ? validationWarnings.errors : [];
+  const counts = { error: 0, warning: 0, info: 0, other: 0, total: errors.length };
+  for (const e of errors) {
+    const sev = String(e?.severity || 'warning').toLowerCase();
+    if (sev === 'error') counts.error += 1;
+    else if (sev === 'warning') counts.warning += 1;
+    else if (sev === 'info') counts.info += 1;
+    else counts.other += 1;
+  }
+  return counts;
+}
+
+function hasBlockingValidationErrors(validationWarnings) {
+  const errors = Array.isArray(validationWarnings?.errors) ? validationWarnings.errors : [];
+  return errors.some((e) => String(e?.severity || 'warning').toLowerCase() === 'error');
+}
+
 /**
  * Diálogo para criar fluxo e gerar teste RPA por IA em uma única ação.
  */
@@ -26,6 +44,7 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
   
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
+  const [flowValidationWarnings, setFlowValidationWarnings] = useState(null);
   const [preview, setPreview] = useState(null);
   const [currentStep, setCurrentStep] = useState(''); // Para mostrar progresso
   const [saving, setSaving] = useState(false);
@@ -39,6 +58,7 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
     try {
       setGenerating(true);
       setError(null);
+      setFlowValidationWarnings(null);
       setPreview(null);
 
       // Passo 1: Gerar fluxo
@@ -53,7 +73,7 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
         rpaMode
       });
       
-      const generatedFlow = await generateFlowFromDescription(description, {
+      const generationResult = await generateFlowFromDescription(description, {
         flowName: flowName || undefined,
         flowId: flowId || undefined,
         useRag,
@@ -63,6 +83,29 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
         generateRpaTest,
         rpaMode,
       });
+
+      const generatedFlow = generationResult?.flowDefinition || generationResult;
+      if (!generatedFlow || typeof generatedFlow !== 'object') {
+        throw new Error('Resposta inválida ao gerar fluxo (flowDefinition ausente).');
+      }
+
+      // ✅ Mostra warnings de validação do fluxo imediatamente (sem bloquear),
+      // antes mesmo de persistir no backend, para feedback rápido.
+      const generationWarnings = generationResult?.validationWarnings || null;
+      const hasGenerationWarnings =
+        !!generationWarnings &&
+        generationWarnings.valid === false &&
+        Array.isArray(generationWarnings.errors) &&
+        generationWarnings.errors.length > 0;
+
+      if (hasGenerationWarnings) {
+        setFlowValidationWarnings(generationWarnings);
+        logger.warn('Fluxo gerado com warnings de validação (pré-salvamento)', {
+          flowId: generatedFlow?.id,
+          errorCount: generationWarnings.errors.length,
+          codes: generationWarnings.codes || generationWarnings.errors.map((e) => e?.code).filter(Boolean),
+        });
+      }
 
       logger.info('Fluxo gerado com sucesso', { 
         flowId: generatedFlow?.id,
@@ -80,6 +123,19 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
       }
       
       logger.info('Fluxo salvo com sucesso', { flowId: savedFlow.id, flowName: savedFlow.name });
+
+      // ✅ Se o backend retornou warnings no POST /flows, também exibimos,
+      // mas evitamos duplicar caso já tenhamos warnings do /flows/generate.
+      const savedWarnings = savedFlow?.validationWarnings || null;
+      const hasSavedWarnings =
+        !!savedWarnings &&
+        savedWarnings.valid === false &&
+        Array.isArray(savedWarnings.errors) &&
+        savedWarnings.errors.length > 0;
+
+      if (hasSavedWarnings && !hasGenerationWarnings) {
+        setFlowValidationWarnings(savedWarnings);
+      }
 
       // Passo 3: Gerar teste RPA (apenas se solicitado)
       let rpaTestResult = null;
@@ -110,12 +166,19 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
       setCurrentStep('Concluído!');
       
       // Monta preview completo
+      const flowWarningsForPreview = (hasSavedWarnings ? savedWarnings : (hasGenerationWarnings ? generationWarnings : null));
+      const rpaWarnings = rpaTestResult?.rpaTest?.validationWarnings || null;
+      const blockingFlow = hasBlockingValidationErrors(flowWarningsForPreview);
+      const blockingRpa = hasBlockingValidationErrors(rpaWarnings);
+      const readyToSave = !generateRpaTest || (!blockingFlow && !blockingRpa);
+
       setPreview({
         flow: savedFlow,
         rpaTest: rpaTestResult?.rpaTest || null,
         dependencies: rpaTestResult?.dependencies || null,
         resolution: rpaTestResult?.resolution || null,
-        readyToSave: !rpaTestResult || !rpaTestResult.rpaTest || !rpaTestResult.rpaTest.validationWarnings || rpaTestResult.rpaTest.validationWarnings.valid,
+        flowValidationWarnings: flowWarningsForPreview,
+        readyToSave,
       });
 
     } catch (err) {
@@ -130,6 +193,14 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
   const handleSave = async () => {
     if (!preview || !preview.rpaTest) {
       setError('Nenhum teste RPA para salvar');
+      return;
+    }
+
+    // Bloqueia apenas se houver erros (severity=error)
+    const blockingFlow = hasBlockingValidationErrors(preview.flowValidationWarnings);
+    const blockingRpa = hasBlockingValidationErrors(preview.rpaTest?.validationWarnings);
+    if (blockingFlow || blockingRpa) {
+      setError('Não é possível salvar: existem erros de validação (severity=error). Corrija antes de continuar.');
       return;
     }
 
@@ -161,6 +232,7 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
   const handleCancel = () => {
     setPreview(null);
     setError(null);
+    setFlowValidationWarnings(null);
     setDescription('');
     setFlowName('');
     setFlowId('');
@@ -444,6 +516,18 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
                 </div>
               )}
 
+              {/* Avisos de validação do fluxo (retornados por /flows/generate) */}
+              {flowValidationWarnings && flowValidationWarnings.valid === false && (
+                <div className="p-3 rounded-md bg-status-warning/10 border border-status-warning/20 text-status-warning text-sm">
+                  <strong>Aviso:</strong> O fluxo gerado possui {flowValidationWarnings.errors?.length || 0} aviso(s) de validação (antes de salvar).
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    {(flowValidationWarnings.errors || []).map((err, index) => (
+                      <li key={index}>{err.messageUi || err.message || 'Erro de validação'}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {error && (
                 <div className="p-3 rounded-md bg-status-error/10 border border-status-error/20 text-status-error text-sm">
                   {error}
@@ -474,7 +558,11 @@ export function FlowAndRpaTestGeneratorDialog({ onComplete, onCancel }) {
  * Componente de preview do fluxo e teste RPA gerados.
  */
 function FlowAndRpaTestPreview({ preview, onSave, onCancel, saving, error }) {
-  const { flow, rpaTest, dependencies, resolution, readyToSave } = preview;
+  const { flow, rpaTest, dependencies, resolution, readyToSave, flowValidationWarnings } = preview;
+  const flowCounts = summarizeValidationBySeverity(flowValidationWarnings);
+  const rpaCounts = summarizeValidationBySeverity(rpaTest?.validationWarnings);
+  const flowHasWarnings = !!flowValidationWarnings && flowValidationWarnings.valid === false && Array.isArray(flowValidationWarnings.errors) && flowValidationWarnings.errors.length > 0;
+  const rpaHasWarnings = !!rpaTest?.validationWarnings && rpaTest.validationWarnings.valid === false && Array.isArray(rpaTest.validationWarnings.errors) && rpaTest.validationWarnings.errors.length > 0;
 
   return (
     <div className="space-y-6">
@@ -502,6 +590,18 @@ function FlowAndRpaTestPreview({ preview, onSave, onCancel, saving, error }) {
           </div>
         </div>
       </div>
+
+      {/* Avisos de Validação do Fluxo */}
+      {flowHasWarnings && (
+        <div className="p-3 rounded-md bg-status-warning/10 border border-status-warning/20 text-status-warning text-sm">
+          <strong>Aviso (Fluxo):</strong> {flowCounts.total} item(ns) — erros: {flowCounts.error}, warnings: {flowCounts.warning}, info: {flowCounts.info}{flowCounts.other ? `, outros: ${flowCounts.other}` : ''}.
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            {(flowValidationWarnings.errors || []).map((err, index) => (
+              <li key={index}>{err.messageUi || err.message || 'Erro de validação'}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Dependências */}
       {dependencies && (
@@ -595,12 +695,12 @@ function FlowAndRpaTestPreview({ preview, onSave, onCancel, saving, error }) {
       )}
 
       {/* Avisos de Validação */}
-      {rpaTest?.validationWarnings && !rpaTest.validationWarnings.valid && (
+      {rpaHasWarnings && (
         <div className="p-3 rounded-md bg-status-warning/10 border border-status-warning/20 text-status-warning text-sm">
-          <strong>Aviso:</strong> O teste gerado tem alguns avisos de validação. Revise antes de salvar.
+          <strong>Aviso (Teste RPA):</strong> {rpaCounts.total} item(ns) — erros: {rpaCounts.error}, warnings: {rpaCounts.warning}, info: {rpaCounts.info}{rpaCounts.other ? `, outros: ${rpaCounts.other}` : ''}.
           <ul className="list-disc list-inside mt-2 space-y-1">
             {rpaTest.validationWarnings.errors?.map((err, index) => (
-              <li key={index}>{err.message}</li>
+              <li key={index}>{err.messageUi || err.message || 'Erro de validação'}</li>
             ))}
           </ul>
         </div>

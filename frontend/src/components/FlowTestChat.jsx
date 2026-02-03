@@ -185,7 +185,9 @@ export function FlowTestChat({ flow, onSizeChange }) {
     if (
       isRunning &&
       conversationState &&
-      flow?.nodes?.find((n) => n.id === conversationState.currentNodeId)?.type === 'user_input'
+      ['user_input', 'fallback'].includes(
+        flow?.nodes?.find((n) => n.id === conversationState.currentNodeId)?.type
+      )
     ) {
       setTimeout(() => {
         if (inputRef.current) {
@@ -328,7 +330,13 @@ export function FlowTestChat({ flow, onSizeChange }) {
         logger.error('Erro ao validar arquivo:', error);
         // Mostra erro para o usuário de forma mais amigável
         const errorMessage = error.message || 'Erro desconhecido';
-        alert(`Erro ao adicionar arquivo "${file.name}": ${errorMessage}`);
+        const msg = `Erro ao adicionar arquivo "${file.name}": ${errorMessage}`;
+        // Em ambiente de testes (happy-dom) `alert` pode não existir.
+        if (typeof alert === 'function') {
+          alert(msg);
+        } else {
+          logger.warn(msg);
+        }
       }
     }
 
@@ -346,7 +354,7 @@ export function FlowTestChat({ flow, onSizeChange }) {
     const hasText = inputText.trim().length > 0;
     const hasFiles = attachedFiles.some((f) => f.status === 'ready');
     
-    if ((!hasText && !hasFiles) || !isRunning) return;
+    if ((!hasText && !hasFiles) || !isRunning || isProcessing) return;
 
     // Prepara arquivos prontos
     const readyFiles = attachedFiles
@@ -390,13 +398,16 @@ export function FlowTestChat({ flow, onSizeChange }) {
   };
 
   const canSend = isRunning && 
+    !isProcessing &&
     (inputText.trim().length > 0 || attachedFiles.some(f => f.status === 'ready')) &&
     !attachedFiles.some(f => f.status === 'processing');
   const isFinished = conversationState && conversationState.currentNodeId === null;
   const isWaitingInput =
     isRunning &&
     conversationState &&
-    flow?.nodes?.find((n) => n.id === conversationState.currentNodeId)?.type === 'user_input';
+    ['user_input', 'fallback'].includes(
+      flow?.nodes?.find((n) => n.id === conversationState.currentNodeId)?.type
+    );
   
   // Indica quando o bot está processando/respondendo
   // Mostra apenas quando está realmente processando (isProcessing = true)

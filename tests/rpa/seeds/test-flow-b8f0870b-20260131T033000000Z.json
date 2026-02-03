@@ -1,0 +1,184 @@
+{
+  "id": "test-flow-b8f0870b-20260131T033000000Z",
+  "name": "IA - Teste RPA - studiooly",
+  "description": "Teste RPA gerado automaticamente",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "",
+      "value": "http://localhost:5173",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173"
+      },
+      "description": "Acessar o frontend do chatbot (URL base)",
+      "critical": "true",
+      "url": "http://localhost:5173/chat?flowId=flow-b8f0870b"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "5000",
+      "assert": {
+        "type": "exists",
+        "expected": "body"
+      },
+      "description": "Aguardar carregamento inicial da página",
+      "critical": "true"
+    },
+    {
+      "step": "step-2",
+      "action": "assert",
+      "type": "url",
+      "expected": "http://localhost:5173",
+      "description": "Garantir que o teste está na URL base correta",
+      "title": "http://localhost:5173"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar que a mensagem inicial do fluxo foi exibida",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "input[type='text'], textarea",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "input[type='text'], textarea"
+      },
+      "description": "Validar que existe campo de entrada para o usuário",
+      "critical": "true"
+    },
+    {
+      "step": "step-4",
+      "action": "assert",
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Mensagem inicial do nó message_1 deve estar visível no chat"
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='text'], textarea",
+      "value": "Qual é o WhatsApp?",
+      "assert": {
+        "type": "text",
+        "expected": "Qual é o WhatsApp?"
+      },
+      "description": "Preencher pergunta determinística de FAQ (contato WhatsApp)",
+      "critical": "true"
+    },
+    {
+      "step": "step-5",
+      "action": "assert",
+      "type": "exists",
+      "selector": "input[type='text'], textarea",
+      "expected": "input[type='text'], textarea",
+      "description": "Campo de input deve existir para o nó user_input_faq"
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "button[type='submit'], button"
+      },
+      "description": "Enviar a mensagem do usuário",
+      "critical": "true"
+    },
+    {
+      "step": "step-6",
+      "action": "assert",
+      "type": "text",
+      "selector": "input[type='text'], textarea",
+      "expected": "Qual é o WhatsApp?",
+      "description": "O texto preenchido no input deve ser exatamente o esperado"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "15000",
+      "assert": {
+        "type": "text",
+        "expected": "35138939"
+      },
+      "description": "Aguardar resposta da IA e validar presença do número de contato esperado",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "WhatsApp"
+      },
+      "description": "Validar que a resposta menciona explicitamente WhatsApp",
+      "critical": "true"
+    },
+    {
+      "step": "step-8",
+      "action": "assert",
+      "type": "text",
+      "selector": "body",
+      "expected": "35138939",
+      "description": "A resposta da IA deve conter o número de WhatsApp/telefone conhecido (35138939)"
+    },
+    {
+      "step": "step-9",
+      "action": "assert",
+      "type": "text",
+      "selector": "body",
+      "expected": "WhatsApp",
+      "description": "A resposta deve mencionar WhatsApp para confirmar contexto da pergunta"
+    }
+  ],
+  "data": {},
+  "metadata": {
+    "generatedAt": "2026-01-31T03:30:00.000Z",
+    "dependenciesResolved": false,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "iniciar conversa no widget de chat"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "validar mensagem de boas-vindas"
+      },
+      {
+        "nodeId": "user_input_faq",
+        "nodeType": "user_input",
+        "action": "enviar pergunta de FAQ determinística"
+      },
+      {
+        "nodeId": "ai_faq",
+        "nodeType": "ai",
+        "action": "validar resposta do assistente (contato/WhatsApp/telefone)"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "encerrar fluxo após resposta da IA"
+      }
+    ],
+    "version": "1.0.0",
+    "convertedFromTest": true,
+    "convertedAt": "2026-01-31T03:29:49.414Z",
+    "originalStepsCount": 8,
+    "assertsCount": 6
+  },
+  "source": "automatic"
+}

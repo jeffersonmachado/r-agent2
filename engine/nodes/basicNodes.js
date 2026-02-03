@@ -44,6 +44,18 @@ const { renderTemplate } = require('../utils/templateRenderer');
 async function startNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   
+  // Compatibilidade/UX: se o caller já enviou input (ex.: primeira mensagem inbound),
+  // preservamos o texto em variables.user_input para que o próximo nó possa usá-lo
+  // (ex.: semantic_router/ai_task), sem exigir um nó explícito de user_input logo após start.
+  if (input && typeof input === 'object' && input.text != null) {
+    const existing = nextState.variables && Object.prototype.hasOwnProperty.call(nextState.variables, 'user_input')
+      ? nextState.variables.user_input
+      : undefined;
+    if (existing === undefined || existing === null || String(existing).trim() === '') {
+      nextState.variables.user_input = String(input.text);
+    }
+  }
+
   // Valida que start tem next definido
   const hasValidNext =
     typeof node.next === 'string' ||
@@ -353,15 +365,15 @@ async function userInputNodeHandler(node, state, input) {
  * Decisão importante:
  * - Para manter segurança e simplicidade, evitamos eval().
  * - Implementamos um conjunto mínimo de operadores declarativos.
- * - APENAS igualdade simples (===) e always são permitidos.
+ * - Permitimos um conjunto pequeno de operadores declarativos (compatível com o validator).
  *
  * Formato suportado (exemplos):
  * - { op: "always" } - Sempre verdadeiro (fallback)
  * - { op: "equals", var: "intent", value: "support" } - Igualdade simples
+ * - { op: "contains", var: "nome", value: " " } - Contém substring/elemento
  *
  * PROIBIDO:
- * - Operadores matemáticos: > < >= <=
- * - Operadores de string: contains, regex
+ * - Regex e expressões arbitrárias
  * - Acesso profundo: obj.prop (deve ser achatado antes)
  */
 function evaluateCondition(condition, state) {
@@ -369,8 +381,7 @@ function evaluateCondition(condition, state) {
 
   const op = condition.op || 'always';
 
-  // Operadores permitidos: apenas 'always' e 'equals'
-  const validOps = ['always', 'equals'];
+  const validOps = ['always', 'equals', 'contains', 'not_equals', 'not_contains', 'greater_than', 'less_than'];
   if (!validOps.includes(op)) {
     // Operador inválido: retorna false e loga erro
     const logger = require('../../api/utils/logger');
@@ -384,12 +395,34 @@ function evaluateCondition(condition, state) {
 
   if (op === 'always') return true;
 
-  if (op === 'equals') {
-    const varName = condition.var;
-    if (!varName) return false;
-    const variableValue = state.variables[varName];
-    // Igualdade estrita (===)
-    return variableValue === condition.value;
+  const varName = condition.var;
+  if (!varName) return false;
+  const variableValue = state.variables[varName];
+
+  if (op === 'equals') return variableValue === condition.value;
+  if (op === 'not_equals') return variableValue !== condition.value;
+
+  if (op === 'contains' || op === 'not_contains') {
+    const needle = condition.value;
+    let has = false;
+
+    if (typeof variableValue === 'string') {
+      has = variableValue.includes(String(needle ?? ''));
+    } else if (Array.isArray(variableValue)) {
+      has = variableValue.includes(needle);
+    } else if (variableValue != null) {
+      // fallback seguro: stringificação
+      has = String(variableValue).includes(String(needle ?? ''));
+    }
+
+    return op === 'contains' ? has : !has;
+  }
+
+  if (op === 'greater_than' || op === 'less_than') {
+    const left = Number(variableValue);
+    const right = Number(condition.value);
+    if (!Number.isFinite(left) || !Number.isFinite(right)) return false;
+    return op === 'greater_than' ? left > right : left < right;
   }
 
   return false;
@@ -406,8 +439,56 @@ async function routerNodeHandler(node, state, input, deps = null) {
   const nextState = cloneState(state);
   const rules = (node.config && Array.isArray(node.config.rules) ? node.config.rules : []);
 
+  // Loop controlado (opcional):
+  // - Se este nó estiver em um ciclo intencional, pode ter um socket "limit_exceeded"
+  //   apontando para fora do ciclo, e um limite de tentativas em config.loopMaxAttempts.
+  const nextMap = node && node.next && typeof node.next === 'object' && !Array.isArray(node.next) ? node.next : null;
+  const limitExceededTarget =
+    nextMap && typeof nextMap.limit_exceeded === 'string' && nextMap.limit_exceeded.trim()
+      ? nextMap.limit_exceeded
+      : null;
+  const loopMaxAttemptsRaw = node?.config?.loopMaxAttempts;
+  const loopMaxAttempts =
+    loopMaxAttemptsRaw === undefined || loopMaxAttemptsRaw === null || loopMaxAttemptsRaw === ''
+      ? 3
+      : Number(loopMaxAttemptsRaw);
+
+  if (limitExceededTarget) {
+    nextState.metadata = nextState.metadata || {};
+    nextState.metadata.loopAttemptsByNodeId = nextState.metadata.loopAttemptsByNodeId || {};
+    const prev = Number(nextState.metadata.loopAttemptsByNodeId[node.id] || 0);
+    const attempt = prev + 1;
+    nextState.metadata.loopAttemptsByNodeId[node.id] = attempt;
+
+    // Se excedeu, desvia imediatamente
+    if (Number.isFinite(loopMaxAttempts) && loopMaxAttempts >= 1 && attempt > loopMaxAttempts) {
+      /** @type {EngineStepOutput} */
+      const result = {
+        nextState,
+        events: [
+          createEngineEvent({
+            sessionId: state.sessionId,
+            flowId: state.flowId,
+            nodeId: node.id,
+            type: 'LOOP_LIMIT_EXCEEDED',
+            payload: {
+              attempt,
+              maxAttempts: loopMaxAttempts,
+              chosenNext: limitExceededTarget,
+            },
+          }),
+        ],
+        output: {
+          type: 'router',
+          chosenNext: limitExceededTarget,
+        },
+      };
+      return result;
+    }
+  }
+
   // Valida regras antes de executar (segurança)
-  const validOps = ['always', 'equals'];
+  const validOps = ['always', 'equals', 'contains', 'not_equals', 'not_contains', 'greater_than', 'less_than'];
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i];
     if (!rule || typeof rule !== 'object') {
@@ -445,17 +526,10 @@ async function routerNodeHandler(node, state, input, deps = null) {
       throw error;
     }
     
-    // Detecta acesso profundo (obj.prop)
-    if (op === 'equals' && condition.var && condition.var.includes('.')) {
-      const error = new Error(`Router node "${node.id}" tenta acessar propriedade profunda "${condition.var}" na regra ${i + 1}. Aplaine antes (ex: user_role em vez de user.role).`);
-      // @ts-ignore
-      error.code = 'ENGINE_ROUTER_DEEP_ACCESS';
-      // @ts-ignore
-      error.type = 'flow';
-      // @ts-ignore
-      error.nodeId = node.id;
-      throw error;
-    }
+    // Observação:
+    // Variáveis no sistema podem ser "flat" e conter pontos no nome (ex.: ai.<id>.value, rag.<id>.text).
+    // Como o router acessa variáveis por chave direta (state.variables[varName]), NÃO há risco de "deep access"
+    // real aqui. Portanto, não bloqueamos nomes com '.'.
   }
 
   let chosenNext = null;
@@ -878,12 +952,57 @@ async function optionsNodeHandler(node, state, input, deps = null) {
   const variableName = config.variable || 'user_option';
   const allowMultiple = config.allowMultiple === true;
 
+  // Loop controlado (opcional):
+  // - Se este nó estiver em um ciclo intencional, pode ter um socket "limit_exceeded"
+  //   apontando para fora do ciclo, e um limite de tentativas em config.loopMaxAttempts.
+  const nextMap = node && node.next && typeof node.next === 'object' && !Array.isArray(node.next) ? node.next : null;
+  const limitExceededTarget =
+    nextMap && typeof nextMap.limit_exceeded === 'string' && nextMap.limit_exceeded.trim()
+      ? nextMap.limit_exceeded
+      : null;
+  const loopMaxAttemptsRaw = config.loopMaxAttempts;
+  const loopMaxAttempts =
+    loopMaxAttemptsRaw === undefined || loopMaxAttemptsRaw === null || loopMaxAttemptsRaw === ''
+      ? 3
+      : Number(loopMaxAttemptsRaw);
+
+  if (limitExceededTarget) {
+    nextState.metadata = nextState.metadata || {};
+    nextState.metadata.loopAttemptsByNodeId = nextState.metadata.loopAttemptsByNodeId || {};
+    const prev = Number(nextState.metadata.loopAttemptsByNodeId[node.id] || 0);
+    const attempt = prev + 1;
+    nextState.metadata.loopAttemptsByNodeId[node.id] = attempt;
+
+    if (Number.isFinite(loopMaxAttempts) && loopMaxAttempts >= 1 && attempt > loopMaxAttempts) {
+      // Força saída pelo socket "limit_exceeded" sem re-renderizar o menu
+      nextState.currentNodeId = limitExceededTarget;
+      return {
+        nextState,
+        events: [
+          createEngineEvent({
+            sessionId: state.sessionId,
+            flowId: state.flowId,
+            nodeId: node.id,
+            type: 'LOOP_LIMIT_EXCEEDED',
+            payload: {
+              attempt,
+              maxAttempts: loopMaxAttempts,
+              chosenNext: limitExceededTarget,
+            },
+          }),
+        ],
+        output: null,
+      };
+    }
+  }
+
   // Renderiza a mensagem substituindo variáveis
   const renderedMessage = renderTemplate(messageTemplate, nextState.variables || {});
 
+  let selectedValue = null;
+
   // Se há input do usuário, processa a seleção
   if (input) {
-    let selectedValue = null;
     let selectedOption = null;
 
     // Processa diferentes formatos de input
@@ -942,8 +1061,9 @@ async function optionsNodeHandler(node, state, input, deps = null) {
   };
 
   // Se há seleção, adiciona ao output
-  if (input && (input.optionId || Array.isArray(input.optionIds))) {
-    result.output.selectedOption = input.optionId || input.optionIds;
+  if (input && selectedValue !== null) {
+    // Compatibilidade: expõe selectedOption também quando a seleção veio por texto.
+    result.output.selectedOption = selectedValue;
   }
 
   // Evento de opções exibidas

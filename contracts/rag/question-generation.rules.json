@@ -1,141 +1,99 @@
 {
-  "version": "1.0.0",
-  "lastUpdated": "2026-01-05T17:00:00.000Z",
-  "description": "Regras editáveis para geração automática de perguntas a partir de documentos RAG",
+  "version": "1.1.0",
+  "lastUpdated": "2026-01-30T00:00:00.000Z",
+  "description": "Regras editáveis para geração automática de perguntas a partir de documentos RAG (com cobertura de domínio)",
   "titleBased": {
     "enabled": true,
     "minTitleLength": 3,
-    "excludedWords": [
-      "como",
-      "para",
-      "sobre",
-      "guia",
-      "manual",
-      "documento",
-      "arquivo"
-    ],
-    "templates": [
-      "O que é {{mainTopic}}?",
-      "Como funciona {{mainTopic}}?"
-    ],
+    "excludedWords": ["como", "para", "sobre", "guia", "manual", "documento", "arquivo"],
+    "templates": ["O que é {{mainTopic}}?", "Como funciona {{mainTopic}}?"],
     "maxQuestionsFromTitle": 2
   },
   "keywordPatterns": {
     "enabled": true,
     "patterns": [
       {
-        "pattern": "senha|password",
-        "questions": [
-          "Como resetar minha senha?",
-          "Como alterar minha senha?",
-          "Esqueci minha senha"
-        ]
+        "pattern": "pagamento|payment|pagar|pix",
+        "questions": ["Quais formas de pagamento são aceitas?", "Posso pagar via PIX?", "Como enviar o comprovante?"]
       },
       {
-        "pattern": "conta|account",
-        "questions": [
-          "Como criar uma conta?",
-          "Como cancelar minha conta?",
-          "Como fechar minha conta?"
-        ]
+        "pattern": "whatsapp|telefone|contato|site",
+        "questions": ["Qual é o WhatsApp?", "Qual é o telefone?", "Qual é o site?", "Como entrar em contato?"]
       },
       {
-        "pattern": "pagamento|payment|pagar",
-        "questions": [
-          "Como fazer um pagamento?",
-          "Quais são as formas de pagamento?",
-          "Como pagar?"
-        ]
+        "pattern": "hor[aá]rio|horarios|funcionamento|grade|agenda",
+        "questions": ["Qual é o horário de funcionamento?", "Quais são os horários durante a semana?", "Abre aos sábados?", "Funciona aos domingos?"]
       },
       {
-        "pattern": "suporte|support|ajuda|help",
-        "questions": [
-          "Como entrar em contato com o suporte?",
-          "Onde posso obter ajuda?",
-          "Preciso de ajuda"
-        ]
+        "pattern": "plano|planos|mensal|semestral|anual",
+        "questions": ["Quais planos estão disponíveis?", "Quanto custa o plano mensal?", "Existem planos semestrais?", "Existem planos anuais?"]
       },
       {
-        "pattern": "produto|product",
-        "questions": [
-          "Quais produtos estão disponíveis?",
-          "Como comprar um produto?",
-          "Informações sobre produtos"
-        ]
+        "pattern": "valor|valores|pre[cç]o|precos|r\\$",
+        "questions": ["Quais são os valores?", "Quais são os preços dos planos?"]
       },
       {
-        "pattern": "ticket|chamado",
-        "questions": [
-          "Como abrir um ticket?",
-          "Como acompanhar meu ticket?",
-          "Abrir chamado"
-        ]
+        "pattern": "black\\s*friday|promo[cç][aã]o|desconto|oferta",
+        "questions": ["Existe promoção de Black Friday?", "Até quando vai a promoção?"]
       },
       {
-        "pattern": "configuração|config|settings",
-        "questions": [
-          "Como configurar?",
-          "Onde estão as configurações?",
-          "Configurações do sistema"
-        ]
+        "pattern": "fisioterapia|sess[aã]o|sess[oõ]es|pacote",
+        "questions": ["Quanto custa uma sessão de fisioterapia?", "Quanto custa o pacote com 5 sessões?", "Quanto custa o pacote com 10 sessões?"]
       },
       {
-        "pattern": "resetar|reset",
-        "questions": [
-          "Como resetar?",
-          "Resetar configurações"
-        ]
-      },
-      {
-        "pattern": "instalar|instalação",
-        "questions": [
-          "Como instalar?",
-          "Instruções de instalação"
-        ]
-      },
-      {
-        "pattern": "erro|error|problema",
-        "questions": [
-          "Como resolver este problema?",
-          "O que fazer quando ocorre erro?"
-        ]
+        "pattern": "pilates|bal[eé]|crossfit|funcional",
+        "questions": ["Quais modalidades estão disponíveis?"]
       }
     ]
+  },
+  "domainCoverage": {
+    "enabled": true,
+    "entities": {
+      "modalities": [
+        { "label": "Crossfit", "patterns": ["crossfit"] },
+        { "label": "Funcional", "patterns": ["funcional"] },
+        { "label": "Balé", "patterns": ["bale", "ballet"] },
+        { "label": "Pilates", "patterns": ["pilates"] },
+        { "label": "Fisioterapia", "patterns": ["fisioterapia", "fisio"] }
+      ]
+    },
+    "templates": {
+      "business": ["O que é {{business}}?", "Quais serviços {{business}} oferece?", "Quais modalidades estão disponíveis?"],
+      "hoursGeneric": ["Qual é o horário de funcionamento?", "Quais são os horários durante a semana?", "Abre aos sábados?", "Funciona aos domingos?"],
+    "hoursByModality": ["Quais são os horários de {{modality}}?", "Como consultar a grade de horários de {{modality}}?"],
+      "plans": ["Quais planos estão disponíveis?", "Quanto custa o plano mensal?", "Existem planos semestrais?", "Existem planos anuais?"],
+      "pricingGeneric": ["Quais são os valores?", "Quais são os preços dos planos?"],
+    "pricingByModality": ["Qual o valor de {{modality}}?"],
+      "balletPricing": ["Qual o valor do balé 1x por semana?", "Qual o valor do balé 2x por semana?"],
+      "physioPackages": ["Quanto custa uma sessão de fisioterapia?", "Quanto custa o pacote com 5 sessões?", "Quanto custa o pacote com 10 sessões?"],
+      "promotions": ["Existe promoção de Black Friday?", "Até quando vai a promoção?", "Qual o valor promocional do pilates?"],
+      "payment": ["Quais formas de pagamento são aceitas?", "Posso pagar via PIX?", "Qual é a chave PIX?", "Como enviar o comprovante?", "Para qual WhatsApp envio o comprovante?"],
+      "contact": ["Qual é o WhatsApp?", "Qual é o telefone?", "Qual é o site?", "Como entrar em contato?"],
+      "rules": ["Quais são as regras básicas?", "Quais dados devo informar no pagamento (nome do aluno etc.)?"]
+    },
+    "triggers": {
+      "hours": ["horário", "horarios", "funcionamento", "grade"],
+      "plans": ["plano", "planos", "mensal", "semestral", "anual"],
+      "pricing": ["valor", "valores", "preço", "precos", "r$"],
+      "promotions": ["black friday", "promo", "promoc", "desconto", "oferta"],
+      "payment": ["pix", "comprovante", "pagamento", "pagar"],
+      "contact": ["whatsapp", "telefone", "site", "contato"],
+      "rules": ["comprovante", "nome do aluno", "nome do(a) aluno", "aluno", "enviar o comprovante", "envio do comprovante"]
+    }
   },
   "contentBased": {
     "enabled": true,
     "minContentLength": 50,
-    "actionVerbs": [
-      "acesse",
-      "clique",
-      "selecione",
-      "digite",
-      "insira",
-      "configure",
-      "ativar",
-      "desativar"
-    ],
-    "sentenceFilters": {
-      "minLength": 20,
-      "maxLength": 150
-    },
-    "maxSentencesToProcess": 3,
+    "actionVerbs": ["acesse", "clique", "selecione", "digite", "insira", "configure", "ativar", "desativar", "envie", "pague", "agende", "fale", "entre em contato"],
+    "sentenceFilters": { "minLength": 20, "maxLength": 150 },
+    "maxSentencesToProcess": 4,
     "questionTemplate": "Como {{action}}?",
     "fallbackEnabled": true,
-    "fallbackMaxSentences": 2,
+    "fallbackMaxSentences": 3,
     "fallbackMinLength": 20,
-    "fallbackMaxLength": 100
+    "fallbackMaxLength": 110
   },
-  "deduplication": {
-    "enabled": true,
-    "similarityThreshold": 0.8,
-    "normalizeForComparison": true
-  },
-  "limits": {
-    "maxQuestionsPerDocument": 5,
-    "maxQuestionsFromTitle": 2,
-    "maxQuestionsFromKeywords": 10,
-    "maxQuestionsFromContent": 5
-  }
+  "deduplication": { "enabled": true, "similarityThreshold": 0.8, "normalizeForComparison": true },
+  "limits": { "maxQuestionsPerDocument": 45, "maxQuestionsFromTitle": 2, "maxQuestionsFromKeywords": 25, "maxQuestionsFromContent": 10 }
 }
 

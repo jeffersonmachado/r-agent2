@@ -115,10 +115,17 @@ export async function getCurrentTenantPlanUsage() {
 /**
  * Gera dados de tenant por IA baseado em uma descrição
  */
-export async function generateTenantByAI(description) {
+export async function generateTenantByAI(description, options = {}) {
+  const create = options?.create === true;
+  const executionId = (options?.executionId && String(options.executionId).trim())
+    ? String(options.executionId).trim()
+    : null;
+  if (!executionId) {
+    throw new Error('executionId é obrigatório para /tenants/generate-by-ai');
+  }
   return fetchJson('/tenants/generate-by-ai', {
     method: 'POST',
-    body: JSON.stringify({ description }),
+    body: JSON.stringify({ description, create, executionId }),
   });
 }
 

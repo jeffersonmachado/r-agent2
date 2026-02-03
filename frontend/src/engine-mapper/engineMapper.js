@@ -43,7 +43,12 @@ export function reteJsonToEngineFlow(reteJson, meta) {
   // Primeiro passamos para criar nós sem "next"
   Object.values(nodesObj).forEach((node, index) => {
     if (!node || typeof node.id === 'undefined') return;
-    const engineId = String(node.id);
+    // ✅ Preserva IDs estáveis do engine quando disponíveis (ex.: fluxos vindos do backend)
+    // node.data.__engineId é injetado por engineFlowToReteJson / toJSON().
+    const engineId = (node?.data && node.data.__engineId != null)
+      ? String(node.data.__engineId)
+      : String(node.id);
+    // Mapa: ID do Rete JSON (numérico como string) -> ID do engine
     idMap.set(String(node.id), engineId);
 
     engineNodes.push({
@@ -63,7 +68,8 @@ export function reteJsonToEngineFlow(reteJson, meta) {
   
   Object.values(nodesObj).forEach((node) => {
     if (!node || typeof node.id === 'undefined') return;
-    const fromId = String(node.id);
+    const fromReteId = String(node.id);
+    const fromId = idMap.get(fromReteId) || fromReteId;
     const engineNode = byId.get(fromId);
     if (!engineNode) return;
 
@@ -121,7 +127,8 @@ export function reteJsonToEngineFlow(reteJson, meta) {
       });
       for (const connection of output.connections) {
         if (connection && typeof connection.node !== 'undefined') {
-          const targetId = String(connection.node);
+          const targetReteId = String(connection.node);
+          const targetId = idMap.get(targetReteId) || targetReteId;
           logger.debug('reteJsonToEngineFlow - processando connection', {
             nodeId: fromId,
             targetId,
@@ -279,12 +286,14 @@ export function engineFlowToReteJson(flow) {
   // Criamos nós com posições preservadas ou calculadas em grade
   // Primeiro, criamos um mapa do ID original do engine para o ID numérico do Rete
   const engineIdToNumeric = new Map();
+  const engineById = new Map();
   
   // Primeira passada: cria todos os mapeamentos de ID
   flow.nodes.forEach((node, index) => {
     const numericId = Number.isNaN(Number(node.id)) ? index + 1 : Number(node.id);
     const nodeId = String(node.id);
     engineIdToNumeric.set(nodeId, numericId);
+    engineById.set(nodeId, node);
   });
   
   // Segunda passada: cria os nós com configs atualizados
@@ -380,6 +389,9 @@ export function engineFlowToReteJson(flow) {
       data: {
         type: node.type,
         config: nodeConfig,
+        // ✅ Preserva o ID real do engine para mapear erros do backend no editor
+        // (ex.: backend retorna nodeIds como "fallback-1", "msg-inicial", etc.)
+        __engineId: String(node.id),
       },
       position: position,
       name: 'FlowNode',
@@ -448,6 +460,21 @@ export function engineFlowToReteJson(flow) {
       return;
     }
 
+    /**
+     * Resolve qual input do nó destino deve receber a conexão.
+     * Preferência: 'in' quando existir; caso contrário, o primeiro input disponível.
+     * Retorna null quando o destino não possui inputs (ex.: start).
+     */
+    const resolveTargetInputKey = (toNumeric) => {
+      const targetReteNode = nodes[toNumeric];
+      const inputs = targetReteNode?.inputs || null;
+      if (!inputs || typeof inputs !== 'object') return null;
+      const keys = Object.keys(inputs);
+      if (keys.length === 0) return null;
+      if (Object.prototype.hasOwnProperty.call(inputs, 'in')) return 'in';
+      return keys[0] || null;
+    };
+
     // Função auxiliar para adicionar conexão (por outputKey)
     const addConnection = (outputKey, nextId) => {
       const toNumeric = engineIdToNumeric.get(String(nextId));
@@ -458,6 +485,32 @@ export function engineFlowToReteJson(flow) {
           toId: nextId,
           fromNumeric,
           availableIds: Array.from(engineIdToNumeric.keys())
+        });
+        return;
+      }
+
+      const targetEngineNode = engineById.get(String(nextId)) || null;
+      if (targetEngineNode?.type === 'start') {
+        // Regra normativo: start não pode receber conexões.
+        logger.warn('engineFlowToReteJson - ignorando conexão cujo destino é start', {
+          fromId: node.id,
+          toId: nextId,
+          fromNumeric,
+          toNumeric,
+          outputKey,
+        });
+        return;
+      }
+
+      const targetInputKey = resolveTargetInputKey(toNumeric);
+      if (!targetInputKey) {
+        logger.warn('engineFlowToReteJson - destino não possui inputs, conexão ignorada', {
+          fromId: node.id,
+          toId: nextId,
+          fromNumeric,
+          toNumeric,
+          outputKey,
+          targetType: targetEngineNode?.type || null,
         });
         return;
       }
@@ -474,13 +527,13 @@ export function engineFlowToReteJson(flow) {
 
       // Verifica se a conexão já existe para evitar duplicatas
       const existingConnection = fromNode.outputs[outputKey].connections.find(
-        conn => conn.node === toNumeric && conn.input === 'in'
+        conn => conn.node === toNumeric && conn.input === targetInputKey
       );
       
       if (!existingConnection) {
         fromNode.outputs[outputKey].connections.push({
           node: toNumeric,
-          input: 'in',
+          input: targetInputKey,
         });
         logger.debug('Conexão adicionada ao JSON', {
           fromId: node.id,
@@ -488,6 +541,7 @@ export function engineFlowToReteJson(flow) {
           fromNumeric,
           toNumeric,
           outputKey,
+          targetInputKey,
         });
       }
     };
@@ -499,7 +553,20 @@ export function engineFlowToReteJson(flow) {
       if (typeof node.next === 'string' || Array.isArray(node.next)) {
         const nextConnections = Array.isArray(node.next) ? node.next : [node.next];
         for (const nextId of nextConnections) {
-          addConnection('out', nextId);
+          // Ajuste de compatibilidade do editor:
+          // alguns nós NÃO possuem saída "out" (ex.: router/ai_task usam sockets específicos).
+          if (node.type === 'router') {
+            addConnection('default', nextId);
+          } else if (node.type === 'ai_task') {
+            addConnection('fallback', nextId);
+          } else if (node.type === 'fallback') {
+            // Compatibilidade: fallback não possui saída "out"; conexão simples deve ir para "end"
+            addConnection('end', nextId);
+          } else if (node.type === 'schedule_router') {
+            addConnection('default', nextId);
+          } else {
+            addConnection('out', nextId);
+          }
         }
       } else if (typeof node.next === 'object') {
         for (const [outputKey, rawNext] of Object.entries(node.next)) {
@@ -526,6 +593,31 @@ export function engineFlowToReteJson(flow) {
               toId: rule.next,
               ruleIndex: index,
               availableIds: Array.from(engineIdToNumeric.keys())
+            });
+            return;
+          }
+
+          const targetEngineNode = engineById.get(String(rule.next)) || null;
+          if (targetEngineNode?.type === 'start') {
+            logger.warn('engineFlowToReteJson - ignorando conexão de regra cujo destino é start', {
+              fromId: node.id,
+              toId: rule.next,
+              ruleIndex: index,
+              fromNumeric,
+              toNumeric,
+            });
+            return;
+          }
+
+          const targetInputKey = resolveTargetInputKey(toNumeric);
+          if (!targetInputKey) {
+            logger.warn('engineFlowToReteJson - destino de regra não possui inputs, conexão ignorada', {
+              fromId: node.id,
+              toId: rule.next,
+              ruleIndex: index,
+              fromNumeric,
+              toNumeric,
+              targetType: targetEngineNode?.type || null,
             });
             return;
           }
@@ -558,13 +650,13 @@ export function engineFlowToReteJson(flow) {
 
           // Verifica se a conexão já existe
           const existingConnection = fromNode.outputs[ruleOutputKey].connections.find(
-            conn => conn.node === toNumeric && conn.input === 'in'
+            conn => conn.node === toNumeric && conn.input === targetInputKey
           );
           
           if (!existingConnection) {
             fromNode.outputs[ruleOutputKey].connections.push({
               node: toNumeric,
-              input: 'in',
+              input: targetInputKey,
             });
             logger.debug('Conexão de regra adicionada ao JSON', {
               fromId: node.id,
@@ -572,7 +664,8 @@ export function engineFlowToReteJson(flow) {
               ruleIndex: index,
               outputKey: ruleOutputKey,
               fromNumeric,
-              toNumeric
+              toNumeric,
+              targetInputKey,
             });
           }
         }
@@ -592,6 +685,31 @@ export function engineFlowToReteJson(flow) {
               toId: schedule.next,
               scheduleIndex: index,
               availableIds: Array.from(engineIdToNumeric.keys())
+            });
+            return;
+          }
+
+          const targetEngineNode = engineById.get(String(schedule.next)) || null;
+          if (targetEngineNode?.type === 'start') {
+            logger.warn('engineFlowToReteJson - ignorando conexão de horário cujo destino é start', {
+              fromId: node.id,
+              toId: schedule.next,
+              scheduleIndex: index,
+              fromNumeric,
+              toNumeric,
+            });
+            return;
+          }
+
+          const targetInputKey = resolveTargetInputKey(toNumeric);
+          if (!targetInputKey) {
+            logger.warn('engineFlowToReteJson - destino de horário não possui inputs, conexão ignorada', {
+              fromId: node.id,
+              toId: schedule.next,
+              scheduleIndex: index,
+              fromNumeric,
+              toNumeric,
+              targetType: targetEngineNode?.type || null,
             });
             return;
           }
@@ -621,13 +739,13 @@ export function engineFlowToReteJson(flow) {
 
           // Verifica se a conexão já existe
           const existingConnection = fromNode.outputs[scheduleOutputKey].connections.find(
-            conn => conn.node === toNumeric && conn.input === 'in'
+            conn => conn.node === toNumeric && conn.input === targetInputKey
           );
           
           if (!existingConnection) {
             fromNode.outputs[scheduleOutputKey].connections.push({
               node: toNumeric,
-              input: 'in',
+              input: targetInputKey,
             });
             logger.debug('Conexão de horário adicionada ao JSON', {
               fromId: node.id,
@@ -635,7 +753,8 @@ export function engineFlowToReteJson(flow) {
               scheduleIndex: index,
               outputKey: scheduleOutputKey,
               fromNumeric,
-              toNumeric
+              toNumeric,
+              targetInputKey,
             });
           }
         }
@@ -645,6 +764,29 @@ export function engineFlowToReteJson(flow) {
       if (node.config.defaultNext) {
         const toNumeric = engineIdToNumeric.get(String(node.config.defaultNext));
         if (toNumeric) {
+          const targetEngineNode = engineById.get(String(node.config.defaultNext)) || null;
+          if (targetEngineNode?.type === 'start') {
+            logger.warn('engineFlowToReteJson - ignorando conexão defaultNext cujo destino é start', {
+              fromId: node.id,
+              toId: node.config.defaultNext,
+              fromNumeric,
+              toNumeric,
+            });
+            return;
+          }
+
+          const targetInputKey = resolveTargetInputKey(toNumeric);
+          if (!targetInputKey) {
+            logger.warn('engineFlowToReteJson - destino defaultNext não possui inputs, conexão ignorada', {
+              fromId: node.id,
+              toId: node.config.defaultNext,
+              fromNumeric,
+              toNumeric,
+              targetType: targetEngineNode?.type || null,
+            });
+            return;
+          }
+
           // Garante que a saída "default" existe
           if (!fromNode.outputs.default) {
             const socket = { name: DEFAULT_SOCKET_NAME };
@@ -657,19 +799,20 @@ export function engineFlowToReteJson(flow) {
           
           // Verifica se a conexão já existe
           const existingConnection = fromNode.outputs.default.connections.find(
-            conn => conn.node === toNumeric && conn.input === 'in'
+            conn => conn.node === toNumeric && conn.input === targetInputKey
           );
           
           if (!existingConnection) {
             fromNode.outputs.default.connections.push({
               node: toNumeric,
-              input: 'in',
+              input: targetInputKey,
             });
             logger.debug('Conexão padrão de schedule_router adicionada ao JSON', {
               fromId: node.id,
               toId: node.config.defaultNext,
               fromNumeric,
-              toNumeric
+              toNumeric,
+              targetInputKey,
             });
           }
         }

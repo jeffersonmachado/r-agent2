@@ -1,9 +1,9 @@
 /**
- * API client para geração por IA (wrappers).
+ * API client para geração por IA (formato alinhado ao orquestrador).
  * 
  * Interface controlada que:
- * - Chama wrappers via API interna
- * - Retorna sempre IaGenerationResult
+ * - Chama o orquestrador (ou aliases) via API
+ * - Retorna o formato do /flows/generate (success, flowDefinition, validationWarnings, etc.)
  * - NÃO persiste automaticamente
  * - NÃO executa efeitos colaterais
  */
@@ -28,17 +28,28 @@ export async function generateChatbotFlow(userInput, options = {}) {
   });
 
   try {
-    const result = await fetchJson('/ai/chatbot/generate', {
+    const payload = {
+      name: options.flowName || options.name || 'Fluxo Gerado',
+      description: userInput,
+      tenantId: options.tenantId, // usado em ambientes sem STRICT_TENANT_MODE
+      useRag: options.useRag === true,
+      ragSources: Array.isArray(options.ragSources) ? options.ragSources : [],
+      useWebScraping: options.useWebScraping === true,
+      scrapingTargets: Array.isArray(options.scrapingTargets) ? options.scrapingTargets : [],
+      includeQuestions: options.includeQuestions === true,
+      questions: Array.isArray(options.questions) ? options.questions : [],
+      generateRpaTest: options.generateRpaTest === true,
+      rpaMode: options.rpaMode,
+    };
+
+    const result = await fetchJson('/flows/generate', {
       method: 'POST',
-      body: JSON.stringify({
-        userInput,
-        options
-      })
+      body: JSON.stringify(payload)
     });
 
     logger.debug('[aiGeneration] Chatbot gerado', {
-      success: result.success,
-      domain: result.domain
+      success: result?.success,
+      flowId: result?.flowDefinition?.id
     });
 
     return result;
@@ -67,17 +78,31 @@ export async function generateRpaTest(userInput, options = {}) {
   });
 
   try {
-    const result = await fetchJson('/ai/rpa/generate', {
+    // Mantemos a semântica do wrapper: gerar também o RPA.
+    // No novo contrato, isso é um alias de /flows/generate com generateRpaTest=true.
+    const payload = {
+      name: options.flowName || options.name || 'Fluxo Gerado',
+      description: userInput,
+      tenantId: options.tenantId,
+      useRag: options.useRag === true,
+      ragSources: Array.isArray(options.ragSources) ? options.ragSources : [],
+      useWebScraping: options.useWebScraping === true,
+      scrapingTargets: Array.isArray(options.scrapingTargets) ? options.scrapingTargets : [],
+      includeQuestions: options.includeQuestions === true,
+      questions: Array.isArray(options.questions) ? options.questions : [],
+      generateRpaTest: true,
+      rpaMode: options.rpaMode || 'infer',
+    };
+
+    const result = await fetchJson('/flows/generate', {
       method: 'POST',
-      body: JSON.stringify({
-        userInput,
-        options
-      })
+      body: JSON.stringify(payload)
     });
 
     logger.debug('[aiGeneration] RPA gerado', {
-      success: result.success,
-      domain: result.domain
+      success: result?.success,
+      flowId: result?.flowDefinition?.id,
+      rpaTestId: result?.rpaTest?.id
     });
 
     return result;

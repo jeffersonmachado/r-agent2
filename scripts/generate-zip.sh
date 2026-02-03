@@ -60,7 +60,6 @@ zip -r "$ZIP_FILE" "$PROJECT_NAME" \
     -x "*/rag-service/.venv/*" \
     -x "*/rag-service/__pycache__/*" \
     -x "*/rag-service/*.index" \
-    -x "*/rag-service/*.index.faiss" \
     -x "*/rag-service/models/*" \
     -x "*/rag-service/.cache/*" \
     -x "*/.pytest_cache/*" \

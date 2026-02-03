@@ -28,6 +28,38 @@ until node -e "
   sleep 2
 done
 
+echo "[Entrypoint] Aguardando Redis estar pronto..."
+# Redis é usado por rate-limit e contexto efêmero. Se REDIS_URL não estiver definido, não bloqueia.
+if [ -n "${REDIS_URL:-}" ] || [ -n "${RATE_LIMIT_REDIS_URL:-}" ]; then
+  MAX_ATTEMPTS=30
+  ATTEMPT=0
+  until node -e "
+    const Redis = require('ioredis');
+    const url = process.env.REDIS_URL || process.env.RATE_LIMIT_REDIS_URL;
+    if (!url) process.exit(0);
+    const r = new Redis(url, { lazyConnect: true, enableOfflineQueue: false, connectTimeout: 3000, maxRetriesPerRequest: 1 });
+    r.connect()
+      .then(() => r.ping())
+      .then(() => { console.log('[Entrypoint] Redis pronto'); return r.quit(); })
+      .then(() => process.exit(0))
+      .catch(async (err) => {
+        console.error('[Entrypoint] Redis não disponível:', err.message);
+        try { await r.quit(); } catch {}
+        process.exit(1);
+      });
+  "; do
+    ATTEMPT=$((ATTEMPT + 1))
+    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+      echo "[Entrypoint] ⚠️ Timeout: Redis não ficou pronto após $MAX_ATTEMPTS tentativas (seguindo assim mesmo)"
+      break
+    fi
+    echo "[Entrypoint] Redis não está pronto, aguardando... (tentativa $ATTEMPT/$MAX_ATTEMPTS)"
+    sleep 1
+  done
+else
+  echo "[Entrypoint] REDIS_URL/RATE_LIMIT_REDIS_URL não definidos; pulando espera do Redis"
+fi
+
 echo "[Entrypoint] Executando migrations..."
 node api/db/migrate.js || {
   echo "[Entrypoint] ❌ Falha ao executar migrations"

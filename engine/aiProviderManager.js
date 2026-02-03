@@ -84,6 +84,19 @@ function setTenantAiConfig(tenantId, config) {
  * @returns {AiProvider|null}
  */
 function getAiProviderForTenant(tenantId) {
+  // Fallback "provider secundário" deve ser explícito e configurável.
+  // Default: false (não usar secondary automaticamente).
+  let allowSecondaryFallback = false;
+  try {
+    // engine → api (acesso a config) é best-effort
+    // eslint-disable-next-line global-require
+    const config = require('../api/utils/config');
+    allowSecondaryFallback = config.get('fallbacks.aiProviderSecondary', false) === true;
+  } catch {
+    // Se não conseguir ler config, mantém postura segura: não usa secondary por padrão.
+    allowSecondaryFallback = false;
+  }
+
   // Logger simples para o engine
   const log = {
     debug: (msg, data) => {
@@ -135,10 +148,11 @@ function getAiProviderForTenant(tenantId) {
 
   const secondary = cfg.secondary ? providerRegistry.get(cfg.secondary) : null;
 
-  if (!secondary) {
+  if (!allowSecondaryFallback || !secondary) {
     log.debug('ℹ️ getAiProviderForTenant: Sem provider secundário configurado, retornando provider primário', {
       tenantId,
       primaryId: cfg.primary,
+      allowSecondaryFallback,
     });
     return primary;
   }

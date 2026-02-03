@@ -8,6 +8,7 @@
  */
 
 import { getFeature, getFeaturesConfig, setFeature } from './featuresConfig';
+import { getFallbackFlag } from './fallbacksConfig';
 
 // Importa do módulo compartilhado via alias configurado no Vite
 // O Vite está configurado para resolver '@shared/aiTaskExecutor' para engine/utils/aiTaskExecutor.js
@@ -72,13 +73,12 @@ export async function execute(task, input, config = {}, context = {}) {
   
   // Se IA está desabilitada, retorna fallback imediatamente
   if (!aiEnabled) {
+    const allowFallback = await getFallbackFlag('frontendAiDisabledReturnFallback', false);
+    if (!allowFallback) {
+      throw new Error('Tarefas de IA estão desabilitadas e fallback automático não está permitido (fallbacks.frontendAiDisabledReturnFallback=false)');
+    }
     const fallback = config.fallback || 'desconhecido';
-    return {
-      value: fallback,
-      confidence: 0.0,
-      _fallbackUsed: true,
-      _reason: 'ai_tasks_disabled',
-    };
+    return { value: fallback, confidence: 0.0, _fallbackUsed: true, _reason: 'ai_tasks_disabled' };
   }
 
   // Verifica se deve usar API real (via feature flag ou config)
@@ -136,7 +136,11 @@ export async function execute(task, input, config = {}, context = {}) {
       };
     } catch (error) {
       console.error('Erro ao chamar API de IA real:', error);
-      // Em caso de erro, usa implementação mock como fallback
+      const allowMockFallback = await getFallbackFlag('frontendAiMockOnError', false);
+      if (!allowMockFallback) {
+        throw error;
+      }
+      // Fallback explícito: usa implementação mock local
       return sharedExecuteAiTask(task, input, config, context);
     }
   }

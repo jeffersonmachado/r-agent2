@@ -316,6 +316,9 @@ async function scrapeUrl(url, options = {}) {
     throw new Error('URL é obrigatória');
   }
 
+  const startedAt = Date.now();
+  const tenantId = options.tenantId || null;
+
   // Inicializa replay (opcional)
   const shouldRecordReplay = process.env.ENABLE_SCRAPING_REPLAY !== 'false';
   let replay = null;
@@ -327,12 +330,15 @@ async function scrapeUrl(url, options = {}) {
   if (shouldRecordReplay) {
     replay = new ReplaySystem({
       storagePath: path.join(process.cwd(), 'replays', 'scraping'),
+      tenantId,
       context: 'scraping',
       enableScreenshots: false,
     });
     
-    replayId = `scraping-${Date.now()}`;
+    const prefix = tenantId ? `${tenantId}-` : '';
+    replayId = `${prefix}scraping-${Date.now()}`;
     replay.start(replayId, {
+      tenantId,
       url,
       options: Object.keys(options),
     });
@@ -344,13 +350,16 @@ async function scrapeUrl(url, options = {}) {
     if (shouldRecord) {
       recording = new RecordingSystem({
         storagePath: path.join(process.cwd(), 'recordings', 'scraping'),
+        tenantId,
         context: 'scraping',
         enableTimestamps: true,
       });
-      recordingId = `scraping-${Date.now()}`;
+      const prefix = tenantId ? `${tenantId}-` : '';
+      recordingId = `${prefix}scraping-${Date.now()}`;
       recording.start(recordingId, {
         name: 'Web scraping',
         description: 'Raspagem de URL',
+        tenantId,
         url,
         source: 'automatic',
       });
@@ -404,14 +413,13 @@ async function scrapeUrl(url, options = {}) {
     source = 'web_scraping',
     category = null,
     tags = [],
-    tenantId = null, // Tenant deve ser fornecido explicitamente
   } = options;
 
-  logger.info('[WebScraping] Iniciando scraping', { url });
+  const executionId = options.executionId || `exec-${Date.now()}`;
+  logger.info('[WebScraping] Iniciando scraping', { url, executionId, tenantId, autoIndex, timeout });
 
   try {
     // Aplica rate limiting ANTES de fazer requisição
-    const executionId = options.executionId || `exec-${Date.now()}`;
     const userId = options.userId || tenantId;
     
     await enforceScrapingRateLimit({
@@ -572,6 +580,9 @@ async function scrapeUrl(url, options = {}) {
         scrapedAt: new Date().toISOString(),
         description: scrapeResult.metaDescription || '',
         headings: Array.isArray(scrapeResult.headings) ? scrapeResult.headings : [],
+        // Para UI: texto extraído puro do site (quando disponível)
+        extractedText: scrapeResult.extractedText || '',
+        extractedContent: scrapeResult.extractedText || '',
         scrape_method: usedPlaywright ? 'playwright' : 'fetch',
         warnings,
         keywords: metadata.keywords,
@@ -605,6 +616,8 @@ async function scrapeUrl(url, options = {}) {
             isDuplicate = true;
             logger.info('[WebScraping] Documento duplicado detectado, usando existente', {
               url,
+              executionId,
+              tenantId,
               existingDocumentId: result.existingDocument.id,
               existingTitle: result.existingDocument.title,
             });
@@ -626,6 +639,18 @@ async function scrapeUrl(url, options = {}) {
             // Retorna documento existente
             recording?.stop?.();
             if (recordingId) recording?.save?.(recordingId);
+            logger.info('[WebScraping] Scraping concluído (duplicado)', {
+              url,
+              executionId,
+              tenantId,
+              durationMs: Date.now() - startedAt,
+              scrapeMethod: usedPlaywright ? 'playwright' : 'fetch',
+              extractedLength: (scrapeResult?.extractedText || '').trim().length,
+              warningsCount: Array.isArray(warnings) ? warnings.length : 0,
+              indexed: result.existingDocument.indexed || false,
+              chunksCreated: result.existingDocument.chunksCount || 0,
+              documentId: result.existingDocument.id,
+            });
             return {
               success: true,
               documentId: result.existingDocument.id,
@@ -685,6 +710,18 @@ async function scrapeUrl(url, options = {}) {
     recording?.stop?.();
     if (recordingId) recording?.save?.(recordingId);
 
+    logger.info('[WebScraping] Scraping concluído', {
+      url,
+      executionId,
+      tenantId,
+      durationMs: Date.now() - startedAt,
+      scrapeMethod: usedPlaywright ? 'playwright' : 'fetch',
+      extractedLength: (scrapeResult?.extractedText || '').trim().length,
+      warningsCount: Array.isArray(warnings) ? warnings.length : 0,
+      indexed,
+      chunksCreated,
+      documentId,
+    });
     return {
       success: true,
       documentId,
@@ -724,6 +761,9 @@ async function scrapeUrl(url, options = {}) {
     
     logger.error('[WebScraping] Erro ao raspar URL', {
       url,
+      executionId,
+      tenantId,
+      durationMs: Date.now() - startedAt,
       error: error.message,
     });
     throw error;
@@ -740,6 +780,17 @@ async function scrapeUrl(url, options = {}) {
 async function scrapeUrls(urls, options = {}) {
   const { concurrency = 3 } = options;
   const results = [];
+  const startedAt = Date.now();
+  const tenantId = options?.tenantId || null;
+  const executionId = options?.executionId || null;
+
+  logger.info('[WebScraping] Iniciando scraping em lote', {
+    total: Array.isArray(urls) ? urls.length : 0,
+    concurrency,
+    tenantId,
+    executionId,
+    autoIndex: options?.autoIndex !== false,
+  });
 
   function normalizeError(err) {
     if (err && typeof err === 'object') {
@@ -786,6 +837,25 @@ async function scrapeUrls(urls, options = {}) {
     results.push(...batchResults);
   }
 
+  try {
+    const total = Array.isArray(urls) ? urls.length : 0;
+    const successCount = (Array.isArray(results) ? results : []).filter(r => r && r.success).length;
+    const failedCount = total - successCount;
+    const duplicateCount = (Array.isArray(results) ? results : []).filter(r => r && r.success && r.isDuplicate).length;
+    const durationMs = Date.now() - startedAt;
+
+    logger.info('[WebScraping] Scraping em lote concluído', {
+      total,
+      successCount,
+      failedCount,
+      duplicateCount,
+      durationMs,
+      tenantId,
+      executionId,
+    });
+  } catch {
+    // ignora (log best-effort)
+  }
   return results;
 }
 

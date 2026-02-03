@@ -2,7 +2,7 @@
  * Teste para verificar se as conexões estão sendo criadas e renderizadas corretamente
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NodeEditor } from 'rete';
 import { ClassicPreset } from 'rete';
 import { AreaPlugin } from 'rete-area-plugin';
@@ -48,6 +48,32 @@ describe('Connection Rendering', () => {
     // Usa plugins no area
     area.use(connection);
     area.use(reactPlugin);
+  });
+
+  afterEach(() => {
+    // Importante: esses testes usam plugins que podem anexar listeners/raízes React no DOM.
+    // Sem cleanup, o ambiente de teste pode “poluir” testes seguintes (DOM vazio/instável).
+    try {
+      // algumas versões expõem destroy; outras não
+      reactPlugin?.destroy?.();
+    } catch {}
+    try {
+      connection?.destroy?.();
+    } catch {}
+    try {
+      area?.destroy?.();
+    } catch {}
+    try {
+      editor?.destroy?.();
+    } catch {}
+    try {
+      container?.remove();
+    } catch {}
+    container = null;
+    reactPlugin = null;
+    connection = null;
+    area = null;
+    editor = null;
   });
 
   it('deve criar nós com inputs e outputs', async () => {

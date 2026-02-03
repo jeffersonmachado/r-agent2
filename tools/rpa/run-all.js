@@ -80,19 +80,51 @@ async function runRpaTest(testFile) {
     try {
       // Executa o teste (playback)
       const result = await runner.playback(testData);
-      
+
+      // Sempre gera relatório detalhado do runner (inclui details + steps + debug)
+      const detailedReport = runner.generateReport();
+      const detailedReportPath = path.join(
+        REPORTS_DIR,
+        `rpa-detail-${testName}-${Date.now()}.json`
+      );
+      fs.writeFileSync(detailedReportPath, JSON.stringify(detailedReport, null, 2), 'utf8');
+
       await runner.close();
-      
+
+      // Tenta extrair um resumo da falha (primeiro erro/step)
+      const firstFailedStep = Array.isArray(result.steps)
+        ? result.steps.find((s) => s && s.success === false)
+        : null;
+      const failedStepSummary = firstFailedStep
+        ? {
+            step: firstFailedStep.step,
+            action: firstFailedStep.action,
+            selector: firstFailedStep.selector,
+            diagnosticsKind: firstFailedStep.debug?.diagnostics?.kind || null,
+            selectorsTried: firstFailedStep.debug?.diagnostics?.selectorsTried || null,
+          }
+        : null;
+
       if (result.success) {
-        return { success: true, output: `Teste passou: ${result.steps.length} passos executados`, testName };
-      } else {
-        return { 
-          success: false, 
-          output: `Teste falhou: ${result.errors?.join('; ') || 'Erro desconhecido'}`,
-          error: result.message || 'Falha na execução',
-          testName 
+        return {
+          success: true,
+          output: `Teste passou: ${result.steps.length} passos executados`,
+          testName,
+          reportPath: detailedReportPath,
+          replayPath: result.replayPath || null,
         };
       }
+
+      const errorMessage = result.message || result.error || 'Falha na execução';
+      return {
+        success: false,
+        output: `Teste falhou: ${errorMessage}`,
+        error: errorMessage,
+        testName,
+        reportPath: detailedReportPath,
+        replayPath: result.replayPath || null,
+        failedStep: failedStepSummary,
+      };
     } catch (execError) {
       await runner.close();
       throw execError;
@@ -131,6 +163,9 @@ function generateReport(results) {
       name: r.testName,
       success: r.success,
       error: r.error || null,
+      reportPath: r.reportPath || null,
+      replayPath: r.replayPath || null,
+      failedStep: r.failedStep || null,
     })),
   };
 

@@ -66,6 +66,16 @@ export function TicketMaintenancePage() {
 
   // Carrega métricas do sistema
   const loadMetrics = useCallback(async () => {
+    // Importante para automações (RPA) e UX:
+    // a seção de métricas (incluindo o botão "Gerenciar Filas") só renderiza quando `metrics` não é null.
+    // Se o backend estiver lento, deixamos um placeholder imediatamente para a UI não "sumir".
+    setMetrics((prev) => prev ?? {
+      totalTickets: 0,
+      ticketsByStatus: { waiting: 0, in_progress: 0, closed: 0 },
+      ticketsByQueue: {},
+      oldClosedTickets: { olderThan7Days: 0, olderThan30Days: 0 },
+      memoryUsage: { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 },
+    });
     try {
       const data = await getQueueMetrics();
       logger.info('Métricas carregadas', { 
@@ -423,6 +433,7 @@ export function TicketMaintenancePage() {
                       });
                     }
                   }}
+                  data-testid="queue-manager-toggle"
                   variant="secondary"
                   style={{ fontSize: '0.9em', padding: '6px 12px' }}
                 >

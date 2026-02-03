@@ -22,23 +22,28 @@ function getRedisUrl() {
 }
 
 function getEphemeralContextClient() {
-  // Reaproveita cliente se estiver pronto/conectando
-  if (client && (client.status === 'ready' || client.status === 'connect' || client.status === 'connecting')) {
-    return client;
+  // Reaproveita SEMPRE o mesmo cliente quando ele já existe.
+  // Importante: com enableOfflineQueue=false, enviar comandos antes de "ready" pode causar
+  // "Stream isn't writeable" — por isso quem usa este client deve checar status === 'ready'
+  // antes de executar comandos. O objetivo aqui é evitar recriações infinitas enquanto conecta.
+  if (client) {
+    // Se o client já morreu/fechou, permite recriar.
+    if (client.status === 'end' || client.status === 'close') {
+      client = null;
+    } else {
+      return client;
+    }
   }
 
   // Dev: se estourou tentativas, desliga e usa fallback (memória)
   if (MAX_RECONNECTION_ATTEMPTS && connectionAttempts >= MAX_RECONNECTION_ATTEMPTS) {
-    if (client && (client.status === 'end' || client.status === 'close' || client.status === 'reconnecting')) {
-      client = null;
-    }
-    if (!client) {
-      logger.warn('[EphemeralContext] Limite de tentativas de conexão excedido, usando modo memória', {
-        attempts: connectionAttempts,
-        maxAttempts: MAX_RECONNECTION_ATTEMPTS,
-      });
-      return null;
-    }
+    logger.warn('[EphemeralContext] Limite de tentativas de conexão excedido, usando modo memória', {
+      attempts: connectionAttempts,
+      maxAttempts: MAX_RECONNECTION_ATTEMPTS,
+    });
+    try { client?.disconnect(); } catch {}
+    client = null;
+    return null;
   }
 
   const redisUrl = getRedisUrl();

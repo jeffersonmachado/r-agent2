@@ -88,6 +88,17 @@ function buildUrl(path) {
 }
 
 /**
+ * Exporta a resolução de URL usada internamente pelo client.
+ * Útil para downloads (blob) que não passam por fetchJson.
+ *
+ * @param {string} path
+ * @returns {string}
+ */
+export function buildApiUrl(path) {
+  return buildUrl(path);
+}
+
+/**
  * Executa um fetch com timeout.
  *
  * @param {RequestInfo} input
@@ -101,7 +112,24 @@ async function fetchWithTimeout(input, init) {
   }
 
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
+  // Dá um "motivo" explícito para o abort, para evitar mensagens crípticas como
+  // "signal is aborted without reason" e para manter compatibilidade com o
+  // tratamento existente (err.name === 'AbortError').
+  const timeoutReason = (() => {
+    const message = `Request timed out after ${timeoutMs}ms`;
+    try {
+      // DOMException existe no browser; em alguns ambientes de teste pode não existir.
+      // Usamos name "AbortError" para continuar batendo no tratamento atual.
+      // eslint-disable-next-line no-undef
+      return new DOMException(message, 'AbortError');
+    } catch {
+      const e = new Error(message);
+      // @ts-ignore
+      e.name = 'AbortError';
+      return e;
+    }
+  })();
+  const id = setTimeout(() => controller.abort(timeoutReason), timeoutMs);
 
   try {
     const response = await fetch(input, {
@@ -119,41 +147,50 @@ async function fetchWithTimeout(input, init) {
  *
  * @template T
  * @param {string} path
- * @param {RequestInit & { timeoutMs?: number }} [init]
+ * @param {RequestInit & { timeoutMs?: number, silent?: boolean }} [init]
  * @returns {Promise<T>}
  */
 export async function fetchJson(path, init) {
+  const silent = init?.silent === true;
+  const isPipelineStatusRequest = false;
+
   // Log IMEDIATO no início para garantir que a função está sendo chamada
-  console.log('[HTTP Client] 🚀 fetchJson chamado', {
-    path,
-    timestamp: new Date().toISOString(),
-    stack: new Error().stack?.split('\n').slice(0, 5).join('\n'),
-  });
+  if (!silent) {
+    console.log('[HTTP Client] 🚀 fetchJson chamado', {
+      path,
+      timestamp: new Date().toISOString(),
+      stack: new Error().stack?.split('\n').slice(0, 5).join('\n'),
+    });
+  }
   
   const url = buildUrl(path);
   const method = init?.method || 'GET';
   
-  console.log('[HTTP Client] 📍 URL construída:', {
-    path,
-    url,
-    method,
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'não definido',
-    windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
-    windowPort: typeof window !== 'undefined' ? window.location.port : 'N/A',
-  });
+  if (!silent) {
+    console.log('[HTTP Client] 📍 URL construída:', {
+      path,
+      url,
+      method,
+      baseUrl: import.meta.env.VITE_API_BASE_URL || 'não definido',
+      windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      windowPort: typeof window !== 'undefined' ? window.location.port : 'N/A',
+    });
+  }
   
   // Log estruturado com URL final resolvida
-  logger.debug('HTTP Request', { 
-    method, 
-    url, 
-    path,
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)',
-    windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
-    windowPort: typeof window !== 'undefined' ? window.location.port : 'N/A',
-  });
+  if (!silent) {
+    logger.debug('HTTP Request', { 
+      method, 
+      url, 
+      path,
+      baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)',
+      windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      windowPort: typeof window !== 'undefined' ? window.location.port : 'N/A',
+    });
+  }
   
   // Log adicional para debug de proxy
-  if (typeof window !== 'undefined' && window.location.port === '5173') {
+  if (!silent && typeof window !== 'undefined' && window.location.port === '5173') {
     console.log('[HTTP Client] 🔄 Requisição em desenvolvimento:', {
       path,
       url,
@@ -179,25 +216,85 @@ export async function fetchJson(path, init) {
       }
     })();
     
-    // Merge dos headers: primeiro os headers customizados, depois auth, depois Content-Type e Accept (para garantir que sejam sempre definidos)
+    // Merge dos headers:
+    // - Começa com authHeaders (inclui X-Tenant-Id do contexto atual)
+    // - Permite que headers customizados do caller sobrescrevam (ex.: X-Tenant-Id por requisição)
+    // - Força Accept e Content-Type quando aplicável
     const mergedHeaders = {
-      ...(init && init.headers),
       ...authHeaders,
+      ...(init && init.headers),
       // Sempre envia Accept: application/json para garantir que a API retorne JSON
       'Accept': 'application/json',
       // Garante que Content-Type seja application/json se houver body e NÃO for FormData
       ...(hasBody && !isFormDataBody && { 'Content-Type': 'application/json' }),
     };
+
+    // Importante: algumas rotas NÃO devem ser influenciadas por tenant-context via header.
+    // - Rotas de super-admin operam globalmente e falham/filtram quando X-Tenant-Id é enviado
+    // - Rotas /auth/* devem depender do token, não de um tenant "persistido" no localStorage
+    const normalizedPath = path && typeof path === 'string'
+      ? (path.startsWith('/') ? path : `/${path}`)
+      : '';
+    const shouldStripTenantHeader =
+      normalizedPath.startsWith('/super-admin/') ||
+      normalizedPath === '/super-admin' ||
+      normalizedPath.startsWith('/auth/') ||
+      normalizedPath === '/auth';
+    if (shouldStripTenantHeader && mergedHeaders['X-Tenant-Id']) {
+      delete mergedHeaders['X-Tenant-Id'];
+    }
     
     // Remove headers do init para evitar sobrescrita, mas mantém timeoutMs
-    const { headers: _, timeoutMs, ...restInit } = init || {};
+    const { headers: _, timeoutMs, ...restInitRaw } = init || {};
+
+    // -------------------------------------------------------------------
+    // Pipeline unificado: executionId obrigatório em rotas críticas.
+    // - Se o caller não forneceu, geramos automaticamente para evitar chamadas inválidas.
+    // - NÃO altera bodies FormData.
+    // -------------------------------------------------------------------
+    const PIPELINE_EXECUTION_ID_PATHS = new Set([
+      '/api/ai/generate',
+      '/system/pipeline/validate-prereqs',
+      '/system/suggest-description',
+      '/tenants/generate-by-ai',
+      '/system/generate-initial-flow',
+      '/system/generate-faq',
+      '/web-scraping/scrape-batch',
+      '/rag/ephemeral/context',
+    ]);
+    const shouldEnsureExecutionId =
+      method !== 'GET' &&
+      normalizedPath &&
+      PIPELINE_EXECUTION_ID_PATHS.has(normalizedPath);
+
+    const makeExecutionId = () => `exec-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    let restInit = { ...restInitRaw };
+    if (shouldEnsureExecutionId && hasBody && !isFormDataBody) {
+      try {
+        const raw = restInit.body;
+        if (typeof raw === 'string' && raw.trim().startsWith('{')) {
+          const parsed = JSON.parse(raw);
+          if (!parsed.executionId) {
+            parsed.executionId = makeExecutionId();
+            restInit.body = JSON.stringify(parsed);
+          }
+        } else if (raw == null) {
+          restInit.body = JSON.stringify({ executionId: makeExecutionId() });
+        }
+      } catch {
+        // Se não conseguir parsear, não bloqueia.
+      }
+    }
     
-    console.log('[HTTP Client] 📤 Fazendo requisição fetch:', {
-      url,
-      method,
-      headers: Object.keys(mergedHeaders),
-      hasAuth: !!mergedHeaders.Authorization,
-    });
+    if (!silent) {
+      console.log('[HTTP Client] 📤 Fazendo requisição fetch:', {
+        url,
+        method,
+        headers: Object.keys(mergedHeaders),
+        hasAuth: !!mergedHeaders.Authorization,
+      });
+    }
     
     const response = await fetchWithTimeout(url, {
       ...restInit,
@@ -219,13 +316,15 @@ export async function fetchJson(path, init) {
       responseHeadersObj = {};
     }
 
-    console.log('[HTTP Client] 📥 Resposta recebida:', {
-      url: response.url,
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      headers: responseHeadersObj,
-    });
+    if (!silent) {
+      console.log('[HTTP Client] 📥 Resposta recebida:', {
+        url: response.url,
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: responseHeadersObj,
+      });
+    }
 
     const contentType = (response?.headers && typeof response.headers.get === 'function'
       ? response.headers.get('Content-Type')
@@ -235,11 +334,14 @@ export async function fetchJson(path, init) {
     // HTTP 207 (Multi-Status) é considerado sucesso pelo fetch (ok=true),
     // e deve ser tratado como resposta válida pelo frontend.
     if (!response.ok) {
-      console.log('[HTTP Client] ❌ Resposta não OK:', {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-      });
+      const isPipelineStatusNotFound = false;
+      if (!isPipelineStatusNotFound) {
+        console.log('[HTTP Client] ❌ Resposta não OK:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+        });
+      }
       let errorBody = null;
       if (isJson) {
         try {
@@ -265,8 +367,11 @@ export async function fetchJson(path, init) {
       const isOptionalDevEndpoint = response.status === 404 && 
         (path.includes('/system/websocket/connections') || 
          path.includes('/analytics/metrics'));
+
+      // Não há polling de pipeline (progresso via WebSocket).
+      const isPipelineStatusNotFoundForLogs = false;
       
-      if (!isTicketNotFound && !isOptionalDevEndpoint) {
+      if (!isTicketNotFound && !isOptionalDevEndpoint && !isPipelineStatusNotFoundForLogs) {
         // Log estruturado com URL final resolvida
         logger.error(`HTTP Error ${response.status}`, { 
           method: init?.method || 'GET',
@@ -464,14 +569,17 @@ export async function fetchJson(path, init) {
     });
     return result;
   } catch (err) {
-    console.error('[HTTP Client] 💥 Erro capturado no catch:', {
-      name: err?.name,
-      message: err?.message,
-      status: err?.status,
-      path,
-      url,
-      stack: err?.stack?.split('\n').slice(0, 10).join('\n'),
-    });
+    // Para polling do pipeline, evitamos spam de console no catch (timeouts/abort podem ocorrer sob carga).
+    if (!silent && !isPipelineStatusRequest) {
+      console.error('[HTTP Client] 💥 Erro capturado no catch:', {
+        name: err?.name,
+        message: err?.message,
+        status: err?.status,
+        path,
+        url,
+        stack: err?.stack?.split('\n').slice(0, 10).join('\n'),
+      });
+    }
     
     // Verifica se é erro 401 no catch também
     if (err?.status === 401) {
@@ -497,12 +605,14 @@ export async function fetchJson(path, init) {
     }
     
     if (err instanceof Error && err.name === 'AbortError') {
-      logger.error('Request timeout', { 
-        method: init?.method || 'GET',
-        url, 
-        path,
-        timeout: DEFAULT_TIMEOUT_MS 
-      });
+      if (!silent && !isPipelineStatusRequest) {
+        logger.error('Request timeout', { 
+          method: init?.method || 'GET',
+          url, 
+          path,
+          timeout: init?.timeoutMs || DEFAULT_TIMEOUT_MS,
+        });
+      }
     } else if (err instanceof Error) {
       // Não loga erros 404 de ticket_not_found (são esperados quando ticket foi removido)
       const isTicketNotFound = err.status === 404 && 
@@ -511,6 +621,14 @@ export async function fetchJson(path, init) {
          (typeof err.body === 'string' && err.body.includes('ticket_not_found')));
       
       if (isTicketNotFound) {
+        // Não loga, apenas relança o erro silenciosamente
+        throw err;
+      }
+
+      // Não há polling de pipeline (progresso via WebSocket).
+      const isPipelineStatusNotFound = false;
+
+      if (isPipelineStatusNotFound) {
         // Não loga, apenas relança o erro silenciosamente
         throw err;
       }
@@ -645,7 +763,7 @@ export async function fetchBlob(path, init) {
         method: init?.method || 'GET',
         url, 
         path,
-        timeout: DEFAULT_TIMEOUT_MS 
+        timeout: init?.timeoutMs || DEFAULT_TIMEOUT_MS,
       });
     } else if (err instanceof Error) {
       if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {

@@ -23,13 +23,13 @@ services:
       RATE_LIMIT_SCRAPING_DURATION: ${RATE_LIMIT_SCRAPING_DURATION:-300}
       RATE_LIMIT_SCRAPING_RPS: ${RATE_LIMIT_SCRAPING_RPS:-3}
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
-      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8001}
+      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       # PostgreSQL - Configuração de produção
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${PGUSER:-postgres}:${PGPASSWORD:-postgres}@postgres:5432/${PGDATABASE:-r_agent2}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-r_agent2}}
       PGHOST: ${PGHOST:-postgres}
-      PGUSER: ${PGUSER:-postgres}
-      PGPASSWORD: ${PGPASSWORD:-postgres}
-      PGDATABASE: ${PGDATABASE:-r_agent2}
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      PGDATABASE: ${POSTGRES_DB:-r_agent2}
       PGPORT: ${PGPORT:-5432}
       # Criptografia de segredos (OBRIGATÓRIO em produção)
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
@@ -57,13 +57,15 @@ services:
       - "${API_PUBLIC_PORT:-3001}:3000"
     volumes:
       # Persistência de dados
-      - api-data:/app/api/data
+      - r-agent2-api-data:/app/api/data
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
+      rag-service:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
@@ -100,7 +102,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
@@ -126,30 +128,33 @@ services:
       PORT: 8000
       DEBUG: ${RAG_DEBUG:-false}
       EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-384}
       CHUNK_SIZE: ${RAG_CHUNK_SIZE:-500}
       CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-50}
       CHUNK_STRATEGY: ${RAG_CHUNK_STRATEGY:-sentence}
-      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-faiss}
+      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-postgres}
       VECTOR_STORE_PATH: /app/data/vector_store
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-r_agent2}}
     ports:
-      - "${RAG_PORT:-8002}:8001"
+      - "${RAG_PORT:-8002}:8000"
     volumes:
-      - rag-vector-store:/app/data/vector_store
+      - r-agent2-rag-vector-store:/app/data/vector_store
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/rag/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
@@ -160,32 +165,33 @@ services:
           memory: 1G
 
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: r-agent2-postgres-prod
     environment:
-      POSTGRES_USER: ${PGUSER:-postgres}
-      POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
-      POSTGRES_DB: ${PGDATABASE:-r_agent2}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-r_agent2}
       PGDATA: /var/lib/postgresql/data/pgdata
       # Configurações de performance para produção
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=pt_BR.UTF-8"
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
       # Configurações de segurança
       POSTGRES_HOST_AUTH_METHOD: md5
     ports:
       - "${PGPORT:-5433}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - r-agent2-postgres-data:/var/lib/postgresql/data
       # Scripts de inicialização (opcional)
       # - ./scripts/postgres-init:/docker-entrypoint-initdb.d
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres} -d ${PGDATABASE:-r_agent2}"]
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 40s
     deploy:
       resources:
         limits:
@@ -224,17 +230,16 @@ services:
     ports:
       - "${REDIS_PORT:-6380}:6379"
     volumes:
-      - redis-data:/data
+      - r-agent2-redis-data:/data
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 5s
+      timeout: 3s
       retries: 5
-      start_period: 10s
     deploy:
       resources:
         limits:
@@ -245,14 +250,10 @@ services:
           memory: 128M
 
 volumes:
-  rag-vector-store:
-    driver: local
-  redis-data:
-    driver: local
-  api-data:
-    driver: local
-  postgres-data:
-    driver: local
+  r-agent2-postgres-data:
+  r-agent2-redis-data:
+  r-agent2-api-data:
+  r-agent2-rag-vector-store:
 
 networks:
   r-agent2-network:

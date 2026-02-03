@@ -126,7 +126,7 @@ A execução do pipeline RAG deve seguir **EXATAMENTE** esta ordem:
 ┌─────────────────────────────────────────────────────────────┐
 │ 3. Busca vetorial                                            │
 │    - Query processada com NLP (ramo_atividade como viés)     │
-│    - Busca no índice FAISS do tenant específico             │
+│    - Busca no Postgres (pgvector) do tenant específico      │
 │    - Filtros por tenant_id (isolamento)                     │
 └─────────────────────────────────────────────────────────────┘
                         ↓
@@ -176,9 +176,7 @@ A execução do pipeline RAG deve seguir **EXATAMENTE** esta ordem:
 
 #### RAG (Retrieval-Augmented Generation)
 
-- **Vector Store**: Cada tenant possui seu próprio índice FAISS
-  - Arquivo: `data/vector_store/{tenantId}.index`
-  - Metadados: `data/vector_store/{tenantId}.metadata.json`
+- **Vector Store**: Chunks/embeddings no Postgres (pgvector), isolados por `tenant_key`
 - **Documentos**: Filtrados por `tenantId` em todas as operações
 - **Busca**: Sempre inclui filtro `tenantId` na busca vetorial
 

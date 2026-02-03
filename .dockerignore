@@ -87,6 +87,10 @@ __tests__/
 !tests/rpa/
 !tests/rpa/**
 
+# Helper usado pelo runtime RPA legado
+!tests/helpers/
+!tests/helpers/errorClassifier.js
+
 # Outros
 .editorconfig
 .eslintrc*

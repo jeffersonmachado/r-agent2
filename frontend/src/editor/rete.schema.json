@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Rete Editor JSON (subset)",
+  "description": "Schema do JSON mínimo usado pelo editor (Rete) no projeto.\n\nEste schema descreve a forma do objeto serializado (nodes/inputs/outputs/connections) e inclui anotações normativas para guiar geradores/transformers.\n\nObservação: regras que dependem de múltiplos nós (ex.: \"connections[].input deve existir no nó destino\" e \"não conectar para o nó start\") são topológicas e não são plenamente expressáveis em JSON Schema puro; devem ser aplicadas por validadores de alto nível (ex.: engine-mapper e loadFromJson).",
+  "type": "object",
+  "required": ["id", "nodes"],
+  "additionalProperties": false,
+  "x-rules": [
+    "CONNECTION_TARGET_INPUT_MUST_EXIST: cada conexão deve apontar para uma porta de input que exista no nó destino (aplicar via getNodeInputs + checagem em runtime)",
+    "NO_CONNECTIONS_TO_START: nenhum nó pode conectar para um nó do tipo start (aplicar em runtime)",
+    "OUTPUT_KEY_MUST_EXIST: cada conexão deve sair por uma porta (outKey) que exista no nó de origem (aplicar via getNodeOutputs + checagem em runtime)"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identificador do documento do editor (ex.: 'chatbot-flow@0.1.0')"
+    },
+    "nodes": {
+      "type": "object",
+      "description": "Mapa de nós (chave: id numérico como string)",
+      "additionalProperties": {
+        "$ref": "#/definitions/ReteNode"
+      }
+    }
+  },
+  "definitions": {
+    "SocketRef": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string" }
+      }
+    },
+    "ConnectionRef": {
+      "type": "object",
+      "required": ["node", "input"],
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "type": "number",
+          "description": "ID numérico do nó destino (no JSON do Rete)"
+        },
+        "input": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Chave do input no nó destino (ex.: 'in')"
+        }
+      }
+    },
+    "Port": {
+      "type": "object",
+      "required": ["socket", "label", "connections"],
+      "additionalProperties": false,
+      "properties": {
+        "socket": { "$ref": "#/definitions/SocketRef" },
+        "label": { "type": "string" },
+        "connections": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ConnectionRef" },
+          "default": []
+        }
+      }
+    },
+    "ReteNodeData": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string" },
+        "config": { "type": "object" }
+      }
+    },
+    "ReteNode": {
+      "type": "object",
+      "required": ["id", "data"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "data": { "$ref": "#/definitions/ReteNodeData" },
+        "position": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "number" }
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/Port" }
+        },
+        "outputs": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/Port" }
+        }
+      }
+    }
+  }
+}
+

@@ -72,6 +72,7 @@ describe('POST /system/suggest-description - institutional mode', () => {
 
     // RAG com chunks web + file
     jest.doMock('../../api/services/ragService', () => ({
+      isRagAvailable: jest.fn(async () => true),
       queryRag: jest.fn(async () => ({
         success: true,
         sources: [
@@ -90,6 +91,11 @@ describe('POST /system/suggest-description - institutional mode', () => {
         ],
         response: '',
       })),
+    }));
+
+    // Evita depender de Redis/ephemeral context (mesmo com executionId obrigatório)
+    jest.doMock('../../api/services/ephemeralRagContextService', () => ({
+      getEphemeralContext: jest.fn(async () => ({ found: false, used: false, chunks: [] })),
     }));
 
     // IA: 1 chamada para profile + 2 para institucional (1ª “ruim”, 2ª corrigida)
@@ -139,7 +145,13 @@ describe('POST /system/suggest-description - institutional mode', () => {
 
     jest.doMock('../../api/services/aiProviderService', () => ({
       initializeAiProviders: jest.fn(async () => {}),
+      ensureTenantAiConfigLoaded: jest.fn(async () => {}),
       generateAiResponse,
+    }));
+
+    // Provider ativo para o tenant (Gate 1 do endpoint)
+    jest.doMock('../../engine/aiProviderManager', () => ({
+      getAiProviderForTenant: jest.fn(() => ({ id: 'mock-provider' })),
     }));
 
     // eslint-disable-next-line global-require
@@ -174,6 +186,7 @@ describe('POST /system/suggest-description - institutional mode', () => {
       req.write(JSON.stringify({
         name: 'Empresa X',
         tenantId: 't1',
+        executionId: 'exec-test-2',
         urls: ['https://empresa-x.com'],
         fileNames: ['catalogo.pdf'],
         mode: 'institutional',

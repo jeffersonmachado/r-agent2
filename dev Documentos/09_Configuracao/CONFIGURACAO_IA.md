@@ -4,7 +4,7 @@ Este guia explica como configurar providers de IA no sistema.
 
 ## Visão Geral
 
-O sistema suporta múltiplos providers de IA e permite configurar diferentes providers por tenant. Os providers são gerenciados pelo módulo `aiProviderManager` e podem ser configurados via arquivo `api/data/config.json`.
+O sistema suporta múltiplos providers de IA e permite configurar diferentes providers por tenant. Os providers são gerenciados pelo módulo `aiProviderManager` e a configuração/credenciais são por tenant (no banco, criptografadas).
 
 ## Providers Suportados
 
@@ -24,48 +24,19 @@ O sistema suporta múltiplos providers de IA e permite configurar diferentes pro
 
 ## Configuração
 
-### 1. Editar `api/data/config.json`
+### Configurar via UI (recomendado)
 
-Adicione a seção `ai` ao arquivo de configuração:
+Use `http://localhost:5173/config?tab=ai&tenant=<TENANT_KEY>` para:
 
-```json
-{
-  "ai": {
-    "defaultProvider": "openai",
-    "defaultFallback": "fallback",
-    "openai": {
-      "apiKey": "sk-sua-chave-api-openai-aqui",
-      "model": "gpt-5.2"
-    },
-    "anthropic": {
-      "apiKey": "sk-ant-sua-chave-api-anthropic-aqui",
-      "model": "claude-3-sonnet-20240229"
-    },
-    "tenants": {
-      "tenant-acme": {
-        "primary": "openai",
-        "fallback": "fallback"
-      },
-      "tenant-premium": {
-        "primary": "anthropic",
-        "fallback": "openai"
-      }
-    }
-  }
-}
-```
+- selecionar provider primário/secundário
+- salvar configuração do tenant
+- salvar credenciais (API key) criptografadas no DB
 
 ### 2. Campos de Configuração
 
-- **`defaultProvider`**: Provider padrão usado quando nenhum tenant específico está configurado
-- **`defaultFallback`**: Provider de fallback padrão
-- **`openai.apiKey`**: Chave de API da OpenAI (obtenha em https://platform.openai.com/api-keys)
-- **`openai.model`**: Modelo OpenAI a ser usado (padrão: `gpt-5.2`). Modelos disponíveis: gpt-5.2, gpt-5.1, gpt-4o, gpt-4, gpt-3.5-turbo
-- **`anthropic.apiKey`**: Chave de API da Anthropic (obtenha em https://console.anthropic.com/)
-- **`anthropic.model`**: Modelo Anthropic a ser usado (padrão: `claude-3-sonnet-20240229`)
-- **`tenants`**: Configuração específica por tenant
-  - **`primary`**: Provider principal para o tenant
-  - **`fallback`**: Provider de fallback (opcional)
+- **`primary`**: Provider principal do tenant
+- **`secondary`**: Provider secundário (opcional)
+- **Credenciais**: API key do provider (salva criptografada no DB; nunca exibida)
 
 ### 3. Instalar Dependências (Opcional)
 
@@ -123,13 +94,11 @@ curl -X POST http://localhost:3000/api/ai/generate \
 ## Troubleshooting
 
 ### Erro: "Nenhum provider de IA configurado"
-- Verifique se a seção `ai` existe em `config.json`
-- Verifique se `defaultProvider` está configurado
-- Verifique se o provider está registrado (veja logs do servidor)
+- Verifique se o tenant salvou `primary` na aba IA
+- Verifique se existem credenciais salvas no DB para o provider selecionado
 
-### Erro: "OpenAI API key não configurada"
-- Adicione `ai.openai.apiKey` no `config.json`
-- Obtenha uma chave em https://platform.openai.com/api-keys
+### Erro: "API key não configurada para o tenant"
+- Salve as credenciais na aba IA do tenant (elas ficam no DB, criptografadas)
 
 ### Provider sempre retorna resposta simulada
 - Verifique se os pacotes SDK estão instalados

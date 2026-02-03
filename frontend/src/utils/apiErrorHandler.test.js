@@ -20,5 +20,26 @@ describe('apiErrorHandler', () => {
     const [, type] = showToast.mock.calls[0];
     expect(type).toBe('error');
   });
+
+  it('ao receber PROVIDER_QUOTA_EXCEEDED mostra mensagem de quota', () => {
+    const showToast = vi.fn();
+    const err = {
+      status: 402,
+      body: {
+        error: {
+          code: 'PROVIDER_QUOTA_EXCEEDED',
+          message: 'You exceeded your current quota',
+          details: { tenantId: 'system', providerErrorCode: 'insufficient_quota' },
+        },
+      },
+    };
+
+    handlePipelineApiError(err, { showToast });
+
+    expect(showToast).toHaveBeenCalled();
+    const [msg, type] = showToast.mock.calls[0];
+    expect(type).toBe('error');
+    expect(String(msg)).toMatch(/cota do provider/i);
+  });
 });
 

@@ -22,6 +22,8 @@ const getDepartment = require('./Department');
 const getQuickReply = require('./QuickReply');
 const getWebhook = require('./Webhook');
 const getRagDocument = require('./RagDocument');
+const getRagDocumentFile = require('./RagDocumentFile');
+const getTenantExclusion = require('./TenantExclusion');
 const getQueue = require('./Queue');
 const getCloseReason = require('./CloseReason');
 const getTicketTag = require('./TicketTag');
@@ -53,6 +55,8 @@ const Department = () => getDepartment();
 const QuickReply = () => getQuickReply();
 const Webhook = () => getWebhook();
 const RagDocument = () => getRagDocument();
+const RagDocumentFile = () => getRagDocumentFile();
+const TenantExclusion = () => getTenantExclusion();
 const Queue = () => getQueue();
 const CloseReason = () => getCloseReason();
 const TicketTag = () => getTicketTag();
@@ -218,6 +222,8 @@ module.exports = {
   QuickReply,
   Webhook,
   RagDocument,
+  RagDocumentFile,
+  TenantExclusion,
   Queue,
   CloseReason,
   TicketTag,
@@ -249,6 +255,8 @@ module.exports = {
   getQuickReply,
   getWebhook,
   getRagDocument,
+  getRagDocumentFile,
+  getTenantExclusion,
   getQueue,
   getCloseReason,
   getTicketTag,

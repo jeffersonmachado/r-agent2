@@ -5,6 +5,7 @@ import { EditorProvider } from './state/editorStore';
 import { ThemeProvider } from './styles/themeContext';
 import { AuthProvider, useAuth } from './context/authContext';
 import { WebSocketProvider } from './context/WebSocketContext';
+import { FileUploadProvider } from './context/FileUploadContext';
 import { FlowEditorPage } from './pages/FlowEditorPage';
 import { SupportPage } from './pages/SupportPage';
 import { TicketMaintenancePage } from './pages/TicketMaintenancePage';
@@ -16,6 +17,7 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { AuditPage } from './pages/AuditPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { QuickRepliesPage } from './pages/QuickRepliesPage';
+import { FaqManagementPage } from './pages/FaqManagementPage';
 import { DepartmentsPage } from './pages/DepartmentsPage';
 import { BulkMessagingPage } from './pages/BulkMessagingPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
@@ -40,6 +42,7 @@ import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
+import { TenantGate } from './components/TenantGate';
 import { useRouter } from './hooks/useRouter';
 import { isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
 
@@ -113,7 +116,9 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <WebSocketProvider>
-          <AppWithAuth />
+          <FileUploadProvider>
+            <AppWithAuth />
+          </FileUploadProvider>
         </WebSocketProvider>
       </AuthProvider>
     </ThemeProvider>
@@ -136,6 +141,7 @@ function AppWithAuth() {
   const isOnboarding = currentPath === '/onboarding' || currentPath.startsWith('/onboarding');
   const isAudit = currentPath === '/audit' || currentPath.startsWith('/audit');
   const isQuickReplies = currentPath === '/quick-replies' || currentPath.startsWith('/quick-replies');
+  const isFaq = currentPath === '/faq' || currentPath.startsWith('/faq');
   const isDepartments = currentPath === '/departments' || currentPath.startsWith('/departments');
   const isBulkMessaging = currentPath === '/bulk-messaging' || currentPath.startsWith('/bulk-messaging');
   const isAnalytics = currentPath === '/analytics' || currentPath.startsWith('/analytics');
@@ -173,7 +179,7 @@ function AppWithAuth() {
     
     const allRoutes = [
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-      isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
+      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isDevDashboard, isLogin
     ];
     
@@ -186,7 +192,7 @@ function AppWithAuth() {
     }
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-    isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
+    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
@@ -208,6 +214,7 @@ function AppWithAuth() {
       '/tenants': '🏢 Gerenciamento de Tenants',
       '/audit': '🔍 Auditoria',
       '/quick-replies': '⚡ Respostas Rápidas',
+      '/faq': '❓ FAQ',
       '/departments': '🏢 Departamentos',
       '/bulk-messaging': '📢 Disparos em Massa',
       '/analytics': '📈 Analytics & Métricas',
@@ -262,7 +269,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage'];
+  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/quick-replies', '/faq'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -282,6 +289,7 @@ function AppWithAuth() {
   return (
     <div className="support-content-wrapper">
       <UserMenu />
+      <TenantGate />
       {isDashboard ? (
         <DashboardPage />
       ) : isEditor ? (
@@ -306,6 +314,8 @@ function AppWithAuth() {
         <AuditPage />
       ) : isQuickReplies ? (
         <QuickRepliesPage />
+      ) : isFaq ? (
+        <FaqManagementPage />
       ) : isDepartments ? (
         <DepartmentsPage />
       ) : isBulkMessaging ? (

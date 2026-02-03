@@ -34,6 +34,18 @@ export function normalizeApiError(err) {
  */
 export function toastForApiErrorCode(code) {
   switch (code) {
+    case 'PROVIDER_QUOTA_EXCEEDED':
+      return {
+        message: 'Cota do provider de IA excedida. Verifique billing/plano e credenciais do tenant e tente novamente.',
+        type: 'error',
+        durationMs: 12000,
+      };
+    case 'RATE_LIMIT_EXCEEDED':
+      return {
+        message: 'Rate limit excedido no provider de IA. Aguarde alguns segundos e tente novamente.',
+        type: 'warning',
+        durationMs: 10000,
+      };
     case 'SCRAPE_FAILED':
       return {
         message: 'Falha ao raspar o site. Verifique a URL e tente novamente. Se o site for SPA, habilite o fallback Playwright.',
@@ -60,7 +72,13 @@ export function toastForApiErrorCode(code) {
       };
     case 'RAG_INDEX_FAILED':
       return {
-        message: 'Falha ao indexar no RAG. Tente novamente em instantes.',
+        message: 'Falha ao indexar documento. Ver detalhes.',
+        type: 'error',
+        durationMs: 10000,
+      };
+    case 'EMBEDDING_DIM_MISMATCH':
+      return {
+        message: 'Configuração inválida: dimensão do embedding não confere. Verifique `EMBEDDING_DIM` e reindexe o tenant.',
         type: 'error',
         durationMs: 10000,
       };
@@ -79,6 +97,24 @@ export function toastForApiErrorCode(code) {
     case 'DESCRIPTION_FAILED':
       return {
         message: 'Falha ao gerar a descrição. Tente novamente.',
+        type: 'error',
+        durationMs: 10000,
+      };
+    case 'SEMANTIC_CLEAN_FAILED':
+      return {
+        message: 'Falha ao limpar/normalizar o contexto (OCR/artefatos). Verifique as evidências e tente novamente.',
+        type: 'error',
+        durationMs: 10000,
+      };
+    case 'RAG_CONTEXT_FAILED':
+      return {
+        message: 'Falha ao recuperar contexto do RAG/Redis. Verifique se há evidências indexadas e tente novamente.',
+        type: 'error',
+        durationMs: 10000,
+      };
+    case 'QUESTION_GENERATION_FAILED':
+      return {
+        message: 'Falha ao gerar perguntas a partir do contexto. Verifique as evidências e tente novamente.',
         type: 'error',
         durationMs: 10000,
       };
@@ -105,6 +141,12 @@ export function toastForApiErrorCode(code) {
         message: 'Pipeline abortado. Verifique os detalhes do erro e tente novamente.',
         type: 'error',
         durationMs: 10000,
+      };
+    case 'PIPELINE_ABSTAINED':
+      return {
+        message: 'Evidência insuficiente para continuar (pipeline absteve). Verifique as evidências retornadas pelo RAG.',
+        type: 'warning',
+        durationMs: 12000,
       };
     case 'INTERNAL_ERROR':
       return {
@@ -138,7 +180,19 @@ export function handlePipelineApiError(err, opts = {}) {
   const toast = toastForApiErrorCode(info.code);
 
   // Prioriza mensagem baseada em `code` (contrato), depois fallback do caller.
-  const message = toast.message || opts.defaultMessage || info.message;
+  let message = toast.message || opts.defaultMessage || info.message;
+  // Personaliza com detalhes do contrato quando disponível
+  if (info.code === 'RATE_LIMIT_EXCEEDED') {
+    const retryAfter = Number(info?.details?.retryAfter);
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+      message = `Rate limit excedido no provider de IA. Tente novamente em ${retryAfter}s.`;
+    }
+  } else if (info.code === 'PROVIDER_QUOTA_EXCEEDED') {
+    const tenantId = info?.details?.tenantId ? String(info.details.tenantId) : null;
+    if (tenantId) {
+      message = `Cota do provider de IA excedida para o tenant "${tenantId}". Verifique billing/plano e credenciais e tente novamente.`;
+    }
+  }
 
   if (typeof opts.updatePipelineWithDetails === 'function' && opts.stepKey) {
     opts.updatePipelineWithDetails({

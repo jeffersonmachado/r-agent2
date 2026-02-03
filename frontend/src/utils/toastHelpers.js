@@ -12,7 +12,8 @@ function formatMessage(title, description, details) {
   const lines = [];
   if (title) lines.push(String(title).trim());
   if (description) lines.push(String(description).trim());
-  if (details) lines.push('Ver detalhes no console.');
+  // Só promete detalhes no console quando realmente vamos logar (dev).
+  if (details && isDev()) lines.push('Ver detalhes no console.');
   return lines.filter(Boolean).join('\n');
 }
 
@@ -22,7 +23,14 @@ function logDetails(level, title, details) {
   try {
     // Log detalhado apenas em dev
     // eslint-disable-next-line no-console
-    console[level](`[Toast] ${title}`, details);
+    const groupTitle = `[Toast] ${title}`;
+    // Deixa o log mais fácil de encontrar no console.
+    // eslint-disable-next-line no-console
+    if (typeof console.groupCollapsed === 'function') console.groupCollapsed(groupTitle);
+    // eslint-disable-next-line no-console
+    console[level](details);
+    // eslint-disable-next-line no-console
+    if (typeof console.groupEnd === 'function') console.groupEnd();
   } catch {
     // ignora
   }

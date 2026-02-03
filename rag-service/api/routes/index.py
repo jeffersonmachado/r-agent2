@@ -11,7 +11,7 @@ import logging
 from models.document import Document, DocumentMetadata, DocumentPermissions, ChunkMetadata
 from services.chunking_service import chunk_document
 from services.embedding_service import generate_embeddings_batch
-from services.vector_store import get_vector_store
+from services.vector_store import get_vector_store, normalize_tenant_id
 from services.deduplication_service import (
     normalize_content,
     generate_content_hash,
@@ -88,7 +88,7 @@ async def index_document(request: IndexRequest):
         content_hash = generate_content_hash(normalized_content)
         
         # ETAPA 3: Verificação de duplicidade estrutural
-        tenant_id = doc_data['tenantId']
+        tenant_id = normalize_tenant_id(doc_data['tenantId'])
         document_id = doc_data['id']
         source_id = doc_data.get('metadata', {}).get('source_id') or document_id
         structural_check = check_structural_duplicate(tenant_id, content_hash, source_id)
@@ -265,7 +265,7 @@ async def index_document(request: IndexRequest):
             'indexSizeBefore': stats_before.get('indexSize', 0)
         })
         
-        vector_store.add_chunks(valid_chunks, valid_embeddings)
+        chunks_added = vector_store.add_chunks(valid_chunks, valid_embeddings)
         
         # Verifica estado após adicionar
         stats_after = vector_store.get_stats()
@@ -278,24 +278,6 @@ async def index_document(request: IndexRequest):
             'documentCountDelta': stats_after.get('documentCount', 0) - stats_before.get('documentCount', 0),
             'chunkCountDelta': stats_after.get('chunkCount', 0) - stats_before.get('chunkCount', 0)
         })
-        
-        # Validação: verifica se os chunks foram realmente adicionados
-        chunks_added = 0
-        chunks_not_found = []
-        for chunk in valid_chunks:
-            if chunk.id in vector_store.chunks:
-                chunks_added += 1
-            else:
-                chunks_not_found.append(chunk.id)
-        
-        if chunks_added < len(valid_chunks):
-            logger.warning(f"[INDEX] Alguns chunks não foram adicionados: {chunks_added}/{len(valid_chunks)} para documento {document.id}", {
-                'documentId': document.id,
-                'tenantId': document.tenantId,
-                'chunksAdded': chunks_added,
-                'chunksTotal': len(valid_chunks),
-                'chunksNotFound': chunks_not_found
-            })
         
         logger.info(f"[INDEX] Documento indexado: {document.id}, chunks criados: {len(chunks)}, duplicados descartados: {duplicate_count}, chunks válidos: {len(valid_chunks)}, chunks adicionados: {chunks_added}", {
             'documentId': document.id,

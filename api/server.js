@@ -1184,6 +1184,35 @@ async function requestHandler(req, res) {
     try {
       const { checkServicesStatus } = require('./services/systemStatusService');
       const status = await checkServicesStatus();
+
+      // Se o client informar executionId via header, emitimos progresso via WS (pipeline.status).
+      // IMPORTANTE: como /system/status é rota pública (dashboard), só emitimos quando houver auth válido.
+      try {
+        const executionIdHeader =
+          (req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const executionId =
+          (typeof executionIdHeader === 'string' && executionIdHeader.trim()) ? executionIdHeader.trim() : null;
+        const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
+        if (isValidExecutionId) {
+          const authResult = requireAuth(req);
+          if (authResult.valid && authResult.agent?.tenantId) {
+            const tenantId = String(authResult.agent.tenantId);
+            const ragService = status?.services?.ragService || null;
+            if (ragService && ragService.status === 'healthy') {
+              const { emitEvent } = require('./services/websocketService');
+              emitEvent('pipeline.status', {
+                executionId,
+                status: 'running',
+                stages: { ragValidated: true },
+                metadata: { message: 'Serviço RAG validado', source: '/system/status' },
+              }, { tenantId });
+            }
+          }
+        }
+      } catch (_) {
+        // best-effort: não bloquear /system/status por WS
+      }
+
       sendJson(res, 200, status);
     } catch (err) {
       logger.error('Erro ao verificar status dos serviços:', err);
@@ -1715,9 +1744,32 @@ async function requestHandler(req, res) {
 
     try {
       const body = await parseJsonBody(req);
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const execIdForWs = requireExecutionId(body, res, badRequest);
+      if (!execIdForWs) return;
       const { description, create = false } = body;
 
+      const tenantIdForWs = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : 'system';
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForWs });
+
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'tenants-generate-by-ai',
+        status: 'running',
+        message: 'Gerando tenant por IA...',
+        meta: { create: !!create },
+      });
+
       if (!description || typeof description !== 'string' || description.trim().length === 0) {
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'tenants-generate-by-ai',
+          status: 'error',
+          message: 'Descrição é obrigatória',
+          meta: { code: 'INVALID_INPUT' },
+        });
         const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
           ? String(req.headers['x-request-id']).trim()
           : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -1774,6 +1826,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         const aiResult = await generateAiResponse(prompt, systemTenantId, {});
         aiText = aiResult.text || '';
       } catch (providerErr) {
+        try {
+          emitPipelineStage(pipelineWs, execIdForWs, {
+            stage: 'tenants-generate-by-ai',
+            status: 'error',
+            message: providerErr?.message || 'Falha ao chamar provider de IA',
+            meta: { code: 'AI_PROVIDER_ERROR' },
+          });
+        } catch (_) {}
         // Sempre retorna envelope + erro (mesmo sem provider configurado)
         const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
         const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
@@ -1813,6 +1873,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           throw new Error('JSON não encontrado na resposta');
         }
       } catch (parseError) {
+        try {
+          emitPipelineStage(pipelineWs, execIdForWs, {
+            stage: 'tenants-generate-by-ai',
+            status: 'error',
+            message: 'A IA não retornou um JSON válido. Tente novamente com uma descrição mais detalhada.',
+            meta: { code: 'AI_OUTPUT_PARSE_ERROR' },
+          });
+        } catch (_) {}
         logger.error('[Tenants] Erro ao parsear resposta da IA', { 
           aiText, 
           error: parseError.message 
@@ -1836,6 +1904,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       // Valida dados gerados
       if (!tenantData.name || !tenantData.ramo_atividade || !tenantData.objetivo) {
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'tenants-generate-by-ai',
+          status: 'error',
+          message: 'A IA não gerou todos os campos necessários. Tente novamente.',
+          meta: { code: 'AI_OUTPUT_INCOMPLETE' },
+        });
         const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
         const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
           valid: false,
@@ -2008,6 +2082,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       // Se solicitado, cria o tenant em etapas (base -> context). NUNCA ativa automaticamente.
       let createdTenant = null;
+      let reusedExistingTenant = null;
       if (create === true) {
         const { createTenant } = require('./services/tenantService');
         const createResult = await createTenant({
@@ -2024,6 +2099,42 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           _aiSafeMode: true,
         });
         if (!createResult.success) {
+          // Idempotência: se o site já existe, reaproveita o tenant existente ao invés de falhar.
+          if (String(createResult.error || '').toLowerCase().includes('já existe um tenant com este site')) {
+            try {
+              const { findTenantBySite } = require('./services/tenantService');
+              reusedExistingTenant = await findTenantBySite(tenantDraft.site);
+            } catch (_) {
+              reusedExistingTenant = null;
+            }
+            if (reusedExistingTenant) {
+              // Regra: só reaproveita se ainda for draft (pending_review). Caso contrário, é conflito.
+              if (reusedExistingTenant.status !== 'pending_review') {
+                sendJson(res, 409, {
+                  error: 'tenant_site_conflict',
+                  message: 'Já existe um tenant com este site e ele não está em modo draft (pending_review).',
+                  tenantDraft,
+                  envelope,
+                  auditId: aiAuditId,
+                  existingTenant: reusedExistingTenant,
+                });
+                return;
+              }
+              sendJson(res, 200, {
+                generated: true,
+                auditId: aiAuditId,
+                auditGenerationId,
+                envelope,
+                tenantDraft,
+                tenant: tenantDraft, // compatibilidade
+                created: false,
+                createdTenant: null,
+                reusedExisting: true,
+                existingTenant: reusedExistingTenant,
+              });
+              return;
+            }
+          }
           sendJson(res, 500, {
             error: 'tenant_create_failed',
             message: createResult.error || 'Erro ao criar tenant (safe-mode)',
@@ -2035,6 +2146,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }
         createdTenant = createResult.tenant;
       }
+
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'tenants-generate-by-ai',
+        status: 'success',
+        message: createdTenant ? 'Tenant gerado por IA (e criado).' : 'Tenant gerado por IA.',
+        meta: { created: !!createdTenant, tenantId: createdTenant?.id || null },
+      });
 
       sendJson(res, 200, {
         generated: true,
@@ -2075,7 +2193,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { name, tenantId, urls, fileNames, mode, executionId, contextMode } = body;
+      const { name, tenantId, urls, fileNames, mode, executionId, contextMode, chunks } = body;
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const execIdForWs = requireExecutionId({ executionId }, res, badRequest);
+      if (!execIdForWs) return;
 
       const isSuperAdminUser = isSuperAdmin(req.agent);
       // Importante: para super-admin, permite operar em um tenant alvo via body.tenantId
@@ -2087,6 +2208,98 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const tenantIdForAI = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
       if (!tenantIdForAI) {
         sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForAI });
+
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'suggest-description',
+        status: 'running',
+        message: 'Sugerindo descrição com IA...',
+        meta: { mode: mode === 'technical' ? 'technical' : 'institutional' },
+      });
+
+      // Pipeline (backend-only): etapa explícita para o card "Sugerir descrição"
+      let pipelineExecution = null;
+      if (execIdForWs) {
+        try {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          pipelineExecution = ensureExecutionContext({ executionId: execIdForWs }, { tenantId: tenantIdForAI });
+          requireStages(pipelineExecution, ['descriptionSuggested']);
+          pipelineExecution.stages.descriptionSuggested = false;
+          updateStatus(pipelineExecution, 'running', {
+            currentStage: 'descriptionSuggested',
+            stageStatus: 'in_progress',
+            message: 'Sugerindo descrição com IA...',
+            source: '/system/suggest-description',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
+      // Gate 1: provider válido (falha terminal centralizada no backend)
+      try {
+        const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
+        const { getAiProviderForTenant } = require('../engine/aiProviderManager');
+        await ensureTenantAiConfigLoaded(tenantIdForAI);
+        const provider = getAiProviderForTenant(tenantIdForAI);
+        if (!provider) {
+          throw new Error(`Nenhum provider de IA configurado para tenant: ${tenantIdForAI}`);
+        }
+      } catch (provErr) {
+        const { createExecutionContext } = require('./services/pipelineExecutionContext');
+        const { failGeneration } = require('./services/failGeneration');
+        const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+        const execution = createExecutionContext({ executionId: execIdForWs || undefined }, { tenantId: tenantIdForAI });
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.INVALID_PROVIDER,
+            error: provErr,
+            extra: { tenantId: tenantIdForAI, endpoint: '/system/suggest-description' },
+          });
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_NOT_AVAILABLE',
+          message: provErr?.message || 'Provider de IA não disponível',
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: tenantIdForAI, executionId: execIdForWs },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      // Gate 2: RAG disponível (falha terminal centralizada no backend)
+      try {
+        const { isRagAvailable } = require('./services/ragService');
+        const ok = await isRagAvailable(tenantIdForAI);
+        if (!ok) throw new Error('Serviço RAG não disponível');
+      } catch (ragErr) {
+        const { createExecutionContext } = require('./services/pipelineExecutionContext');
+        const { failGeneration } = require('./services/failGeneration');
+        const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+        const execution = createExecutionContext({ executionId: execIdForWs || undefined }, { tenantId: tenantIdForAI });
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.RAG_UNAVAILABLE,
+            error: ragErr,
+            extra: { tenantId: tenantIdForAI, endpoint: '/system/suggest-description' },
+          });
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'RAG_NOT_AVAILABLE',
+          message: ragErr?.message || 'Serviço RAG não disponível',
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: tenantIdForAI, executionId: execIdForWs },
+          req,
+        }), setCorsHeaders);
         return;
       }
       
@@ -2106,6 +2319,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10)
         : [];
 
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
       // Só retorna 422 se realmente não houver qualquer fonte (site nem urls nem arquivos).
       let tenantSite = '';
       try {
@@ -2116,8 +2341,27 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         logger.debug('[SuggestDescription] Falha ao obter tenant para checar fontes', { tenantId: tenantIdForAI, error: err.message });
       }
 
-      const hasAnySource = safeUrls.length > 0 || safeFiles.length > 0 || !!tenantSite;
+      const hasAnySource = safeUrls.length > 0 || safeFiles.length > 0 || safeChunks.length > 0 || !!tenantSite;
       if (!hasAnySource) {
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'suggest-description',
+          status: 'error',
+          message: 'Nenhum contexto indexado disponível para sugerir descrição',
+          meta: { code: 'NO_INDEXED_CONTEXT' },
+        });
+        // Encerra pipeline automaticamente (falha lógica)
+        try {
+          const { createExecutionContext } = require('./services/pipelineExecutionContext');
+          const { failGeneration } = require('./services/failGeneration');
+          const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+          const execution = createExecutionContext({ executionId: execIdForWs }, { tenantId: tenantIdForAI });
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.SUGGEST_DESCRIPTION_FAILED,
+            error: new Error('NO_INDEXED_CONTEXT'),
+            extra: { tenantId: tenantIdForAI, stage: 'descriptionSuggested', endpoint: '/system/suggest-description' },
+          });
+        } catch (_) {}
         sendApiError(res, buildApiError({
           code: 'NO_INDEXED_CONTEXT',
           message: 'Nenhum contexto indexado disponível para sugerir descrição',
@@ -2140,13 +2384,36 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         name: (name && String(name).trim()) ? String(name).trim() : null,
         urls: safeUrls,
         fileNames: safeFiles,
-        executionId: (executionId && String(executionId).trim()) ? String(executionId).trim() : null,
+        chunks: safeChunks,
+        executionId: execIdForWs,
         contextMode: (contextMode && String(contextMode).trim()) ? String(contextMode).trim() : 'auto',
         mode: mode === 'technical' ? 'technical' : 'institutional',
         debug: debugRequested,
       });
 
+      // Pipeline (backend-only): conclui etapa
+      if (pipelineExecution) {
+        try {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'descriptionSuggested', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'descriptionSuggested',
+            stageStatus: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'completed',
+            message: 'Descrição sugerida.',
+            source: '/system/suggest-description',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
       if (!payload?.suggestion || !String(payload.suggestion).trim()) {
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'suggest-description',
+          status: 'error',
+          message: 'Não foi possível gerar uma descrição sugerida',
+          meta: { code: 'DESCRIPTION_FAILED' },
+        });
         sendApiError(res, buildApiError({
           code: 'DESCRIPTION_FAILED',
           message: 'Não foi possível gerar uma descrição sugerida',
@@ -2158,15 +2425,1377 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'suggest-description',
+        status: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'success',
+        message: Array.isArray(warnings) && warnings.length > 0 ? 'Descrição sugerida (com avisos).' : 'Descrição sugerida.',
+        meta: { warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+      });
+
       logger.info('[System] Descrição sugerida com sucesso', { 
         length: String(payload.suggestion || '').length,
         mode: payload.mode,
         confidence: payload.confidence,
       });
 
-      sendJson(res, 200, { ok: true, data: payload, warnings: warnings || [], ...payload });
+      // ============================================================
+      // 🔗 Camada final: RAG → FAQ → Respostas → Intents → Fluxo visual
+      // - Executa apenas quando solicitado e quando há executionId
+      // - Dry-run: não persiste; apenas retorna no payload
+      // ============================================================
+      let initialFlow = null;
+      let intents = null;
+      let questions = null;
+      let answers = null;
+      let extractedEntities = null;
+      let excludedItemsCount = 0;
+      const wantsInitialFlow = body && body.generateInitialFlow === true;
+      const isDryRun = body && body.dryRun === true;
+      const execId = execIdForWs;
+
+      if (wantsInitialFlow && execId) {
+        try {
+          const faqService = require('./services/faq.service');
+          const businessEntitiesService = require('./services/business-entities.service');
+          const answersService = require('./services/answers.service');
+          const intentsService = require('./services/intents.service');
+          const flowAdapter = require('./services/flow.adapter');
+
+          const executionContext = {
+            executionId: execId,
+            exclusions: [],
+            excludedItemsCount: 0,
+          };
+
+          // Etapa obrigatória: Business Entity Extraction (salva em Redis: entities:{tenantId}:{executionId})
+          try {
+            const be = await businessEntitiesService.extractBusinessEntities({
+              tenantId: tenantIdForAI,
+              executionId: execId,
+              dryRun: isDryRun,
+            });
+            extractedEntities = be?.entities || null;
+          } catch (beErr) {
+            logger.warn('[System] Falha ao extrair entidades de negócio (best-effort)', {
+              tenantId: tenantIdForAI,
+              executionId: execId,
+              error: beErr?.message || String(beErr),
+            });
+            extractedEntities = null;
+          }
+
+          const faq = await faqService.generateFAQ({ tenantId: tenantIdForAI, executionId: execId, dryRun: isDryRun });
+          questions = faq.questions;
+          const ragContext = faq.ragContext || '';
+          executionContext.exclusions = Array.isArray(faq?.meta?.exclusions) ? faq.meta.exclusions : [];
+
+          // Métrica pós-FAQ (best-effort): coverage = perguntasGeradas / (services + plans + prices + schedules)
+          try {
+            const { getEphemeralContextClient } = require('../infra/redis/ephemeralContextClient');
+            const redis = getEphemeralContextClient();
+            if (redis && redis.status === 'ready') {
+              const countArr = (v) => (Array.isArray(v) ? v.length : 0);
+              const denom = countArr(extractedEntities?.services)
+                + countArr(extractedEntities?.plans)
+                + countArr(extractedEntities?.prices)
+                + countArr(extractedEntities?.schedules);
+              const qn = Array.isArray(questions) ? questions.length : 0;
+              const cov = denom > 0 ? (qn / denom) : 0;
+              const envTtl = Number(process.env.EPHEMERAL_RAG_TTL_SECONDS);
+              const ttlSeconds = Number.isFinite(envTtl) && envTtl > 0 ? envTtl : 1800;
+              const key = `rag_metrics:${tenantIdForAI}:${execId}`;
+              await redis.set(key, JSON.stringify({
+                tenantId: tenantIdForAI,
+                executionId: execId,
+                coverage: cov,
+                questionsGenerated: qn,
+                denominator: denom,
+                entityCounts: {
+                  services: countArr(extractedEntities?.services),
+                  plans: countArr(extractedEntities?.plans),
+                  prices: countArr(extractedEntities?.prices),
+                  schedules: countArr(extractedEntities?.schedules),
+                },
+                updatedAt: new Date().toISOString(),
+              }), 'EX', ttlSeconds);
+            }
+          } catch (mErr) {
+            logger.debug('[System] Falha ao salvar rag_metrics (best-effort)', {
+              tenantId: tenantIdForAI,
+              executionId: execId,
+              error: mErr?.message || String(mErr),
+            });
+          }
+
+          answers = await answersService.generateAnswers(tenantIdForAI, questions, ragContext, executionContext);
+          intents = await intentsService.buildIntents(tenantIdForAI, questions, answers, executionContext);
+          initialFlow = flowAdapter.buildInitialFlowFromIntents(intents, {
+            tenantId: tenantIdForAI,
+            flowId: `initial-${tenantIdForAI}-${execId}`.slice(0, 180),
+            name: 'Fluxo inicial (auto)',
+          });
+
+          excludedItemsCount = Number(executionContext.excludedItemsCount) || 0;
+          // Anexa métrica no flow para rastreio (best-effort)
+          try {
+            if (initialFlow && typeof initialFlow === 'object') {
+              initialFlow.metadata = {
+                ...(initialFlow.metadata || {}),
+                excludedItemsCount,
+              };
+            }
+          } catch {
+            // noop
+          }
+
+          // Se for modo real e o caller solicitar persistência, persiste no banco via cache de flows
+          if (!isDryRun && body.persistFlow === true) {
+            try {
+              // Gate obrigatório (mesmo comportamento do POST /flows para IA)
+              const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+              validateGeneratedPlanOrThrow(initialFlow, 'chatbot');
+
+              flows.set(initialFlow.id, initialFlow);
+              persistFlowBestEffort(initialFlow);
+            } catch (persistErr) {
+              logger.warn('[System] Falha ao persistir fluxo inicial (best-effort)', {
+                flowId: initialFlow?.id,
+                error: persistErr?.message || String(persistErr),
+              });
+            }
+          }
+        } catch (flowErr) {
+          logger.warn('[System] Falha ao gerar fluxo inicial (best-effort)', {
+            tenantId: tenantIdForAI,
+            executionId: execId,
+            error: flowErr?.message || String(flowErr),
+          });
+          initialFlow = null;
+        }
+      }
+
+      const enriched = {
+        ok: true,
+        data: payload,
+        warnings: warnings || [],
+        ...payload,
+        ...(extractedEntities ? { entities: extractedEntities } : {}),
+        ...(initialFlow ? { initialFlow } : {}),
+        ...(Array.isArray(intents) ? { intents } : {}),
+        ...(Array.isArray(questions) ? { questions } : {}),
+        ...(Array.isArray(answers) ? { answers } : {}),
+        ...(wantsInitialFlow && execId ? { excludedItemsCount } : {}),
+      };
+
+      sendJson(res, 200, enriched);
     } catch (err) {
       logger.error('[System] Erro ao sugerir descrição:', err);
+      const { failGeneration } = require('./services/failGeneration');
+      const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+      try {
+        const { createExecutionContext } = require('./services/pipelineExecutionContext');
+        const tenantIdForWs = req.agent?.tenantId || req.tenantId || null;
+        const execution = createExecutionContext({ executionId: execIdForWs || undefined }, { tenantId: tenantIdForWs });
+        await failGeneration({
+          execution,
+          reason: GenerationFailureReasons.SUGGEST_DESCRIPTION_FAILED,
+          error: err,
+          extra: { endpoint: '/system/suggest-description' },
+        });
+      } catch (_) {}
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+      } else {
+        const rawMessage = String(err?.message || '');
+        const rawCode = String(err?.code || err?.error?.code || '');
+        const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+        if (isQuota) {
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage || 'Rate limit excedido no provider de IA',
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        sendApiError(res, buildApiError({
+          code: 'DESCRIPTION_FAILED',
+          message: err.message || 'Erro ao sugerir descrição por IA',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
+      }
+    }
+    return;
+  }
+
+  // POST /system/pipeline/validate-prereqs - Valida pré-requisitos do pipeline (backend-only)
+  // - Provider de IA disponível
+  // - Serviço RAG disponível (opcional)
+  // Emite `pipeline.status` via pipelineExecutionContext para alimentar o PipelineMachine.
+  if (method === 'POST' && pathname === '/system/pipeline/validate-prereqs') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    let execution = null;
+    try {
+      const body = await parseJsonBody(req);
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) return;
+      const useRag = body?.useRag !== false;
+
+      const tenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim()) ? String(req.agent.tenantId).trim() : null;
+      if (!tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId });
+
+      const { ensureExecutionContext, requireStages, updateStatus, updateStage } = require('./services/pipelineExecutionContext');
+      const { failGeneration } = require('./services/failGeneration');
+      const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+
+      execution = ensureExecutionContext({ executionId }, { tenantId });
+      requireStages(execution, ['providerValidated', 'ragValidated']);
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'validate-prereqs',
+        status: 'running',
+        message: 'Validando pré-requisitos do pipeline...',
+        meta: { useRag: !!useRag },
+      });
+
+      // Provider
+      updateStatus(execution, 'running', {
+        currentStage: 'providerValidated',
+        stageStatus: 'in_progress',
+        message: 'Validando provider de IA...',
+        source: '/system/pipeline/validate-prereqs',
+      });
+      try {
+        const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
+        const { getAiProviderForTenant } = require('../engine/aiProviderManager');
+        await ensureTenantAiConfigLoaded(tenantId);
+        const provider = getAiProviderForTenant(tenantId);
+        if (!provider) throw new Error(`Nenhum provider de IA configurado para tenant: ${tenantId}`);
+      } catch (provErr) {
+        emitPipelineStage(pipelineWs, executionId, {
+          stage: 'validate-prereqs',
+          status: 'error',
+          message: provErr?.message || 'Provider de IA não disponível',
+          meta: { code: 'PROVIDER_NOT_AVAILABLE' },
+        });
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.INVALID_PROVIDER,
+            error: provErr,
+            extra: { tenantId, endpoint: '/system/pipeline/validate-prereqs' },
+          });
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_NOT_AVAILABLE',
+          message: provErr?.message || 'Provider de IA não disponível',
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId, executionId },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+      updateStage(execution, 'providerValidated', true);
+
+      // RAG
+      if (useRag) {
+        updateStatus(execution, 'running', {
+          currentStage: 'ragValidated',
+          stageStatus: 'in_progress',
+          message: 'Validando serviço RAG...',
+          source: '/system/pipeline/validate-prereqs',
+        });
+        try {
+          const { isRagAvailable } = require('./services/ragService');
+          const ok = await isRagAvailable(tenantId);
+          if (!ok) throw new Error('Serviço RAG não disponível');
+        } catch (ragErr) {
+          emitPipelineStage(pipelineWs, executionId, {
+            stage: 'validate-prereqs',
+            status: 'error',
+            message: ragErr?.message || 'Serviço RAG não disponível',
+            meta: { code: 'RAG_NOT_AVAILABLE' },
+          });
+          try {
+            await failGeneration({
+              execution,
+              reason: GenerationFailureReasons.RAG_UNAVAILABLE,
+              error: ragErr,
+              extra: { tenantId, endpoint: '/system/pipeline/validate-prereqs' },
+            });
+          } catch (_) {}
+          sendApiError(res, buildApiError({
+            code: 'RAG_NOT_AVAILABLE',
+            message: ragErr?.message || 'Serviço RAG não disponível',
+            httpStatus: 424,
+            retryable: false,
+            details: { tenantId, executionId },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+      }
+      updateStage(execution, 'ragValidated', true);
+
+      updateStatus(execution, execution.status, {
+        currentStage: 'ragValidated',
+        stageStatus: 'completed',
+        message: 'Pré-requisitos validados.',
+        source: '/system/pipeline/validate-prereqs',
+      });
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'validate-prereqs',
+        status: 'success',
+        message: 'Pré-requisitos validados.',
+        meta: { providerValidated: true, ragValidated: true, useRag: !!useRag },
+      });
+
+      sendJson(res, 200, { ok: true, executionId, providerValidated: true, ragValidated: true });
+    } catch (err) {
+      logger.error('[System] Erro ao validar pré-requisitos do pipeline:', err);
+      try {
+        if (execution) {
+          const { failGeneration } = require('./services/failGeneration');
+          const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.UNKNOWN,
+            error: err,
+            extra: { endpoint: '/system/pipeline/validate-prereqs' },
+          });
+        }
+      } catch (_) {}
+      sendApiError(res, buildApiError({
+        code: 'PIPELINE_PREREQS_FAILED',
+        message: err?.message || 'Falha ao validar pré-requisitos do pipeline',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
+  // Rota /system/pipeline/fail removida:
+  // - O frontend não aborta mais o pipeline via REST.
+  // - Qualquer falha lógica deve emitir `generation.stage` (error) e encerrar automaticamente.
+
+  // POST /system/generate-faq - Gera FAQ agrupado (clusters) + coverage
+  if (method === 'POST' && pathname === '/system/generate-faq') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    let pipelineExecution = null;
+    let execIdForPipeline = null;
+    let tenantIdForPipeline = null;
+    try {
+      const body = await parseJsonBody(req);
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      execIdForPipeline = requireExecutionId(body, res, badRequest);
+      if (!execIdForPipeline) return;
+      const {
+        name,
+        description,
+        tenantId,
+        urls,
+        fileNames,
+        pipelineStage,
+        executionId, // mantido para compatibilidade, mas obrigatório
+        contextMode,
+        chunks,
+        rules,
+        dryRun,
+      } = body || {};
+      const stageKey = (pipelineStage && String(pipelineStage).trim() === 'questionsGenerated')
+        ? 'questionsGenerated'
+        : 'faqGenerated';
+
+      // Pipeline (opção A): esta chamada faz parte do pipeline tenant quando há executionId.
+      // Ela pode disparar chamadas de IA e deve "segurar" o approved até finalizar.
+      // executionId já validado como obrigatório acima
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const requestedTenantId = tenantId ? String(tenantId).trim() : null;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      const tenantIdForAI = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
+      tenantIdForPipeline = tenantIdForAI;
+      if (!tenantIdForAI) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForAI });
+
+      emitPipelineStage(pipelineWs, execIdForPipeline, {
+        stage: 'generate-faq',
+        status: 'running',
+        message: stageKey === 'questionsGenerated'
+          ? 'Gerando perguntas automaticamente...'
+          : 'Gerando FAQ...',
+        meta: { pipelineStage: stageKey },
+      });
+
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10)
+        : [];
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      logger.info('[System] Gerando FAQ', {
+        tenantId: tenantIdForAI,
+        hasExecutionId: !!(executionId && String(executionId).trim()),
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        urls: safeUrls.length,
+        fileNames: safeFiles.length,
+        inlineChunks: safeChunks.length,
+      });
+
+      // Pipeline status: marca etapa FAQ como requerida e em progresso (best-effort).
+      try {
+        if (execIdForPipeline) {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          pipelineExecution = ensureExecutionContext({ executionId: execIdForPipeline }, { tenantId: tenantIdForAI });
+          requireStages(pipelineExecution, [stageKey]);
+          // torna etapa pendente (requerida)
+          pipelineExecution.stages[stageKey] = false;
+          updateStatus(pipelineExecution, 'running', {
+            currentStage: stageKey,
+            stageStatus: 'in_progress',
+            message: stageKey === 'questionsGenerated'
+              ? 'Gerando perguntas automaticamente (contexto do tenant)...'
+              : 'Gerando FAQ (pipeline tenant)...',
+            source: '/system/generate-faq',
+          });
+        }
+      } catch (e) {
+        // best-effort: não falha a request
+      }
+
+      const { generateFaq } = require('./services/faqGeneratorService');
+      const result = await generateFaq({
+        tenantId: tenantIdForAI,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        description: (description && String(description).trim()) ? String(description).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        chunks: safeChunks,
+        executionId: execIdForPipeline,
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        rules: (rules && typeof rules === 'object') ? rules : null,
+        dryRun: dryRun === true,
+      });
+
+      // Se esta chamada era para gerar PERGUNTAS (pipelineStage=questionsGenerated),
+      // exige pelo menos 1 pergunta. Caso contrário, marca como failed e não avança.
+      try {
+        if (pipelineExecution && stageKey === 'questionsGenerated') {
+          const isValidQuestionBasic = (q) => {
+            if (typeof q !== 'string') return false;
+            const s = q.trim();
+            if (!s) return false;
+            if (s.length < 8) return false;
+            if (s.length > 220) return false;
+            // Evita lixo técnico/arquivos/URLs
+            if (/https?:\/\/\S+/i.test(s)) return false;
+            if (/\b[\w.-]{3,}\.(pdf|jpe?g|png|gif|webp|bmp|tiff|svg|docx?|xlsx?|pptx?|csv|txt|zip|rar|7z)\b/i.test(s)) return false;
+            if (/\[imagem:.*?\]/i.test(s)) return false;
+            if (/texto extra[ií]do.*ocr/i.test(s)) return false;
+            return true;
+          };
+
+          const flat = Array.isArray(result?.flatQuestions) ? result.flatQuestions : null;
+          const grouped = Array.isArray(result?.faq) ? result.faq : null;
+          const flattened = Array.isArray(grouped)
+            ? grouped.flatMap(g => Array.isArray(g?.questions) ? g.questions : [])
+            : [];
+          const candidates = Array.isArray(flat) ? flat : flattened;
+          const validCount = (Array.isArray(candidates) ? candidates : []).filter(isValidQuestionBasic).length;
+          if (!validCount || validCount <= 0) {
+            try {
+              const { createPipelineWs } = require('./ws/pipelineEmitter');
+              const { emitPipelineStage } = require('./ws/emitPipelineStage');
+              emitPipelineStage(createPipelineWs({ tenantId: tenantIdForAI }), execIdForPipeline, {
+                stage: 'generate-faq',
+                status: 'error',
+                message: 'Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.',
+                meta: { code: 'QUESTIONS_GENERATION_FAILED' },
+              });
+            } catch (_) {}
+            const { updateStatus } = require('./services/pipelineExecutionContext');
+            try {
+              const { updateStage } = require('./services/pipelineExecutionContext');
+              updateStage(pipelineExecution, 'questionsGenerated', false);
+            } catch (_) {
+              // best-effort
+            }
+            updateStatus(pipelineExecution, 'failed', {
+              currentStage: 'questionsGenerated',
+              stageStatus: 'error',
+              reason: { code: 'QUESTIONS_GENERATION_FAILED' },
+              message: 'Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.',
+              source: '/system/generate-faq',
+            });
+
+            sendApiError(res, buildApiError({
+              code: 'QUESTIONS_GENERATION_FAILED',
+              message: 'Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.',
+              httpStatus: 422,
+              retryable: false,
+              details: { tenantId: tenantIdForAI, executionId: execIdForPipeline },
+              req,
+            }), setCorsHeaders);
+            return;
+          }
+        }
+      } catch (e) {
+        // best-effort: se falhar a verificação, segue o fluxo original
+      }
+
+      // Pipeline status: conclui etapa FAQ e tenta aprovar (best-effort).
+      try {
+        if (pipelineExecution && execIdForPipeline) {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, stageKey, true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: stageKey,
+            stageStatus: 'completed',
+            message: stageKey === 'questionsGenerated' ? 'Perguntas geradas.' : 'FAQ gerado.',
+            source: '/system/generate-faq',
+          });
+        }
+      } catch (e) {
+        // best-effort
+      }
+
+      emitPipelineStage(pipelineWs, execIdForPipeline, {
+        stage: 'generate-faq',
+        status: 'success',
+        message: stageKey === 'questionsGenerated' ? 'Perguntas geradas.' : 'FAQ gerado.',
+        meta: { pipelineStage: stageKey },
+      });
+
+      sendJson(res, 200, { ok: true, data: result, ...result });
+    } catch (err) {
+      logger.error('[System] Erro ao gerar FAQ:', err);
+      // Pipeline status:
+      // - Qualquer falha lógica/técnica encerra o pipeline automaticamente.
+      try {
+        if (pipelineExecution && execIdForPipeline) {
+          const { updateStatus } = require('./services/pipelineExecutionContext');
+          updateStatus(pipelineExecution, 'failed', {
+            currentStage: stageKey,
+            stageStatus: 'error',
+            reason: { code: 'FAQ_FAILED' },
+            message: (String(err?.message || err) || 'Falha ao gerar FAQ').slice(0, 300),
+            source: '/system/generate-faq',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+      try {
+        const { createPipelineWs } = require('./ws/pipelineEmitter');
+        const { emitPipelineStage } = require('./ws/emitPipelineStage');
+        if (tenantIdForPipeline && execIdForPipeline) {
+          emitPipelineStage(createPipelineWs({ tenantId: tenantIdForPipeline }), execIdForPipeline, {
+            stage: 'generate-faq',
+            status: 'error',
+            message: (String(err?.message || err) || 'Falha ao gerar FAQ').slice(0, 300),
+            meta: { code: 'FAQ_FAILED' },
+          });
+        }
+      } catch (_) {}
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+      } else {
+        const rawMessage = String(err?.message || '');
+        const rawCode = String(err?.code || err?.error?.code || '');
+        const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+        if (isQuota) {
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage || 'Rate limit excedido no provider de IA',
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        sendApiError(res, buildApiError({
+          code: 'FAQ_FAILED',
+          message: err.message || 'Erro ao gerar FAQ',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
+      }
+    }
+    return;
+  }
+
+  // POST /system/generate-faq-answers - Gera respostas para um conjunto de perguntas (FAQ)
+  if (method === 'POST' && pathname === '/system/generate-faq-answers') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
+      const {
+        questions,
+        name,
+        urls,
+        fileNames,
+        executionId,
+        contextMode,
+        chunks,
+        dryRun,
+      } = body || {};
+
+      // executionId é opcional, mas se vier deve ser válido (hardening)
+      if (executionId) {
+        const { isValidExecutionId } = require('./middleware/requireExecutionId');
+        const raw = String(executionId).trim();
+        if (!isValidExecutionId(raw)) {
+          badRequest(res, 'executionId inválido');
+          return;
+        }
+      }
+
+      const isValidQuestionBasic = (q) => {
+        if (typeof q !== 'string') return false;
+        const s = q.trim();
+        if (!s) return false;
+        if (s.length < 8) return false;
+        if (s.length > 220) return false;
+        // Evita lixo técnico/arquivos/URLs
+        if (/https?:\/\/\S+/i.test(s)) return false;
+        if (/\b[\w.-]{3,}\.(pdf|jpe?g|png|gif|webp|bmp|tiff|svg|docx?|xlsx?|pptx?|csv|txt|zip|rar|7z)\b/i.test(s)) return false;
+        if (/\[imagem:.*?\]/i.test(s)) return false;
+        if (/texto extra[ií]do.*ocr/i.test(s)) return false;
+        return true;
+      };
+
+      const qs = Array.isArray(questions)
+        ? questions
+            .filter((q) => typeof q === 'string')
+            .map((q) => String(q).trim().slice(0, 220))
+            .filter(isValidQuestionBasic)
+            .slice(0, 50)
+        : [];
+
+      if (qs.length === 0) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'questions é obrigatório (array com pelo menos 1 pergunta válida)',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter((u) => typeof u === 'string' && u.trim()).map((u) => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim()).slice(0, 10)
+        : [];
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter((c) => c && typeof c === 'object')
+            .map((c) => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter((c) => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      const { generateFaqAnswers } = require('./services/faqAnswersService');
+      const result = await generateFaqAnswers({
+        tenantId,
+        questions: qs,
+        executionId: executionId ? String(executionId).trim() : null,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        chunks: safeChunks,
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        dryRun: dryRun === true,
+      });
+
+      sendJson(res, 200, { ok: true, data: result, ...result });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      const rawMessage = String(err?.message || '');
+      const rawCode = String(err?.code || err?.error?.code || '');
+      const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+      const isQuota =
+        rawCode === 'insufficient_quota' ||
+        /exceeded your current quota/i.test(rawMessage);
+      const isRateLimit =
+        (rawStatus === 429 && !isQuota) ||
+        rawCode === 'rate_limit_exceeded' ||
+        /rate limit/i.test(rawMessage);
+
+      if (isQuota) {
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_QUOTA_EXCEEDED',
+          message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+          httpStatus: 402,
+          retryable: false,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      if (isRateLimit) {
+        const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+        sendApiError(res, buildApiError({
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: rawMessage || 'Rate limit excedido no provider de IA',
+          httpStatus: 429,
+          retryable: true,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null, retryAfter },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      sendApiError(res, buildApiError({
+        code: 'FAQ_ANSWERS_FAILED',
+        message: rawMessage || 'Erro ao gerar respostas do FAQ',
+        httpStatus: 500,
+        retryable: true,
+        details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
+  // POST /system/generate-initial-flow - RAG(ctx Redis) → FAQ → respostas → intents → FlowDefinition
+  if (method === 'POST' && pathname === '/system/generate-initial-flow') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    let pipelineExecution = null;
+    let execId = '';
+    let tenantIdForPipeline = null;
+    try {
+      const body = await parseJsonBody(req);
+      const {
+        tenantId,           // tenant que contém o contexto (ctx:{tenantId}:{executionId}) e também o tenant do provider IA
+        executionId,        // obrigatório
+        targetTenantId,     // onde persistir o flow (modo real)
+        chunks,             // opcional (dry-run inline)
+        questions,          // opcional: perguntas adicionais (ex.: step questionsGenerated do frontend)
+        dryRun,
+        persistFlow,
+      } = body || {};
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const requestedTenantId = tenantId ? String(tenantId).trim() : null;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      const tenantIdForAI = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
+      tenantIdForPipeline = tenantIdForAI;
+      if (!tenantIdForAI) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      execId = requireExecutionId({ executionId }, res, badRequest) || '';
+      if (!execId) return;
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForAI });
+
+      emitPipelineStage(pipelineWs, execId, {
+        stage: 'generate-initial-flow',
+        status: 'running',
+        message: 'Gerando fluxo inicial...',
+        meta: { dryRun: dryRun === true, persistFlow: persistFlow === true },
+      });
+
+      // Pipeline status (opção A): esta chamada dispara intents.service/OpenAI.
+      // Ela deve ser uma etapa explícita e bloquear o approved até terminar.
+      try {
+        const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+        pipelineExecution = ensureExecutionContext({ executionId: execId }, { tenantId: tenantIdForAI });
+        requireStages(pipelineExecution, ['initialFlowGenerated', 'faqGenerated']);
+        pipelineExecution.stages.initialFlowGenerated = false;
+        // Como este endpoint também gera FAQ internamente, FAQ deve estar pendente até terminar.
+        if (pipelineExecution.stages.faqGenerated !== true) pipelineExecution.stages.faqGenerated = false;
+        updateStatus(pipelineExecution, 'running', {
+          currentStage: 'initialFlowGenerated',
+          stageStatus: 'in_progress',
+          message: 'Gerando fluxo inicial (intents + respostas)...',
+          source: '/system/generate-initial-flow',
+        });
+      } catch {
+        // best-effort
+      }
+
+      const isDry = dryRun === true;
+      const wantsPersist = persistFlow === true && !isDry;
+
+      // onde salvar (apenas super-admin pode escolher)
+      const requestedTarget = targetTenantId ? String(targetTenantId).trim() : null;
+      const tenantIdTarget = (isSuperAdminUser && requestedTarget) ? requestedTarget : tenantIdForAI;
+
+      const faqService = require('./services/faq.service');
+      const businessEntitiesService = require('./services/business-entities.service');
+      const answersService = require('./services/answers.service');
+      const intentsService = require('./services/intents.service');
+      const flowAdapter = require('./services/flow.adapter');
+
+      const executionContext = {
+        executionId: execId,
+        exclusions: [],
+        excludedItemsCount: 0,
+      };
+
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      // Etapa obrigatória: Business Entity Extraction (salva em Redis: entities:{tenantId}:{executionId})
+      let extractedEntities = null;
+      try {
+        const be = await businessEntitiesService.extractBusinessEntities({
+          tenantId: tenantIdForAI,
+          executionId: execId,
+          dryRun: isDry,
+        });
+        extractedEntities = be?.entities || null;
+      } catch (beErr) {
+        logger.warn('[System] Falha ao extrair entidades de negócio (best-effort)', {
+          tenantId: tenantIdForAI,
+          executionId: execId,
+          error: beErr?.message || String(beErr),
+        });
+        extractedEntities = null;
+      }
+
+      const faq = await faqService.generateFAQ({
+        tenantId: tenantIdForAI,
+        executionId: execId,
+        chunks: safeChunks.length > 0 ? safeChunks : null,
+        dryRun: isDry,
+      });
+      // Pipeline status: FAQ interno concluído (best-effort).
+      try {
+        if (pipelineExecution) {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'faqGenerated', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'faqGenerated',
+            stageStatus: 'completed',
+            message: 'FAQ (interno) gerado.',
+            source: '/system/generate-initial-flow',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+      const normalizeQuestionKey = (q) => {
+        const s = String(q || '').replace(/\s+/g, ' ').trim();
+        if (!s) return '';
+        return s
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+      const mergeQuestions = (base, extra) => {
+        const out = [];
+        const seen = new Set();
+        const push = (q) => {
+          const s = String(q || '').replace(/\s+/g, ' ').trim();
+          if (!s) return;
+          if (s.length < 6) return;
+          const k = normalizeQuestionKey(s);
+          if (!k) return;
+          if (seen.has(k)) return;
+          seen.add(k);
+          out.push(s);
+        };
+        (Array.isArray(base) ? base : []).forEach(push);
+        (Array.isArray(extra) ? extra : []).forEach(push);
+        return out.slice(0, 200);
+      };
+
+      const faqQuestions = Array.isArray(faq.questions) ? faq.questions : [];
+      const extraQuestions = Array.isArray(questions) ? questions : [];
+      const mergedQuestions = mergeQuestions(faqQuestions, extraQuestions);
+      const ragContext = faq.ragContext || '';
+      executionContext.exclusions = Array.isArray(faq?.meta?.exclusions) ? faq.meta.exclusions : [];
+
+      // Métrica pós-FAQ (best-effort): coverage = perguntasGeradas / (services + plans + prices + schedules)
+      try {
+        const { getEphemeralContextClient } = require('../infra/redis/ephemeralContextClient');
+        const redis = getEphemeralContextClient();
+        if (redis && redis.status === 'ready') {
+          const countArr = (v) => (Array.isArray(v) ? v.length : 0);
+          const denom = countArr(extractedEntities?.services)
+            + countArr(extractedEntities?.plans)
+            + countArr(extractedEntities?.prices)
+            + countArr(extractedEntities?.schedules);
+          const qn = Array.isArray(questions) ? questions.length : 0;
+          const cov = denom > 0 ? (qn / denom) : 0;
+          const envTtl = Number(process.env.EPHEMERAL_RAG_TTL_SECONDS);
+          const ttlSeconds = Number.isFinite(envTtl) && envTtl > 0 ? envTtl : 1800;
+          const key = `rag_metrics:${tenantIdForAI}:${execId}`;
+          await redis.set(key, JSON.stringify({
+            tenantId: tenantIdForAI,
+            executionId: execId,
+            coverage: cov,
+            questionsGenerated: qn,
+            denominator: denom,
+            entityCounts: {
+              services: countArr(extractedEntities?.services),
+              plans: countArr(extractedEntities?.plans),
+              prices: countArr(extractedEntities?.prices),
+              schedules: countArr(extractedEntities?.schedules),
+            },
+            updatedAt: new Date().toISOString(),
+          }), 'EX', ttlSeconds);
+        }
+      } catch (mErr) {
+        logger.debug('[System] Falha ao salvar rag_metrics (best-effort)', {
+          tenantId: tenantIdForAI,
+          executionId: execId,
+          error: mErr?.message || String(mErr),
+        });
+      }
+
+      const answers = await answersService.generateAnswers(tenantIdForAI, mergedQuestions, ragContext, executionContext);
+      const intents = await intentsService.buildIntents(tenantIdForAI, mergedQuestions, answers, executionContext);
+
+      const initialFlow = flowAdapter.buildInitialFlowFromIntents(intents, {
+        tenantId: tenantIdTarget,
+        flowId: `initial-${tenantIdTarget}-${execId}`.slice(0, 180),
+        name: 'Fluxo inicial (auto)',
+      });
+
+      // Anexa métrica final no flow para rastreio (best-effort)
+      try {
+        if (initialFlow && typeof initialFlow === 'object') {
+          initialFlow.metadata = {
+            ...(initialFlow.metadata || {}),
+            excludedItemsCount: Number(executionContext.excludedItemsCount) || 0,
+          };
+        }
+      } catch {
+        // noop
+      }
+
+      if (wantsPersist) {
+        try {
+          const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+          validateGeneratedPlanOrThrow(initialFlow, 'chatbot');
+          flows.set(initialFlow.id, initialFlow);
+          persistFlowBestEffort(initialFlow);
+
+          // Rastreabilidade: registra no tenant recém-criado o executionId/flowId gerados
+          try {
+            const tenantService = require('./services/tenantService');
+            await tenantService.updateTenant(tenantIdTarget, {
+              settings: {
+                initialFlowExecutionId: execId,
+                initialFlowId: initialFlow.id,
+                initialFlowGeneratedAt: new Date().toISOString(),
+              },
+            });
+          } catch (tenantUpdateErr) {
+            logger.warn('[System] Falha ao registrar rastreabilidade do fluxo no tenant (best-effort)', {
+              tenantIdTarget,
+              flowId: initialFlow?.id,
+              error: tenantUpdateErr?.message || String(tenantUpdateErr),
+            });
+          }
+        } catch (persistErr) {
+          logger.warn('[System] Falha ao persistir fluxo inicial (best-effort)', {
+            flowId: initialFlow?.id,
+            error: persistErr?.message || String(persistErr),
+          });
+        }
+      }
+
+      // Pipeline status: conclui etapa do fluxo inicial e tenta aprovar (best-effort).
+      try {
+        if (pipelineExecution) {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'initialFlowGenerated', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'initialFlowGenerated',
+            stageStatus: 'completed',
+            message: 'Fluxo inicial gerado.',
+            source: '/system/generate-initial-flow',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+
+      emitPipelineStage(pipelineWs, execId, {
+        stage: 'generate-initial-flow',
+        status: 'success',
+        message: 'Fluxo inicial gerado.',
+        meta: { persisted: wantsPersist, tenantId: tenantIdTarget },
+      });
+
+      sendJson(res, 200, {
+        ok: true,
+        data: { initialFlow, intents, questions: mergedQuestions, answers, entities: extractedEntities, excludedItemsCount: Number(executionContext.excludedItemsCount) || 0 },
+        initialFlow,
+        intents,
+        questions: mergedQuestions,
+        answers,
+        entities: extractedEntities,
+        executionId: execId,
+        persisted: wantsPersist,
+        excludedItemsCount: Number(executionContext.excludedItemsCount) || 0,
+      });
+    } catch (err) {
+      logger.error('[System] Erro ao gerar fluxo inicial:', err);
+      // Qualquer falha encerra o pipeline automaticamente (sem best-effort).
+      try {
+        if (pipelineExecution) {
+          const { updateStatus } = require('./services/pipelineExecutionContext');
+          updateStatus(pipelineExecution, 'failed', {
+            currentStage: 'initialFlowGenerated',
+            stageStatus: 'error',
+            reason: { code: 'INITIAL_FLOW_FAILED' },
+            message: (String(err?.message || err) || 'Falha ao gerar fluxo inicial').slice(0, 300),
+            source: '/system/generate-initial-flow',
+          });
+        } else if (execId && tenantIdForPipeline) {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          const ex = ensureExecutionContext({ executionId: execId }, { tenantId: tenantIdForPipeline });
+          requireStages(ex, ['initialFlowGenerated']);
+          updateStatus(ex, 'failed', {
+            currentStage: 'initialFlowGenerated',
+            stageStatus: 'error',
+            reason: { code: 'INITIAL_FLOW_FAILED' },
+            message: (String(err?.message || err) || 'Falha ao gerar fluxo inicial').slice(0, 300),
+            source: '/system/generate-initial-flow',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+      try {
+        if (execId && tenantIdForPipeline) {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          emitPipelineStage(createPipelineWs({ tenantId: tenantIdForPipeline }), execId, {
+            stage: 'generate-initial-flow',
+            status: 'error',
+            message: (String(err?.message || err) || 'Falha ao gerar fluxo inicial').slice(0, 300),
+            meta: { code: 'INITIAL_FLOW_FAILED' },
+          });
+        }
+      } catch (_) {}
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+      } else {
+        const rawMessage = String(err?.message || '');
+        const rawCode = String(err?.code || err?.error?.code || '');
+        const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+        if (isQuota) {
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage || 'Rate limit excedido no provider de IA',
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: req.agent?.tenantId || null, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        sendApiError(res, buildApiError({
+          code: 'INITIAL_FLOW_FAILED',
+          message: err.message || 'Erro ao gerar fluxo inicial',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
+      }
+    }
+    return;
+  }
+
+  // POST /system/generate-initial-graph - Gera grafo inicial (Rete) baseado em FAQ + intents + respostas
+  if (method === 'POST' && pathname === '/system/generate-initial-graph') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const {
+        name,
+        description,
+        tenantId,
+        targetTenantId,
+        urls,
+        fileNames,
+        executionId,
+        contextMode,
+        chunks,
+        rules,
+        dryRun,
+      } = body || {};
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      if (!agentTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId do agente é obrigatório' });
+        return;
+      }
+
+      // tenantIdForAI: sempre o tenant do agente (provider configurado)
+      // tenantIdTarget: onde persistir (super-admin pode escolher)
+      const requestedTarget = (targetTenantId || tenantId) ? String(targetTenantId || tenantId).trim() : null;
+      const tenantIdTargetFinal = (isSuperAdminUser && requestedTarget) ? requestedTarget : agentTenantId;
+
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10)
+        : [];
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      logger.info('[System] Gerando grafo inicial (Rete)', {
+        tenantIdForAI: agentTenantId,
+        tenantIdTarget: tenantIdTargetFinal,
+        dryRun: dryRun === true,
+        hasExecutionId: !!(executionId && String(executionId).trim()),
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        urls: safeUrls.length,
+        fileNames: safeFiles.length,
+        inlineChunks: safeChunks.length,
+      });
+
+      const { generateInitialGraph } = require('./services/initialGraphService');
+      const result = await generateInitialGraph({
+        tenantIdForAI: agentTenantId,
+        tenantIdTarget: tenantIdTargetFinal,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        description: (description && String(description).trim()) ? String(description).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        chunks: safeChunks,
+        executionId: (executionId && String(executionId).trim()) ? String(executionId).trim() : null,
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        rules: (rules && typeof rules === 'object') ? rules : null,
+        dryRun: dryRun === true,
+      });
+
+      sendJson(res, 200, { ok: true, data: result, ...result });
+    } catch (err) {
+      logger.error('[System] Erro ao gerar grafo inicial (Rete):', err);
       if (err instanceof SyntaxError) {
         sendApiError(res, buildApiError({
           code: 'BAD_REQUEST',
@@ -2178,11 +3807,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }), setCorsHeaders);
       } else {
         sendApiError(res, buildApiError({
-          code: 'DESCRIPTION_FAILED',
-          message: err.message || 'Erro ao sugerir descrição por IA',
+          code: 'INITIAL_GRAPH_FAILED',
+          message: err.message || 'Erro ao gerar grafo inicial',
           httpStatus: 500,
           retryable: true,
-          details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+          details: { tenantId: req.agent?.tenantId || null },
           req,
         }), setCorsHeaders);
       }
@@ -2206,10 +3835,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       badRequest(res, 'Content-Type deve ser application/json');
       return;
     }
+    let executionIdForWs = null;
+    let pipelineWsForStage = null;
     try {
       const body = await parseJsonBody(req);
       const tenantIdFromBody = body?.tenantId ? String(body.tenantId).trim() : null;
-      const executionId = body?.executionId ? String(body.executionId).trim() : null;
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) return;
+      executionIdForWs = executionId;
       const chunks = Array.isArray(body?.chunks) ? body.chunks : [];
       const ttlSeconds = body?.ttlSeconds;
       const replace = body?.replace === true;
@@ -2225,10 +3859,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      if (!executionId) {
-        badRequest(res, 'executionId é obrigatório');
-        return;
-      }
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdFinal });
+      pipelineWsForStage = pipelineWs;
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'rag-ephemeral-context',
+        status: 'running',
+        message: 'Armazenando contexto efêmero (dry-run)...',
+        meta: { chunks: Array.isArray(chunks) ? chunks.length : 0, replace: !!replace },
+      });
 
       const { upsertEphemeralContext } = require('./services/ephemeralRagContextService');
       const result = await upsertEphemeralContext({
@@ -2239,9 +3880,68 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         replace,
       });
 
+      // ---------------------------------------------------------------
+      // Pipeline WS como fonte de verdade:
+      // No modo dry-run do tenant, o "processamento de arquivos" acontece no frontend
+      // (extração local) e NÃO cria documentos/indexação no RAG.
+      //
+      // Isso gerava um gap: o usuário via toast "arquivo processado", mas o pipeline WS
+      // mantinha `filesInferred=false` porque o backend nunca era informado.
+      //
+      // Quando o frontend chega aqui, significa que terminou de preparar o contexto
+      // (arquivos extraídos + possivelmente scraping) para a execução.
+      // Então marcamos `filesInferred` como concluído via WS para evitar pipeline "travado".
+      // ---------------------------------------------------------------
+      try {
+        const {
+          ensureExecutionContext,
+          updateStatus,
+          updateStage,
+        } = require('./services/pipelineExecutionContext');
+
+        const execution = ensureExecutionContext({ executionId }, { tenantId: tenantIdFinal });
+
+        // Não forçamos "in_progress" aqui porque o processamento aconteceu no cliente.
+        // Apenas registramos conclusão para o pipeline visível.
+        updateStatus(execution, execution.status || 'running', {
+          stage: 'filesInferred',
+          stageStatus: 'completed',
+          message: 'Arquivos processados (dry-run: não indexados no RAG).',
+          source: '/rag/ephemeral/context',
+          timestamp: new Date().toISOString(),
+        });
+        updateStage(execution, 'filesInferred', true);
+      } catch (e) {
+        logger.debug('[EphemeralContext] Falha ao marcar filesInferred via pipeline (best-effort)', {
+          executionId,
+          tenantId: tenantIdFinal,
+          error: e?.message || String(e),
+        });
+      }
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'rag-ephemeral-context',
+        status: 'success',
+        message: 'Contexto efêmero armazenado.',
+        meta: { chunks: Array.isArray(chunks) ? chunks.length : 0 },
+      });
+
       sendJson(res, 200, { ok: true, ...result });
     } catch (err) {
       logger.error('[EphemeralContext] Erro ao armazenar contexto efêmero', err);
+      try {
+        const { emitPipelineStage } = require('./ws/emitPipelineStage');
+        if (pipelineWsForStage && executionIdForWs) {
+          emitPipelineStage(pipelineWsForStage, executionIdForWs, {
+            stage: 'rag-ephemeral-context',
+            status: 'error',
+            message: err?.message || 'Erro ao armazenar contexto efêmero',
+            meta: { code: 'EPHEMERAL_CONTEXT_FAILED' },
+          });
+        }
+      } catch (_) {
+        // best-effort
+      }
       sendApiError(res, buildApiError({
         code: 'EPHEMERAL_CONTEXT_FAILED',
         message: err.message || 'Erro ao armazenar contexto efêmero',
@@ -3209,8 +4909,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     // Apenas owner ou admin podem iniciar onboarding
-    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem iniciar onboarding' });
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin' && req.agent.role !== 'super_admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner, admin ou super_admin podem iniciar onboarding' });
       return;
     }
 
@@ -3839,7 +5539,29 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // IMPORTANTE: Verificar se não é um endpoint especial (validate, simulate) antes de processar
   if (method === 'GET' && pathname.startsWith('/flows/') && pathname !== '/flows/validate' && pathname !== '/flows/simulate') {
     const id = decodeURIComponent(pathname.slice('/flows/'.length));
-    const flow = flows.get(id);
+    let flow = flows.get(id);
+    // Fallback DB: se não estiver no cache em memória, tenta buscar no PostgreSQL.
+    if (!flow) {
+      try {
+        const { getSequelize } = require('./db/sequelize');
+        const sequelize = getSequelize();
+        if (sequelize) {
+          const { Flow } = require('./db/models');
+          const FlowModel = Flow();
+          const row = await FlowModel.findByPk(id);
+          if (row) {
+            const data = row.data && typeof row.data === 'object' ? row.data : {};
+            const flowObj = { ...data, id: row.id };
+            if (row.tenant_key && !flowObj.tenantId) flowObj.tenantId = row.tenant_key;
+            if (row.name && !flowObj.name) flowObj.name = row.name;
+            flows.set(row.id, flowObj);
+            flow = flowObj;
+          }
+        }
+      } catch (e) {
+        // best-effort: se falhar, mantém comportamento anterior (404)
+      }
+    }
     if (!flow) {
       sendJson(res, 404, { error: 'flow_not_found' });
       return;
@@ -4407,6 +6129,188 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // Geração de fluxo a partir de descrição
   // -----------------------------------------------------------------------
 
+  // POST /flows/generate/prompt-preview
+  // Preview do prompt FINAL que seria enviado ao provedor (incluindo RAG),
+  // SEM executar a chamada ao provedor.
+  //
+  // Segurança:
+  // - Restrito a Super Admin (prompt pode conter conteúdo sensível via RAG/scraping).
+  // - Super Admin deve selecionar tenant via header X-Tenant-Id (requireTenant).
+  if (method === 'POST' && pathname === '/flows/generate/prompt-preview') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode pré-visualizar prompts completos' });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body || typeof body !== 'object') {
+        badRequest(res, 'Body deve ser um objeto válido');
+        return;
+      }
+      const description = typeof body.description === 'string' ? body.description.trim() : '';
+      if (!description) {
+        badRequest(res, 'Campo "description" é obrigatório');
+        return;
+      }
+
+      // Monta descrição enriquecida (best-effort) para ficar próxima do que /flows/generate usará.
+      let descriptionForPrompt = description;
+
+      // FAQ/perguntas (se habilitado)
+      try {
+        const includeQuestions = body.includeQuestions === true;
+        const questions = includeQuestions && Array.isArray(body.questions) ? body.questions : [];
+        const normalized = questions
+          .filter((q) => typeof q === 'string')
+          .map((q) => q.trim())
+          .filter(Boolean)
+          .map((q) => (q.length > 220 ? q.slice(0, 220) : q))
+          .slice(0, 50);
+
+        if (includeQuestions && normalized.length > 0) {
+          const lines = normalized.map((q) => `- ${q}`);
+          const faqBlock = [
+            '## Perguntas (FAQ) que o bot deve saber responder',
+            ...lines,
+            '',
+            'Requisitos obrigatórios:',
+            '- O fluxo deve permitir que o usuário faça qualquer uma das perguntas acima.',
+            '- Use um nó do tipo "ai" para responder, e habilite RAG quando disponível.',
+            '- Se a resposta não estiver clara no conhecimento, peça esclarecimentos (não invente).',
+            '',
+          ].join('\n');
+          descriptionForPrompt = `${descriptionForPrompt}\n\n${faqBlock}`.trim();
+        }
+      } catch (_) {
+        // best-effort
+      }
+
+      // Web Scraping (best-effort): adiciona contexto na própria descrição (sem indexar)
+      try {
+        const useWebScraping = body.useWebScraping === true;
+        const targets = useWebScraping && Array.isArray(body.scrapingTargets) ? body.scrapingTargets : [];
+        const urls = targets
+          .filter((u) => typeof u === 'string')
+          .map((u) => u.trim())
+          .filter(Boolean)
+          .slice(0, 5);
+
+        if (useWebScraping && urls.length > 0) {
+          const webScrapingService = require('./services/webScrapingService');
+          const scrapingResults = [];
+          for (const url of urls) {
+            // eslint-disable-next-line no-await-in-loop
+            const scrapeResult = await webScrapingService.scrapeUrl(url, {
+              tenantId,
+              autoIndex: false,
+            });
+            if (scrapeResult && scrapeResult.success && scrapeResult.content) {
+              scrapingResults.push(`\n### ${scrapeResult.title || url}:\n${String(scrapeResult.content || '').substring(0, 1000)}...\n`);
+            }
+          }
+          if (scrapingResults.length > 0) {
+            const scrapingBlock = `\n## Fontes Externas (Scraping):\n${scrapingResults.join('\n')}\n`;
+            descriptionForPrompt = `${descriptionForPrompt}\n\n${scrapingBlock}`.trim();
+          }
+        }
+      } catch (scrapeErr) {
+        // best-effort: não falha preview por scraping
+        logger.debug('[POST /flows/generate/prompt-preview] Falha no scraping (best-effort)', {
+          error: scrapeErr?.message || String(scrapeErr),
+        });
+      }
+
+      // RAG: se useRag=true, tenta montar ragContext (sem pipeline), para evitar dupla consulta
+      let ragContext = null;
+      try {
+        if (body.useRag === true) {
+          const desiredSources = Array.isArray(body.ragSources) ? body.ragSources : [];
+          const query = `${body.name ? `${String(body.name)}\n` : ''}${description}`.slice(0, 1800);
+          const { buildDiverseRagContext } = require('./services/ragContextBuilder');
+          const diverse = await buildDiverseRagContext({
+            query,
+            tenantId,
+            totalK: 12,
+            minUploaded: 0,
+            minWeb: 0,
+            minScore: 0.12,
+            maxTokens: 4500,
+            // Observação: desiredSources é mantido no payload (para auditoria), mas o builder atual não filtra por ele.
+          });
+
+          const contextSources = Array.isArray(diverse?.contextSources) ? diverse.contextSources : [];
+          const chunks = contextSources.slice(0, 18).map((s) => ({
+            sourceFile: s?.sourceId || s?.sourceType || 'unknown',
+            content: String(s?.text || s?.excerpt || '').slice(0, 2400),
+          }));
+          const bySourceId = new Map();
+          for (const s of contextSources) {
+            const id = s?.sourceId || s?.sourceType || 'unknown';
+            bySourceId.set(id, (bySourceId.get(id) || 0) + 1);
+          }
+          const sources = Array.from(bySourceId.entries()).slice(0, 40).map(([documentId, chunksCount]) => ({
+            documentId,
+            chunksCount,
+          }));
+
+          ragContext = {
+            enabled: true,
+            executionId: null,
+            chunks,
+            sources,
+            // Mantém referência das fontes solicitadas (best-effort)
+            requestedSources: desiredSources,
+          };
+        }
+      } catch (ragErr) {
+        logger.debug('[POST /flows/generate/prompt-preview] Falha ao montar ragContext (best-effort)', {
+          error: ragErr?.message || String(ragErr),
+        });
+        ragContext = null;
+      }
+
+      const { buildChatbotFinalPrompt } = require('./services/aiWrappersAdapter');
+      const preview = await buildChatbotFinalPrompt(descriptionForPrompt, {
+        tenantId,
+        useRag: body.useRag === true,
+        ragSources: Array.isArray(body.ragSources) ? body.ragSources : [],
+        ragContext: ragContext && ragContext.enabled ? ragContext : undefined,
+        name: body.name || body.flowName || null,
+      });
+
+      sendJson(res, 200, {
+        success: true,
+        tenantId,
+        objective: preview.objective,
+        promptSummary: preview.promptSummary,
+        ragMeta: preview.ragMeta,
+        finalPrompt: preview.finalPrompt,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao gerar prompt-preview:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar prompt-preview' });
+      }
+    }
+    return;
+  }
+
   // POST /flows/generate
   if (method === 'POST' && pathname === '/flows/generate') {
     // Valida Content-Type para requisições com body
@@ -4416,6 +6320,19 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      // Cancelamento real: se o cliente abortar/fechar a conexão, interrompe a orquestração
+      const abortController = new AbortController();
+      const signal = abortController.signal;
+      const onClientGone = (reason) => {
+        try {
+          if (!signal.aborted) abortController.abort(reason);
+        } catch (_) {}
+      };
+      req.on('aborted', () => onClientGone(new Error('client_aborted')));
+      res.on('close', () => {
+        if (!res.writableEnded) onClientGone(new Error('response_closed'));
+      });
+
       const body = await parseJsonBody(req);
       if (!body || typeof body !== 'object') {
         badRequest(res, 'Body deve ser um objeto válido');
@@ -4444,11 +6361,33 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const result = await orchestrateGeneration(body, {
         tenantId: finalTenantId,
         autoResolveDependencies: body.autoResolveDependencies || false,
+        signal,
       });
 
       if (!result.success) {
         badRequest(res, result.error || 'Erro na orquestração de geração');
         return;
+      }
+
+      // ✅ Compatibilidade/UX: expõe warnings de validação em top-level (não bloqueante),
+      // no mesmo formato que o POST /flows já usa, para o frontend conseguir exibir facilmente.
+      // Observação: a validação completa já está em result.validation.flow.
+      try {
+        const flowValidation = result?.validation?.flow || null;
+        if (flowValidation && flowValidation.valid === false && Array.isArray(flowValidation.errors)) {
+          result.validationWarnings = {
+            valid: false,
+            errors: flowValidation.errors, // já inclui messageUi
+            codes: flowValidation.errors.map((e) => e && e.code).filter(Boolean),
+          };
+        } else {
+          result.validationWarnings = { valid: true, errors: [], codes: [] };
+        }
+      } catch (warnErr) {
+        // best-effort: nunca falhar o endpoint por causa de warnings
+        logger.debug('[POST /flows/generate] Falha ao montar validationWarnings (best-effort)', {
+          error: warnErr?.message || String(warnErr),
+        });
       }
 
       // Registra para auditoria
@@ -4466,6 +6405,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err && typeof err === 'object' && typeof err.code === 'string' && err.code.startsWith('FLOW_')) {
+        sendJson(res, 400, { error: err.code, code: err.code, message: err.message });
+      } else if (err && (err.name === 'AbortError' || err.message === 'client_aborted' || err.message === 'client_closed' || err.message === 'response_closed')) {
+        // Cliente já foi embora: não tenta responder (evita ruído e trabalho extra)
+        logger.info('[POST /flows/generate] Requisição abortada pelo cliente', {
+          name: err.name,
+          message: err.message,
+        });
+        return;
       } else {
         logger.error('Erro ao gerar fluxo:', err);
         sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar fluxo' });
@@ -4641,22 +6589,137 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const userId = req.agent?.id || req.agent?.username || finalTenantId;
       const agentId = req.agent?.id;
 
-      // Callback para enviar atualizações de progresso via WebSocket
-      const { emitEvent } = require('./services/websocketService');
-      const onProgress = (progress) => {
-        if (agentId) {
-          emitEvent('generation.progress', progress, { agentId });
-        } else if (finalTenantId) {
-          emitEvent('generation.progress', progress, { tenantId: finalTenantId });
+      // Pipeline visível: única fonte de verdade é o backend via `pipeline.status`
+      // emitido pelo `pipelineExecutionContext` (updateStage/updateStatus).
+      const {
+        ensureExecutionContext,
+        requireStages,
+        updateStage,
+        updateStatus,
+      } = require('./services/pipelineExecutionContext');
+      const { failGeneration } = require('./services/failGeneration');
+      const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+
+      const executionIdHint =
+        (typeof body?.executionId === 'string' && body.executionId.trim()) ? body.executionId.trim() : null;
+
+      const execution = ensureExecutionContext(
+        { ...(body || {}), executionId: executionIdHint || body?.executionId },
+        { tenantId: finalTenantId, userId, agent: req.agent }
+      );
+
+      // Etapas pré-pipeline que agora também vêm do backend (sem updates locais no frontend).
+      requireStages(execution, ['providerValidated', 'ragValidated']);
+
+      // Se o fluxo for tenantPipeline, também exigimos as etapas “UI-level” quando aplicável.
+      if (body?.tenantPipeline === true) {
+        const wantsWebScraping =
+          body?.useWebScraping === true &&
+          Array.isArray(body?.scrapingTargets) &&
+          body.scrapingTargets.some((u) => typeof u === 'string' && u.trim().startsWith('http'));
+        if (wantsWebScraping) requireStages(execution, ['webScraping']);
+
+        const wantsQuestions = body?.includeQuestions === true;
+        if (wantsQuestions) requireStages(execution, ['questionsGenerated']);
+
+        // Em dry-run, a UI sempre exibe "Sugerir descrição" (mesmo quando o usuário preencheu).
+        if ((body?.executionMode || 'dry-run') === 'dry-run') requireStages(execution, ['descriptionSuggested']);
+      }
+
+      // Best-effort: se alguns passos não forem aplicáveis, marcamos como concluídos aqui
+      // para evitar cards “pendentes” quando o frontend não executou a etapa.
+      try {
+        const hasDescription = typeof body?.description === 'string' && body.description.trim().length > 0;
+        if (hasDescription) updateStage(execution, 'descriptionSuggested', true);
+
+        const includeQuestions = body?.includeQuestions === true;
+        const hasQuestions = Array.isArray(body?.questions) && body.questions.length > 0;
+        if (!includeQuestions || hasQuestions) updateStage(execution, 'questionsGenerated', true);
+
+        const wantsWebScraping = body?.useWebScraping === true;
+        const hasUrls = Array.isArray(body?.scrapingTargets) && body.scrapingTargets.length > 0;
+        const isDryRun = (body?.executionMode || 'dry-run') === 'dry-run';
+        if (!wantsWebScraping || !hasUrls || isDryRun) updateStage(execution, 'webScraping', true);
+      } catch (_) {
+        // best-effort
+      }
+
+      updateStatus(execution, 'running', {
+        message: 'Iniciando geração e validação...',
+        source: '/system/generate-and-validate',
+      });
+
+      // Validação determinística inicial (antes de iniciar o pipeline):
+      // providerValidated -> ragValidated
+      try {
+        const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
+        const { getAiProviderForTenant } = require('../engine/aiProviderManager');
+        await ensureTenantAiConfigLoaded(finalTenantId);
+        const provider = getAiProviderForTenant(finalTenantId);
+        if (!provider) {
+          throw new Error(`Nenhum provider de IA configurado para tenant: ${finalTenantId}`);
         }
-      };
+        updateStage(execution, 'providerValidated', true);
+      } catch (err) {
+        const msg = err?.message || 'Falha ao validar provider de IA';
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.INVALID_PROVIDER,
+            error: new Error(msg),
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate' },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_NOT_AVAILABLE',
+          message: msg,
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: finalTenantId, executionId: executionIdHint },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      try {
+        const useRag = body?.useRag !== false;
+        if (useRag) {
+          const { isRagAvailable } = require('./services/ragService');
+          const ok = await isRagAvailable(finalTenantId);
+          if (!ok) throw new Error('Serviço RAG não disponível');
+        }
+        updateStage(execution, 'ragValidated', true);
+      } catch (err) {
+        const msg = err?.message || 'Falha ao validar serviço RAG';
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.RAG_UNAVAILABLE,
+            error: new Error(msg),
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate' },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+        sendApiError(res, buildApiError({
+          code: 'RAG_NOT_AVAILABLE',
+          message: msg,
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: finalTenantId, executionId: executionIdHint },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
 
       // Usa orquestrador único generate-and-validate
       const result = await generateAndValidate(body, {
         tenantId: finalTenantId,
         userId,
         agent: req.agent, // Passa agente para verificação de super-admin
-      }, onProgress);
+      }, null);
 
       // Trata erro de rate limit no resultado
       if (result.rateLimitExceeded) {
@@ -4673,9 +6736,48 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (result && result.success === false) {
         const errorsText = Array.isArray(result.errors) ? result.errors.join(' | ') : '';
         const providerNotAvailable = /api key não configurada|openai não configurado|não configurad/i.test(errorsText);
+        const isAbstained = result.abstained === true || result.abstentionReason;
+        const isTenantPipeline = body?.tenantPipeline === true;
+
+        // SAFE-MODE (tenantPipeline): não retorna 409 para falhas não-críticas.
+        // Converte erros em warnings e permite revisão humana com sucesso parcial (207).
+        if (isTenantPipeline && !providerNotAvailable && !isAbstained) {
+          const existingWarnings = Array.isArray(result.warnings) ? result.warnings : [];
+          const existingErrors = Array.isArray(result.errors) ? result.errors : [];
+          const nonBlockingWarnings = existingErrors.map((msg) => ({
+            type: 'TENANT_PIPELINE_NON_BLOCKING_ERROR',
+            message: String(msg || 'Falha não especificada'),
+            rule: 'TENANT_SAFE_MODE',
+          }));
+
+          sendJson(res, 207, {
+            ...result,
+            success: true,
+            errors: [],
+            warnings: [...existingWarnings, ...nonBlockingWarnings],
+            motivo: result.motivo || 'Concluído com avisos (tenant safe-mode)',
+            tenantSafeMode: true,
+          });
+          return;
+        }
+
         const httpStatus = providerNotAvailable ? 424 : 409;
-        const code = providerNotAvailable ? 'PROVIDER_NOT_AVAILABLE' : 'PIPELINE_ABORTED';
-        const message = result.motivo || (providerNotAvailable ? 'Provider de IA não disponível' : 'Pipeline abortado');
+        const code = providerNotAvailable
+          ? 'PROVIDER_NOT_AVAILABLE'
+          : (isAbstained ? 'PIPELINE_ABSTAINED' : 'PIPELINE_ABORTED');
+        const message = result.motivo || (providerNotAvailable ? 'Provider de IA não disponível' : (isAbstained ? 'Pipeline absteve' : 'Pipeline abortado'));
+
+        // Falha terminal centralizada
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.UNKNOWN,
+            error: new Error(message),
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate', code },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
 
         sendApiError(res, buildApiError({
           code,
@@ -4687,13 +6789,33 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
             executionId: result.executionId,
             errors: Array.isArray(result.errors) ? result.errors : [],
             warnings: Array.isArray(result.warnings) ? result.warnings : [],
+            abstained: isAbstained,
+            abstentionReason: result.abstentionReason || null,
+            evidenceContext: result.evidenceContext || null,
+            // Diagnóstico adicional (especialmente útil quando RPA falha)
+            reportLink: result.reportLink || null,
+            replayLink: result.replayLink || null,
+            rpaFailedStep: result.rpaFailedStep || null,
+            rpa: {
+              generated: !!result.rpaGenerated,
+              executed: !!result.rpaExecuted,
+              passed: result.rpaPassed === true,
+            },
+            rpaTestId: result.rpaTest?.id || null,
           },
           req,
         }), setCorsHeaders);
         return;
       }
 
-      sendJson(res, 200, result);
+      // SAFE-MODE (tenantPipeline): permite sucesso parcial com 207 para facilitar UX
+      // (ex.: RPA falhou, ou gate gerou warnings), mantendo revisão humana obrigatória.
+      const isTenantPipeline = body?.tenantPipeline === true;
+      const hasWarnings = Array.isArray(result?.warnings) && result.warnings.length > 0;
+      const isPartial =
+        isTenantPipeline && (hasWarnings || result?.rpaPassed === false);
+
+      sendJson(res, isPartial ? 207 : 200, result);
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
@@ -4710,6 +6832,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         });
       } else {
         logger.error('Erro em generate-and-validate:', err);
+        try {
+          const { failGeneration } = require('./services/failGeneration');
+          const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+          await failGeneration({
+            executionId: executionIdHint,
+            reason: GenerationFailureReasons.UNKNOWN,
+            error: err,
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate' },
+            agentId: agentId || null,
+            tenantId: finalTenantId,
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
         sendApiError(res, buildApiError({
           code: 'INTERNAL_ERROR',
           message: err.message || 'Erro interno em generate-and-validate',
@@ -7222,7 +9358,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // API Interna de Geração por IA (Wrappers)
   // -----------------------------------------------------------------------
 
-  // POST /ai/chatbot/generate - Gera fluxo de chatbot via wrapper oficial
+  // POST /ai/chatbot/generate - Alias do orquestrador (formato alinhado com /flows/generate)
   if (method === 'POST' && pathname === '/ai/chatbot/generate') {
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -7242,210 +9378,51 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const { userInput, options = {} } = body || {};
 
       if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
-        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
-          ? String(req.headers['x-request-id']).trim()
-          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
-        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('chatbot_flow', {}, {
-          valid: false,
-          errors: [{ type: 'INVALID_INPUT', message: 'Campo \"userInput\" é obrigatório e deve ser uma string não vazia' }],
-          warnings: [],
-          qualityScore: 0,
-          riskFlags: ['INVALID_INPUT'],
-        }, {
-          provider: { name: null, model: null, temperature: null },
-          input: { prompt_summary: 'chatbot.generator.prompt.md', user_goal: null, context: { tenantId, options } },
-          audit: { request_id: requestId, seed: null, tenant_id: tenantId, user_id: req.agent?.id || req.agent?.username || null },
-        }));
-        sendJson(res, 400, { envelope, error: { code: 'INVALID_INPUT', message: 'Campo "userInput" é obrigatório e deve ser uma string não vazia' } });
+        badRequest(res, 'Campo "userInput" é obrigatório e deve ser uma string não vazia');
         return;
       }
 
-      logger.info('[API] Geração de chatbot via wrapper', {
-        inputLength: userInput.length,
+      const payload = {
+        name: options.flowName || options.name || 'Fluxo Gerado',
+        description: userInput,
         tenantId,
-      });
-
-      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
-        ? String(req.headers['x-request-id']).trim()
-        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-      const aiMeta = {
-        provider: { name: null, model: null, temperature: null },
-        input: {
-          prompt_summary: 'chatbot.generator.prompt.md',
-          user_goal: userInput,
-          context: { tenantId, options },
-        },
-        audit: {
-          request_id: requestId,
-          seed: null,
-          tenant_id: tenantId,
-          user_id: req.agent?.id || req.agent?.username || null,
-        },
-        rawModelOutput: null,
+        useRag: options.useRag === true,
+        ragSources: Array.isArray(options.ragSources) ? options.ragSources : [],
+        useWebScraping: options.useWebScraping === true,
+        scrapingTargets: Array.isArray(options.scrapingTargets) ? options.scrapingTargets : [],
+        includeQuestions: options.includeQuestions === true,
+        questions: Array.isArray(options.questions) ? options.questions : [],
+        generateRpaTest: options.generateRpaTest === true,
+        rpaMode: options.rpaMode,
       };
 
-      // Chama wrapper oficial
-      const wrapperResult = await generateChatbotFlow(userInput, { ...options, tenantId, _aiMeta: aiMeta });
+      const result = await orchestrateGeneration(payload, { tenantId });
 
-      // Envelope é obrigatório (fallback defensivo)
-      const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
-      const envelope = (() => {
-        try {
-          if (wrapperResult && wrapperResult.envelope) return validateAiEnvelopeOrThrow(wrapperResult.envelope);
-        } catch (_) {}
-        // fallback: envelope mínimo com erro
-        return validateAiEnvelopeOrThrow(buildAiEnvelope(
-          'chatbot_flow',
-          wrapperResult?.flow || {},
-          wrapperResult?.validation || { valid: false, errors: [{ type: 'ENVELOPE_MISSING', message: 'Envelope ausente' }], warnings: [], qualityScore: 0, riskFlags: ['ENVELOPE_MISSING'] },
-          aiMeta,
-        ));
-      })();
-
-      // Converte para formato IaGenerationResult
-      const iaResult = {
-        success: wrapperResult.success,
-        domain: 'chatbot',
-        meta: {
-          prompt: 'chatbot.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        }
-      };
-
-      if (wrapperResult.success) {
-        iaResult.data = {
-          flow: wrapperResult.flow,
-          validation: wrapperResult.validation,
-          envelope,
-          promptVersion: wrapperResult.promptVersion
-        };
-
-        // Auditoria + telemetria (success)
-        try {
-          const { logSuccess } = require('../engine/ai/aiTelemetry');
-          logSuccess({
-            domain: 'chatbot_flow',
-            requestId,
-            promptUsed: iaResult.meta.prompt,
-            qualityScore: envelope?.validation?.qualityScore ?? null,
-            riskFlags: envelope?.validation?.riskFlags || [],
-          });
-        } catch (_) {}
-
-        // Auditoria (DB) best-effort
-        try {
-          const auditGenerationId = await registerGeneration({
-            tenantId,
-            payload: { userInput },
-            context: { sources: [] },
-            artifacts: { flowId: wrapperResult.flow?.id || null },
-            contract: { version: '1.0.0', hash: null },
-            envelope,
-          });
-          iaResult.meta.auditGenerationId = auditGenerationId;
-        } catch (_) {
-          // best-effort
-        }
-
-        // Persistência/auditoria best-effort
-        try {
-          const { appendGeneration } = require('../qa/aiGenerationStore');
-          const auditId = appendGeneration({
-            envelope,
-            valid: true,
-            domain: 'chatbot_flow',
-            requestId,
-          });
-          iaResult.meta.auditId = auditId;
-        } catch (e) {
-          // best-effort
-        }
-      } else {
-        iaResult.errors = wrapperResult.error ? [{
-          code: wrapperResult.error.type || 'GENERATION_ERROR',
-          message: wrapperResult.error.message || 'Erro na geração',
-          source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
-        }] : [];
-
-        // Auditoria + telemetria (failure)
-        try {
-          const { logFailure } = require('../engine/ai/aiTelemetry');
-          logFailure({
-            domain: 'chatbot_flow',
-            requestId,
-            promptUsed: iaResult.meta.prompt,
-            stage: wrapperResult.error?.type || 'unknown',
-            errors: wrapperResult.validation?.errors || wrapperResult.error?.errors || iaResult.errors || [],
-          });
-        } catch (_) {}
-
-        // Auditoria (DB) best-effort
-        try {
-          const auditGenerationId = await registerGeneration({
-            tenantId,
-            payload: { userInput },
-            context: { sources: [] },
-            artifacts: { flowId: wrapperResult.flow?.id || null },
-            contract: { version: '1.0.0', hash: null },
-            envelope,
-            error: wrapperResult.error || null,
-          });
-          iaResult.meta.auditGenerationId = auditGenerationId;
-        } catch (_) {
-          // best-effort
-        }
-
-        // Persistência/auditoria best-effort (falha)
-        try {
-          const { appendGeneration } = require('../qa/aiGenerationStore');
-          const auditId = appendGeneration({
-            envelope,
-            valid: false,
-            domain: 'chatbot_flow',
-            requestId,
-          });
-          iaResult.meta.auditId = auditId;
-        } catch (e) {
-          // best-effort
-        }
-      }
-
-      // Resposta compatível + nova forma obrigatória
-      const response = wrapperResult.success
-        ? { envelope, flow: wrapperResult.flow, ...iaResult }
-        : { envelope, error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' }, ...iaResult };
-
-      sendJson(res, wrapperResult.success ? 200 : 400, response);
-    } catch (err) {
-      logger.error('[API] Erro ao gerar chatbot', { error: err.message, stack: err.stack });
-      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
-        ? String(req.headers['x-request-id']).trim()
-        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      // Mantém compatibilidade com /flows/generate: validação warnings em top-level
       try {
-        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
-        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('chatbot_flow', {}, {
-          valid: false,
-          errors: [{ type: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar chatbot' }],
-          warnings: [],
-          qualityScore: 0,
-          riskFlags: ['INTERNAL_ERROR'],
-        }, {
-          provider: { name: null, model: null, temperature: null },
-          input: { prompt_summary: 'chatbot.generator.prompt.md', user_goal: null, context: {} },
-          audit: { request_id: requestId, seed: null, tenant_id: req.tenantId || null, user_id: req.agent?.id || req.agent?.username || null },
-        }));
-        sendJson(res, 500, { envelope, error: { code: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar chatbot' } });
+        const flowValidation = result?.validation?.flow || null;
+        if (flowValidation && flowValidation.valid === false && Array.isArray(flowValidation.errors)) {
+          result.validationWarnings = {
+            valid: false,
+            errors: flowValidation.errors,
+            codes: flowValidation.errors.map((e) => e && e.code).filter(Boolean),
+          };
+        } else {
+          result.validationWarnings = { valid: true, errors: [], codes: [] };
+        }
       } catch (_) {
-        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar chatbot' });
+        // best-effort
       }
+
+      sendJson(res, result.success ? 200 : 400, result);
+    } catch (err) {
+      logger.error('[API] Erro ao gerar chatbot (alias do orquestrador)', { error: err.message, stack: err.stack });
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar chatbot' });
     }
     return;
   }
 
-  // POST /ai/rpa/generate - Gera teste RPA via wrapper oficial
+  // POST /ai/rpa/generate - Alias do orquestrador (formato alinhado com /flows/generate)
   if (method === 'POST' && pathname === '/ai/rpa/generate') {
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -7465,181 +9442,42 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const { userInput, options = {} } = body || {};
 
       if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
-        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
-          ? String(req.headers['x-request-id']).trim()
-          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
-        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('rpa_test', {}, {
-          valid: false,
-          errors: [{ type: 'INVALID_INPUT', message: 'Campo \"userInput\" é obrigatório e deve ser uma string não vazia' }],
-          warnings: [],
-          qualityScore: 0,
-          riskFlags: ['INVALID_INPUT'],
-        }, {
-          provider: { name: null, model: null, temperature: null },
-          input: { prompt_summary: 'rpa.generator.prompt.md', user_goal: null, context: { tenantId, options } },
-          audit: { request_id: requestId, seed: null, tenant_id: tenantId, user_id: req.agent?.id || req.agent?.username || null },
-        }));
-        sendJson(res, 400, { envelope, error: { code: 'INVALID_INPUT', message: 'Campo "userInput" é obrigatório e deve ser uma string não vazia' } });
+        badRequest(res, 'Campo "userInput" é obrigatório e deve ser uma string não vazia');
         return;
       }
 
-      logger.info('[API] Geração de RPA via wrapper', {
-        inputLength: userInput.length,
+      // Alias: gera flow + rpaTest usando o mesmo orquestrador do /flows/generate
+      const payload = {
+        name: options.flowName || options.name || 'Fluxo Gerado',
+        description: userInput,
         tenantId,
-      });
-
-      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
-        ? String(req.headers['x-request-id']).trim()
-        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-      const aiMeta = {
-        provider: { name: null, model: null, temperature: null },
-        input: {
-          prompt_summary: 'rpa.generator.prompt.md',
-          user_goal: userInput,
-          context: { tenantId, options },
-        },
-        audit: {
-          request_id: requestId,
-          seed: null,
-          tenant_id: tenantId,
-          user_id: req.agent?.id || req.agent?.username || null,
-        },
-        rawModelOutput: null,
+        useRag: options.useRag === true,
+        ragSources: Array.isArray(options.ragSources) ? options.ragSources : [],
+        useWebScraping: options.useWebScraping === true,
+        scrapingTargets: Array.isArray(options.scrapingTargets) ? options.scrapingTargets : [],
+        includeQuestions: options.includeQuestions === true,
+        questions: Array.isArray(options.questions) ? options.questions : [],
+        generateRpaTest: true,
+        rpaMode: options.rpaMode || 'infer',
       };
 
-      // Chama wrapper oficial
-      const wrapperResult = await generateRpaTest(userInput, { ...options, tenantId, _aiMeta: aiMeta });
-
-      // Envelope é obrigatório (fallback defensivo)
-      const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
-      const envelope = (() => {
-        try {
-          if (wrapperResult && wrapperResult.envelope) return validateAiEnvelopeOrThrow(wrapperResult.envelope);
-        } catch (_) {}
-        return validateAiEnvelopeOrThrow(buildAiEnvelope(
-          'rpa_test',
-          wrapperResult?.plan || {},
-          wrapperResult?.validation || { valid: false, errors: [{ type: 'ENVELOPE_MISSING', message: 'Envelope ausente' }], warnings: [], qualityScore: 0, riskFlags: ['ENVELOPE_MISSING'] },
-          aiMeta,
-        ));
-      })();
-
-      // Converte para formato IaGenerationResult
-      const iaResult = {
-        success: wrapperResult.success,
-        domain: 'rpa',
-        meta: {
-          prompt: 'rpa.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        }
-      };
-
-      if (wrapperResult.success) {
-        iaResult.data = {
-          plan: wrapperResult.plan,
-          validation: wrapperResult.validation,
-          envelope,
-          promptVersion: wrapperResult.promptVersion
-        };
-
-        // Telemetria (success)
-        try {
-          const { logSuccess } = require('../engine/ai/aiTelemetry');
-          logSuccess({
-            domain: 'rpa_test',
-            requestId,
-            promptUsed: iaResult.meta.prompt,
-            qualityScore: envelope?.validation?.qualityScore ?? null,
-            riskFlags: envelope?.validation?.riskFlags || [],
-          });
-        } catch (_) {}
-
-        // Auditoria (DB) best-effort
-        try {
-          const auditGenerationId = await registerGeneration({
-            tenantId,
-            payload: { userInput },
-            context: { sources: [] },
-            artifacts: { rpaTestId: wrapperResult.plan?.id || null },
-            contract: { version: '1.0.0', hash: null },
-            envelope,
-          });
-          iaResult.meta.auditGenerationId = auditGenerationId;
-        } catch (_) {
-          // best-effort
-        }
-
-        // Persistência/auditoria best-effort
-        try {
-          const { appendGeneration } = require('../qa/aiGenerationStore');
-          const auditId = appendGeneration({
-            envelope,
-            valid: true,
-            domain: 'rpa_test',
-            requestId,
-          });
-          iaResult.meta.auditId = auditId;
-        } catch (e) {
-          // best-effort
-        }
-      } else {
-        iaResult.errors = wrapperResult.error ? [{
-          code: wrapperResult.error.type || 'GENERATION_ERROR',
-          message: wrapperResult.error.message || 'Erro na geração',
-          source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
-        }] : [];
-
-        // Telemetria (failure)
-        try {
-          const { logFailure } = require('../engine/ai/aiTelemetry');
-          logFailure({
-            domain: 'rpa_test',
-            requestId,
-            promptUsed: iaResult.meta.prompt,
-            stage: wrapperResult.error?.type || 'unknown',
-            errors: wrapperResult.validation?.errors || wrapperResult.error?.errors || iaResult.errors || [],
-          });
-        } catch (_) {}
-
-        // Auditoria (DB) best-effort
-        try {
-          const auditGenerationId = await registerGeneration({
-            tenantId,
-            payload: { userInput },
-            context: { sources: [] },
-            artifacts: { rpaTestId: wrapperResult.plan?.id || null },
-            contract: { version: '1.0.0', hash: null },
-            envelope,
-            error: wrapperResult.error || null,
-          });
-          iaResult.meta.auditGenerationId = auditGenerationId;
-        } catch (_) {
-          // best-effort
-        }
-
-        // Persistência/auditoria best-effort (falha)
-        try {
-          const { appendGeneration } = require('../qa/aiGenerationStore');
-          const auditId = appendGeneration({
-            envelope,
+      const result = await orchestrateGeneration(payload, { tenantId });
+      try {
+        const flowValidation = result?.validation?.flow || null;
+        if (flowValidation && flowValidation.valid === false && Array.isArray(flowValidation.errors)) {
+          result.validationWarnings = {
             valid: false,
-            domain: 'rpa_test',
-            requestId,
-          });
-          iaResult.meta.auditId = auditId;
-        } catch (e) {
-          // best-effort
+            errors: flowValidation.errors,
+            codes: flowValidation.errors.map((e) => e && e.code).filter(Boolean),
+          };
+        } else {
+          result.validationWarnings = { valid: true, errors: [], codes: [] };
         }
+      } catch (_) {
+        // best-effort
       }
 
-      const response = wrapperResult.success
-        ? { envelope, rpaTest: wrapperResult.plan, ...iaResult }
-        : { envelope, error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' }, ...iaResult };
-
-      sendJson(res, wrapperResult.success ? 200 : 400, response);
+      sendJson(res, result.success ? 200 : 400, result);
     } catch (err) {
       logger.error('[API] Erro ao gerar RPA', { error: err.message, stack: err.stack });
       const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
@@ -7676,7 +9514,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { prompt, sessionId, flowId, nodeId, tenantId } = body || {};
+      const { prompt, sessionId, flowId, nodeId, tenantId, executionId } = body || {};
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const execIdForWs = requireExecutionId({ executionId }, res, badRequest);
+      if (!execIdForWs) return;
 
       logger.debug('Requisição de IA recebida', {
         promptLength: prompt?.length,
@@ -7684,6 +9525,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         flowId,
         nodeId,
         tenantId,
+        executionId: execIdForWs,
       });
 
       if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
@@ -7696,6 +9538,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       logger.debug('Usando tenant para IA', { effectiveTenantId });
 
       try {
+        // Emite etapa para feedback visual (toasts) via WS.
+        try {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          if (effectiveTenantId) {
+            emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+              stage: 'ai-generate',
+              status: 'running',
+              message: 'Executando IA...',
+              meta: { flowId: flowId || null, nodeId: nodeId || null },
+            });
+          }
+        } catch (_) {}
+
         logger.debug('Gerando resposta de IA...', {
           tenantId: effectiveTenantId,
           promptPreview: prompt.substring(0, 100),
@@ -7713,6 +9569,19 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           hasUsage: !!result?.usage,
         });
 
+        try {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          if (effectiveTenantId) {
+            emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+              stage: 'ai-generate',
+              status: 'success',
+              message: 'IA executada.',
+              meta: { usage: result?.usage || null },
+            });
+          }
+        } catch (_) {}
+
         sendJson(res, 200, {
           text: typeof result === 'string' ? result : result.text,
           usage: result.usage || null,
@@ -7724,11 +9593,91 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           tenantId: effectiveTenantId,
           promptPreview: prompt.substring(0, 100),
         });
-        sendJson(res, 500, {
-          error: 'ai_generation_failed',
-          message: aiError.message || 'Erro ao gerar resposta de IA',
-          details: process.env.NODE_ENV === 'development' ? aiError.stack : undefined,
-        });
+        const rawMessage = String(aiError?.message || 'Erro ao gerar resposta de IA');
+        const rawCode = String(aiError?.code || aiError?.error?.code || '');
+        const rawStatus = Number(aiError?.status || aiError?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+
+        if (isQuota) {
+          try {
+            const { createPipelineWs } = require('./ws/pipelineEmitter');
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            if (effectiveTenantId) {
+              emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+                stage: 'ai-generate',
+                status: 'error',
+                message: rawMessage || 'Cota do provider excedida',
+                meta: { code: 'PROVIDER_QUOTA_EXCEEDED' },
+              });
+            }
+          } catch (_) {}
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage,
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: effectiveTenantId, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(aiError?.retryAfter || aiError?.headers?.['retry-after'] || 60);
+          try {
+            const { createPipelineWs } = require('./ws/pipelineEmitter');
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            if (effectiveTenantId) {
+              emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+                stage: 'ai-generate',
+                status: 'error',
+                message: rawMessage || 'Rate limit excedido no provider de IA',
+                meta: { code: 'RATE_LIMIT_EXCEEDED', retryAfter },
+              });
+            }
+          } catch (_) {}
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage,
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: effectiveTenantId, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+
+        try {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          if (effectiveTenantId) {
+            emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+              stage: 'ai-generate',
+              status: 'error',
+              message: rawMessage || 'Erro ao gerar resposta de IA',
+              meta: { code: 'AI_GENERATION_FAILED', status: rawStatus || null, providerErrorCode: rawCode || null },
+            });
+          }
+        } catch (_) {}
+
+        sendApiError(res, buildApiError({
+          code: 'AI_GENERATION_FAILED',
+          message: rawMessage,
+          httpStatus: 500,
+          retryable: true,
+          details: {
+            tenantId: effectiveTenantId,
+            providerErrorCode: rawCode || null,
+            status: rawStatus || null,
+            ...(process.env.NODE_ENV === 'development' ? { stack: aiError?.stack } : {}),
+          },
+          req,
+        }), setCorsHeaders);
       }
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -9046,6 +10995,26 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }
       }
 
+      // Se o client informar executionId via header, emitimos progresso via WS (pipeline.status).
+      try {
+        const executionIdHeader =
+          (req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const executionId =
+          (typeof executionIdHeader === 'string' && executionIdHeader.trim()) ? executionIdHeader.trim() : null;
+        const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
+        if (isValidExecutionId && isValid === true) {
+          const { emitEvent } = require('./services/websocketService');
+          emitEvent('pipeline.status', {
+            executionId,
+            status: 'running',
+            stages: { providerValidated: true },
+            metadata: { message: 'Provider de IA validado', source: '/tenants/current/ai-credentials/test', provider: providerToTest },
+          }, { tenantId });
+        }
+      } catch (_) {
+        // best-effort: não bloquear validação por WS
+      }
+
       sendJson(res, 200, { success: true, valid: isValid, provider: providerToTest, error: error || null });
     } catch (err) {
       logger.error('Erro ao validar credenciais de IA do tenant atual', err);
@@ -9332,6 +11301,26 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         } else {
           error = validationError.message || 'Erro ao validar credenciais';
         }
+      }
+
+      // Se o client informar executionId via header, emitimos progresso via WS (pipeline.status).
+      try {
+        const executionIdHeader =
+          (req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const executionId =
+          (typeof executionIdHeader === 'string' && executionIdHeader.trim()) ? executionIdHeader.trim() : null;
+        const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
+        if (isValidExecutionId && isValid === true) {
+          const { emitEvent } = require('./services/websocketService');
+          emitEvent('pipeline.status', {
+            executionId,
+            status: 'running',
+            stages: { providerValidated: true },
+            metadata: { message: 'Provider de IA validado', source: '/tenants/:tenantKey/ai-credentials/test', provider: providerToTest },
+          }, { tenantId: tenantKey });
+        }
+      } catch (_) {
+        // best-effort: não bloquear validação por WS
       }
 
       sendJson(res, 200, { success: true, valid: isValid, provider: providerToTest, error: error || null });
@@ -11828,13 +13817,64 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const tenantId = (fields && fields.tenantId) ? String(fields.tenantId).trim() : (req.tenantId || req.agent?.tenantId);
-      if (!tenantId) {
+      const requestTenantId = req.tenantId || req.agent?.tenantId || null;
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+
+      // Hardening: tenantId em form-data não define tenant efetivo (compat: aceita se igual)
+      if (fields && fields.tenantId) {
+        const bodyTenantId = String(fields.tenantId).trim();
+        if (requestTenantId && bodyTenantId && bodyTenantId !== String(requestTenantId)) {
+          badRequest(res, 'tenantId no form-data não é permitido (use X-Tenant-Id).');
+          return;
+        }
+      }
+
+      const rawPersistTenantId = (fields && (fields.persistTenantId || fields.targetTenantId))
+        ? String(fields.persistTenantId || fields.targetTenantId).trim()
+        : null;
+      if (rawPersistTenantId && !isSuperAdminUser) {
+        sendJson(res, 403, { error: 'forbidden', message: 'persistTenantId é permitido apenas para super-admin' });
+        return;
+      }
+
+      const finalTenantId = (rawPersistTenantId && rawPersistTenantId.trim())
+        ? rawPersistTenantId.trim()
+        : requestTenantId;
+
+      if (!requestTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+      if (!finalTenantId) {
         sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
         return;
       }
 
       const isDryRun = fields && String(fields.dryRun || '').toLowerCase() === 'true';
+
+      // Pipeline (toasts): executionId é opcional aqui para não quebrar uploads fora do pipeline,
+      // mas quando fornecido, emitimos feedback via `generation.stage`.
+      let pipelineWsForStage = null;
+      let execIdForStage = null;
+      try {
+        const { isValidExecutionId } = require('./middleware/requireExecutionId');
+        const rawExec = (fields && fields.executionId) ? String(fields.executionId).trim() : null;
+        if (rawExec && isValidExecutionId(rawExec)) {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          execIdForStage = rawExec;
+          // WS deve seguir o tenant do contexto do request (token/header), não o tenant de persistência.
+          pipelineWsForStage = createPipelineWs({ tenantId: requestTenantId });
+          emitPipelineStage(pipelineWsForStage, execIdForStage, {
+            stage: 'file-ocr',
+            status: 'running',
+            message: `Processando arquivo "${file.filename}"...`,
+            meta: { fileName: file.filename, mimeType: file.mimeType, dryRun: !!isDryRun },
+          });
+        }
+      } catch (_) {
+        // best-effort
+      }
 
       // Limite simples de tamanho (10MB)
       const maxSizeBytes = 10 * 1024 * 1024;
@@ -11925,7 +13965,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (isDryRun) {
         const payload = {
           dryRun: true,
-          tenantId,
+          tenantId: finalTenantId,
           fileName: file.filename,
           mimeType: file.mimeType,
           sizeBytes: Number(file.size || 0),
@@ -11933,6 +13973,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           warnings,
           message: 'DRY-RUN: extração concluída, sem persistência no RAG/BD.',
         };
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'success',
+              message: `Arquivo "${file.filename}" processado`,
+              meta: { fileName: file.filename, dryRun: true, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+            });
+          }
+        } catch (_) {}
         sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
         return;
       }
@@ -11961,14 +14012,25 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         autoIndex: !(fields && String(fields.autoIndex).toLowerCase() === 'false'),
       };
 
-      const result = await createDocument(documentData, tenantId);
+      const result = await createDocument(documentData, finalTenantId);
       if (!result.success) {
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: 'error',
+              message: result.error || 'Falha ao criar/indexar documento no RAG',
+              meta: { code: 'RAG_INDEX_FAILED', fileName: file.filename },
+            });
+          }
+        } catch (_) {}
         sendApiError(res, buildApiError({
           code: 'RAG_INDEX_FAILED',
           message: result.error || 'Falha ao criar/indexar documento no RAG',
           httpStatus: 500,
           retryable: true,
-          details: { tenantId, fileName: file.filename, mimeType: file.mimeType },
+          details: { tenantId: finalTenantId, fileName: file.filename, mimeType: file.mimeType },
           req,
         }), setCorsHeaders);
         return;
@@ -11979,7 +14041,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         const ragDocumentsService = require('./services/ragDocumentsService');
         await ragDocumentsService.upsertDocumentFileToDb({
           documentId: result.document.id,
-          tenantId,
+          tenantId: finalTenantId,
           filename: file.filename,
           mimeType: file.mimeType,
           sizeBytes: Number(file.size || 0),
@@ -12004,7 +14066,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }
       } catch (e) {
         logger.warn('[RAGDocuments] Falha ao salvar binário original no BD (best-effort)', {
-          tenantId,
+          tenantId: finalTenantId,
           documentId: result.document?.id,
           error: e.message,
         });
@@ -12012,6 +14074,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       if (result.isDuplicate) {
         const payload = { ...result.document, isDuplicate: true, warnings };
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: 'success',
+              message: `Arquivo "${file.filename}" processado`,
+              meta: { fileName: file.filename, isDuplicate: true, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+            });
+          }
+        } catch (_) {}
         sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
         return;
       }
@@ -12020,13 +14093,53 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       // Sucesso parcial: upload/extraiu/criou, mas indexação falhou
       if (result.indexing && result.indexing.attempted && result.indexing.success === false) {
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: 'warning',
+              message: `Arquivo "${file.filename}" processado`,
+              meta: { fileName: file.filename, indexing: result.indexing, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+            });
+          }
+        } catch (_) {}
         sendJson(res, 207, { ok: true, data: payload, warnings, ...payload });
         return;
       }
 
+      try {
+        if (pipelineWsForStage && execIdForStage) {
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          emitPipelineStage(pipelineWsForStage, execIdForStage, {
+            stage: 'file-ocr',
+            status: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'success',
+            message: `Arquivo "${file.filename}" processado`,
+            meta: { fileName: file.filename, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+          });
+        }
+      } catch (_) {}
+
       sendJson(res, 201, { ok: true, data: payload, warnings, ...payload });
     } catch (err) {
       logger.error('Erro ao fazer upload e extrair arquivo:', err);
+      try {
+        // best-effort: tenta emitir erro se for parte de um pipeline
+        const { isValidExecutionId } = require('./middleware/requireExecutionId');
+        const rawExec = (req && req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const execId = (typeof rawExec === 'string' && rawExec.trim() && isValidExecutionId(rawExec.trim())) ? rawExec.trim() : null;
+        const tenantIdForWs = req.tenantId || req.agent?.tenantId || null;
+        if (execId && tenantIdForWs) {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          emitPipelineStage(createPipelineWs({ tenantId: tenantIdForWs }), execId, {
+            stage: 'file-ocr',
+            status: 'error',
+            message: err.message || 'Erro ao processar upload de arquivo',
+            meta: { code: 'FILE_UPLOAD_FAILED' },
+          });
+        }
+      } catch (_) {}
       sendApiError(res, buildApiError({
         code: 'FILE_UPLOAD_FAILED',
         message: err.message || 'Erro ao processar upload de arquivo',
@@ -12060,8 +14173,40 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const tenantId = body.tenantId || req.tenantId;
-      const result = await createDocument(body, tenantId);
+      const requestTenantId = req.tenantId || req.agent?.tenantId || null;
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+
+      // Hardening: tenantId no body não deve definir o tenant efetivo.
+      // - compat: se vier igual ao tenant do request, aceitamos e ignoramos
+      // - segurança: se vier diferente, rejeitamos
+      if (body && body.tenantId) {
+        const bodyTenantId = String(body.tenantId).trim();
+        if (requestTenantId && bodyTenantId && bodyTenantId !== String(requestTenantId)) {
+          badRequest(res, 'tenantId no body não é permitido (use X-Tenant-Id).');
+          return;
+        }
+        // remove para evitar fallback interno
+        try { delete body.tenantId; } catch {}
+      }
+
+      const rawPersistTenantId = body?.persistTenantId || body?.targetTenantId || null;
+      if (rawPersistTenantId && !isSuperAdminUser) {
+        sendJson(res, 403, { error: 'forbidden', message: 'persistTenantId é permitido apenas para super-admin' });
+        return;
+      }
+      if (rawPersistTenantId) {
+        try { delete body.persistTenantId; } catch {}
+        try { delete body.targetTenantId; } catch {}
+      }
+
+      const persistTenantId = rawPersistTenantId ? String(rawPersistTenantId).trim() : null;
+      const finalTenantId = persistTenantId || requestTenantId;
+      if (!finalTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const result = await createDocument(body, finalTenantId);
 
       if (!result.success) {
         sendJson(res, 400, { error: 'creation_failed', message: result.error });
@@ -12866,13 +15011,76 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       badRequest(res, 'Content-Type deve ser application/json');
       return;
     }
+    let executionIdForWs = null;
+    let pipelineWsForStage = null;
     try {
       const body = await parseJsonBody(req);
       if (!body.urls || !Array.isArray(body.urls) || body.urls.length === 0) {
         badRequest(res, 'URLs é obrigatório e deve ser um array não vazio');
         return;
       }
+      const requestTenantId = req.tenantId || req.agent?.tenantId || null;
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      if (!requestTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      // Hardening: tenantId no body não define tenant efetivo (compat: aceita se igual)
+      if (body && body.tenantId) {
+        const bodyTenantId = String(body.tenantId).trim();
+        if (bodyTenantId && bodyTenantId !== String(requestTenantId)) {
+          badRequest(res, 'tenantId no body não é permitido (use X-Tenant-Id).');
+          return;
+        }
+      }
+
+      const rawPersistTenantId = body?.persistTenantId || body?.targetTenantId || null;
+      if (rawPersistTenantId && !isSuperAdminUser) {
+        sendJson(res, 403, { error: 'forbidden', message: 'persistTenantId é permitido apenas para super-admin' });
+        return;
+      }
+      const persistTenantId = rawPersistTenantId ? String(rawPersistTenantId).trim() : null;
+      const finalPersistTenantId = persistTenantId || requestTenantId;
+
       const isDryRun = body && body.dryRun === true;
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) return;
+      executionIdForWs = executionId;
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      // WS/execução seguem o tenant do request (token/header), não o tenant de persistência.
+      const pipelineWs = createPipelineWs({ tenantId: requestTenantId });
+      pipelineWsForStage = pipelineWs;
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'scrape-batch',
+        status: 'running',
+        message: `Web scraping em execução (${Array.isArray(body.urls) ? body.urls.length : 0} URL(s))...`,
+        meta: { dryRun: !!isDryRun },
+      });
+
+      // Pipeline (backend-only): etapa explícita para o card "Web scraping"
+      let pipelineExecution = null;
+      if (executionId) {
+        try {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          pipelineExecution = ensureExecutionContext({ executionId }, { tenantId: requestTenantId });
+          requireStages(pipelineExecution, ['webScraping']);
+          pipelineExecution.stages.webScraping = false;
+          updateStatus(pipelineExecution, 'running', {
+            currentStage: 'webScraping',
+            stageStatus: 'in_progress',
+            message: `Web scraping em execução (${Array.isArray(body.urls) ? body.urls.length : 0} URL(s))...`,
+            source: '/web-scraping/scrape-batch',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
       const results = await scrapeUrls(body.urls, {
         contentSelector: body.contentSelector,
         removeSelectors: body.removeSelectors,
@@ -12883,7 +15091,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         source: body.source || 'web_scraping',
         category: body.category,
         tags: body.tags || [],
-        tenantId: req.tenantId,
+        tenantId: finalPersistTenantId,
       });
 
       const total = body.urls.length;
@@ -12891,6 +15099,37 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const failedCount = total - successCount;
       const duplicatesCount = (Array.isArray(results) ? results : []).filter(r => r && r.success && r.isDuplicate).length;
       const newCount = successCount - duplicatesCount;
+
+      // Gate terminal (quando usado como pipeline de geração): scraping sem sucesso => falha
+      if (successCount === 0 && executionId) {
+        const { failGeneration } = require('./services/failGeneration');
+        const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+        try {
+          await failGeneration({
+            execution: pipelineExecution,
+            reason: GenerationFailureReasons.SCRAPING_EMPTY,
+            error: new Error('Nenhuma URL foi raspada com sucesso'),
+            extra: { urlsTotal: total, endpoint: '/web-scraping/scrape-batch', stage: 'webScraping' },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+        emitPipelineStage(pipelineWs, executionId, {
+          stage: 'scrape-batch',
+          status: 'error',
+          message: 'Nenhuma URL foi raspada com sucesso',
+          meta: { code: 'SCRAPING_EMPTY', urlsTotal: total },
+        });
+        sendApiError(res, buildApiError({
+          code: 'SCRAPING_EMPTY',
+          message: 'Nenhuma URL foi raspada com sucesso',
+          httpStatus: 409,
+          retryable: false,
+          details: { tenantId: req.tenantId || null, executionId, urlsTotal: total },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
 
       const errorSummary = (Array.isArray(results) ? results : [])
         .filter(r => r && !r.success)
@@ -12955,9 +15194,49 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       } catch {
         // ignora
       }
+      // Pipeline (backend-only): conclui etapa
+      if (pipelineExecution && executionId) {
+        try {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'webScraping', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'webScraping',
+            stageStatus: statusCode === 207 ? 'warning' : 'completed',
+            message: successCount === 0
+              ? 'Web scraping falhou.'
+              : `Web scraping concluído: ${successCount}/${total} URL(s)`,
+            source: '/web-scraping/scrape-batch',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'scrape-batch',
+        status: statusCode === 207 ? 'warning' : 'success',
+        message: successCount === 0
+          ? 'Web scraping falhou.'
+          : `Web scraping concluído: ${successCount}/${total} URL(s)`,
+        meta: { total, success: successCount, failed: failedCount, duplicates: duplicatesCount, new: newCount, dryRun: !!isDryRun },
+      });
+
       sendJson(res, statusCode, { ok: true, data: payload, warnings, ...payload });
     } catch (err) {
       logger.error('Erro ao raspar URLs:', err);
+      try {
+        const { emitPipelineStage } = require('./ws/emitPipelineStage');
+        if (pipelineWsForStage && executionIdForWs) {
+          emitPipelineStage(pipelineWsForStage, executionIdForWs, {
+            stage: 'scrape-batch',
+            status: 'error',
+            message: err?.message || 'Falha ao raspar URLs',
+            meta: { code: 'SCRAPE_FAILED' },
+          });
+        }
+      } catch (_) {
+        // best-effort
+      }
       sendApiError(res, buildApiError({
         code: 'SCRAPE_FAILED',
         message: err.message || 'Falha ao raspar URLs',

@@ -9,6 +9,7 @@ const {
   handoffNodeHandler,
   endNodeHandler,
 } = require('../nodes/basicNodes');
+const { mergeNodeHandler } = require('../nodes/mergeNode');
 const { executeStep } = require('../executeStep');
 const { buildConversationReplay } = require('../replay');
 
@@ -46,6 +47,7 @@ describe('Engine E2E - fluxos básicos', () => {
     registry.register('start', startNodeHandler);
     registry.register('message', messageNodeHandler);
     registry.register('user_input', userInputNodeHandler);
+    registry.register('merge', mergeNodeHandler);
     registry.register('router', routerNodeHandler);
     registry.register('handoff', handoffNodeHandler);
     registry.register('end', endNodeHandler);

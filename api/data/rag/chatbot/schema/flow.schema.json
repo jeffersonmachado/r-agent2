@@ -1,7 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Chatbot Flow Definition",
-  "description": "Schema para definição de fluxos de chatbot. Extraído das regras existentes do sistema.",
+  "description": "Schema para definição de fluxos de chatbot. Extraído das regras existentes do sistema.\n\nEste schema descreve a FORMA (shape) do FlowDefinition e inclui anotações normativas (restrições) para orientar geradores e validadores.\n\nObservação: algumas regras são topológicas (ex.: \"start não pode receber conexão\") e não são plenamente expressáveis em JSON Schema puro. Essas regras devem ser aplicadas pelo validador da engine (engine/validator.js) e/ou por validadores de plano (api/utils/validateFlowPlan.js).",
+  "x-rules": [
+    "MUST_HAVE_EXACTLY_ONE_START: o fluxo deve ter exatamente 1 nó type=start",
+    "START_MUST_HAVE_NEXT: o nó start deve ter next não-nulo e apontar para o próximo nó",
+    "START_MUST_NOT_HAVE_INCOMING_EDGES: nenhum nó pode apontar para start (regra topológica; aplicar via engine/validator.js)",
+    "MUST_HAVE_AT_LEAST_ONE_END: o fluxo deve ter pelo menos 1 nó type=end",
+    "END_MUST_NOT_HAVE_NEXT: nós end não podem ter campo next com valor diferente de null/ausente",
+    "ALL_NODES_MUST_BE_REACHABLE: todos os nós devem ser alcançáveis a partir do start (regra topológica; aplicar via engine/validator.js)"
+  ],
   "type": "object",
   "required": ["tenantId", "id", "name", "version", "nodes"],
   "properties": {
@@ -42,11 +50,15 @@
               "message",
               "user_input",
               "router",
+              "semantic_router",
               "ai_task",
               "set_variable",
               "handoff",
               "ai",
+              "rag_answer",
+              "business_entry",
               "fallback",
+              "subflow",
               "end",
               "get_flow_info",
               "get_queue_status",
@@ -60,7 +72,8 @@
               "get_user_info",
               "schedule_router",
               "options",
-              "api"
+              "api",
+              "merge"
             ],
             "description": "Tipo do nó"
           },
@@ -82,12 +95,80 @@
                 "description": "IDs dos próximos nós (múltiplas conexões)"
               },
               {
+                "type": "object",
+                "description": "Mapa de rotas por porta (ex.: { out: 'n2', error: 'n3', main: 'n4', fallback: 'n5' })",
+                "additionalProperties": {
+                  "oneOf": [
+                    { "type": "string" },
+                    { "type": "array", "items": { "type": "string" } },
+                    { "type": "null" }
+                  ]
+                }
+              },
+              {
                 "type": "null",
                 "description": "Sem próximo nó (apenas para nós 'end')"
               }
             ]
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "type": { "const": "start" } }
+            },
+            "then": {
+              "required": ["next"],
+              "properties": {
+                "next": {
+                  "description": "Obrigatório no nó start. Não pode ser null/vazio. (Regra topológica adicional: start não pode receber conexões.)",
+                  "not": { "type": "null" }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": { "type": { "const": "end" } }
+            },
+            "then": {
+              "properties": {
+                "next": {
+                  "description": "Nós end devem ser folhas: next deve ser null ou ausente.",
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": { "type": { "const": "subflow" } }
+            },
+            "then": {
+              "required": ["config"],
+              "properties": {
+                "config": {
+                  "type": "object",
+                  "required": ["flowId"],
+                  "properties": {
+                    "flowId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "ID do fluxo a ser chamado como subfluxo"
+                    },
+                    "timeout": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 300000,
+                      "description": "Timeout em ms para execução do subfluxo (0..300000)"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "metadata": {

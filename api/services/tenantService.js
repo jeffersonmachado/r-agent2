@@ -179,6 +179,18 @@ function isValidUrl(url) {
   }
 }
 
+function isPlaceholderSite(url) {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const u = new URL(url.trim());
+    const host = String(u.hostname || '').toLowerCase();
+    // placeholders comuns usados pelo sistema/IA
+    return host === 'exemplo.com' || host === 'example.com' || host === 'exemplo.org' || host === 'example.org';
+  } catch {
+    return false;
+  }
+}
+
 
 /**
  * Retorna limites padrão para um plano.
@@ -350,12 +362,21 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     return { success: false, error: 'Nome é obrigatório' };
   }
 
-  if (!site || typeof site !== 'string' || site.trim() === '') {
-    return { success: false, error: 'Site é obrigatório' };
+  // Normaliza site:
+  // - Em safe-mode por IA, `site` pode estar ausente ou vir como placeholder (ex.: https://exemplo.com).
+  //   Nesses casos, tratamos como null (para evitar bloqueio por "site duplicado").
+  // - Fora do safe-mode, mantém validação rígida.
+  let normalizedSite = (site && typeof site === 'string') ? site.trim() : '';
+  if (_aiSafeMode && (!normalizedSite || isPlaceholderSite(normalizedSite) || !isValidUrl(normalizedSite))) {
+    normalizedSite = '';
   }
-
-  if (!isValidUrl(site)) {
-    return { success: false, error: 'Site deve ser uma URL válida (http:// ou https://)' };
+  if (!_aiSafeMode) {
+    if (!normalizedSite) {
+      return { success: false, error: 'Site é obrigatório' };
+    }
+    if (!isValidUrl(normalizedSite)) {
+      return { success: false, error: 'Site deve ser uma URL válida (http:// ou https://)' };
+    }
   }
 
   if (!ramo_atividade || typeof ramo_atividade !== 'string' || ramo_atividade.trim() === '') {
@@ -398,11 +419,13 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     }
     
     // Verifica se já existe tenant com mesmo site
-    const existingBySite = await TenantModel.findOne({
-      where: { site: site.trim() },
-    });
-    if (existingBySite) {
-      return { success: false, error: 'Já existe um tenant com este site' };
+    if (normalizedSite) {
+      const existingBySite = await TenantModel.findOne({
+        where: { site: normalizedSite },
+      });
+      if (existingBySite) {
+        return { success: false, error: 'Já existe um tenant com este site' };
+      }
     }
 
     // Determina status final:
@@ -431,7 +454,7 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     const tenantRecord = await Tenant.create({
       tenant_key: finalTenantKey,
       name: name.trim(),
-      site: site.trim(),
+      site: normalizedSite || null,
       ramo_atividade: ramo_atividade.trim(),
       objetivo: objetivo.trim(),
       status: finalStatus,
@@ -1220,9 +1243,53 @@ async function getTenantUsage(tenantId) {
   }
 }
 
+/**
+ * Busca tenant por site (URL exata).
+ * Útil para tornar criação por IA idempotente quando `site` já existe.
+ *
+ * @param {string} site
+ * @returns {Promise<any|null>}
+ */
+async function findTenantBySite(site) {
+  const s = (site && typeof site === 'string') ? site.trim() : '';
+  if (!s) return null;
+  const sequelize = getSequelize();
+  if (!sequelize || !isConnected()) return null;
+  try {
+    const { Tenant: TenantModel } = getModels();
+    const existing = await TenantModel.findOne({ where: { site: s } });
+    if (!existing) return null;
+    const data = existing.toJSON ? existing.toJSON() : existing.dataValues || existing;
+    const tenantKey = data.tenant_key;
+    const tenantStatus = data.status;
+    return {
+      id: tenantKey,
+      tenant_key: tenantKey,
+      name: data.name,
+      site: data.site || null,
+      ramo_atividade: data.ramo_atividade || null,
+      objetivo: data.objetivo || null,
+      active: tenantStatus !== 'pending_review' && tenantStatus !== 'suspended' && tenantStatus !== 'terminated',
+      status: tenantStatus,
+      plan: data.plan,
+      limits: data.limits || {},
+      settings: data.settings || {},
+      branding: data.branding || {},
+      createdAt: data.created_at?.toISOString?.() || data.createdAt?.toISOString?.() || new Date().toISOString(),
+      updatedAt: data.updated_at?.toISOString?.() || data.updatedAt?.toISOString?.() || new Date().toISOString(),
+      suspendedAt: data.suspended_at?.toISOString?.() || data.suspendedAt?.toISOString?.() || null,
+      trialExpiresAt: data.trial_expires_at?.toISOString?.() || data.trialExpiresAt?.toISOString?.() || null,
+    };
+  } catch (err) {
+    logger.warn('[TenantService] Falha ao buscar tenant por site', { site: s, error: err.message });
+    return null;
+  }
+}
+
 module.exports = {
   initializeTenantContexts,
   createTenant,
+  findTenantBySite,
   updateTenant,
   listTenants,
   getTenant,

@@ -291,6 +291,32 @@ export function SupportPage() {
     ],
   });
 
+  // UI: status do WebSocket (mostra imediatamente ao carregar a página)
+  const [wsUiStatus, setWsUiStatus] = useState({ phase: 'connecting' }); // connecting | auth | ready | disconnected
+  useEffect(() => {
+    let timeoutId = null;
+
+    if (wsConnected && wsAuthenticated) {
+      setWsUiStatus({ phase: 'ready' });
+      return () => {};
+    }
+
+    if (wsConnected && !wsAuthenticated) {
+      setWsUiStatus({ phase: 'auth' });
+      return () => {};
+    }
+
+    // Não conectado: mostra "Conectando..." por um curto período e depois "Desconectado"
+    setWsUiStatus({ phase: 'connecting' });
+    timeoutId = setTimeout(() => {
+      setWsUiStatus({ phase: 'disconnected' });
+    }, 1500);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [wsConnected, wsAuthenticated]);
+
   // Carrega filas disponíveis (apenas para o modal de nova conversa)
   const loadQueues = useCallback(async () => {
     try {
@@ -1236,55 +1262,64 @@ export function SupportPage() {
           <h1>💬 Atendimento</h1>
         </div>
         <div className="support-controls">
-          {wsConnected && wsAuthenticated ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span 
-                style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#25D366',
-                  animation: 'pulse 2s infinite'
-                }}
+          {wsUiStatus.phase === 'ready' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
                 title="WebSocket conectado e autenticado - Atualizações em tempo real ativas"
-              />
-              <span style={{ fontSize: '14px', color: '#666' }}>
-                Atualização em tempo real
-              </span>
-            </div>
-          ) : wsConnected ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span 
                 style={{
                   display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
+                  width: 8,
+                  height: 8,
                   borderRadius: '50%',
-                  backgroundColor: '#3b82f6',
-                  animation: 'pulse 2s infinite'
+                  backgroundColor: 'rgb(37, 211, 102)',
+                  animation: 'pulse 2s ease 0s infinite normal none running pulse',
                 }}
-                title="WebSocket conectado, autenticando..."
               />
-              <span style={{ fontSize: '14px', color: '#666' }}>
-                Autenticando...
-              </span>
+              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Conectado</span>
+            </div>
+          ) : wsUiStatus.phase === 'auth' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                title="WebSocket conectado, autenticando..."
+                style={{
+                  display: 'inline-block',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgb(59, 130, 246)',
+                  animation: 'pulse 2s ease 0s infinite normal none running pulse',
+                }}
+              />
+              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Autenticando...</span>
+            </div>
+          ) : wsUiStatus.phase === 'connecting' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                title="WebSocket conectando..."
+                style={{
+                  display: 'inline-block',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgb(59, 130, 246)',
+                  animation: 'pulse 2s ease 0s infinite normal none running pulse',
+                }}
+              />
+              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Conectando...</span>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span 
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                title="WebSocket desconectado"
                 style={{
                   display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
+                  width: 8,
+                  height: 8,
                   borderRadius: '50%',
-                  backgroundColor: '#f59e0b',
+                  backgroundColor: 'rgb(245, 158, 11)',
                 }}
-                title="WebSocket desconectado - Usando atualização automática a cada 5 segundos"
               />
-              <span style={{ fontSize: '14px', color: '#666' }}>
-                Atualização automática (5s)
-              </span>
+              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Desconectado</span>
             </div>
           )}
           <Button 

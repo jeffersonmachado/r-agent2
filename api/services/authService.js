@@ -668,7 +668,8 @@ async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', user
 
   // Busca ou cria usuário RPA
   const username = 'rpa';
-  const email = 'rpa@local';
+  // Precisa ser um email válido (model tem validação isEmail com require_tld=true)
+  const email = 'rpa@local.test';
 
   let rpaAgent = null;
   for (const a of agents.values()) {

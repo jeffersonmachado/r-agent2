@@ -19,6 +19,8 @@ export function AuthProvider({ children }) {
   // Flag para evitar carregamento duplicado (especialmente com StrictMode)
   const isLoadingAgentRef = React.useRef(false);
   const hasLoadedAgentRef = React.useRef(false);
+  const retryCountRef = React.useRef(0);
+  const retryTimerRef = React.useRef(null);
 
   /**
    * Carrega informações do agente autenticado.
@@ -32,6 +34,11 @@ export function AuthProvider({ children }) {
     isLoadingAgentRef.current = true;
     const token = authApi.getToken();
     if (!token) {
+      retryCountRef.current = 0;
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
       setAgent(null);
       setIsAuthenticated(false);
       setLoading(false);
@@ -49,11 +56,14 @@ export function AuthProvider({ children }) {
           const storedAgent = localStorage.getItem('auth_agent');
           if (storedAgent) {
             const parsedStoredAgent = JSON.parse(storedAgent);
-            // Preserva originalTenantId se existir no localStorage
+            // Preserva originalTenantId e tenantId selecionado (super-admin)
             if (parsedStoredAgent.originalTenantId) {
               agentToSet = {
                 ...agentToSet,
-                originalTenantId: parsedStoredAgent.originalTenantId
+                originalTenantId: parsedStoredAgent.originalTenantId,
+                // Se o super-admin selecionou um tenant no modal, mantém esse tenantId
+                // mesmo que /auth/me retorne tenantId="system".
+                ...(parsedStoredAgent.tenantId ? { tenantId: parsedStoredAgent.tenantId } : {}),
               };
             }
           }
@@ -64,6 +74,7 @@ export function AuthProvider({ children }) {
       
       setAgent(agentToSet);
       setIsAuthenticated(true);
+      retryCountRef.current = 0;
       
       // Atualiza informações do agente no localStorage (preservando originalTenantId)
       if (agentToSet) {
@@ -74,41 +85,66 @@ export function AuthProvider({ children }) {
         }
       }
     } catch (err) {
-      // Se for erro de conexão (servidor não acessível), não remove o token
-      // Pode ser apenas o servidor iniciando
-      const isConnectionError = err.message === 'Failed to fetch' || 
-                                err.message?.includes('fetch') ||
-                                err.message?.includes('ERR_CONNECTION_REFUSED');
-      
-      if (isConnectionError) {
-        // Não loga warning para erros de conexão na inicialização
-        // O servidor pode estar apenas iniciando
-        logger.debug('Servidor não acessível ao carregar agente (pode estar iniciando)', err);
-        // Não remove o token - pode ser apenas uma falha temporária
+      const msg = String(err?.message || '');
+      const isAbortError = err?.name === 'AbortError' || msg.includes('signal is aborted');
+      const isConnectionError =
+        err?.connectionRefused ||
+        err?.status === 0 ||
+        msg === 'Failed to fetch' ||
+        msg.includes('fetch') ||
+        msg.includes('ERR_CONNECTION_REFUSED') ||
+        msg.includes('NetworkError');
+
+      const isTransient = isAbortError || isConnectionError;
+
+      if (isTransient) {
+        // Servidor pode estar reiniciando/ocupado; não “desloga” o usuário.
+        logger.debug('Falha temporária ao carregar agente (servidor pode estar iniciando)', err);
+
+        // Se houver um agente salvo, mantém a sessão local enquanto o servidor volta.
+        try {
+          const storedAgent = localStorage.getItem('auth_agent');
+          if (storedAgent) {
+            const parsedStoredAgent = JSON.parse(storedAgent);
+            if (parsedStoredAgent) {
+              setAgent(parsedStoredAgent);
+              setIsAuthenticated(true);
+            }
+          }
+        } catch {
+          // ignora
+        }
+
+        // Agenda novas tentativas com backoff (máx. 5) para recuperar a sessão automaticamente.
+        if (retryCountRef.current < 5 && !retryTimerRef.current) {
+          const attempt = retryCountRef.current + 1;
+          retryCountRef.current = attempt;
+          const delayMs = Math.min(15000, 1000 * Math.pow(2, attempt - 1));
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            loadAgent();
+          }, delayMs);
+        }
       } else {
         // Para outros erros (401, 403, etc)
-        // Se for 401 e não houver token, é esperado (página carregada sem autenticação)
-        const status = err.status || err.body?.status;
+        const status = err?.status || err?.body?.status;
         const hasToken = authApi.getToken();
-        
+
         if (status === 401 && !hasToken) {
-          // Erro 401 sem token é esperado - usuário ainda não fez login
           logger.debug('Não autenticado (esperado se não houver token)');
         } else if (status === 401 && hasToken) {
-          // Erro 401 com token significa que a sessão expirou ou é inválida
           logger.warn('Sessão inválida ou expirada', err);
           authApi.removeToken();
         } else {
-          // Outros erros (403, 500, etc)
           logger.warn('Erro ao carregar agente autenticado', err);
           if (status === 403) {
             authApi.removeToken();
           }
         }
+
+        setAgent(null);
+        setIsAuthenticated(false);
       }
-      
-      setAgent(null);
-      setIsAuthenticated(false);
     } finally {
       setLoading(false);
       isLoadingAgentRef.current = false;
@@ -167,6 +203,16 @@ export function AuthProvider({ children }) {
     loadAgent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Executa apenas uma vez no mount
+
+  // Cleanup de timer de retry
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, []);
 
   /**
    * Atualiza o agente diretamente (útil para atualizações locais sem buscar do servidor)

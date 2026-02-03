@@ -86,6 +86,15 @@ export function DashboardPage() {
       category: 'Atendimento',
     },
     {
+      id: 'faq',
+      title: 'FAQ',
+      description: 'Gerencie perguntas e respostas (base RAG)',
+      icon: '❓',
+      path: '/faq',
+      color: 'bg-purple-500',
+      category: 'Conhecimento',
+    },
+    {
       id: 'departments',
       title: 'Departamentos',
       description: 'Organize equipe em departamentos',
@@ -528,7 +537,7 @@ export function DashboardPage() {
                 <li>• Instagram Direct</li>
                 <li>• OpenAI (Whisper, GPT)</li>
                 <li>• RAG Service (Python FastAPI)</li>
-                <li>• FAISS Vector Store</li>
+                <li>• PostgreSQL (pgvector) Vector Store</li>
               </ul>
             </div>
           </div>

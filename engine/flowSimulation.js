@@ -28,6 +28,10 @@ const {
 } = require('./nodes/basicNodes');
 const { aiNodeHandler } = require('./nodes/aiNode');
 const { aiTaskNodeHandler } = require('./nodes/aiTaskNode');
+const { semanticRouterNodeHandler } = require('./nodes/semanticRouterNode');
+const { ragAnswerNodeHandler } = require('./nodes/ragAnswerNode');
+const { businessEntryNodeHandler } = require('./nodes/businessEntryNode');
+const { mergeNodeHandler } = require('./nodes/mergeNode');
 const { getOrCompileFlow } = require('./compiledFlowCache');
 const { executeStep } = require('./executeStep');
 const { buildConversationReplay } = require('./replay');
@@ -104,14 +108,18 @@ function createSimulationRegistry() {
   registry.register('start', startNodeHandler);
   registry.register('message', messageNodeHandler);
   registry.register('user_input', userInputNodeHandler);
+  registry.register('merge', mergeNodeHandler);
   registry.register('options', optionsNodeHandler);
   registry.register('router', routerNodeHandler);
   registry.register('schedule_router', scheduleRouterNodeHandler);
+  registry.register('semantic_router', semanticRouterNodeHandler);
+  registry.register('business_entry', businessEntryNodeHandler);
   registry.register('set_variable', setVariableNodeHandler);
   registry.register('handoff', handoffNodeHandler);
   registry.register('end', endNodeHandler);
   registry.register('ai', aiNodeHandler);
   registry.register('ai_task', aiTaskNodeHandler);
+  registry.register('rag_answer', ragAnswerNodeHandler);
   // Nós de persistência
   const {
     getFlowInfoNodeHandler,

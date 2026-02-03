@@ -346,9 +346,20 @@ async function runStep(flow, state, registry, input, deps = null) {
     // Handler não redefiniu explicitamente o currentNodeId para outro nó;
     // usamos heurísticas em cima do output e do campo next padrão.
     const output = handlerOutput.output || {};
-    if (output && typeof output === 'object' && output.type === 'router') {
+    // Nós interativos: quando emitem opções mas ainda não houve seleção,
+    // mantemos o fluxo no mesmo nó, aguardando input do usuário.
+    // Isso evita depender de loops no grafo (que são proibidos pelo validador).
+    let holdOnCurrentNode = false;
+    if (output && typeof output === 'object' && output.type === 'options') {
+      const resolvedSelection = output.selectedOption;
+      if (resolvedSelection === undefined || resolvedSelection === null || (Array.isArray(resolvedSelection) && resolvedSelection.length === 0)) {
+        nextNodeId = node.id;
+        holdOnCurrentNode = true;
+      }
+    }
+    if (!holdOnCurrentNode && output && typeof output === 'object' && output.type === 'router') {
       nextNodeId = output.chosenNext || normalizeNext(node.next);
-    } else {
+    } else if (!holdOnCurrentNode) {
       // Roteamento por portas (sockets):
       // - se node.next for objeto: escolhe pela chave (out/error/timeout/no_match)
       // - caso contrário: comportamento legacy (string/array)

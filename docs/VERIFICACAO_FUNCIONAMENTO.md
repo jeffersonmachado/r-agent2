@@ -34,6 +34,9 @@
   - Redireciona para `/config?tab=ai`
 - ✅ Se `hasValidProvider === true`:
   - Continua para `/support`
+- ✅ Se ocorrer **erro** ao verificar (401/403/500/rede/timeout):
+  - **Bloqueia o fluxo**
+  - Redireciona para `/config?tab=ai` (quando possível inclui `&tenant=<tenantId>`)
 
 ### 4. Verificação no Login (Super Admin) ✅
 
@@ -45,6 +48,9 @@
   - Redireciona para `/config?tab=ai`
 - ✅ Se `hasValidProvider === true`:
   - Continua para `/support`
+- ✅ Se ocorrer **erro** ao verificar (401/403/500/rede/timeout):
+  - **Bloqueia o fluxo**
+  - Redireciona para `/config?tab=ai&tenant=<tenantId>`
 
 ### 5. Suporte a Query Parameter ✅
 

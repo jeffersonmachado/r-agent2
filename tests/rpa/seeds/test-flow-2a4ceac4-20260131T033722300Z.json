@@ -1,0 +1,230 @@
+{
+  "id": "test-flow-2a4ceac4-20260131T033722300Z",
+  "name": "IA - Teste RPA - studiooly",
+  "description": "Teste RPA gerado automaticamente",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "",
+      "value": "http://localhost:5173",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173"
+      },
+      "description": "Navegar para o frontend do chatbot (URL base obrigatória).",
+      "critical": "true",
+      "url": "http://localhost:5173/chat?flowId=flow-2a4ceac4"
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "2000",
+      "assert": {
+        "type": "exists",
+        "expected": "body"
+      },
+      "description": "Aguardar carregamento inicial da página (validação mínima de DOM).",
+      "critical": "true"
+    },
+    {
+      "step": "step-2",
+      "action": "assert",
+      "type": "url",
+      "expected": "http://localhost:5173",
+      "description": "A URL deve ser exatamente a base definida para o frontend.",
+      "title": "http://localhost:5173"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar que a mensagem inicial do fluxo foi exibida.",
+      "critical": "true"
+    },
+    {
+      "step": "step-3",
+      "action": "assert",
+      "type": "exists",
+      "selector": "body",
+      "expected": "body",
+      "description": "A página deve conter o elemento body carregado."
+    },
+    {
+      "type": "assert",
+      "selector": "input, textarea, [contenteditable='true']",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "input, textarea, [contenteditable='true']"
+      },
+      "description": "Validar que existe um campo de entrada para o usuário (input/textarea/contenteditable).",
+      "critical": "true"
+    },
+    {
+      "step": "step-4",
+      "action": "assert",
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "A mensagem inicial do bot deve estar visível no conteúdo da página."
+    },
+    {
+      "type": "fill",
+      "selector": "textarea",
+      "value": "Qual é o WhatsApp?",
+      "assert": {
+        "type": "exists",
+        "expected": "textarea"
+      },
+      "description": "Preencher a pergunta de FAQ no campo textarea (caminho preferencial e determinístico).",
+      "critical": "true"
+    },
+    {
+      "step": "step-5",
+      "action": "assert",
+      "type": "exists",
+      "selector": "input, textarea, [contenteditable='true']",
+      "expected": "input, textarea, [contenteditable='true']",
+      "description": "Deve existir um componente de input para o usuário enviar mensagens."
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button",
+      "value": "",
+      "assert": {
+        "type": "exists",
+        "expected": "button[type='submit'], button"
+      },
+      "description": "Enviar a mensagem clicando no botão de submit (fallback para qualquer button).",
+      "critical": "true"
+    },
+    {
+      "step": "step-6",
+      "action": "assert",
+      "type": "exists",
+      "selector": "textarea",
+      "expected": "textarea",
+      "description": "Deve existir textarea para preenchimento determinístico neste teste."
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "5000",
+      "assert": {
+        "type": "text",
+        "expected": "Qual é o WhatsApp?"
+      },
+      "description": "Aguardar e validar que a mensagem do usuário aparece no histórico.",
+      "critical": "true"
+    },
+    {
+      "step": "step-7",
+      "action": "assert",
+      "type": "exists",
+      "selector": "button[type='submit'], button",
+      "expected": "button[type='submit'], button",
+      "description": "Deve existir um botão para envio da mensagem."
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "8000",
+      "assert": {
+        "type": "text",
+        "expected": "35138939"
+      },
+      "description": "Aguardar resposta do assistente e validar presença do telefone/WhatsApp (conteúdo determinístico do RAG/metadata).",
+      "critical": "true"
+    },
+    {
+      "step": "step-8",
+      "action": "assert",
+      "type": "text",
+      "selector": "body",
+      "expected": "Qual é o WhatsApp?",
+      "description": "A mensagem do usuário deve aparecer no histórico após o envio."
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "studioolyadm@studiooly.com.br"
+      },
+      "description": "Validar que a resposta do assistente inclui o e-mail de contato (confirmando uso do conhecimento).",
+      "critical": "true"
+    },
+    {
+      "step": "step-9",
+      "action": "assert",
+      "type": "text",
+      "selector": "body",
+      "expected": "35138939",
+      "description": "A resposta do assistente deve conter o número de telefone/WhatsApp conhecido."
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "value": "",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar que o histórico mantém a mensagem inicial após a interação (estabilidade da conversa).",
+      "critical": "false"
+    },
+    {
+      "step": "step-10",
+      "action": "assert",
+      "type": "text",
+      "selector": "body",
+      "expected": "studioolyadm@studiooly.com.br",
+      "description": "A resposta do assistente deve conter o e-mail de contato conhecido."
+    }
+  ],
+  "data": {},
+  "metadata": {
+    "generatedAt": "2026-01-31T03:37:22.300Z",
+    "dependenciesResolved": false,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "open_chat_entrypoint"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "assert_greeting_message_rendered"
+      },
+      {
+        "nodeId": "user_input_faq",
+        "nodeType": "user_input",
+        "action": "send_faq_question"
+      },
+      {
+        "nodeId": "ai_faq",
+        "nodeType": "ai",
+        "action": "assert_ai_answer_contains_contact"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "assert_conversation_stable"
+      }
+    ],
+    "version": "1.0.0",
+    "convertedFromTest": true,
+    "convertedAt": "2026-01-31T03:37:43.858Z",
+    "originalStepsCount": 10,
+    "assertsCount": 9
+  },
+  "source": "automatic"
+}

@@ -17,8 +17,10 @@ const {
   updateStatus, 
   isStageCompleted, 
   getNextPendingStage,
-  toProgressFormat 
+  toProgressFormat,
+  tryApprove,
 } = require('./pipelineExecutionContext');
+const { emitEvent } = require('./websocketService');
 const { validateGenerationContract } = require('../utils/contractValidator');
 const { orchestrateGeneration } = require('./generationOrchestrator');
 const { validateFlow } = require('../../engine/validator');
@@ -26,6 +28,70 @@ const { saveFlowToFile, removeFlowFromFile } = require('./generationOrchestrator
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
+
+/**
+ * Garante que o flow gerado esteja disponível via API (`GET /flows/:id`) antes do RPA.
+ *
+ * Contexto:
+ * - O RPA (via frontend /chat) chama `GET /flows/:id`.
+ * - O orquestrador gera `execution.flow`, mas sem persistência.
+ * - Em bootstrap, isso causa 404 (`flow_not_found`) e o RPA falha com assert no body.
+ *
+ * Solução:
+ * - Persistir o flow no PostgreSQL (tabela `flows`) antes de executar o RPA.
+ * - O endpoint `/flows/:id` já faz fallback para o DB quando não está no cache.
+ */
+async function ensureFlowPersistedForRpa(execution) {
+  const flow = execution.flow;
+  if (!flow) return;
+
+  const tenantId =
+    execution.options?.tenantId ||
+    flow.tenantId ||
+    execution.payload?.tenantId ||
+    null;
+
+  if (!tenantId) {
+    // Se não há tenant, não dá para persistir com segurança (evita cross-tenant/orfãos)
+    throw new Error('Flow gerado sem tenantId. Não é possível persistir para execução RPA.');
+  }
+
+  // Hardening: garante tenantId no objeto (usado também pelo frontend)
+  if (!flow.tenantId) flow.tenantId = tenantId;
+
+  try {
+    const { getSequelize } = require('../db/sequelize');
+    const sequelize = getSequelize();
+    if (!sequelize) {
+      throw new Error('PostgreSQL/Sequelize não inicializado');
+    }
+
+    const { Flow } = require('../db/models');
+    const FlowModel = Flow();
+    const now = new Date();
+
+    const existing = await FlowModel.findByPk(flow.id);
+    const payload = {
+      id: flow.id,
+      tenant_key: tenantId,
+      name: flow.name || null,
+      data: flow,
+      updated_at: now,
+    };
+    if (existing) {
+      await existing.update(payload);
+    } else {
+      await FlowModel.create({ ...payload, created_at: now });
+    }
+  } catch (err) {
+    logger.error('[PipelineOrchestrator] Falha ao persistir flow para RPA', {
+      executionId: execution.executionId,
+      flowId: flow.id,
+      error: err.message,
+    });
+    throw new Error(`Falha ao persistir flow para execução RPA: ${err.message}`);
+  }
+}
 
 /**
  * Avança o pipeline para a próxima etapa válida.
@@ -37,17 +103,28 @@ const path = require('path');
 async function advancePipeline(execution, onProgress = null) {
   // Inicializa replay se não existir
   let replay = execution._replay;
+  const recording = execution._recording;
   const shouldRecordReplay = process.env.ENABLE_PIPELINE_REPLAY !== 'false';
   
   if (shouldRecordReplay && !replay) {
+    const tenantId =
+      execution?.options?.tenantId ||
+      execution?.payload?.tenantId ||
+      execution?.tenantId ||
+      execution?.flow?.tenantId ||
+      null;
+
     replay = new ReplaySystem({
       storagePath: path.join(process.cwd(), 'replays', 'pipeline'),
+      tenantId,
       context: 'pipeline',
       enableScreenshots: false,
     });
     
-    const replayId = `pipeline-${execution.executionId}-${Date.now()}`;
+    const prefix = tenantId ? `${tenantId}-` : '';
+    const replayId = `${prefix}pipeline-${execution.executionId}-${Date.now()}`;
     replay.start(replayId, {
+      tenantId,
       executionId: execution.executionId,
       status: execution.status,
     });
@@ -110,9 +187,21 @@ async function advancePipeline(execution, onProgress = null) {
         approvedBy: 'pipelineOrchestrator',
       };
     }
-    updateStatus(execution, 'approved', {
+    // Opção A: não aprovar se existirem etapas extras (tenant) pendentes.
+    // `tryApprove` só emite `approved` quando todas as etapas requeridas concluíram.
+    // Se ainda não estiver pronto, mantemos `running` e deixamos outros endpoints concluírem.
+    const approvedNow = tryApprove(execution, {
       decisionAuthority: execution.decisionAuthority,
+      source: 'pipelineOrchestrator.completed',
     });
+    // Se ainda não aprovou (ex.: aguardando etapas extras do modo tenant),
+    // não persistimos como "decisão final" e encerramos a execução do orchestrator aqui.
+    if (!approvedNow) {
+      if (onProgress) {
+        onProgress(toProgressFormat(execution));
+      }
+      return { shouldContinue: false };
+    }
     
     // Persiste execução após decisão final
     const { persistExecution } = require('./executionPersistence');
@@ -144,6 +233,52 @@ async function advancePipeline(execution, onProgress = null) {
   });
 
   try {
+    // Atualiza "etapa atual" para observabilidade (polling/UI)
+    execution.currentStage = nextStage;
+    execution.currentStageStartedAt = Date.now();
+    execution.updatedAt = Date.now();
+
+    // Emite um snapshot "running + etapa atual" para o frontend atualizar UI (best-effort).
+    // Importante: isso NÃO marca a etapa como concluída (stages não mudam), apenas
+    // informa qual etapa está em execução (ex.: RPA) para mostrar "in_progress".
+    try {
+      const tenantId = execution?.options?.tenantId || null;
+      if (tenantId) {
+        emitEvent('pipeline.status', {
+          executionId: execution.executionId,
+          status: execution.status || 'running',
+          stages: execution.stages || {},
+          metadata: {
+            currentStage: nextStage,
+            stageStatus: 'in_progress',
+            timestamp: new Date(execution.currentStageStartedAt).toISOString(),
+            message: `Executando etapa: ${nextStage}`,
+            source: 'pipelineOrchestrator.advancePipeline',
+          },
+        }, { tenantId });
+      }
+    } catch (err) {
+      // Best-effort: nunca falhar a execução por WS.
+      logger.debug('[PipelineOrchestrator] Falha ao emitir pipeline.status (stage start) (best-effort)', {
+        executionId: execution.executionId,
+        stage: nextStage,
+        error: err?.message || String(err),
+      });
+    }
+
+    // Notifica início da etapa (útil para UI sem WebSocket, via polling ou WS quando disponível)
+    if (onProgress) {
+      onProgress({
+        ...toProgressFormat(execution),
+        [nextStage]: {
+          status: 'in_progress',
+          progress: 0,
+          timestamp: new Date(execution.currentStageStartedAt).toISOString(),
+          message: `Executando etapa: ${nextStage}`,
+        },
+      });
+    }
+
     // Executa a próxima etapa
     await executeStage(execution, nextStage, onProgress);
     
@@ -155,7 +290,13 @@ async function advancePipeline(execution, onProgress = null) {
       stage: nextStage,
       error: error.message,
     });
-    updateStatus(execution, 'failed');
+    updateStatus(execution, 'failed', {
+      currentStage: nextStage,
+      stageStatus: 'error',
+      reason: { code: 'PIPELINE_STAGE_FAILED', stage: nextStage },
+      message: error.message || `Falha ao executar etapa: ${nextStage}`,
+      source: 'pipelineOrchestrator.advancePipeline',
+    });
 
     // Registra erro na gravação
     if (execution._recording) {
@@ -464,11 +605,42 @@ async function executeRagContextBuilding(execution) {
 
     updateStage(execution, 'ragContextBuilt', true);
   } catch (error) {
-    logger.error('[PipelineOrchestrator] Erro ao construir contexto RAG', {
+    // Erro ao construir contexto RAG = evidência insuficiente / RAG indisponível
+    // Pela governança epistemológica, isso gera ABSTENÇÃO (não falha).
+    logger.error('[PipelineOrchestrator] Erro ao construir contexto RAG (abstenção)', {
       executionId: execution.executionId,
       error: error.message,
     });
-    throw error;
+
+    updateStatus(execution, 'abstained', {
+      abstentionReason: {
+        code: 'INSUFFICIENT_EVIDENCE',
+        description: error.message || 'Erro ao construir contexto RAG (evidência insuficiente)',
+      },
+      decisionAuthority: {
+        type: 'system',
+        approvedBy: 'evidenceValidator',
+      },
+      evidenceContext: {
+        available: false,
+        type: 'rag',
+        error: error.message,
+        code: error.code || null,
+        details: error.details || null,
+      },
+    });
+
+    // Persiste execução após decisão de abstenção
+    const { persistExecution } = require('./executionPersistence');
+    persistExecution(execution).catch(err => {
+      logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
+        executionId: execution.executionId,
+        error: err.message,
+      });
+    });
+
+    updateStage(execution, 'ragContextBuilt', true);
+    return;
   }
 }
 
@@ -619,6 +791,15 @@ async function executeAIGeneration(execution) {
   execution.flow = generationResult.flowDefinition;
   execution.generationResult = generationResult;
 
+  // Garante que o flow exista via API antes de qualquer RPA (bootstrap/geração com RPA)
+  const shouldRunRpaLater =
+    execution.payload?.bootstrap === true ||
+    execution.payload?.generate?.rpa === true ||
+    execution.payload?.generateRpaTest === true;
+  if (shouldRunRpaLater) {
+    await ensureFlowPersistedForRpa(execution);
+  }
+
   // Log estruturado para auditoria RAG
   if (useRag && execution.ragContext) {
     const ragUsed = generationResult.ragUsed !== false;
@@ -667,12 +848,75 @@ async function executeSeedGeneration(execution) {
     throw new Error('Fluxo não disponível para gerar seed');
   }
 
-  // Por enquanto, apenas simula geração de seed
-  // Em produção, isso pode chamar scripts de seed específicos
-  logger.info('[PipelineOrchestrator] Seed gerado (simulado)', {
-    executionId: execution.executionId,
-    flowId: execution.flow.id,
-  });
+  // Seed = gravação (recording) para playback/execução do RPA (salva em tests/rpa/seeds)
+  // Preferência: derivar do rpaTest gerado pela IA; fallback: seed mínimo baseado no flow.
+  try {
+    const { convertRpaTestToRecording, saveTemporaryRecording } = require('./generationOrchestrator');
+    const flow = execution.flow;
+
+    const recording = (() => {
+      if (execution.generationResult?.rpaTest) {
+        return convertRpaTestToRecording(execution.generationResult.rpaTest);
+      }
+
+      const baseUrl = (() => {
+        const raw = process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+        return String(raw).replace(/\/$/, '');
+      })();
+
+      const seedId = `seed-${flow.id}-${Date.now()}`;
+      return {
+        id: seedId,
+        name: `Seed - ${flow.name || flow.id}`,
+        description: 'Seed gerado automaticamente (fallback)',
+        version: '1.0.0',
+        steps: [
+          {
+            type: 'navigate',
+            url: `${baseUrl}/chat?flowId=${encodeURIComponent(flow.id)}`,
+            description: 'Abrir chat do fluxo (fallback).',
+            critical: true,
+          },
+          {
+            type: 'wait',
+            selector: 'body',
+            description: 'Aguardar carregamento inicial do app.',
+            critical: false,
+          },
+        ],
+        data: {},
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          source: 'automatic',
+          fallback: true,
+          flowId: flow.id,
+        },
+        source: 'automatic',
+      };
+    })();
+
+    const seedPath = saveTemporaryRecording(recording);
+    execution.seed = {
+      id: recording.id,
+      name: recording.name,
+      filePath: seedPath,
+    };
+
+    logger.info('[PipelineOrchestrator] Seed gerado e salvo', {
+      executionId: execution.executionId,
+      flowId: execution.flow.id,
+      seedId: recording.id,
+      seedPath,
+      fromRpaTest: !!execution.generationResult?.rpaTest,
+    });
+  } catch (err) {
+    logger.error('[PipelineOrchestrator] Falha ao gerar seed', {
+      executionId: execution.executionId,
+      flowId: execution.flow.id,
+      error: err.message,
+    });
+    throw err;
+  }
 
   updateStage(execution, 'seedGenerated', true);
 }
@@ -711,6 +955,9 @@ async function executeRPAGeneration(execution) {
   const rpaTestPath = path.join(flowsDir, `${execution.generationResult.rpaTest.id}.json`);
   fs.writeFileSync(rpaTestPath, JSON.stringify(execution.generationResult.rpaTest, null, 2), 'utf8');
   execution.rpaTestPath = rpaTestPath;
+  // Ajuda o frontend a exibir e garante rastreabilidade do artefato salvo
+  execution.generationResult.rpaTest.filePath = rpaTestPath;
+  execution.rpaTest = execution.generationResult.rpaTest;
 
   logger.info(`[PipelineOrchestrator][${execution.executionId}] RPA gerado e salvo`, {
     rpaTestId: execution.generationResult.rpaTest.id,
@@ -754,6 +1001,17 @@ async function executeRPAExecution(execution) {
   updateStage(execution, 'rpaExecuted', true);
 
   if (!rpaResult.success) {
+    // SAFE-MODE (tenantPipeline): não aborta o pipeline por falha de RPA.
+    // Mantém diagnóstico (report/replay) para revisão humana.
+    if (execution?.payload?.tenantPipeline === true) {
+      logger.warn(`[PipelineOrchestrator][${execution.executionId}] RPA falhou em tenantPipeline (não-bloqueante)`, {
+        error: rpaResult.error,
+        reportPath: rpaResult.reportPath || null,
+        replayPath: rpaResult.replayPath || null,
+        failedStep: rpaResult.failedStep || null,
+      });
+      return;
+    }
     throw new Error(`Teste RPA falhou: ${rpaResult.error}`);
   }
 }

@@ -154,6 +154,19 @@ export function reindexAllNotIndexed(tenantId = null, includeInconsistent = fals
 }
 
 /**
+ * Reindex completo do tenant (zera rag_chunks e reprocessa tudo).
+ *
+ * Endpoint: POST /rag/reindex-all?tenantId=...
+ */
+export function reindexAllTenant(tenantId) {
+  if (!tenantId) {
+    return Promise.reject(new Error('reindexAllTenant: tenantId é obrigatório'));
+  }
+  const params = new URLSearchParams({ tenantId: String(tenantId) });
+  return fetchJson(`/rag/reindex-all?${params.toString()}`, { method: 'POST' });
+}
+
+/**
  * Obtém estatísticas de documentos.
  * 
  * @param {string} [tenantId] - ID do tenant
@@ -168,6 +181,40 @@ export function getDocumentsStats(tenantId = null) {
 
   return fetchJson(url, {
     method: 'GET',
+  });
+}
+
+/**
+ * Health do RAG (Node): compara BD vs vector store.
+ *
+ * @param {string|null} tenantId
+ * @param {{ autoRepair?: boolean }} [options]
+ * @returns {Promise<any>}
+ */
+export function getRagHealth(tenantId = null, options = {}) {
+  const params = new URLSearchParams();
+  if (tenantId) params.append('tenantId', tenantId);
+  const query = params.toString();
+  const url = `/rag/health${query ? `?${query}` : ''}`;
+  return fetchJson(url, { method: 'GET' });
+}
+
+/**
+ * Limpa documentos órfãos do vector store (vector_ahead).
+ * Se `documentIds` não for fornecido, o backend detecta automaticamente (vectorIds - dbIds).
+ *
+ * @param {string|null} tenantId
+ * @param {{ documentIds?: string[] }} [options]
+ * @returns {Promise<any>}
+ */
+export function cleanOrphanedVectorDocuments(tenantId = null, options = {}) {
+  const body = {};
+  if (tenantId) body.tenantId = tenantId; // compatibilidade futura; o backend usa auth tenant
+  if (Array.isArray(options.documentIds) && options.documentIds.length > 0) body.documentIds = options.documentIds;
+  return fetchJson('/rag/documents/clean-orphans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 }
 
@@ -372,7 +419,12 @@ export async function uploadDocument(file, options = {}) {
   const fileName = file.name;
   const formData = new FormData();
   formData.append('file', file, fileName);
+  if (options.executionId) formData.append('executionId', String(options.executionId));
+  // tenantId (request context): legado/compatibilidade. Idealmente, o tenant vem do header X-Tenant-Id.
   if (options.tenantId) formData.append('tenantId', String(options.tenantId));
+  // persistTenantId: permite persistir no tenant alvo (ex.: tenant recém-criado) mantendo o contexto do caller.
+  if (options.persistTenantId) formData.append('persistTenantId', String(options.persistTenantId));
+  if (options.dryRun === true) formData.append('dryRun', 'true');
   if (options.category) formData.append('category', String(options.category));
   if (Array.isArray(options.tags)) formData.append('tags', JSON.stringify(options.tags));
   if (options.autoIndex === false) formData.append('autoIndex', 'false');
@@ -388,6 +440,8 @@ export async function uploadDocument(file, options = {}) {
     fileType: file.type,
     fileSize: file.size,
     tenantId: options.tenantId || null,
+    persistTenantId: options.persistTenantId || null,
+    dryRun: options.dryRun === true,
     category: options.category || null,
     autoIndex: options.autoIndex !== false,
   });
@@ -397,6 +451,7 @@ export async function uploadDocument(file, options = {}) {
     method: 'POST',
     body: formData,
     timeoutMs: 45000,
+    ...(options.headers && typeof options.headers === 'object' ? { headers: options.headers } : {}),
   });
 }
 

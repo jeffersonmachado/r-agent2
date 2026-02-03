@@ -130,13 +130,16 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
   const executionId = `rpa-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
   // Cria runner com configurações
-  // headless sempre false para sempre mostrar o navegador
+  // Por padrão mantemos o navegador visível (útil para execução manual),
+  // mas permitimos headless quando explicitamente solicitado (ex: validações automáticas/CI).
+  const resolvedHeadless = config.headless !== undefined ? config.headless : false;
   const runner = new RpaTestRunner({
-    headless: false, // SEMPRE false - navegador sempre visível
+    headless: resolvedHeadless,
     slowMo: config.slowMo || 500,
     timeout: config.timeout || 30000,
     screenshotOnFailure: config.screenshotOnFailure !== undefined ? config.screenshotOnFailure : true,
-    devtools: config.devtools !== undefined ? config.devtools : true,
+    // Devtools em headless só atrapalha (e pode causar instabilidade)
+    devtools: config.devtools !== undefined ? config.devtools : !resolvedHeadless,
   });
 
   // Armazena execução
@@ -915,6 +918,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             success: stepResult.success,
             error: stepResult.error || null,
             timestamp: new Date().toISOString(),
+            debug: stepResult.debug || null,
           });
 
           if (stepResult.success) {
@@ -927,6 +931,14 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
               step: stepNumber,
               action: step.type,
               error: stepResult.error,
+              // Log detalhado vai no payload do results.steps para não explodir execution.logs,
+              // mas deixamos um resumo aqui quando disponível.
+              debugSummary: stepResult?.debug?.diagnostics
+                ? {
+                    kind: stepResult.debug.diagnostics.kind,
+                    selectorsTried: stepResult.debug.diagnostics.selectorsTried,
+                  }
+                : null,
             });
             
             results.success = false;
@@ -934,6 +946,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
               step: stepNumber,
               action: step.type,
               error: stepResult.error,
+              debug: stepResult.debug || null,
             });
 
             // Captura screenshot em caso de erro

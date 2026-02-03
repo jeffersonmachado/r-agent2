@@ -46,20 +46,19 @@ describe('ragDocuments', () => {
         autoIndex: true,
       });
 
-      // Aguarda FileReader processar
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       expect(clientApi.fetchJson).toHaveBeenCalledWith(
-        '/rag/documents',
+        '/rag/documents/upload',
         expect.objectContaining({
           method: 'POST',
         })
       );
 
-      // Verifica que o body contém o conteúdo extraído
       const callArgs = clientApi.fetchJson.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body.content).toBe(extractedContent);
+      expect(callArgs[1].body).toBeInstanceOf(FormData);
+      const metadataRaw = callArgs[1].body.get('metadata');
+      expect(typeof metadataRaw).toBe('string');
+      const metadata = JSON.parse(metadataRaw);
+      expect(metadata.extractedContent).toBe(extractedContent);
     });
 
     it('deve processar arquivo de texto sem extractedContent', async () => {
@@ -75,22 +74,15 @@ describe('ragDocuments', () => {
         autoIndex: true,
       });
 
-      // Aguarda FileReader processar
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       expect(clientApi.fetchJson).toHaveBeenCalledWith(
-        '/rag/documents',
+        '/rag/documents/upload',
         expect.objectContaining({
           method: 'POST',
         })
       );
-
-      const callArgs = clientApi.fetchJson.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body.content).toBe(content);
     });
 
-    it('deve usar placeholder para imagem sem extractedContent', async () => {
+    it('deve enviar imagem via multipart', async () => {
       const blob = new Blob(['fake image'], { type: 'image/png' });
       const file = new File([blob], 'test.png', { type: 'image/png' });
 
@@ -104,15 +96,14 @@ describe('ragDocuments', () => {
       });
 
       expect(clientApi.fetchJson).toHaveBeenCalledWith(
-        '/rag/documents',
+        '/rag/documents/upload',
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('[Imagem: test.png]'),
         })
       );
     });
 
-    it('deve usar placeholder para PDF sem extractedContent', async () => {
+    it('deve enviar PDF via multipart', async () => {
       const blob = new Blob(['fake pdf'], { type: 'application/pdf' });
       const file = new File([blob], 'test.pdf', { type: 'application/pdf' });
 
@@ -126,10 +117,9 @@ describe('ragDocuments', () => {
       });
 
       expect(clientApi.fetchJson).toHaveBeenCalledWith(
-        '/rag/documents',
+        '/rag/documents/upload',
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('[PDF: test.pdf]'),
         })
       );
     });
@@ -150,18 +140,16 @@ describe('ragDocuments', () => {
         autoIndex: true,
       });
 
-      // Aguarda FileReader processar
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       const callArgs = clientApi.fetchJson.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
+      expect(callArgs[1].body).toBeInstanceOf(FormData);
 
-      expect(body.metadata.category).toBe('promocoes');
-      expect(body.metadata.tags).toEqual(['promocoes', 'generate-system']);
-      expect(body.metadata.extractedContent).toBe('conteúdo extraído');
+      expect(callArgs[1].body.get('category')).toBe('promocoes');
+      expect(callArgs[1].body.get('tags')).toBe(JSON.stringify(['promocoes', 'generate-system']));
+      const metadata = JSON.parse(callArgs[1].body.get('metadata'));
+      expect(metadata.extractedContent).toBe('conteúdo extraído');
     });
 
-    it('deve indexar automaticamente quando autoIndex é true', async () => {
+    it('não deve setar autoIndex=false quando autoIndex é true', async () => {
       const file = new File(['conteúdo'], 'test.txt', { type: 'text/plain' });
 
       clientApi.fetchJson.mockResolvedValue({
@@ -172,13 +160,9 @@ describe('ragDocuments', () => {
         autoIndex: true,
       });
 
-      // Aguarda FileReader processar
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       const callArgs = clientApi.fetchJson.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-
-      expect(body.autoIndex).toBe(true);
+      expect(callArgs[1].body).toBeInstanceOf(FormData);
+      expect(callArgs[1].body.get('autoIndex')).toBe(null);
     });
 
     it('deve rejeitar quando arquivo não é fornecido', async () => {

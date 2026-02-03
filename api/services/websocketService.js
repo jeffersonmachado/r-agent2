@@ -67,6 +67,8 @@ function initializeWebSocket(httpServer) {
       tenantId: null,
       agentId: null,
       username: null,
+      // Subscriptions por executionId (pipeline)
+      executionIds: new Set(),
       connectedAt: new Date(),
       lastActivity: new Date(),
     };
@@ -137,6 +139,41 @@ function initializeWebSocket(httpServer) {
             status: 'success',
             message: 'Inscrito em eventos',
             events: data.events,
+          });
+          return;
+        }
+
+        // Subscribe por executionId (pipeline): permite isolar eventos por execução
+        if (data.type === 'subscribeExecution' && data.executionId) {
+          const executionId = typeof data.executionId === 'string' ? data.executionId.trim() : '';
+          const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
+          if (!isValidExecutionId) {
+            sendToClient(clientId, {
+              type: 'subscribeExecution',
+              status: 'error',
+              message: 'executionId inválido',
+              executionId: executionId || null,
+            });
+            return;
+          }
+          client.executionIds.add(executionId);
+          sendToClient(clientId, {
+            type: 'subscribeExecution',
+            status: 'success',
+            message: 'Inscrito no executionId',
+            executionId,
+          });
+          return;
+        }
+
+        if (data.type === 'unsubscribeExecution' && data.executionId) {
+          const executionId = typeof data.executionId === 'string' ? data.executionId.trim() : '';
+          if (executionId) client.executionIds.delete(executionId);
+          sendToClient(clientId, {
+            type: 'unsubscribeExecution',
+            status: 'success',
+            message: 'Desinscrito do executionId',
+            executionId: executionId || null,
           });
           return;
         }
@@ -223,7 +260,43 @@ function broadcastToTenant(tenantId, data) {
       }
     }
   }
-  logger.debug(`[WebSocketService] Broadcast enviado para ${sent} cliente(s) do tenant ${tenantId}`);
+  // Mantém debug para alto volume, mas sobe para info no caso do pipeline (para diagnóstico).
+  const isPipelineStatus = data?.type === 'event' && data?.event === 'pipeline.status';
+  const msg = `[WebSocketService] Broadcast enviado para ${sent} cliente(s) do tenant ${tenantId}`;
+  if (isPipelineStatus) {
+    logger.info(msg, {
+      tenantId,
+      sent,
+      executionId: data?.data?.executionId || null,
+      status: data?.data?.status || null,
+    });
+  } else {
+    logger.debug(msg);
+  }
+}
+
+/**
+ * Envia mensagem apenas para clientes de um tenant inscritos no executionId.
+ *
+ * @param {string} tenantId
+ * @param {string} executionId
+ * @param {Object} data
+ */
+function broadcastToExecution(tenantId, executionId, data) {
+  let sent = 0;
+  for (const [clientId, client] of clients.entries()) {
+    if (client.tenantId !== tenantId) continue;
+    if (!client.executionIds || !(client.executionIds instanceof Set)) continue;
+    if (!client.executionIds.has(executionId)) continue;
+    if (client.ws.readyState !== 1) continue;
+    try {
+      client.ws.send(JSON.stringify(data));
+      sent++;
+    } catch (err) {
+      logger.error(`[WebSocketService] Erro ao enviar broadcast (execution) para cliente ${clientId}:`, err);
+    }
+  }
+  logger.info('[WebSocketService] Broadcast (execution) enviado', { tenantId, executionId, sent, event: data?.event || null });
 }
 
 /**
@@ -255,7 +328,7 @@ function sendToAgent(agentId, data) {
  * @param {Object} options - Opções (tenantId, agentId)
  */
 function emitEvent(event, payload, options = {}) {
-  const { tenantId, agentId } = options;
+  const { tenantId, agentId, executionId } = options;
 
   const message = {
     type: 'event',
@@ -265,7 +338,20 @@ function emitEvent(event, payload, options = {}) {
   };
 
   if (tenantId) {
-    broadcastToTenant(tenantId, message);
+    // Observabilidade: eventos críticos para pipeline devem ser rastreáveis em DEV.
+    if (event === 'pipeline.status') {
+      logger.info('[WebSocketService] Emitindo pipeline.status', {
+        tenantId,
+        executionId: payload?.executionId || null,
+        status: payload?.status || null,
+        stages: payload?.stages ? Object.keys(payload.stages).filter((k) => payload.stages[k] === true) : [],
+      });
+    }
+    if (executionId && typeof executionId === 'string' && executionId.trim()) {
+      broadcastToExecution(tenantId, executionId.trim(), message);
+    } else {
+      broadcastToTenant(tenantId, message);
+    }
   } else if (agentId) {
     sendToAgent(agentId, message);
   } else {
@@ -398,6 +484,7 @@ module.exports = {
   initializeWebSocket,
   sendToClient,
   broadcastToTenant,
+  broadcastToExecution,
   sendToAgent,
   emitEvent,
   getStats,

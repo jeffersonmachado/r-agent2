@@ -46,6 +46,19 @@ function safeString(v) {
   return String(v);
 }
 
+function cleanOcrText(s) {
+  let out = safeString(s);
+  // remove control chars
+  out = out.replace(/[\u0000-\u001F\u007F]/g, ' ');
+  // join broken hyphenation from OCR/wrapped PDFs: "qualida- de" -> "qualidade"
+  out = out.replace(/([A-Za-zÀ-ÿ]{2,})-\s+([a-zà-ÿ]{2,})/g, '$1$2');
+  // collapse whitespace
+  out = out.replace(/\s+/g, ' ').trim();
+  // normalize spaced punctuation
+  out = out.replace(/\s+([,.;:!?])/g, '$1');
+  return out;
+}
+
 function normalizeForMatch(s) {
   return safeString(s)
     .toLowerCase()
@@ -172,7 +185,7 @@ function extractJsonFromAiText(text) {
 
 function extractSignalsFromChunks(chunks) {
   const texts = (Array.isArray(chunks) ? chunks : [])
-    .map(c => safeString(c?.text || c?.excerpt || '').trim())
+    .map(c => cleanOcrText(c?.text || c?.excerpt || ''))
     .filter(Boolean);
   const joined = texts.join('\n');
 
@@ -214,6 +227,27 @@ function extractSignalsFromChunks(chunks) {
     proofPoints.push({ label: 'Horários', value: h, source: null });
   }
 
+  // Heurística segura: extrair listas explícitas (ex.: "Modalidades: X, Y e Z") sem inferir segmento
+  const productsServices = [];
+  const listLineMatches = joined.match(/(?:modalidades|servi[cç]os|solu[cç][oõ]es|oferece|trabalha com)\s*[:\-]\s*[^\n]{8,180}/gi) || [];
+  for (const line of listLineMatches.slice(0, 8)) {
+    const parts = line.split(/[:\-]\s*/);
+    const tail = parts.slice(1).join(':').trim();
+    if (!tail) continue;
+    // separa por vírgula, barra e " e "
+    const items = tail
+      .split(/,|\/|;|\s+e\s+/i)
+      .map(x => x.trim())
+      .filter(Boolean)
+      .filter(x => x.length >= 3 && x.length <= 40)
+      .filter(x => /^[A-Za-zÀ-ÿ0-9][A-Za-zÀ-ÿ0-9\s().+-]+$/.test(x));
+    for (const it of items) {
+      productsServices.push(it);
+      if (productsServices.length >= 12) break;
+    }
+    if (productsServices.length >= 12) break;
+  }
+
   return {
     contacts: {
       email: emails[0] || null,
@@ -224,6 +258,7 @@ function extractSignalsFromChunks(chunks) {
     legal: { cnpj: cnpj || null },
     paymentMethods: uniq(pm),
     proofPoints,
+    productsServices: uniq(productsServices),
   };
 }
 
@@ -314,7 +349,7 @@ function buildProfilePrompt({ tenantName, website, urls, fileNames, chunks, pref
     sourceType: c.sourceType || 'unknown',
     sourceId: c.sourceId || null,
     score: Number.isFinite(c.score) ? Number(c.score) : null,
-    text: safeString(c.text || c.excerpt || '').slice(0, 1400),
+    text: cleanOcrText(c.text || c.excerpt || '').slice(0, 1400),
   }));
 
   return [
@@ -372,7 +407,7 @@ async function buildEntityProfile(tenantId, input = {}) {
   if (!finalTenantId) throw new Error('tenantId é obrigatório');
 
   const chunks = Array.isArray(input.chunks) ? input.chunks : [];
-  const evidenceTexts = chunks.map(c => safeString(c.text || c.excerpt || '')).filter(Boolean);
+  const evidenceTexts = chunks.map(c => cleanOcrText(c.text || c.excerpt || '')).filter(Boolean);
 
   let tenant = null;
   try {
@@ -398,6 +433,7 @@ async function buildEntityProfile(tenantId, input = {}) {
     p.legal = { ...p.legal, ...deterministic.legal };
     p.paymentMethods = deterministic.paymentMethods || [];
     p.proofPoints = deterministic.proofPoints || [];
+    p.productsServices = deterministic.productsServices || [];
     p.confidence = computeHeuristicConfidence({ chunks, profile: p });
     return { profile: p, usedAi: false };
   }
@@ -421,6 +457,7 @@ async function buildEntityProfile(tenantId, input = {}) {
   profile.legal = { ...profile.legal, ...deterministic.legal };
   profile.paymentMethods = uniq([...(profile.paymentMethods || []), ...(deterministic.paymentMethods || [])]);
   profile.proofPoints = dedupeProofPoints([...(profile.proofPoints || []), ...(deterministic.proofPoints || [])]);
+  profile.productsServices = uniq([...(profile.productsServices || []), ...(deterministic.productsServices || [])]);
 
   // Enforce anti-invenção nas partes verificáveis
   profile = enforceNoInvention(profile, evidenceTexts, { website, urls });

@@ -77,9 +77,14 @@ async function saveTempAudio(audioBuffer, extension = 'ogg') {
  */
 async function transcribeWithWhisper(audioData, tenantId) {
   try {
-    const apiKey = config.get('ai.openai.apiKey');
-    if (!apiKey) {
-      throw new Error('OpenAI API key não configurada');
+    if (!tenantId) {
+      throw new Error('TenantId é obrigatório para transcrição (credenciais por tenant)');
+    }
+    // Resolve API key EXCLUSIVAMENTE por tenant (DB, criptografada)
+    const { getDecryptedAPIKey } = require('./tenantAIService');
+    const apiKey = await getDecryptedAPIKey(String(tenantId), 'openai');
+    if (!apiKey || !String(apiKey).trim()) {
+      throw new Error(`OpenAI API key não configurada para o tenant: ${tenantId}`);
     }
     
     let audioBuffer;

@@ -55,9 +55,12 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     saveRecording = true,
   } = options;
 
+  const tenantId = flow?.tenantId || null;
+
   // Inicializa replay
   const replay = new ReplaySystem({
     storagePath: path.join(process.cwd(), 'replays', 'rpa-pipeline'),
+    tenantId,
     context: 'rpa-pipeline',
     enableScreenshots: false,
   });
@@ -65,12 +68,14 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   // Inicializa gravação
   const recordingSystem = new RecordingSystem({
     storagePath: path.join(process.cwd(), 'recordings', 'rpa-pipeline'),
+    tenantId,
     context: 'rpa-pipeline',
     enableTimestamps: false,
   });
 
-  const replayId = `rpa-pipeline-${flow.id}-${Date.now()}`;
-  const recordingId = `rpa-pipeline-${flow.id}-${Date.now()}`;
+  const prefix = tenantId ? `${tenantId}-` : '';
+  const replayId = `${prefix}rpa-pipeline-${flow.id}-${Date.now()}`;
+  const recordingId = `${prefix}rpa-pipeline-${flow.id}-${Date.now()}`;
   
   replay.start(replayId, {
     flowId: flow.id,
@@ -109,7 +114,8 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   };
 
   try {
-    const tenantId = flow.tenantId; // Tenant deve ser fornecido no flow
+    // Tenant deve ser fornecido no flow; aqui usamos o tenantId já resolvido acima.
+    const tenantId = flow.tenantId;
 
     // PASSO 1: Análise de dependências
     logger.info('[RpaFlowPipeline] Passo 1: Analisando dependências...');

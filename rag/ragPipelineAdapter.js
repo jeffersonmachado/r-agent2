@@ -181,7 +181,25 @@ async function fetchRagContext({ executionId, tenantId, categories, query }) {
       });
       
       if (mandatoryWhenEnabled) {
-        throw new Error(errorMsg);
+        const err = new Error(errorMsg);
+        err.code = 'INSUFFICIENT_EVIDENCE';
+        err.details = {
+          executionId,
+          tenantId: tenant,
+          queryPreview: query.substring(0, 180),
+          categories: cats,
+          filters,
+          chunksFound: chunks.length,
+          minChunks,
+          sourcesFound: sources.length,
+          sampleSources: sources.slice(0, 5),
+          sampleChunks: chunks.slice(0, 5).map(c => ({
+            sourceFile: c.sourceFile,
+            category: c.category,
+            score: c.score,
+          })),
+        };
+        throw err;
       }
       
       return {
@@ -200,7 +218,24 @@ async function fetchRagContext({ executionId, tenantId, categories, query }) {
       });
       
       if (mandatoryWhenEnabled) {
-        throw new Error(errorMsg);
+        const err = new Error(errorMsg);
+        err.code = 'INSUFFICIENT_EVIDENCE';
+        err.details = {
+          executionId,
+          tenantId: tenant,
+          queryPreview: query.substring(0, 180),
+          categories: cats,
+          filters,
+          chunksFound: chunks.length,
+          minChunks,
+          sourcesFound: sources.length,
+          sampleChunks: chunks.slice(0, 5).map(c => ({
+            sourceFile: c.sourceFile,
+            category: c.category,
+            score: c.score,
+          })),
+        };
+        throw err;
       }
       
       return {

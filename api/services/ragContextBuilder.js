@@ -95,8 +95,9 @@ function buildContextSource(s) {
   const hash = sha256(normalizeForHash(rawText));
 
   // Texto completo (limitado) para extração estruturada; `excerpt` é apenas para UI/debug leve.
-  const text = rawText.length > 1400 ? `${rawText.slice(0, 1400)}...` : rawText;
-  const excerpt = rawText.length > 380 ? `${rawText.slice(0, 380)}...` : rawText;
+  // Aumentado para melhorar extração (modalidades/planos/horários às vezes ficam “depois do corte”).
+  const text = rawText.length > 2400 ? `${rawText.slice(0, 2400)}...` : rawText;
+  const excerpt = rawText.length > 520 ? `${rawText.slice(0, 520)}...` : rawText;
 
   return {
     sourceType,

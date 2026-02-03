@@ -23,6 +23,9 @@ const {
 } = require('../../engine/nodes/basicNodes');
 const { aiNodeHandler } = require('../../engine/nodes/aiNode');
 const { aiTaskNodeHandler } = require('../../engine/nodes/aiTaskNode');
+const { semanticRouterNodeHandler } = require('../../engine/nodes/semanticRouterNode');
+const { ragAnswerNodeHandler } = require('../../engine/nodes/ragAnswerNode');
+const { businessEntryNodeHandler } = require('../../engine/nodes/businessEntryNode');
 const {
   getFlowInfoNodeHandler,
   getQueueStatusNodeHandler,
@@ -39,6 +42,7 @@ const {
 } = require('../../engine/nodes/systemNodes');
 const { apiNodeHandler } = require('../../engine/nodes/apiNode');
 const { fallbackNodeHandler } = require('../../engine/nodes/fallbackNode');
+const { mergeNodeHandler } = require('../../engine/nodes/mergeNode');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const outboundQueueService = require('./outboundQueueService');
 const logger = require('../utils/logger');
@@ -73,13 +77,17 @@ function createNodeRegistry() {
   registry.register('message', messageNodeHandler);
   registry.register('user_input', userInputNodeHandler);
   registry.register('options', optionsNodeHandler);
+  registry.register('merge', mergeNodeHandler);
   registry.register('router', routerNodeHandler);
   registry.register('schedule_router', scheduleRouterNodeHandler);
+  registry.register('semantic_router', semanticRouterNodeHandler);
+  registry.register('business_entry', businessEntryNodeHandler);
   registry.register('set_variable', setVariableNodeHandler);
   registry.register('handoff', handoffNodeHandler);
   registry.register('end', endNodeHandler);
   registry.register('ai', aiNodeHandler);
   registry.register('ai_task', aiTaskNodeHandler);
+  registry.register('rag_answer', ragAnswerNodeHandler);
   // Nós de persistência
   registry.register('get_flow_info', getFlowInfoNodeHandler);
   registry.register('get_queue_status', getQueueStatusNodeHandler);
@@ -180,14 +188,18 @@ async function processWhatsAppMessage(message, value, deps) {
   let recordingId = null;
   
   if (shouldRecordReplay) {
+    const tenantId = inboundTenantId || null;
     replay = new ReplaySystem({
       storagePath: path.join(process.cwd(), 'replays', 'message'),
+      tenantId,
       context: 'message',
       enableScreenshots: false,
     });
     
-    replayId = `message-${sessionId}-${Date.now()}`;
+    const prefix = tenantId ? `${tenantId}-` : '';
+    replayId = `${prefix}message-${sessionId}-${Date.now()}`;
     replay.start(replayId, {
+      tenantId,
       sessionId,
       messageId,
       from,
@@ -195,16 +207,20 @@ async function processWhatsAppMessage(message, value, deps) {
   }
 
   if (shouldRecord) {
+    const tenantId = inboundTenantId || null;
     recording = new RecordingSystem({
       storagePath: path.join(process.cwd(), 'recordings', 'message'),
+      tenantId,
       context: 'message',
       enableTimestamps: true,
     });
     
-    recordingId = `message-${sessionId}-${Date.now()}`;
+    const prefix = tenantId ? `${tenantId}-` : '';
+    recordingId = `${prefix}message-${sessionId}-${Date.now()}`;
     recording.start(recordingId, {
       name: 'Processamento de Mensagem WhatsApp',
       description: 'Processamento de mensagem do WhatsApp',
+      tenantId,
       sessionId,
       messageId,
       from,

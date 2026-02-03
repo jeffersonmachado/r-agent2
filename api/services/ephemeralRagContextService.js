@@ -8,6 +8,14 @@ function nowMs() {
   return Date.now();
 }
 
+function getReadyRedisClientOrNull() {
+  const redis = getEphemeralContextClient();
+  if (!redis) return null;
+  // Com enableOfflineQueue=false, não podemos enviar comandos enquanto não estiver "ready"
+  if (redis.status !== 'ready') return null;
+  return redis;
+}
+
 function safeString(v) {
   if (v === null || v === undefined) return '';
   return String(v);
@@ -50,24 +58,63 @@ function coerceChunk(c) {
   };
 }
 
-function dedupeAndCap(chunks) {
+function dedupeAndCapWithStats(chunks) {
   const out = [];
   const seen = new Set();
   let totalChars = 0;
+  const stats = {
+    received: Array.isArray(chunks) ? chunks.length : 0,
+    droppedShortText: 0,
+    droppedMissingSourceId: 0,
+    droppedInvalid: 0,
+    droppedDuplicate: 0,
+    cappedByCount: false,
+    cappedByChars: false,
+  };
 
   for (const c of Array.isArray(chunks) ? chunks : []) {
+    if (!c || typeof c !== 'object') {
+      stats.droppedInvalid += 1;
+      continue;
+    }
+    const sourceId = safeString(c?.sourceId || '').trim();
+    const text = normalizeText(c?.text || c?.excerpt || '');
+    if (!sourceId) {
+      stats.droppedMissingSourceId += 1;
+      continue;
+    }
+    if (!text || text.length < 20) {
+      stats.droppedShortText += 1;
+      continue;
+    }
     const cc = coerceChunk(c);
-    if (!cc) continue;
+    if (!cc) {
+      stats.droppedInvalid += 1;
+      continue;
+    }
     const h = sha256(`${cc.sourceType}|${cc.sourceId}|${cc.text}`);
-    if (seen.has(h)) continue;
+    if (seen.has(h)) {
+      stats.droppedDuplicate += 1;
+      continue;
+    }
     seen.add(h);
     out.push(cc);
     totalChars += cc.text.length;
-    if (out.length >= 30) break;
-    if (totalChars >= 30000) break;
+    if (out.length >= 30) {
+      stats.cappedByCount = true;
+      break;
+    }
+    if (totalChars >= 30000) {
+      stats.cappedByChars = true;
+      break;
+    }
   }
 
-  return out;
+  return { chunks: out, stats };
+}
+
+function dedupeAndCap(chunks) {
+  return dedupeAndCapWithStats(chunks).chunks;
 }
 
 async function getFromMemory(key) {
@@ -105,12 +152,20 @@ async function upsertEphemeralContext(input) {
   const ttlSeconds = getTtlSeconds(input?.ttlSeconds);
   const key = buildKey(tenantId, executionId);
 
-  const incoming = dedupeAndCap(input?.chunks || []);
+  const { chunks: incoming, stats } = dedupeAndCapWithStats(input?.chunks || []);
   if (incoming.length === 0) {
-    return { ok: true, stored: 0, ttlSeconds, key, used: 'noop' };
+    logger.info('[EphemeralContext] Upsert noop (nenhum chunk válido)', {
+      tenantId,
+      executionId,
+      ttlSeconds,
+      key,
+      used: 'noop',
+      stats,
+    });
+    return { ok: true, stored: 0, ttlSeconds, key, used: 'noop', stats };
   }
 
-  const redis = getEphemeralContextClient();
+  const redis = getReadyRedisClientOrNull();
   const replace = input?.replace === true;
 
   let merged = incoming;
@@ -139,13 +194,44 @@ async function upsertEphemeralContext(input) {
     updatedAt: new Date().toISOString(),
   };
 
-  if (redis) {
-    await redis.set(key, JSON.stringify(payload), 'EX', ttlSeconds);
-  } else {
-    await setToMemory(key, payload, ttlSeconds);
+  try {
+    if (redis) {
+      await redis.set(key, JSON.stringify(payload), 'EX', ttlSeconds);
+      logger.info('[EphemeralContext] Contexto efêmero gravado', {
+        tenantId,
+        executionId,
+        ttlSeconds,
+        key,
+        used: 'redis',
+        stored: merged.length,
+        replace,
+        stats,
+      });
+      return { ok: true, stored: merged.length, ttlSeconds, key, used: 'redis', stats };
+    }
+  } catch (err) {
+    // Em dev, é comum o Redis ainda não estar pronto (enableOfflineQueue=false).
+    // Não devemos falhar a requisição: degradamos para memória e seguimos.
+    logger.warn('[EphemeralContext] Falha ao persistir no Redis, usando fallback memória', {
+      tenantId,
+      executionId,
+      error: err.message,
+    });
   }
 
-  return { ok: true, stored: merged.length, ttlSeconds, key, used: redis ? 'redis' : 'memory' };
+  await setToMemory(key, payload, ttlSeconds);
+  logger.info('[EphemeralContext] Contexto efêmero gravado', {
+    tenantId,
+    executionId,
+    ttlSeconds,
+    key,
+    used: 'memory',
+    stored: merged.length,
+    replace,
+    stats,
+  });
+  return { ok: true, stored: merged.length, ttlSeconds, key, used: 'memory', stats };
+
 }
 
 /**
@@ -159,7 +245,7 @@ async function getEphemeralContext(input) {
   if (!tenantId || !executionId) return { ok: true, found: false, chunks: [], used: 'noop' };
   const key = buildKey(tenantId, executionId);
 
-  const redis = getEphemeralContextClient();
+  const redis = getReadyRedisClientOrNull();
   try {
     const data = redis ? await redis.get(key) : await getFromMemory(key);
     if (!data) return { ok: true, found: false, chunks: [], used: redis ? 'redis' : 'memory' };

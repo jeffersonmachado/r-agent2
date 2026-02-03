@@ -160,13 +160,39 @@ class Settings(BaseSettings):
     
     # Vector Store
     vector_store_type: str = (
-        _CONFIG_JSON.get('vectorStore', {}).get('type', 'faiss')
-        if _CONFIG_JSON else "faiss"
+        _CONFIG_JSON.get('vectorStore', {}).get('type', 'postgres')
+        if _CONFIG_JSON else "postgres"
     )
     vector_store_path: str = (
         _CONFIG_JSON.get('vectorStore', {}).get('path', './data/vector_store')
         if _CONFIG_JSON else "./data/vector_store"
     )
+
+    # Database (para pgvector)
+    # Prioridade: DATABASE_URL env > PG* env > vazio
+    database_url: Optional[str] = None
+
+    @property
+    def postgres_dsn(self) -> Optional[str]:
+        """
+        Retorna DSN do Postgres para o vector store (pgvector).
+        Usa DATABASE_URL (recomendado) ou monta via PG*.
+        """
+        if os.getenv("DATABASE_URL"):
+            return os.getenv("DATABASE_URL")
+        if self.database_url:
+            return self.database_url
+
+        host = os.getenv("PGHOST")
+        user = os.getenv("PGUSER")
+        password = os.getenv("PGPASSWORD")
+        dbname = os.getenv("PGDATABASE")
+        port = os.getenv("PGPORT") or "5432"
+
+        if host and user and dbname:
+            pw = password or ""
+            return f"postgresql://{user}:{pw}@{host}:{port}/{dbname}"
+        return None
     
     # LLM
     llm_provider: str = (

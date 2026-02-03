@@ -12,8 +12,8 @@
    - Inclui dependências: torch, transformers, numpy, scipy
    - Modelos pré-treinados baixados sob demanda (podem ser 500 MB - 2 GB cada)
 
-2. **faiss-cpu (1.8.0)** - ~50-100 MB
-   - Biblioteca de busca vetorial otimizada
+2. **psycopg2-binary** - ~5-15 MB
+   - Driver para Postgres (o vector store fica no Postgres via pgvector)
 
 3. **fastapi + uvicorn** - ~20-30 MB
    - Framework web assíncrono
@@ -87,7 +87,6 @@ Se você tiver apenas 2-3 GB disponíveis, pode tentar:
 2. **Instalar apenas dependências essenciais primeiro**:
    ```bash
    pip install fastapi uvicorn pydantic
-   pip install faiss-cpu
    pip install sentence-transformers --no-cache-dir
    ```
 

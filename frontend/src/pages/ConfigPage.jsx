@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection, getTenantAiConfig, saveTenantAiConfig, saveTenantAiCredentials } from '../api/config';
+import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection, getTenantAiConfig, saveTenantAiConfig, saveTenantAiCredentials, validateTenantAiCredentials } from '../api/config';
 import { listFlows } from '../api/flows';
 import { useAuth } from '../context/authContext';
 import { useToast } from '../components/Toast';
@@ -53,7 +53,7 @@ export function ConfigPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam && ['api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'general'].includes(tabParam)) {
+      if (tabParam && ['api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'].includes(tabParam)) {
         return tabParam;
       }
     }
@@ -80,11 +80,9 @@ export function ConfigPage() {
     }
   }, [getTargetTenantId, targetTenantId]);
   
-  const [activeTab, setActiveTab] = useState(getInitialTab); // 'api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'general'
+  const [activeTab, setActiveTab] = useState(getInitialTab); // 'api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'
   const [flows, setFlows] = useState([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
-  const [validatingTokens, setValidatingTokens] = useState({}); // { 'ai.openai.apiKey': true }
-  const [tokenValidationStatus, setTokenValidationStatus] = useState({}); // { 'ai.openai.apiKey': { valid: true, error: null } }
   const [validatingRedis, setValidatingRedis] = useState(false);
   const [redisValidationStatus, setRedisValidationStatus] = useState(null); // { valid: true, error: null }
   
@@ -98,6 +96,8 @@ export function ConfigPage() {
   const [validatingApiKey, setValidatingApiKey] = useState(false);
   const [apiKeyValidationStatus, setApiKeyValidationStatus] = useState(null); // { valid: boolean, error: string | null }
   const [credentialsValidatedAndSaved, setCredentialsValidatedAndSaved] = useState(false); // Rastreia se credenciais foram validadas e salvas
+  const [providerAutoValidation, setProviderAutoValidation] = useState({ validating: false, status: null }); // { validating, status: { valid, error, provider } }
+  const [providerAutoValidationNonce, setProviderAutoValidationNonce] = useState(0); // força revalidação automática
 
   const configLoadedRef = useRef(false);
   const configLoadedTenantRef = useRef(null); // Rastreia qual tenant foi carregado
@@ -307,6 +307,55 @@ export function ConfigPage() {
     }
   }, [activeTab, loadTenantAiConfig]);
 
+  // Validação automática do provider ao abrir a aba IA (usa credenciais salvas no backend)
+  useEffect(() => {
+    const run = async () => {
+      if (activeTab !== 'ai') return;
+      if (loadingTenantAiConfig) return;
+
+      const tenantToUse = targetTenantId || agent?.tenantId || null;
+      const primary = tenantAiConfig?.primary || null;
+
+      // Sem provider: reseta
+      if (!primary) {
+        setProviderAutoValidation({ validating: false, status: null });
+        return;
+      }
+
+      setProviderAutoValidation({ validating: true, status: null });
+      try {
+        // Valida o que está efetivamente salvo no backend (runtime),
+        // para evitar incoerência: "API key válida" vs "provider não configurado no tenant".
+        const result = await validateTenantAiCredentials({
+          tenantId: targetTenantId || null,
+        });
+        setProviderAutoValidation({
+          validating: false,
+          status: {
+            valid: !!result?.valid,
+            error: result?.error || null,
+            provider: result?.provider || primary,
+            tenantId: tenantToUse,
+          },
+        });
+      } catch (error) {
+        const errorMessage = error?.body?.message || error?.message || 'Erro ao validar credenciais';
+        setProviderAutoValidation({
+          validating: false,
+          status: {
+            valid: false,
+            error: errorMessage,
+            provider: primary,
+            tenantId: tenantToUse,
+          },
+        });
+      }
+    };
+
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, loadingTenantAiConfig, tenantAiConfig?.primary, targetTenantId, agent?.tenantId, providerAutoValidationNonce]);
+
   // Valida JSON quando o texto muda (com debounce)
   const jsonValidationTimeoutRef = useRef(null);
   useEffect(() => {
@@ -396,6 +445,7 @@ export function ConfigPage() {
           // Reset estado de credenciais quando configuração muda
           setCredentialsValidatedAndSaved(false);
           setApiKeyValidationStatus(null);
+          setProviderAutoValidationNonce((n) => n + 1); // revalida provider ao salvar config
           await loadTenantAiConfig(); // Recarrega
         } catch (error) {
           logger.error('Erro ao salvar configuração de IA', error);
@@ -536,57 +586,7 @@ export function ConfigPage() {
     }
   };
 
-  // Valida token de um provedor
-  const validateToken = useCallback(async (path, apiKey) => {
-    if (!apiKey || apiKey.trim() === '') {
-      setTokenValidationStatus(prev => ({ ...prev, [path]: null }));
-      return;
-    }
-
-    // Determina qual provider baseado no path
-    let provider = null;
-    if (path === 'ai.openai.apiKey') {
-      provider = 'openai';
-    } else if (path === 'ai.anthropic.apiKey') {
-      provider = 'anthropic';
-    }
-
-    if (!provider) {
-      return; // Não é um token de provedor que precisa validação
-    }
-
-    setValidatingTokens(prev => ({ ...prev, [path]: true }));
-    setTokenValidationStatus(prev => ({ ...prev, [path]: null }));
-
-    try {
-      const result = await validateProviderToken(provider, apiKey);
-      setTokenValidationStatus(prev => ({
-        ...prev,
-        [path]: {
-          valid: result.valid,
-          error: result.error || null,
-        },
-      }));
-
-      if (result.valid) {
-        showToast(`Token ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} válido!`, 'success');
-      } else {
-        showToast(`Token ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} inválido: ${result.error || 'Erro desconhecido'}`, 'error');
-      }
-    } catch (error) {
-      logger.error('Erro ao validar token', error);
-      setTokenValidationStatus(prev => ({
-        ...prev,
-        [path]: {
-          valid: false,
-          error: error.message || 'Erro ao validar token',
-        },
-      }));
-      showToast(`Erro ao validar token: ${error.message || 'Erro desconhecido'}`, 'error');
-    } finally {
-      setValidatingTokens(prev => ({ ...prev, [path]: false }));
-    }
-  }, [showToast]);
+  // Validação de token global removida: credenciais de IA são por-tenant e ficam no DB (criptografadas).
 
   // Valida conexão do Redis
   const validateRedis = useCallback(async (redisUrl) => {
@@ -693,10 +693,7 @@ export function ConfigPage() {
       setJsonText(JSON.stringify(newConfig, null, 2));
     }
 
-    // Limpa status de validação quando o valor muda
-    if (path === 'ai.openai.apiKey' || path === 'ai.anthropic.apiKey') {
-      setTokenValidationStatus(prev => ({ ...prev, [path]: null }));
-    }
+    // Validação de token global removida: credenciais são por-tenant (DB).
     if (path === 'rateLimit.redis.url') {
       setRedisValidationStatus(null);
     }
@@ -705,10 +702,7 @@ export function ConfigPage() {
   // Renderiza campo de input para um valor
   const renderField = (label, path, value, type = 'text', options = null) => {
     const displayValue = value === null || value === undefined ? '' : String(value);
-    const isTokenField = path === 'ai.openai.apiKey' || path === 'ai.anthropic.apiKey';
     const isRedisField = path === 'rateLimit.redis.url';
-    const isValidating = validatingTokens[path] || false;
-    const validationStatus = tokenValidationStatus[path];
     const redisValidating = isRedisField && validatingRedis;
     const redisStatus = isRedisField ? redisValidationStatus : null;
 
@@ -757,13 +751,7 @@ export function ConfigPage() {
               <textarea
                 value={displayValue}
                 onChange={(e) => updateValue(path, e.target.value)}
-                className={`w-full px-3 py-2 bg-bg-secondary border rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all min-h-[80px] resize-y ${
-                  validationStatus
-                    ? validationStatus.valid
-                      ? 'border-status-success'
-                      : 'border-status-error'
-                    : 'border-border-default'
-                }`}
+                className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all min-h-[80px] resize-y"
                 placeholder={label}
               />
             ) : (
@@ -772,8 +760,8 @@ export function ConfigPage() {
                 value={displayValue}
                 onChange={(e) => updateValue(path, e.target.value)}
                 className={`w-full px-3 py-2 pr-10 bg-bg-secondary border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all ${
-                  (validationStatus || redisStatus)
-                    ? (validationStatus?.valid || redisStatus?.valid)
+                  (redisStatus)
+                    ? (redisStatus?.valid)
                       ? 'border-status-success'
                       : 'border-status-error'
                     : 'border-border-default'
@@ -781,9 +769,9 @@ export function ConfigPage() {
                 placeholder={label}
               />
             )}
-            {(isTokenField && validationStatus) || (isRedisField && redisStatus) ? (
+            {(isRedisField && redisStatus) ? (
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                {(validationStatus?.valid || redisStatus?.valid) ? (
+                {(redisStatus?.valid) ? (
                   <svg className="w-5 h-5 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -795,14 +783,14 @@ export function ConfigPage() {
               </div>
             ) : null}
           </div>
-          {(isTokenField || isRedisField) && (
+          {(isRedisField) && (
             <button
               type="button"
-              onClick={() => isTokenField ? validateToken(path, displayValue) : validateRedis(displayValue)}
-              disabled={!displayValue || isValidating || redisValidating}
+              onClick={() => validateRedis(displayValue)}
+              disabled={!displayValue || redisValidating}
               className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
             >
-              {(isValidating || redisValidating) ? (
+              {(redisValidating) ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Testando...</span>
@@ -812,18 +800,12 @@ export function ConfigPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>{isTokenField ? 'Testar Token' : 'Testar Conexão'}</span>
+                  <span>Testar Conexão</span>
                 </>
               )}
             </button>
           )}
         </div>
-        {isTokenField && validationStatus && !validationStatus.valid && validationStatus.error && (
-          <p className="mt-1 text-xs text-status-error">{validationStatus.error}</p>
-        )}
-        {isTokenField && validationStatus && validationStatus.valid && (
-          <p className="mt-1 text-xs text-status-success">✓ Token válido e funcionando corretamente</p>
-        )}
         {isRedisField && redisStatus && !redisStatus.valid && redisStatus.error && (
           <p className="mt-1 text-xs text-status-error">{redisStatus.error}</p>
         )}
@@ -845,6 +827,7 @@ export function ConfigPage() {
     { id: 'scripts', label: 'Scripts', icon: '📜' },
     { id: 'logging', label: 'Logging', icon: '📝' },
     { id: 'rateLimit', label: 'Rate Limiting', icon: '🚦' },
+    { id: 'fallbacks', label: 'Fallbacks', icon: '🛟' },
     { id: 'general', label: 'Geral', icon: '🌐' },
   ];
 
@@ -975,8 +958,8 @@ export function ConfigPage() {
 
         {/* Abas de navegação (apenas no modo formulário) */}
         {viewMode === 'form' && (
-          <div className="mb-6 border-b border-border-default overflow-x-auto">
-            <div className="flex gap-0 min-w-max">
+          <div className="mb-6 border-b border-border-default">
+            <div className="flex flex-wrap gap-0">
               {tabs.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -1229,6 +1212,59 @@ export function ConfigPage() {
                       max_tokens: null
                     };
 
+                    const providerLabel = (p) => {
+                      if (!p) return '—';
+                      if (p === 'openai') return 'OpenAI';
+                      if (p === 'anthropic') return 'Anthropic (Claude)';
+                      return String(p);
+                    };
+
+                    const providerStatus = (() => {
+                      // Status do provider (similar ao indicador de WebSocket)
+                      if (!currentConfig.primary) {
+                        return {
+                          dotColor: 'rgb(156, 163, 175)', // cinza
+                          dotPulse: false,
+                          text: 'Não configurado',
+                          title: 'Provider primário de IA não configurado para este tenant.',
+                        };
+                      }
+
+                      if (providerAutoValidation.validating) {
+                        return {
+                          dotColor: 'rgb(59, 130, 246)', // azul
+                          dotPulse: true,
+                          text: `Validando (${providerLabel(currentConfig.primary)})...`,
+                          title: 'Validando credenciais salvas do provider (chamada real).',
+                        };
+                      }
+
+                      if (providerAutoValidation.status) {
+                        if (providerAutoValidation.status.valid) {
+                          return {
+                            dotColor: 'rgb(16, 185, 129)', // verde
+                            dotPulse: true,
+                            text: `Válido (${providerLabel(currentConfig.primary)})`,
+                            title: 'Provider validado com sucesso (API Key válida).',
+                          };
+                        }
+                        return {
+                          dotColor: 'rgb(239, 68, 68)', // vermelho
+                          dotPulse: false,
+                          text: `Inválido (${providerLabel(currentConfig.primary)})`,
+                          title: `Provider inválido: ${providerAutoValidation.status.error || 'erro desconhecido'}`,
+                        };
+                      }
+
+                      // Durante carga inicial, assume validação em andamento
+                      return {
+                        dotColor: 'rgb(59, 130, 246)', // azul
+                        dotPulse: true,
+                        text: `Validando (${providerLabel(currentConfig.primary)})...`,
+                        title: 'Validando credenciais salvas do provider...',
+                      };
+                    })();
+
                     return (
                       <div className="space-y-4">
                         <div className="p-4 bg-status-info/10 rounded-lg border border-status-info/30">
@@ -1241,6 +1277,26 @@ export function ConfigPage() {
                           <p className="text-xs text-text-secondary mt-1">
                             Esta configuração é específica para este tenant. Cada tenant precisa ter seu próprio provider configurado.
                           </p>
+                        </div>
+
+                        {/* Indicador de status do provider (estilo WebSocket) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            title={providerStatus.title}
+                            style={{
+                              display: 'inline-block',
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: providerStatus.dotColor,
+                              animation: providerStatus.dotPulse
+                                ? 'pulse 2s ease 0s infinite normal none running pulse'
+                                : 'none',
+                            }}
+                          />
+                          <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>
+                            {providerStatus.text}
+                          </span>
                         </div>
 
                         <div className="mb-4 p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
@@ -1417,9 +1473,37 @@ export function ConfigPage() {
                             </div>
 
                             <div>
-                              <label className="block mb-2 text-sm font-medium text-text-primary">
-                                API Key
-                              </label>
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium text-text-primary">
+                                  API Key
+                                </label>
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
+                                    validatingApiKey
+                                      ? 'bg-status-info/20 text-status-info border-status-info/30'
+                                      : apiKeyValidationStatus
+                                        ? apiKeyValidationStatus.valid
+                                          ? 'bg-status-success/20 text-status-success border-status-success/30'
+                                          : 'bg-status-error/20 text-status-error border-status-error/30'
+                                        : 'bg-bg-primary text-text-secondary border-border-default'
+                                  }`}
+                                >
+                                  {validatingApiKey ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                      <span>Validando...</span>
+                                    </>
+                                  ) : apiKeyValidationStatus ? (
+                                    apiKeyValidationStatus.valid ? (
+                                      <span>Válido</span>
+                                    ) : (
+                                      <span>Inválido</span>
+                                    )
+                                  ) : (
+                                    <span>{(apiKey || '').trim() ? 'Não testado' : 'Informe e teste'}</span>
+                                  )}
+                                </span>
+                              </div>
                               <div className="flex gap-2">
                                 <div className="relative flex-1">
                                   <input
@@ -1541,6 +1625,8 @@ export function ConfigPage() {
                                       provider: apiKeyProvider,
                                       apiKey: apiKey.trim()
                                     }, targetTenantId || undefined);
+                                    // Força revalidação automática do provider após salvar credenciais
+                                    setProviderAutoValidationNonce((n) => n + 1);
                                     // Se a API Key foi validada antes de salvar, marca como validada e salva
                                     if (apiKeyValidationStatus && apiKeyValidationStatus.valid) {
                                       setCredentialsValidatedAndSaved(true);
@@ -1810,6 +1896,218 @@ export function ConfigPage() {
                       <li>Eventos são registrados em <code className="bg-bg-primary px-1 rounded">reports/rate-limit-events.json</code></li>
                       <li>Redis é obrigatório em produção para rate limiting distribuído</li>
                     </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Aba: Fallbacks */}
+            {activeTab === 'fallbacks' && (
+              <div className="space-y-6">
+                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                    <h3 className="text-xl font-semibold text-text-primary flex items-center gap-2">
+                      <span>🛟</span>
+                      <span>Fallbacks (uso explícito)</span>
+                    </h3>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (!editedConfig) return;
+                        const next = JSON.parse(JSON.stringify(editedConfig));
+                        next.fallbacks = {
+                          aiProviderSecondary: false,
+                          ragFallbackToDirect: false,
+                          ticketInsightHeuristic: false,
+                          rateLimitRedisToMemory: false,
+                          frontendAiMockOnError: false,
+                          frontendAiDisabledReturnFallback: false,
+                          frontendNavigationHardRedirect: false,
+                        };
+                        setEditedConfig(next);
+                        if (viewMode === 'json') setJsonText(JSON.stringify(next, null, 2));
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <span>🧩</span>
+                      <span>Tornar explícito (todos false)</span>
+                    </Button>
+                  </div>
+
+                  <div className="p-4 bg-status-warning/10 rounded-lg border border-status-warning/30 mb-6">
+                    <p className="text-sm text-text-primary">
+                      <strong>⚠️ Importante:</strong> todos os toggles abaixo são <strong>false por padrão</strong>. Se um fallback estiver desabilitado, o sistema deve <strong>falhar de forma explícita</strong> (sem “jeitinho”) ou seguir o fluxo sem degradar silenciosamente.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={editedConfig.fallbacks?.aiProviderSecondary === true}
+                        onClick={() => updateValue('fallbacks.aiProviderSecondary', !(editedConfig.fallbacks?.aiProviderSecondary === true))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          editedConfig.fallbacks?.aiProviderSecondary === true
+                            ? 'bg-accent-primary border-accent-primary'
+                            : 'bg-bg-secondary border-border-default'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            editedConfig.fallbacks?.aiProviderSecondary === true ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium">IA: usar provider secundário (primary → secondary)</span>
+                        <p className="text-text-secondary text-sm mt-1">`fallbacks.aiProviderSecondary`</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={editedConfig.fallbacks?.ragFallbackToDirect === true}
+                        onClick={() => updateValue('fallbacks.ragFallbackToDirect', !(editedConfig.fallbacks?.ragFallbackToDirect === true))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          editedConfig.fallbacks?.ragFallbackToDirect === true
+                            ? 'bg-accent-primary border-accent-primary'
+                            : 'bg-bg-secondary border-border-default'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            editedConfig.fallbacks?.ragFallbackToDirect === true ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium">RAG: fallback para IA direta quando RAG falha/baixa confiança</span>
+                        <p className="text-text-secondary text-sm mt-1">`fallbacks.ragFallbackToDirect`</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={editedConfig.fallbacks?.ticketInsightHeuristic === true}
+                        onClick={() => updateValue('fallbacks.ticketInsightHeuristic', !(editedConfig.fallbacks?.ticketInsightHeuristic === true))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          editedConfig.fallbacks?.ticketInsightHeuristic === true
+                            ? 'bg-accent-primary border-accent-primary'
+                            : 'bg-bg-secondary border-border-default'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            editedConfig.fallbacks?.ticketInsightHeuristic === true ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium">Atendimento: resumo heurístico quando IA falhar (best-effort)</span>
+                        <p className="text-text-secondary text-sm mt-1">`fallbacks.ticketInsightHeuristic`</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={editedConfig.fallbacks?.rateLimitRedisToMemory === true}
+                        onClick={() => updateValue('fallbacks.rateLimitRedisToMemory', !(editedConfig.fallbacks?.rateLimitRedisToMemory === true))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          editedConfig.fallbacks?.rateLimitRedisToMemory === true
+                            ? 'bg-accent-primary border-accent-primary'
+                            : 'bg-bg-secondary border-border-default'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            editedConfig.fallbacks?.rateLimitRedisToMemory === true ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium">Rate limit: permitir fallback Redis → memória</span>
+                        <p className="text-text-secondary text-sm mt-1">`fallbacks.rateLimitRedisToMemory`</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={editedConfig.fallbacks?.frontendAiMockOnError === true}
+                        onClick={() => updateValue('fallbacks.frontendAiMockOnError', !(editedConfig.fallbacks?.frontendAiMockOnError === true))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          editedConfig.fallbacks?.frontendAiMockOnError === true
+                            ? 'bg-accent-primary border-accent-primary'
+                            : 'bg-bg-secondary border-border-default'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            editedConfig.fallbacks?.frontendAiMockOnError === true ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium">Frontend: usar mock local se a API real de IA falhar</span>
+                        <p className="text-text-secondary text-sm mt-1">`fallbacks.frontendAiMockOnError`</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true}
+                        onClick={() => updateValue('fallbacks.frontendAiDisabledReturnFallback', !(editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true
+                            ? 'bg-accent-primary border-accent-primary'
+                            : 'bg-bg-secondary border-border-default'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium">Frontend: quando IA estiver desabilitada, retornar “fallback” automático</span>
+                        <p className="text-text-secondary text-sm mt-1">`fallbacks.frontendAiDisabledReturnFallback`</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={editedConfig.fallbacks?.frontendNavigationHardRedirect === true}
+                        onClick={() => updateValue('fallbacks.frontendNavigationHardRedirect', !(editedConfig.fallbacks?.frontendNavigationHardRedirect === true))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          editedConfig.fallbacks?.frontendNavigationHardRedirect === true
+                            ? 'bg-accent-primary border-accent-primary'
+                            : 'bg-bg-secondary border-border-default'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            editedConfig.fallbacks?.frontendNavigationHardRedirect === true ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium">Frontend: permitir fallback de navegação via `window.location`</span>
+                        <p className="text-text-secondary text-sm mt-1">`fallbacks.frontendNavigationHardRedirect`</p>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>
