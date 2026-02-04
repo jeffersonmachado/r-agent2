@@ -51,7 +51,7 @@ flowchart LR
   - Event ledger append-only: migration `api/db/migrations/20260204020000-create-event-ledger.js` + model `api/db/models/EventLedger.js` + serviço `api/services/eventLedgerService.js`.
   - Retenção mínima (prune): `api/services/pruneEventLedgerService.js` (por `EVENT_LEDGER_RETENTION_DAYS`).
   - PBX: trigger DB-level em `pbx_cdr` emitindo `PbxCdrIngested` no `event_ledger` (best-effort).
-  - Dispatcher v1 (parcial) para webhooks: `api/services/eventLedgerTriggerDispatcher.js` + cursor `event_dispatch_state` (migration `20260204033000-event-dispatch-state-and-schedule.js`).
+  - Dispatcher v1 (parcial) para webhooks: `api/services/eventLedgerTriggerDispatcher.js` + cursor `event_dispatch_state` (migrations `20260204033000-event-dispatch-state-and-schedule.js` e `20260204034000-event-dispatch-state-add-last-event-id.js`).
 
 - **Execution Queue + Scheduler v1 (DB-first, interno)**:
   - Tabelas: `execution_jobs` + `schedules` em `api/db/migrations/20260204021000-create-exec-jobs-and-schedules.js`.
@@ -87,11 +87,31 @@ flowchart LR
   - Serviço: `api/services/publicAccessTokenService.js`.
   - Lifecycle (v1): expiração/revogação/rotação/last_used (migration `api/db/migrations/20260204030000-public-access-tokens-lifecycle.js` + service).
 
+- **SaaS enterprise (multi-tenant) — base completa (backend + frontend)**:
+  - Multi-tenancy + isolamento: `api/middleware/tenantValidation.js` e docs `IMPLEMENTACAO_SAAS_COMPLETA.md`.
+  - RBAC (6 roles) + permissões granulares: `api/services/rbacService.js`.
+  - Planos/limites: `api/services/planLimitsService.js`.
+  - Auditoria/compliance: `api/services/auditService.js`.
+  - Super-admin + onboarding: `api/services/superAdminService.js` e `api/services/onboardingService.js` + páginas no frontend (ver `IMPLEMENTACAO_SAAS_COMPLETA.md`).
+  - Rate-limit por tenant: `api/middleware/tenantRateLimit.js`.
+
+- **AI Output Envelope (safe-mode + validação por contrato)**:
+  - Especificação: `docs/IA_OUTPUT_ENVELOPE.md`.
+  - Schema (AJV): `contracts/ia/ai-output-envelope.schema.json`.
+  - Implementação e testes: `engine/ai/aiEnvelope.js` e `tests/unit/aiEnvelope.test.js`.
+
+- **Webhooks/WebSockets/validação de input (base)**:
+  - Webhooks customizados: `api/services/webhookService.js`.
+  - WebSocket server (real-time por tenant): `api/services/websocketService.js`.
+  - Validação de inputs: `api/utils/inputValidator.js`.
+  - Resumo do pacote (documentação interna): `IMPLEMENTACOES_MELHORIAS.md`.
+
 - **PBX v1 (Postgres + Asterisk Realtime) — configuração básica**:
   - Camada produto (fonte de verdade): migration `api/db/migrations/20260203011000-pbx-product-core.js` (extensions/trunks/routes/queues/members/call_rules/config_versions).
   - Realtime core (Asterisk): migration `api/db/migrations/20260203010000-pbx-realtime-core.js` (extensions + ps_* + filas realtime).
   - Domínios PBX/CC adicionais (migração do menu legado): migration `api/db/migrations/20260204010000-pbx-cc-menu-domains.js` (dids, carriers, categorias, bloqueios, áudios, gravações, CDR, campanhas etc.).
   - Compatibilidade CDR (Asterisk `cdr_adaptive_odbc`): migration `api/db/migrations/20260204011000-pbx-cdr-asterisk-adaptive.js`.
+  - **Call events v0 (estado + schedule)**: migration `api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js` + serviço `api/services/pbx/pbxCallEventsService.js`.
   - API: rotas `GET/POST /api/pbx/*` em `api/server.js` (extensions, trunks, routes, queues, dialplan preview/apply, queue-members, audio-assets, recordings).
   - UI: `frontend/src/pages/PbxLegacyPage.jsx` (CRUD básico no Postgres).
   - Porte legado (contrato inicial): `docs/PBX_LEGACY_PORTING.md` e `docs/PBX_V1_INVENTORY.md` (health/inventory/ramais via XML, estratégia gradual).
@@ -110,6 +130,14 @@ flowchart LR
   - Validador: `api/utils/voiceFlowValidator.js` (tipos permitidos, referências, órfãos, ciclos).
   - Integração: validação condicional em `api/server.js` quando `flow.kind === 'voice'`.
 
+- **Marketing v1 (core DB-first)**:
+  - Migrations e modelos base: `api/db/migrations/20260204040000-marketing-v1-core.js` + models `Marketing*` em `api/db/models/`.
+  - Serviço inicial: `api/services/marketing/marketingService.js`.
+
+- **Voice nodes v0 (engine)**:
+  - Nodes básicos: `engine/nodes/voiceNodes.js`.
+  - Testes: `engine/__tests__/voiceNodes.test.js`.
+
 - **QA/CI (direcionamento)**:
   - Plano incremental e critérios de aceitação: `docs/QA_NEXT_ACTIONS.md`.
   - Autotest com stack completa (Compose + Playwright + artifacts): workflow `.github/workflows/stack-test.yml`.
@@ -126,7 +154,7 @@ flowchart LR
 - **Fast service e Delivery** evoluíram do MVP para um **v1 operacional** (sequenciamento, operações e métricas mínimas), mas ainda falta:
   - dashboards completos, auditoria operacional “enterprise” e integração mais profunda com o runtime DAG (triggers e ações por node).
 - **Event model + event_ledger** já existe no primeiro corte, mas ainda falta:
-  - “execution ledger por nó” (inputs/outputs por node), replay parcial e políticas de retenção/particionamento por tenant com custo previsível.
+  - **inputs/outputs completos por node**, replay parcial e políticas de retenção/particionamento por tenant com custo previsível.
 - **Execution queue/scheduler v1** já existe (DB-first), mas ainda falta:
   - cron/timezone por tenant, limites/quotas por tenant, DLQ formal, métricas/observabilidade e integração direta com execuções do DAG.
 - **Autoprovisionamento v1 (one-click)** ainda não está completo (hoje existe bootstrap do `system`/`systemadmin`, mas falta fluxo idempotente por tenant/unidade).
@@ -134,7 +162,8 @@ flowchart LR
 - **Execution ledger por nó** existe no v1, mas falta “ligar de ponta a ponta” no runtime (registrar execuções reais, RBAC/consultas e replay assistido).
 - **Dispatcher de triggers do event_ledger** existe parcialmente (webhooks), mas ainda precisa hardening e ligação completa ao worker/runtime (DLQ/observabilidade/kinds no worker).
 - **Analytics/ROI** (funil, custos por canal, SLA físico e SLA de pedido/delivery) ainda é prioridade.
-- **Voz como evento no DAG** (URA/CCaaS-style) ainda está pré-core (PBX config v1 está em progresso, mas “voz como trigger/ação” é fase seguinte).
+- **Marketing v1** já tem core DB-first, mas ainda falta UI/trackers/jornadas/email e orquestração operacional.
+- **Voz como evento no DAG** ainda está pré-core: já existe base de **call events v0** e **voice nodes v0**, mas falta ligar triggers/ações no runtime (URA/CCaaS-style).
 
 ### 2.3) “Gaps” que destravam (ordem recomendada)
 
@@ -148,7 +177,7 @@ flowchart LR
 
 ## 3) Roadmap operacional (Now/Next/Later)
 
-> Meta: converter o que já existe em **suites vendáveis** (Fast service e Pedidos/Storefront/Delivery), sem perder o eixo “tudo vira evento/node” (DAG).
+> Meta: converter o que já existe em **suítes vendáveis** (Fast service e Pedidos/Storefront/Delivery), sem perder o eixo “tudo vira evento/node” (DAG).
 
 ### 3.1) Now (0–3 meses) — estabilizar MVPs e reduzir risco operacional
 
@@ -162,7 +191,7 @@ flowchart LR
   - Operação: incidentes (delivery) com roteamento para omnichannel + trilha auditável e eventos correlacionados.
 
 - **Tokens públicos**:
-  - Expiração/revogação/rotina de rotação e rate-limit por tenant + logs/auditoria.
+  - Completar **operabilidade vendável**: endpoints/admin UI para listar/revogar/rotacionar + auditoria consultável + rate-limit/monitoramento por tenant/token.
   - Escopo explícito por `kind` + `locationId` (e validação de uso indevido).
 
 - **PBX v1**:
@@ -171,7 +200,7 @@ flowchart LR
   - Evoluir provisioning de ramais (MVP) para v1.1 operável: templates por vendor/modelo, parâmetros operacionais e auditoria/rotação de token.
 
 - **QA/CI**:
-  - Implementar o mínimo do `docs/QA_NEXT_ACTIONS.md` (rodar suites essenciais no CI e publicar artifacts JUnit/coverage quando aplicável).
+  - Implementar o mínimo do `docs/QA_NEXT_ACTIONS.md` (rodar suítes essenciais no CI e publicar artifacts JUnit/coverage quando aplicável).
   - Manter gate de stack (Compose) com selftest PASS/WARN e evidência de “happy paths” (storefront + physical).
 
 - **Autoprovisionamento v1 (one-click bootstrap)**
@@ -195,7 +224,8 @@ flowchart LR
 ### 3.3) Next (6–12 meses) — produto inicial completo + entrada de marketing v1
 
 - **Marketing v1 (RD-like)**:
-  - Forms/landing pages/tracker JS + scoring v1 + jornadas v1 + email v1.
+  - **Status**: core DB-first entregue (migrations/models/serviço inicial).
+  - Completar forms/landing pages/tracker JS + scoring v1 + jornadas v1 + email v1.
   - Funil v1 e bases para atribuição/ROI.
 
 - **Atendimento omnichannel**:
@@ -220,8 +250,8 @@ flowchart LR
 ## 4) Mapeamento para “fases de maturidade” (referência 0–60m)
 
 - **Fase 1 (0–6m) — Fundação**: event model + ledger/replay + queue/scheduler + vault + observabilidade (destravadores).
-- **Fase 2 (6–12m) — Produto inicial**: marketing v1 + omnichannel v1 sólido + APIs públicas v1 + suites v1 (filas físicas e pedidos/delivery) e templates por segmento.
-- **Fase 3 (12–24m) — Plataforma integrada**: marketplace/SDK + analytics/ROI + voz v1 no DAG + evolução de suites (v2).
+- **Fase 2 (6–12m) — Produto inicial**: marketing v1 + omnichannel v1 sólido + APIs públicas v1 + suítes v1 (filas físicas e pedidos/delivery) e templates por segmento.
+- **Fase 3 (12–24m) — Plataforma integrada**: marketplace/SDK + analytics/ROI + voz v1 no DAG + evolução de suítes (v2).
 - **Fase 4 (24–36m) — Enterprise**: governança (SSO/SCIM), auditoria, ambientes, HA/DR, IA enterprise, contact center avançado.
 - **Fase 5 (36–60m) — Ecossistema**: monetização e parceiros, extensões UI e verticalização.
 

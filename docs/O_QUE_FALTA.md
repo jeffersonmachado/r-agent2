@@ -24,6 +24,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - **Dispatcher de triggers a partir do `event_ledger` (v1 parcial)**:
   - cursor: migration `api/db/migrations/20260204033000-event-dispatch-state-and-schedule.js` (`event_dispatch_state` + schedule `scan_event_triggers`)
   - serviço: `api/services/eventLedgerTriggerDispatcher.js` (scan + enqueue + dispatch via webhooks)
+  - extensão do estado: migration `api/db/migrations/20260204034000-event-dispatch-state-add-last-event-id.js`
 
 ### Suites verticais (MVP→v1 operacional)
 - **Fast service (filas físicas)**:
@@ -39,6 +40,28 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - base produto/realtime/CDR via migrations PBX
   - `dialplan/apply` com trilha mínima em `pbx_config_versions` (signature)
   - **Provisionamento de ramais (MVP)**: `POST /api/pbx/extensions` aceita `provisioning` (vendor+mac) e expõe `GET /provision/<tenantKey>/<vendor>/<mac>` (ou com token). Ver `docs/PBX_PROVISIONING_GRANDSTREAM_AVAYA.md`.
+  - **Call events v0 (estado + schedule)**: migration `api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js` + `api/services/pbx/pbxCallEventsService.js`.
+
+### Marketing (core DB-first entregue)
+- **Migrations e modelos base**: `api/db/migrations/20260204040000-marketing-v1-core.js` + models `Marketing*` em `api/db/models/`.
+- **Serviço inicial**: `api/services/marketing/marketingService.js`.
+
+### Voz (base técnica entregue)
+- **Voice nodes v0 (engine)**: `engine/nodes/voiceNodes.js` + `engine/__tests__/voiceNodes.test.js`.
+
+### SaaS e governança (base enterprise já entregue)
+- **Multi-tenant + RBAC + planos/limites + auditoria + super-admin + onboarding + rate-limit por tenant**: ver `IMPLEMENTACAO_SAAS_COMPLETA.md`.
+
+### Hardening de IA (contratos + safe-mode)
+- **AI Output Envelope (obrigatório)**:
+  - especificação: `docs/IA_OUTPUT_ENVELOPE.md`
+  - schema: `contracts/ia/ai-output-envelope.schema.json`
+  - implementação/testes: `engine/ai/aiEnvelope.js` e `tests/unit/aiEnvelope.test.js`
+
+### Integrações de plataforma (base)
+- **Webhooks customizados**: `api/services/webhookService.js`
+- **WebSockets (real-time por tenant)**: `api/services/websocketService.js`
+- **Validação de inputs**: `api/utils/inputValidator.js` (resumo em `IMPLEMENTACOES_MELHORIAS.md`)
 
 ### Gate operacional
 - **Selftest**: `GET /health/selftest`
@@ -55,7 +78,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 > Regra: cada item abaixo é “único” (não duplicar em outros docs). Se um tema aparecer em mais de um pilar, ele deve ser referenciado (não replicado).
 
-### Now (0–3 meses) — hardening para v1 vendável (suite operável)
+### Now (0–3 meses) — hardening para v1 vendável (suíte operável)
 
 #### 2.1 Execução “enterprise mínima” (sem prometer marketplace)
 - **Conectar o execution ledger por nó ao runtime + expor consulta/replay assistido**
@@ -132,11 +155,13 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - **Contrato call events v0**
   - `ringing/answered/ended` entrando no `event_ledger` (CDR + base para ARI/AMI)
   - correlação com ticket/pedido quando aplicável
+  - **Status**: base DB-first entregue (estado + schedule) em `api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js` + `api/services/pbx/pbxCallEventsService.js` (faltam triggers/integração no runtime)
 
 ### Next (6–12 meses) — produto inicial completo (entrada marketing v1)
 
 #### 2.11 Marketing v1 (RD-like mínimo)
-- forms/LP/tracker + scoring + jornadas + email (mínimo vendável)
+- **Status**: core DB-first entregue (migrations/models/serviço inicial).
+- completar forms/LP/tracker + scoring + jornadas + email (mínimo vendável)
 - modelo analítico inicial (funil básico) e bases para ROI
 
 #### 2.12 Templates “solutions” por segmento
