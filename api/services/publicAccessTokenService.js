@@ -252,11 +252,67 @@ async function resolvePublicToken({ token, allowedKinds }) {
   };
 }
 
+/**
+ * Estatísticas mínimas de uso por kind (para dashboards operacionais).
+ *
+ * @param {object} args
+ * @param {string} args.tenantId
+ */
+async function getPublicTokenStats({ tenantId }) {
+  const Model = PublicAccessToken();
+  const sequelize = Model.sequelize;
+  if (!sequelize) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const [rows] = await sequelize.query(
+    `SELECT
+       kind,
+       COUNT(*)::int AS total,
+       COUNT(*) FILTER (WHERE active = true)::int AS active,
+       COUNT(*) FILTER (WHERE active = false)::int AS inactive,
+       COUNT(*) FILTER (WHERE revoked_at IS NOT NULL)::int AS revoked,
+       COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= NOW())::int AS expired,
+       COUNT(*) FILTER (WHERE last_used_at IS NOT NULL AND last_used_at >= NOW() - INTERVAL '1 hour')::int AS used_last_hour,
+       COUNT(*) FILTER (WHERE last_used_at IS NOT NULL AND last_used_at >= NOW() - INTERVAL '1 day')::int AS used_last_day,
+       MAX(last_used_at) AS last_used_at_max
+     FROM public_access_tokens
+     WHERE tenant_key = :tenantKey
+     GROUP BY kind
+     ORDER BY kind ASC`,
+    { replacements: { tenantKey: String(tenantId) } },
+  );
+
+  const items = Array.isArray(rows) ? rows.map((r) => ({
+    kind: r.kind,
+    total: Number(r.total || 0),
+    active: Number(r.active || 0),
+    inactive: Number(r.inactive || 0),
+    revoked: Number(r.revoked || 0),
+    expired: Number(r.expired || 0),
+    usedLastHour: Number(r.used_last_hour || 0),
+    usedLastDay: Number(r.used_last_day || 0),
+    lastUsedAtMax: r.last_used_at_max ? new Date(r.last_used_at_max).toISOString() : null,
+  })) : [];
+
+  const totals = items.reduce((acc, it) => {
+    acc.total += it.total;
+    acc.active += it.active;
+    acc.inactive += it.inactive;
+    acc.revoked += it.revoked;
+    acc.expired += it.expired;
+    return acc;
+  }, { total: 0, active: 0, inactive: 0, revoked: 0, expired: 0 });
+
+  return { ok: true, tenantId, totals, items };
+}
+
 module.exports = {
   createPublicToken,
   resolvePublicToken,
   listPublicTokens,
   revokePublicToken,
   rotatePublicToken,
+  getPublicTokenStats,
 };
 

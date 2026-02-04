@@ -115,6 +115,51 @@ async function createTicket({ tenantId, locationId, queueId = null, priority = 0
     qId = q.id;
   }
 
+  // Idempotência (vendável): se o caller enviar context.idempotencyKey,
+  // evitamos criar múltiplas senhas em retries (kiosk/QR).
+  // Escopo recomendado: tenant + location + queue + dia.
+  try {
+    const idemKey = context && context.idempotencyKey ? String(context.idempotencyKey).trim() : '';
+    const sequelize = TicketModel.sequelize;
+    if (idemKey && sequelize) {
+      const replacements = {
+        tenantKey: String(tenantId),
+        queueId: String(qId),
+        idemKey,
+      };
+      let locSql = '';
+      if (locationId != null) {
+        locSql = `AND (context->>'locationId') = :locationId`;
+        replacements.locationId = String(locationId);
+      }
+      // Opcional: reduz colisões quando múltiplos dispositivos compartilham chaves
+      let tokenSql = '';
+      if (context && context.publicTokenId) {
+        tokenSql = `AND (context->>'publicTokenId') = :publicTokenId`;
+        replacements.publicTokenId = String(context.publicTokenId);
+      }
+
+      const [rows] = await sequelize.query(
+        `SELECT id, tenant_key, physical_queue_id, ticket_number, status, priority, called_at, started_at, finished_at, station_id, context, created_at, updated_at
+         FROM physical_tickets
+         WHERE tenant_key = :tenantKey
+           AND physical_queue_id = :queueId
+           ${locSql}
+           ${tokenSql}
+           AND (context->>'idempotencyKey') = :idemKey
+           AND created_at::date = CURRENT_DATE
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        { replacements },
+      );
+      if (Array.isArray(rows) && rows[0] && rows[0].id) {
+        return rows[0];
+      }
+    }
+  } catch (_) {
+    // best-effort: nunca bloquear criação por falha de lookup idempotente
+  }
+
   // ticket_number robusto por tenant+location+queue+day
   const ticketNumber = await nextTicketNumber({ tenantId, locationId, queueId: qId });
 

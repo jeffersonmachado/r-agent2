@@ -287,7 +287,10 @@ async function replayFromNode({
   const header = details.execution || {};
   const meta = header.meta && typeof header.meta === 'object' ? header.meta : {};
   if (meta.mode !== 'simulation') {
-    return { ok: false, error: 'replay_only_supported_for_simulation' };
+    const allowReal = process.env.ENABLE_EXECUTION_LEDGER_REPLAY_REAL === 'true';
+    if (!allowReal) {
+      return { ok: false, error: 'replay_only_supported_for_simulation' };
+    }
   }
 
   const nodes = Array.isArray(details.nodes) ? details.nodes : [];

@@ -330,6 +330,7 @@ async function getExecutionQueueMetrics({ tenantId = null } = {}) {
      )
      SELECT
        COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+       COUNT(*) FILTER (WHERE status = 'pending' AND attempts > 0) AS retrying_pending,
        COUNT(*) FILTER (WHERE status = 'processing') AS processing,
        COUNT(*) FILTER (WHERE status = 'done') AS done,
        COUNT(*) FILTER (WHERE status = 'dead') AS dead,
@@ -346,6 +347,7 @@ async function getExecutionQueueMetrics({ tenantId = null } = {}) {
     ok: true,
     metrics: {
       pending: Number(r.pending || 0),
+      retryingPending: Number(r.retrying_pending || 0),
       processing: Number(r.processing || 0),
       done: Number(r.done || 0),
       dead: Number(r.dead || 0),
@@ -365,6 +367,13 @@ async function processJob(job) {
   if (kind === 'scan_sla') {
     const { runSlaScan } = require('./opsSlaService');
     await runSlaScan();
+    return;
+  }
+  if (kind === 'scan_pbx_cdr_events') {
+    const { scanPbxCdrAndEmitEvents } = require('./pbx/pbxCallEventsService');
+    const consumer = job?.payload?.consumer || 'pbx_cdr_v0';
+    const batchSize = job?.payload?.batchSize || 200;
+    await scanPbxCdrAndEmitEvents({ consumer, batchSize });
     return;
   }
   if (kind === 'prune_event_ledger') {

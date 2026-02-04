@@ -43,6 +43,16 @@ const {
 const { apiNodeHandler } = require('../../engine/nodes/apiNode');
 const { fallbackNodeHandler } = require('../../engine/nodes/fallbackNode');
 const { mergeNodeHandler } = require('../../engine/nodes/mergeNode');
+const {
+  voicePromptListenNodeHandler,
+  voiceListenAsrNodeHandler,
+  voiceGatherDtmfNodeHandler,
+  voiceBranchNodeHandler,
+  voiceTransferRamalNodeHandler,
+  voiceTransferFilaNodeHandler,
+  voiceTransferUtilsNodeHandler,
+  voiceHangupNodeHandler,
+} = require('../../engine/nodes/voiceNodes');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const outboundQueueService = require('./outboundQueueService');
 const logger = require('../utils/logger');
@@ -106,6 +116,15 @@ function createNodeRegistry() {
   registry.register('fallback', fallbackNodeHandler);
   // Nó de subfluxo
   registry.register('subflow', subflowNodeHandler);
+  // Nós de voz/URA (kind=voice)
+  registry.register('voice_prompt_listen', voicePromptListenNodeHandler);
+  registry.register('voice_listen_asr', voiceListenAsrNodeHandler);
+  registry.register('voice_gather_dtmf', voiceGatherDtmfNodeHandler);
+  registry.register('voice_branch', voiceBranchNodeHandler);
+  registry.register('voice_transfer_ramal', voiceTransferRamalNodeHandler);
+  registry.register('voice_transfer_fila', voiceTransferFilaNodeHandler);
+  registry.register('voice_transfer_utils', voiceTransferUtilsNodeHandler);
+  registry.register('voice_hangup', voiceHangupNodeHandler);
   return registry;
 }
 
@@ -418,6 +437,34 @@ async function processWhatsAppMessage(message, value, deps) {
   // Obtém provider de IA para o tenant (para nós AI)
   const tenantId = state.tenantId; // Tenant deve ser fornecido no state
   const aiProvider = getAiProviderForTenant(tenantId);
+
+  // Adapter do execution ledger para a engine (best-effort).
+  // Importante: sanitiza input/output para evitar JSON inválido (ex.: funções como aiProvider).
+  let executionLedgerAdapter = null;
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      const executionId = state?.metadata?.executionId || null;
+      if (executionId) {
+        // eslint-disable-next-line global-require
+        const { appendNodeExecution } = require('./flowExecutionLedgerService');
+        executionLedgerAdapter = {
+          executionId,
+          sanitizeInput: (inObj) => ({
+            text,
+            messageId,
+            channel: effectiveChannelType,
+            // Mantemos raw fora do ledger (pode ser grande/variável)
+          }),
+          sanitizeOutput: (outObj) => outObj && typeof outObj === 'object' ? outObj : {},
+          appendNodeExecution: async (args) => appendNodeExecution({
+            tenantId: inboundTenantId,
+            executionId,
+            ...args,
+          }),
+        };
+      }
+    }
+  } catch (_) {}
   
   // Registra início do processamento
   if (replay) {
@@ -451,6 +498,7 @@ async function processWhatsAppMessage(message, value, deps) {
         persistence: persistenceServices,
         registry, // Passa registry para handlers que precisam (ex: subflow)
         replay, // Passa replay para o executeStep registrar ações
+        executionLedger: executionLedgerAdapter,
       },
     });
   } catch (err) {
@@ -470,41 +518,6 @@ async function processWhatsAppMessage(message, value, deps) {
     throw err;
   }
   const stepEndTime = new Date().toISOString();
-
-  // Execution ledger: registra node execution (best-effort)
-  try {
-    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
-      const executionId = state?.metadata?.executionId || null;
-      if (executionId) {
-        const nodeId = state.currentNodeId || null;
-        let nodeType = null;
-        try {
-          const nodes = Array.isArray(compiledFlow?.nodes) ? compiledFlow.nodes : [];
-          const found = nodeId ? nodes.find((n) => n && String(n.id) === String(nodeId)) : null;
-          nodeType = found ? String(found.type || '') : null;
-        } catch (_) {}
-
-        // eslint-disable-next-line global-require
-        const { appendNodeExecution } = require('./flowExecutionLedgerService');
-        await appendNodeExecution({
-          tenantId: inboundTenantId,
-          executionId,
-          nodeId,
-          nodeType,
-          stepIndex: null,
-          status: 'ok',
-          startedAt: stepStartTime,
-          finishedAt: stepEndTime,
-          input: { text, messageId, channel: effectiveChannelType },
-          output: result.output || {},
-          stateBefore: state,
-          stateAfter: result.state,
-          events: Array.isArray(result.events) ? result.events : [],
-          errorMessage: null,
-        }).catch(() => {});
-      }
-    }
-  } catch (_) {}
 
   // Registra execução no replay
   if (replay) {

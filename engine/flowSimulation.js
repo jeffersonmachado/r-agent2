@@ -32,6 +32,16 @@ const { semanticRouterNodeHandler } = require('./nodes/semanticRouterNode');
 const { ragAnswerNodeHandler } = require('./nodes/ragAnswerNode');
 const { businessEntryNodeHandler } = require('./nodes/businessEntryNode');
 const { mergeNodeHandler } = require('./nodes/mergeNode');
+const {
+  voicePromptListenNodeHandler,
+  voiceListenAsrNodeHandler,
+  voiceGatherDtmfNodeHandler,
+  voiceBranchNodeHandler,
+  voiceTransferRamalNodeHandler,
+  voiceTransferFilaNodeHandler,
+  voiceTransferUtilsNodeHandler,
+  voiceHangupNodeHandler,
+} = require('./nodes/voiceNodes');
 const { getOrCompileFlow } = require('./compiledFlowCache');
 const { executeStep } = require('./executeStep');
 const { buildConversationReplay } = require('./replay');
@@ -154,6 +164,15 @@ function createSimulationRegistry() {
   // Nó de fallback
   const { fallbackNodeHandler } = require('./nodes/fallbackNode');
   registry.register('fallback', fallbackNodeHandler);
+  // Nós de voz/URA (kind=voice)
+  registry.register('voice_prompt_listen', voicePromptListenNodeHandler);
+  registry.register('voice_listen_asr', voiceListenAsrNodeHandler);
+  registry.register('voice_gather_dtmf', voiceGatherDtmfNodeHandler);
+  registry.register('voice_branch', voiceBranchNodeHandler);
+  registry.register('voice_transfer_ramal', voiceTransferRamalNodeHandler);
+  registry.register('voice_transfer_fila', voiceTransferFilaNodeHandler);
+  registry.register('voice_transfer_utils', voiceTransferUtilsNodeHandler);
+  registry.register('voice_hangup', voiceHangupNodeHandler);
   return registry;
 }
 
@@ -237,6 +256,52 @@ async function simulateFlow(flow, options) {
     },
   };
 
+  // Execution ledger (DB-first) para simulação (best-effort).
+  // Importante: mantém o comportamento do simulador mesmo sem DB.
+  let executionLedgerAdapter = null;
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      // eslint-disable-next-line global-require
+      const { startFlowExecution, appendNodeExecution, finishFlowExecution } = require('../api/services/flowExecutionLedgerService');
+      const started = await startFlowExecution({
+        tenantId: flow.tenantId,
+        flowId: flow.id,
+        flowVersion: compiled.version,
+        sessionId: state.sessionId,
+        correlationId: `simulation:${replayId}`,
+        subjectType: 'flow_simulation',
+        subjectId: flow.id,
+        meta: { mode: 'simulation', replayId },
+      });
+      if (started && started.ok) {
+        state.metadata = state.metadata || {};
+        state.metadata.executionId = started.executionId;
+        executionLedgerAdapter = {
+          executionId: started.executionId,
+          sanitizeInput: (inObj) => {
+            if (!inObj || typeof inObj !== 'object') return {};
+            const copy = { ...inObj };
+            // Remove provider (função) do JSON
+            delete copy.aiProvider;
+            return copy;
+          },
+          sanitizeOutput: (outObj) => (outObj && typeof outObj === 'object' ? outObj : {}),
+          appendNodeExecution: async (args) => appendNodeExecution({
+            tenantId: flow.tenantId,
+            executionId: started.executionId,
+            ...args,
+          }),
+          finishFlowExecution: async ({ status, metaPatch }) => finishFlowExecution({
+            tenantId: flow.tenantId,
+            executionId: started.executionId,
+            status,
+            metaPatch,
+          }),
+        };
+      }
+    }
+  } catch (_) {}
+
   const maxSteps = (options && options.maxSteps) || 50;
   const inputProvider = options && options.inputProvider;
 
@@ -247,6 +312,7 @@ async function simulateFlow(flow, options) {
   /** @type {EngineEvent[]} */
   const allEvents = [];
 
+  let simulationError = null;
   for (let i = 0; i < maxSteps; i += 1) {
     if (!state.currentNodeId) {
       replay.recordEvent('simulation_ended', { reason: 'no_current_node', step: i });
@@ -274,17 +340,25 @@ async function simulateFlow(flow, options) {
     });
     
     const stepStartTime = new Date().toISOString();
-    // eslint-disable-next-line no-await-in-loop
-    const result = await executeStep(before, compiled, {
-      registry,
-      input: execInput,
-      deps: {
-        registry, // Passa registry para handlers que precisam (ex: subflow)
-        replay, // Passa replay para o executeStep registrar ações
-        // Simulação/preview é permitido mesmo para fluxos em safe-mode
-        allowUnreviewedAiFlow: true,
-      },
-    });
+    let result;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      result = await executeStep(before, compiled, {
+        registry,
+        input: execInput,
+        deps: {
+          registry, // Passa registry para handlers que precisam (ex: subflow)
+          replay, // Passa replay para o executeStep registrar ações
+          // Simulação/preview é permitido mesmo para fluxos em safe-mode
+          allowUnreviewedAiFlow: true,
+          executionLedger: executionLedgerAdapter,
+        },
+      });
+    } catch (err) {
+      simulationError = err;
+      replay.recordError(err, 'simulation_step_failed');
+      break;
+    }
     const stepEndTime = new Date().toISOString();
 
     const step = {
@@ -345,6 +419,7 @@ async function simulateFlow(flow, options) {
     stepsCount: steps.length,
     eventsCount: allEvents.length,
     finalNodeId: state.currentNodeId,
+    error: simulationError ? (simulationError.message || String(simulationError)) : null,
   });
   replay.stop();
   const replayPath = replay.save(replayId);
@@ -361,6 +436,16 @@ async function simulateFlow(flow, options) {
   });
   recording.stop();
   const recordingPath = recording.save(recordingId);
+
+  // Best-effort: finaliza execução no ledger
+  try {
+    if (executionLedgerAdapter && typeof executionLedgerAdapter.finishFlowExecution === 'function') {
+      await executionLedgerAdapter.finishFlowExecution({
+        status: simulationError ? 'failed' : 'done',
+        metaPatch: simulationError ? { error: simulationError.message || String(simulationError) } : { finishedBy: 'simulateFlow' },
+      });
+    }
+  } catch (_) {}
 
   return {
     compiledFlowInfo: {

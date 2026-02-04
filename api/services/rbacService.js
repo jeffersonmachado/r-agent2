@@ -74,6 +74,8 @@ const ROLE_PERMISSIONS = {
     // Relatórios
     { resource: 'reports', action: 'read' },
     { resource: 'reports', action: 'export' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     { resource: 'audit', action: 'export' },
@@ -146,6 +148,8 @@ const ROLE_PERMISSIONS = {
     // Relatórios
     { resource: 'reports', action: 'read' },
     { resource: 'reports', action: 'export' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -197,6 +201,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'flows', action: 'read' },
     // Relatórios
     { resource: 'reports', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -239,6 +245,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'flows', action: 'update' },
     // Relatórios
     { resource: 'reports', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -298,6 +306,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'config', action: 'read' },
     { resource: 'flows', action: 'read' },
     { resource: 'reports', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     { resource: 'audit', action: 'read' },
     { resource: 'audit', action: 'export' },
     { resource: 'quick_replies', action: 'read' },
@@ -313,6 +323,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'queues', action: 'read' },
     { resource: 'agents', action: 'read' },
     { resource: 'flows', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     { resource: 'quick_replies', action: 'read' },
     { resource: 'departments', action: 'read' },
     { resource: 'rag', action: 'read' },

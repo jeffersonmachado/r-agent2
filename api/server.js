@@ -1214,6 +1214,274 @@ async function requestHandler(req, res) {
   }
 
   // -----------------------------------------------------------------------
+  // Marketing v1 (Storefront token) - tracker + landing pages/forms
+  // -----------------------------------------------------------------------
+  // GET /mkt/track.js?token=...
+  if (method === 'GET' && pathname === '/mkt/track.js') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token (storefront)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, { error: 'rate_limit_exceeded', retryAfter: rl.retryAfter || 60 });
+        return;
+      }
+
+      const js = `
+(function(){
+  var endpoint = "/mkt/e?token=${String(token).replace(/"/g, '\\"')}";
+  function send(evt){
+    try{
+      evt = evt || {};
+      evt.ts = evt.ts || Date.now();
+      var payload = JSON.stringify(evt);
+      if (navigator.sendBeacon) {
+        var blob = new Blob([payload], {type: "application/json"});
+        navigator.sendBeacon(endpoint, blob);
+        return;
+      }
+      fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: payload, keepalive:true}).catch(function(){});
+    }catch(e){}
+  }
+  // Pageview automático
+  send({ type: "pageview", url: location.href, referrer: document.referrer || null, title: document.title || null });
+  // API pública mínima
+  window.mktIdentify = function(data){ send(Object.assign({ type: "identify" }, data || {})); };
+  window.mktEvent = function(name, props){ send({ type: "event", name: String(name||""), props: props||{} }); };
+})();`;
+
+      setCorsHeaders(res);
+      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(js);
+    } catch (err) {
+      logger.error('[Marketing] Erro em GET /mkt/track.js', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao gerar tracker' });
+    }
+    return;
+  }
+
+  // POST /mkt/e?token=...  { type, ... }
+  if (method === 'POST' && pathname === '/mkt/e') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, { error: 'rate_limit_exceeded', retryAfter: rl.retryAfter || 60 });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const evtType = body && body.type ? String(body.type).trim().toLowerCase() : 'event';
+      const tenantId = resolved.tenantId;
+      const externalId = body && (body.externalId || body.external_id) ? String(body.externalId || body.external_id).trim() : null;
+      const email = body && body.email ? String(body.email).trim() : null;
+      const phone = body && body.phone ? String(body.phone).trim() : null;
+      const name = body && body.name ? String(body.name).trim() : null;
+
+      const marketing = require('./services/marketing/marketingService');
+      const leadRes = (email || phone || externalId)
+        ? await marketing.upsertLead({ tenantId, email, phone, externalId, name, attributesPatch: body && body.props ? body.props : null })
+        : null;
+      const lead = leadRes && leadRes.ok ? leadRes.lead : null;
+
+      const mapped =
+        evtType === 'pageview' ? 'MarketingPageView'
+        : evtType === 'identify' ? 'MarketingIdentify'
+        : evtType === 'form_submit' ? 'MarketingFormSubmitted'
+        : 'MarketingCustomEvent';
+
+      await marketing.recordMarketingEvent({
+        tenantId,
+        eventType: mapped,
+        correlationId: body && body.idempotencyKey ? String(body.idempotencyKey) : null,
+        lead,
+        payload: {
+          ...(body && typeof body === 'object' ? body : {}),
+          publicTokenId: resolved.tokenId,
+        },
+      });
+      if (lead && lead.id) {
+        await marketing.applyScoring({ tenantId, leadId: lead.id, eventType: mapped, payload: body || {} }).catch(() => null);
+      }
+
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      logger.error('[Marketing] Erro em POST /mkt/e', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao registrar evento' });
+    }
+    return;
+  }
+
+  // GET /lp/:slug?token=...  - Landing page simples para um form
+  if (method === 'GET' && pathname.startsWith('/lp/')) {
+    try {
+      const slug = decodeURIComponent(pathname.slice('/lp/'.length)).trim();
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const marketing = require('./services/marketing/marketingService');
+      const form = await marketing.getFormBySlug({ tenantId: resolved.tenantId, slug });
+      if (!form || form.status !== 'active') {
+        sendJson(res, 404, { error: 'not_found', message: 'Landing page não encontrada' });
+        return;
+      }
+
+      const fields = Array.isArray(form.fields) ? form.fields : (Array.isArray(form.fields?.items) ? form.fields.items : []);
+      const fieldsHtml = fields.map((f) => {
+        const name = String(f.name || '').trim();
+        if (!name) return '';
+        const label = String(f.label || name);
+        const type = String(f.type || 'text');
+        const required = f.required === true ? 'required' : '';
+        return `<label style="display:block;margin:8px 0 4px;">${label}</label><input ${required} style="width:100%;padding:10px" name="${name}" type="${type}"/>`;
+      }).join('\n');
+
+      const html = form.landing_html && String(form.landing_html).trim()
+        ? String(form.landing_html)
+        : `<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${String(form.name || 'Form')}</title></head>
+<body style="font-family:system-ui,Arial;margin:24px;max-width:720px">
+  <h1>${String(form.name || '')}</h1>
+  <form id="mktForm">
+    ${fieldsHtml || '<label>Email</label><input name="email" type="email" required style="width:100%;padding:10px"/>'}
+    <div style="margin-top:12px"><button type="submit" style="padding:10px 14px">Enviar</button></div>
+  </form>
+  <div id="mktMsg" style="margin-top:12px"></div>
+  <script src="/mkt/track.js?token=${encodeURIComponent(String(token))}"></script>
+  <script>
+    (function(){
+      var form = document.getElementById("mktForm");
+      var msg = document.getElementById("mktMsg");
+      form.addEventListener("submit", function(e){
+        e.preventDefault();
+        var data = {};
+        new FormData(form).forEach(function(v,k){ data[k]=v; });
+        fetch("/lp/${encodeURIComponent(slug)}/submit?token=${encodeURIComponent(String(token))}", {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ data: data, submissionId: "sub-"+Date.now()+"-"+Math.random().toString(36).slice(2,9) })
+        }).then(function(r){ return r.json(); }).then(function(out){
+          if(out && out.ok){ msg.textContent = "Enviado! Obrigado."; if(window.mktEvent) window.mktEvent("form_submitted",{slug:"${encodeURIComponent(slug)}"}); }
+          else { msg.textContent = (out && out.message) ? out.message : "Falha ao enviar"; }
+        }).catch(function(){ msg.textContent = "Falha ao enviar"; });
+      });
+    })();
+  </script>
+</body></html>`;
+
+      setCorsHeaders(res);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(html);
+    } catch (err) {
+      logger.error('[Marketing] Erro em GET /lp/:slug', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao carregar landing page' });
+    }
+    return;
+  }
+
+  // POST /lp/:slug/submit?token=...
+  if (method === 'POST' && pathname.startsWith('/lp/') && pathname.endsWith('/submit')) {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const slug = decodeURIComponent(pathname.slice('/lp/'.length).replace(/\/submit$/, '')).trim();
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, { error: 'rate_limit_exceeded', retryAfter: rl.retryAfter || 60 });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const submissionId = body && body.submissionId ? String(body.submissionId).trim() : null;
+      const data = body && body.data ? body.data : {};
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.submitForm({
+        tenantId: resolved.tenantId,
+        slug,
+        submissionId,
+        data,
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+      });
+      if (!out.ok) {
+        const map = { form_not_found: 'Form não encontrado', slug_required: 'Slug inválido' };
+        sendJson(res, 400, { ok: false, error: out.error, message: map[out.error] || 'Falha ao enviar' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, leadId: out.lead?.id || null, submissionId: out.submission?.id || null });
+    } catch (err) {
+      logger.error('[Marketing] Erro em POST /lp/:slug/submit', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao enviar formulário' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
   // Provisionamento público (telefones)
   // -----------------------------------------------------------------------
   // GET /provision/:tenantKey/:vendor/:mac
@@ -1575,7 +1843,7 @@ async function requestHandler(req, res) {
       sendJson(res, 200, { ok: true, item });
     } catch (err) {
       const code = err.code || 'pbx_extensions_upsert_error';
-      const httpStatus = ['extension_required', 'invalid_mac', 'invalid_provisioning_vendor', 'provisioning_mac_required', 'mac_already_assigned', 'weak_extension_password', 'provisioning_extension_inactive'].includes(code)
+      const httpStatus = ['extension_required', 'invalid_mac', 'invalid_provisioning_vendor', 'invalid_provisioning_settings_key', 'provisioning_mac_required', 'mac_already_assigned', 'weak_extension_password', 'provisioning_extension_inactive'].includes(code)
         ? 400
         : 500;
       logger.error('[PBX] Erro em POST /api/pbx/extensions', err);
@@ -1701,12 +1969,29 @@ async function requestHandler(req, res) {
     const tenantKey = requireTenant(req, res);
     if (!tenantKey) return;
     try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const expiresInSecRaw = urlObj.searchParams.get('expiresInSec');
+      const expiresInSec = expiresInSecRaw != null ? Number(expiresInSecRaw) : null;
+
       const { rotateProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
-      const result = await rotateProvisioningToken({ tenantKey, actorUserId: req.agent?.id || null });
+      const result = await rotateProvisioningToken({ tenantKey, actorUserId: req.agent?.id || null, expiresInSec });
       if (!result.ok) {
         sendJson(res, 404, { error: 'not_found', message: 'Tenant PBX não encontrado' });
         return;
       }
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.provisioning_token.rotate',
+          resource: 'pbx_provisioning_token',
+          resourceId: tenantKey,
+          details: { expiresInSec: expiresInSec != null ? expiresInSec : null, expiresAt: result.expiresAt || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
       // Retorna token em texto claro (operação administrativa)
       sendJson(res, 200, { ok: true, token: result.token });
     } catch (err) {
@@ -6443,6 +6728,25 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
     try {
+      // Gate de segurança: rate limit por super-admin (produção)
+      try {
+        const rl = await checkRateLimit({
+          userId: `superAdmin:${req.agent?.id || req.agent?.username || 'unknown'}`,
+          operationType: 'BOOTSTRAP',
+        });
+        if (!rl.allowed) {
+          res.setHeader('Retry-After', rl.retryAfter || 60);
+          sendJson(res, 429, {
+            error: 'rate_limit_exceeded',
+            message: `Limite de bootstrap excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+            retryAfter: rl.retryAfter || 60,
+          });
+          return;
+        }
+      } catch (_) {
+        // best-effort: se rate limit falhar, não bloqueia por enquanto
+      }
+
       const body = await parseJsonBody(req);
       const {
         tenantKey,
@@ -6453,11 +6757,27 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         plan,
         segment,
         locationId,
+        locationIds,
         adminEmail,
         adminPassword,
         adminUsername,
         createTokens,
+        tokenKinds,
+        createTemplates,
+        createPhysicalQueue,
+        confirm,
       } = body || {};
+
+      // Gate opcional (fail-closed quando habilitado via env)
+      if (process.env.BOOTSTRAP_CONFIRM_REQUIRED === 'true') {
+        if (String(confirm || '') !== 'I_UNDERSTAND') {
+          sendJson(res, 400, {
+            error: 'bad_request',
+            message: 'Confirmação obrigatória. Envie { confirm: \"I_UNDERSTAND\" } para executar bootstrap.',
+          });
+          return;
+        }
+      }
 
       const { bootstrapTenantOneClick } = require('./services/oneClickBootstrapService');
       const result = await bootstrapTenantOneClick({
@@ -6469,10 +6789,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         plan,
         segment,
         locationId,
+        locationIds: Array.isArray(locationIds) ? locationIds : null,
         adminEmail,
         adminPassword,
         adminUsername,
         createTokens: createTokens !== false,
+        tokenKinds: Array.isArray(tokenKinds) ? tokenKinds : null,
+        createTemplates: createTemplates !== false,
+        createPhysicalQueue: createPhysicalQueue !== false,
       });
 
       logAction({
@@ -6898,6 +7222,69 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     sendJson(res, 200, result);
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Solutions (curadoria por segmento, sem marketplace)
+  // -----------------------------------------------------------------------
+  // GET /api/solutions/packs - lista packs/segmentos disponíveis
+  if (method === 'GET' && pathname === '/api/solutions/packs') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const solutions = require('./services/solutions/solutionsTemplateService');
+      const items = solutions.listSolutionPacks();
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[Solutions] Erro ao listar packs', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar packs' });
+    }
+    return;
+  }
+
+  // POST /api/solutions/packs/install { segment }
+  if (method === 'POST' && pathname === '/api/solutions/packs/install') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const segment = body && body.segment ? String(body.segment).trim() : '';
+      if (!segment) {
+        badRequest(res, 'segment é obrigatório');
+        return;
+      }
+      const solutions = require('./services/solutions/solutionsTemplateService');
+      const result = await solutions.installSolutionPack({ tenantId: req.tenantId, segment });
+      if (!result.success) {
+        sendJson(res, 400, { ok: false, error: result.error || 'install_failed' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[Solutions] Erro ao instalar pack', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao instalar pack' });
+    }
     return;
   }
 
@@ -9011,16 +9398,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      if (String(flow.kind || 'chat').trim().toLowerCase() === 'voice') {
-        sendJson(res, 400, {
-          error: 'not_supported',
-          message: 'Simulação de fluxo de voz ainda não é suportada neste endpoint (/flows/simulate).',
-        });
-        return;
-      }
-
       // Valida o fluxo antes de simular
-      const validationResult = validateFlow(flow);
+      const kind = String(flow.kind || 'chat').trim().toLowerCase();
+      const validationResult = kind === 'voice' ? validateVoiceFlow(flow) : validateFlow(flow);
       if (!validationResult.valid && validationResult.errors.length > 0) {
         sendJson(res, 400, {
           error: 'flow_invalid',
@@ -9569,6 +9949,261 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   }
 
   // -----------------------------------------------------------------------
+  // Marketing v1 (Admin / autenticado)
+  // -----------------------------------------------------------------------
+  // GET /api/marketing/forms
+  if (method === 'GET' && pathname === '/api/marketing/forms') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const marketing = require('./services/marketing/marketingService');
+      const items = await marketing.listForms({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar forms:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar forms' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/forms
+  if (method === 'POST' && pathname === '/api/marketing/forms') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const slug = body && body.slug ? String(body.slug).trim() : '';
+      const name = body && body.name ? String(body.name).trim() : '';
+      const fields = body && body.fields ? body.fields : {};
+      const landingHtml = body && body.landingHtml != null ? body.landingHtml : null;
+      const settings = body && body.settings ? body.settings : {};
+      const status = body && body.status ? String(body.status).trim() : 'active';
+
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.upsertForm({ tenantId: req.tenantId, slug, name, fields, landingHtml, settings, status });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao upsert form:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar form' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/leads?stage=&minScore=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/marketing/leads') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const stage = urlObj.searchParams.get('stage');
+      const minScore = urlObj.searchParams.get('minScore');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.listLeads({
+        tenantId: req.tenantId,
+        stage: stage ? String(stage) : null,
+        minScore: minScore != null ? Number(minScore) : null,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar leads:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar leads' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/leads/stats
+  if (method === 'GET' && pathname === '/api/marketing/leads/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.getLeadStats({ tenantId: req.tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao obter stats:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/scoring-rules
+  if (method === 'GET' && pathname === '/api/marketing/scoring-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const marketing = require('./services/marketing/marketingService');
+      const items = await marketing.listScoringRules({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar scoring rules:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar scoring rules' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/scoring-rules
+  if (method === 'POST' && pathname === '/api/marketing/scoring-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.upsertScoringRule({
+        tenantId: req.tenantId,
+        id: body && body.id ? String(body.id).trim() : null,
+        name: body && body.name ? String(body.name).trim() : null,
+        enabled: body ? body.enabled !== false : true,
+        eventType: body && body.eventType ? String(body.eventType).trim() : null,
+        delta: body && body.delta != null ? Number(body.delta) : 0,
+        conditions: body && body.conditions ? body.conditions : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao upsert scoring rule:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar scoring rule' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/email-campaigns
+  if (method === 'POST' && pathname === '/api/marketing/email-campaigns') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.createEmailCampaign({
+        tenantId: req.tenantId,
+        name: body && body.name ? String(body.name).trim() : null,
+        subject: body && body.subject ? String(body.subject).trim() : null,
+        bodyText: body && body.bodyText != null ? body.bodyText : null,
+        bodyHtml: body && body.bodyHtml != null ? body.bodyHtml : null,
+        minScore: body && body.minScore != null ? Number(body.minScore) : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 201, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao criar campanha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar campanha' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/email-campaigns/:id/send?limit=
+  if (method === 'POST' && pathname.startsWith('/api/marketing/email-campaigns/') && pathname.endsWith('/send')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/api/marketing/email-campaigns/'.length).replace(/\/send$/, '')).trim();
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit');
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.sendEmailCampaignNow({ tenantId: req.tenantId, campaignId: id, limit: limit != null ? Number(limit) : 2000 });
+      if (!out.ok) {
+        const msg = out.error === 'campaign_not_found' ? 'Campanha não encontrada' : 'Falha ao enviar';
+        sendJson(res, 400, { ok: false, error: out.error, message: msg });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao enviar campanha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao enviar campanha' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
   // Ops: Execution Queue (DLQ/metrics) - autenticado
   // -----------------------------------------------------------------------
   // GET /api/ops/execution-jobs/metrics
@@ -9803,7 +10438,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (!result.ok) {
         const msgMap = {
           replay_disabled: 'Replay está desabilitado. Defina ENABLE_EXECUTION_LEDGER_REPLAY=true para habilitar.',
-          replay_only_supported_for_simulation: 'Replay a partir do ledger só é suportado para execuções de simulação (meta.mode=simulation).',
+          replay_only_supported_for_simulation: 'Replay a partir do ledger só é suportado para execuções de simulação (meta.mode=simulation), a menos que ENABLE_EXECUTION_LEDGER_REPLAY_REAL=true esteja habilitado.',
           from_node_not_found: 'Node de origem não encontrado nesta execução.',
         };
         sendJson(res, 400, { error: String(result.error || 'replay_failed'), message: msgMap[result.error] || 'Não foi possível executar replay' });
@@ -9922,6 +10557,33 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[PublicTokens] Erro ao listar tokens:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar tokens públicos' });
+    }
+    return;
+  }
+
+  // GET /public-tokens/stats - Stats mínimos de uso por kind (dashboard)
+  if (method === 'GET' && pathname === '/public-tokens/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getPublicTokenStats } = require('./services/publicAccessTokenService');
+      const result = await getPublicTokenStats({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'public_token_stats_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao obter stats:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats de tokens públicos' });
     }
     return;
   }
@@ -10458,11 +11120,35 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           ...context,
           publicTokenId: resolved.tokenId,
           locationId: resolved.locationId || null,
+          idempotencyKey: (context && context.idempotencyKey) ? String(context.idempotencyKey) : null,
           biometricMode: biometric ? biometric.mode : (mode || null),
           biometricSubjectId: biometric ? biometric.subjectId : null,
           customerIdInput: customerIdInput || null,
         },
       });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_ticket_create',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || null,
+          details: {
+            kind: 'kiosk',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            queueId: ticket?.physical_queue_id || queueId || null,
+            ticketNumber: ticket?.ticket_number || null,
+            priority,
+            biometricMode: biometric ? biometric.mode : (mode || null),
+            biometricSubjectId: biometric ? biometric.subjectId : null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
 
       sendJson(res, 201, { ok: true, ticket });
     } catch (err) {
@@ -10568,6 +11254,28 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const stationId = body && body.stationId ? String(body.stationId).trim() : null;
       const { callNext } = require('./services/physicalQueueService');
       const ticket = await callNext({ tenantId: resolved.tenantId, locationId: resolved.locationId, stationId });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_call_next',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || null,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketFound: !!ticket,
+            ticketNumber: ticket?.ticket_number || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
       sendJson(res, 200, { ok: true, ticket });
     } catch (err) {
       logger.error('[Physical] Erro ao chamar próximo:', err);
@@ -10622,6 +11330,28 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       const { finishTicket } = require('./services/physicalQueueService');
       const ticket = await finishTicket({ tenantId: resolved.tenantId, ticketId });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_finish',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            stationId: ticket?.station_id || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
       sendJson(res, 200, { ok: true, ticket });
     } catch (err) {
       if (err && err.code === 'physical_ticket_not_found') {
@@ -10682,6 +11412,29 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
       const { startService } = require('./services/physicalQueueService');
       const ticket = await startService({ tenantId: resolved.tenantId, ticketId, stationId, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_start_service',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || ticket?.station_id || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
       sendJson(res, 200, { ok: true, ticket });
     } catch (err) {
       if (err && err.code === 'physical_ticket_not_found') {
@@ -10743,6 +11496,30 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
       const { skipTicket } = require('./services/physicalQueueService');
       const ticket = await skipTicket({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_skip',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            reason: reason || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
       sendJson(res, 200, { ok: true, ticket });
     } catch (err) {
       if (err && err.code === 'physical_ticket_not_found') {
@@ -10803,6 +11580,29 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
       const { transferTicket } = require('./services/physicalQueueService');
       const ticket = await transferTicket({ tenantId: resolved.tenantId, ticketId, toQueueId, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_transfer',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            toQueueId,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
       sendJson(res, 200, { ok: true, ticket });
     } catch (err) {
       if (err && err.code === 'physical_ticket_not_found') {
@@ -10862,6 +11662,30 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       const { abandonTicket } = require('./services/physicalQueueService');
       const ticket = await abandonTicket({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_abandon',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            reason: reason || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
       sendJson(res, 200, { ok: true, ticket });
     } catch (err) {
       if (err && err.code === 'physical_ticket_not_found') {
@@ -13596,8 +14420,97 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (body.object === 'page') {
         const entries = body.entry || [];
         for (const entry of entries) {
-          // Processa mensagens do Messenger
-          await processMessengerMessage(entry, flows, sessionEvents);
+          const messagingArr = Array.isArray(entry.messaging) ? entry.messaging : [];
+          for (const messaging of messagingArr) {
+            // 1) Persiste no gateway (best-effort) e resolve tenant
+            // eslint-disable-next-line no-await-in-loop
+            const ingest = await channelGatewayService.ingestIncoming('messenger', { messaging, entry, raw: body }).catch(() => null);
+            const tenantId = ingest?.tenantId || null;
+            if (!tenantId) {
+              logger.warn('[Webhook Messenger] Mensagem ignorada: tenant não resolvido (channel_account ausente/inativo)', {
+                page_id: entry?.id || null,
+                senderId: messaging?.sender?.id ? String(messaging.sender.id) : null,
+                externalMessageId: messaging?.message?.mid || null,
+              });
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            // Idempotência inbound: se duplicada, não processa ticket/engine
+            if (ingest?.persist?.idempotent === true) {
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            const senderId = messaging?.sender?.id ? String(messaging.sender.id) : null;
+            const externalConversationId = ingest?.normalized?.conversationKey?.externalId || senderId || null;
+            const messageText = messaging?.message?.text ? String(messaging.message.text) : '[Mensagem recebida]';
+            const externalMessageId = messaging?.message?.mid ? String(messaging.message.mid) : null;
+            const iso = messaging?.timestamp ? new Date(Number(messaging.timestamp)).toISOString() : null;
+
+            // 2) Resolve ticket existente (ou cria, se configurado)
+            // eslint-disable-next-line no-await-in-loop
+            const link = await resolveOrCreateTicketFromIncomingMessage(
+              tenantId,
+              'messenger',
+              String(externalConversationId || ''),
+              { contactId: externalConversationId || null }
+            ).catch(() => null);
+            const ticket = link?.ticket || null;
+
+            // 2.1) Ledger do ticket (idempotente por externalMessageId)
+            let updatedTicket = null;
+            if (ticket && ticket.id) {
+              try {
+                updatedTicket = appendTicketMessage(ticket.id, {
+                  direction: 'in',
+                  text: messageText,
+                  externalMessageId,
+                  timestamp: iso,
+                });
+              } catch (_) {
+                updatedTicket = ticket;
+              }
+            }
+            const effectiveTicket = updatedTicket || ticket;
+
+            // 3) Se ticket em modo humano, NÃO roda engine; apenas notifica UI
+            if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
+              if ((effectiveTicket.mode || 'bot') === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
+                autoAssignTicket(effectiveTicket.id).catch(() => null);
+              }
+              try {
+                emitEvent('ticket.message.received', {
+                  ticketId: effectiveTicket.id,
+                  message: messageText,
+                  sender: 'user',
+                  ticket: effectiveTicket,
+                }, { tenantId: effectiveTicket.tenantId, agentId: effectiveTicket.assignedTo });
+              } catch (e) {}
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            // 4) Processa na engine (pipeline compartilhado), usando channelType=messenger
+            const compatibleMessage = {
+              from: senderId || 'unknown',
+              id: externalMessageId || `ms-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+              text: { body: messageText || '' },
+              type: 'text',
+              timestamp: messaging?.timestamp ? Math.floor(Number(messaging.timestamp) / 1000) : undefined,
+            };
+            const compatibleValue = { metadata: { phone_number_id: entry?.id ? String(entry.id) : null } };
+
+            // eslint-disable-next-line no-await-in-loop
+            await processWhatsAppMessage(compatibleMessage, compatibleValue, {
+              flows,
+              sessionEvents,
+              saveSessionEvents: saveSessionEventsToFile,
+              tenantId,
+              conversationId: ingest?.persist?.conversationId || null,
+              channelType: 'messenger',
+            });
+          }
         }
       }
 

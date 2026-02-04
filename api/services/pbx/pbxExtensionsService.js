@@ -44,6 +44,39 @@ function normalizeProvisioning(payload) {
   const transport = (prov.transport ?? null) ? String(prov.transport).trim().toLowerCase() : null; // udp|tcp|tls
   const srtp = prov.srtp === true;
   const codecs = Array.isArray(prov.codecs) ? prov.codecs.map((c) => String(c).trim()).filter(Boolean) : null;
+  const settingsRaw = (prov.settings ?? prov.params ?? null);
+  let settings = null;
+  if (settingsRaw && typeof settingsRaw === 'object' && !Array.isArray(settingsRaw)) {
+    settings = {};
+    const entries = Object.entries(settingsRaw);
+    for (const [kRaw, vRaw] of entries) {
+      const k = String(kRaw || '').trim();
+      if (!k) continue;
+      // Validação leve para evitar injection/keys inesperadas
+      if (vendor === 'grandstream') {
+        if (!/^P\d{1,6}$/.test(k)) {
+          const err = new Error('invalid_provisioning_settings_key');
+          err.code = 'invalid_provisioning_settings_key';
+          err.details = { vendor, key: k };
+          throw err;
+        }
+      } else if (vendor === 'avaya') {
+        if (!/^[A-Z0-9_]{2,64}$/.test(k)) {
+          const err = new Error('invalid_provisioning_settings_key');
+          err.code = 'invalid_provisioning_settings_key';
+          err.details = { vendor, key: k };
+          throw err;
+        }
+      }
+      const v =
+        (typeof vRaw === 'string' || typeof vRaw === 'number' || typeof vRaw === 'boolean')
+          ? String(vRaw)
+          : null;
+      if (v == null) continue;
+      settings[k] = v.length > 512 ? v.slice(0, 512) : v;
+    }
+    if (Object.keys(settings).length === 0) settings = null;
+  }
 
   return {
     enabled: true,
@@ -57,6 +90,7 @@ function normalizeProvisioning(payload) {
     transport: transport || null,
     srtp,
     codecs: codecs && codecs.length ? codecs : null,
+    settings,
   };
 }
 

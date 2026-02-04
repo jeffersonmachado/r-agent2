@@ -159,6 +159,15 @@ function getSeedSpec() {
       tags: ['status', 'pedido', 'servico', 'api'],
       icon: '📦',
     },
+    // Templates por segmento (curados) - sem "marketplace" aberto, apenas seed do catálogo base.
+    {
+      id: 'segment-academia-crossfit',
+      file: 'crossfit-academia.json',
+      name: 'Academia (CrossFit) - atendimento completo',
+      description: 'Atendimento completo para academia com planos, horários, aula experimental e fallback.',
+      tags: ['solution', 'segment:academia', 'academia', 'crossfit', 'atendimento'],
+      icon: '💪',
+    },
   ];
 }
 

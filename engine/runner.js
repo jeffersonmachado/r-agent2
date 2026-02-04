@@ -357,6 +357,11 @@ async function runStep(flow, state, registry, input, deps = null) {
         holdOnCurrentNode = true;
       }
     }
+    // Nós de voz/URA: quando precisam aguardar input (ASR/DTMF), mantemos no mesmo nó.
+    if (!holdOnCurrentNode && output && typeof output === 'object' && output.type === 'voice' && output.waitForInput === true) {
+      nextNodeId = node.id;
+      holdOnCurrentNode = true;
+    }
     if (!holdOnCurrentNode && output && typeof output === 'object' && output.type === 'router') {
       nextNodeId = output.chosenNext || normalizeNext(node.next);
     } else if (!holdOnCurrentNode) {

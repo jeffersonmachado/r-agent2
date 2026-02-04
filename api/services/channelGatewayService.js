@@ -71,6 +71,9 @@ async function resolveTenantForWebhook(channelType, payload) {
       externalId = payload?.value?.metadata?.phone_number_id || payload?.metadata?.phone_number_id || null;
     } else if (channelType === 'instagram') {
       externalId = payload?.pageId || payload?.entry?.id || payload?.page_id || null;
+    } else if (channelType === 'messenger') {
+      // Messenger webhooks: entry.id é o pageId
+      externalId = payload?.pageId || payload?.entry?.id || payload?.entry?.[0]?.id || payload?.page_id || null;
     }
 
     if (!externalId) return { tenantId: null, account: null };
@@ -195,6 +198,55 @@ function normalizeIncoming(channelType, payload) {
         body,
         externalMessageId: mid,
         status: 'received',
+      },
+    };
+  }
+
+  if (channelType === 'messenger') {
+    // payload pode vir como { messaging } (obj) ou { entry } (webhook)
+    const messaging =
+      payload?.messaging
+      || payload?.entry?.messaging?.[0]
+      || payload?.entry?.[0]?.messaging?.[0]
+      || null;
+    const senderId = messaging?.sender?.id ? String(messaging.sender.id) : null;
+    const recipientId = messaging?.recipient?.id ? String(messaging.recipient.id) : null; // pageId
+    const msg = messaging?.message || null;
+    const externalMessageId = msg?.mid ? String(msg.mid) : null;
+
+    let type = 'text';
+    let body = {};
+    if (msg?.text) {
+      type = 'text';
+      body = { text: String(msg.text) };
+    } else if (Array.isArray(msg?.attachments) && msg.attachments.length > 0) {
+      type = String(msg.attachments[0]?.type || 'attachment');
+      body = { attachments: msg.attachments };
+    } else {
+      type = 'text';
+      body = { raw: msg || {} };
+    }
+
+    const externalId = senderId ? senderId.replace(/^\+/, '') : 'unknown';
+    const contactId = externalId;
+
+    return {
+      conversationKey: {
+        channelType: 'messenger',
+        externalId,
+        contactId,
+      },
+      message: {
+        direction: 'in',
+        type,
+        body,
+        externalMessageId,
+        status: 'received',
+        meta: {
+          messenger: {
+            page_id: recipientId || null,
+          },
+        },
       },
     };
   }

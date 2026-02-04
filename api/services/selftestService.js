@@ -84,6 +84,7 @@ async function safeCheckExecutionQueue() {
     const m = result.metrics || {};
     const dead = Number(m.dead || 0);
     const pending = Number(m.pending || 0);
+    const retryingPending = Number(m.retryingPending || 0);
     const lagSec = Number(m.pendingLagSec || 0);
 
     // Thresholds (WARN/FAIL)
@@ -93,14 +94,17 @@ async function safeCheckExecutionQueue() {
     const lagFail = intEnv('SELFTEST_EXEC_QUEUE_PENDING_LAG_FAIL_SEC', 300);
     const pendingWarn = intEnv('SELFTEST_EXEC_QUEUE_PENDING_WARN', 500);
     const pendingFail = intEnv('SELFTEST_EXEC_QUEUE_PENDING_FAIL', 5000);
+    const retryWarn = intEnv('SELFTEST_EXEC_QUEUE_RETRYING_PENDING_WARN', 50);
+    const retryFail = intEnv('SELFTEST_EXEC_QUEUE_RETRYING_PENDING_FAIL', 500);
 
-    const fail = dead >= deadFail || lagSec >= lagFail || pending >= pendingFail;
-    const warn = dead >= deadWarn || lagSec >= lagWarn || pending >= pendingWarn;
+    const fail = dead >= deadFail || lagSec >= lagFail || pending >= pendingFail || retryingPending >= retryFail;
+    const warn = dead >= deadWarn || lagSec >= lagWarn || pending >= pendingWarn || retryingPending >= retryWarn;
 
     return {
       status: fail ? 'unhealthy' : warn ? 'degraded' : 'healthy',
       details: {
         pending,
+        retryingPending,
         processing: Number(m.processing || 0),
         done: Number(m.done || 0),
         dead,
@@ -113,6 +117,8 @@ async function safeCheckExecutionQueue() {
           lagFail,
           pendingWarn,
           pendingFail,
+          retryWarn,
+          retryFail,
         },
       },
       error: fail ? 'exec_queue_threshold_exceeded' : null,

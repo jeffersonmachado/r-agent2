@@ -80,6 +80,12 @@ const getLegacyMonHost = require('./LegacyMonHost');
 const getLegacyMonService = require('./LegacyMonService');
 const getLegacyMonOs = require('./LegacyMonOs');
 const getLegacyMonApp = require('./LegacyMonApp');
+const getMarketingForm = require('./MarketingForm');
+const getMarketingLead = require('./MarketingLead');
+const getMarketingFormSubmission = require('./MarketingFormSubmission');
+const getMarketingScoringRule = require('./MarketingScoringRule');
+const getMarketingEmailCampaign = require('./MarketingEmailCampaign');
+const getMarketingEmailSend = require('./MarketingEmailSend');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -159,6 +165,12 @@ const LegacyMonHost = () => getLegacyMonHost();
 const LegacyMonService = () => getLegacyMonService();
 const LegacyMonOs = () => getLegacyMonOs();
 const LegacyMonApp = () => getLegacyMonApp();
+const MarketingForm = () => getMarketingForm();
+const MarketingLead = () => getMarketingLead();
+const MarketingFormSubmission = () => getMarketingFormSubmission();
+const MarketingScoringRule = () => getMarketingScoringRule();
+const MarketingEmailCampaign = () => getMarketingEmailCampaign();
+const MarketingEmailSend = () => getMarketingEmailSend();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -372,6 +384,12 @@ module.exports = {
   LegacyMonService,
   LegacyMonOs,
   LegacyMonApp,
+  MarketingForm,
+  MarketingLead,
+  MarketingFormSubmission,
+  MarketingScoringRule,
+  MarketingEmailCampaign,
+  MarketingEmailSend,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -449,4 +467,10 @@ module.exports = {
   getLegacyMonService,
   getLegacyMonOs,
   getLegacyMonApp,
+  getMarketingForm,
+  getMarketingLead,
+  getMarketingFormSubmission,
+  getMarketingScoringRule,
+  getMarketingEmailCampaign,
+  getMarketingEmailSend,
 };

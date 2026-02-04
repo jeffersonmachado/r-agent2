@@ -126,10 +126,14 @@ async function bootstrapTenantOneClick({
   plan = 'trial',
   segment = 'geral',
   locationId = null,
+  locationIds = null,
   adminEmail = '',
   adminPassword = null,
   adminUsername = null,
   createTokens = true,
+  tokenKinds = null,
+  createTemplates = true,
+  createPhysicalQueue = true,
 } = {}) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
 
@@ -154,6 +158,9 @@ async function bootstrapTenantOneClick({
     physicalQueue: null,
     tokens: {},
     warnings: [],
+    report: {
+      steps: [],
+    },
   };
 
   // 1) Tenant
@@ -168,6 +175,12 @@ async function bootstrapTenantOneClick({
   });
   result.created.tenant = ensuredTenant.created;
   result.tenant = ensuredTenant.tenant;
+  result.report.steps.push({
+    step: 'tenant',
+    ok: true,
+    created: ensuredTenant.created === true,
+    tenantKey: tk,
+  });
 
   // 2) Admin user (optional)
   try {
@@ -182,52 +195,127 @@ async function bootstrapTenantOneClick({
     result.adminUser = ensuredAdmin.user || null;
     result.adminToken = ensuredAdmin.token || null;
     if (ensuredAdmin.warning) result.warnings.push(ensuredAdmin.warning);
+    result.report.steps.push({
+      step: 'admin_user',
+      ok: true,
+      created: ensuredAdmin.created === true,
+      warning: ensuredAdmin.warning || null,
+      email: safeStr(adminEmail) || null,
+    });
   } catch (err) {
     result.warnings.push(`admin_user_bootstrap_failed:${err.message}`);
+    result.report.steps.push({
+      step: 'admin_user',
+      ok: false,
+      error: err.message || 'admin_user_bootstrap_failed',
+      email: safeStr(adminEmail) || null,
+    });
   }
 
   // 3) Templates + quick replies + queue digital
-  try {
-    const createdTemplates = await createInitialTemplates(tk, { segment });
-    result.created.templates = createdTemplates.success === true;
-    result.templates = createdTemplates.success ? createdTemplates.created : null;
-  } catch (err) {
-    result.warnings.push(`templates_bootstrap_failed:${err.message}`);
+  if (createTemplates) {
+    try {
+      const createdTemplates = await createInitialTemplates(tk, { segment });
+      result.created.templates = createdTemplates.success === true;
+      result.templates = createdTemplates.success ? createdTemplates.created : null;
+      result.report.steps.push({
+        step: 'templates',
+        ok: createdTemplates.success === true,
+        created: createdTemplates.success === true,
+        segment,
+      });
+    } catch (err) {
+      result.warnings.push(`templates_bootstrap_failed:${err.message}`);
+      result.report.steps.push({
+        step: 'templates',
+        ok: false,
+        error: err.message || 'templates_bootstrap_failed',
+        segment,
+      });
+    }
+  } else {
+    result.report.steps.push({ step: 'templates', ok: true, skipped: true });
   }
 
+  const locsRaw = Array.isArray(locationIds) ? locationIds : (locationId != null ? [locationId] : []);
+  const locs = locsRaw.map((x) => (x == null ? null : String(x).trim())).filter((x) => x !== '');
+  const effectiveLocs = locs.length > 0 ? locs : [null];
+
   // 4) Physical queue default (location-aware)
-  try {
-    const q = await upsertPhysicalQueue({
-      tenantId: tk,
-      locationId: locationId ? String(locationId) : null,
-      name: 'Geral',
-      status: 'active',
-      rules: {},
-    });
-    result.created.physicalQueue = true;
-    result.physicalQueue = q;
-  } catch (err) {
-    result.warnings.push(`physical_queue_bootstrap_failed:${err.message}`);
+  if (createPhysicalQueue) {
+    for (const loc of effectiveLocs) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const q = await upsertPhysicalQueue({
+          tenantId: tk,
+          locationId: loc ? String(loc) : null,
+          name: 'Geral',
+          status: 'active',
+          rules: {},
+        });
+        result.created.physicalQueue = true;
+        result.physicalQueue = q;
+        result.report.steps.push({
+          step: 'physical_queue',
+          ok: true,
+          created: true,
+          locationId: loc || null,
+          queueId: q?.id || null,
+        });
+      } catch (err) {
+        result.warnings.push(`physical_queue_bootstrap_failed:${err.message}`);
+        result.report.steps.push({
+          step: 'physical_queue',
+          ok: false,
+          error: err.message || 'physical_queue_bootstrap_failed',
+          locationId: loc || null,
+        });
+      }
+    }
+  } else {
+    result.report.steps.push({ step: 'physical_queue', ok: true, skipped: true });
   }
 
   // 5) Public tokens
   if (createTokens) {
-    const tokenKinds = ['storefront', 'kiosk', 'panel', 'station'];
-    for (const kind of tokenKinds) {
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        const ensured = await ensurePublicToken({
-          tenantKey: tk,
-          kind,
-          locationId: locationId ? String(locationId) : null,
-          meta: { segment, locationId: locationId ? String(locationId) : null },
-        });
-        result.created.tokens[kind] = ensured.created;
-        result.tokens[kind] = ensured.token;
-      } catch (err) {
-        result.warnings.push(`public_token_bootstrap_failed:${kind}:${err.message}`);
+    const kinds = Array.isArray(tokenKinds) && tokenKinds.length
+      ? tokenKinds.map((k) => String(k).trim()).filter(Boolean)
+      : ['storefront', 'kiosk', 'panel', 'station'];
+    for (const loc of effectiveLocs) {
+      for (const kind of kinds) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const ensured = await ensurePublicToken({
+            tenantKey: tk,
+            kind,
+            locationId: loc ? String(loc) : null,
+            meta: { segment, locationId: loc ? String(loc) : null },
+          });
+          const key = loc ? `${kind}:${String(loc)}` : kind;
+          result.created.tokens[key] = ensured.created;
+          result.tokens[key] = ensured.token;
+          result.report.steps.push({
+            step: 'public_token',
+            ok: true,
+            created: ensured.created === true,
+            kind,
+            locationId: loc || null,
+            tokenId: ensured?.token?.id || null,
+          });
+        } catch (err) {
+          result.warnings.push(`public_token_bootstrap_failed:${kind}:${err.message}`);
+          result.report.steps.push({
+            step: 'public_token',
+            ok: false,
+            error: err.message || 'public_token_bootstrap_failed',
+            kind,
+            locationId: loc || null,
+          });
+        }
       }
     }
+  } else {
+    result.report.steps.push({ step: 'public_tokens', ok: true, skipped: true });
   }
 
   logger.info('[Bootstrap] one-click concluído', {

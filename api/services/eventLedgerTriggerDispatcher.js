@@ -26,13 +26,13 @@ async function ensureStateRow({ consumer }) {
   if (!sequelize) return null;
   const id = `eds:${String(consumer)}`;
   await sequelize.query(
-    `INSERT INTO event_dispatch_state (id, consumer, last_received_at, created_at, updated_at)
-     VALUES (:id, :consumer, '1970-01-01'::timestamptz, NOW(), NOW())
+    `INSERT INTO event_dispatch_state (id, consumer, last_received_at, last_event_id, created_at, updated_at)
+     VALUES (:id, :consumer, '1970-01-01'::timestamptz, NULL, NOW(), NOW())
      ON CONFLICT (consumer) DO NOTHING`,
     { replacements: { id, consumer: String(consumer) } },
   );
   const [rows] = await sequelize.query(
-    `SELECT id, consumer, last_received_at
+    `SELECT id, consumer, last_received_at, last_event_id
      FROM event_dispatch_state
      WHERE consumer = :consumer
      LIMIT 1`,
@@ -53,7 +53,7 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}
   // Cursor + lock to avoid concurrent scanners
   return sequelize.transaction(async (t) => {
     const [lockedRows] = await sequelize.query(
-      `SELECT id, consumer, last_received_at
+      `SELECT id, consumer, last_received_at, last_event_id
        FROM event_dispatch_state
        WHERE consumer = :consumer
        FOR UPDATE`,
@@ -61,22 +61,28 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}
     );
     const locked = Array.isArray(lockedRows) && lockedRows[0] ? lockedRows[0] : null;
     const lastReceivedAt = locked?.last_received_at ? new Date(locked.last_received_at) : new Date('1970-01-01');
+    const lastEventId = locked?.last_event_id ? String(locked.last_event_id) : '';
 
     const EventModel = EventLedger();
     const events = await EventModel.findAll({
       where: {
-        received_at: { [Op.gt]: lastReceivedAt },
+        [Op.or]: [
+          { received_at: { [Op.gt]: lastReceivedAt } },
+          // Tie-breaker: mesma timestamp, usa id lexicográfico
+          { received_at: { [Op.eq]: lastReceivedAt }, id: { [Op.gt]: lastEventId } },
+        ],
       },
-      order: [['received_at', 'ASC']],
+      order: [['received_at', 'ASC'], ['id', 'ASC']],
       limit: safeBatch,
       transaction: t,
     }).catch(() => []);
 
     if (!events || events.length === 0) {
-      return { ok: true, enqueued: 0, cursor: lastReceivedAt.toISOString() };
+      return { ok: true, enqueued: 0, cursor: { receivedAt: lastReceivedAt.toISOString(), eventId: lastEventId || null } };
     }
 
     let maxReceivedAt = lastReceivedAt;
+    let maxEventId = lastEventId;
     let enqueued = 0;
 
     for (const ev of events) {
@@ -84,7 +90,14 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}
       const tenantId = json.tenant_key;
       const eventId = json.id;
       const receivedAt = json.received_at ? new Date(json.received_at) : null;
-      if (receivedAt && receivedAt > maxReceivedAt) maxReceivedAt = receivedAt;
+      if (receivedAt) {
+        if (receivedAt > maxReceivedAt) {
+          maxReceivedAt = receivedAt;
+          maxEventId = String(eventId || '');
+        } else if (receivedAt.getTime() === maxReceivedAt.getTime() && String(eventId || '') > String(maxEventId || '')) {
+          maxEventId = String(eventId || '');
+        }
+      }
 
       // Enqueue per-event dispatch job (idempotent via execution_jobs unique index)
       // eslint-disable-next-line no-await-in-loop
@@ -104,12 +117,12 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}
 
     await sequelize.query(
       `UPDATE event_dispatch_state
-       SET last_received_at = :ts, updated_at = NOW()
+       SET last_received_at = :ts, last_event_id = :eid, updated_at = NOW()
        WHERE consumer = :consumer`,
-      { replacements: { ts: maxReceivedAt, consumer: String(consumer) }, transaction: t },
+      { replacements: { ts: maxReceivedAt, eid: maxEventId || null, consumer: String(consumer) }, transaction: t },
     );
 
-    return { ok: true, enqueued, cursor: maxReceivedAt.toISOString() };
+    return { ok: true, enqueued, cursor: { receivedAt: maxReceivedAt.toISOString(), eventId: maxEventId || null } };
   });
 }
 
