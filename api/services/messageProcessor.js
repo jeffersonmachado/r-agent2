@@ -381,6 +381,37 @@ async function processWhatsAppMessage(message, value, deps) {
   }
   const registry = createNodeRegistry();
 
+  // Execution ledger (DB-first) - best-effort
+  // Mantém um executionId por sessão (em memória) para anexar node_executions por mensagem.
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      const existingExecutionId = state?.metadata?.executionId || null;
+      if (!existingExecutionId) {
+        // eslint-disable-next-line global-require
+        const { startFlowExecution } = require('./flowExecutionLedgerService');
+        const started = await startFlowExecution({
+          tenantId: inboundTenantId,
+          flowId: state.flowId,
+          flowVersion: state.flowVersion,
+          sessionId,
+          correlationId: conversationId ? String(conversationId) : `channel:${effectiveChannelType}:${sessionId}`,
+          subjectType: 'channel_session',
+          subjectId: sessionId,
+          meta: {
+            mode: 'message',
+            channelType: effectiveChannelType,
+            phoneNumber: from,
+            conversationId: conversationId || null,
+          },
+        });
+        if (started && started.ok) {
+          if (!state.metadata) state.metadata = {};
+          state.metadata.executionId = started.executionId;
+        }
+      }
+    }
+  } catch (_) {}
+
   // Executa UM passo com input do usuário
   const persistenceServices = require('../../engine/services/persistenceServices');
   
@@ -440,6 +471,41 @@ async function processWhatsAppMessage(message, value, deps) {
   }
   const stepEndTime = new Date().toISOString();
 
+  // Execution ledger: registra node execution (best-effort)
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      const executionId = state?.metadata?.executionId || null;
+      if (executionId) {
+        const nodeId = state.currentNodeId || null;
+        let nodeType = null;
+        try {
+          const nodes = Array.isArray(compiledFlow?.nodes) ? compiledFlow.nodes : [];
+          const found = nodeId ? nodes.find((n) => n && String(n.id) === String(nodeId)) : null;
+          nodeType = found ? String(found.type || '') : null;
+        } catch (_) {}
+
+        // eslint-disable-next-line global-require
+        const { appendNodeExecution } = require('./flowExecutionLedgerService');
+        await appendNodeExecution({
+          tenantId: inboundTenantId,
+          executionId,
+          nodeId,
+          nodeType,
+          stepIndex: null,
+          status: 'ok',
+          startedAt: stepStartTime,
+          finishedAt: stepEndTime,
+          input: { text, messageId, channel: effectiveChannelType },
+          output: result.output || {},
+          stateBefore: state,
+          stateAfter: result.state,
+          events: Array.isArray(result.events) ? result.events : [],
+          errorMessage: null,
+        }).catch(() => {});
+      }
+    }
+  } catch (_) {}
+
   // Registra execução no replay
   if (replay) {
     replay.recordAction(
@@ -463,6 +529,24 @@ async function processWhatsAppMessage(message, value, deps) {
 
   // Atualiza sessão
   sessions.set(sessionId, result.state);
+
+  // Execution ledger: marca execução como concluída quando conversa termina (best-effort)
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      const executionId = result?.state?.metadata?.executionId || state?.metadata?.executionId || null;
+      const finished = !result?.state?.currentNodeId;
+      if (executionId && finished) {
+        // eslint-disable-next-line global-require
+        const { finishFlowExecution } = require('./flowExecutionLedgerService');
+        await finishFlowExecution({
+          tenantId: inboundTenantId,
+          executionId,
+          status: 'done',
+          metaPatch: { finishedBy: 'end_node_or_no_current_node', finishedAt: new Date().toISOString() },
+        }).catch(() => {});
+      }
+    }
+  } catch (_) {}
 
   // Guarda eventos para replay
   const existingEvents = sessionEvents.get(sessionId) || [];

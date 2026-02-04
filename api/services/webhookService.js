@@ -43,7 +43,7 @@ const { Webhook: WebhookGetter } = require('../db/models');
 const webhooks = new Map();
 
 // Eventos disponíveis
-const AVAILABLE_EVENTS = [
+const BASE_AVAILABLE_EVENTS = [
   'ticket.created',
   'ticket.assigned',
   'ticket.closed',
@@ -57,6 +57,17 @@ const AVAILABLE_EVENTS = [
   'campaign.completed',
   'campaign.failed',
 ];
+
+// Canonical events (event_ledger.<Type>)
+let AVAILABLE_EVENTS = [...BASE_AVAILABLE_EVENTS];
+try {
+  // eslint-disable-next-line global-require
+  const { EVENT_TYPES_V1 } = require('../events/eventModelV1');
+  const canonical = Array.from(EVENT_TYPES_V1 || []).map((t) => `event_ledger.${t}`);
+  AVAILABLE_EVENTS = Array.from(new Set([...AVAILABLE_EVENTS, ...canonical]));
+} catch (_) {
+  // best-effort: mantém base
+}
 
 function dbAvailable() {
   return !!getSequelize();

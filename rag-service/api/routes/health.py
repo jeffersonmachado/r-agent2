@@ -84,3 +84,41 @@ async def health_check(tenant_id: Optional[str] = Query(None, description="ID do
             "error": str(e)
         }
 
+
+@router.get("/ready")
+async def readiness_check():
+    """
+    Readiness check (rápido e read-only).
+
+    Retorna 200 apenas se conseguir conectar ao Postgres e executar um SELECT 1.
+    """
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                _ = cur.fetchone()
+        return {"status": "ready"}
+    except Exception as e:
+        return {"status": "not_ready", "error": str(e)}
+
+
+@router.get("/selftest")
+async def selftest_check():
+    """
+    Self-test read-only (auto tester).
+
+    - Reusa o health check (stats) e valida conectividade ao Postgres.
+    - Não executa indexação nem mutações.
+    """
+    try:
+        # Revalida DB de forma explícita
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                _ = cur.fetchone()
+        # Inclui o mesmo payload do /health (agregado)
+        health = await health_check(None)
+        return {"status": "PASS", "checks": {"db": "ok", "health": health}}
+    except Exception as e:
+        return {"status": "FAIL", "error": str(e)}
+

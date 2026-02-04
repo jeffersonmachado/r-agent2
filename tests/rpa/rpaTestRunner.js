@@ -110,6 +110,7 @@ class RpaTestRunner {
       screenshots: [],
       startTime: new Date().toISOString(),
       replayId: null,
+      tracePath: null,
     };
 
     // Inicia sistema de replay
@@ -122,6 +123,13 @@ class RpaTestRunner {
       if (!this.executor) {
         await this.init();
       }
+
+      // Tracing (opcional) - inicia no começo da execução do seed
+      try {
+        if (this.executor?.startTracing) {
+          await this.executor.startTracing();
+        }
+      } catch (_) {}
 
       // Faz login automático antes de executar os steps
       if (this.executor?.page) {
@@ -216,6 +224,13 @@ class RpaTestRunner {
         results.replayPath = replayPath;
       }
 
+      // Para tracing (opcional)
+      try {
+        if (this.executor?.stopTracing) {
+          results.tracePath = await this.executor.stopTracing(`rpa-trace-${recordingData.id}-${Date.now()}`);
+        }
+      } catch (_) {}
+
       results.endTime = new Date().toISOString();
       results.duration = new Date(results.endTime) - new Date(results.startTime);
 
@@ -224,6 +239,44 @@ class RpaTestRunner {
       if (pageErrors.length > 0) {
         results.pageErrors = pageErrors;
       }
+
+      // Adiciona evidências adicionais (não-bloqueantes): console + debug logs + httpErrors
+      try {
+        const consoleLogs = this.executor.getConsoleLogs?.() || [];
+        if (consoleLogs.length > 0) results.consoleLogs = consoleLogs;
+      } catch (_) {}
+
+      try {
+        const debugLogs = this.executor.getDebugLogs?.() || [];
+        if (debugLogs.length > 0) results.debugLogs = debugLogs;
+      } catch (_) {}
+
+      try {
+        const httpErrors = this.executor.getHttpErrors?.() || [];
+        if (httpErrors.length > 0) results.httpErrors = httpErrors;
+      } catch (_) {}
+
+      // Gate forte: falha em pageerror e console.error (mesmo se asserts passaram).
+      // Motivo: evita falsos positivos onde a UI "parece ok", mas há erro em runtime.
+      try {
+        const pageErrorsList = Array.isArray(results.pageErrors) ? results.pageErrors : [];
+        const hasPageError = pageErrorsList.some((e) => e && e.type === 'page_error');
+
+        const consoleLogsList = Array.isArray(results.consoleLogs) ? results.consoleLogs : [];
+        const hasConsoleError = consoleLogsList.some((e) => e && String(e.level || '').toLowerCase() === 'error');
+
+        if (hasPageError || hasConsoleError) {
+          results.success = false;
+          results.errors.push({
+            step: 'postcheck',
+            action: 'browser_runtime_gate',
+            error: [
+              hasPageError ? 'Detectado pageerror no browser' : null,
+              hasConsoleError ? 'Detectado console.error no browser' : null,
+            ].filter(Boolean).join(' | '),
+          });
+        }
+      } catch (_) {}
 
       // Adiciona screenshots
       const screenshots = this.executor.getScreenshots();
@@ -242,6 +295,13 @@ class RpaTestRunner {
         results.replayId = this.replaySystem.replayData.id;
         results.replayPath = replayPath;
       }
+
+      // Para tracing (opcional) mesmo em erro fatal
+      try {
+        if (this.executor?.stopTracing) {
+          results.tracePath = await this.executor.stopTracing(`rpa-trace-${recordingData.id}-fatal-${Date.now()}`);
+        }
+      } catch (_) {}
       
       results.success = false;
       results.errors.push({

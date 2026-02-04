@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./utils/config');
 const { validateFlow, addUiMessage } = require('../engine/validator');
+const { validateVoiceFlow } = require('./utils/voiceFlowValidator');
 const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
 const { verifyWebhook } = require('./services/whatsappService');
@@ -104,7 +105,7 @@ const { validateGenerationContract } = require('./utils/contractValidator');
 const { orchestrateGeneration } = require('./services/generationOrchestrator');
 const { registerGeneration, generateAuditReport } = require('./services/auditService');
 const { generateAndValidate } = require('./services/generate-and-validate');
-const { clearLimitersCache, clearRedisRateLimitKeys } = require('../infra/rate-limit');
+const { checkRateLimit, clearLimitersCache, clearRedisRateLimitKeys } = require('../infra/rate-limit');
 const { executeRpaFlowPipeline, previewRpaFlowPipeline } = require('./services/rpaFlowPipelineService');
 const { generateChatbotFlow } = require('../engine/ai/generateChatbotFlow');
 const { generateRpaTest } = require('../engine/ai/generateRpaTest');
@@ -976,6 +977,12 @@ function ensureFlowHasMeta(rawFlow, tenantId = null) {
     flow.version = 999999;
   }
 
+  // kind (generalista): default chat; voice habilita runtime/validação específicos
+  const rawKind = (flow.kind && typeof flow.kind === 'string' ? flow.kind : null)
+    || (flow.metadata && typeof flow.metadata === 'object' && typeof flow.metadata.kind === 'string' ? flow.metadata.kind : null);
+  const kind = String(rawKind || 'chat').trim().toLowerCase();
+  flow.kind = (kind === 'voice') ? 'voice' : 'chat';
+
   return flow;
 }
 
@@ -1170,12 +1177,138 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // Alias curto para readiness (útil para monitor externo)
+  if (method === 'GET' && pathname === '/ready') {
+    // Reutiliza a lógica existente chamando a rota interna
+    req.url = '/health/ready';
+    return requestHandler(req, res);
+  }
+
+  // Selftest read-only: checa DB + Redis + RAG (sem efeitos colaterais)
+  // - 200 em PASS/WARN, 503 em FAIL
+  // - Retorna payload estruturado para monitoramento
+  if (method === 'GET' && (pathname === '/health/selftest' || pathname === '/selftest')) {
+    try {
+      const { runSelftest } = require('./services/selftestService');
+      const result = await runSelftest();
+      const httpStatus = result.status === 'FAIL' ? 503 : 200;
+      sendJson(res, httpStatus, result);
+    } catch (err) {
+      logger.error('[Selftest] Erro ao executar selftest:', err);
+      sendJson(res, 503, {
+        status: 'FAIL',
+        error: err.message || 'selftest_failed',
+        meta: { timestamp: new Date().toISOString() },
+      });
+    }
+    return;
+  }
+
   // Versão / ambiente
   if (method === 'GET' && pathname === '/version') {
     sendJson(res, 200, {
       name: 'chatbot-engine-api',
       env: config.get('nodeEnv', 'development'),
     });
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Provisionamento público (telefones)
+  // -----------------------------------------------------------------------
+  // GET /provision/:tenantKey/:vendor/:mac
+  // GET /provision/:tenantKey/:token/:vendor/:mac  (se PROVISIONING_PUBLIC_TOKEN estiver definido)
+  if (method === 'GET' && pathname.startsWith('/provision/')) {
+    try {
+      const parts = pathname.split('/').filter(Boolean); // ["provision", ...]
+      // Accept:
+      // - /provision/<tenant>/<vendor>/<mac>
+      // - /provision/<tenant>/<token>/<vendor>/<mac>
+      if (parts.length !== 4 && parts.length !== 5) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      const provisioningToken = (process.env.PROVISIONING_PUBLIC_TOKEN || '').trim();
+      const tenantKey = String(parts[1] || '').trim();
+
+      let token = null;
+      let vendor = null;
+      let mac = null;
+      if (parts.length === 4) {
+        [vendor, mac] = [parts[2], parts[3]];
+      } else {
+        [token, vendor, mac] = [parts[2], parts[3], parts[4]];
+      }
+
+      if (!tenantKey) {
+        sendJson(res, 400, { error: 'bad_request', code: 'tenant_required', message: 'tenantKey é obrigatório' });
+        return;
+      }
+
+      // Token: aceita token global (env) e/ou token por tenant (PBX settings)
+      let tenantProvisioningToken = null;
+      try {
+        // eslint-disable-next-line global-require
+        const { getProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+        const t = await getProvisioningToken({ tenantKey, includeToken: true });
+        if (t && t.ok && t.token) tenantProvisioningToken = String(t.token);
+      } catch (_) {}
+
+      const tokenRequired = !!provisioningToken || !!tenantProvisioningToken;
+      if (tokenRequired) {
+        // sem token na URL
+        if (!token) {
+          sendJson(res, 403, { error: 'forbidden', code: 'provisioning_token_required' });
+          return;
+        }
+        const ok = (provisioningToken && token === provisioningToken) || (tenantProvisioningToken && token === tenantProvisioningToken);
+        if (!ok) {
+          sendJson(res, 403, { error: 'forbidden', code: 'invalid_provisioning_token' });
+          return;
+        }
+      }
+
+      // Deriva host para uso nas configs (SIPDOMAIN/registrar)
+      // - Preferir override explícito (on-prem às vezes expõe API em host/porta diferente do SIP)
+      // - Remover porta do Host header quando presente
+      const hostHeader = String(req.headers?.host || '').trim();
+      const hostNoPort = hostHeader.includes(':') ? hostHeader.split(':')[0] : hostHeader;
+      const serverHost = (process.env.PROVISIONING_SIP_HOST || '').trim() || hostNoPort || 'localhost';
+
+      // eslint-disable-next-line global-require
+      const { generateProvisioning } = require('./services/pbx/pbxProvisioningService');
+      const out = await generateProvisioning({ tenantKey, vendor, mac, serverHost });
+
+      // Auditoria best-effort (acesso público)
+      try {
+        logAction({
+          agentId: 'public',
+          username: 'public',
+          tenantId: tenantKey,
+          action: 'pbx.provisioning.fetch',
+          resource: 'pbx_provisioning',
+          resourceId: `${String(vendor || '')}:${String(mac || '')}`,
+          details: { vendor: String(vendor || ''), mac: String(mac || ''), serverHost },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      setCorsHeaders(res);
+      res.writeHead(200, {
+        'Content-Type': out.contentType || 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(out.body || '');
+    } catch (err) {
+      const code = err.code || 'provisioning_error';
+      const httpStatus = ['invalid_mac', 'invalid_provisioning_vendor', 'invalid_provisioning_template'].includes(code) ? 400
+        : code === 'extension_not_found_for_mac' ? 404
+          : 500;
+      logger.error('[Provisioning] Erro em GET /provision', err);
+      sendJson(res, httpStatus, { error: 'provisioning_error', code, message: err.message || 'Erro ao gerar provisionamento' });
+    }
     return;
   }
 
@@ -1241,13 +1374,1651 @@ async function requestHandler(req, res) {
   }
 
   // -----------------------------------------------------------------------
+  // PBX Legacy (Ripabx / r-pbx) - Somente para conversor / diagnóstico
+  // BIG-BANG: o PBX v1 usa /api/pbx/*; legado foi movido para /api/pbx-legacy/*
+  // -----------------------------------------------------------------------
+
+  // GET /api/pbx-legacy/health
+  if (method === 'GET' && pathname === '/api/pbx-legacy/health') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const pbxLegacy = require('./services/pbxLegacy');
+      const health = await pbxLegacy.getPbxHealth();
+      sendJson(res, 200, health);
+    } catch (err) {
+      logger.error('[PBX] Erro em /api/pbx-legacy/health', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_health_error',
+        message: err.message || 'Erro ao verificar saúde do PBX legado',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx-legacy/inventory
+  if (method === 'GET' && pathname === '/api/pbx-legacy/inventory') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const pbxLegacy = require('./services/pbxLegacy');
+      const inventory = await pbxLegacy.getLegacyInventory();
+      sendJson(res, 200, inventory);
+    } catch (err) {
+      logger.error('[PBX] Erro em /api/pbx-legacy/inventory', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_inventory_error',
+        message: err.message || 'Erro ao obter inventário do PBX legado',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx-legacy/ramais
+  if (method === 'GET' && pathname === '/api/pbx-legacy/ramais') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!requireTenant(req, res)) return;
+
+    try {
+      const pbxLegacy = require('./services/pbxLegacy');
+      const ramais = pbxLegacy.listRamais();
+      sendJson(res, 200, { items: ramais });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx-legacy/ramais', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_ramais_list_error',
+        message: err.message || 'Erro ao listar ramais',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx-legacy/ramais (upsert)
+  if (method === 'POST' && pathname === '/api/pbx-legacy/ramais') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!requireTenant(req, res)) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxLegacy = require('./services/pbxLegacy');
+      const saved = pbxLegacy.upsertRamal(body);
+      sendJson(res, 200, { ok: true, item: saved });
+    } catch (err) {
+      const code = err.code || 'pbx_ramais_upsert_error';
+      const httpStatus = code === 'ramal_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx-legacy/ramais', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar ramal',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // PBX v1 (Postgres-first + Asterisk Realtime)
+  // -----------------------------------------------------------------------
+
+  // GET /api/pbx/extensions
+  if (method === 'GET' && pathname === '/api/pbx/extensions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxExtensions = require('./services/pbx/pbxExtensionsService');
+      const items = await pbxExtensions.listExtensions({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/extensions', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_extensions_list_error',
+        message: err.message || 'Erro ao listar ramais',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/extensions (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/extensions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxExtensions = require('./services/pbx/pbxExtensionsService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxExtensions.upsertExtension({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_extensions_upsert_error';
+      const httpStatus = ['extension_required', 'invalid_mac', 'invalid_provisioning_vendor', 'provisioning_mac_required', 'mac_already_assigned', 'weak_extension_password', 'provisioning_extension_inactive'].includes(code)
+        ? 400
+        : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/extensions', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar ramal',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/extensions/bulk - upsert em lote (provisioning/parque)
+  if (method === 'POST' && pathname === '/api/pbx/extensions/bulk') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const items = body && Array.isArray(body.items) ? body.items : null;
+      if (!items || items.length === 0) {
+        badRequest(res, 'Campo "items" (array) é obrigatório');
+        return;
+      }
+      if (items.length > 500) {
+        badRequest(res, 'Máximo de 500 itens por lote');
+        return;
+      }
+
+      const pbxExtensions = require('./services/pbx/pbxExtensionsService');
+      const actorUserId = req.user?.id || null;
+      const results = [];
+      for (const payload of items) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const item = await pbxExtensions.upsertExtension({ tenantKey, payload, actorUserId });
+          results.push({ ok: true, item });
+        } catch (err) {
+          results.push({
+            ok: false,
+            code: err?.code || 'pbx_extensions_bulk_item_error',
+            message: err?.message || 'Erro ao salvar item',
+            details: err?.details || null,
+            payloadHint: payload && typeof payload === 'object' ? { extension: payload.extension || payload.ramal || null } : null,
+          });
+        }
+      }
+
+      const okCount = results.filter((r) => r.ok).length;
+      sendJson(res, 200, { ok: true, okCount, errorCount: results.length - okCount, results });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/extensions/bulk', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_extensions_bulk_error',
+        message: err.message || 'Erro ao processar lote de ramais',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/provisioning-token - retorna token (mascarado) por tenant
+  if (method === 'GET' && pathname === '/api/pbx/provisioning-token') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const { getProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+      const result = await getProvisioningToken({ tenantKey, includeToken: false });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant PBX não encontrado' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/provisioning-token', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter token de provisioning' });
+    }
+    return;
+  }
+
+  // POST /api/pbx/provisioning-token/rotate - rotaciona token por tenant
+  if (method === 'POST' && pathname === '/api/pbx/provisioning-token/rotate') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const { rotateProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+      const result = await rotateProvisioningToken({ tenantKey, actorUserId: req.agent?.id || null });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant PBX não encontrado' });
+        return;
+      }
+      // Retorna token em texto claro (operação administrativa)
+      sendJson(res, 200, { ok: true, token: result.token });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/provisioning-token/rotate', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao rotacionar token de provisioning' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/trunks
+  if (method === 'GET' && pathname === '/api/pbx/trunks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxTrunks = require('./services/pbx/pbxTrunksService');
+      const items = await pbxTrunks.listTrunks({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/trunks', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_trunks_list_error',
+        message: err.message || 'Erro ao listar troncos',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/trunks (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/trunks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxTrunks = require('./services/pbx/pbxTrunksService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxTrunks.upsertTrunk({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_trunks_upsert_error';
+      const httpStatus = code === 'trunk_name_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/trunks', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar tronco',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/routes
+  if (method === 'GET' && pathname === '/api/pbx/routes') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxRoutes = require('./services/pbx/pbxRoutesService');
+      const direction = url.searchParams.get('direction');
+      const items = await pbxRoutes.listRoutes({ tenantKey, direction: direction || null });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/routes', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_routes_list_error',
+        message: err.message || 'Erro ao listar rotas',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/routes (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/routes') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxRoutes = require('./services/pbx/pbxRoutesService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxRoutes.upsertRoute({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_routes_upsert_error';
+      const httpStatus = ['route_direction_invalid', 'route_name_required'].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/routes', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar rota',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/dids
+  if (method === 'GET' && pathname === '/api/pbx/dids') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const pbxDids = require('./services/pbx/pbxDidsService');
+      const items = await pbxDids.listDids({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/dids', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dids_list_error',
+        message: err.message || 'Erro ao listar DIDs',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dids (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/dids') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const pbxDids = require('./services/pbx/pbxDidsService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxDids.upsertDid({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_dids_upsert_error';
+      const httpStatus = code === 'did_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/dids', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar DID',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/call-rules?type=...
+  if (method === 'GET' && pathname === '/api/pbx/call-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const type = urlObj.searchParams.get('type');
+      const pbxRules = require('./services/pbx/pbxCallRulesService');
+      const items = await pbxRules.listCallRules({ tenantKey, type });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/call-rules', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_call_rules_list_error',
+        message: err.message || 'Erro ao listar regras',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/call-rules (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/call-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const pbxRules = require('./services/pbx/pbxCallRulesService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxRules.upsertCallRule({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_call_rules_upsert_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/call-rules', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar regra',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/queues
+  if (method === 'GET' && pathname === '/api/pbx/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxQueues = require('./services/pbx/pbxQueuesService');
+      const items = await pbxQueues.listQueues({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/queues', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queues_list_error',
+        message: err.message || 'Erro ao listar filas',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/queues (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxQueues = require('./services/pbx/pbxQueuesService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxQueues.upsertQueue({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_queues_upsert_error';
+      const httpStatus = code === 'queue_name_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/queues', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar fila',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dialplan/preview
+  if (method === 'POST' && pathname === '/api/pbx/dialplan/preview') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxDialplan = require('./services/pbx/pbxDialplanService');
+      const rows = await pbxDialplan.buildTenantDialplanRows({ tenantKey });
+      sendJson(res, 200, { ok: true, tenantKey, count: rows.length, rows });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/dialplan/preview', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dialplan_preview_error',
+        message: err.message || 'Erro ao gerar preview do dialplan',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dialplan/apply
+  if (method === 'POST' && pathname === '/api/pbx/dialplan/apply') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxDialplan = require('./services/pbx/pbxDialplanService');
+      const result = await pbxDialplan.applyTenantDialplan({ tenantKey });
+      // Registra versão aplicada (best-effort)
+      try {
+        const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+        const actorUserId = req.user?.id || null;
+        await pbxVersions.createVersion({
+          tenantKey,
+          status: 'applied',
+          createdByUserId: actorUserId,
+          summary: {
+            appliedAt: new Date().toISOString(),
+            dialplan: {
+              count: result.count,
+              signature: result.signature || null,
+            },
+          },
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, tenantKey, ...result });
+    } catch (err) {
+      // best-effort: registra falha como versão
+      try {
+        const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+        const actorUserId = req.user?.id || null;
+        await pbxVersions.createVersion({
+          tenantKey,
+          status: 'failed',
+          createdByUserId: actorUserId,
+          summary: {
+            failedAt: new Date().toISOString(),
+            error: err && err.message ? String(err.message) : 'apply_failed',
+          },
+        });
+      } catch (_) {}
+
+      logger.error('[PBX] Erro em POST /api/pbx/dialplan/apply', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dialplan_apply_error',
+        message: err.message || 'Erro ao aplicar dialplan',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/reload (best-effort: core reload + pjsip via AMI)
+  if (method === 'POST' && pathname === '/api/pbx/reload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ami = require('./services/asterisk/amiClient');
+      const core = await ami.command('core reload');
+      const pjsip = await ami.command('pjsip reload');
+      const odbc = await ami.command('module reload res_odbc.so res_config_odbc.so');
+      sendJson(res, 200, { ok: true, tenantKey, core: !!core.ok, pjsip: !!pjsip.ok, odbc: !!odbc.ok });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/reload', err);
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'pbx_reload_error',
+        message: err.message || 'Erro ao recarregar Asterisk',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/queue-members?queueId=...
+  if (method === 'GET' && pathname === '/api/pbx/queue-members') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const queueId = urlObj.searchParams.get('queueId');
+      if (!queueId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'queueId obrigatório' });
+        return;
+      }
+      const pbxQueueMembers = require('./services/pbx/pbxQueueMembersService');
+      const items = await pbxQueueMembers.listQueueMembers({ tenantKey, queueId: String(queueId) });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/queue-members', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queue_members_list_error',
+        message: err.message || 'Erro ao listar membros da fila',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/queue-members (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/queue-members') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const pbxQueueMembers = require('./services/pbx/pbxQueueMembersService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxQueueMembers.upsertQueueMember({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_queue_members_upsert_error';
+      const httpStatus = [
+        'queue_id_required',
+        'member_type_invalid',
+        'member_ref_required',
+        'queue_not_found',
+      ].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/queue-members', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar membro da fila',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // DELETE /api/pbx/queue-members?id=...
+  if (method === 'DELETE' && pathname === '/api/pbx/queue-members') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const id = urlObj.searchParams.get('id');
+      if (!id) {
+        sendJson(res, 400, { error: 'bad_request', message: 'id obrigatório' });
+        return;
+      }
+      const pbxQueueMembers = require('./services/pbx/pbxQueueMembersService');
+      const actorUserId = req.user?.id || null;
+      const result = await pbxQueueMembers.deleteQueueMember({ tenantKey, id: String(id), actorUserId });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[PBX] Erro em DELETE /api/pbx/queue-members', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queue_members_delete_error',
+        message: err.message || 'Erro ao remover membro da fila',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Contact Center (CC) - v1
+  // -----------------------------------------------------------------------
+  // GET /api/cc/pause-reasons
+  if (method === 'GET' && pathname === '/api/cc/pause-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const items = await ccReasons.listPauseReasons({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/pause-reasons', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar motivos de pausa' });
+    }
+    return;
+  }
+
+  // POST /api/cc/pause-reasons (upsert)
+  if (method === 'POST' && pathname === '/api/cc/pause-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccReasons.upsertPauseReason({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_pause_reason_upsert_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar motivo de pausa',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/contact-reasons
+  if (method === 'GET' && pathname === '/api/cc/contact-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const items = await ccReasons.listContactReasons({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/contact-reasons', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar motivos de contato' });
+    }
+    return;
+  }
+
+  // POST /api/cc/contact-reasons (upsert)
+  if (method === 'POST' && pathname === '/api/cc/contact-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccReasons.upsertContactReason({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_contact_reason_upsert_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar motivo de contato',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/campaigns
+  if (method === 'GET' && pathname === '/api/cc/campaigns') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const items = await ccCampaigns.listCampaigns({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/campaigns', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar campanhas' });
+    }
+    return;
+  }
+
+  // POST /api/cc/campaigns (upsert)
+  if (method === 'POST' && pathname === '/api/cc/campaigns') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccCampaigns.upsertCampaign({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_campaign_upsert_error';
+      const httpStatus = code === 'campaign_name_required' ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar campanha',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/campaigns/list?campaignId=...
+  if (method === 'GET' && pathname === '/api/cc/campaigns/list') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const campaignId = urlObj.searchParams.get('campaignId');
+      if (!campaignId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'campaignId obrigatório' });
+        return;
+      }
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const items = await ccCampaigns.listCampaignList({ tenantKey, campaignId: String(campaignId) });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/campaigns/list', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar lista de campanha' });
+    }
+    return;
+  }
+
+  // POST /api/cc/campaigns/list (add items)
+  if (method === 'POST' && pathname === '/api/cc/campaigns/list') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const campaignId = body?.campaignId ? String(body.campaignId) : null;
+      if (!campaignId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'campaignId obrigatório' });
+        return;
+      }
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const added = await ccCampaigns.addCampaignListItems({ tenantKey, campaignId, items: body?.items || [] });
+      sendJson(res, 200, { ok: true, addedCount: added.length, added });
+    } catch (err) {
+      logger.error('[CC] Erro em POST /api/cc/campaigns/list', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao adicionar itens na campanha' });
+    }
+    return;
+  }
+
+  // GET /api/cc/scheduled-callbacks
+  if (method === 'GET' && pathname === '/api/cc/scheduled-callbacks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccSched = require('./services/cc/ccScheduledCallbacksService');
+      const items = await ccSched.listScheduledCallbacks({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/scheduled-callbacks', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar agendados' });
+    }
+    return;
+  }
+
+  // POST /api/cc/scheduled-callbacks (upsert)
+  if (method === 'POST' && pathname === '/api/cc/scheduled-callbacks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccSched = require('./services/cc/ccScheduledCallbacksService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccSched.upsertScheduledCallback({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_scheduled_upsert_error';
+      const httpStatus = ['scheduled_at_invalid', 'scheduled_phone_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar agendado',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/click2call
+  if (method === 'GET' && pathname === '/api/cc/click2call') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit') || '100';
+      const ccC2C = require('./services/cc/ccClick2CallService');
+      const items = await ccC2C.listClick2CallRequests({ tenantKey, limit });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/click2call', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar click2call' });
+    }
+    return;
+  }
+
+  // POST /api/cc/click2call
+  if (method === 'POST' && pathname === '/api/cc/click2call') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccC2C = require('./services/cc/ccClick2CallService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccC2C.createClick2CallRequest({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_click2call_create_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao criar click2call',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // PBX - Mídia (áudios) / Gravações
+  // -----------------------------------------------------------------------
+  // GET /api/pbx/audio-assets?kind=...
+  if (method === 'GET' && pathname === '/api/pbx/audio-assets') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const kind = urlObj.searchParams.get('kind');
+      const pbxMedia = require('./services/pbx/pbxMediaService');
+      const items = await pbxMedia.listAudioAssets({ tenantKey, kind });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/audio-assets', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_audio_assets_list_error',
+        message: err.message || 'Erro ao listar áudios',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/audio-assets/upload (multipart)
+  if (method === 'POST' && pathname === '/api/pbx/audio-assets/upload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const { fields, files } = await parseMultipartFormData(req);
+      const kind = fields.kind || fields.dir || null; // legado usa ?dir=espera|sons
+      const file = Array.isArray(files) ? files.find(f => f.fieldname === 'file') || files[0] : null;
+      if (!file) {
+        badRequest(res, 'Arquivo obrigatório (field "file")');
+        return;
+      }
+      // Limite: 25MB
+      if (file.size > 25 * 1024 * 1024) {
+        sendJson(res, 413, { error: 'payload_too_large', message: 'Arquivo maior que 25MB' });
+        return;
+      }
+      const pbxMedia = require('./services/pbx/pbxMediaService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxMedia.createAudioAssetFromUpload({
+        tenantKey,
+        kind,
+        filename: file.filename,
+        mimeType: file.mimeType,
+        buffer: file.buffer,
+        actorUserId,
+      });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_audio_upload_error';
+      const httpStatus = ['audio_kind_required', 'audio_file_required'].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/audio-assets/upload', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao fazer upload de áudio',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/audio-assets/file?id=... (download)
+  if (method === 'GET' && pathname === '/api/pbx/audio-assets/file') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const id = urlObj.searchParams.get('id');
+      if (!id) {
+        badRequest(res, 'id obrigatório');
+        return;
+      }
+      const { PbxAudioAsset } = require('./db/models');
+      const row = await PbxAudioAsset().findOne({ where: { id: String(id), tenantKey } });
+      if (!row) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      const pbxMedia = require('./services/pbx/pbxMediaService');
+      const filePath = pbxMedia.resolveAudioFilePath(row.toJSON());
+      if (!filePath) {
+        sendJson(res, 404, { error: 'file_not_found' });
+        return;
+      }
+      // eslint-disable-next-line global-require
+      const fs = require('fs');
+      // eslint-disable-next-line global-require
+      const p = require('path');
+      const buf = fs.readFileSync(filePath);
+      res.writeHead(200, {
+        'Content-Type': 'audio/wav',
+        'Content-Disposition': `attachment; filename="${p.basename(filePath)}"`,
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/audio-assets/file', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao baixar áudio' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/recordings?limit=...
+  if (method === 'GET' && pathname === '/api/pbx/recordings') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit') || '200';
+      const pbxRec = require('./services/pbx/pbxRecordingsService');
+      const items = await pbxRec.listRecordings({ tenantKey, limit });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/recordings', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar gravações' });
+    }
+    return;
+  }
+
+  // POST /api/pbx/recordings/scan
+  if (method === 'POST' && pathname === '/api/pbx/recordings/scan') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const pbxRec = require('./services/pbx/pbxRecordingsService');
+      const result = await pbxRec.scanAndUpsertRecordings({ tenantKey });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/recordings/scan', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao varrer gravações' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/recordings/file?id=...
+  if (method === 'GET' && pathname === '/api/pbx/recordings/file') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const id = urlObj.searchParams.get('id');
+      if (!id) {
+        badRequest(res, 'id obrigatório');
+        return;
+      }
+      const pbxRec = require('./services/pbx/pbxRecordingsService');
+      const filePath = await pbxRec.getRecordingFilePath({ tenantKey, id: String(id) });
+      if (!filePath) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      // eslint-disable-next-line global-require
+      const fs = require('fs');
+      // eslint-disable-next-line global-require
+      const p = require('path');
+      const buf = fs.readFileSync(filePath);
+      res.writeHead(200, {
+        'Content-Type': 'audio/wav',
+        'Content-Disposition': `attachment; filename="${p.basename(filePath)}"`,
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/recordings/file', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao baixar gravação' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/cdr?limit=...&from=...&to=...&src=...&dst=...&uniqueid=...
+  if (method === 'GET' && pathname === '/api/pbx/cdr') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const pbxCdr = require('./services/pbx/pbxCdrService');
+      const items = await pbxCdr.listCdr({
+        tenantKey,
+        filters: {
+          limit: urlObj.searchParams.get('limit') || null,
+          from: urlObj.searchParams.get('from') || null,
+          to: urlObj.searchParams.get('to') || null,
+          src: urlObj.searchParams.get('src') || null,
+          dst: urlObj.searchParams.get('dst') || null,
+          uniqueid: urlObj.searchParams.get('uniqueid') || null,
+        },
+      });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/cdr', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar CDR' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
   // Rate Limiting por Tenant
   // -----------------------------------------------------------------------
   // Aplica rate limiting por tenant em todas as rotas (exceto rotas públicas acima)
   // Rotas públicas: /health, /version, /system/status, /system/websocket, OPTIONS
   // Rotas de autenticação não exigem tenant_id (login, reset, convites)
   // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
-  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket'];
+  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket', '/storefront', '/physical', '/public-tokens/resolve', '/click2call', '/provision'];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
   // Webhooks de provedores (inbound) não podem ser bloqueados por falta de tenant no início:
   // tenant é resolvido por channel_accounts e, se não resolver, deve retornar 200 OK com log warn.
@@ -4656,6 +6427,78 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /super-admin/bootstrap/one-click - bootstrap idempotente (tenant + admin + tokens + filas)
+  if (method === 'POST' && pathname === '/super-admin/bootstrap/one-click') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode executar bootstrap' });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const {
+        tenantKey,
+        tenantName,
+        site,
+        ramoAtividade,
+        objetivo,
+        plan,
+        segment,
+        locationId,
+        adminEmail,
+        adminPassword,
+        adminUsername,
+        createTokens,
+      } = body || {};
+
+      const { bootstrapTenantOneClick } = require('./services/oneClickBootstrapService');
+      const result = await bootstrapTenantOneClick({
+        tenantKey,
+        tenantName,
+        site,
+        ramoAtividade,
+        objetivo,
+        plan,
+        segment,
+        locationId,
+        adminEmail,
+        adminPassword,
+        adminUsername,
+        createTokens: createTokens !== false,
+      });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        tenantId: req.tenantId,
+        action: 'super_admin_bootstrap_one_click',
+        resource: 'tenant',
+        resourceId: tenantKey || null,
+        details: { ok: result.ok, warnings: result.warnings || [] },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('[SuperAdmin] Erro no bootstrap one-click:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar bootstrap one-click' });
+      }
+    }
+    return;
+  }
+
   // GET /super-admin/ai-generations - Lista gerações por IA (audit store JSONL)
   if (method === 'GET' && pathname === '/super-admin/ai-generations') {
     const authResult = requireAuth(req);
@@ -5636,10 +7479,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      const flowKind = String(flow.kind || 'chat').trim().toLowerCase();
+
       // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
       // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
       const isAiGenerated = flow.metadata?.generatedBy === 'ai' || flow.metadata?.generated === true;
-      if (isAiGenerated) {
+      if (isAiGenerated && flowKind !== 'voice') {
         // Safe-mode obrigatório: todo fluxo de IA nasce como draft e exige revisão humana.
         flow.metadata = {
           ...(flow.metadata && typeof flow.metadata === 'object' ? flow.metadata : {}),
@@ -5670,7 +7515,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // ✅ NOTA: A validação é executada mas não bloqueia a criação do fluxo
       // O fluxo pode ser criado mesmo com erros de validação para permitir que o usuário corrija depois
       // EXCEÇÃO: Fluxos gerados por IA já foram validados pelo gate acima
-      const validationResult = validateFlow(flow);
+      const validationResult = flowKind === 'voice' ? validateVoiceFlow(flow) : validateFlow(flow);
       const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
 
       // Verifica se já existe um fluxo com o mesmo id
@@ -5789,6 +7634,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         id, // Garante que o ID não seja alterado
       };
 
+      const mergedKind = (merged && typeof merged === 'object' && typeof merged.kind === 'string')
+        ? String(merged.kind).trim().toLowerCase()
+        : (existingFlow && typeof existingFlow.kind === 'string' ? String(existingFlow.kind).trim().toLowerCase() : 'chat');
+
       // Validação estrutural básica
       const structureValidation = validateFlowStructure(merged);
       if (!structureValidation.valid) {
@@ -5799,7 +7648,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
       // Se o fluxo foi gerado por IA, deve passar pelo gate antes de ser atualizado
       const isAiGenerated = merged.metadata?.generatedBy === 'ai' || merged.metadata?.generated === true;
-      if (isAiGenerated) {
+      if (isAiGenerated && mergedKind !== 'voice') {
         // Safe-mode permanece até aprovação explícita (admin/super-admin).
         const requestedApprove = body?.metadata?.approveAiGenerated === true;
         const canApprove = !!(authResult.valid && (isSuperAdmin(req.agent) || req.agent.role === 'admin'));
@@ -5836,7 +7685,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Validação completa usando o validador da engine
-      const validationResult = validateFlow(merged);
+      const validationResult = mergedKind === 'voice' ? validateVoiceFlow(merged) : validateFlow(merged);
       if (!validationResult.valid && validationResult.errors.length > 0) {
         // ✅ Mapeia erros técnicos para mensagens amigáveis
         sendJson(res, 400, {
@@ -5976,7 +7825,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const result = validateFlow(body);
+      const kind = (body && typeof body === 'object' && typeof body.kind === 'string')
+        ? String(body.kind).trim().toLowerCase()
+        : 'chat';
+
+      const result = kind === 'voice' ? validateVoiceFlow(body) : validateFlow(body);
       
       sendJson(res, 200, {
         valid: Boolean(result && result.valid),
@@ -7158,6 +9011,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      if (String(flow.kind || 'chat').trim().toLowerCase() === 'voice') {
+        sendJson(res, 400, {
+          error: 'not_supported',
+          message: 'Simulação de fluxo de voz ainda não é suportada neste endpoint (/flows/simulate).',
+        });
+        return;
+      }
+
       // Valida o fluxo antes de simular
       const validationResult = validateFlow(flow);
       if (!validationResult.valid && validationResult.errors.length > 0) {
@@ -7183,6 +9044,74 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sessionEvents.set(sessionId, Array.isArray(result.events) ? result.events : []);
         // Salva conversas após adicionar eventos
         saveSessionEventsToFile();
+      }
+
+      // Execution ledger (DB-first) - best-effort
+      // Persist steps/events por nó para auditoria/debug.
+      try {
+        if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+          const { startFlowExecution, appendNodeExecution, finishFlowExecution } = require('./services/flowExecutionLedgerService');
+          const tenantId = flow.tenantId || 'system';
+          const nodeTypeById = new Map();
+          if (Array.isArray(flow.nodes)) {
+            for (const n of flow.nodes) {
+              if (n && n.id) nodeTypeById.set(String(n.id), String(n.type || ''));
+            }
+          }
+          const started = await startFlowExecution({
+            tenantId,
+            flowId: flow.id,
+            flowVersion: flow.version,
+            sessionId: sessionId || null,
+            correlationId: sessionId ? `simulate:${sessionId}` : `simulate:${flow.id}:${Date.now()}`,
+            subjectType: 'session',
+            subjectId: sessionId || null,
+            meta: {
+              mode: 'simulation',
+              source: '/flows/simulate',
+              maxSteps: options?.maxSteps || null,
+              startNodeId: options?.startNodeId || null,
+            },
+          });
+          if (started && started.ok) {
+            const executionId = started.executionId;
+            const steps = Array.isArray(result.steps) ? result.steps : [];
+            for (const step of steps) {
+              const idx = step && step.index != null ? Number(step.index) : null;
+              const before = step?.stateBefore || {};
+              const after = step?.stateAfter || {};
+              const nodeId = before?.currentNodeId || null;
+              const nodeType = nodeId ? (nodeTypeById.get(String(nodeId)) || null) : null;
+              const evs = Array.isArray(step?.events) ? step.events : [];
+              const startedAt = evs[0]?.timestamp ? new Date(String(evs[0].timestamp)) : null;
+              const finishedAt = evs.length > 0 && evs[evs.length - 1]?.timestamp ? new Date(String(evs[evs.length - 1].timestamp)) : null;
+              // input não é persistido na simulação atual (pode ser estendido futuramente)
+              // Persistimos output/state/events para replay/debug.
+              // eslint-disable-next-line no-await-in-loop
+              await appendNodeExecution({
+                tenantId,
+                executionId,
+                nodeId,
+                nodeType,
+                stepIndex: idx,
+                status: 'ok',
+                startedAt,
+                finishedAt,
+                input: {},
+                output: step?.output || {},
+                stateBefore: before,
+                stateAfter: after,
+                events: evs,
+                errorMessage: null,
+              }).catch(() => {});
+            }
+            await finishFlowExecution({ tenantId, executionId, status: 'done', metaPatch: { steps: steps.length } }).catch(() => {});
+            // Anexa executionId no payload de resposta (não quebra compatibilidade)
+            result.executionId = executionId;
+          }
+        }
+      } catch (e) {
+        // best-effort: não bloquear simulação por falha de ledger
       }
 
       // Retorna resultado completo da simulação (SimulationResultUi)
@@ -7505,6 +9434,1564 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // Sistema de Filas e Tickets
   // -----------------------------------------------------------------------
 
+  // -----------------------------------------------------------------------
+  // Filas físicas (Admin / autenticado)
+  // -----------------------------------------------------------------------
+  // GET /api/physical/queues?locationId=...&status=...
+  if (method === 'GET' && pathname === '/api/physical/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const status = urlObj.searchParams.get('status');
+      const { listQueues } = require('./services/physicalQueueService');
+      const items = await listQueues({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+        status: status ? String(status) : null,
+      });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PhysicalAdmin] Erro ao listar filas físicas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar filas físicas' });
+    }
+    return;
+  }
+
+  // POST /api/physical/queues - cria/atualiza fila física
+  if (method === 'POST' && pathname === '/api/physical/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const id = body && body.id ? String(body.id).trim() : null;
+      const locationId = body && body.locationId ? String(body.locationId).trim() : null;
+      const name = body && body.name ? String(body.name).trim() : '';
+      const status = body && body.status ? String(body.status).trim() : 'active';
+      const rules = body && typeof body.rules === 'object' && body.rules ? body.rules : {};
+      const { upsertQueue } = require('./services/physicalQueueService');
+      const item = await upsertQueue({
+        tenantId: req.tenantId,
+        id,
+        locationId,
+        name,
+        status,
+        rules,
+      });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'physical_queue_name_required') {
+        sendJson(res, 400, { error: 'bad_request', message: 'Nome da fila é obrigatório' });
+        return;
+      }
+      logger.error('[PhysicalAdmin] Erro ao salvar fila física:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar fila física' });
+    }
+    return;
+  }
+
+  // GET /api/physical/metrics?locationId=...
+  if (method === 'GET' && pathname === '/api/physical/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const { getMetrics } = require('./services/physicalQueueService');
+      const metrics = await getMetrics({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+      });
+      sendJson(res, 200, metrics);
+    } catch (err) {
+      logger.error('[PhysicalAdmin] Erro ao obter métricas físicas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas físicas' });
+    }
+    return;
+  }
+
+  // GET /api/orders/metrics?locationId=...
+  if (method === 'GET' && pathname === '/api/orders/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const { getOrderMetrics } = require('./services/orderService');
+      const metrics = await getOrderMetrics({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+      });
+      sendJson(res, 200, metrics);
+    } catch (err) {
+      logger.error('[OrdersAdmin] Erro ao obter métricas de pedidos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas de pedidos' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Ops: Execution Queue (DLQ/metrics) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/ops/execution-jobs/metrics
+  if (method === 'GET' && pathname === '/api/ops/execution-jobs/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getExecutionQueueMetrics } = require('./services/executionQueueService');
+      const result = await getExecutionQueueMetrics({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'queue_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas da execution queue:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas da execution queue' });
+    }
+    return;
+  }
+
+  // GET /api/ops/execution-jobs/dead?kind=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/ops/execution-jobs/dead') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const kind = urlObj.searchParams.get('kind');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const { listDeadJobs } = require('./services/executionQueueService');
+      const result = await listDeadJobs({
+        tenantId: req.tenantId,
+        kind: kind ? String(kind) : null,
+        limit: limit != null ? Number(limit) : 100,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[Ops] Erro ao listar DLQ da execution queue:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar DLQ da execution queue' });
+    }
+    return;
+  }
+
+  // POST /api/ops/execution-jobs/retry { jobId }
+  if (method === 'POST' && pathname === '/api/ops/execution-jobs/retry') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const jobId = body && body.jobId ? String(body.jobId).trim() : '';
+      if (!jobId) {
+        badRequest(res, 'Campo "jobId" é obrigatório');
+        return;
+      }
+      const { retryDeadJob } = require('./services/executionQueueService');
+      const result = await retryDeadJob({ tenantId: req.tenantId, jobId });
+      if (!result.ok) {
+        if (result.error === 'dead_job_not_found') {
+          sendJson(res, 404, { error: 'job_not_found', message: 'Job DLQ não encontrado' });
+          return;
+        }
+        sendJson(res, 400, { error: 'bad_request', message: result.error || 'retry_failed' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'execution_job_retry',
+          resource: 'execution_job',
+          resourceId: jobId,
+          details: { fromStatus: 'dead', toStatus: 'pending' },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, job: result.job });
+    } catch (err) {
+      logger.error('[Ops] Erro ao reprocessar job DLQ:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao reprocessar job DLQ' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Execution ledger (flow_executions/node_executions) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/executions?correlationId=&sessionId=&subjectType=&subjectId=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/executions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const correlationId = urlObj.searchParams.get('correlationId');
+      const sessionId = urlObj.searchParams.get('sessionId');
+      const subjectType = urlObj.searchParams.get('subjectType');
+      const subjectId = urlObj.searchParams.get('subjectId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+
+      const { listFlowExecutions } = require('./services/flowExecutionLedgerService');
+      const result = await listFlowExecutions({
+        tenantId: req.tenantId,
+        correlationId: correlationId ? String(correlationId) : null,
+        sessionId: sessionId ? String(sessionId) : null,
+        subjectType: subjectType ? String(subjectType) : null,
+        subjectId: subjectId ? String(subjectId) : null,
+        limit: limit != null ? Number(limit) : 50,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'execution_ledger_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao listar execuções:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar execuções' });
+    }
+    return;
+  }
+
+  // GET /api/executions/:id
+  if (method === 'GET' && pathname.startsWith('/api/executions/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const execId = decodeURIComponent(pathname.slice('/api/executions/'.length));
+      if (!execId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'executionId obrigatório' });
+        return;
+      }
+
+      const { getFlowExecutionDetails } = require('./services/flowExecutionLedgerService');
+      const result = await getFlowExecutionDetails({ tenantId: req.tenantId, executionId: execId });
+      if (!result.ok) {
+        if (result.error === 'execution_not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'execution_ledger_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao obter execução:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter execução' });
+    }
+    return;
+  }
+
+  // POST /api/executions/:id/replay-from-node  { fromNodeExecutionId|fromStepIndex, maxSteps }
+  if (method === 'POST' && pathname.startsWith('/api/executions/') && pathname.endsWith('/replay-from-node')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const execId = decodeURIComponent(pathname.slice('/api/executions/'.length).replace(/\/replay-from-node$/, ''));
+      const body = await parseJsonBody(req);
+      const fromNodeExecutionId = body && body.fromNodeExecutionId ? String(body.fromNodeExecutionId).trim() : null;
+      const fromStepIndex = body && body.fromStepIndex != null ? Number(body.fromStepIndex) : null;
+      const maxSteps = body && body.maxSteps != null ? Number(body.maxSteps) : 200;
+
+      const { replayFromNode } = require('./services/flowExecutionLedgerService');
+      const result = await replayFromNode({
+        tenantId: req.tenantId,
+        executionId: execId,
+        fromNodeExecutionId,
+        fromStepIndex,
+        maxSteps,
+      });
+      if (!result.ok) {
+        const msgMap = {
+          replay_disabled: 'Replay está desabilitado. Defina ENABLE_EXECUTION_LEDGER_REPLAY=true para habilitar.',
+          replay_only_supported_for_simulation: 'Replay a partir do ledger só é suportado para execuções de simulação (meta.mode=simulation).',
+          from_node_not_found: 'Node de origem não encontrado nesta execução.',
+        };
+        sendJson(res, 400, { error: String(result.error || 'replay_failed'), message: msgMap[result.error] || 'Não foi possível executar replay' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'execution_replay_from_node',
+          resource: 'flow_execution',
+          resourceId: execId,
+          details: { replayExecutionId: result.replayExecutionId, fromNodeExecutionId: fromNodeExecutionId || null, fromStepIndex: fromStepIndex != null ? fromStepIndex : null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao executar replay-from-node:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar replay-from-node' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Event ledger query (audit/debug) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/event-ledger?subjectType=&subjectId=&correlationId=&type=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/event-ledger') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const subjectType = urlObj.searchParams.get('subjectType');
+      const subjectId = urlObj.searchParams.get('subjectId');
+      const correlationId = urlObj.searchParams.get('correlationId');
+      const type = urlObj.searchParams.get('type');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+
+      const { listEvents } = require('./services/eventLedgerService');
+      const result = await listEvents({
+        tenantId: req.tenantId,
+        subjectType: subjectType ? String(subjectType) : null,
+        subjectId: subjectId ? String(subjectId) : null,
+        correlationId: correlationId ? String(correlationId) : null,
+        type: type ? String(type) : null,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[EventLedger] Erro ao listar eventos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar eventos' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Public Tokens (Storefront/Kiosk/Panel/Station)
+  // -----------------------------------------------------------------------
+  // GET /public-tokens - Lista tokens públicos do tenant
+  if (method === 'GET' && pathname === '/public-tokens') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Ver tokens é sensível (retorna secrets apenas se solicitado e autorizado)
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const kind = urlObj.searchParams.get('kind');
+      const locationId = urlObj.searchParams.get('locationId');
+      const activeParam = urlObj.searchParams.get('active');
+      const includeTokenParam = urlObj.searchParams.get('includeToken');
+      const active = activeParam === null ? null : (activeParam === 'true' ? true : activeParam === 'false' ? false : null);
+      const includeToken = includeTokenParam === 'true';
+
+      // Para incluir o token real, exige permissão de update (mais restritiva)
+      if (includeToken) {
+        const permSecrets = requirePermission(req, 'config', 'update');
+        if (!permSecrets.allowed) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para incluir tokens em texto claro' });
+          return;
+        }
+      }
+
+      const { listPublicTokens } = require('./services/publicAccessTokenService');
+      const items = await listPublicTokens({
+        tenantId: req.tenantId,
+        kind: kind ? String(kind) : null,
+        locationId: locationId ? String(locationId) : null,
+        active,
+        includeToken,
+      });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao listar tokens:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar tokens públicos' });
+    }
+    return;
+  }
+
+  // POST /public-tokens - Cria token público (por tenant) para telas públicas
+  if (method === 'POST' && pathname === '/public-tokens') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const kind = body && body.kind ? String(body.kind).trim() : '';
+      const locationId = body && body.locationId ? String(body.locationId).trim() : null;
+      const meta = body && typeof body.meta === 'object' && body.meta ? body.meta : {};
+      const expiresInSec = body && body.expiresInSec != null ? Number(body.expiresInSec) : null;
+
+      const allowedKinds = new Set(['storefront', 'kiosk', 'panel', 'station']);
+      if (!allowedKinds.has(kind)) {
+        badRequest(res, 'Campo "kind" inválido. Use: storefront|kiosk|panel|station');
+        return;
+      }
+
+      const { createPublicToken } = require('./services/publicAccessTokenService');
+      const tokenRow = await createPublicToken({
+        tenantId: req.tenantId,
+        kind,
+        locationId,
+        meta,
+        expiresInSec,
+      });
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'public_token_create',
+          resource: 'public_token',
+          resourceId: tokenRow.id,
+          details: { kind, locationId: locationId || null, expiresInSec: expiresInSec || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, token: tokenRow });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao criar token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar token público' });
+    }
+    return;
+  }
+
+  // POST /public-tokens/:id/revoke - Revoga um token público
+  if (method === 'POST' && pathname.startsWith('/public-tokens/') && pathname.endsWith('/revoke')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const parts = pathname.split('/').filter(Boolean); // ["public-tokens", ":id", "revoke"]
+      const tokenId = parts[1] ? String(parts[1]) : null;
+      if (!tokenId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'tokenId obrigatório' });
+        return;
+      }
+      const reason = (() => {
+        try {
+          const urlObj = new URL(req.url || '/', 'http://localhost');
+          const q = urlObj.searchParams.get('reason');
+          return q ? String(q) : null;
+        } catch (_) {
+          return null;
+        }
+      })();
+
+      const { revokePublicToken } = require('./services/publicAccessTokenService');
+      const result = await revokePublicToken({ tenantId: req.tenantId, tokenId, reason });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Token não encontrado' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'public_token_revoke',
+          resource: 'public_token',
+          resourceId: tokenId,
+          details: { reason: reason || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, token: result.token });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao revogar token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao revogar token público' });
+    }
+    return;
+  }
+
+  // POST /public-tokens/:id/rotate - Rotaciona token público (revoga antigo e cria novo)
+  if (method === 'POST' && pathname.startsWith('/public-tokens/') && pathname.endsWith('/rotate')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const parts = pathname.split('/').filter(Boolean); // ["public-tokens", ":id", "rotate"]
+      const tokenId = parts[1] ? String(parts[1]) : null;
+      if (!tokenId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'tokenId obrigatório' });
+        return;
+      }
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const expiresInSecRaw = urlObj.searchParams.get('expiresInSec');
+      const expiresInSec = expiresInSecRaw != null ? Number(expiresInSecRaw) : null;
+
+      const { rotatePublicToken } = require('./services/publicAccessTokenService');
+      const result = await rotatePublicToken({ tenantId: req.tenantId, tokenId, expiresInSec });
+      if (!result.ok) {
+        const code = result.error;
+        if (code === 'token_not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Token não encontrado' });
+          return;
+        }
+        if (code === 'token_inactive') {
+          sendJson(res, 409, { error: 'conflict', message: 'Token já está inativo' });
+          return;
+        }
+        sendJson(res, 400, { error: 'bad_request', message: 'Não foi possível rotacionar token' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'public_token_rotate',
+          resource: 'public_token',
+          resourceId: tokenId,
+          details: { newTokenId: result.newToken?.id || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, oldTokenId: result.oldTokenId, newToken: result.newToken });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao rotacionar token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao rotacionar token público' });
+    }
+    return;
+  }
+
+  // GET /public-tokens/resolve?token=... - Resolve token público (para telas públicas)
+  if (method === 'GET' && pathname === '/public-tokens/resolve') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Token obrigatório' });
+        return;
+      }
+
+      // Anti brute-force: rate limit por IP
+      const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+      const rl = await checkRateLimit({ userId: `ip:${ipAddress}`, operationType: 'PUBLIC_TOKEN_RESOLVE' });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({
+        token,
+        allowedKinds: ['storefront', 'kiosk', 'panel', 'station'],
+      });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Auditoria best-effort (evento público)
+      try {
+        logAction({
+          agentId: 'public',
+          username: 'public',
+          tenantId: resolved.tenantId,
+          action: 'public_token_resolve',
+          resource: 'public_token',
+          resourceId: resolved.tokenId,
+          details: { kind: resolved.kind, locationId: resolved.locationId || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, {
+        ok: true,
+        token: {
+          id: resolved.tokenId,
+          kind: resolved.kind,
+          tenantId: resolved.tenantId,
+          locationId: resolved.locationId,
+          meta: resolved.meta || {},
+        },
+      });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao resolver token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao resolver token público' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Storefront (público por token)
+  // -----------------------------------------------------------------------
+  // POST /storefront/orders?token=... - cria pedido
+  if (method === 'POST' && pathname === '/storefront/orders') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=storefront)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const customerName = body && body.customerName ? String(body.customerName).trim() : null;
+      const customerPhone = body && body.customerPhone ? String(body.customerPhone).trim() : null;
+      const notes = body && body.notes ? String(body.notes).trim() : null;
+      const items = body && Array.isArray(body.items) ? body.items : [];
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      const deliveryType = body && body.deliveryType ? String(body.deliveryType).trim() : 'delivery';
+      const deliveryAddress = body && typeof body.deliveryAddress === 'object' && body.deliveryAddress ? body.deliveryAddress : {};
+
+      const { createOrder } = require('./services/orderService');
+      const order = await createOrder({
+        tenantId: resolved.tenantId,
+        source: 'storefront',
+        locationId: resolved.locationId,
+        customerName,
+        customerPhone,
+        items,
+        notes,
+        deliveryType,
+        deliveryAddress,
+        context: { publicTokenId: resolved.tokenId, idempotencyKey: idempotencyKey || null },
+      });
+
+      // cria Delivery best-effort (para SLA) quando for delivery
+      let delivery = null;
+      if (deliveryType === 'delivery') {
+        try {
+          const { createDeliveryForOrder } = require('./services/deliveryService');
+          delivery = await createDeliveryForOrder({
+            tenantId: resolved.tenantId,
+            orderId: order.id,
+            deliveryAddress,
+            context: {
+              publicTokenId: resolved.tokenId,
+              correlationId: order?.context?.correlationId || null,
+              idempotencyKey: idempotencyKey ? `${idempotencyKey}:delivery` : null,
+            },
+          });
+        } catch (e) {
+          // best-effort: não bloquear criação do pedido
+        }
+      }
+
+      sendJson(res, 201, { ok: true, order, delivery });
+    } catch (err) {
+      logger.error('[Storefront] Erro ao criar pedido:', err);
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'order_items_required') {
+        sendJson(res, 400, { error: 'bad_request', message: 'Itens do pedido são obrigatórios' });
+        return;
+      }
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar pedido' });
+    }
+    return;
+  }
+
+  // GET /storefront/orders/:id?token=... - status do pedido
+  if (method === 'GET' && pathname.startsWith('/storefront/orders/')) {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=storefront)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const orderId = decodeURIComponent(pathname.slice('/storefront/orders/'.length));
+      const { getOrderById } = require('./services/orderService');
+      const order = await getOrderById({ tenantId: resolved.tenantId, orderId });
+      if (!order) {
+        sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+        return;
+      }
+
+      const { getDeliveryByOrderId } = require('./services/deliveryService');
+      const delivery = await getDeliveryByOrderId({ tenantId: resolved.tenantId, orderId });
+      sendJson(res, 200, { ok: true, order, delivery });
+    } catch (err) {
+      logger.error('[Storefront] Erro ao obter status do pedido:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter status do pedido' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Filas físicas (público por token)
+  // -----------------------------------------------------------------------
+  // POST /physical/kiosk/tickets?token=... - cria senha
+  if (method === 'POST' && pathname === '/physical/kiosk/tickets') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['kiosk'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=kiosk)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_KIOSK',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const priority = body && body.priority != null ? Number(body.priority) : 0;
+      const queueId = body && body.queueId ? String(body.queueId).trim() : null;
+      const context = body && typeof body.context === 'object' && body.context ? body.context : {};
+      const biometricMode = body && body.biometricMode ? String(body.biometricMode).trim() : null;
+      const biometricRef = body && body.biometricRef ? String(body.biometricRef).trim() : null;
+      const customerIdInput = body && body.customerIdInput ? String(body.customerIdInput).trim() : null;
+
+      const tokenMeta = (resolved && resolved.meta && typeof resolved.meta === 'object') ? resolved.meta : {};
+      const mode = biometricMode || (tokenMeta.biometricMode ? String(tokenMeta.biometricMode) : null);
+      const requireBiometric = tokenMeta.requireBiometric === true;
+      const biometricSecret = tokenMeta.biometricSecret || tokenMeta.biobridgeSecret || null;
+
+      let biometric = null;
+      if (mode || requireBiometric || biometricRef) {
+        if (!mode) {
+          sendJson(res, 400, { error: 'bad_request', message: 'biometricMode obrigatório quando biometria está habilitada' });
+          return;
+        }
+        if (requireBiometric && !biometricRef) {
+          sendJson(res, 400, { error: 'bad_request', message: 'biometricRef obrigatório' });
+          return;
+        }
+        if (biometricRef) {
+          const { verifyBiometricRef } = require('./services/biometricService');
+          biometric = verifyBiometricRef({
+            secret: biometricSecret,
+            ref: biometricRef,
+            expectedTokenId: resolved.tokenId,
+            expectedLocationId: resolved.locationId || null,
+            allowedModes: ['identify-1n', 'verify-1to1', 'dedupe-only'],
+            maxAgeSec: 180,
+          });
+
+          if (mode && biometric.mode !== mode) {
+            sendJson(res, 400, { error: 'bad_request', message: 'biometricRef não corresponde ao biometricMode atual' });
+            return;
+          }
+
+          if (biometric.mode === 'verify-1to1') {
+            if (!customerIdInput) {
+              sendJson(res, 400, { error: 'bad_request', message: 'customerIdInput obrigatório no modo verify-1to1' });
+              return;
+            }
+            const expectedSubject = `cust:${customerIdInput}`;
+            if (biometric.subjectId !== expectedSubject) {
+              sendJson(res, 401, { error: 'unauthorized', message: 'Biometria não corresponde ao identificador informado' });
+              return;
+            }
+          }
+
+          if (biometric.mode === 'dedupe-only') {
+            // Deduplica: se já existe ticket ativo hoje para este subjectId + locationId, devolve o mesmo.
+            try {
+              const { PhysicalTicket } = require('./db/models');
+              const TicketModel = PhysicalTicket();
+              const sequelize = TicketModel.sequelize;
+              const locationId = resolved.locationId || null;
+              if (sequelize && locationId) {
+                const [rows] = await sequelize.query(
+                  `SELECT id, tenant_key, physical_queue_id, ticket_number, status, priority, called_at, started_at, finished_at, station_id, context, created_at, updated_at
+                   FROM physical_tickets
+                   WHERE tenant_key = :tenantKey
+                     AND status IN ('waiting','called')
+                     AND (context->>'locationId') = :locationId
+                     AND (context->>'biometricSubjectId') = :subjectId
+                     AND created_at::date = CURRENT_DATE
+                   ORDER BY created_at DESC
+                   LIMIT 1`,
+                  {
+                    replacements: {
+                      tenantKey: resolved.tenantId,
+                      locationId: String(locationId),
+                      subjectId: String(biometric.subjectId),
+                    },
+                  },
+                );
+                if (Array.isArray(rows) && rows.length > 0 && rows[0] && rows[0].id) {
+                  sendJson(res, 200, { ok: true, ticket: rows[0], idempotent: true });
+                  return;
+                }
+              }
+            } catch (_) {
+              // best-effort: não bloquear emissão de senha por falha no dedupe
+            }
+          }
+        }
+      }
+
+      const { createTicket } = require('./services/physicalQueueService');
+      const ticket = await createTicket({
+        tenantId: resolved.tenantId,
+        locationId: resolved.locationId,
+        queueId,
+        priority,
+        context: {
+          ...context,
+          publicTokenId: resolved.tokenId,
+          locationId: resolved.locationId || null,
+          biometricMode: biometric ? biometric.mode : (mode || null),
+          biometricSubjectId: biometric ? biometric.subjectId : null,
+          customerIdInput: customerIdInput || null,
+        },
+      });
+
+      sendJson(res, 201, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Physical] Erro ao criar senha:', err);
+      const code = err && err.code ? String(err.code) : null;
+      if (code && String(code).startsWith('invalid_biometric_ref')) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Biometria inválida' });
+        return;
+      }
+      if (code === 'biometric_ref_expired') {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Biometria expirada' });
+        return;
+      }
+      if (code === 'biometric_secret_missing') {
+        sendJson(res, 500, { error: 'internal_error', message: 'Biometria habilitada sem secret configurado' });
+        return;
+      }
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar senha' });
+    }
+    return;
+  }
+
+  // GET /physical/panel/state?token=... - estado do painel
+  if (method === 'GET' && pathname === '/physical/panel/state') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['panel'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=panel)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_PANEL',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const { getPanelState } = require('./services/physicalQueueService');
+      const state = await getPanelState({ tenantId: resolved.tenantId, locationId: resolved.locationId });
+      sendJson(res, 200, { ok: true, ...state });
+    } catch (err) {
+      logger.error('[Physical] Erro ao obter estado do painel:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter estado do painel' });
+    }
+    return;
+  }
+
+  // POST /physical/station/call-next?token=... - chama próximo
+  if (method === 'POST' && pathname === '/physical/station/call-next') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const { callNext } = require('./services/physicalQueueService');
+      const ticket = await callNext({ tenantId: resolved.tenantId, locationId: resolved.locationId, stationId });
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Physical] Erro ao chamar próximo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao chamar próximo' });
+    }
+    return;
+  }
+
+  // POST /physical/station/finish?token=... - finaliza atendimento
+  if (method === 'POST' && pathname === '/physical/station/finish') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+
+      const { finishTicket } = require('./services/physicalQueueService');
+      const ticket = await finishTicket({ tenantId: resolved.tenantId, ticketId });
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao finalizar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao finalizar atendimento' });
+    }
+    return;
+  }
+
+  // POST /physical/station/start?token=... - inicia atendimento (in_service)
+  if (method === 'POST' && pathname === '/physical/station/start') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { startService } = require('./services/physicalQueueService');
+      const ticket = await startService({ tenantId: resolved.tenantId, ticketId, stationId, idempotencyKey });
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao iniciar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao iniciar atendimento' });
+    }
+    return;
+  }
+
+  // POST /physical/station/skip?token=... - pula senha (volta para waiting)
+  if (method === 'POST' && pathname === '/physical/station/skip') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const reason = body && body.reason ? String(body.reason).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { skipTicket } = require('./services/physicalQueueService');
+      const ticket = await skipTicket({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao pular senha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao pular senha' });
+    }
+    return;
+  }
+
+  // POST /physical/station/transfer?token=... - transfere senha para outra fila
+  if (method === 'POST' && pathname === '/physical/station/transfer') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const toQueueId = body && body.toQueueId ? String(body.toQueueId).trim() : '';
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId || !toQueueId) {
+        badRequest(res, 'Campos "ticketId" e "toQueueId" são obrigatórios');
+        return;
+      }
+      const { transferTicket } = require('./services/physicalQueueService');
+      const ticket = await transferTicket({ tenantId: resolved.tenantId, ticketId, toQueueId, idempotencyKey });
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      logger.error('[Physical] Erro ao transferir senha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao transferir senha' });
+    }
+    return;
+  }
+
+  // POST /physical/station/abandon?token=... - marca como abandonada (no-show)
+  if (method === 'POST' && pathname === '/physical/station/abandon') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const reason = body && body.reason ? String(body.reason).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+
+      const { abandonTicket } = require('./services/physicalQueueService');
+      const ticket = await abandonTicket({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao abandonar senha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao abandonar senha' });
+    }
+    return;
+  }
+
+  // POST /physical/station/open-support-ticket?token=... - cria ticket digital vinculado à senha física
+  if (method === 'POST' && pathname === '/physical/station/open-support-ticket') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const physicalTicketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const queue = body && body.queue ? String(body.queue).trim() : 'FastService';
+      const message = body && body.message ? String(body.message).trim() : 'Atendimento físico: suporte solicitado';
+      if (!physicalTicketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+
+      const { PhysicalTicket } = require('./db/models');
+      const TicketModel = PhysicalTicket();
+      const row = await TicketModel.findOne({ where: { tenant_key: resolved.tenantId, id: physicalTicketId } });
+      if (!row) {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      const json = row.toJSON ? row.toJSON() : row;
+
+      // Idempotência simples: se já existe supportTicketId no contexto, devolve.
+      const existingSupportId = json?.context?.supportTicketId || null;
+      if (existingSupportId) {
+        sendJson(res, 200, { ok: true, idempotent: true, ticketId: existingSupportId });
+        return;
+      }
+
+      const sessionId = `physical_${physicalTicketId}`;
+      const ticket = createTicket({
+        tenantId: resolved.tenantId,
+        sessionId,
+        queue,
+        lastUserMessage: message,
+        context: {
+          escalationReason: 'physical_support_ticket',
+          metadata: {
+            kind: 'physical_support_ticket',
+            physicalTicketId: physicalTicketId,
+            ticketNumber: json.ticket_number,
+            locationId: json?.context?.locationId || resolved.locationId || null,
+            correlationId: json?.context?.correlationId || null,
+          },
+        },
+        tags: ['fast_service', 'physical'],
+      });
+
+      // Persist link in physical ticket context (best-effort)
+      try {
+        await row.update({
+          context: { ...(json.context || {}), supportTicketId: ticket.id },
+        });
+      } catch (_) {}
+
+      // Canonical event (best-effort)
+      try {
+        const { appendEventV1 } = require('./services/eventLedgerService');
+        await appendEventV1({
+          tenantId: resolved.tenantId,
+          type: 'SupportTicketOpened',
+          source: 'physical.station',
+          occurredAt: new Date(),
+          correlationId: json?.context?.correlationId || null,
+          subject: { type: 'physical_ticket', id: physicalTicketId },
+          actor: { type: 'public_token', id: String(resolved.tokenId) },
+          idempotencyKey: `physical_support_ticket:${resolved.tenantId}:${physicalTicketId}:${ticket.id}`,
+          payload: {
+            ticketId: ticket.id,
+            queue,
+            physicalTicketId,
+          },
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Physical] Erro ao abrir ticket digital:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao abrir ticket digital' });
+    }
+    return;
+  }
+
   // POST /tickets - Cria um novo ticket manualmente (para conversas iniciadas por agente)
   if (method === 'POST' && pathname === '/tickets') {
     const authResult = requireAuth(req);
@@ -7678,6 +11165,235 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       });
       return;
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Orders (Delivery Ops) - Rotas autenticadas
+  // -----------------------------------------------------------------------
+  // GET /orders - lista pedidos
+  if (method === 'GET' && pathname === '/orders') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const status = urlObj.searchParams.get('status');
+      const limit = urlObj.searchParams.get('limit') || '50';
+      const offset = urlObj.searchParams.get('offset') || '0';
+      const { listOrders } = require('./services/orderService');
+      const result = await listOrders({ tenantId: req.tenantId, status, limit, offset });
+      sendJson(res, 200, { ok: true, orders: result.items, total: result.total });
+    } catch (err) {
+      logger.error('[Orders] Erro ao listar pedidos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar pedidos' });
+    }
+    return;
+  }
+
+  // GET /orders/:id - obtém pedido
+  if (method === 'GET' && pathname.startsWith('/orders/')) {
+    // Evita conflito com /orders (já tratado acima)
+    if (pathname === '/orders') {
+      // noop
+    } else {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      const permResult = requirePermission(req, 'tickets', 'read');
+      if (!permResult.allowed) {
+        sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+        return;
+      }
+
+      try {
+        const orderId = decodeURIComponent(pathname.slice('/orders/'.length));
+        const { getOrderById } = require('./services/orderService');
+        const order = await getOrderById({ tenantId: req.tenantId, orderId });
+        if (!order) {
+          sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+          return;
+        }
+        const { getDeliveryByOrderId } = require('./services/deliveryService');
+        const delivery = await getDeliveryByOrderId({ tenantId: req.tenantId, orderId });
+        sendJson(res, 200, { ok: true, order, delivery });
+      } catch (err) {
+        logger.error('[Orders] Erro ao obter pedido:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter pedido' });
+      }
+      return;
+    }
+  }
+
+  // PUT /orders/:id/status - atualiza status do pedido
+  if (method === 'PUT' && pathname.match(/^\/orders\/[^\/]+\/status$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const orderId = decodeURIComponent(pathname.split('/')[2]);
+      const body = await parseJsonBody(req);
+      const status = body && body.status ? String(body.status).trim() : '';
+      const { updateOrderStatus } = require('./services/orderService');
+      const order = await updateOrderStatus({ tenantId: req.tenantId, orderId, status });
+      sendJson(res, 200, { ok: true, order });
+    } catch (err) {
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'order_not_found') {
+        sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+        return;
+      }
+      if (code === 'invalid_order_status_transition') {
+        sendJson(res, 400, { error: 'invalid_transition', message: 'Transição de status inválida', details: err.details });
+        return;
+      }
+      logger.error('[Orders] Erro ao atualizar status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar status do pedido' });
+    }
+    return;
+  }
+
+  // POST /orders/:id/incidents - abre incidente de suporte vinculado ao pedido
+  if (method === 'POST' && pathname.match(/^\/orders\/[^\/]+\/incidents$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const orderId = decodeURIComponent(pathname.split('/')[2]);
+      const { getOrderById } = require('./services/orderService');
+      const order = await getOrderById({ tenantId: req.tenantId, orderId });
+      if (!order) {
+        sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const queue = body && body.queue ? String(body.queue).trim() : 'Delivery';
+      const incidentType = body && body.type ? String(body.type).trim() : 'generic';
+      const message = body && body.message ? String(body.message).trim() : `Incidente (${incidentType}) no pedido ${order.order_number}`;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+
+      // Incidente 1:1 com pedido (idempotente): se já existe incidente aberto no contexto do pedido, devolve.
+      try {
+        const { getOrderIncident } = require('./services/orderService');
+        const existingIncident = await getOrderIncident({ tenantId: req.tenantId, orderId: order.id });
+        const existingTicketId = existingIncident?.ticketId || null;
+        if (existingTicketId) {
+          let existingTicket = null;
+          try {
+            existingTicket = getTicket(existingTicketId) || null;
+          } catch (_) {}
+          sendJson(res, 200, { ok: true, idempotent: true, ticketId: existingTicketId, ticket: existingTicket || { id: existingTicketId } });
+          return;
+        }
+      } catch (_) {}
+
+      // Cria ticket digital (in-memory) com contexto mínimo para o atendente
+      const sessionId = `order_${order.id}`;
+      const ticket = createTicket({
+        tenantId: req.tenantId,
+        sessionId,
+        queue,
+        lastUserMessage: message,
+        context: {
+          escalationReason: 'order_incident',
+          metadata: {
+            kind: 'order_incident',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            incidentType,
+            correlationId: order?.context?.correlationId || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+        },
+        tags: ['delivery', 'incident'],
+      });
+
+      // Persist 1:1 link no pedido (best-effort)
+      try {
+        const { setOrderIncident } = require('./services/orderService');
+        await setOrderIncident({
+          tenantId: req.tenantId,
+          orderId: order.id,
+          incident: {
+            ticketId: ticket.id,
+            type: incidentType,
+            queue,
+            status: 'open',
+            message,
+            idempotencyKey: idempotencyKey || null,
+            createdAt: new Date().toISOString(),
+            actorUserId: req.agent?.id || null,
+          },
+        });
+      } catch (_) {}
+
+      // Canonical event (best-effort)
+      try {
+        const { appendEventV1 } = require('./services/eventLedgerService');
+        await appendEventV1({
+          tenantId: req.tenantId,
+          type: 'SupportIncidentOpened',
+          source: 'orders.ops',
+          occurredAt: new Date(),
+          correlationId: order?.context?.correlationId || null,
+          subject: { type: 'order', id: order.id },
+          actor: { type: 'user', id: String(req.agent?.id || 'unknown') },
+          idempotencyKey: `incident:${req.tenantId}:${order.id}:${incidentType}:${idempotencyKey || ticket.id}`,
+          payload: {
+            ticketId: ticket.id,
+            orderId: order.id,
+            incidentType,
+            queue,
+          },
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Orders] Erro ao abrir incidente:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao abrir incidente' });
+    }
+    return;
   }
 
   // GET /queues - Lista todas as filas disponíveis
@@ -10317,7 +14033,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       const flow = ensureFlowHasMeta(raw, req.tenantId);
 
-      const validationResult = validateFlow(flow);
+      const flowKind = String(flow.kind || 'chat').trim().toLowerCase();
+      const validationResult = flowKind === 'voice' ? validateVoiceFlow(flow) : validateFlow(flow);
       const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
 
       flows.set(flow.id, flow);
@@ -10501,7 +14218,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Valida o fluxo antes de salvar como template
-      const validationResult = validateFlow(body.flow);
+      const kind = (body.flow && typeof body.flow === 'object' && typeof body.flow.kind === 'string')
+        ? String(body.flow.kind).trim().toLowerCase()
+        : 'chat';
+      const validationResult = kind === 'voice' ? validateVoiceFlow(body.flow) : validateFlow(body.flow);
       if (!validationResult.valid && validationResult.errors.length > 0) {
         sendJson(res, 400, {
           error: 'validation_failed',
@@ -16579,6 +20299,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       !pathname.startsWith('/version') &&
       !pathname.startsWith('/system') &&
       !pathname.startsWith('/metrics') &&
+      !pathname.startsWith('/storefront') &&
+      !pathname.startsWith('/orders') &&
+      !pathname.startsWith('/deliveries') &&
+      !pathname.startsWith('/public-tokens') &&
+      !pathname.startsWith('/physical') &&
       !pathname.startsWith('/tickets') &&
       !pathname.startsWith('/queues') &&
       !pathname.startsWith('/flows') &&
@@ -16913,6 +20638,8 @@ async function startInitialization() {
 process.on('SIGINT', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
+  try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
+  try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
@@ -16920,6 +20647,8 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
+  try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
+  try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
@@ -17004,6 +20733,26 @@ if (require.main === module) {
         logger.warn('[ChannelHealth] Falha ao iniciar monitor (ignorado)', { error: err.message });
       }
     }
+
+    // Execution Queue + Scheduler (best-effort) - internal ops jobs
+    if (process.env.ENABLE_EXECUTION_WORKER !== 'false') {
+      try {
+        const { startExecutionQueueWorker } = require('./services/executionQueueService');
+        const intervalMs = parseInt(process.env.EXECUTION_WORKER_INTERVAL_MS || '800', 10);
+        startExecutionQueueWorker({ intervalMs });
+      } catch (err) {
+        logger.warn('[ExecutionQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
+      }
+    }
+    if (process.env.ENABLE_SCHEDULER_WORKER !== 'false') {
+      try {
+        const { startScheduler } = require('./services/schedulerService');
+        const intervalMs = parseInt(process.env.SCHEDULER_INTERVAL_MS || '2000', 10);
+        startScheduler({ intervalMs, batchSize: 10 });
+      } catch (err) {
+        logger.warn('[Scheduler] Falha ao iniciar scheduler (ignorado)', { error: err.message });
+      }
+    }
   }).catch((error) => {
     console.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
     console.error('[Server] Erro:', error);
@@ -17016,11 +20765,14 @@ if (require.main === module) {
   });
 } else {
   console.log('[Server] ⚠️  Bloco if (require.main === module) NÃO executado - servidor não será iniciado automaticamente');
-  // Mesmo assim, inicia a inicialização em background
-  startInitialization().catch(err => {
-    console.error('[Server] Erro na inicialização em background:', err);
-    logger.error('[Server] Erro na inicialização em background:', err);
-  });
+  // Mesmo assim, inicia a inicialização em background (exceto em testes)
+  const disableBackgroundInit = process.env.NODE_ENV === 'test' || process.env.DISABLE_BACKGROUND_INIT === 'true';
+  if (!disableBackgroundInit) {
+    startInitialization().catch(err => {
+      console.error('[Server] Erro na inicialização em background:', err);
+      logger.error('[Server] Erro na inicialização em background:', err);
+    });
+  }
 }
 
 module.exports = {

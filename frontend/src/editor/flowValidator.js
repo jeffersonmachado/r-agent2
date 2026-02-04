@@ -748,9 +748,16 @@ function validateSubflowRecursion(flow, edges) {
  * Função principal de validação de fluxo
  * 
  * @param {Object} flow - Fluxo a validar (formato Rete.js ou engine)
+ * @param {{ kind?: string }} [options]
  * @returns {FlowValidationResult}
  */
-export function validateFlow(flow) {
+export function validateFlow(flow, options) {
+  const kind = String(options?.kind || 'chat').trim().toLowerCase();
+  if (kind === 'voice') {
+    // Validação local atual é focada em chatbot (fallback obrigatório).
+    // Para fluxos de voz, delegamos a validação completa ao backend (/flows/validate).
+    return { valid: true, errors: [] };
+  }
   /** @type {FlowValidationError[]} */
   let errors = [];
   

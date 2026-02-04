@@ -1,0 +1,71 @@
+name: Stack Test (Docker Compose)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      enable_trace:
+        description: 'Habilitar Playwright tracing (RPA_TRACE=1)'
+        required: false
+        default: '0'
+      capture_http_errors:
+        description: 'Capturar respostas HTTP>=400 no RPA (RPA_CAPTURE_HTTP_ERRORS=1)'
+        required: false
+        default: '1'
+
+jobs:
+  stack-autotest:
+    name: Autotest com stack completa
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: 'npm'
+
+      - name: Instalar dependências (root)
+        run: npm ci
+
+      - name: Instalar Playwright (Chromium)
+        run: npx playwright install chromium --with-deps
+
+      - name: Rodar autotest com stack (Compose)
+        env:
+          RPA_TRACE: ${{ inputs.enable_trace }}
+          RPA_CAPTURE_HTTP_ERRORS: ${{ inputs.capture_http_errors }}
+        run: |
+          bash ./scripts/system-autotest-stack.sh
+
+      - name: Upload test artifacts (JUnit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-junit
+          path: |
+            frontend/test-results/junit.xml
+            rag-service/test-results/junit.xml
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload RPA artifacts (reports/replay/screenshots/traces)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpa-artifacts-stack
+          path: |
+            tests/rpa/reports/**/*.json
+            tests/rpa/replay/**/*.json
+            tests/rpa/screenshots/**/*.png
+            tests/rpa/traces/**/*.zip
+          retention-days: 7
+          if-no-files-found: ignore
+

@@ -1,0 +1,185 @@
+version: "3.9"
+
+# Stack de TESTE (reprodutível) para auto-test.
+# Objetivo: subir API + Frontend (Vite) + RAG + Postgres + Redis com portas
+# alinhadas aos defaults do RPA:
+# - API: http://localhost:3001
+# - Frontend: http://localhost:5173
+# - RAG: http://localhost:8001 (mapeia para 8000 no container)
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: r-agent2-postgres-test
+    environment:
+      POSTGRES_USER: results_app
+      POSTGRES_PASSWORD: StrongPass
+      POSTGRES_DB: results_saas_test
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - r-agent2-postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U results_app -d results_saas_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    build:
+      context: ./redis
+      dockerfile: ./Dockerfile
+    image: r-agent2-redis:test
+    container_name: r-agent2-redis-test
+    ports:
+      - "6380:6379"
+    volumes:
+      - r-agent2-redis-test-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rag-service:
+    build:
+      context: ./rag-service
+      dockerfile: ./Dockerfile
+    image: r-agent2-rag-service:test
+    container_name: r-agent2-rag-service-test
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DEBUG: "false"
+      VECTOR_STORE_TYPE: postgres
+      VECTOR_STORE_PATH: /app/data/vector_store
+      DATABASE_URL: postgresql://results_app:StrongPass@postgres:5432/results_saas_test
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - r-agent2-rag-vector-test-store:/app/data/vector_store
+      - ./rag-service/test-results:/test-results
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    image: r-agent2-api:test
+    container_name: r-agent2-api-test
+    environment:
+      NODE_ENV: test
+      API_PORT: 3001
+      RATE_LIMIT_REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://redis:6379
+      RAG_SERVICE_URL: http://rag-service:8000
+      DATABASE_URL: postgresql://results_app:StrongPass@postgres:5432/results_saas_test
+      PGHOST: postgres
+      PGUSER: results_app
+      PGPASSWORD: StrongPass
+      PGDATABASE: results_saas_test
+      PGPORT: 5432
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-test-only-not-secure}
+      # Bootstrap de usuários alinhado ao default do RPA (tests/rpa/rpa.config.json)
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: admin123
+      ADMIN_USERNAME: admin
+      ADMIN_NAME: Admin
+      SYSTEMADMIN_EMAIL: systemadmin@example.com
+      SYSTEMADMIN_PASSWORD: admin123
+      SYSTEMADMIN_USERNAME: systemadmin
+      SYSTEMADMIN_NAME: System Admin
+      AMI_HOST: asterisk
+      AMI_PORT: 5038
+      AMI_USERNAME: ragent2
+      AMI_SECRET: ragent2
+      AMI_ORIGINATE_ENABLED: "true"
+      PBX_MEDIA_DIR: /app/api/data/pbx-media
+      PBX_RECORDINGS_DIR: /app/api/data/pbx-recordings
+      PBX_RECORDING_ENABLED: "true"
+      PBX_MIXMONITOR_DIR: /var/spool/asterisk/monitor/pbx
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rag-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health/ready', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    volumes:
+      - r-agent2-pbx-media-test-data:/app/api/data/pbx-media
+      - r-agent2-pbx-recordings-test-data:/app/api/data/pbx-recordings
+
+  asterisk:
+    build:
+      context: ./pbx/asterisk
+      dockerfile: ./Dockerfile
+    image: r-agent2-asterisk:test
+    container_name: r-agent2-asterisk-test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/odbc.test.ini:/etc/odbc.ini:ro
+      - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
+      - r-agent2-pbx-media-test-data:/var/lib/asterisk/sounds/pbx
+      - r-agent2-pbx-recordings-test-data:/var/spool/asterisk/monitor/pbx
+    environment:
+      NODE_ENV: test
+    command: sh -c "asterisk -f -vvvvv -d"
+    ports:
+      - "5060:5060/udp"
+      - "5038:5038"
+    healthcheck:
+      test: ["CMD-SHELL", "asterisk -rx 'core show version' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  frontend:
+    image: node:22-bookworm-slim
+    container_name: r-agent2-frontend-test
+    working_dir: /app/frontend
+    environment:
+      NODE_ENV: test
+      # Para o Vite falar com a API do host (Playwright roda no host):
+      # o frontend é servido em http://localhost:5173, e faz chamadas para http://localhost:3001
+      VITE_API_BASE_URL: http://localhost:3001
+    volumes:
+      - ./:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    command: sh -c "npm ci && npm run start -- --host 0.0.0.0 --port 5173 --strictPort"
+
+volumes:
+  r-agent2-postgres-test-data:
+  r-agent2-redis-test-data:
+  r-agent2-rag-vector-test-store:
+  r-agent2-pbx-media-test-data:
+  r-agent2-pbx-recordings-test-data:
+

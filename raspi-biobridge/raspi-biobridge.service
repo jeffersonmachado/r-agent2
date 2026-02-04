@@ -1,0 +1,18 @@
+[Unit]
+Description=raspi-biobridge (biometria kiosk)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/r-agent2/raspi-biobridge
+Environment=BIOBRIDGE_SECRET=CHANGE_ME
+Environment=BIOBRIDGE_MODE=fprintd
+Environment=BIOBRIDGE_BIND_LOCATION_ID=loja-1
+Environment=BIOBRIDGE_BIND_TOKEN_ID=pat-EXAMPLE
+ExecStart=/opt/r-agent2/raspi-biobridge/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 17923
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+

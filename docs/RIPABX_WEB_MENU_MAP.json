@@ -1,0 +1,2578 @@
+{
+  "generatedAt": "2026-02-04T00:16:34.481Z",
+  "menuItems": [
+    {
+      "label": "Painel",
+      "href": "app/painel.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Sistema",
+      "href": "/dash/app/index.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Sistema",
+      "href": "app/cockpit.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Resumo",
+      "href": "app/dashboard.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Filas",
+      "href": "app/dash_filas.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Agentes",
+      "href": "app/dash_agentes.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "DDR",
+      "href": "app/ddr.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Grupos",
+      "href": "app/grupo.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Ramais",
+      "href": "app/ramais.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Desvio",
+      "href": "app/desvio.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Transbordo",
+      "href": "app/transbordo.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Bloqueio",
+      "href": "app/bloqueio.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Retorno",
+      "href": "app/retorno.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Recusa",
+      "href": "app/recusa.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Feriado",
+      "href": "app/feriado.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Transferencia",
+      "href": "app/transferencia.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Espera",
+      "href": "app/upload.html?dir=espera",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Sons",
+      "href": "app/upload.html?dir=sons",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Ligações",
+      "href": "app/cdr.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Fax",
+      "href": "app/fax_rel.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Gravações",
+      "href": "app/sac.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Resumo",
+      "href": "app/resumo.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Hora",
+      "href": "app/hora.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Origem",
+      "href": "app/origem.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Destino",
+      "href": "app/destino.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Configuraçoes",
+      "href": "app/configuracoes.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Operadoras",
+      "href": "app/operadoras.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Rotas",
+      "href": "app/rotas.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Categoria",
+      "href": "app/categoria.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Fax",
+      "href": "app/fax.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Facilidades",
+      "href": "app/facilidades.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "URA",
+      "href": "app/ura.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Sala",
+      "href": "app/sala.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Interconexão",
+      "href": "app/interconexao.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Usuários",
+      "href": "app/usuarios.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Rede",
+      "href": "config/net",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "DHCP",
+      "href": "config/dhcpd",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Firewall",
+      "href": "config/firewalld",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "VPN",
+      "href": "config/ipsec",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Licença",
+      "href": "app/licenca.php",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Atualização",
+      "href": "app/update.php",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Assistência",
+      "href": "/cgi/ripabx/assistencia.cgi",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Recarga",
+      "href": "app/recarga.php",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Serviços",
+      "href": "app/servicos.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Processos",
+      "href": "/pm2",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Fila",
+      "href": "app/fila.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Motivo Pausa",
+      "href": "app/motivo.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Motivo Contato",
+      "href": "app/motivo1.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Campanhas",
+      "href": "app/campanha.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "CallBack Agendado",
+      "href": "app/agendado.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "atendidas",
+      "href": "app/fila_atendidas.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "abandonadas",
+      "href": "app/fila_abandonadas.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "agentes",
+      "href": "app/fila_agentes.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "por hora",
+      "href": "app/fila_hora.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Resumo por campanha",
+      "href": "app/filas_resumo.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Pesquisa",
+      "href": "app/pesquisa.html",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Click2Call",
+      "href": "app/click2call.php",
+      "perm": "R",
+      "source": "menu.php"
+    },
+    {
+      "label": "Clientes",
+      "href": "app/tron_clientes.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Objetivos",
+      "href": "app/objetivos.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Regras",
+      "href": "app/regras.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Memórias",
+      "href": "app/memorias.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Dicionário",
+      "href": "app/tron_dicionario.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Substitutos",
+      "href": "app/tron_substitutos.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Palavras Base",
+      "href": "app/tron_palavras_base.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Substituidos",
+      "href": "app/tron_substituidos.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Palavras Sinonimos",
+      "href": "app/tron_palavras_sinonimos.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Configurações Tron",
+      "href": "app/tron_config.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "Configurações SIP",
+      "href": "app/sip_config.html",
+      "perm": "C",
+      "source": "menu.php"
+    },
+    {
+      "label": "R-ChatBot",
+      "href": "app/rchatbot_man.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "R-ChatBot",
+      "href": "app/rchatbot_chats.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Bot",
+      "href": "app/voicebot.php",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Hosts",
+      "href": "app/mon_hosts.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Grupos de Hosts",
+      "href": "app/mon_hostgroups.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Serviços",
+      "href": "app/mon_services.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Grupos de Serviços",
+      "href": "app/mon_servicegroups.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Dependências",
+      "href": "app/mon_dependencies.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Usuários",
+      "href": "app/mon_users.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Grupos de Usuários",
+      "href": "app/mon_usergroups.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Períodos de tempo",
+      "href": "app/mon_timeperiods.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "Zonas",
+      "href": "app/mon_zones.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "OS",
+      "href": "app/mon_os.html",
+      "perm": null,
+      "source": "menu.php"
+    },
+    {
+      "label": "App",
+      "href": "app/mon_app.html",
+      "perm": null,
+      "source": "menu.php"
+    }
+  ],
+  "inventory": [
+    {
+      "label": "Painel",
+      "href": "app/painel.html",
+      "permission": "R",
+      "resolvedFile": "painel.html",
+      "jsFiles": [
+        "painel.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Sistema",
+      "href": "/dash/app/index.html",
+      "permission": "R",
+      "resolvedFile": "temp/index.html",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Sistema",
+      "href": "app/cockpit.html",
+      "permission": "R",
+      "resolvedFile": "cockpit.html",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Resumo",
+      "href": "app/dashboard.html",
+      "permission": "R",
+      "resolvedFile": "dashboard.html",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Filas",
+      "href": "app/dash_filas.html",
+      "permission": "R",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Agentes",
+      "href": "app/dash_agentes.html",
+      "permission": "R",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "DDR",
+      "href": "app/ddr.html",
+      "permission": "C",
+      "resolvedFile": "ddr.html",
+      "jsFiles": [
+        "ddr.js",
+        "ddr.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "operadora.xml",
+            "xsl": "operadora2.xsl",
+            "raw": "xml.php?xml=operadora.xml&xsl=operadora2.xsl"
+          },
+          {
+            "xml": "ddr.xml",
+            "xsl": "ddr.xsl",
+            "raw": "xml.php?xml=ddr.xml&xsl=ddr.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "ddr",
+            "raw": "server.php?prog=ddr"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Grupos",
+      "href": "app/grupo.html",
+      "permission": "C",
+      "resolvedFile": "grupo.html",
+      "jsFiles": [
+        "grupo.js",
+        "grupo.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "grupo.xml",
+            "xsl": "grupo.xsl",
+            "raw": "xml.php?xml=grupo.xml&xsl=grupo.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "grupo",
+            "raw": "server.php?prog=grupo"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Ramais",
+      "href": "app/ramais.html",
+      "permission": "C",
+      "resolvedFile": "ramais.html",
+      "jsFiles": [
+        "ramais.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "grupo.xml",
+            "xsl": "grupo2.xsl",
+            "raw": "xml.php?xml=grupo.xml&xsl=grupo2.xsl"
+          },
+          {
+            "xml": "categoria.xml",
+            "xsl": "categoria2.xsl",
+            "raw": "xml.php?xml=categoria.xml&xsl=categoria2.xsl"
+          },
+          {
+            "xml": "ramal.xml",
+            "xsl": "ramal.xsl",
+            "raw": "xml.php?xml=ramal.xml&xsl=ramal.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "ramal",
+            "raw": "server.php?prog=ramal"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Desvio",
+      "href": "app/desvio.html",
+      "permission": "C",
+      "resolvedFile": "desvio.html",
+      "jsFiles": [
+        "desvio.js",
+        "desvio.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "desvio.xml",
+            "xsl": "desvio.xsl",
+            "raw": "xml.php?xml=desvio.xml&xsl=desvio.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "desvio",
+            "raw": "server.php?prog=desvio"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Transbordo",
+      "href": "app/transbordo.html",
+      "permission": "C",
+      "resolvedFile": "transbordo.html",
+      "jsFiles": [
+        "transbordo.js",
+        "transbordo.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "transbordo.xml",
+            "xsl": "transbordo.xsl",
+            "raw": "xml.php?xml=transbordo.xml&xsl=transbordo.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "transbordo",
+            "raw": "server.php?prog=transbordo"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Bloqueio",
+      "href": "app/bloqueio.html",
+      "permission": "C",
+      "resolvedFile": "bloqueio.html",
+      "jsFiles": [
+        "bloqueio.js",
+        "bloqueio.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "bloqueio.xml",
+            "xsl": "bloqueio.xsl",
+            "raw": "xml.php?xml=bloqueio.xml&xsl=bloqueio.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "bloqueio",
+            "raw": "server.php?prog=bloqueio"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Retorno",
+      "href": "app/retorno.html",
+      "permission": "C",
+      "resolvedFile": "retorno.html",
+      "jsFiles": [
+        "retorno.js",
+        "retorno.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "retorno.xml",
+            "xsl": "retorno.xsl",
+            "raw": "xml.php?xml=retorno.xml&xsl=retorno.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "retorno",
+            "raw": "server.php?prog=retorno"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Recusa",
+      "href": "app/recusa.html",
+      "permission": "C",
+      "resolvedFile": "recusa.html",
+      "jsFiles": [
+        "recusa.js",
+        "recusa.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "recusa.xml",
+            "xsl": "recusa.xsl",
+            "raw": "xml.php?xml=recusa.xml&xsl=recusa.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "recusa",
+            "raw": "server.php?prog=recusa"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Feriado",
+      "href": "app/feriado.html",
+      "permission": "C",
+      "resolvedFile": "feriado.html",
+      "jsFiles": [
+        "feriado.js",
+        "feriado.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "feriado.xml",
+            "xsl": "feriado.xsl",
+            "raw": "xml.php?xml=feriado.xml&xsl=feriado.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "feriado",
+            "raw": "server.php?prog=feriado"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Transferencia",
+      "href": "app/transferencia.html",
+      "permission": "C",
+      "resolvedFile": "transferencia.html",
+      "jsFiles": [
+        "transferencia.js",
+        "transferencia.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "transferencia.xml",
+            "xsl": "transferencia.xsl",
+            "raw": "xml.php?xml=transferencia.xml&xsl=transferencia.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "transferencia",
+            "raw": "server.php?prog=transferencia"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Espera",
+      "href": "app/upload.html?dir=espera",
+      "permission": "R",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Sons",
+      "href": "app/upload.html?dir=sons",
+      "permission": "R",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Ligações",
+      "href": "app/cdr.html",
+      "permission": "R",
+      "resolvedFile": "cdr.html",
+      "jsFiles": [
+        "cdr.js",
+        "exportagrid.js",
+        "cdr.js",
+        "exportagrid.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Fax",
+      "href": "app/fax_rel.html",
+      "permission": "R",
+      "resolvedFile": "fax_rel.html",
+      "jsFiles": [
+        "fax_rel.js",
+        "fax_rel.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Gravações",
+      "href": "app/sac.html",
+      "permission": "R",
+      "resolvedFile": "sac.html",
+      "jsFiles": [
+        "sac.js",
+        "sac.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Resumo",
+      "href": "app/resumo.html",
+      "permission": "R",
+      "resolvedFile": "resumo.html",
+      "jsFiles": [
+        "resumo.js",
+        "resumo.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Hora",
+      "href": "app/hora.html",
+      "permission": "R",
+      "resolvedFile": "hora.html",
+      "jsFiles": [
+        "hora.js",
+        "hora.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Origem",
+      "href": "app/origem.html",
+      "permission": "R",
+      "resolvedFile": "origem.html",
+      "jsFiles": [
+        "origem.js",
+        "origem.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Destino",
+      "href": "app/destino.html",
+      "permission": "R",
+      "resolvedFile": "destino.html",
+      "jsFiles": [
+        "destino.js",
+        "destino.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Configuraçoes",
+      "href": "app/configuracoes.html",
+      "permission": "C",
+      "resolvedFile": "configuracoes.html",
+      "jsFiles": [
+        "configuracoes.js",
+        "configuracoes.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Operadoras",
+      "href": "app/operadoras.html",
+      "permission": "C",
+      "resolvedFile": "operadoras.html",
+      "jsFiles": [
+        "operadoras.js",
+        "operadoras.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "operadora.xml",
+            "xsl": "operadora.xsl",
+            "raw": "xml.php?xml=operadora.xml&xsl=operadora.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "operadora",
+            "raw": "server.php?prog=operadora"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Rotas",
+      "href": "app/rotas.html",
+      "permission": "C",
+      "resolvedFile": "rotas.html",
+      "jsFiles": [
+        "rotas.js",
+        "rotas.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "operadora.xml",
+            "xsl": "operadora2.xsl",
+            "raw": "xml.php?xml=operadora.xml&xsl=operadora2.xsl"
+          },
+          {
+            "xml": "rota_base.xml",
+            "xsl": "rota_base.xsl",
+            "raw": "xml.php?xml=rota_base.xml&xsl=rota_base.xsl"
+          },
+          {
+            "xml": "rota.xml",
+            "xsl": "rota.xsl",
+            "raw": "xml.php?xml=rota.xml&xsl=rota.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "rota_base",
+            "raw": "server.php?prog=rota_base"
+          },
+          {
+            "prog": "rota",
+            "raw": "server.php?prog=rota"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Categoria",
+      "href": "app/categoria.html",
+      "permission": "C",
+      "resolvedFile": "categoria.html",
+      "jsFiles": [
+        "categoria.js",
+        "categoria.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "tipo.xml",
+            "xsl": "tipo2.xsl",
+            "raw": "xml.php?xml=tipo.xml&xsl=tipo2.xsl"
+          },
+          {
+            "xml": "rota_base.xml",
+            "xsl": "rota2.xsl",
+            "raw": "xml.php?xml=rota_base.xml&xsl=rota2.xsl"
+          },
+          {
+            "xml": "categoria.xml",
+            "xsl": "categoria.xsl",
+            "raw": "xml.php?xml=categoria.xml&xsl=categoria.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "categoria",
+            "raw": "server.php?prog=categoria"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Fax",
+      "href": "app/fax.html",
+      "permission": "C",
+      "resolvedFile": "fax.html",
+      "jsFiles": [
+        "fax.js",
+        "fax.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fax.xml",
+            "xsl": "fax.xsl",
+            "raw": "xml.php?xml=fax.xml&xsl=fax.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "fax",
+            "raw": "server.php?prog=fax"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Facilidades",
+      "href": "app/facilidades.html",
+      "permission": "C",
+      "resolvedFile": "facilidades.html",
+      "jsFiles": [
+        "facilidades.js",
+        "facilidades.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "URA",
+      "href": "app/ura.html",
+      "permission": "C",
+      "resolvedFile": "ura.html",
+      "jsFiles": [
+        "ura.js",
+        "ura.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": true,
+          "save": true
+        }
+      }
+    },
+    {
+      "label": "Sala",
+      "href": "app/sala.html",
+      "permission": "C",
+      "resolvedFile": "sala.html",
+      "jsFiles": [
+        "sala.js",
+        "sala.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "sala.xml",
+            "xsl": "sala.xsl",
+            "raw": "xml.php?xml=sala.xml&xsl=sala.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "sala",
+            "raw": "server.php?prog=sala"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Interconexão",
+      "href": "app/interconexao.html",
+      "permission": "C",
+      "resolvedFile": "interconexao.html",
+      "jsFiles": [
+        "interconexao.js",
+        "interconexao.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "interconexao.xml",
+            "xsl": "interconexao.xsl",
+            "raw": "xml.php?xml=interconexao.xml&xsl=interconexao.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "interconexao",
+            "raw": "server.php?prog=interconexao"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Usuários",
+      "href": "app/usuarios.html",
+      "permission": "C",
+      "resolvedFile": "usuarios.html",
+      "jsFiles": [
+        "usuarios.js",
+        "usuarios.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "usuarios",
+            "raw": "server2.php?prog=usuarios"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql6.php",
+            "prog": "usuarios",
+            "raw": "mysql6.php?prog=usuarios"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Rede",
+      "href": "config/net",
+      "permission": "C",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "DHCP",
+      "href": "config/dhcpd",
+      "permission": "C",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Firewall",
+      "href": "config/firewalld",
+      "permission": "C",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "VPN",
+      "href": "config/ipsec",
+      "permission": "C",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Licença",
+      "href": "app/licenca.php",
+      "permission": "C",
+      "resolvedFile": "licenca.php",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Atualização",
+      "href": "app/update.php",
+      "permission": "C",
+      "resolvedFile": "update.php",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Assistência",
+      "href": "/cgi/ripabx/assistencia.cgi",
+      "permission": "C",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Recarga",
+      "href": "app/recarga.php",
+      "permission": "C",
+      "resolvedFile": "recarga.php",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Serviços",
+      "href": "app/servicos.html",
+      "permission": "C",
+      "resolvedFile": "servicos.html",
+      "jsFiles": [
+        "servicos.js",
+        "servicos.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Processos",
+      "href": "/pm2",
+      "permission": "C",
+      "resolvedFile": null,
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Fila",
+      "href": "app/fila.html",
+      "permission": "C",
+      "resolvedFile": "fila.html",
+      "jsFiles": [
+        "fila.js",
+        "fila.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "fila",
+            "raw": "server.php?prog=fila"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Motivo Pausa",
+      "href": "app/motivo.html",
+      "permission": "C",
+      "resolvedFile": "motivo.html",
+      "jsFiles": [
+        "motivo.js",
+        "motivo.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "motivo.xml",
+            "xsl": "motivo.xsl",
+            "raw": "xml.php?xml=motivo.xml&xsl=motivo.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "motivo",
+            "raw": "server.php?prog=motivo"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Motivo Contato",
+      "href": "app/motivo1.html",
+      "permission": "C",
+      "resolvedFile": "motivo1.html",
+      "jsFiles": [
+        "motivo1.js",
+        "motivo1.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "motivo1.xml",
+            "xsl": "motivo1.xsl",
+            "raw": "xml.php?xml=motivo1.xml&xsl=motivo1.xsl"
+          }
+        ],
+        "serverProgs": [
+          {
+            "prog": "motivo1",
+            "raw": "server.php?prog=motivo1"
+          }
+        ],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Campanhas",
+      "href": "app/campanha.html",
+      "permission": "C",
+      "resolvedFile": "campanha.html",
+      "jsFiles": [
+        "campanha.js",
+        "campanha.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila2.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila2.xsl"
+          },
+          {
+            "xml": "fila.xml",
+            "xsl": "fila3.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila3.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "campanha",
+            "raw": "server2.php?prog=campanha"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql2.php",
+            "prog": "campanha",
+            "raw": "mysql2.php?prog=campanha"
+          },
+          {
+            "file": "mysql3.php",
+            "prog": "campanha",
+            "raw": "mysql3.php?prog=campanha"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "CallBack Agendado",
+      "href": "app/agendado.html",
+      "permission": "C",
+      "resolvedFile": "agendado.html",
+      "jsFiles": [
+        "agendado.js",
+        "agendado.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila2.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila2.xsl"
+          },
+          {
+            "xml": "fila.xml",
+            "xsl": "fila3.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila3.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "agendado",
+            "raw": "server2.php?prog=agendado"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql3.php",
+            "prog": "agendado",
+            "raw": "mysql3.php?prog=agendado"
+          },
+          {
+            "file": "mysql3.php",
+            "prog": "agendado_detalhes",
+            "raw": "mysql3.php?prog=agendado_detalhes"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "atendidas",
+      "href": "app/fila_atendidas.html",
+      "permission": "R",
+      "resolvedFile": "fila_atendidas.html",
+      "jsFiles": [
+        "fila_atendidas.js",
+        "fila_atendidas.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "abandonadas",
+      "href": "app/fila_abandonadas.html",
+      "permission": "R",
+      "resolvedFile": "fila_abandonadas.html",
+      "jsFiles": [
+        "fila_abandonadas.js",
+        "fila_abandonadas.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "agentes",
+      "href": "app/fila_agentes.html",
+      "permission": "R",
+      "resolvedFile": "fila_agentes.html",
+      "jsFiles": [
+        "fila_agentes.js",
+        "fila_agentes.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "por hora",
+      "href": "app/fila_hora.html",
+      "permission": "R",
+      "resolvedFile": "fila_hora.html",
+      "jsFiles": [
+        "fila_hora.js",
+        "fila_hora.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Resumo por campanha",
+      "href": "app/filas_resumo.html",
+      "permission": "R",
+      "resolvedFile": "filas_resumo.html",
+      "jsFiles": [
+        "filas_resumo.js",
+        "filas_resumo.js",
+        "filas_resumo.js",
+        "filas_resumo.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila2.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila2.xsl"
+          },
+          {
+            "xml": "fila.xml",
+            "xsl": "fila3.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila3.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "campanha",
+            "raw": "server2.php?prog=campanha"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql2.php",
+            "prog": "campanha",
+            "raw": "mysql2.php?prog=campanha"
+          },
+          {
+            "file": "mysql3.php",
+            "prog": "campanha_resumo",
+            "raw": "mysql3.php?prog=campanha_resumo"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Pesquisa",
+      "href": "app/pesquisa.html",
+      "permission": "R",
+      "resolvedFile": "pesquisa.html",
+      "jsFiles": [
+        "pesquisa.js",
+        "pesquisa.js"
+      ],
+      "endpoints": {
+        "xmlViews": [
+          {
+            "xml": "fila.xml",
+            "xsl": "fila.xsl",
+            "raw": "xml.php?xml=fila.xml&xsl=fila.xsl"
+          }
+        ],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Click2Call",
+      "href": "app/click2call.php",
+      "permission": "R",
+      "resolvedFile": "click2call.php",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Clientes",
+      "href": "app/tron_clientes.html",
+      "permission": "C",
+      "resolvedFile": "tron_clientes.html",
+      "jsFiles": [
+        "tron_clientes.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Objetivos",
+      "href": "app/objetivos.html",
+      "permission": "C",
+      "resolvedFile": "objetivos.html",
+      "jsFiles": [
+        "objetivos.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Regras",
+      "href": "app/regras.html",
+      "permission": "C",
+      "resolvedFile": "regras.html",
+      "jsFiles": [
+        "regras.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Memórias",
+      "href": "app/memorias.html",
+      "permission": "C",
+      "resolvedFile": "memorias.html",
+      "jsFiles": [
+        "memorias.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Dicionário",
+      "href": "app/tron_dicionario.html",
+      "permission": "C",
+      "resolvedFile": "tron_dicionario.html",
+      "jsFiles": [
+        "tron_dicionario.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Substitutos",
+      "href": "app/tron_substitutos.html",
+      "permission": "C",
+      "resolvedFile": "tron_substitutos.html",
+      "jsFiles": [
+        "tron_substitutos.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Palavras Base",
+      "href": "app/tron_palavras_base.html",
+      "permission": "C",
+      "resolvedFile": "tron_palavras_base.html",
+      "jsFiles": [
+        "tron_palavras_base.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Substituidos",
+      "href": "app/tron_substituidos.html",
+      "permission": "C",
+      "resolvedFile": "tron_substituidos.html",
+      "jsFiles": [
+        "tron_substituidos.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Palavras Sinonimos",
+      "href": "app/tron_palavras_sinonimos.html",
+      "permission": "C",
+      "resolvedFile": "tron_palavras_sinonimos.html",
+      "jsFiles": [
+        "tron_palavras_sinonimos.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Configurações Tron",
+      "href": "app/tron_config.html",
+      "permission": "C",
+      "resolvedFile": "tron_config.html",
+      "jsFiles": [
+        "tron_config.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Configurações SIP",
+      "href": "app/sip_config.html",
+      "permission": "C",
+      "resolvedFile": "sip_config.html",
+      "jsFiles": [
+        "sip_config.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "R-ChatBot",
+      "href": "app/rchatbot_man.html",
+      "permission": null,
+      "resolvedFile": "rchatbot_man.html",
+      "jsFiles": [
+        "rchatbot_man.js",
+        "rchatbot_man.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "campanha",
+            "raw": "server2.php?prog=campanha"
+          },
+          {
+            "prog": "rchatbot",
+            "raw": "server2.php?prog=rchatbot"
+          },
+          {
+            "prog": "rchatbot_patterns",
+            "raw": "server2.php?prog=rchatbot_patterns"
+          },
+          {
+            "prog": "rchatbot_responses",
+            "raw": "server2.php?prog=rchatbot_responses"
+          },
+          {
+            "prog": "rchatbot_actions",
+            "raw": "server2.php?prog=rchatbot_actions"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql7.php",
+            "prog": "tags",
+            "raw": "mysql7.php?prog=tags"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "tags_select",
+            "raw": "mysql7.php?prog=tags_select"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "rchatbot",
+            "raw": "mysql7.php?prog=rchatbot"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "rchatbot_patterns",
+            "raw": "mysql7.php?prog=rchatbot_patterns"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "rchatbot_responses",
+            "raw": "mysql7.php?prog=rchatbot_responses"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "rchatbot_actions",
+            "raw": "mysql7.php?prog=rchatbot_actions"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "R-ChatBot",
+      "href": "app/rchatbot_chats.html",
+      "permission": null,
+      "resolvedFile": "rchatbot_chats.html",
+      "jsFiles": [
+        "rchatbot_chats.js",
+        "rchatbot_chats.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [
+          {
+            "file": "mysql7.php",
+            "prog": "rchatbot_chats",
+            "raw": "mysql7.php?prog=rchatbot_chats"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Bot",
+      "href": "app/voicebot.php",
+      "permission": null,
+      "resolvedFile": "voicebot.php",
+      "jsFiles": [],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Hosts",
+      "href": "app/mon_hosts.html",
+      "permission": null,
+      "resolvedFile": "mon_hosts.html",
+      "jsFiles": [
+        "mon_hosts.js",
+        "mon_hosts.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "mon_hosts",
+            "raw": "server2.php?prog=mon_hosts"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql7.php",
+            "prog": "mon_os_select",
+            "raw": "mysql7.php?prog=mon_os_select"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "mon_app_select",
+            "raw": "mysql7.php?prog=mon_app_select"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "mon_hosts",
+            "raw": "mysql7.php?prog=mon_hosts"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Grupos de Hosts",
+      "href": "app/mon_hostgroups.html",
+      "permission": null,
+      "resolvedFile": "mon_hostgroups.html",
+      "jsFiles": [
+        "mon_hostgroups.js",
+        "mon_hostgroups.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Serviços",
+      "href": "app/mon_services.html",
+      "permission": null,
+      "resolvedFile": "mon_services.html",
+      "jsFiles": [
+        "mon_services.js",
+        "mon_services.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "mon_services",
+            "raw": "server2.php?prog=mon_services"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql7.php",
+            "prog": "mon_os_select",
+            "raw": "mysql7.php?prog=mon_os_select"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "mon_app_select",
+            "raw": "mysql7.php?prog=mon_app_select"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "mon_hosts_select",
+            "raw": "mysql7.php?prog=mon_hosts_select"
+          },
+          {
+            "file": "mysql7.php",
+            "prog": "mon_services",
+            "raw": "mysql7.php?prog=mon_services"
+          },
+          {
+            "file": "mysql9.php",
+            "prog": "mon_services",
+            "raw": "mysql9.php?prog=mon_services"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Grupos de Serviços",
+      "href": "app/mon_servicegroups.html",
+      "permission": null,
+      "resolvedFile": "mon_servicegroups.html",
+      "jsFiles": [
+        "mon_servicegroups.js",
+        "mon_servicegroups.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Dependências",
+      "href": "app/mon_dependencies.html",
+      "permission": null,
+      "resolvedFile": "mon_dependencies.html",
+      "jsFiles": [
+        "mon_dependencies.js",
+        "mon_dependencies.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Usuários",
+      "href": "app/mon_users.html",
+      "permission": null,
+      "resolvedFile": "mon_users.html",
+      "jsFiles": [
+        "mon_users.js",
+        "mon_users.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Grupos de Usuários",
+      "href": "app/mon_usergroups.html",
+      "permission": null,
+      "resolvedFile": "mon_usergroups.html",
+      "jsFiles": [
+        "mon_usergroups.js",
+        "mon_usergroups.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Períodos de tempo",
+      "href": "app/mon_timeperiods.html",
+      "permission": null,
+      "resolvedFile": "mon_timeperiods.html",
+      "jsFiles": [
+        "mon_timeperiods.js",
+        "mon_timeperiods.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "Zonas",
+      "href": "app/mon_zones.html",
+      "permission": null,
+      "resolvedFile": "mon_zones.html",
+      "jsFiles": [
+        "mon_zones.js",
+        "mon_zones.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [],
+        "mysqlProgs": [],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "OS",
+      "href": "app/mon_os.html",
+      "permission": null,
+      "resolvedFile": "mon_os.html",
+      "jsFiles": [
+        "mon_os.js",
+        "mon_os.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "mon_os",
+            "raw": "server2.php?prog=mon_os"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql7.php",
+            "prog": "mon_os",
+            "raw": "mysql7.php?prog=mon_os"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    },
+    {
+      "label": "App",
+      "href": "app/mon_app.html",
+      "permission": null,
+      "resolvedFile": "mon_app.html",
+      "jsFiles": [
+        "mon_app.js",
+        "mon_app.js"
+      ],
+      "endpoints": {
+        "xmlViews": [],
+        "serverProgs": [],
+        "server2Progs": [
+          {
+            "prog": "mon_app",
+            "raw": "server2.php?prog=mon_app"
+          }
+        ],
+        "mysqlProgs": [
+          {
+            "file": "mysql7.php",
+            "prog": "mon_app",
+            "raw": "mysql7.php?prog=mon_app"
+          }
+        ],
+        "ura": {
+          "load": false,
+          "save": false
+        }
+      }
+    }
+  ]
+}

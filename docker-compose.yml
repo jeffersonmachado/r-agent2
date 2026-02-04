@@ -36,6 +36,18 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       # OpenAI API Key (server default, opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # -------------------------------------------------------------------
+      # PBX v1 (Asterisk Realtime/ODBC + AMI)
+      # -------------------------------------------------------------------
+      AMI_HOST: ${AMI_HOST:-asterisk}
+      AMI_PORT: ${AMI_PORT:-5038}
+      AMI_USERNAME: ${AMI_USERNAME:-ragent2}
+      AMI_SECRET: ${AMI_SECRET:-ragent2}
+      AMI_ORIGINATE_ENABLED: ${AMI_ORIGINATE_ENABLED:-false}
+      PBX_MEDIA_DIR: ${PBX_MEDIA_DIR:-/app/api/data/pbx-media}
+      PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
+      PBX_RECORDING_ENABLED: ${PBX_RECORDING_ENABLED:-false}
+      PBX_MIXMONITOR_DIR: ${PBX_MIXMONITOR_DIR:-/var/spool/asterisk/monitor/pbx}
     ports:
       - "${API_PORT:-3001}:3001"
     depends_on:
@@ -45,7 +57,39 @@ services:
         condition: service_healthy
       rag-service:
         condition: service_started
+      asterisk:
+        condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - pbx-media:/app/api/data/pbx-media
+      - pbx-recordings:/app/api/data/pbx-recordings
+
+  asterisk:
+    build:
+      context: ./pbx/asterisk
+      dockerfile: ./Dockerfile
+    image: r-agent2-asterisk:latest
+    container_name: chatbot-asterisk
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
+      - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
+      - pbx-media:/var/lib/asterisk/sounds/pbx
+      - pbx-recordings:/var/spool/asterisk/monitor/pbx
+    command: sh -c "asterisk -f -vvvvv -d"
+    ports:
+      - "${AMI_PORT:-5038}:5038"
+      - "${SIP_UDP_PORT:-5060}:5060/udp"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "asterisk -rx 'core show version' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   frontend:
     build:
@@ -135,5 +179,7 @@ volumes:
   rag-vector-store:
   redis-data:
   postgres-data:
+  pbx-media:
+  pbx-recordings:
 
 

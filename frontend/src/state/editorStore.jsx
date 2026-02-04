@@ -135,6 +135,10 @@ export function EditorProvider({ children }) {
             (metaOverrides && metaOverrides.name) ||
             'Fluxo sem nome',
           version: (currentFlow && currentFlow.version) || 1,
+          kind:
+            (currentFlow && currentFlow.kind) ||
+            (metaOverrides && metaOverrides.kind) ||
+            'chat',
         };
 
         logger.debug('Metadados do fluxo', baseMeta);
@@ -321,6 +325,18 @@ export function EditorProvider({ children }) {
     setError(null);
   }, []);
 
+  /**
+   * Atualiza o kind do fluxo atual no estado (sem persistir automaticamente).
+   * O kind será persistido no backend no próximo "Salvar".
+   */
+  const setCurrentFlowKind = useCallback((kind) => {
+    const normalized = String(kind || 'chat').trim().toLowerCase() === 'voice' ? 'voice' : 'chat';
+    setCurrentFlow((prev) => {
+      if (!prev || typeof prev !== 'object') return prev;
+      return { ...prev, kind: normalized };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       currentFlow,
@@ -341,6 +357,7 @@ export function EditorProvider({ children }) {
       simulateCurrentFlow,
       deleteFlow,
       clearCurrentFlow,
+      setCurrentFlowKind,
     }),
     [
       clearError,
@@ -356,6 +373,7 @@ export function EditorProvider({ children }) {
       simulateCurrentFlow,
       deleteFlow,
       clearCurrentFlow,
+      setCurrentFlowKind,
     ],
   );
 

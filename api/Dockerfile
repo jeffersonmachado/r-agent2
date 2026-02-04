@@ -27,6 +27,7 @@ COPY contracts/ ./contracts/
 COPY config/ ./config/
 COPY qa/ ./qa/
 COPY lib/ ./lib/
+COPY scripts/ ./scripts/
 
 FROM node:22-bookworm-slim AS runtime
 
@@ -34,6 +35,11 @@ ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
+
+# ffmpeg para conversão de áudio (PBX)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copia apenas artefatos do builder
 COPY --from=builder /app/package.json /app/package-lock.json* ./
@@ -46,6 +52,7 @@ COPY --from=builder /app/contracts ./contracts
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/qa ./qa
 COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/scripts ./scripts
 
 # Compatibilidade: a API referencia o runner RPA legado em `tests/rpa/*`.
 # Copiamos apenas o código necessário (não a suíte inteira de testes).

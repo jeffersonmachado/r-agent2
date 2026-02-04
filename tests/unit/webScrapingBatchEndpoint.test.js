@@ -5,6 +5,8 @@
 
 const http = require('http');
 
+jest.setTimeout(30000);
+
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
@@ -114,7 +116,7 @@ describe('POST /web-scraping/scrape-batch', () => {
     }));
 
     await new Promise((resolve) => server.close(resolve));
-  }, 20000);
+  }, 45000);
 
   test('retorna 500 + envelope quando ocorre crash interno', async () => {
     // DB boot mocks

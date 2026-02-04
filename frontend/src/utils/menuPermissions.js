@@ -106,6 +106,13 @@ export const menuItems = [
     roles: ['supervisor', 'manager', 'admin', 'owner'],
   },
   {
+    label: 'PBX (Legado)',
+    path: '/pbx',
+    icon: '📞',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
     label: 'Configuração',
     path: '/config',
     icon: '⚙️',

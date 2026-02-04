@@ -2969,6 +2969,467 @@ export const NODE_SCHEMAS = {
     },
   },
 
+  // -----------------------------------------------------------------------
+  // Voz / URA (kind=voice)
+  // -----------------------------------------------------------------------
+
+  voice_prompt_listen: {
+    type: 'voice_prompt_listen',
+    label: 'Prompt + Escuta',
+    icon: '🎙️',
+    color: '#8E44AD',
+    description: 'Toca um prompt (TTS) e escuta (ASR). Suporta barge-in (interromper o prompt ao falar).',
+    errorPorts: true,
+    supportsTimeout: true,
+    inputs: [
+      { key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME },
+    ],
+    outputs: [
+      { key: 'out', label: 'Próximo', socketName: DEFAULT_SOCKET_NAME },
+    ],
+    properties: [
+      {
+        key: 'text',
+        type: 'textarea',
+        label: 'Texto do prompt (TTS)',
+        description: 'Texto que será sintetizado e tocado ao chamador.',
+        required: true,
+        placeholder: 'Olá. Diga vendas ou suporte. Ou tecle 1 para vendas e 2 para suporte.',
+        rows: 4,
+      },
+      {
+        key: 'variable',
+        type: 'text',
+        label: 'Variável para salvar o texto reconhecido',
+        description: 'Nome da variável onde o ASR salvará o que foi reconhecido (ex.: utterance).',
+        required: false,
+        defaultValue: 'utterance',
+        placeholder: 'utterance',
+        validate: (value) => {
+          if (!value) return null;
+          return validateVariableName(value);
+        },
+      },
+      {
+        key: 'recordSeconds',
+        type: 'number',
+        label: 'Tempo máximo de gravação (s)',
+        description: 'Tempo máximo total de áudio capturado.',
+        required: false,
+        defaultValue: 6,
+        placeholder: '6',
+      },
+      {
+        key: 'maxSilenceSeconds',
+        type: 'number',
+        label: 'Silêncio máximo (s)',
+        description: 'Se o usuário ficar em silêncio por este tempo, encerra a escuta.',
+        required: false,
+        defaultValue: 2,
+        placeholder: '2',
+      },
+      {
+        key: 'timeoutSeconds',
+        type: 'number',
+        label: 'Timeout total (s)',
+        description: 'Tempo máximo total para o nó completar (inclui prompt + escuta).',
+        required: false,
+        defaultValue: 12,
+        placeholder: '12',
+      },
+      {
+        key: 'bargeIn',
+        type: 'boolean',
+        label: 'Permitir interrupção (barge-in)',
+        description: 'Se habilitado, a fala do usuário interrompe o áudio do prompt.',
+        required: false,
+        defaultValue: true,
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (!node.config || typeof node.config !== 'object') {
+        errors.push({
+          code: 'VOICE_PROMPT_LISTEN_MISSING_CONFIG',
+          message: `Nó "${nodeId}" deve ter config.`,
+          messageUi: 'Preencha as configurações do nó de voz.',
+          nodeIds: [nodeId],
+        });
+        return errors;
+      }
+      if (!node.config.text || typeof node.config.text !== 'string' || node.config.text.trim() === '') {
+        errors.push({
+          code: 'VOICE_PROMPT_LISTEN_MISSING_TEXT',
+          message: `Nó "${nodeId}" deve ter config.text (string não vazia).`,
+          messageUi: 'Preencha o texto do prompt (TTS).',
+          nodeIds: [nodeId],
+        });
+      }
+      if (node.config.variable) {
+        const ve = validateVariableName(node.config.variable, nodeId);
+        if (ve) errors.push({ ...ve, nodeIds: [nodeId] });
+      }
+      return errors;
+    },
+  },
+
+  voice_listen_asr: {
+    type: 'voice_listen_asr',
+    label: 'Escutar (ASR)',
+    icon: '👂',
+    color: '#8E44AD',
+    description: 'Escuta o áudio do chamador e transcreve (ASR).',
+    errorPorts: true,
+    supportsTimeout: true,
+    inputs: [{ key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME }],
+    outputs: [{ key: 'out', label: 'Próximo', socketName: DEFAULT_SOCKET_NAME }],
+    properties: [
+      {
+        key: 'variable',
+        type: 'text',
+        label: 'Variável para salvar o texto reconhecido',
+        description: 'Nome da variável onde o ASR salvará o que foi reconhecido (ex.: utterance).',
+        required: false,
+        defaultValue: 'utterance',
+        placeholder: 'utterance',
+        validate: (value) => {
+          if (!value) return null;
+          return validateVariableName(value);
+        },
+      },
+      {
+        key: 'recordSeconds',
+        type: 'number',
+        label: 'Tempo máximo de gravação (s)',
+        description: 'Tempo máximo total de áudio capturado.',
+        required: false,
+        defaultValue: 6,
+        placeholder: '6',
+      },
+      {
+        key: 'maxSilenceSeconds',
+        type: 'number',
+        label: 'Silêncio máximo (s)',
+        description: 'Se o usuário ficar em silêncio por este tempo, encerra a escuta.',
+        required: false,
+        defaultValue: 2,
+        placeholder: '2',
+      },
+      {
+        key: 'timeoutSeconds',
+        type: 'number',
+        label: 'Timeout total (s)',
+        description: 'Tempo máximo total para o nó completar.',
+        required: false,
+        defaultValue: 10,
+        placeholder: '10',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (node.config?.variable) {
+        const ve = validateVariableName(node.config.variable, nodeId);
+        if (ve) errors.push({ ...ve, nodeIds: [nodeId] });
+      }
+      return errors;
+    },
+  },
+
+  voice_gather_dtmf: {
+    type: 'voice_gather_dtmf',
+    label: 'Capturar DTMF',
+    icon: '📞',
+    color: '#8E44AD',
+    description: 'Captura dígitos DTMF (teclas) do chamador.',
+    errorPorts: true,
+    supportsTimeout: true,
+    inputs: [{ key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME }],
+    outputs: [{ key: 'out', label: 'Próximo', socketName: DEFAULT_SOCKET_NAME }],
+    properties: [
+      {
+        key: 'variable',
+        type: 'text',
+        label: 'Variável para salvar os dígitos',
+        description: 'Nome da variável onde os dígitos capturados serão armazenados (ex.: digits).',
+        required: false,
+        defaultValue: 'digits',
+        placeholder: 'digits',
+        validate: (value) => {
+          if (!value) return null;
+          return validateVariableName(value);
+        },
+      },
+      {
+        key: 'maxDigits',
+        type: 'number',
+        label: 'Máximo de dígitos',
+        description: 'Quantidade máxima de dígitos a coletar.',
+        required: false,
+        defaultValue: 1,
+        placeholder: '1',
+      },
+      {
+        key: 'timeoutSeconds',
+        type: 'number',
+        label: 'Timeout inicial (s)',
+        description: 'Tempo máximo esperando o primeiro dígito.',
+        required: false,
+        defaultValue: 8,
+        placeholder: '8',
+      },
+      {
+        key: 'interDigitTimeoutSeconds',
+        type: 'number',
+        label: 'Timeout entre dígitos (s)',
+        description: 'Tempo máximo entre dígitos após o primeiro.',
+        required: false,
+        defaultValue: 3,
+        placeholder: '3',
+      },
+      {
+        key: 'terminator',
+        type: 'text',
+        label: 'Terminador (opcional)',
+        description: 'Se definido, encerra a coleta ao receber este dígito (ex.: #).',
+        required: false,
+        defaultValue: '#',
+        placeholder: '#',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (node.config?.variable) {
+        const ve = validateVariableName(node.config.variable, nodeId);
+        if (ve) errors.push({ ...ve, nodeIds: [nodeId] });
+      }
+      return errors;
+    },
+  },
+
+  voice_branch: {
+    type: 'voice_branch',
+    label: 'Roteador (Voz)',
+    icon: '🔀',
+    color: '#F5A623',
+    description: 'Roteia o fluxo de voz por regras (ex.: equals/contains). Use após ASR/DTMF.',
+    inputs: [{ key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME }],
+    outputs: [{ key: 'default', label: 'Padrão', socketName: DEFAULT_SOCKET_NAME }],
+    getOutputs(node) {
+      // Mesmo comportamento do router (saídas dinâmicas por regra + padrão)
+      const config = node?.config || node?.data?.config || null;
+      const outputs = [];
+      if (config && Array.isArray(config.rules)) {
+        config.rules.forEach((rule, index) => {
+          outputs.push({
+            key: `rule_${index}`,
+            label: rule?.label ? String(rule.label) : `Regra ${index + 1}`,
+            socketName: DEFAULT_SOCKET_NAME,
+          });
+        });
+      }
+      outputs.push({ key: 'default', label: 'Padrão', socketName: DEFAULT_SOCKET_NAME });
+      return outputs;
+    },
+    properties: [
+      {
+        key: 'rules',
+        type: 'router',
+        label: 'Regras',
+        description: 'Defina regras para decidir o caminho. Dica: use a última regra como fallback (always).',
+        required: true,
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (!node.config || typeof node.config !== 'object' || !Array.isArray(node.config.rules) || node.config.rules.length === 0) {
+        errors.push({
+          code: 'VOICE_BRANCH_MISSING_RULES',
+          message: `Nó voice_branch "${nodeId}" deve ter config.rules (array não vazio).`,
+          messageUi: 'Configure pelo menos uma regra no roteador de voz.',
+          nodeIds: [nodeId],
+        });
+      }
+      return errors;
+    },
+  },
+
+  voice_transfer_ramal: {
+    type: 'voice_transfer_ramal',
+    label: 'Transferir Ramal',
+    icon: '➡️',
+    color: '#2C3E50',
+    description: 'Transfere a chamada para um ramal (dialplan).',
+    inputs: [{ key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME }],
+    outputs: [],
+    properties: [
+      {
+        key: 'ramal',
+        type: 'text',
+        label: 'Ramal',
+        description: 'Número do ramal para transferir (ex.: 1001).',
+        required: true,
+        placeholder: '1001',
+      },
+      {
+        key: 'context',
+        type: 'text',
+        label: 'Contexto (opcional)',
+        description: 'Contexto do dialplan. Se vazio, usa o padrão do runtime.',
+        required: false,
+        placeholder: 'ramais',
+      },
+      {
+        key: 'priority',
+        type: 'number',
+        label: 'Prioridade',
+        description: 'Prioridade do dialplan (geralmente 1).',
+        required: false,
+        defaultValue: 1,
+        placeholder: '1',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (!node.config?.ramal || typeof node.config.ramal !== 'string' || node.config.ramal.trim() === '') {
+        errors.push({
+          code: 'VOICE_TRANSFER_RAMAL_MISSING_RAMAL',
+          message: `Nó "${nodeId}" precisa de config.ramal.`,
+          messageUi: 'Preencha o ramal de destino.',
+          nodeIds: [nodeId],
+        });
+      }
+      return errors;
+    },
+  },
+
+  voice_transfer_utils: {
+    type: 'voice_transfer_utils',
+    label: 'Transferir Utilitário',
+    icon: '🧩',
+    color: '#2C3E50',
+    description: 'Transfere para uma extensão utilitária (ex.: *600).',
+    inputs: [{ key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME }],
+    outputs: [],
+    properties: [
+      {
+        key: 'extension',
+        type: 'text',
+        label: 'Extensão',
+        description: 'Extensão de destino (ex.: *600).',
+        required: true,
+        placeholder: '*600',
+      },
+      {
+        key: 'context',
+        type: 'text',
+        label: 'Contexto (opcional)',
+        description: 'Contexto do dialplan. Se vazio, usa o padrão do runtime.',
+        required: false,
+        placeholder: 'utils',
+      },
+      {
+        key: 'priority',
+        type: 'number',
+        label: 'Prioridade',
+        description: 'Prioridade do dialplan (geralmente 1).',
+        required: false,
+        defaultValue: 1,
+        placeholder: '1',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (!node.config?.extension || typeof node.config.extension !== 'string' || node.config.extension.trim() === '') {
+        errors.push({
+          code: 'VOICE_TRANSFER_UTILS_MISSING_EXTENSION',
+          message: `Nó "${nodeId}" precisa de config.extension.`,
+          messageUi: 'Preencha a extensão de destino.',
+          nodeIds: [nodeId],
+        });
+      }
+      return errors;
+    },
+  },
+
+  voice_transfer_fila: {
+    type: 'voice_transfer_fila',
+    label: 'Transferir Fila',
+    icon: '👥',
+    color: '#2C3E50',
+    description: 'Transfere a chamada para uma fila (disca-fila).',
+    inputs: [{ key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME }],
+    outputs: [],
+    properties: [
+      {
+        key: 'fila',
+        type: 'text',
+        label: 'Fila',
+        description: 'Identificador da fila (ex.: suporte).',
+        required: true,
+        placeholder: 'suporte',
+      },
+      {
+        key: 'context',
+        type: 'text',
+        label: 'Contexto (opcional)',
+        description: 'Contexto do dialplan. Se vazio, usa o padrão do runtime.',
+        required: false,
+        placeholder: 'disca-fila',
+      },
+      {
+        key: 'extension',
+        type: 'text',
+        label: 'Extensão (opcional)',
+        description: 'Extensão dentro do contexto da fila (geralmente "s").',
+        required: false,
+        defaultValue: 's',
+        placeholder: 's',
+      },
+      {
+        key: 'priority',
+        type: 'number',
+        label: 'Prioridade',
+        description: 'Prioridade do dialplan (geralmente 1).',
+        required: false,
+        defaultValue: 1,
+        placeholder: '1',
+      },
+    ],
+    validate(node) {
+      const errors = [];
+      const nodeId = node.id || 'unknown';
+      if (!node.config?.fila || typeof node.config.fila !== 'string' || node.config.fila.trim() === '') {
+        errors.push({
+          code: 'VOICE_TRANSFER_FILA_MISSING_FILA',
+          message: `Nó "${nodeId}" precisa de config.fila.`,
+          messageUi: 'Preencha a fila de destino.',
+          nodeIds: [nodeId],
+        });
+      }
+      return errors;
+    },
+  },
+
+  voice_hangup: {
+    type: 'voice_hangup',
+    label: 'Desligar',
+    icon: '📴',
+    color: '#95A5A6',
+    description: 'Encerra a chamada.',
+    inputs: [{ key: 'in', label: 'Anterior', socketName: DEFAULT_SOCKET_NAME }],
+    outputs: [],
+    properties: [],
+    validate() {
+      return [];
+    },
+  },
+
 };
 
 /**

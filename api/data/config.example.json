@@ -20,6 +20,18 @@
     "enableWebhooks": true,
     "enableBulkMessaging": false
   },
+  "pbx": {
+    "legacy": {
+      "root": "/opt/results/telefonia/ripabx",
+      "xmlDir": "/opt/results/telefonia/ripabx/dados/xml",
+      "binDir": "/opt/results/telefonia/ripabx/bin",
+      "cgiDir": "/opt/results/telefonia/ripabx/cgi-bin",
+      "asteriskConfigDir": "/opt/results/telefonia/ripabx/etc/asterisk"
+    },
+    "mariadb": {
+      "url": "mysql://USER:PASS@HOST:3306/results"
+    }
+  },
   "ai": {
     "openai": {
       "model": "gpt-5.2"

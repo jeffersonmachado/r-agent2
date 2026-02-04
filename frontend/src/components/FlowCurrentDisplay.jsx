@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../styles/Button';
 
-export function FlowCurrentDisplay({ displayedFlow, onRegenerate }) {
+export function FlowCurrentDisplay({ displayedFlow, onRegenerate, kind, onKindChange }) {
   const aiGeneration = displayedFlow?.metadata?.aiGeneration || null;
   const usedFallback =
     typeof aiGeneration?.usedFallback === 'boolean' ? aiGeneration.usedFallback : null;
@@ -25,6 +25,21 @@ export function FlowCurrentDisplay({ displayedFlow, onRegenerate }) {
       <strong className="ml-1">
         {displayedFlow ? (displayedFlow.name || displayedFlow.id) : 'não carregado'}
       </strong>
+
+      {displayedFlow && (
+        <span className="ml-3 inline-flex items-center gap-2 text-xs text-text-secondary">
+          <span>Tipo:</span>
+          <select
+            value={String(kind || displayedFlow?.kind || 'chat').toLowerCase() === 'voice' ? 'voice' : 'chat'}
+            onChange={(e) => onKindChange && onKindChange(e.target.value)}
+            className="border border-border-default rounded px-2 py-1 bg-bg-elevated text-text-primary"
+            title="Define se o fluxo é de chat ou voz (URA)"
+          >
+            <option value="chat">Chat</option>
+            <option value="voice">Voz (URA)</option>
+          </select>
+        </span>
+      )}
 
       {displayedFlow && (
         <Button

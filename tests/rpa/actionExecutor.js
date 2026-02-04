@@ -24,6 +24,7 @@ class ActionExecutor {
     // Logs detalhados por step/ação (úteis para debug no backend/CI)
     this.debugLogs = [];
     this.consoleLogs = [];
+    this.httpErrors = [];
     this.options = {
       headless: options.headless !== undefined ? options.headless : config.playwright.headless,
       slowMo: options.slowMo || config.playwright.slowMo,
@@ -37,6 +38,13 @@ class ActionExecutor {
       maxConsoleEntries: options.maxConsoleEntries !== undefined
         ? options.maxConsoleEntries
         : (Number(process.env.RPA_MAX_CONSOLE_ENTRIES) || 500),
+      captureHttpErrors: options.captureHttpErrors !== undefined
+        ? options.captureHttpErrors
+        : (process.env.RPA_CAPTURE_HTTP_ERRORS === '1' || process.env.RPA_CAPTURE_HTTP_ERRORS === 'true'),
+      traceEnabled: options.traceEnabled !== undefined
+        ? options.traceEnabled
+        : (process.env.RPA_TRACE === '1' || process.env.RPA_TRACE === 'true'),
+      traceDir: options.traceDir || process.env.RPA_TRACE_DIR || path.join(__dirname, 'traces'),
     };
   }
 
@@ -125,6 +133,17 @@ class ActionExecutor {
       viewport: { width: 1280, height: 720 },
     });
 
+    // Tracing (opcional) - útil para diagnóstico em CI/stack.
+    // Observação: não vira gate; apenas evidência.
+    if (this.options.traceEnabled) {
+      try {
+        const fs = require('fs');
+        if (!fs.existsSync(this.options.traceDir)) {
+          fs.mkdirSync(this.options.traceDir, { recursive: true });
+        }
+      } catch (_) {}
+    }
+
     this.page = await this.context.newPage();
     
     // Captura console do browser (útil para debug de travas/renders)
@@ -164,6 +183,79 @@ class ActionExecutor {
         timestamp: new Date().toISOString(),
       });
     });
+
+    // Captura respostas HTTP com status >= 400 (não é gate; apenas evidência).
+    if (this.options.captureHttpErrors) {
+      this.page.on('response', async (response) => {
+        try {
+          const status = response.status();
+          if (status < 400) return;
+          const req = response.request();
+          const url = response.url();
+          const method = req.method();
+
+          // Tenta capturar um preview do body apenas quando for texto/JSON, com limite.
+          let bodyPreview = null;
+          let contentType = null;
+          try {
+            const headers = response.headers();
+            contentType = headers['content-type'] || headers['Content-Type'] || null;
+          } catch (_) {}
+
+          const isTextLike = contentType
+            ? /application\/json|text\/|application\/problem\+json|application\/x-www-form-urlencoded/i.test(contentType)
+            : false;
+          if (isTextLike) {
+            try {
+              const txt = await response.text();
+              if (typeof txt === 'string') bodyPreview = txt.slice(0, 2000);
+            } catch (_) {
+              // ignora
+            }
+          }
+
+          const entry = {
+            type: 'http_error',
+            status,
+            url,
+            method,
+            contentType,
+            bodyPreview,
+            timestamp: new Date().toISOString(),
+          };
+          this.httpErrors.push(entry);
+          // também expõe via errors (mantém compatibilidade com report atual)
+          this.errors.push(entry);
+        } catch (_) {
+          // ignora
+        }
+      });
+    }
+  }
+
+  async startTracing() {
+    if (!this.options.traceEnabled) return { started: false };
+    if (!this.context || !this.context.tracing) return { started: false };
+    try {
+      await this.context.tracing.start({ screenshots: true, snapshots: true, sources: false });
+      return { started: true };
+    } catch (error) {
+      return { started: false, error: error.message };
+    }
+  }
+
+  async stopTracing(name = `trace-${Date.now()}`) {
+    if (!this.options.traceEnabled) return null;
+    if (!this.context || !this.context.tracing) return null;
+    try {
+      const filepath = path.join(this.options.traceDir, `${name}.zip`);
+      await this.context.tracing.stop({ path: filepath });
+      return filepath;
+    } catch (_) {
+      // best-effort
+      try { await this.context.tracing.stop(); } catch {}
+      return null;
+    }
   }
 
   getDebugLogs() {
@@ -1534,6 +1626,10 @@ class ActionExecutor {
    */
   getErrors() {
     return [...this.errors];
+  }
+
+  getHttpErrors() {
+    return [...this.httpErrors];
   }
 
   /**

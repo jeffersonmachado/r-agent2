@@ -75,6 +75,40 @@ const DEFAULT_POLICIES = {
     points: getConfigValue('rateLimit.policies.systemValidate.points', 'RATE_LIMIT_SYSTEM_VALIDATE_POINTS', 10),
     duration: getConfigValue('rateLimit.policies.systemValidate.duration', 'RATE_LIMIT_SYSTEM_VALIDATE_DURATION', 60),
   },
+
+  // -----------------------------------------------------------------------
+  // Public access tokens (storefront/kiosk/panel/station)
+  // -----------------------------------------------------------------------
+  // Resolve endpoint (anti brute-force por IP)
+  PUBLIC_TOKEN_RESOLVE: {
+    points: getConfigValue('rateLimit.policies.publicTokens.resolve.points', 'RATE_LIMIT_PUBLIC_TOKENS_RESOLVE_POINTS', 60),
+    duration: getConfigValue('rateLimit.policies.publicTokens.resolve.duration', 'RATE_LIMIT_PUBLIC_TOKENS_RESOLVE_DURATION', 60),
+  },
+  // Uso por kind (limite por tokenId)
+  PUBLIC_TOKEN_STOREFRONT: {
+    points: getConfigValue('rateLimit.policies.publicTokens.storefront.points', 'RATE_LIMIT_PUBLIC_TOKENS_STOREFRONT_POINTS', 300),
+    duration: getConfigValue('rateLimit.policies.publicTokens.storefront.duration', 'RATE_LIMIT_PUBLIC_TOKENS_STOREFRONT_DURATION', 60),
+  },
+  PUBLIC_TOKEN_KIOSK: {
+    points: getConfigValue('rateLimit.policies.publicTokens.kiosk.points', 'RATE_LIMIT_PUBLIC_TOKENS_KIOSK_POINTS', 120),
+    duration: getConfigValue('rateLimit.policies.publicTokens.kiosk.duration', 'RATE_LIMIT_PUBLIC_TOKENS_KIOSK_DURATION', 60),
+  },
+  PUBLIC_TOKEN_PANEL: {
+    points: getConfigValue('rateLimit.policies.publicTokens.panel.points', 'RATE_LIMIT_PUBLIC_TOKENS_PANEL_POINTS', 600),
+    duration: getConfigValue('rateLimit.policies.publicTokens.panel.duration', 'RATE_LIMIT_PUBLIC_TOKENS_PANEL_DURATION', 60),
+  },
+  PUBLIC_TOKEN_STATION: {
+    points: getConfigValue('rateLimit.policies.publicTokens.station.points', 'RATE_LIMIT_PUBLIC_TOKENS_STATION_POINTS', 300),
+    duration: getConfigValue('rateLimit.policies.publicTokens.station.duration', 'RATE_LIMIT_PUBLIC_TOKENS_STATION_DURATION', 60),
+  },
+
+  // -----------------------------------------------------------------------
+  // Internal execution queue quotas (per tenant)
+  // -----------------------------------------------------------------------
+  EXECUTION_QUEUE_ENQUEUE: {
+    points: getConfigValue('rateLimit.policies.executionQueue.enqueue.points', 'RATE_LIMIT_EXECUTION_QUEUE_ENQUEUE_POINTS', 300),
+    duration: getConfigValue('rateLimit.policies.executionQueue.enqueue.duration', 'RATE_LIMIT_EXECUTION_QUEUE_ENQUEUE_DURATION', 60),
+  },
 };
 
 /**

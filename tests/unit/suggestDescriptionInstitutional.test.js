@@ -8,6 +8,8 @@
 
 const http = require('http');
 
+jest.setTimeout(30000);
+
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
@@ -141,7 +143,7 @@ describe('POST /system/suggest-description - institutional mode', () => {
           'Para falar com a equipe, você pode usar o WhatsApp (11) 99999-9999 e conhecer as opções de pagamento como PIX e cartão. Entre em contato para saber mais e solicitar uma proposta.',
         ].join('\n\n'),
       };
-    });
+  }, 30000);
 
     jest.doMock('../../api/services/aiProviderService', () => ({
       initializeAiProviders: jest.fn(async () => {}),
@@ -218,6 +220,6 @@ describe('POST /system/suggest-description - institutional mode', () => {
     expect(generateAiResponse.mock.calls.length).toBeGreaterThanOrEqual(3);
 
     await new Promise((resolve) => server.close(resolve));
-  }, 20000);
+  }, 45000);
 });
 

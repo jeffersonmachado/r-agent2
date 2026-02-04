@@ -198,7 +198,7 @@ function getLimiter(operationType) {
 async function checkRateLimit(options) {
   // Em desenvolvimento, rate limit é desativado
   const nodeEnv = process.env.NODE_ENV || 'development';
-  if (nodeEnv === 'development') {
+  if (nodeEnv === 'development' || nodeEnv === 'test') {
     return {
       allowed: true,
       remainingPoints: 999999,

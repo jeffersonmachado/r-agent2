@@ -40,28 +40,34 @@ function normalizeRpaTestUrls(test) {
     
     // Se já é uma URL absoluta válida (http:// ou https://), verifica se é inválida
     if (url.match(/^https?:\/\//)) {
-      // Verifica se é um domínio inválido conhecido
-      const invalidDomains = ['rpa.local', 'localhost.local', '.local'];
-      const isInvalid = invalidDomains.some(domain => url.includes(domain));
-      
-      if (isInvalid) {
-        // Extrai o caminho e query string
-        try {
-          const urlObj = new URL(url);
-          const path = urlObj.pathname + urlObj.search;
-          return baseUrl + path;
-        } catch (e) {
-          // Se falhar ao parsear, tenta extrair caminho manualmente
-          const match = url.match(/https?:\/\/[^\/]+(\/.*)?$/);
-          if (match && match[1]) {
-            return baseUrl + match[1];
-          }
-          return baseUrl;
+      try {
+        const urlObj = new URL(url);
+
+        // Reescreve URLs locais (ex.: localhost:3000) para a base atual do frontend.
+        // Isso permite replay de seeds gravados em portas diferentes (3000 vs 5173, etc).
+        const localHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
+        if (localHosts.has(urlObj.hostname)) {
+          return baseUrl + urlObj.pathname + urlObj.search + urlObj.hash;
         }
+
+        // Verifica se é um domínio inválido conhecido
+        const invalidDomains = ['rpa.local', 'localhost.local', '.local'];
+        const isInvalid = invalidDomains.some(domain => urlObj.hostname.includes(domain));
+
+        if (isInvalid) {
+          return baseUrl + urlObj.pathname + urlObj.search + urlObj.hash;
+        }
+
+        // URL absoluta válida e não-local, mantém
+        return url;
+      } catch (e) {
+        // Se falhar ao parsear, tenta extrair caminho manualmente
+        const match = url.match(/https?:\/\/[^\/]+(\/.*)?$/);
+        if (match && match[1]) {
+          return baseUrl + match[1];
+        }
+        return baseUrl;
       }
-      
-      // URL absoluta válida, mantém
-      return url;
     }
     
     // URL relativa, adiciona base

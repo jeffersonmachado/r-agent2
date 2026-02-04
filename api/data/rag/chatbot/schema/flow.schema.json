@@ -30,6 +30,11 @@
       "minimum": 1,
       "description": "Versão do fluxo"
     },
+    "kind": {
+      "type": "string",
+      "enum": ["chat", "voice"],
+      "description": "Tipo do fluxo (chat ou voz/URA). Se ausente, assume chat."
+    },
     "nodes": {
       "type": "array",
       "minItems": 1,
@@ -60,6 +65,14 @@
               "fallback",
               "subflow",
               "end",
+              "voice_prompt_listen",
+              "voice_listen_asr",
+              "voice_gather_dtmf",
+              "voice_branch",
+              "voice_transfer_ramal",
+              "voice_transfer_fila",
+              "voice_transfer_utils",
+              "voice_hangup",
               "get_flow_info",
               "get_queue_status",
               "get_config_value",

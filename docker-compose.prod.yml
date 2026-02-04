@@ -25,11 +25,11 @@ services:
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
       RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       # PostgreSQL - Configuração de produção
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-r_agent2}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:-StrongPass}@postgres:5432/${POSTGRES_DB:-results_saas}}
       PGHOST: ${PGHOST:-postgres}
-      PGUSER: ${POSTGRES_USER:-postgres}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      PGDATABASE: ${POSTGRES_DB:-r_agent2}
+      PGUSER: ${POSTGRES_USER:-results_app}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-StrongPass}
+      PGDATABASE: ${POSTGRES_DB:-results_saas}
       PGPORT: ${PGPORT:-5432}
       # Criptografia de segredos (OBRIGATÓRIO em produção)
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
@@ -52,18 +52,34 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Configurações adicionais de produção
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # -------------------------------------------------------------------
+      # PBX v1 (Asterisk Realtime/ODBC + AMI)
+      # -------------------------------------------------------------------
+      AMI_HOST: ${AMI_HOST:-asterisk}
+      AMI_PORT: ${AMI_PORT:-5038}
+      AMI_USERNAME: ${AMI_USERNAME:-ragent2}
+      AMI_SECRET: ${AMI_SECRET:-ragent2}
+      AMI_ORIGINATE_ENABLED: ${AMI_ORIGINATE_ENABLED:-false}
+      PBX_MEDIA_DIR: ${PBX_MEDIA_DIR:-/app/api/data/pbx-media}
+      PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
+      PBX_RECORDING_ENABLED: ${PBX_RECORDING_ENABLED:-false}
+      PBX_MIXMONITOR_DIR: ${PBX_MIXMONITOR_DIR:-/var/spool/asterisk/monitor/pbx}
     ports:
       # Porta exposta no host (externa) -> porta interna do container (3000)
       - "${API_PUBLIC_PORT:-3001}:3000"
     volumes:
       # Persistência de dados
       - r-agent2-api-data:/app/api/data
+      - r-agent2-pbx-media-data:/app/api/data/pbx-media
+      - r-agent2-pbx-recordings-data:/app/api/data/pbx-recordings
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       rag-service:
+        condition: service_healthy
+      asterisk:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -168,9 +184,9 @@ services:
     image: pgvector/pgvector:pg16
     container_name: r-agent2-postgres-prod
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-r_agent2}
+      POSTGRES_USER: ${POSTGRES_USER:-results_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-StrongPass}
+      POSTGRES_DB: ${POSTGRES_DB:-results_saas}
       PGDATA: /var/lib/postgresql/data/pgdata
       # Configurações de performance para produção
       LANG: C.UTF-8
@@ -221,6 +237,35 @@ services:
       -c log_timezone=America/Sao_Paulo
       -c timezone=America/Sao_Paulo
 
+  asterisk:
+    build:
+      context: ./pbx/asterisk
+      dockerfile: ./Dockerfile
+    image: r-agent2-asterisk:latest
+    container_name: r-agent2-asterisk-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
+      - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
+      - r-agent2-pbx-media-data:/var/lib/asterisk/sounds/pbx
+      - r-agent2-pbx-recordings-data:/var/spool/asterisk/monitor/pbx
+    command: sh -c "asterisk -f -vvvvv -d"
+    ports:
+      - "${AMI_PUBLIC_PORT:-5038}:5038"
+      - "${SIP_UDP_PORT:-5060}:5060/udp"
+    restart: unless-stopped
+    networks:
+      - r-agent2-network
+    healthcheck:
+      test: ["CMD-SHELL", "asterisk -rx 'core show version' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   redis:
     build:
       context: ./redis
@@ -253,6 +298,8 @@ volumes:
   r-agent2-postgres-data:
   r-agent2-redis-data:
   r-agent2-api-data:
+  r-agent2-pbx-media-data:
+  r-agent2-pbx-recordings-data:
   r-agent2-rag-vector-store:
 
 networks:

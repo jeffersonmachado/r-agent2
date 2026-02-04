@@ -60,6 +60,9 @@ function logAction({ agentId, username, tenantId = null, action, resource, resou
   if (dbAvailable()) {
     const AuditEventModel = typeof AuditEvent === 'function' ? AuditEvent() : AuditEvent;
     setImmediate(() => {
+      if (!AuditEventModel || typeof AuditEventModel.create !== 'function') {
+        return;
+      }
       AuditEventModel.create({
         tenant_key: tenantId || null,
         actor_user_id: agentId && agentId !== 'system' ? agentId : null,

@@ -73,7 +73,9 @@ ecosystem.config.js
 .pm2/
 
 # Scripts de desenvolvimento
-scripts/
+scripts/*.md
+scripts/*.txt
+scripts/*.json
 tools/
 
 # Testes

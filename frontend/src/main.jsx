@@ -40,6 +40,15 @@ import { ChannelHealthPage } from './pages/ChannelHealthPage';
 import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
 import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
+import { PbxPage } from './pages/PbxPage';
+import { StorefrontOrderPage } from './pages/StorefrontOrderPage';
+import { StorefrontOrderStatusPage } from './pages/StorefrontOrderStatusPage';
+import { OrdersPage } from './pages/OrdersPage';
+import { KitchenPage } from './pages/KitchenPage';
+import { DispatchPage } from './pages/DispatchPage';
+import { KioskPage } from './pages/KioskPage';
+import { PanelPage } from './pages/PanelPage';
+import { StationPage } from './pages/StationPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
@@ -130,6 +139,11 @@ function AppWithAuth() {
   const { isAuthenticated, loading, agent } = useAuth();
 
   // Determina qual página renderizar baseado na URL
+  const isStorefrontOrder = currentPath === '/storefront/order' || currentPath.startsWith('/storefront/order?');
+  const isStorefrontOrderStatus = currentPath.startsWith('/storefront/order/');
+  const isKiosk = currentPath === '/kiosk' || currentPath.startsWith('/kiosk');
+  const isPanel = currentPath === '/panel' || currentPath.startsWith('/panel');
+  const isStation = currentPath === '/station' || currentPath.startsWith('/station');
   const isDashboard = currentPath === '/' || currentPath === '/dashboard';
   const isEditor = currentPath === '/editor' || currentPath.startsWith('/editor');
   const isSupport = currentPath === '/support' || currentPath.startsWith('/support');
@@ -163,14 +177,18 @@ function AppWithAuth() {
   const isChannelHealth = currentPath === '/channel-health' || currentPath.startsWith('/channel-health');
   const isChannelAccounts = currentPath === '/channel-accounts' || currentPath.startsWith('/channel-accounts');
   const isPlanUsage = currentPath === '/plan-usage' || currentPath.startsWith('/plan-usage');
+  const isPbx = currentPath === '/pbx' || currentPath.startsWith('/pbx');
   const isDevDashboard = currentPath === '/dev' || currentPath === '/dev-dashboard' || currentPath.startsWith('/dev');
+  const isOrders = currentPath === '/orders' || currentPath.startsWith('/orders');
+  const isKitchen = currentPath === '/kitchen' || currentPath.startsWith('/kitchen');
+  const isDispatch = currentPath === '/dispatch' || currentPath.startsWith('/dispatch');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
   // Verifica se é Super Admin usando a função completa que considera originalTenantId
   const isSuperAdmin = checkIsSuperAdmin(agent);
 
-  // Todas as rotas requerem autenticação, exceto /login
-  const publicRoutes = []; // Nenhuma rota pública além de /login
+  // Rotas públicas (sem login): Storefront v1
+  const publicRoutes = ['/storefront', '/kiosk', '/panel', '/station']; // além de /login
 
   // Se a rota não for reconhecida, redireciona para login se não autenticado, ou /dashboard se autenticado
   useEffect(() => {
@@ -178,9 +196,13 @@ function AppWithAuth() {
     if (loading) return;
     
     const allRoutes = [
+      isStorefrontOrder, isStorefrontOrderStatus,
+      isKiosk, isPanel, isStation,
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isDevDashboard, isLogin
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbx, isDevDashboard,
+      isOrders, isKitchen, isDispatch,
+      isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -193,7 +215,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbx, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -236,6 +258,7 @@ function AppWithAuth() {
       '/channel-health': '📡 Saúde de Canais',
       '/channel-accounts': '🔌 Canais',
       '/plan-usage': '📦 Plano e Uso',
+      '/pbx': '📞 PBX',
       '/dev': '🛠️ Dashboard de Desenvolvimento',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/login': '🔐 Login',
@@ -269,7 +292,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/quick-replies', '/faq'];
+  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/quick-replies', '/faq'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -280,9 +303,20 @@ function AppWithAuth() {
     return <Login />;
   }
 
-  // Se não está autenticado, mostra login (todas as outras rotas requerem autenticação)
-  if (!isAuthenticated) {
+  // Rotas públicas (storefront) não exigem autenticação
+  if (!isAuthenticated && !isPublicRoute) {
     return <Login />;
+  }
+
+  // Render público (sem menu/gate)
+  if (isPublicRoute) {
+    if (isStorefrontOrder) return <StorefrontOrderPage />;
+    if (isStorefrontOrderStatus) return <StorefrontOrderStatusPage />;
+    if (isKiosk) return <KioskPage />;
+    if (isPanel) return <PanelPage />;
+    if (isStation) return <StationPage />;
+    // fallback
+    return <StorefrontOrderPage />;
   }
 
   // Se chegou aqui, está autenticado OU é rota pública
@@ -358,6 +392,14 @@ function AppWithAuth() {
         <ChannelAccountsPage />
       ) : isPlanUsage ? (
         <PlanUsagePage />
+      ) : isPbx ? (
+        <PbxPage />
+      ) : isOrders ? (
+        <OrdersPage />
+      ) : isKitchen ? (
+        <KitchenPage />
+      ) : isDispatch ? (
+        <DispatchPage />
       ) : isDevDashboard ? (
         // Rota /dev só é acessível por super-admin
         isSuperAdmin ? (

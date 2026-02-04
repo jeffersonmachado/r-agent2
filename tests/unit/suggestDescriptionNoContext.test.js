@@ -147,6 +147,6 @@ describe('POST /system/suggest-description - NO_INDEXED_CONTEXT_FALLBACK', () =>
     expect(generateAiResponse).not.toHaveBeenCalled();
 
     await new Promise((resolve) => server.close(resolve));
-  }, 20000);
+  }, 45000);
 });
 

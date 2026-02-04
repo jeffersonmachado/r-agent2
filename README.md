@@ -1,117 +1,98 @@
-## Visão geral (RAG + scraping + arquivos)
+## Visão geral
 
-Este repositório mantém um pipeline que **indexa fontes do tenant** (site + arquivos) no RAG e usa essas fontes para **sugerir descrição**.
+Este repositório evolui para uma **plataforma unificada** que converte processos e operações em **fluxos visuais (DAG)** com **nodes plugáveis**, reunindo sete pilares em um único produto SaaS multi-tenant:
 
-## Vector Store (PostgreSQL + pgvector) — fonte única
+1) **Automação** (inspirado em **n8n**)  
+2) **Marketing automation** (inspirado em **RD Station**)  
+3) **Atendimento omnichannel** (inspirado em **BLIP / Huggy / Zenvia**)  
+4) **Voz / Contact Center** (inspirado em **Twilio Flex / Talkdesk / Five9**)  
+5) **Orquestração de IA** (inspirado em **LangFlow / Flowise**)  
+6) **Filas físicas / Fast service** (inspirado em **Qminder / QLess / Waitwhile / Skiplino**)  
+7) **Delivery / Marketplace de pedidos** (inspirado em **iFood / Uber Eats / Rappi / DoorDash**)  
 
-O sistema RAG usa **PostgreSQL com a extensão `pgvector`** como **única fonte de verdade** para embeddings e chunks (`rag_chunks`). Isso elimina inconsistências do tipo “BD diz indexed, mas vector store está vazio”.
+**Tese do produto**: no nosso sistema, *tudo vira node* dentro do DAG — desde “gerar senha no totem” até “enviar WhatsApp”, “acionar URA”, “atualizar CRM”, “disparar jornada”, “medir ROI” e “replay da execução”.
 
-### Habilitar pgvector no Postgres
+## Problema que resolvemos
 
-As migrations já incluem:
+Organizações crescem usando ferramentas isoladas (automação, marketing, atendimento, voz, IA, operação física e delivery). O resultado é:
 
-- `CREATE EXTENSION IF NOT EXISTS vector;`
-- criação da tabela `rag_chunks` com coluna `embedding vector(N)` (onde \(N\) vem de `EMBEDDING_DIM`)
+- **Dados fragmentados** (identidade do cliente espalhada; difícil reconciliar histórico)
+- **Operação cara e frágil** (integrações pontuais; baixa rastreabilidade ponta a ponta)
+- **Dificuldade de escala** (SLA, filas, produtividade, voz e atendimento físico)
+- **Operação de delivery fragmentada** (pedido, preparo, despacho, tracking e pós-venda em sistemas distintos)
+- **ROI obscuro** (atribuição e custo total por canal e jornada)
 
-Para aplicar:
+## Documentação (comece por aqui)
 
-```bash
-npm run db:migrate
-```
+- **Índice da documentação**: `docs/00_DOCUMENTACAO_INDEX.md`
+- **Objetivo final / visão**: `docs/OBJETIVO_FINAL_PLATAFORMA.md`
+- **Roadmap (atalho)**: `docs/ROADMAP.md`
+- **Roadmap 3–5 anos**: `docs/ROADMAP_3A5_ANOS.md`
+- **O que falta (fonte única)**: `docs/O_QUE_FALTA.md`
+- (Histórico) **Gaps vs benchmarks**: `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md`
 
-### Se você usa Postgres local (fora do Docker)
+## Pilares do produto (com benchmarks)
 
-Você precisa instalar o pacote do pgvector no seu Postgres. Exemplo (Ubuntu/Debian, Postgres 16):
+### 1) Automação (n8n)
+- DAG runtime, execuções por nó, histórico e **replay**
+- Queue distribuída, scheduler, retries/idempotência
+- Credentials vault, versionamento, subflows
+- Marketplace de nodes e templates reutilizáveis
 
-```bash
-sudo apt-get update
-sudo apt-get install -y postgresql-16-pgvector
-```
+### 2) Marketing automation (RD Station)
+- Leads, formulários, landing pages e tracker JS (UTM/pageview)
+- Scoring, segmentação e jornadas
+- Email marketing, funil visual, analytics e ROI
 
-Depois disso, rode as migrations novamente.
+### 3) Atendimento omnichannel (BLIP / Huggy / Zenvia)
+- Inbox omnichannel unificado (bot + humano)
+- Filas, SLA, roteamento e operação humana
+- Histórico completo do cliente (timeline)
 
-### Variáveis de ambiente
+### 4) Voz / Contact Center (Twilio Flex / Talkdesk / Five9)
+- URA visual, filas de voz, transferências e gravação
+- Click-to-call, discagem, disposition codes
+- Eventos de chamada como triggers/ações no DAG
 
-- **`RAG_VECTOR_STORE_TYPE`**: `postgres` (padrão recomendado)
-- **`EMBEDDING_DIM`**: dimensão do embedding (padrão do projeto: `384`)
-  - O `rag-service` (Python) usa `sentence-transformers/all-MiniLM-L6-v2` por padrão (384 dims).
+### 5) IA (LangFlow / Flowise)
+- Nodes reutilizáveis de IA (classificação, priorização, enriquecimento, sugestão)
+- Contexto unificado + governança (custo, privacidade, auditoria)
 
-### Reindex de tenant (zera e recria tudo)
+### 6) Filas físicas / Fast service (Qminder / QLess / Waitwhile / Skiplino)
+- Emissão de senha (totem/kiosk), tipos de fila e prioridades
+- Painel de chamada (TV), estações/guichês e “chamar próximo”
+- Métricas: tempo de espera, throughput, abandono e produtividade
+- Integração com fluxos: **Totem → Fila → DAG → Atendimento/Voz/CRM/Marketing**
 
-- Endpoint: `POST /rag/reindex-all?tenantId=...`
+### 7) Delivery / Marketplace de pedidos (iFood / Uber Eats / Rappi / DoorDash)
+- Criação de pedido, pagamento e antifraude (quando aplicável)
+- Status em tempo real (pedido → preparo → despacho → entrega)
+- Despacho de entregador e tracking
+- Notificações (WhatsApp/SMS/push), avaliação e suporte
+- SLA de entrega e métricas de operação
+- Integração com fluxos: **Pedido → Cozinha → Entrega → CRM → Marketing**
 
-## Scraping (fetch + fallback Playwright)
+## Estado atual (o que já existe neste repo)
 
-- **Rápido (padrão)**: tenta `fetch`/HTML estático.
-- **Fallback (SPA/JS)**: quando o texto extraído for curto, tenta Playwright (Chromium headless).
+Além do editor de fluxos e execução básica, o repositório já contém entregas importantes para SaaS e operação:
 
-### Habilitar/Desabilitar via env
+- **SaaS multi-tenant, RBAC, planos/limites, auditoria, super-admin e onboarding**: ver `IMPLEMENTACAO_SAAS_COMPLETA.md`.
+- **Atendimento omnichannel com filas/roteamento/SLA (parcial) e handover bot↔humano**: ver `docs/BLIP_GAP_ANALYSIS.md` e `docs/ARCHITECTURE_QUEUES_ROUTING_SLA.md`.
+- **Templates de flows (marketplace) e onboarding por segmento**: ver `docs/ARCHITECTURE_TEMPLATE_MARKETPLACE_PHASE5.md`.
+- **Replay (simulação e visualização por sessionId)**: ver `docs/COMO_USAR_REPLAY.md`.
+- **Pipeline de IA/RAG (scraping, upload PDF, OCR) e contratos de resposta**: detalhes abaixo e em `docs/` (RAG).
 
-- **USE_PLAYWRIGHT**: `true|false` (padrão: `false`)
+## IA/RAG (visão rápida)
 
-### Instalação do Playwright (Chromium)
+O sistema atual também inclui um pipeline RAG que indexa fontes do tenant (site + arquivos) e gera sugestões baseadas em contexto.
 
-No host/CI (Linux):
+- **Vector store**: PostgreSQL + `pgvector` (fonte única)
+- **Scraping**: fetch + fallback Playwright (opcional)
+- **Uploads**: PDF + imagens com OCR (opcional)
 
-```bash
-npx playwright install --with-deps chromium
-```
+Documentos detalhados (RAG):
+- `docs/COMO_TESTAR_RAG.md`
+- `docs/RAG_POR_TENANT.md`
+- `docs/CONFIGURACAO_IA.md`
 
-## Upload de arquivos (PDF + imagens com OCR)
-
-Uploads via `POST /rag/documents/upload` (multipart) fazem extração **server-side**:
-
-- **PDF**: `pdf-parse` (timeout 15s por arquivo)
-- **Imagens (png/jpg/webp)**: OCR com `tesseract.js` (timeout 15s por arquivo), com **pré-processamento best-effort** via `sharp` para melhorar contraste/rotação/legibilidade
-
-### Habilitar/Desabilitar via env
-
-- **USE_OCR**: `true|false` (padrão: `false`)
-
-### Ajustes finos do OCR (opcional)
-
-- **OCR_PREPROCESS**: `true|false` (padrão: `true`) — habilita pré-processamento da imagem antes do OCR
-- **OCR_LANG**: ex. `por+eng` (padrão: `por+eng`) — idiomas carregados pelo Tesseract
-- **OCR_PSM**: ex. `6` (padrão: `6`) — Page Segmentation Mode do Tesseract (ajuda bastante dependendo do layout)
-
-> Observação: OCR pode depender de recursos de runtime (WASM / dados de linguagem). Se falhar, o pipeline continua e indexa metadados mínimos, retornando warnings.
-
-## Contratos de resposta (envolvidos no pipeline)
-
-As rotas principais retornam (sem quebrar compatibilidade) campos adicionais:
-
-- **Sucesso**: `ok: true`, `data`, `warnings?: []` (e também os campos “legados” no topo)
-- **Erro**: `success: false`, `ok: false`, `error: { code, message, details, traceId, ... }`
-
-### Códigos comuns (error/warning)
-
-- `SCRAPE_FAILED`, `PLAYWRIGHT_FAILED`
-- `PDF_PARSE_FAILED`, `OCR_FAILED`
-- `RAG_INDEX_FAILED`, `FILE_UPLOAD_FAILED`, `FILE_TOO_LARGE`
-- `DESCRIPTION_FAILED`
-
-## Geração de perguntas (FAQ) baseada em contexto real (RAG/PDF/OCR/Web)
-
-O pipeline de perguntas foi endurecido para **usar o conteúdo indexado** (chunks do RAG/Redis) em vez de depender apenas de descrição resumida:
-
-- **Pipeline**: `RAG/Redis chunks → limpeza semântica → tópicos/entidades → businessType → perguntas por categoria → filtros/dedupe`
-
-### O que foi reaproveitado
-
-- **Resolução de contexto/chunks**: `api/services/contextSourceResolver.js` (inline → Redis → RAG), extraído do `faqGeneratorService`.
-- **Limpeza e exclusões inferidas**: `api/services/exclusions.service.js` (`sanitizeContext`, `getFinalExclusions`, `filterQuestions`).
-- **Entidades (best-effort)**: `api/services/business-entities.service.js` (quando `executionId` existe).
-- **Deduplicação semântica por embeddings**: `api/services/faqGeneratorService.js` e `api/services/faq.service.js`.
-
-### O que foi criado
-
-- **Extração de contexto semântico**: `api/services/semanticContextService.js` (`extractSemanticContext`, `detectBusinessType`), incluindo `excludedTerms` (filenames/hashes/ocrNoise/uiTokens/technicalTokens).
-- **Geração de perguntas por contexto**: `api/utils/ragQuestionGenerator.js` (`generateQuestionsFromContext`).
-- **Testes**: `tests/unit/semanticContextService.test.js` e `tests/unit/generateQuestionsFromContext.test.js`.
-
-### Onde foi integrado
-
-- **`POST /system/generate-faq`**: `api/services/faqGeneratorService.js` (prioriza `extractSemanticContext` + `generateQuestionsFromContext`; mantém clusterização/coverage existentes).
-- **`POST /system/suggest-description` → fluxo inicial**: `api/services/faq.service.js` (substitui geração via IA por geração baseada em contexto; respeita `dryRun`).
-- **Feedback visual**: mapeamento de toasts em `frontend/src/utils/apiErrorHandler.js` e fallback com toast em `frontend/src/pages/GenerateSystemPage.jsx`.
 

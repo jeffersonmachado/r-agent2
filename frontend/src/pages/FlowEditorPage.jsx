@@ -94,6 +94,7 @@ export function FlowEditorPage() {
     error,
     setSelectedNode,
     setValidation,
+    setCurrentFlowKind,
     validateCurrentFlow,
     saveFlow,
     simulateCurrentFlow,
@@ -301,6 +302,16 @@ export function FlowEditorPage() {
     }
   }, [currentFlow, draftFlow]);
 
+  const handleFlowKindChange = useCallback((nextKind) => {
+    const normalized = String(nextKind || 'chat').trim().toLowerCase() === 'voice' ? 'voice' : 'chat';
+    if (currentFlow && currentFlow.id) {
+      setCurrentFlowKind(normalized);
+    }
+    if (draftFlow && draftFlow.id) {
+      setDraftFlow((prev) => (prev && typeof prev === 'object' ? { ...prev, kind: normalized } : prev));
+    }
+  }, [currentFlow, draftFlow, setCurrentFlowKind]);
+
   // ✅ Expande automaticamente o painel de validação quando há erros
   useEffect(() => {
     if (validation && !validation.valid && validation.uiErrors && validation.uiErrors.length > 0) {
@@ -362,7 +373,7 @@ export function FlowEditorPage() {
             
             // ✅ Validação local de fallback (antes de chamar backend) - mesma lógica do handleValidate
             const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
-            const localValidation = validateFlowLocal(reteJson);
+            const localValidation = validateFlowLocal(reteJson, { kind: flow?.kind || 'chat' });
             
             // Se validação local falhou, mostra erros e não chama backend
             if (!localValidation.valid && localValidation.errors.length > 0) {
@@ -526,7 +537,7 @@ export function FlowEditorPage() {
           let uiErrorsToApply = Array.isArray(generationWarnings.errors) ? generationWarnings.errors : [];
           try {
             const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
-            const localValidation = validateFlowLocal(reteJson);
+            const localValidation = validateFlowLocal(reteJson, { kind: flow?.kind || 'chat' });
             const formattedLocalErrors = (localValidation?.errors || []).map((err) => ({
               code: err.code,
               message: err.message,
@@ -1062,7 +1073,7 @@ export function FlowEditorPage() {
       
       // ✅ Validação local de fallback (antes de chamar backend)
       const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
-      const localValidation = validateFlowLocal(reteJson);
+      const localValidation = validateFlowLocal(reteJson, { kind: currentFlow?.kind || 'chat' });
       
       // Se validação local falhou, mostra erros e não chama backend
       if (!localValidation.valid && localValidation.errors.length > 0) {
@@ -1985,6 +1996,8 @@ export function FlowEditorPage() {
       <FlowCurrentDisplay
         displayedFlow={displayedFlow}
         onRegenerate={() => setShowFlowGenerator(true)}
+        kind={displayedFlow?.kind || currentFlow?.kind || 'chat'}
+        onKindChange={handleFlowKindChange}
       />
 
       {/* MAIN - EXATAMENTE como no modelo */}
@@ -2009,11 +2022,11 @@ export function FlowEditorPage() {
 
           {!paletteCollapsed ? (
             <div className="flex-1 p-2 text-sm space-y-2 overflow-y-auto">
-                <NodePalette />
+                <NodePalette flowKind={displayedFlow?.kind || currentFlow?.kind || 'chat'} />
             </div>
           ) : (
             <div className="flex-1 p-2 flex flex-col items-center gap-2 overflow-y-auto">
-              <NodePaletteCollapsed />
+              <NodePaletteCollapsed flowKind={displayedFlow?.kind || currentFlow?.kind || 'chat'} />
             </div>
           )}
         </div>

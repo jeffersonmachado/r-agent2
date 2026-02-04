@@ -87,5 +87,79 @@ describe('OutboundQueueService', () => {
     expect(res).toMatchObject({ queued: false, direct: true });
     expect(sendTextMessage).toHaveBeenCalledTimes(1);
   });
+
+  test('enqueueOutbound deduplica por message.meta.clientMessageId quando DB disponível', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({})) }));
+
+    const sequelize = {
+      query: jest.fn(async () => [[{ id: 'outq-existing' }]]),
+    };
+    const Model = {
+      sequelize,
+      findOne: jest.fn(async () => null),
+      create: jest.fn(async () => ({ id: 'outq-new' })),
+    };
+
+    jest.doMock('../../api/db/models', () => ({
+      OutboundQueueItem: () => Model,
+      ChannelConversation: () => ({}),
+      ChannelMessage: () => ({}),
+      TicketEvent: () => ({}),
+    }));
+    jest.doMock('../../api/services/whatsappService', () => ({ sendTextMessage: jest.fn() }));
+    jest.doMock('../../api/services/instagramService', () => ({ sendInstagramMessage: jest.fn(), sendInstagramMedia: jest.fn() }));
+    jest.doMock('../../api/services/queueService', () => ({ updateOutboundMessageMeta: jest.fn(), getTicket: jest.fn() }));
+    jest.doMock('../../api/services/websocketService', () => ({ emitEvent: jest.fn() }));
+    jest.doMock('../../api/services/auditService', () => ({ logAction: jest.fn() }));
+    jest.doMock('../../api/utils/config', () => ({ get: jest.fn() }));
+
+    // eslint-disable-next-line global-require
+    const { enqueueOutbound } = require('../../api/services/outboundQueueService');
+
+    const res = await enqueueOutbound({
+      tenantId: 'tenant-1',
+      channelType: 'whatsapp',
+      message: { to: '5511999999999', type: 'text', body: { text: 'oi' }, meta: { clientMessageId: 'c1' } },
+    });
+
+    expect(res).toMatchObject({ queued: false, idempotent: true, itemId: 'outq-existing' });
+    expect(Model.create).not.toHaveBeenCalled();
+  });
+
+  test('enqueueOutbound deduplica por externalMessageId quando fornecido', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({})) }));
+
+    const sequelize = { query: jest.fn(async () => [[]]) };
+    const Model = {
+      sequelize,
+      findOne: jest.fn(async () => ({ id: 'outq-existing2' })),
+      create: jest.fn(async () => ({ id: 'outq-new' })),
+    };
+
+    jest.doMock('../../api/db/models', () => ({
+      OutboundQueueItem: () => Model,
+      ChannelConversation: () => ({}),
+      ChannelMessage: () => ({}),
+      TicketEvent: () => ({}),
+    }));
+    jest.doMock('../../api/services/whatsappService', () => ({ sendTextMessage: jest.fn() }));
+    jest.doMock('../../api/services/instagramService', () => ({ sendInstagramMessage: jest.fn(), sendInstagramMedia: jest.fn() }));
+    jest.doMock('../../api/services/queueService', () => ({ updateOutboundMessageMeta: jest.fn(), getTicket: jest.fn() }));
+    jest.doMock('../../api/services/websocketService', () => ({ emitEvent: jest.fn() }));
+    jest.doMock('../../api/services/auditService', () => ({ logAction: jest.fn() }));
+    jest.doMock('../../api/utils/config', () => ({ get: jest.fn() }));
+
+    // eslint-disable-next-line global-require
+    const { enqueueOutbound } = require('../../api/services/outboundQueueService');
+
+    const res = await enqueueOutbound({
+      tenantId: 'tenant-1',
+      channelType: 'whatsapp',
+      message: { to: '5511999999999', type: 'text', body: { text: 'oi' }, externalMessageId: 'wamid.out.1' },
+    });
+
+    expect(res).toMatchObject({ queued: false, idempotent: true, itemId: 'outq-existing2' });
+    expect(Model.create).not.toHaveBeenCalled();
+  });
 });
 

@@ -30,7 +30,7 @@ import { getNodeSchema, DEFAULT_SOCKET_NAME, getNodeInputs, getNodeOutputs } fro
  * }
  *
  * @param {any} reteJson
- * @param {{ tenantId?: string, id?: string, name?: string, version?: number }} [meta]
+ * @param {{ tenantId?: string, id?: string, name?: string, version?: number, kind?: string }} [meta]
  * @returns {import('../api/types').EngineFlowDefinition}
  */
 export function reteJsonToEngineFlow(reteJson, meta) {
@@ -217,6 +217,9 @@ export function reteJsonToEngineFlow(reteJson, meta) {
     id: (meta && meta.id) || 'demo-flow',
     name: (meta && meta.name) || 'Fluxo sem nome',
     version: (meta && typeof meta.version === 'number' ? meta.version : 1),
+    kind: (meta && typeof meta.kind === 'string' && meta.kind.trim())
+      ? meta.kind.trim()
+      : 'chat',
     nodes: engineNodes,
     metadata: {
       positions: positions,

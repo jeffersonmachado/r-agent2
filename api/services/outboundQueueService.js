@@ -98,6 +98,52 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
   const Model = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
   const now = new Date();
 
+  // -------------------------------------------------------------------
+  // Idempotência (v1):
+  // - Se o caller fornecer um clientMessageId em message.meta, evitamos
+  //   duplicar itens na fila quando houver retries HTTP/WS.
+  // - Se o caller fornecer externalMessageId (raro no enqueue), também deduplica.
+  // -------------------------------------------------------------------
+  try {
+    const meta = message && typeof message === 'object' ? (message.meta || {}) : {};
+    const clientMessageId = meta && meta.clientMessageId ? String(meta.clientMessageId) : null;
+    const externalMessageId = message && message.externalMessageId ? String(message.externalMessageId) : null;
+
+    if (clientMessageId) {
+      const sequelize = Model.sequelize;
+      const [rows] = await sequelize.query(
+        `SELECT id
+         FROM outbound_queue
+         WHERE tenant_key = :tenantKey
+           AND (message->'meta'->>'clientMessageId') = :clientMessageId
+         LIMIT 1`,
+        {
+          replacements: {
+            tenantKey: tenantId,
+            clientMessageId,
+          },
+        },
+      );
+      if (Array.isArray(rows) && rows.length > 0 && rows[0] && rows[0].id) {
+        return { queued: false, idempotent: true, itemId: String(rows[0].id) };
+      }
+    }
+
+    if (externalMessageId) {
+      const existing = await Model.findOne({
+        where: {
+          tenant_key: tenantId,
+          external_message_id: externalMessageId,
+        },
+      });
+      if (existing) {
+        return { queued: false, idempotent: true, itemId: existing.id };
+      }
+    }
+  } catch (_) {
+    // best-effort: não bloquear enfileiramento por falha de dedupe
+  }
+
   const item = await Model.create({
     id: newId('outq'),
     tenant_key: tenantId,
