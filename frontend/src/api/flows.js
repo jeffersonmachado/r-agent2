@@ -21,6 +21,11 @@ export function listFlows() {
   });
 }
 
+export function listFlowsByEnvironment(environment) {
+  const qs = environment ? `?environment=${encodeURIComponent(String(environment))}` : '';
+  return fetchJson(`/flows${qs}`, { method: 'GET' });
+}
+
 /**
  * Busca um fluxo específico pelo id.
  *
@@ -85,6 +90,16 @@ export function updateFlow(flowId, flowData, options = {}) {
     method: 'PUT',
     body: JSON.stringify(flowData || {}),
     ...(options && typeof options === 'object' && options.headers ? { headers: options.headers } : {}),
+  });
+}
+
+export function updateFlowEnvironment(flowId, environment) {
+  if (!flowId) {
+    return Promise.reject(new Error('updateFlowEnvironment: flowId é obrigatório'));
+  }
+  return fetchJson(`/flows/${encodeURIComponent(flowId)}/environment`, {
+    method: 'PUT',
+    body: JSON.stringify({ environment }),
   });
 }
 

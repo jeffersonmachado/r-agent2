@@ -188,6 +188,16 @@ async function testTicketsEndpoints() {
   }
 }
 
+describe('Endpoints de Tickets (smoke)', () => {
+  test('executa smoke test quando habilitado', async () => {
+    if (process.env.RUN_ENDPOINT_TESTS !== 'true') {
+      return;
+    }
+    const result = await testTicketsEndpoints();
+    expect(result && result.success).toBe(true);
+  });
+});
+
 // Executa se for chamado diretamente
 if (require.main === module) {
   testTicketsEndpoints()

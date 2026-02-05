@@ -14,7 +14,7 @@ import { FlowTemplateSelector } from '../components/FlowTemplateSelector';
 import { FlowGeneratorDialog } from '../components/FlowGeneratorDialog';
 import { SaveAsTemplateDialog } from '../components/SaveAsTemplateDialog';
 import { Button } from '../styles/Button';
-import { createFlow, saveTemplate } from '../api/flows';
+import { createFlow, saveTemplate, updateFlowEnvironment } from '../api/flows';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
@@ -58,6 +58,7 @@ export function FlowEditorPage() {
   const { navigate } = useRouter();
   const { themeName } = useTheme();
   const isMobile = useIsMobile();
+  const [flowEnvironment, setFlowEnvironment] = useState('dev');
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -113,6 +114,15 @@ export function FlowEditorPage() {
       }
     } catch {}
   }, [loadFlow]);
+
+  useEffect(() => {
+    const env = currentFlow?.metadata?.environment;
+    if (env && ['dev', 'stage', 'prod'].includes(String(env))) {
+      setFlowEnvironment(String(env));
+    } else if (currentFlow?.id) {
+      setFlowEnvironment('dev');
+    }
+  }, [currentFlow?.id, currentFlow?.metadata?.environment]);
 
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1205,6 +1215,21 @@ export function FlowEditorPage() {
     }
   };
 
+  const handleEnvironmentChange = async (nextEnv) => {
+    if (!currentFlow?.id) return;
+    const env = String(nextEnv || '').trim();
+    if (!['dev', 'stage', 'prod'].includes(env)) return;
+    try {
+      await updateFlowEnvironment(currentFlow.id, env);
+      setFlowEnvironment(env);
+      await loadFlow(currentFlow.id);
+      showToast(`Ambiente atualizado para "${env}"`, 'success');
+    } catch (err) {
+      logger.error('Erro ao atualizar environment do flow', err);
+      showToast('Erro ao atualizar ambiente do fluxo', 'error');
+    }
+  };
+
   const handleDeleteClick = () => {
     if (!currentFlow || !currentFlow.id) return;
     setShowDeleteConfirm(true);
@@ -1947,6 +1972,19 @@ export function FlowEditorPage() {
           currentFlowId={currentFlow?.id}
           refreshTrigger={flowListRefreshTrigger}
         />
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-text-secondary">Env</span>
+          <select
+            value={flowEnvironment}
+            disabled={!currentFlow?.id}
+            onChange={(e) => handleEnvironmentChange(e.target.value)}
+            className="px-2 py-1 rounded border border-border-default bg-bg-elevated text-text-primary"
+          >
+            <option value="dev">dev</option>
+            <option value="stage">stage</option>
+            <option value="prod">prod</option>
+          </select>
+        </div>
         <button className="btn-base" onClick={() => setShowFlowGenerator(true)} title="Gerar fluxo com IA">
           <span className="icon icon-ai"></span>
           <span>Gerar com IA</span>

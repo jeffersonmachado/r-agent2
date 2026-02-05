@@ -188,7 +188,7 @@ describe('ragService', () => {
 
       await expect(
         ragService.queryRag('query', 'tenant-001')
-      ).rejects.toThrow('RAG service error: 500');
+      ).rejects.toThrow('Erro interno no serviço RAG');
     });
 
     it('deve tratar timeout', async () => {
@@ -203,7 +203,7 @@ describe('ragService', () => {
 
       await expect(
         ragService.queryRag('query', 'tenant-001')
-      ).rejects.toThrow('RAG service timeout');
+      ).rejects.toThrow('Timeout ao consultar serviço RAG');
     });
   });
 
@@ -282,6 +282,10 @@ describe('ragService', () => {
           documentId: 'doc-004',
           chunksCreated: 1,
         }),
+      }).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'healthy' }),
       });
 
       const document = {
@@ -317,11 +321,15 @@ describe('ragService', () => {
           documentId: 'doc-005',
           chunksCreated: 1,
         }),
+      }).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'healthy' }),
       });
 
       const document = {
         id: 'doc-005',
-        content: 'Conteúdo',
+        content: 'Conteúdo único para timeout',
       };
 
       await ragService.indexDocument(document, 'tenant-001');
@@ -339,7 +347,7 @@ describe('ragService', () => {
 
       const document = {
         id: 'doc-006',
-        content: 'Conteúdo',
+        content: 'Conteúdo único para erro 006',
       };
 
       await expect(

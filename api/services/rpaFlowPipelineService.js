@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
+const { logAction } = require('./auditService');
 
 /**
  * @typedef {Object} PipelineResult
@@ -56,6 +57,8 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   } = options;
 
   const tenantId = flow?.tenantId || null;
+  const flowId = flow?.id || null;
+  const flowName = flow?.name || null;
 
   // Inicializa replay
   const replay = new ReplaySystem({
@@ -95,8 +98,8 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   });
 
   logger.info('[RpaFlowPipeline] Iniciando pipeline RPA para fluxo', {
-    flowId: flow.id,
-    flowName: flow.name,
+    flowId,
+    flowName,
     autoExecuteSeeds,
     saveRecording,
     replayId,
@@ -112,6 +115,27 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     errors: [],
     warnings: [],
   };
+
+  try {
+    logAction({
+      agentId: null,
+      username: null,
+      tenantId,
+      action: 'rpa_pipeline_started',
+      resource: 'rpa_pipeline',
+      resourceId: flowId,
+      details: {
+        flowId,
+        flowName,
+        replayId,
+        recordingId,
+        autoExecuteSeeds,
+        saveRecording,
+      },
+      ipAddress: 'internal',
+      userAgent: 'internal',
+    });
+  } catch (_) {}
 
   try {
     // Tenant deve ser fornecido no flow; aqui usamos o tenantId já resolvido acima.
@@ -338,6 +362,32 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     });
     result.errors.push(error.message);
   }
+
+  try {
+    logAction({
+      agentId: null,
+      username: null,
+      tenantId,
+      action: 'rpa_pipeline_finished',
+      resource: 'rpa_pipeline',
+      resourceId: flowId,
+      details: {
+        flowId,
+        flowName,
+        replayId,
+        recordingId,
+        success: result.success === true,
+        errors: result.errors ? result.errors.slice(0, 20) : [],
+        warnings: result.warnings ? result.warnings.slice(0, 20) : [],
+        executedSeedsCount: Array.isArray(result.executedSeeds) ? result.executedSeeds.length : 0,
+        recordingIdFinal: result.recording?.id || null,
+        replayPath: result.replayPath || null,
+        recordingPath: result.recordingPath || null,
+      },
+      ipAddress: 'internal',
+      userAgent: 'internal',
+    });
+  } catch (_) {}
 
   return result;
 }

@@ -8,24 +8,81 @@
  * 4. O tenant_context não pode ser alterado por input do usuário
  */
 
-const { describe, it, expect, beforeAll, afterAll } = require('@jest/globals');
+const { describe, it, expect, beforeAll, beforeEach, afterAll } = require('@jest/globals');
+jest.mock('../../api/db/models', () => require('../helpers/dbMock').mockModelsFactory());
+jest.mock('../../api/db/sequelize', () => {
+  const { mockDatabase } = require('../helpers/dbMock');
+  const { mockSequelize } = mockDatabase();
+  return {
+    getSequelize: jest.fn(() => mockSequelize),
+    connect: jest.fn().mockResolvedValue(mockSequelize),
+    close: jest.fn().mockResolvedValue(true),
+    Sequelize: jest.fn(),
+  };
+});
+jest.mock('../../api/services/ragService', () => ({
+  queryRag: jest.fn(async (query, tenantId) => ({
+    success: true,
+    response: `Resposta (${tenantId}): ${query}`,
+    sources: [],
+  })),
+}));
+
+const { mockDatabase, createMockTenant } = require('../helpers/dbMock');
+const { mockModels, mockSequelize } = mockDatabase();
 const tenantService = require('../../api/services/tenantService');
 const ragService = require('../../api/services/ragService');
 
 describe('Testes Cognitivos do Tenant Context', () => {
   let tenantEcommerceId;
   let tenantSaudeId;
+  let tenantStore;
+
+  function setupMocks() {
+    const { getSequelize } = require('../../api/db/sequelize');
+    getSequelize.mockReturnValue(mockSequelize);
+
+    mockModels.Tenant.create.mockImplementation((payload) => {
+      const tenant = createMockTenant(payload);
+      tenantStore.set(String(tenant.tenant_key), tenant);
+      tenantStore.set(String(tenant.id), tenant);
+      return tenant;
+    });
+    mockModels.Tenant.findOne.mockImplementation(({ where } = {}) => {
+      const key = where?.tenant_key || where?.id || null;
+      return key ? (tenantStore.get(String(key)) || null) : null;
+    });
+    mockModels.Tenant.findByPk.mockImplementation((id) => tenantStore.get(String(id)) || null);
+    mockModels.Tenant.update.mockImplementation((updates = {}, { where } = {}) => {
+      const key = where?.tenant_key || where?.id || null;
+      const tenant = key ? (tenantStore.get(String(key)) || null) : null;
+      if (tenant) {
+        Object.assign(tenant, updates);
+        return [1, [tenant]];
+      }
+      return [0, []];
+    });
+
+    ragService.queryRag.mockImplementation(async (query, tenantId) => ({
+      success: true,
+      response: `Resposta (${tenantId})`,
+      sources: [],
+    }));
+  }
 
   beforeAll(async () => {
+    tenantStore = new Map();
+    setupMocks();
+
     // Cria tenants de teste com ramos distintos
-    const ecommerceResult = tenantService.createTenant({
+    const ecommerceResult = await tenantService.createTenant({
       name: 'E-commerce Test',
       site: 'https://ecommerce-test.com',
       ramo_atividade: 'E-commerce e Varejo Online - Venda de produtos físicos e digitais através de plataforma online',
       objetivo: 'Melhorar a experiência de compra online, reduzir abandono de carrinho e aumentar conversão',
     });
 
-    const saudeResult = tenantService.createTenant({
+    const saudeResult = await tenantService.createTenant({
       name: 'Clínica Saúde Test',
       site: 'https://clinica-test.com',
       ramo_atividade: 'Saúde e Bem-estar - Clínica médica especializada em atendimento ambulatorial e consultas',
@@ -40,13 +97,17 @@ describe('Testes Cognitivos do Tenant Context', () => {
     tenantSaudeId = saudeResult.tenant.id;
   });
 
-  afterAll(() => {
+  beforeEach(() => {
+    setupMocks();
+  });
+
+  afterAll(async () => {
     // Limpa tenants de teste
     if (tenantEcommerceId) {
-      tenantService.deleteTenant(tenantEcommerceId);
+      await tenantService.deleteTenant(tenantEcommerceId);
     }
     if (tenantSaudeId) {
-      tenantService.deleteTenant(tenantSaudeId);
+      await tenantService.deleteTenant(tenantSaudeId);
     }
   });
 

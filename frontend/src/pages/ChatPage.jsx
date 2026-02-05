@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FlowTestChat } from '../components/FlowTestChat';
 import { listFlows, getFlow } from '../api/flows';
 import { useRouter } from '../hooks/useRouter';
@@ -22,6 +22,7 @@ export function ChatPage() {
   const [error, setError] = useState(null);
   const [selectFocused, setSelectFocused] = useState(false);
   const [selectHovered, setSelectHovered] = useState(false);
+  const urlFlowIdRef = useRef(null);
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -39,19 +40,22 @@ export function ChatPage() {
 
   // Carrega fluxo selecionado
   useEffect(() => {
-    if (selectedFlowId) {
-      loadFlow(selectedFlowId);
-    } else {
+    if (!selectedFlowId) {
       setSelectedFlow(null);
+      return;
     }
-  }, [selectedFlowId]);
+    if (!authLoading && isAuthenticated) {
+      loadFlow(selectedFlowId);
+    }
+  }, [selectedFlowId, isAuthenticated, authLoading]);
 
   // Verifica se há flowId na URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const flowIdFromUrl = urlParams.get('flowId');
-    if (flowIdFromUrl && !selectedFlowId) {
-      setSelectedFlowId(flowIdFromUrl);
+    if (flowIdFromUrl) {
+      urlFlowIdRef.current = flowIdFromUrl;
+      setSelectedFlowId((current) => current || flowIdFromUrl);
     }
   }, []);
 
@@ -62,7 +66,17 @@ export function ChatPage() {
       const flowsList = await listFlows();
       const flowsArray = Array.isArray(flowsList) ? flowsList : [];
       setFlows(flowsArray);
-      
+
+      const preferredFlowId = urlFlowIdRef.current;
+      if (preferredFlowId) {
+        const matchedFlow = flowsArray.find((flow) => String(flow?.id) === String(preferredFlowId));
+        if (matchedFlow) {
+          setSelectedFlowId(preferredFlowId);
+          setSelectedFlow(matchedFlow);
+          return;
+        }
+      }
+
       // Se não há fluxo selecionado e há fluxos disponíveis, seleciona o primeiro
       if (!selectedFlowId && flowsArray.length > 0) {
         setSelectedFlowId(flowsArray[0].id);
@@ -84,7 +98,12 @@ export function ChatPage() {
     } catch (err) {
       logger.error('Erro ao carregar fluxo:', err);
       setError(err.message || 'Erro ao carregar fluxo');
-      setSelectedFlow(null);
+      setSelectedFlow((current) => {
+        if (current && current.id === flowId) {
+          return current;
+        }
+        return null;
+      });
     } finally {
       setLoading(false);
     }

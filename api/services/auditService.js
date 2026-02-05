@@ -109,6 +109,21 @@ async function queryLogs(filters = {}) {
   }
 
   const AuditEventModel = typeof AuditEvent === 'function' ? AuditEvent() : AuditEvent;
+  if (!AuditEventModel || !AuditEventModel.sequelize) {
+    // fallback: memória quando model/Sequelize não está disponível
+    let items = [...memoryAuditEvents];
+    if (filters.agentId) items = items.filter(l => l.agentId === filters.agentId);
+    if (filters.action) items = items.filter(l => l.action === filters.action);
+    if (filters.resource) items = items.filter(l => l.resource === filters.resource);
+    if (filters.resourceId) items = items.filter(l => l.resourceId === filters.resourceId);
+    if (filters.tenantId) items = items.filter(l => l.tenantId === filters.tenantId);
+    if (filters.startDate) items = items.filter(l => new Date(l.timestamp) >= new Date(filters.startDate));
+    if (filters.endDate) items = items.filter(l => new Date(l.timestamp) <= new Date(filters.endDate));
+    items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const total = items.length;
+    items = items.slice(offset, offset + limit);
+    return { total, items };
+  }
   const sequelize = AuditEventModel.sequelize;
   const Op = sequelize.constructor.Op;
   const where = {};

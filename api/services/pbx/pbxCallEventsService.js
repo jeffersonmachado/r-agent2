@@ -21,6 +21,17 @@ function intOrZero(v) {
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
 }
 
+function parseRelatedEntities(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return { ticketId: null, orderId: null };
+  const ticketMatch = text.match(/ticket[:=]([a-zA-Z0-9._-]+)/i);
+  const orderMatch = text.match(/order[:=]([a-zA-Z0-9._-]+)/i);
+  return {
+    ticketId: ticketMatch ? String(ticketMatch[1]) : null,
+    orderId: orderMatch ? String(orderMatch[1]) : null,
+  };
+}
+
 async function ensureStateRow({ consumer }) {
   const sequelize = getSequelize();
   if (!sequelize) return null;
@@ -133,6 +144,7 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
         lastdata: json.lastdata || null,
         accountcode: json.accountcode || null,
       };
+      const related = parseRelatedEntities(json.accountcode || json.userfield || '');
 
       // 1) Ringing (calldate)
       await appendEventV1({
@@ -144,7 +156,7 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
         subject: { type: 'pbx_call', id: subjectId },
         actor: { type: 'system', id: 'pbx_cdr_scanner' },
         idempotencyKey: `pbx_call_event:${tenantId}:${cdrId}:ringing`,
-        payload: basePayload,
+        payload: { ...basePayload, related },
       }).then(() => { emitted += 1; }).catch(() => {});
 
       // 2) Answered (se houver billsec)
@@ -158,7 +170,7 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
           subject: { type: 'pbx_call', id: subjectId },
           actor: { type: 'system', id: 'pbx_cdr_scanner' },
           idempotencyKey: `pbx_call_event:${tenantId}:${cdrId}:answered`,
-          payload: { ...basePayload, answeredAt: answeredAt.toISOString() },
+        payload: { ...basePayload, answeredAt: answeredAt.toISOString(), related },
         }).then(() => { emitted += 1; }).catch(() => {});
       }
 
@@ -172,7 +184,7 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
         subject: { type: 'pbx_call', id: subjectId },
         actor: { type: 'system', id: 'pbx_cdr_scanner' },
         idempotencyKey: `pbx_call_event:${tenantId}:${cdrId}:ended`,
-        payload: { ...basePayload, endedAt: endedAt.toISOString() },
+        payload: { ...basePayload, endedAt: endedAt.toISOString(), related },
       }).then(() => { emitted += 1; }).catch(() => {});
     }
 

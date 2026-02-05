@@ -14,6 +14,7 @@ const { execSync } = require('child_process');
 const RPA_SEEDS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'seeds');
 const RPA_FLOWS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'flows');
 const REPORTS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'reports');
+const RPA_CONFIG_PATH = path.join(__dirname, '..', '..', 'tests', 'rpa', 'rpa.config.json');
 
 // Garante que os diretórios existem
 if (!fs.existsSync(REPORTS_DIR)) {
@@ -51,6 +52,30 @@ function findRpaTestFiles() {
   return testFiles;
 }
 
+function resolveFrontendUrl() {
+  if (process.env.RPA_FRONTEND_URL) return String(process.env.RPA_FRONTEND_URL);
+  try {
+    const configRaw = fs.readFileSync(RPA_CONFIG_PATH, 'utf8');
+    const config = JSON.parse(configRaw);
+    const url = config && config.urls && config.urls.frontend ? String(config.urls.frontend) : '';
+    if (url) return url;
+  } catch (_) {}
+  return 'http://localhost:5173';
+}
+
+async function isFrontendReachable(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    return res && res.ok;
+  } catch (_) {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * Executa um teste RPA usando o RpaTestRunner.
  * 
@@ -78,8 +103,29 @@ async function runRpaTest(testFile) {
     await runner.init();
     
     try {
-      // Executa o teste (playback)
-      const result = await runner.playback(testData);
+      const timeoutMsRaw = process.env.RPA_TEST_TIMEOUT_MS;
+      const timeoutMs = Number.isFinite(Number(timeoutMsRaw))
+        ? Math.max(10000, Math.floor(Number(timeoutMsRaw)))
+        : 120000;
+
+      // Executa o teste (playback) com timeout global por teste
+      let timeoutId = null;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          const err = new Error(`RPA test timeout após ${timeoutMs}ms`);
+          err.code = 'RPA_TEST_TIMEOUT';
+          reject(err);
+        }, timeoutMs);
+        // Evita impedir o processo de encerrar
+        if (timeoutId && timeoutId.unref) timeoutId.unref();
+      });
+
+      const result = await Promise.race([
+        runner.playback(testData),
+        timeoutPromise,
+      ]).finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
 
       // Sempre gera relatório detalhado do runner (inclui details + steps + debug)
       const detailedReport = runner.generateReport();
@@ -194,6 +240,17 @@ function saveReport(report) {
  */
 async function main() {
   console.log('=== Executando Testes RPA ===\n');
+
+  if (process.env.RPA_SKIP_IF_FRONTEND_UNREACHABLE === 'true') {
+    const frontendUrl = resolveFrontendUrl();
+    const reachable = await isFrontendReachable(frontendUrl);
+    if (!reachable) {
+      console.log(`⚠ Frontend indisponível (${frontendUrl}); pulando testes RPA por configuração.`);
+      const report = generateReport([]);
+      saveReport(report);
+      return;
+    }
+  }
 
   const testFiles = findRpaTestFiles();
   

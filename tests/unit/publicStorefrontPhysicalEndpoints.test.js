@@ -43,6 +43,11 @@ describe('endpoints públicos /storefront e /physical', () => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env.NODE_ENV = 'test';
+    process.env.RATE_LIMIT_BYPASS = 'true';
+  });
+
+  afterEach(() => {
+    delete process.env.RATE_LIMIT_BYPASS;
   });
 
   test('POST /storefront/orders exige token', async () => {

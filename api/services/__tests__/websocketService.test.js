@@ -163,7 +163,7 @@ describe('websocketService', () => {
     test('cliente pode autenticar com token válido', async () => {
       // Cria agente de teste com nome único
       const uniqueUsername = `test-user-${Date.now()}`;
-      const agentResult = createAgent({
+      const agentResult = await createAgent({
         tenantId: 'tenant-test',
         username: uniqueUsername,
         email: `test-${Date.now()}@example.com`,
@@ -173,14 +173,14 @@ describe('websocketService', () => {
 
       if (!agentResult.success) {
         // Se falhar, pode ser que já existe, tenta fazer login
-        const loginResult = login(uniqueUsername, 'password123', '127.0.0.1', 'test');
+        const loginResult = await login(uniqueUsername, 'password123', '127.0.0.1', 'test');
         if (!loginResult.success) {
           throw new Error(`Falha ao criar agente: ${agentResult.error}`);
         }
       }
 
       // Faz login para obter token
-      const loginResult = login(uniqueUsername, 'password123', '127.0.0.1', 'test');
+      const loginResult = await login(uniqueUsername, 'password123', '127.0.0.1', 'test');
 
       if (!loginResult.success) {
         throw new Error(`Falha ao fazer login: ${loginResult.error}`);
@@ -365,7 +365,7 @@ describe('websocketService', () => {
     test('emite evento para tenant específico', async () => {
       // Cria agente e autentica com nome único
       const uniqueUsername = `test-ws-user-${Date.now()}`;
-      const agentResult = createAgent({
+      const agentResult = await createAgent({
         tenantId: 'tenant-test-ws',
         username: uniqueUsername,
         email: `test-ws-${Date.now()}@example.com`,
@@ -375,13 +375,13 @@ describe('websocketService', () => {
 
       if (!agentResult.success) {
         // Se falhar, pode ser que já existe, tenta fazer login
-        const loginResult = login(uniqueUsername, 'password123', '127.0.0.1', 'test');
+        const loginResult = await login(uniqueUsername, 'password123', '127.0.0.1', 'test');
         if (!loginResult.success) {
           throw new Error(`Falha ao criar agente: ${agentResult.error}`);
         }
       }
 
-      const loginResult = login(uniqueUsername, 'password123', '127.0.0.1', 'test');
+      const loginResult = await login(uniqueUsername, 'password123', '127.0.0.1', 'test');
 
       if (!loginResult.success) {
         throw new Error(`Falha ao fazer login: ${loginResult.error}`);

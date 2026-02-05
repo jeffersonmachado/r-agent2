@@ -4,10 +4,10 @@
   "private": true,
   "description": "Editor visual de fluxo de chatbot baseado em React + Rete.js",
   "scripts": {
-    "start": "vite",
-    "test": "vitest",
-    "build": "vite build",
-    "preview": "vite preview"
+    "start": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite --config vite.config.cjs",
+    "test": "VITE_CACHE_DIR=/tmp/r-agent2-vite vitest --config vite.config.cjs",
+    "build": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite build --config vite.config.cjs",
+    "preview": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite preview --config vite.config.cjs"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",

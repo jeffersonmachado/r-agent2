@@ -1,0 +1,130 @@
+{
+  "hash": "22313f4d",
+  "configHash": "19a488b3",
+  "lockfileHash": "95d1b8ca",
+  "browserHash": "0955b306",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "6af5b394",
+      "needsInterop": true
+    },
+    "react-dom": {
+      "src": "../../node_modules/react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "439e7dcc",
+      "needsInterop": true
+    },
+    "react/jsx-runtime": {
+      "src": "../../node_modules/react/jsx-runtime.js",
+      "file": "react_jsx-runtime.js",
+      "fileHash": "57a2651c",
+      "needsInterop": true
+    },
+    "/app/engine/utils/aiTaskExecutor.js": {
+      "src": "../../../engine/utils/aiTaskExecutor.js",
+      "file": "_app_engine_utils_aiTaskExecutor__js.js",
+      "fileHash": "e4ef7d7b",
+      "needsInterop": true
+    },
+    "/app/engine/utils/typeCompatibility.js": {
+      "src": "../../../engine/utils/typeCompatibility.js",
+      "file": "_app_engine_utils_typeCompatibility__js.js",
+      "fileHash": "60f398e9",
+      "needsInterop": true
+    },
+    "/app/engine/utils/templateRenderer.js": {
+      "src": "../../../engine/utils/templateRenderer.js",
+      "file": "_app_engine_utils_templateRenderer__js.js",
+      "fileHash": "8ae65564",
+      "needsInterop": true
+    },
+    "/app/engine/utils/jsonSchemaValidator.js": {
+      "src": "../../../engine/utils/jsonSchemaValidator.js",
+      "file": "_app_engine_utils_jsonSchemaValidator__js.js",
+      "fileHash": "51738e5e",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "8c90582c",
+      "needsInterop": true
+    },
+    "browser-image-compression": {
+      "src": "../../node_modules/browser-image-compression/dist/browser-image-compression.mjs",
+      "file": "browser-image-compression.js",
+      "fileHash": "a09222fd",
+      "needsInterop": false
+    },
+    "pdfjs-dist": {
+      "src": "../../node_modules/pdfjs-dist/build/pdf.js",
+      "file": "pdfjs-dist.js",
+      "fileHash": "0d34c5bb",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "94f36be7",
+      "needsInterop": true
+    },
+    "rete": {
+      "src": "../../node_modules/rete/rete.esm.js",
+      "file": "rete.js",
+      "fileHash": "752e1b74",
+      "needsInterop": false
+    },
+    "rete-area-plugin": {
+      "src": "../../node_modules/rete-area-plugin/rete-area-plugin.esm.js",
+      "file": "rete-area-plugin.js",
+      "fileHash": "174f47ea",
+      "needsInterop": false
+    },
+    "rete-auto-arrange-plugin": {
+      "src": "../../node_modules/rete-auto-arrange-plugin/rete-auto-arrange-plugin.esm.js",
+      "file": "rete-auto-arrange-plugin.js",
+      "fileHash": "f221c340",
+      "needsInterop": false
+    },
+    "rete-connection-plugin": {
+      "src": "../../node_modules/rete-connection-plugin/rete-connection-plugin.esm.js",
+      "file": "rete-connection-plugin.js",
+      "fileHash": "573f8498",
+      "needsInterop": false
+    },
+    "rete-react-plugin": {
+      "src": "../../node_modules/rete-react-plugin/rete-react-plugin.esm.js",
+      "file": "rete-react-plugin.js",
+      "fileHash": "8ce1c29c",
+      "needsInterop": false
+    },
+    "tesseract.js": {
+      "src": "../../node_modules/tesseract.js/src/index.js",
+      "file": "tesseract__js.js",
+      "fileHash": "3331508b",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-7HAVDVRF": {
+      "file": "chunk-7HAVDVRF.js"
+    },
+    "chunk-KBNZICPF": {
+      "file": "chunk-KBNZICPF.js"
+    },
+    "chunk-EYN7YZXN": {
+      "file": "chunk-EYN7YZXN.js"
+    },
+    "chunk-J45VAN7Q": {
+      "file": "chunk-J45VAN7Q.js"
+    },
+    "chunk-IGR7ZU6C": {
+      "file": "chunk-IGR7ZU6C.js"
+    },
+    "chunk-PLDDJCW6": {
+      "file": "chunk-PLDDJCW6.js"
+    }
+  }
+}

@@ -213,6 +213,16 @@ async function testTenantsEndpoints() {
   }
 }
 
+describe('Endpoints de Tenants (smoke)', () => {
+  test('executa smoke test quando habilitado', async () => {
+    if (process.env.RUN_ENDPOINT_TESTS !== 'true') {
+      return;
+    }
+    const result = await testTenantsEndpoints();
+    expect(result && result.success).toBe(true);
+  });
+});
+
 // Executa se for chamado diretamente
 if (require.main === module) {
   testTenantsEndpoints()

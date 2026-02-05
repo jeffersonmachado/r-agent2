@@ -54,3 +54,32 @@ export async function getAllMetrics(options = {}) {
   const query = params.toString();
   return fetchJson(`/analytics/metrics${query ? `?${query}` : ''}`);
 }
+
+export async function getRoiMetrics(options = {}) {
+  const params = new URLSearchParams();
+  if (options.windowDays) params.append('windowDays', options.windowDays);
+  const query = params.toString();
+  return fetchJson(`/analytics/roi${query ? `?${query}` : ''}`);
+}
+
+export async function getFunnelMetrics(options = {}) {
+  const params = new URLSearchParams();
+  if (options.windowDays) params.append('windowDays', options.windowDays);
+  const query = params.toString();
+  return fetchJson(`/analytics/funnel${query ? `?${query}` : ''}`);
+}
+
+export async function getOrderMetrics() {
+  return fetchJson('/api/orders/metrics');
+}
+
+export async function getPublicTokenStats() {
+  return fetchJson('/public-tokens/stats');
+}
+
+export async function getVoiceMetrics(options = {}) {
+  const params = new URLSearchParams();
+  if (options.windowDays) params.append('windowDays', options.windowDays);
+  const query = params.toString();
+  return fetchJson(`/api/voice/metrics${query ? `?${query}` : ''}`);
+}

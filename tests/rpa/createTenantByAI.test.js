@@ -20,6 +20,7 @@ const API_URL = process.env.API_URL || 'http://localhost:3000';
 const USERNAME = process.env.TEST_USERNAME || 'systemadmin';
 const PASSWORD = process.env.TEST_PASSWORD || 'Admin123!';
 const TARGET_URL = process.env.TARGET_URL || 'https://studiooly.com.br/';
+const SHOULD_RUN = process.env.RUN_RPA_CREATE_TENANT_BY_AI === '1';
 
 /**
  * Extrai informações do site usando scraping básico
@@ -648,3 +649,15 @@ module.exports = {
   extractSiteInfo,
   generateDescriptionForAI,
 };
+
+describe('RPA - Criar tenant por IA', () => {
+  const maybeTest = SHOULD_RUN ? test : test.skip;
+  maybeTest(
+    'executa fluxo completo quando habilitado',
+    async () => {
+      const result = await testCreateTenantByAI();
+      expect(result.success).toBe(true);
+    },
+    300000
+  );
+});

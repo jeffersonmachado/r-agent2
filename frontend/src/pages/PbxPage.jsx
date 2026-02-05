@@ -16,11 +16,14 @@ import {
   upsertCallRule,
   upsertDid,
   upsertExtension,
+  bulkUpsertExtensions,
   upsertQueue,
   upsertQueueMember,
   upsertRoute,
   upsertTrunk,
   pbxReload,
+  getProvisioningToken,
+  rotateProvisioningToken,
   uploadAudioAsset,
   deleteQueueMember,
 } from '../api/pbx';
@@ -71,6 +74,13 @@ export function PbxPage() {
     provisioningMac: '',
     provisioningModel: '',
   });
+  const [provisioningToken, setProvisioningToken] = useState(null);
+  const [provisioningTokenExpiresAt, setProvisioningTokenExpiresAt] = useState(null);
+  const [provisioningTokenUpdatedAt, setProvisioningTokenUpdatedAt] = useState(null);
+  const [rotateExpiresInSec, setRotateExpiresInSec] = useState('');
+  const [rotatedToken, setRotatedToken] = useState(null);
+  const [bulkJson, setBulkJson] = useState('[\n  {\n    "extension": "1001",\n    "displayName": "Ramal 1001",\n    "authUsername": "1001",\n    "authPassword": "SenhaForte123",\n    "provisioning": {\n      "enabled": true,\n      "vendor": "grandstream",\n      "mac": "001122AABBCC",\n      "model": "GXP1620"\n    }\n  }\n]');
+  const [bulkResult, setBulkResult] = useState(null);
   const canSaveExt = useMemo(() => {
     const extOk = (formExt.extension || '').trim().length > 0;
     if (!extOk) return false;
@@ -139,6 +149,15 @@ export function PbxPage() {
     setQueues(rQueues?.items || []);
     setDids(rDids?.items || []);
     setIvrRules(rRules?.items || []);
+
+    try {
+      const tokenInfo = await getProvisioningToken();
+      if (tokenInfo?.ok) {
+        setProvisioningToken(tokenInfo.token || null);
+        setProvisioningTokenExpiresAt(tokenInfo.expiresAt || null);
+        setProvisioningTokenUpdatedAt(tokenInfo.updatedAt || null);
+      }
+    } catch (_) {}
 
     // Keep selected queue id stable when possible
     const qItems = rQueues?.items || [];
@@ -222,6 +241,46 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] save extension failed', e);
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRotateProvisioningToken() {
+    setLoading(true);
+    setError(null);
+    try {
+      const exp = rotateExpiresInSec ? Number(rotateExpiresInSec) : null;
+      const out = await rotateProvisioningToken(Number.isFinite(exp) ? exp : null);
+      if (out?.ok && out?.token) {
+        setRotatedToken(out.token);
+        await refreshCore();
+      }
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleBulkProvisioning() {
+    setLoading(true);
+    setError(null);
+    setBulkResult(null);
+    try {
+      const parsed = safeJsonParse(bulkJson, null);
+      const items = Array.isArray(parsed)
+        ? parsed
+        : (parsed && Array.isArray(parsed.items) ? parsed.items : null);
+      if (!items || items.length === 0) {
+        setError('JSON inválido. Envie um array de itens.');
+        return;
+      }
+      const out = await bulkUpsertExtensions(items);
+      setBulkResult(out);
+      await refreshCore();
+    } catch (e) {
       setError(e?.message || String(e));
     } finally {
       setLoading(false);
@@ -618,6 +677,54 @@ export function PbxPage() {
                 disabled={!formExt.provisioningEnabled}
                 onChange={(e) => setFormExt((s) => ({ ...s, provisioningModel: e.target.value }))}
               />
+            </div>
+            <div style={{ marginBottom: 16, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <strong>Token de Provisionamento</strong>
+                <span style={{ opacity: 0.75 }}>{provisioningToken || '—'}</span>
+                {provisioningTokenExpiresAt ? (
+                  <span style={{ opacity: 0.75 }}>expira: {new Date(provisioningTokenExpiresAt).toLocaleString()}</span>
+                ) : null}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <input
+                  placeholder="expiresInSec (opcional)"
+                  value={rotateExpiresInSec}
+                  onChange={(e) => setRotateExpiresInSec(e.target.value)}
+                  style={{ maxWidth: 220 }}
+                />
+                <button onClick={handleRotateProvisioningToken} disabled={loading} style={{ padding: '6px 10px' }}>
+                  Rotacionar token
+                </button>
+                {rotatedToken ? (
+                  <span style={{ opacity: 0.9 }}>Novo token: <code>{rotatedToken}</code></span>
+                ) : null}
+              </div>
+              <div style={{ marginTop: 6, opacity: 0.7 }}>
+                URL: <code>{buildApiUrl('/provision/<tenant>/<token>/<vendor>/<mac>')}</code>
+              </div>
+            </div>
+            <div style={{ marginBottom: 16, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
+              <strong>Provisionamento em Lote</strong>
+              <p style={{ opacity: 0.75, marginTop: 4 }}>
+                Envie um array JSON de ramais (máx. 500). Itens com erro retornam detalhes.
+              </p>
+              <textarea
+                rows={8}
+                value={bulkJson}
+                onChange={(e) => setBulkJson(e.target.value)}
+                style={{ width: '100%', marginTop: 8 }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <button onClick={handleBulkProvisioning} disabled={loading} style={{ padding: '6px 10px' }}>
+                  Enviar lote
+                </button>
+                {bulkResult ? (
+                  <span style={{ opacity: 0.9 }}>
+                    OK: {bulkResult.okCount || 0} | Erros: {bulkResult.errorCount || 0}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <div style={{ overflow: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

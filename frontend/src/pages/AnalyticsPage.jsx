@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { getAllMetrics, getAgentMetrics, getDepartmentMetrics, getQueueMetrics, getTrendMetrics } from '../api/analytics';
+import {
+  getAllMetrics,
+  getAgentMetrics,
+  getDepartmentMetrics,
+  getQueueMetrics,
+  getTrendMetrics,
+  getRoiMetrics,
+  getFunnelMetrics,
+  getOrderMetrics,
+  getPublicTokenStats,
+  getVoiceMetrics,
+} from '../api/analytics';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
@@ -18,6 +29,11 @@ export function AnalyticsPage() {
   }, [isAuthenticated, authLoading, navigate]);
 
   const [metrics, setMetrics] = useState(null);
+  const [roiMetrics, setRoiMetrics] = useState(null);
+  const [funnelMetrics, setFunnelMetrics] = useState(null);
+  const [orderMetrics, setOrderMetrics] = useState(null);
+  const [publicTokenStats, setPublicTokenStats] = useState(null);
+  const [voiceMetrics, setVoiceMetrics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: '',
@@ -37,8 +53,20 @@ export function AnalyticsPage() {
       if (dateRange.startDate) options.startDate = dateRange.startDate;
       if (dateRange.endDate) options.endDate = dateRange.endDate;
       
-      const data = await getAllMetrics(options);
+      const [data, roi, funnel, orders, tokenStats, voice] = await Promise.all([
+        getAllMetrics(options),
+        getRoiMetrics({ windowDays: 30 }),
+        getFunnelMetrics({ windowDays: 30 }),
+        getOrderMetrics(),
+        getPublicTokenStats(),
+        getVoiceMetrics({ windowDays: 7 }),
+      ]);
       setMetrics(data);
+      setRoiMetrics(roi);
+      setFunnelMetrics(funnel);
+      setOrderMetrics(orders);
+      setPublicTokenStats(tokenStats);
+      setVoiceMetrics(voice);
     } catch (error) {
       logger.error('Erro ao carregar métricas:', error);
       showToast('Erro ao carregar métricas', 'error');
@@ -108,6 +136,205 @@ export function AnalyticsPage() {
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Dashboard com KPIs e indicadores em tempo real
         </p>
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <span>💰</span>
+          <span>ROI (janela 30 dias)</span>
+        </h3>
+        {roiMetrics?.ok ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm text-text-secondary">Receita</div>
+              <div className="text-lg font-semibold">R$ {Number(roiMetrics.orders?.totalRevenue || 0).toFixed(2)}</div>
+              <div className="text-xs text-text-secondary">Pedidos: {roiMetrics.orders?.total || 0}</div>
+            </div>
+            <div>
+              <div className="text-sm text-text-secondary">Leads</div>
+              <div className="text-lg font-semibold">{roiMetrics.leads?.total || 0}</div>
+              <div className="text-xs text-text-secondary">Receita por lead: R$ {Number(roiMetrics.revenuePerLead || 0).toFixed(2)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-text-secondary">ROI</div>
+              <div className="text-lg font-semibold">
+                {roiMetrics.roi == null ? 'N/A' : `${Math.round(roiMetrics.roi * 100)}%`}
+              </div>
+              <div className="text-xs text-text-secondary">Custo: R$ {Number(roiMetrics.marketingCost || 0).toFixed(2)}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-text-secondary">ROI indisponível.</div>
+        )}
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <span>🧭</span>
+          <span>Funil (janela 30 dias)</span>
+        </h3>
+        {funnelMetrics?.ok ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <div className="text-sm text-text-secondary">Leads</div>
+                <div className="text-lg font-semibold">{funnelMetrics.totals?.leads || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Submissões</div>
+                <div className="text-lg font-semibold">{funnelMetrics.totals?.formSubmissions || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Pedidos</div>
+                <div className="text-lg font-semibold">{funnelMetrics.totals?.orders || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Receita</div>
+                <div className="text-lg font-semibold">R$ {Number(funnelMetrics.totals?.revenue || 0).toFixed(2)}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <div className="text-sm text-text-secondary">Conversão Lead → Cliente</div>
+                <div className="text-lg font-semibold">{formatRate(funnelMetrics.conversionRates?.leadToCustomer)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Leads com Form</div>
+                <div className="text-lg font-semibold">{funnelMetrics.totals?.formSubmissionLeads || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Canais (leads)</div>
+                <div className="text-lg font-semibold">{funnelMetrics.channels?.length || 0}</div>
+              </div>
+            </div>
+            <div className="overflow-auto">
+              <table style={{ width: '100%', fontSize: '13px' }}>
+                <thead>
+                  <tr>
+                    <th align="left">Etapa</th>
+                    <th align="left">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(funnelMetrics.stages || []).map((s) => (
+                    <tr key={s.stage}>
+                      <td>{s.stage}</td>
+                      <td>{s.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="text-text-secondary">Funil indisponível.</div>
+        )}
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <span>🧾</span>
+          <span>Pedidos (hoje)</span>
+        </h3>
+        {orderMetrics?.ok ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm text-text-secondary">Criados</div>
+              <div className="text-lg font-semibold">{orderMetrics.today?.createdCount || 0}</div>
+              <div className="text-xs text-text-secondary">Cancelados: {orderMetrics.today?.cancelledCount || 0}</div>
+            </div>
+            <div>
+              <div className="text-sm text-text-secondary">Order → Ready</div>
+              <div className="text-lg font-semibold">{formatSeconds(orderMetrics.today?.avgOrderToReadySeconds)}</div>
+              <div className="text-xs text-text-secondary">
+                SLA {orderMetrics.today?.slaOrderToReadyMinutes || 0}m • Estourados: {orderMetrics.today?.slaOrderToReadyBreachedCount || 0}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-text-secondary">Order → Deliver</div>
+              <div className="text-lg font-semibold">{formatSeconds(orderMetrics.today?.avgOrderToDeliverSeconds)}</div>
+              <div className="text-xs text-text-secondary">
+                SLA {orderMetrics.today?.slaOrderToDeliverMinutes || 0}m • Estourados: {orderMetrics.today?.slaOrderToDeliverBreachedCount || 0}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-text-secondary">Métricas de pedidos indisponíveis.</div>
+        )}
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <span>📞</span>
+          <span>Voz (últimos 7 dias)</span>
+        </h3>
+        {voiceMetrics?.ok ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(voiceMetrics.byType || {}).map(([type, total]) => (
+              <div key={type}>
+                <div className="text-sm text-text-secondary">{type}</div>
+                <div className="text-lg font-semibold">{total}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-text-secondary">Métricas de voz indisponíveis.</div>
+        )}
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <span>🔑</span>
+          <span>Tokens públicos</span>
+        </h3>
+        {publicTokenStats?.ok ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <div className="text-sm text-text-secondary">Total</div>
+                <div className="text-lg font-semibold">{publicTokenStats.totals?.total || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Ativos</div>
+                <div className="text-lg font-semibold">{publicTokenStats.totals?.active || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Revogados</div>
+                <div className="text-lg font-semibold">{publicTokenStats.totals?.revoked || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-text-secondary">Expirados</div>
+                <div className="text-lg font-semibold">{publicTokenStats.totals?.expired || 0}</div>
+              </div>
+            </div>
+            <div className="overflow-auto">
+              <table style={{ width: '100%', fontSize: '13px' }}>
+                <thead>
+                  <tr>
+                    <th align="left">Kind</th>
+                    <th align="left">Total</th>
+                    <th align="left">Ativos</th>
+                    <th align="left">Usados 24h</th>
+                    <th align="left">Último uso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(publicTokenStats.items || []).map((item) => (
+                    <tr key={item.kind}>
+                      <td>{item.kind}</td>
+                      <td>{item.total}</td>
+                      <td>{item.active}</td>
+                      <td>{item.usedLastDay}</td>
+                      <td>{item.lastUsedAtMax || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="text-text-secondary">Stats de tokens indisponíveis.</div>
+        )}
       </div>
 
         {/* Filtros de Data */}

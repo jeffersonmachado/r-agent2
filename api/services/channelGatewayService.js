@@ -305,7 +305,13 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
   // Mapeia ticket existente (compatibilidade com ticket = sessão)
   let currentTicketId = null;
   let derivedStatus = 'bot';
-  if (channelType === 'whatsapp' && externalId && externalId !== 'unknown') {
+  const bodyMeta = messageNormalized?.body && typeof messageNormalized.body === 'object' ? messageNormalized.body.meta : null;
+  const metaTicketId = bodyMeta?.ticketId || bodyMeta?.ticket_id || messageNormalized?.body?.ticketId || null;
+  if (metaTicketId) {
+    currentTicketId = String(metaTicketId);
+    derivedStatus = 'human';
+  }
+  if (!currentTicketId && channelType === 'whatsapp' && externalId && externalId !== 'unknown') {
     const sessionId = `whatsapp_${externalId.replace(/^\+/, '')}`;
     const ticket = getTicketBySession(sessionId);
     if (ticket && ticket.status !== 'closed') {

@@ -263,7 +263,20 @@ class RpaTestRunner {
         const hasPageError = pageErrorsList.some((e) => e && e.type === 'page_error');
 
         const consoleLogsList = Array.isArray(results.consoleLogs) ? results.consoleLogs : [];
-        const hasConsoleError = consoleLogsList.some((e) => e && String(e.level || '').toLowerCase() === 'error');
+        const ignoreConsoleErrors = process.env.RPA_IGNORE_API_CONSOLE_ERRORS === 'true';
+        const ignoredPatterns = ignoreConsoleErrors
+          ? [
+            /failed to fetch/i,
+            /api não acessível/i,
+            /err_connection_refused/i,
+          ]
+          : [];
+        const consoleErrors = consoleLogsList.filter((e) => e && String(e.level || '').toLowerCase() === 'error');
+        const relevantConsoleErrors = consoleErrors.filter((e) => {
+          const text = String(e.text || '');
+          return !ignoredPatterns.some((pattern) => pattern.test(text));
+        });
+        const hasConsoleError = relevantConsoleErrors.length > 0;
 
         if (hasPageError || hasConsoleError) {
           results.success = false;

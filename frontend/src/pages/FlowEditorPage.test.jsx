@@ -222,12 +222,12 @@ describe('pages/FlowEditorPage', () => {
   
   beforeEach(() => {
     mockValidation = null;
-    // Garante isolamento do grafo de módulos entre testes (evita interferência de outros arquivos)
-    vi.resetModules();
-
     // Usa fake timers para controlar todos os setTimeout
     vi.useFakeTimers();
     vi.clearAllMocks();
+    // Garante layout desktop para manter o painel de validação expandido
+    window.innerWidth = 1024;
+    window.dispatchEvent(new Event('resize'));
     localStorage.clear();
     // Define valores padrão no localStorage para evitar mudanças durante o teste
     localStorage.setItem('paletteWidth', '224');

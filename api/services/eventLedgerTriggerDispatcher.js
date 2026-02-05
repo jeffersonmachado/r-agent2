@@ -16,6 +16,7 @@ const { getSequelize } = require('../db/sequelize');
 const { EventLedger } = require('../db/models');
 const { enqueueJob } = require('./executionQueueService');
 const { triggerWebhooks } = require('./webhookService');
+const { dispatchFlowsForEvent } = require('./flowEventTriggerService');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -150,6 +151,24 @@ async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId }) {
     actor: { type: json.actor_type || null, id: json.actor_id || null },
     payload: json.payload || {},
   });
+
+  // Trigger flows (best-effort) via metadata.eventTriggers
+  try {
+    await dispatchFlowsForEvent({
+      tenantId: String(tenantId),
+      event: {
+        id: json.id,
+        type: json.type,
+        source: json.source,
+        occurredAt: json.occurred_at,
+        receivedAt: json.received_at,
+        correlationId: json.correlation_id,
+        subject: { type: json.subject_type || null, id: json.subject_id || null },
+        actor: { type: json.actor_type || null, id: json.actor_id || null },
+        payload: json.payload || {},
+      },
+    });
+  } catch (_) {}
 
   return { ok: true, dispatched: true, eventName };
 }

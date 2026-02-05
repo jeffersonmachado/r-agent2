@@ -41,6 +41,11 @@ import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
 import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
 import { PbxPage } from './pages/PbxPage';
+import { MarketingPage } from './pages/MarketingPage';
+import { SolutionsPage } from './pages/SolutionsPage';
+import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
+import { SsoScimPage } from './pages/SsoScimPage';
+import { BackupPage } from './pages/BackupPage';
 import { StorefrontOrderPage } from './pages/StorefrontOrderPage';
 import { StorefrontOrderStatusPage } from './pages/StorefrontOrderStatusPage';
 import { OrdersPage } from './pages/OrdersPage';
@@ -182,6 +187,11 @@ function AppWithAuth() {
   const isOrders = currentPath === '/orders' || currentPath.startsWith('/orders');
   const isKitchen = currentPath === '/kitchen' || currentPath.startsWith('/kitchen');
   const isDispatch = currentPath === '/dispatch' || currentPath.startsWith('/dispatch');
+  const isMarketing = currentPath === '/marketing' || currentPath.startsWith('/marketing');
+  const isSolutions = currentPath === '/solutions' || currentPath.startsWith('/solutions');
+  const isNodeMarketplace = currentPath === '/node-marketplace' || currentPath.startsWith('/node-marketplace');
+  const isSsoScim = currentPath === '/sso-scim' || currentPath.startsWith('/sso-scim');
+  const isBackup = currentPath === '/backup' || currentPath.startsWith('/backup');
   const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
 
   // Verifica se é Super Admin usando a função completa que considera originalTenantId
@@ -201,6 +211,7 @@ function AppWithAuth() {
       isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbx, isDevDashboard,
+      isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOrders, isKitchen, isDispatch,
       isLogin
     ];
@@ -215,7 +226,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbx, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbx, isDevDashboard, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -259,6 +270,11 @@ function AppWithAuth() {
       '/channel-accounts': '🔌 Canais',
       '/plan-usage': '📦 Plano e Uso',
       '/pbx': '📞 PBX',
+      '/marketing': '🧲 Marketing',
+      '/solutions': '📦 Solutions Packs',
+      '/node-marketplace': '🧩 Node Marketplace',
+      '/sso-scim': '🔐 SSO / SCIM',
+      '/backup': '🗄️ Backup / DR',
       '/dev': '🛠️ Dashboard de Desenvolvimento',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/login': '🔐 Login',
@@ -292,7 +308,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/quick-replies', '/faq'];
+  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/quick-replies', '/faq', '/marketing', '/solutions', '/node-marketplace', '/sso-scim', '/backup'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -400,6 +416,16 @@ function AppWithAuth() {
         <KitchenPage />
       ) : isDispatch ? (
         <DispatchPage />
+      ) : isMarketing ? (
+        <MarketingPage />
+      ) : isSolutions ? (
+        <SolutionsPage />
+      ) : isNodeMarketplace ? (
+        <NodeMarketplacePage />
+      ) : isSsoScim ? (
+        <SsoScimPage />
+      ) : isBackup ? (
+        <BackupPage />
       ) : isDevDashboard ? (
         // Rota /dev só é acessível por super-admin
         isSuperAdmin ? (

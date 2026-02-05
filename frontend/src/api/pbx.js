@@ -11,6 +11,25 @@ export function upsertExtension(payload) {
   });
 }
 
+export function bulkUpsertExtensions(items) {
+  return fetchJson('/api/pbx/extensions/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ items: Array.isArray(items) ? items : [] }),
+  });
+}
+
+export function getProvisioningToken() {
+  return fetchJson('/api/pbx/provisioning-token', { method: 'GET' });
+}
+
+export function rotateProvisioningToken(expiresInSec = null) {
+  const qs = expiresInSec != null ? `?expiresInSec=${encodeURIComponent(String(expiresInSec))}` : '';
+  return fetchJson(`/api/pbx/provisioning-token/rotate${qs}`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export function listTrunks() {
   return fetchJson('/api/pbx/trunks', { method: 'GET' });
 }

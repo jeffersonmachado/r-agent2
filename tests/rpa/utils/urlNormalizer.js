@@ -81,6 +81,18 @@ function normalizeRpaTestUrls(test) {
   
   // Normaliza URLs nos steps
   if (test.steps && Array.isArray(test.steps)) {
+    const hasFlowIdInSteps = test.steps.some((step) => {
+      const candidate = step?.url || step?.value || step?.selector || '';
+      return typeof candidate === 'string' && candidate.includes('flowId=');
+    });
+    const hasChatGreetingAssert = test.steps.some((step) => {
+      const expected = step?.assert?.expected || step?.expected || '';
+      return typeof expected === 'string' && expected.includes('Como posso ajudar');
+    });
+    const derivedFlowId = typeof test.id === 'string'
+      ? (test.id.match(/^test-flow-([^-]+)/) ? `flow-${test.id.match(/^test-flow-([^-]+)/)[1]}` : null)
+      : null;
+
     test.steps.forEach((step, index) => {
       if (step.type === 'navigate') {
         // Garante que há uma URL válida (url ou value)
@@ -101,6 +113,19 @@ function normalizeRpaTestUrls(test) {
         }
         if (step.value) {
           step.value = normalizeUrl(step.value);
+        }
+
+        if (!hasFlowIdInSteps && hasChatGreetingAssert && derivedFlowId) {
+          const maybeBase = step.url || step.value;
+          if (typeof maybeBase === 'string') {
+            const normalized = normalizeUrl(maybeBase);
+            const isBaseOnly = normalized === baseUrl || normalized === `${baseUrl}/`;
+            if (isBaseOnly) {
+              const chatUrl = `${baseUrl}/chat?flowId=${encodeURIComponent(derivedFlowId)}`;
+              if (step.url) step.url = chatUrl;
+              if (step.value) step.value = chatUrl;
+            }
+          }
         }
       }
     });

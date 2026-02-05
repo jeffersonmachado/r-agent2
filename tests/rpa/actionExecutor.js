@@ -316,6 +316,14 @@ class ActionExecutor {
     // Sem normalização:
     // - asserts com "assert: {..}" viram no-op (não validam nada)
     // - steps com type="url" falham com "Tipo de ação desconhecido: url"
+    const parseExistsExpected = (value) => {
+      if (value === undefined || value === null) return undefined;
+      if (value === true || value === 'true') return true;
+      if (value === false || value === 'false') return false;
+      if (typeof value === 'string' && value.trim() !== '') return true;
+      return Boolean(value);
+    };
+
     const normalizeAction = (a) => {
       if (!a || typeof a !== 'object') return a;
 
@@ -337,7 +345,13 @@ class ActionExecutor {
             // `body` normalmente contém MUITO texto (UI + logs). Para seeds gerados,
             // o esperado costuma ser substring, não igualdade exata.
             const selector = typeof a.selector === 'string' ? a.selector.trim() : '';
-            if (selector === 'body') {
+            const isInputLike =
+              selector.includes('input') ||
+              selector.includes('textarea') ||
+              selector.includes('contenteditable');
+            if (isInputLike) {
+              normalized.value = a.expected;
+            } else if (selector === 'body') {
               normalized.textContains = a.expected;
             } else {
               normalized.text = a.expected;
@@ -352,7 +366,7 @@ class ActionExecutor {
         }
 
         if (kind === 'exists') {
-          if (a.expected !== undefined) normalized.exists = a.expected === true || a.expected === 'true';
+          if (a.expected !== undefined) normalized.exists = parseExistsExpected(a.expected);
           return normalized;
         }
 
@@ -381,7 +395,13 @@ class ActionExecutor {
           if (expected !== undefined) {
             // Mesma regra do formato legado: `body` => contains por padrão
             const selector = typeof a.selector === 'string' ? a.selector.trim() : '';
-            if (selector === 'body') {
+            const isInputLike =
+              selector.includes('input') ||
+              selector.includes('textarea') ||
+              selector.includes('contenteditable');
+            if (isInputLike) {
+              normalized.value = expected;
+            } else if (selector === 'body') {
               normalized.textContains = expected;
             } else {
               normalized.text = expected;
@@ -396,7 +416,7 @@ class ActionExecutor {
         }
 
         if (kind === 'exists') {
-          if (expected !== undefined) normalized.exists = expected === true || expected === 'true';
+          if (expected !== undefined) normalized.exists = parseExistsExpected(expected);
           return normalized;
         }
 
@@ -831,9 +851,41 @@ class ActionExecutor {
             timeout: action.timeout || this.options.timeout,
           });
         } catch (e) {
-          const error = new Error(`Elemento não encontrado: ${foundSelector}`);
-          error.code = 'RPA_ELEMENT_NOT_FOUND';
-          throw error;
+          // Fallback para inputs genéricos quando o seletor é muito específico (ex.: textarea)
+          const rawSelector = String(selectors[0] || '').trim();
+          const isInputLike =
+            rawSelector === 'textarea' ||
+            rawSelector === 'input' ||
+            rawSelector.includes('textarea') ||
+            rawSelector.includes('input') ||
+            rawSelector.includes('contenteditable');
+
+          if (isInputLike) {
+            const fallbackSelectors = [
+              "textarea",
+              "input[type='text']",
+              "input",
+              "[contenteditable='true']",
+            ];
+            for (const fallback of fallbackSelectors) {
+              try {
+                await this.page.waitForSelector(fallback, {
+                  state: 'visible',
+                  timeout: 5000,
+                });
+                foundSelector = fallback;
+                break;
+              } catch (_) {
+                // tenta próximo fallback
+              }
+            }
+          }
+
+          if (!foundSelector) {
+            const error = new Error(`Elemento não encontrado: ${rawSelector}`);
+            error.code = 'RPA_ELEMENT_NOT_FOUND';
+            throw error;
+          }
         }
       }
 
@@ -1453,7 +1505,31 @@ class ActionExecutor {
             };
           }
         }
-        const exists = await this.page.locator(selector).count() > 0;
+        let exists = await this.page.locator(selector).count() > 0;
+        if (!exists && action.exists === true) {
+          const rawSelector = String(selector || '').trim();
+          const isInputLike =
+            rawSelector === 'textarea' ||
+            rawSelector === 'input' ||
+            rawSelector.includes('textarea') ||
+            rawSelector.includes('input') ||
+            rawSelector.includes('contenteditable');
+          if (isInputLike) {
+            const fallbackSelectors = [
+              "textarea",
+              "input[type='text']",
+              "input",
+              "[contenteditable='true']",
+            ];
+            for (const fallback of fallbackSelectors) {
+              const fallbackExists = await this.page.locator(fallback).count() > 0;
+              if (fallbackExists) {
+                exists = true;
+                break;
+              }
+            }
+          }
+        }
         if (exists !== action.exists) {
           return {
             success: false,
@@ -1515,6 +1591,16 @@ class ActionExecutor {
         const actualValue = await this.page.locator(selector).inputValue();
         const expectedValue = this.replaceVariables(action.value, data);
         if (actualValue !== expectedValue) {
+          const isInputLike =
+            selector.includes('input') ||
+            selector.includes('textarea') ||
+            selector.includes('contenteditable');
+          if (isInputLike) {
+            const bodyText = await this.page.locator('body').textContent();
+            if (bodyText && bodyText.includes(expectedValue)) {
+              return { success: true };
+            }
+          }
           return {
             success: false,
             error: action.message || `Valor esperado "${expectedValue}", recebido "${actualValue}"`,

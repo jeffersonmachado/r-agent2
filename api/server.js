@@ -1840,6 +1840,25 @@ async function requestHandler(req, res) {
       const pbxExtensions = require('./services/pbx/pbxExtensionsService');
       const actorUserId = req.user?.id || null;
       const item = await pbxExtensions.upsertExtension({ tenantKey, payload: body, actorUserId });
+      try {
+        logAction({
+          agentId: req.user?.id || null,
+          username: req.user?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.extensions.upsert',
+          resource: 'pbx_extension',
+          resourceId: item?.id || null,
+          details: {
+            extension: item?.extension || null,
+            provisioning: item?.endpointOptions?.provisioning?.enabled ? true : false,
+            vendor: item?.endpointOptions?.provisioning?.vendor || null,
+            model: item?.endpointOptions?.provisioning?.model || null,
+            firmware: item?.endpointOptions?.provisioning?.firmware || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
       sendJson(res, 200, { ok: true, item });
     } catch (err) {
       const code = err.code || 'pbx_extensions_upsert_error';
@@ -1910,6 +1929,23 @@ async function requestHandler(req, res) {
       }
 
       const okCount = results.filter((r) => r.ok).length;
+      try {
+        logAction({
+          agentId: req.user?.id || null,
+          username: req.user?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.extensions.bulk',
+          resource: 'pbx_extension',
+          resourceId: null,
+          details: {
+            total: results.length,
+            okCount,
+            errorCount: results.length - okCount,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
       sendJson(res, 200, { ok: true, okCount, errorCount: results.length - okCount, results });
     } catch (err) {
       logger.error('[PBX] Erro em POST /api/pbx/extensions/bulk', err);
@@ -3303,7 +3339,7 @@ async function requestHandler(req, res) {
   // Rotas públicas: /health, /version, /system/status, /system/websocket, OPTIONS
   // Rotas de autenticação não exigem tenant_id (login, reset, convites)
   // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
-  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket', '/storefront', '/physical', '/public-tokens/resolve', '/click2call', '/provision'];
+  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket', '/storefront', '/physical', '/public-tokens/resolve', '/click2call', '/provision', '/config'];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
   // Webhooks de provedores (inbound) não podem ser bloqueados por falta de tenant no início:
   // tenant é resolvido por channel_accounts e, se não resolver, deve retornar 200 OK com log warn.
@@ -7251,6 +7287,143 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // -----------------------------------------------------------------------
+  // Node Marketplace (catalogo interno)
+  // -----------------------------------------------------------------------
+  // GET /api/node-marketplace/catalog
+  if (method === 'GET' && pathname === '/api/node-marketplace/catalog') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const service = require('./services/nodeMarketplaceService');
+      const items = service.listNodeCatalog({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao listar catálogo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar catálogo' });
+    }
+    return;
+  }
+
+  // GET /api/node-marketplace/published
+  if (method === 'GET' && pathname === '/api/node-marketplace/published') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const service = require('./services/nodeMarketplaceService');
+      const items = service.listPublishedNodes({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao listar publicados:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar publicados' });
+    }
+    return;
+  }
+
+  // GET /api/node-marketplace/sdk/schema
+  if (method === 'GET' && pathname === '/api/node-marketplace/sdk/schema') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const service = require('./services/nodeMarketplaceService');
+      const schema = service.getNodeSchema();
+      sendJson(res, 200, { ok: true, schema });
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao obter schema SDK:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter schema SDK' });
+    }
+    return;
+  }
+
+  // POST /api/node-marketplace/publish
+  if (method === 'POST' && pathname === '/api/node-marketplace/publish') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const node = body && body.node ? body.node : body;
+      const service = require('./services/nodeMarketplaceService');
+      const out = service.publishNode({
+        tenantId: req.tenantId,
+        node,
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'publish_failed' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao publicar node:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao publicar node' });
+    }
+    return;
+  }
+
+  // DELETE /api/node-marketplace/publish/:id
+  if (method === 'DELETE' && pathname.match(/^\/api\/node-marketplace\/publish\/[^\/]+$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const nodeId = pathname.split('/').pop();
+      const service = require('./services/nodeMarketplaceService');
+      const out = service.revokeNode({ tenantId: req.tenantId, nodeId });
+      if (!out.ok) {
+        sendJson(res, 404, { ok: false, error: out.error || 'not_found' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao revogar node:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao revogar node' });
+    }
+    return;
+  }
+
   // POST /api/solutions/packs/install { segment }
   if (method === 'POST' && pathname === '/api/solutions/packs/install') {
     const authResult = requireAuth(req);
@@ -7744,6 +7917,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // GET /flows
   if (method === 'GET' && pathname === '/flows') {
     const authResult = requireAuth(req);
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const envFilter = urlObj.searchParams.get('environment');
     if (STRICT_TENANT_MODE) {
       if (!authResult.valid) {
         sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
@@ -7752,14 +7927,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const tenantId = requireTenant(req, res);
       if (!tenantId) return;
       const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === tenantId);
-      sendJson(res, 200, tenantFlows);
+      const filtered = envFilter
+        ? tenantFlows.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
+        : tenantFlows;
+      sendJson(res, 200, filtered);
     } else {
       // DEV/compatibilidade: se autenticado, filtra por tenant do agente; caso contrário, retorna todos
       if (authResult.valid && req.tenantId) {
         const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === req.tenantId);
-        sendJson(res, 200, tenantFlows);
+        const filtered = envFilter
+          ? tenantFlows.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
+          : tenantFlows;
+        sendJson(res, 200, filtered);
       } else {
-        sendJson(res, 200, Array.from(flows.values()));
+        const all = Array.from(flows.values());
+        const filtered = envFilter
+          ? all.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
+          : all;
+        sendJson(res, 200, filtered);
       }
     }
     return;
@@ -7952,6 +8137,61 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         logger.error('Erro ao criar fluxo', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
       }
+    }
+    return;
+  }
+
+  // PUT /flows/:id/environment
+  if (method === 'PUT' && pathname.startsWith('/flows/') && pathname.endsWith('/environment')) {
+    const id = decodeURIComponent(pathname.slice('/flows/'.length).replace(/\/environment$/, ''));
+    if (!id) {
+      badRequest(res, 'ID do fluxo é obrigatório');
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const env = body && body.environment ? String(body.environment).trim() : '';
+      if (!env || !['dev', 'stage', 'prod'].includes(env)) {
+        badRequest(res, 'Campo "environment" inválido. Use: dev|stage|prod');
+        return;
+      }
+
+      const existingFlow = flows.get(id);
+      if (!existingFlow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${id}" não encontrado` });
+        return;
+      }
+
+      const authResult = requireAuth(req);
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        const tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+        if (existingFlow.tenantId !== tenantId) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+          return;
+        }
+      } else if (authResult.valid && req.tenantId && existingFlow.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+        return;
+      }
+
+      const next = { ...existingFlow };
+      next.metadata = next.metadata && typeof next.metadata === 'object' ? { ...next.metadata } : {};
+      next.metadata.environment = env;
+      flows.set(id, next);
+      persistFlowBestEffort(next);
+      sendJson(res, 200, { ok: true, flow: next });
+    } catch (err) {
+      logger.error('[Flows] Erro ao atualizar environment', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar environment' });
     }
     return;
   }
@@ -10470,6 +10710,81 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // -----------------------------------------------------------------------
   // Event ledger query (audit/debug) - autenticado
   // -----------------------------------------------------------------------
+  // POST /api/voice/events - ingestão de eventos de voz (ARI/AMI/gateway)
+  if (method === 'POST' && pathname === '/api/voice/events') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { ingestVoiceEvent } = require('./services/voiceEventService');
+      const out = await ingestVoiceEvent({
+        tenantId: req.tenantId,
+        eventType: body?.eventType || body?.type,
+        callId: body?.callId || body?.call_id,
+        occurredAt: body?.occurredAt || body?.occurred_at || null,
+        correlationId: body?.correlationId || body?.correlation_id || null,
+        subjectType: body?.subjectType || body?.subject_type || 'pbx_call',
+        subjectId: body?.subjectId || body?.subject_id || null,
+        actorType: body?.actorType || body?.actor_type || 'system',
+        actorId: body?.actorId || body?.actor_id || 'voice_gateway',
+        payload: body?.payload || {},
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_event_invalid' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceEvents] Erro ao ingerir evento de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao ingerir evento de voz' });
+    }
+    return;
+  }
+
+  // GET /api/voice/metrics - métricas básicas de voz (por tipo)
+  if (method === 'GET' && pathname === '/api/voice/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowDays = urlObj.searchParams.get('windowDays');
+      const { getVoiceMetrics } = require('./services/voiceEventService');
+      const out = await getVoiceMetrics({
+        tenantId: req.tenantId,
+        windowDays: windowDays != null ? Number(windowDays) : 7,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceEvents] Erro ao obter métricas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas' });
+    }
+    return;
+  }
+
   // GET /api/event-ledger?subjectType=&subjectId=&correlationId=&type=&limit=&offset=
   if (method === 'GET' && pathname === '/api/event-ledger') {
     const authResult = requireAuth(req);
@@ -10505,6 +10820,222 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[EventLedger] Erro ao listar eventos:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar eventos' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Tenant settings (SSO/SCIM) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/tenant-settings/:key
+  if (method === 'GET' && pathname.startsWith('/api/tenant-settings/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
+      const allowedKeys = new Set(['sso', 'scim']);
+      if (!allowedKeys.has(String(key))) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim' });
+        return;
+      }
+      const service = require('./services/tenantSettingsService');
+      const out = await service.getSetting({ tenantId, key });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, key, value: out.value });
+    } catch (err) {
+      logger.error('[TenantSettings] Erro ao obter setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter setting' });
+    }
+    return;
+  }
+
+  // POST /api/tenant-settings/:key
+  if (method === 'POST' && pathname.startsWith('/api/tenant-settings/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
+      const allowedKeys = new Set(['sso', 'scim']);
+      if (!allowedKeys.has(String(key))) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim' });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const service = require('./services/tenantSettingsService');
+      const out = await service.upsertSetting({ tenantId, key, value: body?.value || {} });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, key, value: out.value });
+    } catch (err) {
+      logger.error('[TenantSettings] Erro ao salvar setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar setting' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Backup/DR (export/import) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/backup/export
+  if (method === 'GET' && pathname === '/api/backup/export') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const { Flow, TenantSetting } = require('./db/models');
+      const FlowModel = Flow();
+      const TenantSettingModel = TenantSetting();
+      const flowRows = await FlowModel.findAll({ where: { tenant_key: tenantId } });
+      const flowsPayload = flowRows.map((row) => {
+        const data = row.data && typeof row.data === 'object' ? row.data : {};
+        return { ...data, id: row.id, tenantId };
+      });
+      const settingsRows = await TenantSettingModel.findAll({ where: { tenant_id: String(tenantId) } });
+      const settings = settingsRows.map((row) => {
+        const json = row.toJSON ? row.toJSON() : row;
+        return { key: json.key, value: json.value || {} };
+      });
+      sendJson(res, 200, {
+        ok: true,
+        tenantId,
+        exportedAt: new Date().toISOString(),
+        flows: flowsPayload,
+        settings,
+      });
+    } catch (err) {
+      logger.error('[Backup] Erro ao exportar backup:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao exportar backup' });
+    }
+    return;
+  }
+
+  // POST /api/backup/import
+  if (method === 'POST' && pathname === '/api/backup/import') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const flowsInput = Array.isArray(body?.flows) ? body.flows : [];
+      const settingsInput = Array.isArray(body?.settings) ? body.settings : [];
+      const overwrite = body?.overwrite === true;
+
+      const { Flow, TenantSetting } = require('./db/models');
+      const FlowModel = Flow();
+      const TenantSettingModel = TenantSetting();
+      let flowImported = 0;
+      let flowSkipped = 0;
+      let settingImported = 0;
+
+      for (const f of flowsInput) {
+        if (!f || !f.id) {
+          flowSkipped += 1;
+          continue;
+        }
+        const nextFlow = { ...f, tenantId };
+        // eslint-disable-next-line no-await-in-loop
+        const existing = await FlowModel.findByPk(String(f.id));
+        if (existing && !overwrite) {
+          flowSkipped += 1;
+          continue;
+        }
+        const now = new Date();
+        if (existing) {
+          // eslint-disable-next-line no-await-in-loop
+          await existing.update({ tenant_key: tenantId, name: nextFlow.name || null, data: nextFlow, updated_at: now });
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          await FlowModel.create({ id: String(f.id), tenant_key: tenantId, name: nextFlow.name || null, data: nextFlow, created_at: now, updated_at: now });
+        }
+        flows.set(String(f.id), nextFlow);
+        flowImported += 1;
+      }
+
+      for (const s of settingsInput) {
+        if (!s || !s.key) continue;
+        const key = String(s.key);
+        const value = s.value && typeof s.value === 'object' ? s.value : {};
+        // eslint-disable-next-line no-await-in-loop
+        const existing = await TenantSettingModel.findOne({ where: { tenant_id: String(tenantId), key } });
+        if (existing) {
+          // eslint-disable-next-line no-await-in-loop
+          await existing.update({ value });
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          await TenantSettingModel.create({ tenant_id: String(tenantId), key, value });
+        }
+        settingImported += 1;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId,
+          action: 'backup_import',
+          resource: 'tenant_backup',
+          resourceId: tenantId,
+          details: { flowImported, flowSkipped, settingImported, overwrite },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, flowImported, flowSkipped, settingImported, overwrite });
+    } catch (err) {
+      logger.error('[Backup] Erro ao importar backup:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao importar backup' });
     }
     return;
   }
@@ -12735,6 +13266,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           text: typeof m.body?.text === 'string' ? m.body.text : null,
           body: m.body || {},
           externalMessageId: m.externalMessageId || null,
+          status: m.status || null,
           timestamp: m.createdAt || null,
         }));
         const ticketItems = (messages || []).map((m) => ({
@@ -12745,6 +13277,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           text: m.text || '',
           body: { text: m.text || '' },
           externalMessageId: m.externalMessageId || m.id || null,
+          status: m.status || (m.sender === 'agent' || m.sender === 'bot' ? 'sent' : 'received'),
           timestamp: m.timestamp || null,
         }));
 
@@ -17223,6 +17756,74 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, 200, metrics);
     } catch (err) {
       logger.error('Erro ao obter métricas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /analytics/roi - Resumo de ROI (orders vs leads)
+  if (method === 'GET' && pathname === '/analytics/roi') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowDays = urlObj.searchParams.get('windowDays');
+      const { getRoiSummary } = require('./services/roiService');
+      const out = await getRoiSummary({
+        tenantId: req.tenantId,
+        windowDays: windowDays != null ? Number(windowDays) : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'roi_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao obter ROI:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /analytics/funnel - Funil básico (leads/forms/orders + canais)
+  if (method === 'GET' && pathname === '/analytics/funnel') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowDays = urlObj.searchParams.get('windowDays');
+      const { getFunnelMetrics } = require('./services/roiService');
+      const out = await getFunnelMetrics({
+        tenantId: req.tenantId,
+        windowDays: windowDays != null ? Number(windowDays) : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'funnel_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao obter funil:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
     }
     return;

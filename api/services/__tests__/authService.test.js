@@ -226,8 +226,8 @@ describe('authService', () => {
       expect(logoutResult.success).toBe(true);
     });
 
-    test('deve retornar sucesso mesmo para token inválido (logout sempre sucede)', () => {
-      const logoutResult = logout('invalid-token');
+    test('deve retornar sucesso mesmo para token inválido (logout sempre sucede)', async () => {
+      const logoutResult = await logout('invalid-token');
 
       // logout sempre retorna success: true, mesmo se token não existe
       expect(logoutResult.success).toBe(true);
@@ -262,9 +262,9 @@ describe('authService', () => {
   });
 
   describe('listAgents', () => {
-    test('deve retornar lista de agentes', () => {
+    test('deve retornar lista de agentes', async () => {
       const timestamp = Date.now();
-      createAgent({
+      await createAgent({
         tenantId: 'tenant-1',
         username: `user1-${timestamp}`,
         email: `user1-${timestamp}@example.com`,
@@ -272,7 +272,7 @@ describe('authService', () => {
         role: 'operator',
       });
 
-      createAgent({
+      await createAgent({
         tenantId: 'tenant-1',
         username: `user2-${timestamp}`,
         email: `user2-${timestamp}@example.com`,
@@ -280,29 +280,29 @@ describe('authService', () => {
         role: 'operator',
       });
 
-      const agents = listAgents();
+      const agents = await listAgents();
 
       expect(Array.isArray(agents)).toBe(true);
       expect(agents.length).toBeGreaterThanOrEqual(2);
     });
 
-    test('deve filtrar por tenantId quando fornecido', () => {
+    test('deve filtrar por tenantId quando fornecido', async () => {
       const timestamp = Date.now();
-      createAgent({
+      await createAgent({
         tenantId: 'tenant-1',
         username: `user1-${timestamp}`,
         email: `user1-${timestamp}@example.com`,
         password: 'password123',
       });
 
-      createAgent({
+      await createAgent({
         tenantId: 'tenant-2',
         username: `user2-${timestamp}`,
         email: `user2-${timestamp}@example.com`,
         password: 'password123',
       });
 
-      const agents = listAgents('tenant-1');
+      const agents = await listAgents('tenant-1');
 
       expect(agents.every(a => a.tenantId === 'tenant-1')).toBe(true);
     });

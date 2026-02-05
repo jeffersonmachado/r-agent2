@@ -135,6 +135,7 @@ try {
 // Configuração mínima do Vite para o frontend React.
 const viteConfig = defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
+  cacheDir: process.env.VITE_CACHE_DIR || './.vite',
   plugins: [
     react({
       // Permite Fast Refresh para arquivos que exportam hooks customizados

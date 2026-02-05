@@ -1293,15 +1293,15 @@ async function subflowNodeHandler(node, state, input, deps = null) {
       }
 
       // Executa um passo do subfluxo
-      const stepResult = await executeStep(
-        compiledSubflow,
-        currentSubflowState,
-        {
-          registry,
-          input: stepCount === 0 ? input : undefined, // Passa input apenas no primeiro passo
-          deps,
-        }
-      );
+    const stepResult = await executeStep(
+      currentSubflowState,
+      compiledSubflow,
+      {
+        registry,
+        input: stepCount === 0 ? input : undefined, // Passa input apenas no primeiro passo
+        deps,
+      }
+    );
 
       stepCount++;
       currentSubflowState = stepResult.state;

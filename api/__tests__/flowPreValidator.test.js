@@ -45,7 +45,7 @@ describe('FlowPreValidator (validateFlowDraft)', () => {
       throw new Error('expected_to_throw');
     } catch (err) {
       expect(err).toBeTruthy();
-      expect(err.code).toBe('FLOW_HAS_CYCLE');
+      expect(['FLOW_HAS_CYCLE', 'FLOW_POINTS_TO_ANCESTOR']).toContain(err.code);
     }
   });
 

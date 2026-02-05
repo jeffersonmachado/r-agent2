@@ -2,17 +2,14 @@
  * Testes de segurança SaaS - Isolamento, RBAC e Auditoria
  */
 
-const {
-  createTenant,
-  getTenant,
-  validateTenantStatus,
-  _internal,
-} = require('../../api/services/tenantService');
-const {
-  createAgent,
-  login,
-  validateToken,
-} = require('../../api/services/authService');
+let createTenant;
+let getTenant;
+let validateTenantStatus;
+let _internal;
+let createAgent;
+let login;
+let validateToken;
+let tenantStore;
 const {
   hasPermission,
 } = require('../../api/services/rbacService');
@@ -36,8 +33,27 @@ jest.mock('../../api/utils/logger', () => ({
 jest.mock('../../api/utils/config', () => ({
   get: jest.fn((key, defaultValue) => defaultValue || null), // Removido fallback para 'tenant-demo'
 }));
+jest.mock('../../api/db/models', () => require('../helpers/dbMock').mockModelsFactory());
+jest.mock('../../api/db/sequelize', () => {
+  const { mockDatabase } = require('../helpers/dbMock');
+  const { mockSequelize } = mockDatabase();
+  return {
+    getSequelize: jest.fn(() => mockSequelize),
+    connect: jest.fn().mockResolvedValue(mockSequelize),
+    close: jest.fn().mockResolvedValue(true),
+    Sequelize: jest.fn(),
+  };
+});
+jest.mock('../../api/services/authService', () => ({
+  createAgent: jest.fn(async ({ tenantId }) => ({ success: true, agent: { id: 'agent-test', tenantId } })),
+  login: jest.fn(),
+  validateToken: jest.fn(),
+}));
 
 const fs = require('fs');
+const { mockDatabase, createMockTenant } = require('../helpers/dbMock');
+const { mockModels } = mockDatabase();
+const { mockSequelize } = mockDatabase();
 
 describe('SaaS Security Tests', () => {
   beforeEach(() => {
@@ -46,21 +62,52 @@ describe('SaaS Security Tests', () => {
     fs.mkdirSync = jest.fn();
     fs.writeFileSync = jest.fn();
     fs.readFileSync = jest.fn().mockReturnValue('[]');
+
+    const { getSequelize } = require('../../api/db/sequelize');
+    getSequelize.mockReturnValue(mockSequelize);
+
+    tenantStore = new Map();
+    mockModels.Tenant.create.mockImplementation((payload) => {
+      const tenant = createMockTenant(payload);
+      tenantStore.set(String(tenant.tenant_key), tenant);
+      tenantStore.set(String(tenant.id), tenant);
+      return tenant;
+    });
+    mockModels.Tenant.findOne.mockImplementation(({ where } = {}) => {
+      const key = where?.tenant_key || where?.id || null;
+      return key ? (tenantStore.get(String(key)) || null) : null;
+    });
+    mockModels.Tenant.findByPk.mockImplementation((id) => tenantStore.get(String(id)) || null);
+    mockModels.Tenant.update.mockImplementation((updates = {}, { where } = {}) => {
+      const key = where?.tenant_key || where?.id || null;
+      const tenant = key ? (tenantStore.get(String(key)) || null) : null;
+      if (tenant) {
+        Object.assign(tenant, updates);
+        return [1, [tenant]];
+      }
+      return [0, []];
+    });
+    mockModels.TenantContext.findByPk.mockResolvedValue(null);
+    mockModels.TenantContext.create.mockResolvedValue(null);
     
+    ({ createTenant, getTenant, validateTenantStatus, _internal } = require('../../api/services/tenantService'));
+    ({ createAgent, login, validateToken } = require('../../api/services/authService'));
+    createAgent.mockImplementation(async ({ tenantId }) => ({ success: true, agent: { id: 'agent-test', tenantId } }));
+
     // Limpa o estado antes de cada teste
     _internal.clearTenantContexts();
   });
 
   describe('Isolamento de Tenant', () => {
-    test('deve bloquear acesso cruzado entre tenants', () => {
+    test('deve bloquear acesso cruzado entre tenants', async () => {
       // Cria dois tenants
-      const tenant1 = createTenant({
+      const tenant1 = await createTenant({
         name: 'Tenant 1',
         site: 'https://tenant1.com',
         ramo_atividade: 'Teste',
         objetivo: 'Testar',
       });
-      const tenant2 = createTenant({
+      const tenant2 = await createTenant({
         name: 'Tenant 2',
         site: 'https://tenant2.com',
         ramo_atividade: 'Teste',
@@ -68,7 +115,7 @@ describe('SaaS Security Tests', () => {
       });
 
       // Cria agente no tenant 1
-      const agent1 = createAgent({
+      const agent1 = await createAgent({
         tenantId: tenant1.tenant.id,
         username: 'user1',
         email: 'user1@test.com',
@@ -85,7 +132,7 @@ describe('SaaS Security Tests', () => {
       };
 
       // O agente do tenant1 só pode acessar tenant1
-      const result1 = requireTenant(mockReq);
+      const result1 = await requireTenant(mockReq);
       expect(result1.valid).toBe(true);
       expect(result1.tenantId).toBe(tenant1.tenant.id);
       
@@ -99,8 +146,8 @@ describe('SaaS Security Tests', () => {
       expect(validation.error).toContain('tenant');
     });
 
-    test('deve validar que recurso pertence ao tenant', () => {
-      const tenant1 = createTenant({
+    test('deve validar que recurso pertence ao tenant', async () => {
+      const tenant1 = await createTenant({
         name: 'Tenant 1',
         site: 'https://tenant1.com',
         ramo_atividade: 'Teste',
@@ -115,8 +162,8 @@ describe('SaaS Security Tests', () => {
       expect(result.valid).toBe(true);
     });
 
-    test('deve bloquear acesso a recurso de outro tenant', () => {
-      const tenant1 = createTenant({
+    test('deve bloquear acesso a recurso de outro tenant', async () => {
+      const tenant1 = await createTenant({
         name: 'Tenant 1 Block',
         site: 'https://tenant1-block.com',
         ramo_atividade: 'Teste',
@@ -125,7 +172,7 @@ describe('SaaS Security Tests', () => {
       expect(tenant1.success).toBe(true);
       expect(tenant1.tenant).toBeDefined();
       
-      const tenant2 = createTenant({
+      const tenant2 = await createTenant({
         name: 'Tenant 2 Block',
         site: 'https://tenant2-block.com',
         ramo_atividade: 'Teste',
@@ -192,8 +239,8 @@ describe('SaaS Security Tests', () => {
   });
 
   describe('Auditoria', () => {
-    test('deve registrar ação com tenant_id', () => {
-      const tenant = createTenant({
+    test('deve registrar ação com tenant_id', async () => {
+      const tenant = await createTenant({
         name: 'Test Tenant Audit',
         site: 'https://test-audit.com',
         ramo_atividade: 'Teste',
@@ -212,14 +259,14 @@ describe('SaaS Security Tests', () => {
         userAgent: 'test',
       });
 
-      const logs = queryLogs({ tenantId: tenant.tenant.id });
+      const { items: logs } = await queryLogs({ tenantId: tenant.tenant.id });
 
       expect(logs.length).toBeGreaterThan(0);
       expect(logs[0].tenantId).toBe(tenant.tenant.id);
     });
 
-    test('deve filtrar logs por tenant', () => {
-      const tenant1 = createTenant({
+    test('deve filtrar logs por tenant', async () => {
+      const tenant1 = await createTenant({
         name: 'Tenant 1 Logs',
         site: 'https://tenant1-logs.com',
         ramo_atividade: 'Teste',
@@ -228,7 +275,7 @@ describe('SaaS Security Tests', () => {
       expect(tenant1.success).toBe(true);
       expect(tenant1.tenant).toBeDefined();
       
-      const tenant2 = createTenant({
+      const tenant2 = await createTenant({
         name: 'Tenant 2 Logs',
         site: 'https://tenant2-logs.com',
         ramo_atividade: 'Teste',
@@ -257,8 +304,8 @@ describe('SaaS Security Tests', () => {
         userAgent: 'test',
       });
 
-      const logs1 = queryLogs({ tenantId: tenant1.tenant.id });
-      const logs2 = queryLogs({ tenantId: tenant2.tenant.id });
+      const { items: logs1 } = await queryLogs({ tenantId: tenant1.tenant.id });
+      const { items: logs2 } = await queryLogs({ tenantId: tenant2.tenant.id });
 
       expect(logs1.every(log => log.tenantId === tenant1.tenant.id)).toBe(true);
       expect(logs2.every(log => log.tenantId === tenant2.tenant.id)).toBe(true);
@@ -266,8 +313,8 @@ describe('SaaS Security Tests', () => {
   });
 
   describe('Validação de Status de Tenant', () => {
-    test('deve bloquear acesso a tenant suspenso', () => {
-      const tenant = createTenant({
+    test('deve bloquear acesso a tenant suspenso', async () => {
+      const tenant = await createTenant({
         name: 'Test Tenant Suspended',
         site: 'https://test-suspended.com',
         ramo_atividade: 'Teste',
@@ -277,16 +324,16 @@ describe('SaaS Security Tests', () => {
       expect(tenant.tenant).toBeDefined();
 
       const { suspendTenant } = require('../../api/services/tenantService');
-      suspendTenant(tenant.tenant.id);
+      await suspendTenant(tenant.tenant.id);
 
-      const validation = validateTenantStatus(tenant.tenant.id);
+      const validation = await validateTenantStatus(tenant.tenant.id);
 
       expect(validation.valid).toBe(false);
       expect(validation.error).toContain('suspenso');
     });
 
-    test('deve permitir acesso a tenant ativo', () => {
-      const tenant = createTenant({
+    test('deve permitir acesso a tenant ativo', async () => {
+      const tenant = await createTenant({
         name: 'Test Tenant Active',
         site: 'https://test-active.com',
         ramo_atividade: 'Teste',
@@ -296,7 +343,7 @@ describe('SaaS Security Tests', () => {
       expect(tenant.success).toBe(true);
       expect(tenant.tenant).toBeDefined();
 
-      const validation = validateTenantStatus(tenant.tenant.id);
+      const validation = await validateTenantStatus(tenant.tenant.id);
 
       expect(validation.valid).toBe(true);
     });

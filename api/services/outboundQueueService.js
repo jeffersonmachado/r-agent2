@@ -166,6 +166,9 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
 
 async function deliverOutbound({ tenantId, channelType, message }) {
   // messageNormalized esperado: { to, type, body }
+  const meta = message && typeof message === 'object'
+    ? (message.meta || (message.body && message.body.meta) || null)
+    : null;
   if (channelType === 'whatsapp') {
     const to = message.to;
     const kind = message.type || 'text';
@@ -179,7 +182,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         channelType,
         to,
         type: 'text',
-        body: { text },
+        body: { text, ...(meta ? { meta } : {}) },
         externalMessageId,
         status: 'sent',
       }).catch((err) => {
@@ -247,6 +250,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
           templateName,
           languageCode: languageCode || 'pt_BR',
           parameters,
+          ...(meta ? { meta } : {}),
         },
         externalMessageId,
         status: 'sent',
@@ -275,7 +279,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         channelType,
         to,
         type: 'text',
-        body: { text },
+        body: { text, ...(meta ? { meta } : {}) },
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
@@ -294,7 +298,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         channelType,
         to,
         type: kind,
-        body: { url: mediaUrl },
+        body: { url: mediaUrl, ...(meta ? { meta } : {}) },
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
@@ -321,7 +325,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         channelType,
         to,
         type: 'text',
-        body: { text },
+        body: { text, ...(meta ? { meta } : {}) },
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
@@ -350,7 +354,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       channelType,
       to,
       type: 'text',
-      body: { subject: String(subject), text: String(text), html: html ? String(html) : null },
+      body: { subject: String(subject), text: String(text), html: html ? String(html) : null, ...(meta ? { meta } : {}) },
       externalMessageId,
       status: 'sent',
     }).catch((err) => {
@@ -402,13 +406,19 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
 
   const externalId = String(to).replace(/^\+/, '');
   const now = new Date();
+  const meta = body && typeof body === 'object' ? body.meta : null;
+  const ticketId = meta?.ticketId || meta?.ticket_id || body?.ticketId || body?.ticket_id || null;
 
   let conversation = await ConversationModel.findOne({
     where: { tenant_key: tenantId, channel_type: channelType, external_id: externalId },
   });
 
   if (conversation) {
-    await conversation.update({ last_message_at: now, updated_at: now });
+    await conversation.update({
+      last_message_at: now,
+      updated_at: now,
+      ...(ticketId ? { current_ticket_id: String(ticketId), status: 'human' } : {}),
+    });
   } else {
     conversation = await ConversationModel.create({
       id: newId('conv'),
@@ -416,8 +426,8 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
       channel_type: channelType,
       external_id: externalId,
       contact_id: externalId,
-      status: 'bot',
-      current_ticket_id: null,
+      status: ticketId ? 'human' : 'bot',
+      current_ticket_id: ticketId ? String(ticketId) : null,
       last_message_at: now,
       created_at: now,
       updated_at: now,

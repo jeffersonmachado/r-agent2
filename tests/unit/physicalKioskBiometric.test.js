@@ -40,6 +40,11 @@ describe('kiosk biometria', () => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env.NODE_ENV = 'test';
+    process.env.RATE_LIMIT_BYPASS = 'true';
+  });
+
+  afterEach(() => {
+    delete process.env.RATE_LIMIT_BYPASS;
   });
 
   test('modo verify-1to1 exige biometricRef e customerIdInput quando requireBiometric=true', async () => {

@@ -13,7 +13,16 @@ jest.doMock(flowGeneratorAbsPath, () => ({
     await deps.callModel(prompt, { tenantId: 'tenant-test' });
     return {
       success: true,
-      flowDefinition: { tenantId: 'tenant-test', id: 'flow-1', name: 'X', version: 1, nodes: [] },
+      flowDefinition: {
+        tenantId: 'tenant-test',
+        id: 'flow-1',
+        name: 'X',
+        version: 1,
+        nodes: [
+          { id: 'start', type: 'start', next: 'end' },
+          { id: 'end', type: 'end' },
+        ],
+      },
       validation: { valid: true, errors: [], warnings: [] },
       validationWarnings: null,
       envelope: null,

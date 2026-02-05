@@ -54,6 +54,20 @@ export const menuItems = [
     roles: ['supervisor', 'admin'],
   },
   {
+    label: 'Marketing',
+    path: '/marketing',
+    icon: '🧲',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
+    label: 'Solutions Packs',
+    path: '/solutions',
+    icon: '📦',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
     label: 'Analytics',
     path: '/analytics',
     icon: '📊',
@@ -83,6 +97,27 @@ export const menuItems = [
     path: '/whatsapp-templates',
     icon: '📋',
     permission: { resource: 'flows', action: 'read' },
+  },
+  {
+    label: 'Node Marketplace',
+    path: '/node-marketplace',
+    icon: '🧩',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
+    label: 'SSO / SCIM',
+    path: '/sso-scim',
+    icon: '🔐',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['admin', 'owner'],
+  },
+  {
+    label: 'Backup / DR',
+    path: '/backup',
+    icon: '🗄️',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['admin', 'owner'],
   },
   {
     label: 'Canais',

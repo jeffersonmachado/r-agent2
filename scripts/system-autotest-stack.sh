@@ -17,6 +17,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+echo "[autotest-stack] Preparando token RPA..."
+export RPA_TOKEN="$(node -e "const { getOrCreateRpaToken } = require('./tests/rpa/utils/rpaTokenManager'); process.stdout.write(getOrCreateRpaToken());")"
+
 cleanup() {
   echo
   echo "[autotest-stack] Limpando stack..."
@@ -31,6 +34,10 @@ echo "[autotest-stack] Aguardando readiness..."
 API_URL="http://localhost:3001" FRONTEND_URL="http://localhost:5173" RAG_URL="http://localhost:8001" bash ./scripts/wait-ready.sh
 
 echo
+echo "[autotest-stack] Verificando login RPA via API..."
+node -e "const token=process.env.RPA_TOKEN||''; fetch('http://localhost:3001/auth/rpa/login',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify({token, tenantId:'system'})}).then(async r=>{const t=await r.text().catch(()=>'' ); console.log('[rpa-login]', r.status, t); if(r.status>=400) process.exit(1);}).catch(e=>{ console.error(e); process.exit(1); })"
+
+echo
 echo "[autotest-stack] Rodando selftest read-only..."
 node -e "fetch('http://localhost:3001/health/selftest').then(r=>r.json()).then(j=>{ console.log('[selftest]', j.status); if(!j||!j.status) process.exit(2); if(String(j.status).toUpperCase()==='FAIL') process.exit(1); }).catch(e=>{ console.error(e); process.exit(2); })"
 
@@ -39,6 +46,12 @@ echo "[autotest-stack] Exportando URLs padrão para RPA..."
 export TEST_BASE_URL="http://localhost:3001"
 export TEST_API_URL="http://localhost:3001"
 export TEST_FRONTEND_URL="http://localhost:5173"
+export RPA_IGNORE_API_CONSOLE_ERRORS="true"
+export TEST_USERNAME="admin"
+export TEST_USER_PASSWORD="admin123"
+export TEST_ADMIN_USERNAME="admin"
+export TEST_ADMIN_PASSWORD="admin123"
+export TEST_TENANT_ID="system"
 
 echo
 echo "[autotest-stack] Seeding flows mínimos para RPA..."
@@ -56,8 +69,12 @@ echo
 echo "[autotest-stack] Rodando testes do frontend (Vitest)..."
 (
   cd frontend
-  npm ci
-  npm test -- --run
+  if [ -d node_modules ]; then
+    npm test -- --run
+  else
+    npm ci
+    npm test -- --run
+  fi
 )
 
 echo

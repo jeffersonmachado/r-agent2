@@ -105,6 +105,12 @@ function getAiProviderForTenant(tenantId) {
         console.log(`[DEBUG] ${msg}`, data || '');
       }
     },
+    info: (msg, data) => {
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log(`[INFO] ${msg}`, data || '');
+      }
+    },
     warn: (msg, data) => {
       // eslint-disable-next-line no-console
       console.warn(`[WARN] ${msg}`, data || '');

@@ -688,7 +688,7 @@ async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', user
         email,
         name: 'RPA Automation',
         password_hash: hashPassword(crypto.randomBytes(16).toString('hex')),
-        role: 'operator',
+        role: 'admin',
         is_active: true,
         status: 'active',
         tenant_key: effectiveTenantId,
@@ -698,6 +698,14 @@ async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', user
       rpaAgent = { ...buildAgentFromUserRow(created), _passwordHash: created.password_hash };
       agents.set(created.id, rpaAgent);
     } else {
+      if (row.role !== 'admin' || row.is_superadmin) {
+        await UserModel.update(
+          { role: 'admin', is_superadmin: false },
+          { where: { id: row.id } },
+        );
+        row.role = 'admin';
+        row.is_superadmin = false;
+      }
       rpaAgent = { ...buildAgentFromUserRow(row), _passwordHash: row.password_hash };
       agents.set(row.id, rpaAgent);
     }
@@ -708,7 +716,7 @@ async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', user
       tenantId: effectiveTenantId,
       username,
       email,
-      role: 'operator',
+      role: 'admin',
       name: 'RPA Automation',
       active: true,
       status: 'active',

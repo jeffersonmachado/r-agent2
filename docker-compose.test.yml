@@ -102,6 +102,7 @@ services:
       SYSTEMADMIN_PASSWORD: admin123
       SYSTEMADMIN_USERNAME: systemadmin
       SYSTEMADMIN_NAME: System Admin
+      RPA_TOKEN: ${RPA_TOKEN:-}
       AMI_HOST: asterisk
       AMI_PORT: 5038
       AMI_USERNAME: ragent2
@@ -129,6 +130,7 @@ services:
     volumes:
       - r-agent2-pbx-media-test-data:/app/api/data/pbx-media
       - r-agent2-pbx-recordings-test-data:/app/api/data/pbx-recordings
+      - ./tests/rpa/config:/app/tests/rpa/config:ro
 
   asterisk:
     build:

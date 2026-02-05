@@ -16,6 +16,12 @@ function makeOrderNumber({ tenantId }) {
   return `${shortTenant}-${Date.now().toString(36)}`;
 }
 
+function intEnv(name, def) {
+  const raw = process.env[name];
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : def;
+}
+
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
   return items
@@ -248,6 +254,10 @@ async function getOrderMetrics({ tenantId, locationId = null }) {
   if (!sequelize) return { ok: false, reason: 'db_unavailable' };
 
   const replacements = { tenantKey: tenantId };
+  const slaReadyMin = intEnv('SLA_ORDER_TO_READY_MIN', 25);
+  const slaDeliverMin = intEnv('SLA_ORDER_TO_DELIVER_MIN', 60);
+  replacements.slaReadySec = slaReadyMin * 60;
+  replacements.slaDeliverSec = slaDeliverMin * 60;
   let locSql = '';
   if (locationId != null) {
     locSql = 'AND location_id = :locationId';
@@ -264,7 +274,17 @@ async function getOrderMetrics({ tenantId, locationId = null }) {
        COUNT(*) FILTER (WHERE status = 'delivered')::int AS delivered_count,
        COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled_count,
        AVG(EXTRACT(EPOCH FROM (ready_at - confirmed_at))) FILTER (WHERE ready_at IS NOT NULL AND confirmed_at IS NOT NULL)::float AS avg_order_to_ready_seconds,
-       AVG(EXTRACT(EPOCH FROM (delivered_at - confirmed_at))) FILTER (WHERE delivered_at IS NOT NULL AND confirmed_at IS NOT NULL)::float AS avg_order_to_deliver_seconds
+       AVG(EXTRACT(EPOCH FROM (delivered_at - confirmed_at))) FILTER (WHERE delivered_at IS NOT NULL AND confirmed_at IS NOT NULL)::float AS avg_order_to_deliver_seconds,
+       COUNT(*) FILTER (
+         WHERE ready_at IS NOT NULL
+           AND confirmed_at IS NOT NULL
+           AND EXTRACT(EPOCH FROM (ready_at - confirmed_at)) > :slaReadySec
+       )::int AS sla_ready_breached_count,
+       COUNT(*) FILTER (
+         WHERE delivered_at IS NOT NULL
+           AND confirmed_at IS NOT NULL
+           AND EXTRACT(EPOCH FROM (delivered_at - confirmed_at)) > :slaDeliverSec
+       )::int AS sla_deliver_breached_count
      FROM orders
      WHERE tenant_key = :tenantKey
        ${locSql}
@@ -287,6 +307,10 @@ async function getOrderMetrics({ tenantId, locationId = null }) {
       cancelledCount: Number(r.cancelled_count || 0),
       avgOrderToReadySeconds: r.avg_order_to_ready_seconds != null ? Number(r.avg_order_to_ready_seconds) : null,
       avgOrderToDeliverSeconds: r.avg_order_to_deliver_seconds != null ? Number(r.avg_order_to_deliver_seconds) : null,
+      slaOrderToReadyBreachedCount: Number(r.sla_ready_breached_count || 0),
+      slaOrderToDeliverBreachedCount: Number(r.sla_deliver_breached_count || 0),
+      slaOrderToReadyMinutes: slaReadyMin,
+      slaOrderToDeliverMinutes: slaDeliverMin,
     },
   };
 }

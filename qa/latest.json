@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "scope": [],
+  "checks": [],
+  "meta": {
+    "timestamp": "2026-02-05T17:38:31.126Z",
+    "source": "autotest",
+    "commit": "30523af35e434e9bc2ab074d783a5db0d78adfff",
+    "branch": "feat/f10-ai-envelope-safe-mode"
+  },
+  "governance": {
+    "policyEvaluation": {
+      "status": "PASS",
+      "reason": "Nenhum problema detectado"
+    },
+    "timeEvaluation": {
+      "exceeded": false,
+      "executionTime": 0.057,
+      "maxTime": 300,
+      "unit": "seconds",
+      "action": null
+    },
+    "appliedAt": "2026-02-05T17:38:31.127Z"
+  }
+}

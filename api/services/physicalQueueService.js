@@ -583,13 +583,36 @@ async function getMetrics({ tenantId, locationId = null }) {
     { replacements },
   );
 
+  // Recorte por hora (hoje)
+  const [byHourRows] = await sequelize.query(
+    `SELECT
+       EXTRACT(HOUR FROM created_at)::int AS hour,
+       COUNT(*)::int AS created_count,
+       COUNT(*) FILTER (WHERE status = 'done')::int AS done_count,
+       COUNT(*) FILTER (WHERE status = 'abandoned')::int AS abandoned_count,
+       AVG(EXTRACT(EPOCH FROM (called_at - created_at))) FILTER (WHERE called_at IS NOT NULL)::float AS avg_wait_seconds,
+       AVG(EXTRACT(EPOCH FROM (finished_at - started_at))) FILTER (WHERE finished_at IS NOT NULL AND started_at IS NOT NULL)::float AS avg_service_seconds
+     FROM physical_tickets
+     WHERE tenant_key = :tenantKey
+       ${locSql}
+       AND created_at::date = CURRENT_DATE
+     GROUP BY EXTRACT(HOUR FROM created_at)
+     ORDER BY hour ASC`,
+    { replacements },
+  );
+
+  const doneCount = Number(r.done_count || 0);
+  const abandonedCount = Number(r.abandoned_count || 0);
+  const serviceTotal = doneCount + abandonedCount;
+  const abandonmentRate = serviceTotal > 0 ? Number((abandonedCount / serviceTotal).toFixed(4)) : 0;
+
   return {
     ok: true,
     tenantId,
     locationId: locationId || null,
     today: {
-      doneCount: Number(r.done_count || 0),
-      abandonedCount: Number(r.abandoned_count || 0),
+      doneCount,
+      abandonedCount,
       waitingCount: Number(r.waiting_count || 0),
       calledCount: Number(r.called_count || 0),
       inServiceCount: Number(r.in_service_count || 0),
@@ -597,9 +620,11 @@ async function getMetrics({ tenantId, locationId = null }) {
       avgWaitSeconds: r.avg_wait_seconds != null ? Number(r.avg_wait_seconds) : null,
       avgServiceSeconds: r.avg_service_seconds != null ? Number(r.avg_service_seconds) : null,
       avgSkipCount: r.avg_skip_count != null ? Number(r.avg_skip_count) : null,
+      abandonmentRate,
     },
     byStation: Array.isArray(byStationRows) ? byStationRows : [],
     byQueue: Array.isArray(byQueueRows) ? byQueueRows : [],
+    byHour: Array.isArray(byHourRows) ? byHourRows : [],
   };
 }
 

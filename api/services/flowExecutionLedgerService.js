@@ -52,6 +52,21 @@ async function startFlowExecution({
   if (!flowId) return { ok: false, error: 'flow_id_required' };
 
   const Model = FlowExecution();
+  // Idempotência best-effort para triggers de evento
+  if (meta && meta.mode === 'event' && correlationId) {
+    const existing = await Model.findOne({
+      where: {
+        tenant_key: String(tenantId),
+        flow_id: String(flowId),
+        correlation_id: String(correlationId),
+      },
+      order: [['started_at', 'DESC']],
+    });
+    if (existing) {
+      return { ok: true, executionId: existing.id, reused: true };
+    }
+  }
+
   const now = new Date();
   const row = await Model.create({
     id: newId('fx'),

@@ -288,8 +288,37 @@ async function upsertExtension({ tenantKey, payload, actorUserId = null }) {
   return row.toJSON();
 }
 
+async function bulkUpsertExtensions({ tenantKey, items, actorUserId = null }) {
+  const results = [];
+  const errors = [];
+  const list = Array.isArray(items) ? items : [];
+  for (const item of list) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const row = await upsertExtension({ tenantKey, payload: item, actorUserId });
+      results.push({ ok: true, extension: row });
+    } catch (err) {
+      errors.push({
+        ok: false,
+        error: err.code || err.message || 'bulk_upsert_failed',
+        details: err.details || null,
+        payload: item,
+      });
+    }
+  }
+  return {
+    ok: errors.length === 0,
+    results,
+    errors,
+    total: list.length,
+    successCount: results.length,
+    errorCount: errors.length,
+  };
+}
+
 module.exports = {
   listExtensions,
   upsertExtension,
+  bulkUpsertExtensions,
 };
 
