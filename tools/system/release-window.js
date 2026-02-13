@@ -8,6 +8,7 @@ const { execSync } = require('child_process');
 const ROOT = path.join(__dirname, '..', '..');
 const REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
 const FAST_MODE = String(process.env.RELEASE_WINDOW_FAST || '0') === '1';
+const PRUNE_OLD = String(process.env.RELEASE_WINDOW_PRUNE_OLD || '0') === '1';
 
 function runStep(report, label, command, envPatch = {}) {
   const startedAt = Date.now();
@@ -62,6 +63,9 @@ function main() {
       evidencePackRoot: 'qa/release-evidence',
       releaseWindowReport: REPORT_PATH,
     },
+    config: {
+      pruneOldEvidence: PRUNE_OLD,
+    },
     error: null,
   };
 
@@ -104,6 +108,25 @@ function main() {
         finishedAt: new Date().toISOString(),
         durationMs: 0,
         error: null,
+      });
+    }
+    if (!FAST_MODE && PRUNE_OLD) {
+      runStep(
+        report,
+        'release-evidence-prune',
+        'node tools/system/release-evidence-prune.js',
+        { RELEASE_EVIDENCE_PRUNE_DRY_RUN: '0' }
+      );
+    } else {
+      report.steps.push({
+        label: 'release-evidence-prune',
+        command: 'node tools/system/release-evidence-prune.js',
+        status: 'skipped',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 0,
+        error: null,
+        reason: !FAST_MODE ? 'RELEASE_WINDOW_PRUNE_OLD=0' : 'FAST_MODE',
       });
     }
 
