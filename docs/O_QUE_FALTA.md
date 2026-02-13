@@ -7,7 +7,13 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 > Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
 
-## Update L-02/L-03/L-04/L-05 (13/02/2026)
+## Update L-01/L-02/L-03/L-04/L-05 (13/02/2026)
+
+- [x] **L-01** fechado com smoke dedicado de filas físicas (kiosk/panel/station):
+  - `scripts/test-physical-queue-smoke.js`
+  - valida `call/start/pause/resume/finish` + métricas (`doneCount`)
+  - evidência: `qa/l01-physical-queue-evidence.json`
+  - log: `qa/smoke/l01-physical-queue.log`
 
 - [x] **L-02** fechado com smoke dedicado:
   - `scripts/test-ura-publish-rollback-smoke.js`
@@ -34,7 +40,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - evidência: `qa/l05-chatpro-omnichannel-evidence.json`
   - log: `qa/smoke/l05-chatpro-omnichannel.log`
 
-- [x] Gate com consolidado e validação obrigatória de L-02/L-03/L-04/L-05:
+- [x] Gate com consolidado e validação obrigatória de L-01/L-02/L-03/L-04/L-05:
   - consolidado: `qa/smoke-evidence.json`
   - validação no gate: `tools/system/release-gate.js`
 
@@ -246,7 +252,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `npm run system:release-gate`
 - [ ] validar evidências mínimas atualizadas:
   - `qa/release-gate-report.json`
-  - `qa/smoke-evidence.json` (L-02/L-03/L-04/L-05 em `pass`)
+  - `qa/smoke-evidence.json` (L-01/L-02/L-03/L-04/L-05 em `pass`)
 - [ ] registrar baseline de selftest e checks críticos:
   - `eventDispatchRuntime`
   - `pbxEventRuntime`
@@ -289,7 +295,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   evidência: `qa/l05-chatpro-omnichannel-evidence.json` + `qa/smoke-evidence.json` com `l05.status=pass`.
 - [ ] **Fila física (owner: Fast Service/API+Frontend)**  
   comando: `npm run system:release-gate`  
-  evidência: fluxo `kiosk -> station -> panel` sem falhas no `qa/release-gate-report.json`.
+  evidência: `qa/l01-physical-queue-evidence.json` + fluxo `kiosk -> station -> panel` sem falhas no `qa/release-gate-report.json`.
 - [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   evidência: `qa/l03-pbx-voice-tts-asr-evidence.json` e `qa/l04-pbx-call-events-runtime-evidence.json` atualizados.
@@ -300,7 +306,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   aceite: sem divergência mensagem↔ticket↔SLA no gate; sem `FAIL` no selftest.
 - [ ] **Fila física (owner: Fast Service/API+Frontend)**  
   comando: `npm run system:release-gate`  
-  aceite: operação de estação (`call/start/finish/skip/transfer`) validada e painel consistente.
+  aceite: operação de estação (`call/start/pause/resume/finish/skip/transfer`) validada e painel consistente.
 - [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   aceite: chamada real `originated=true`; trigger por call event com `flow.executionId`; quando `cdrFound=false`, evidência de originação + runtime aceita.
@@ -317,7 +323,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   evidência: smoke pós-release em `pass` para operação omnichannel.
 - [ ] **Fila física (owner: Fast Service/API+Frontend)**  
   comando: `npm run system:release-gate`  
-  evidência: jornada completa operável + métricas mínimas no relatório de gate.
+  evidência: L-01 em `pass` + jornada completa operável + métricas mínimas no relatório de gate.
 - [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   evidência: L-03 e L-04 em `pass`, com logs em `qa/smoke/`.

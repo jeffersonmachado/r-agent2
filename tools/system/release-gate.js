@@ -116,6 +116,26 @@ function assertCriticalSmokeEvidence(evidence) {
   const l03 = evidence.data.smokes.l03 || null;
   const l04 = evidence.data.smokes.l04 || null;
   const l05 = evidence.data.smokes.l05 || null;
+  const l01 = evidence.data.smokes.l01 || null;
+  if (!l01 || l01.status !== 'pass') {
+    throw new Error('smoke_l01_not_pass');
+  }
+  if (
+    !l01.evidence
+    || l01.evidence.ok !== true
+    || !String(l01.evidence.queueId || '').trim()
+    || !String(l01.evidence.ticketId || '').trim()
+    || !l01.evidence.transitions
+    || l01.evidence.transitions.callNext !== true
+    || l01.evidence.transitions.start !== true
+    || l01.evidence.transitions.pause !== true
+    || l01.evidence.transitions.resume !== true
+    || l01.evidence.transitions.finish !== true
+    || !l01.evidence.metrics
+    || Number(l01.evidence.metrics.doneCount || 0) < 1
+  ) {
+    throw new Error('smoke_l01_physical_evidence_missing');
+  }
   if (!l02 || l02.status !== 'pass') {
     throw new Error('smoke_l02_not_pass');
   }
