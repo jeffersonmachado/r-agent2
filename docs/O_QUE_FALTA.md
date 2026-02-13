@@ -195,3 +195,57 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - **Ledger por nó + replay**: execução auditável (inputs/outputs), replay parcial controlado, retenção por tenant.
 - **Queue/scheduler enterprise mínimo**: quotas, DLQ, métricas e selftest por limiar.
 - **Suites vendáveis** (Fast service + Orders/Delivery): estados consistentes + idempotência + auditoria + KPIs mínimos.
+
+---
+
+## 4) Plano de lançamento — 01/03/2026 (checklist operacional)
+
+> Data alvo de go-live: **01/03/2026**.
+> Regra de decisão: sem `PASS` no gate e sem evidências completas, **não liberar**.
+
+### D-7 (22/02/2026) — freeze técnico e baseline
+- [ ] congelar escopo de release (apenas correções críticas e blockers)
+- [ ] confirmar branch/tag candidata e owners de plantão (engenharia + operação)
+- [ ] executar gate completo:
+  - `npm run system:release-gate`
+- [ ] validar evidências mínimas atualizadas:
+  - `qa/release-gate-report.json`
+  - `qa/smoke-evidence.json` (L-02/L-03/L-04 em `pass`)
+- [ ] registrar baseline de selftest e checks críticos:
+  - `eventDispatchRuntime`
+  - `pbxEventRuntime`
+  - `voiceRuntime`
+
+### D-1 (28/02/2026) — go/no-go técnico
+- [ ] rerodar gate completo em janela controlada:
+  - `npm run system:release-gate`
+- [ ] executar drill de rollback:
+  - `npm run system:rollback-drill`
+  - opcional com rollback PBX aplicado: `ROLLBACK_DRILL_APPLY_PBX=1 npm run system:rollback-drill`
+- [ ] revisar critérios de aceite:
+  - release gate `PASS`
+  - selftest sem `FAIL`
+  - evidência de chamada real PBX `originated` (L-03)
+  - evidência de trigger runtime por call event (L-04 com `flow.executionId`)
+- [ ] formalizar decisão go/no-go com registro de data/hora e responsáveis
+
+### D0 (01/03/2026) — execução de lançamento
+- [ ] abrir janela oficial de deploy e congelar mudanças paralelas
+- [ ] executar publicação/deploy da versão candidata
+- [ ] executar smoke pós-release imediato:
+  - `npm run system:release-gate` (ou, em contingência, `RELEASE_GATE_MODE=legacy npm run system:release-gate`)
+- [ ] confirmar operação mínima por suíte:
+  - Fast service (kiosk/panel/station)
+  - Orders/Delivery (create/order lifecycle/status)
+  - PBX/Voz (dialplan/runtime/eventos)
+- [ ] arquivar evidências finais da janela:
+  - `qa/release-gate-report.json`
+  - `qa/smoke-evidence.json`
+  - `qa/rollback-drill-report.json`
+
+### Contingência (qualquer momento da janela)
+- [ ] se incidente crítico, acionar `docs/ROLLBACK_PLAYBOOK_SUITES_CRITICAS.md`
+- [ ] executar snapshot/backup antes de alterar estado:
+  - `bash scripts/backup-postgres.sh`
+- [ ] após rollback, rerodar gate técnico mínimo:
+  - `npm run system:release-gate`
