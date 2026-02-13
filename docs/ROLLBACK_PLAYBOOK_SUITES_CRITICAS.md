@@ -65,9 +65,14 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
    - `npm run system:go-no-go`
    - execução rápida sem rerodar suites pesadas: `GO_NO_GO_RUN_RELEASE_GATE=0 GO_NO_GO_RUN_ROLLBACK_DRILL=0 npm run system:go-no-go`
    - relatório: `qa/go-no-go-report.json`
-4. Arquivar evidencias:
+4. Atualizar checklist executivo de marcos do lançamento:
+   - `npm run system:launch-plan-status`
+   - saídas: `qa/launch-plan-status.json` e `qa/launch-plan-status.md`
+5. Arquivar evidencias:
    - `qa/release-gate-report.json`
    - `qa/rollback-drill-report.json`
    - `qa/go-no-go-report.json`
+   - `qa/launch-plan-status.json`
+   - `qa/launch-plan-status.md`
    - logs operacionais
    - checklist de rollback preenchido

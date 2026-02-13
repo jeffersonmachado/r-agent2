@@ -246,6 +246,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 > Regra de decisão: sem `PASS` no gate e sem evidências completas, **não liberar**.
 
 ### D-7 (22/02/2026) — freeze técnico e baseline
+- [ ] gerar status consolidado do plano (D-7/D-1/D0):
+  - `npm run system:launch-plan-status`
+  - saídas: `qa/launch-plan-status.json` e `qa/launch-plan-status.md`
 - [ ] congelar escopo de release (apenas correções críticas e blockers)
 - [ ] confirmar branch/tag candidata e owners de plantão (engenharia + operação)
 - [ ] executar gate completo:
@@ -262,6 +265,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [ ] executar decisão consolidada (gate + rollback + smoke evidence):
   - `npm run system:go-no-go`
   - saída: `qa/go-no-go-report.json` com `decision=GO|NO_GO`
+- [ ] atualizar status consolidado do plano:
+  - `npm run system:launch-plan-status`
+  - regra: `overall=ready` para avançar com liberação
 - [ ] rerodar gate completo em janela controlada:
   - `npm run system:release-gate`
 - [ ] executar drill de rollback:
@@ -281,6 +287,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [ ] executar publicação/deploy da versão candidata
 - [ ] executar smoke pós-release imediato:
   - `npm run system:release-gate` (ou, em contingência, `RELEASE_GATE_MODE=legacy npm run system:release-gate`)
+- [ ] consolidar status final da janela:
+  - `npm run system:launch-plan-status`
+  - validar `qa/launch-plan-status.md` como checklist final da ata de release
 - [ ] confirmar operação mínima por suíte:
   - Fast service (kiosk/panel/station)
   - Orders/Delivery (create/order lifecycle/status)
