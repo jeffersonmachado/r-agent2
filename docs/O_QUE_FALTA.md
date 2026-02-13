@@ -1,6 +1,6 @@
 # O que falta (fonte única) — backlog operacional e critérios de “v1 vendável”
 
-- **Última atualização**: Fev/2026 (05/02)
+- **Última atualização**: Fev/2026 (13/02)
 
 Este documento é a **fonte de verdade única** do “o que falta” a partir do estado atual do repositório (Fev/2026).  
 Ele substitui a visão antiga “capability-driven vs benchmarks” como lista operacional de execução.
@@ -149,16 +149,44 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 > Regra: cada item abaixo é “único” (não duplicar em outros docs). Se um tema aparecer em mais de um pilar, ele deve ser referenciado (não replicado).
 
-### Now (0–3 meses) — hardening para v1 vendável (suíte operável)
+### Now (0–3 meses) — prioridade máxima (ChatPro + Fila + PBX TTS/ASR)
 
-#### 2.1 Execução “enterprise mínima” (core DAG)
+#### 2.1 Atendimento ChatPro-like (omnichannel + operação)
+- **Fechar hardening do atendimento unificado**
+  - conversa↔ticket 1:1 consistente em todos os canais
+  - idempotência de mensagem no ticket (retry sem duplicar)
+  - status por mensagem no console do atendente (`sent/delivered/read/failed`)
+  - SLA operacional por fila/departamento com alertas e trilha auditável
+  - roteamento por skills/capacidade/horário (além de round_robin/least_busy)
+  - histórico unificado por cliente (Customer 360 operacional)
+  - **Critério de pronto**: operação omnichannel sem divergência de estado (mensagem, ticket, SLA e roteamento), com evidência no gate.
+
+#### 2.2 Controle de fila física (Qminder-like)
+- **Fechar v1 operacional de filas físicas**
+  - regras por unidade/serviço/horário/capacidade
+  - priorização robusta (preferencial/agendado/triagem)
+  - operações completas de estação (`call/start/finish/skip/transfer/pause/resume`)
+  - painel resiliente e trilha auditável por estação/painel
+  - métricas consistentes (`wait_time`, `throughput`, `abandon_rate`) por unidade/serviço/faixa horária
+  - integração com runtime (triggers/ações) e correlação com ticket digital
+  - **Critério de pronto**: jornada kiosk→station→panel estável, auditável e mensurável com KPIs mínimos no gate.
+
+#### 2.3 PBX com TTS+ASR (voz real em produção)
+- **Fechar operação PBX v1 com evidência de chamada real**
+  - TTS+ASR funcional no fluxo de voz (smoke dedicado)
+  - chamada real (`click2call/originate`) confirmada no gate
+  - integração call events (`ringing/answered/ended`) com runtime e `node_executions`
+  - fallback operacional quando `cdrFound=false` na janela do smoke: aceitar `originated=true` com evidência de runtime/gate
+  - **Critério de pronto**: gate `PASS` com evidência de voz real + trigger de runtime por evento de chamada.
+
+#### 2.4 Execução “enterprise mínima” (core DAG)
 - **Conectar o execution ledger por nó ao runtime + expor consulta/replay assistido**
   - **Status**: base DB-first já existe (`flow_executions`/`node_executions` + `flowExecutionLedgerService`); integração full do runtime ainda parcial.
   - **Saídas mínimas**:
     - registrar execuções reais do DAG (não só simulation/flows específicos)
   - **Critério de pronto**: responder “o que aconteceu em qual node” e permitir replay controlado com rastreabilidade.
 
-#### 2.2 Triggers do runtime a partir do `event_ledger`
+#### 2.5 Triggers do runtime a partir do `event_ledger`
 - **Consumer/dispatcher** de `event_ledger` para acionar execuções (regras mínimas)
   - retry/backoff e DLQ integrados ao runtime/queue
   - **Status (13/02/2026)**:
@@ -166,20 +194,16 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
     - gate exige evidência de queue (`jobsDone > 0` e `jobsDead = 0`) e execução real de nós (`nodesCount > 0`)
   - pendente: ampliar cobertura para cenários de falha em produção (thresholds operacionais por tenant e rotina de reprocesso assistido no runbook).
 
-#### 2.3 PBX: integração de call events v0 ao runtime
-- acionar triggers/ações do DAG a partir dos eventos de chamada (ringing/answered/ended)
-- garantir observabilidade e correlação ponta a ponta em produção
-
 ### Next (3–6 meses) — produto inicial por suíte + analytics/ROI v1
 
-#### 2.4 Analytics/ROI v1 (sair do v0)
+#### 2.6 Analytics/ROI v1 (sair do v0)
 - funil visual básico e atribuição mínima por canal
 - custos por canal + KPIs de SLA mínimos (order_to_ready/order_to_deliver)
 - dashboards operacionais por suíte (fast service + orders/delivery)
 
 ### Next (6–12 meses) — consolidação core + PBX/voz v1
 
-#### 2.5 PBX + voz v1 (base CCaaS)
+#### 2.7 PBX + voz v1 (base CCaaS)
 - URA visual v1, filas de voz e gravação com trilha auditável
 - observabilidade de voz (CDR/eventos) e custos básicos
 
@@ -197,6 +221,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - **Status**: `tools/system/validate.js` passou localmente em 05/02 (18/18 RPA); `scripts/autotest.js` retornou `GO` (sem Docker).
 
 ### 3.2 DoD (por tema)
+- **Prioridade de release (ChatPro + Fila + PBX TTS/ASR)**: evidência de operação real e auditável no gate para os três pilares.
 - **Ledger por nó + replay**: execução auditável (inputs/outputs), replay parcial controlado, retenção por tenant.
 - **Queue/scheduler enterprise mínimo**: quotas, DLQ, métricas e selftest por limiar.
 - **Suites vendáveis** (Fast service + Orders/Delivery): estados consistentes + idempotência + auditoria + KPIs mínimos.
@@ -247,6 +272,44 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `qa/release-gate-report.json`
   - `qa/smoke-evidence.json`
   - `qa/rollback-drill-report.json`
+
+### 4.1 Checklist executável (foco: ChatPro + Fila + PBX TTS/ASR)
+
+#### D-7 (22/02/2026) — preparação e baseline
+- [ ] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  evidência: `qa/smoke-evidence.json` com status de atendimento/omnichannel em `pass`.
+- [ ] **Fila física (owner: Fast Service/API+Frontend)**  
+  comando: `npm run system:release-gate`  
+  evidência: fluxo `kiosk -> station -> panel` sem falhas no `qa/release-gate-report.json`.
+- [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
+  comando: `npm run system:release-gate`  
+  evidência: `qa/l03-pbx-voice-tts-asr-evidence.json` e `qa/l04-pbx-call-events-runtime-evidence.json` atualizados.
+
+#### D-1 (28/02/2026) — go/no-go técnico por pilar
+- [ ] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  aceite: sem divergência mensagem↔ticket↔SLA no gate; sem `FAIL` no selftest.
+- [ ] **Fila física (owner: Fast Service/API+Frontend)**  
+  comando: `npm run system:release-gate`  
+  aceite: operação de estação (`call/start/finish/skip/transfer`) validada e painel consistente.
+- [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
+  comando: `npm run system:release-gate`  
+  aceite: chamada real `originated=true`; trigger por call event com `flow.executionId`; quando `cdrFound=false`, evidência de originação + runtime aceita.
+- [ ] **Rollback readiness (owner: Engenharia de Plataforma)**  
+  comando: `npm run system:rollback-drill`  
+  evidência: `qa/rollback-drill-report.json` sem bloqueadores.
+
+#### D0 (01/03/2026) — pós-deploy imediato
+- [ ] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  evidência: smoke pós-release em `pass` para operação omnichannel.
+- [ ] **Fila física (owner: Fast Service/API+Frontend)**  
+  comando: `npm run system:release-gate`  
+  evidência: jornada completa operável + métricas mínimas no relatório de gate.
+- [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
+  comando: `npm run system:release-gate`  
+  evidência: L-03 e L-04 em `pass`, com logs em `qa/smoke/`.
 
 ### Contingência (qualquer momento da janela)
 - [ ] se incidente crítico, acionar `docs/ROLLBACK_PLAYBOOK_SUITES_CRITICAS.md`
