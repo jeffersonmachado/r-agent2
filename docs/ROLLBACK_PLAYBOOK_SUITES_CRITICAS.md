@@ -80,6 +80,7 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
      - dry-run de validação: `RELEASE_EVIDENCE_DRY_RUN=1 npm run system:release-evidence-pack`
      - integridade: validar `SHA256SUMS` dentro da pasta `qa/release-evidence/<timestamp>/`
      - verificação automática: `npm run system:release-evidence-verify`
+     - retenção/limpeza (recomendado após handoff): `RELEASE_EVIDENCE_PRUNE_KEEP=5 RELEASE_EVIDENCE_PRUNE_DRY_RUN=0 npm run system:release-evidence-prune`
     - logs operacionais
     - checklist de rollback preenchido
 

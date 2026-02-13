@@ -191,6 +191,10 @@ function checkQAScripts() {
       description: 'Verificação de integridade SHA256 do pacote de evidências'
     },
     {
+      name: 'system:release-evidence-prune',
+      description: 'Limpeza de snapshots antigos de evidências de release'
+    },
+    {
       name: 'system:release-clean-check',
       description: 'Checagem de alterações pendentes fora de artefatos QA'
     },
