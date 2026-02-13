@@ -1,0 +1,43 @@
+{
+  "startedAt": "2026-02-13T22:55:10.128Z",
+  "finishedAt": "2026-02-13T22:55:10.131Z",
+  "status": "pass",
+  "decision": "GO",
+  "steps": [
+    {
+      "label": "release-gate",
+      "command": "node tools/system/release-gate.js",
+      "status": "skipped"
+    },
+    {
+      "label": "rollback-drill",
+      "command": "node tools/system/rollback-drill.js",
+      "status": "skipped"
+    }
+  ],
+  "checks": {
+    "releaseGate": {
+      "path": "qa/release-gate-report.json",
+      "loaded": true,
+      "status": "pass"
+    },
+    "rollbackDrill": {
+      "path": "qa/rollback-drill-report.json",
+      "loaded": true,
+      "status": "pass"
+    },
+    "smoke": {
+      "path": "qa/smoke-evidence.json",
+      "loaded": true,
+      "status": "pass",
+      "pbx": {
+        "click2callStatus": "originated",
+        "originated": true,
+        "cdrFound": false,
+        "acceptedWithoutCdr": true
+      },
+      "reasons": []
+    }
+  },
+  "reasons": []
+}

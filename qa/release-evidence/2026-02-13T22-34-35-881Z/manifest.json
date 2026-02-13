@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-02-13T22:34:35.882Z",
+  "dryRun": false,
+  "sourceRoot": "/opt/results/ria/r-agent2",
+  "packDir": "qa/release-evidence/2026-02-13T22-34-35-881Z",
+  "summary": {
+    "requiredFound": 11,
+    "requiredMissing": 0,
+    "optionalFound": 5,
+    "optionalMissing": 0,
+    "status": "ready"
+  },
+  "required": {
+    "found": [
+      "qa/release-gate-report.json",
+      "qa/rollback-drill-report.json",
+      "qa/go-no-go-report.json",
+      "qa/launch-plan-status.json",
+      "qa/launch-plan-status.md",
+      "qa/smoke-evidence.json",
+      "qa/l01-physical-queue-evidence.json",
+      "qa/l02-ura-publish-rollback-evidence.json",
+      "qa/l03-pbx-voice-tts-asr-evidence.json",
+      "qa/l04-pbx-call-events-runtime-evidence.json",
+      "qa/l05-chatpro-omnichannel-evidence.json"
+    ],
+    "missing": []
+  },
+  "optional": {
+    "found": [
+      "qa/smoke/l01-physical-queue.log",
+      "qa/smoke/l02-ura-publish-rollback.log",
+      "qa/smoke/l03-pbx-voice-tts-asr.log",
+      "qa/smoke/l04-pbx-call-events-runtime.log",
+      "qa/smoke/l05-chatpro-omnichannel.log"
+    ],
+    "missing": []
+  }
+}

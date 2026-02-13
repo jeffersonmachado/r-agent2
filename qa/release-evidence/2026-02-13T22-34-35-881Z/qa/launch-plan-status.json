@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-02-13T22:32:58.946Z",
+  "overall": "ready",
+  "summary": {
+    "done": 8,
+    "total": 8,
+    "progressPct": 100
+  },
+  "milestones": {
+    "d7": [
+      {
+        "done": true,
+        "label": "Executar gate completo",
+        "detail": "qa/release-gate-report.json"
+      },
+      {
+        "done": true,
+        "label": "Validar L-01..L-05 em pass",
+        "detail": "qa/smoke-evidence.json"
+      }
+    ],
+    "d1": [
+      {
+        "done": true,
+        "label": "Executar decisão consolidada",
+        "detail": "qa/go-no-go-report.json"
+      },
+      {
+        "done": true,
+        "label": "Executar rollback drill",
+        "detail": "qa/rollback-drill-report.json"
+      },
+      {
+        "done": true,
+        "label": "Revalidar release gate",
+        "detail": "qa/release-gate-report.json"
+      }
+    ],
+    "d0": [
+      {
+        "done": true,
+        "label": "Smoke pós-release em pass",
+        "detail": "qa/release-gate-report.json"
+      },
+      {
+        "done": true,
+        "label": "Operação mínima por suíte (L-01..L-05)",
+        "detail": "qa/smoke-evidence.json"
+      },
+      {
+        "done": true,
+        "label": "Evidência final de GO",
+        "detail": "qa/go-no-go-report.json"
+      }
+    ]
+  },
+  "sources": {
+    "releaseGate": "qa/release-gate-report.json",
+    "rollbackDrill": "qa/rollback-drill-report.json",
+    "smokeEvidence": "qa/smoke-evidence.json",
+    "goNoGo": "qa/go-no-go-report.json"
+  }
+}
