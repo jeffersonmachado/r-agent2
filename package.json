@@ -32,6 +32,7 @@
     "system:checklist": "node tools/system/checklist.js",
     "system:release-gate": "node tools/system/release-gate.js",
     "system:rollback-drill": "node tools/system/rollback-drill.js",
+    "system:go-no-go": "node tools/system/go-no-go.js",
     "validate:invariants": "node scripts/validate-invariants.js",
     "test:rpa:record": "node tests/rpa/record.js",
     "rpa:demo": "node tests/rpa/demo.js",

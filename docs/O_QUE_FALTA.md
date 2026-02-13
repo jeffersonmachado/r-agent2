@@ -259,6 +259,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `voiceRuntime`
 
 ### D-1 (28/02/2026) — go/no-go técnico
+- [ ] executar decisão consolidada (gate + rollback + smoke evidence):
+  - `npm run system:go-no-go`
+  - saída: `qa/go-no-go-report.json` com `decision=GO|NO_GO`
 - [ ] rerodar gate completo em janela controlada:
   - `npm run system:release-gate`
 - [ ] executar drill de rollback:
@@ -301,6 +304,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   evidência: `qa/l03-pbx-voice-tts-asr-evidence.json` e `qa/l04-pbx-call-events-runtime-evidence.json` atualizados.
 
 #### D-1 (28/02/2026) — go/no-go técnico por pilar
+- [ ] **Decisão consolidada (owner: Engenharia de Plataforma)**  
+  comando: `npm run system:go-no-go`  
+  aceite: `qa/go-no-go-report.json` com `decision=GO`; qualquer `NO_GO` bloqueia release até correção.
 - [ ] **ChatPro (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
   aceite: sem divergência mensagem↔ticket↔SLA no gate; sem `FAIL` no selftest.
