@@ -75,6 +75,7 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
    - `qa/launch-plan-status.json`
    - `qa/launch-plan-status.md`
    - `qa/release-window-report.json`
+   - `qa/release-manifest.json`
    - pacote consolidado: `npm run system:release-evidence-pack`
      - dry-run de validação: `RELEASE_EVIDENCE_DRY_RUN=1 npm run system:release-evidence-pack`
     - logs operacionais
@@ -88,3 +89,4 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
    - `npm run system:release-window`
 3. Evidência consolidada da execução:
    - `qa/release-window-report.json`
+   - `qa/release-manifest.json`

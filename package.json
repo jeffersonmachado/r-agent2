@@ -34,6 +34,7 @@
     "system:rollback-drill": "node tools/system/rollback-drill.js",
     "system:go-no-go": "node tools/system/go-no-go.js",
     "system:launch-plan-status": "node tools/system/launch-plan-status.js",
+    "system:release-manifest": "node tools/system/release-manifest.js",
     "system:release-evidence-pack": "node tools/system/release-evidence-pack.js",
     "system:release-clean-check": "node tools/system/release-clean-check.js",
     "system:release-window": "node tools/system/release-window.js",

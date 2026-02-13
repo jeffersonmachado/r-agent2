@@ -293,6 +293,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [ ] executar janela completa de release (modo full):
   - `npm run system:release-window`
   - saída: `qa/release-window-report.json`
+- [ ] gerar manifesto do release candidate:
+  - `npm run system:release-manifest`
+  - saída: `qa/release-manifest.json`
 - [ ] executar smoke pós-release imediato:
   - `npm run system:release-gate` (ou, em contingência, `RELEASE_GATE_MODE=legacy npm run system:release-gate`)
 - [ ] consolidar status final da janela:
@@ -308,6 +311,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `qa/rollback-drill-report.json`
   - `qa/go-no-go-report.json`
   - `qa/release-window-report.json`
+  - `qa/release-manifest.json`
   - `qa/launch-plan-status.json`
   - `qa/launch-plan-status.md`
   - comando recomendado para pacote consolidado: `npm run system:release-evidence-pack`

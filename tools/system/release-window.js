@@ -58,6 +58,7 @@ function main() {
       goNoGo: 'qa/go-no-go-report.json',
       launchPlanStatus: 'qa/launch-plan-status.json',
       launchPlanStatusMd: 'qa/launch-plan-status.md',
+      releaseManifest: 'qa/release-manifest.json',
       evidencePackRoot: 'qa/release-evidence',
       releaseWindowReport: REPORT_PATH,
     },
@@ -85,6 +86,7 @@ function main() {
       FAST_MODE ? { GO_NO_GO_RUN_RELEASE_GATE: '0', GO_NO_GO_RUN_ROLLBACK_DRILL: '0' } : {}
     );
     runStep(report, 'launch-plan-status', 'node tools/system/launch-plan-status.js');
+    runStep(report, 'release-manifest', 'node tools/system/release-manifest.js');
     runStep(
       report,
       'release-evidence-pack',

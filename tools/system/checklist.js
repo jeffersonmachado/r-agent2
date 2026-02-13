@@ -179,6 +179,10 @@ function checkQAScripts() {
       description: 'Status consolidado de marcos D-7/D-1/D0'
     },
     {
+      name: 'system:release-manifest',
+      description: 'Manifesto do release candidate (branch/commit/checks)'
+    },
+    {
       name: 'system:release-evidence-pack',
       description: 'Empacotamento das evidências de release'
     },
@@ -219,12 +223,14 @@ function checkLaunchEvidence() {
   const goNoGoPath = path.join(ROOT_DIR, 'qa', 'go-no-go-report.json');
   const smokePath = path.join(ROOT_DIR, 'qa', 'smoke-evidence.json');
   const releaseWindowPath = path.join(ROOT_DIR, 'qa', 'release-window-report.json');
+  const releaseManifestPath = path.join(ROOT_DIR, 'qa', 'release-manifest.json');
 
   const evidenceFiles = [
     { name: 'Release gate report', path: releaseGatePath },
     { name: 'Rollback drill report', path: rollbackPath },
     { name: 'Go/No-Go report', path: goNoGoPath },
     { name: 'Release window report', path: releaseWindowPath },
+    { name: 'Release manifest', path: releaseManifestPath },
     { name: 'Smoke evidence summary', path: smokePath },
   ];
 
