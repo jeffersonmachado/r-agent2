@@ -8,6 +8,8 @@ const ROOT = path.join(__dirname, '..', '..');
 const DEFAULT_API_URL = process.env.ROLLBACK_DRILL_API_URL || process.env.API_URL || process.env.TEST_BASE_URL || 'http://localhost:3001';
 const REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
 const APPLY_PBX_ROLLBACK = process.env.ROLLBACK_DRILL_APPLY_PBX === '1';
+const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
+const REQUIRE_PBX_SMOKE_EVIDENCE = String(process.env.ROLLBACK_DRILL_REQUIRE_PBX_SMOKE_EVIDENCE || '1') !== '0';
 
 function nowIso() {
   return new Date().toISOString();
@@ -143,6 +145,77 @@ function sanitizePayload(payload) {
   }
 }
 
+function loadSmokeEvidenceSummary() {
+  const abs = path.join(ROOT, SMOKE_EVIDENCE_SUMMARY_PATH);
+  if (!fs.existsSync(abs)) {
+    return { ok: false, error: 'smoke_evidence_missing', path: SMOKE_EVIDENCE_SUMMARY_PATH, data: null };
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(abs, 'utf8'));
+    return { ok: true, path: SMOKE_EVIDENCE_SUMMARY_PATH, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: 'smoke_evidence_parse_failed',
+      message: err && err.message ? err.message : String(err),
+      path: SMOKE_EVIDENCE_SUMMARY_PATH,
+      data: null,
+    };
+  }
+}
+
+function assertPbxSmokeEvidence(smokeSummary) {
+  if (!smokeSummary || smokeSummary.ok !== true || !smokeSummary.data || !smokeSummary.data.smokes) {
+    throw new Error('pbx_smoke_evidence_unavailable');
+  }
+
+  const l03 = smokeSummary.data.smokes.l03 || null;
+  const l04 = smokeSummary.data.smokes.l04 || null;
+
+  if (!l03 || l03.status !== 'pass') {
+    throw new Error('pbx_smoke_l03_not_pass');
+  }
+  const realCall = l03?.evidence?.realCall || null;
+  const click2callStatus = String(realCall?.click2callStatus || '').toLowerCase();
+  const cdrFound = realCall?.cdrFound === true;
+  const originated = click2callStatus === 'originated';
+  if (!l03.evidence || l03.evidence.ok !== true || !realCall || realCall.attempted !== true || !originated) {
+    throw new Error('pbx_smoke_l03_real_call_invalid');
+  }
+  // Regra operacional do lançamento: quando não há CDR na janela do smoke,
+  // aceitar originate real confirmado no gate.
+  if (!cdrFound && !originated) {
+    throw new Error('pbx_smoke_l03_cdr_missing_without_originate');
+  }
+
+  if (!l04 || l04.status !== 'pass') {
+    throw new Error('pbx_smoke_l04_not_pass');
+  }
+  const executionId = String(l04?.evidence?.flow?.executionId || '').trim();
+  const nodesCount = Number(l04?.evidence?.flow?.nodesCount || 0);
+  if (!l04.evidence || l04.evidence.ok !== true || !executionId || nodesCount <= 0) {
+    throw new Error('pbx_smoke_l04_runtime_invalid');
+  }
+
+  return {
+    l03: {
+      status: l03.status,
+      evidenceOk: l03?.evidence?.ok === true,
+      realCallAttempted: realCall?.attempted === true,
+      click2callStatus,
+      originated,
+      cdrFound,
+      acceptedWithoutCdr: !cdrFound && originated,
+    },
+    l04: {
+      status: l04.status,
+      evidenceOk: l04?.evidence?.ok === true,
+      executionId,
+      nodesCount,
+    },
+  };
+}
+
 async function run() {
   const startedAtMs = Date.now();
   const baseUrl = String(DEFAULT_API_URL).replace(/\/+$/, '');
@@ -163,6 +236,7 @@ async function run() {
       orders: null,
       fastService: null,
       pbx: null,
+      pbxSmokeEvidence: null,
       postSelftest: null,
     },
     error: null,
@@ -267,6 +341,29 @@ async function run() {
     }
 
     report.checks.pbx = pbxResult;
+
+    if (REQUIRE_PBX_SMOKE_EVIDENCE) {
+      const smokeSummary = loadSmokeEvidenceSummary();
+      const smokeCheck = {
+        required: true,
+        summaryPath: SMOKE_EVIDENCE_SUMMARY_PATH,
+        loaded: smokeSummary.ok === true,
+        result: null,
+        error: smokeSummary.ok ? null : (smokeSummary.error || 'unknown_error'),
+      };
+      if (!smokeSummary.ok) {
+        report.checks.pbxSmokeEvidence = smokeCheck;
+        throw new Error(smokeSummary.error || 'pbx_smoke_evidence_load_failed');
+      }
+      smokeCheck.result = assertPbxSmokeEvidence(smokeSummary);
+      report.checks.pbxSmokeEvidence = smokeCheck;
+    } else {
+      report.checks.pbxSmokeEvidence = {
+        required: false,
+        summaryPath: SMOKE_EVIDENCE_SUMMARY_PATH,
+        skipped: true,
+      };
+    }
 
     const postSelf = await reqJson(baseUrl, '/health/selftest', { token });
     report.checks.postSelftest = {

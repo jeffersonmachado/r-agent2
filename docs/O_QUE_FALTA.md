@@ -258,6 +258,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [ ] executar drill de rollback:
   - `npm run system:rollback-drill`
   - opcional com rollback PBX aplicado: `ROLLBACK_DRILL_APPLY_PBX=1 npm run system:rollback-drill`
+  - observação: o drill valida evidência PBX L-03/L-04 no `qa/smoke-evidence.json` por padrão (`ROLLBACK_DRILL_REQUIRE_PBX_SMOKE_EVIDENCE=1`).
 - [ ] revisar critérios de aceite:
   - release gate `PASS`
   - selftest sem `FAIL`
@@ -308,7 +309,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   aceite: `qa/l05-chatpro-omnichannel-evidence.json` com `ok=true` e operações críticas (`assign/transfer/note/tags/quick replies`) validadas.
 - [ ] **Rollback readiness (owner: Engenharia de Plataforma)**  
   comando: `npm run system:rollback-drill`  
-  evidência: `qa/rollback-drill-report.json` sem bloqueadores.
+  evidência: `qa/rollback-drill-report.json` sem bloqueadores, incluindo `checks.pbxSmokeEvidence` válido (L-03/L-04).
 
 #### D0 (01/03/2026) — pós-deploy imediato
 - [ ] **ChatPro (owner: Atendimento/API)**  

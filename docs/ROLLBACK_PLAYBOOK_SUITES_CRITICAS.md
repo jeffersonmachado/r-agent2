@@ -59,6 +59,8 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
 2. Executar simulado de rollback e gerar evidência:
    - `npm run system:rollback-drill`
    - opcional (aplica rollback PBX no drill): `ROLLBACK_DRILL_APPLY_PBX=1 npm run system:rollback-drill`
+   - por padrão, o drill exige evidência PBX de `L-03`/`L-04` em `qa/smoke-evidence.json` (`ROLLBACK_DRILL_REQUIRE_PBX_SMOKE_EVIDENCE=1`).
+   - para diagnóstico isolado (sem smoke prévio): `ROLLBACK_DRILL_REQUIRE_PBX_SMOKE_EVIDENCE=0 npm run system:rollback-drill`
 3. Arquivar evidencias:
    - `qa/release-gate-report.json`
    - `qa/rollback-drill-report.json`
