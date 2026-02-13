@@ -23,6 +23,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [x] **L-04** fechado com integração PBX call events v0 -> runtime (trigger por evento):
   - `scripts/test-pbx-call-events-runtime-smoke.js`
   - valida trigger `CallEnded` (`source=pbx.cdr`) em flow real, com execução registrada
+  - valida também ledger por nó (`node_executions`) com `nodesCount > 0` na evidência
   - evidência: `qa/l04-pbx-call-events-runtime-evidence.json`
   - log: `qa/smoke/l04-pbx-call-events-runtime.log`
 

@@ -334,15 +334,47 @@ const { dispatchOne } = require('./api/services/eventLedgerTriggerDispatcher');
   }
 }
 
-async function waitExecution({ baseUrl, token, correlationId, flowId }) {
+function parseStartedAtMs(execution) {
+  const raw = execution?.started_at || execution?.startedAt || null;
+  if (!raw) return 0;
+  const t = new Date(String(raw)).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+function findExecutionCandidate(items, flowId, minStartedAtMs) {
+  const list = Array.isArray(items) ? items : [];
+  const filtered = list
+    .filter((it) => String(it?.flow_id || it?.flowId || '') === flowId)
+    .filter((it) => parseStartedAtMs(it) >= Math.max(0, Number(minStartedAtMs || 0) - 15000));
+  if (!filtered.length) return null;
+  filtered.sort((a, b) => parseStartedAtMs(b) - parseStartedAtMs(a));
+  return filtered[0];
+}
+
+async function waitExecution({ baseUrl, token, correlationId, flowId, minStartedAtMs = 0 }) {
   const startedAt = Date.now();
+  let lastSeen = null;
   for (let i = 0; i < 120; i += 1) {
-    const execList = await reqJson(
+    const execListByCorrelation = await reqJson(
       `${baseUrl}/api/executions?correlationId=${encodeURIComponent(correlationId)}&limit=20`,
       { method: 'GET', token },
     );
-    expect(execList.ok && Array.isArray(execList.payload?.items), `executions_list_failed:${execList.status}`);
-    const item = execList.payload.items.find((it) => String(it?.flow_id || it?.flowId || '') === flowId);
+    expect(
+      execListByCorrelation.ok && Array.isArray(execListByCorrelation.payload?.items),
+      `executions_list_failed:${execListByCorrelation.status}`,
+    );
+    let item = findExecutionCandidate(execListByCorrelation.payload.items, flowId, minStartedAtMs);
+    if (!item) {
+      const execListFallback = await reqJson(
+        `${baseUrl}/api/executions?limit=200`,
+        { method: 'GET', token },
+      );
+      expect(
+        execListFallback.ok && Array.isArray(execListFallback.payload?.items),
+        `executions_list_fallback_failed:${execListFallback.status}`,
+      );
+      item = findExecutionCandidate(execListFallback.payload.items, flowId, minStartedAtMs);
+    }
     if (item) {
       const execId = String(item.id || '');
       const details = await reqJson(`${baseUrl}/api/executions/${encodeURIComponent(execId)}`, {
@@ -350,16 +382,27 @@ async function waitExecution({ baseUrl, token, correlationId, flowId }) {
         token,
       });
       expect(details.ok && details.payload?.ok === true, `execution_detail_failed:${details.status}`);
-      return {
-        found: true,
-        latencyMs: Date.now() - startedAt,
-        execution: details.payload?.execution || item,
-        nodes: Array.isArray(details.payload?.nodes) ? details.payload.nodes : [],
+      const execution = details.payload?.execution || item;
+      const nodes = Array.isArray(details.payload?.nodes) ? details.payload.nodes : [];
+      const status = String(execution?.status || '').toLowerCase();
+      lastSeen = {
+        executionId: String(execution?.id || execId),
+        status,
+        nodesCount: nodes.length,
       };
+      if ((status === 'done' || status === 'failed') && nodes.length > 0) {
+        return {
+          found: true,
+          latencyMs: Date.now() - startedAt,
+          execution,
+          nodes,
+          lastSeen,
+        };
+      }
     }
     await sleep(1000);
   }
-  return { found: false, latencyMs: Date.now() - startedAt, execution: null, nodes: [] };
+  return { found: false, latencyMs: Date.now() - startedAt, execution: null, nodes: [], lastSeen };
 }
 
 async function main() {
@@ -385,8 +428,10 @@ async function main() {
     token: auth.token,
     correlationId: uniqueid,
     flowId,
+    minStartedAtMs: ts,
   });
-  expect(waited.found, 'event_trigger_execution_not_found');
+  expect(waited.found, `event_trigger_execution_not_found:${JSON.stringify(waited.lastSeen || {})}`);
+  expect(waited.nodes.length > 0, `execution_nodes_missing:${JSON.stringify(waited.lastSeen || {})}`);
 
   const metrics = await reqJson(`${baseUrl}/api/ops/event-ledger/metrics?windowMinutes=30`, {
     method: 'GET',

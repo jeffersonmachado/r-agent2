@@ -98,6 +98,12 @@ function boolEnv(name, def = false) {
   return def;
 }
 
+function resolvePositiveStepLimit(value, fallback) {
+  const n = Number(value);
+  if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  return fallback;
+}
+
 function resolveStartNodeId(flow) {
   const nodes = Array.isArray(flow?.nodes) ? flow.nodes : [];
   const startNode = nodes.find((n) => n && n.type === 'start');
@@ -201,7 +207,7 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
 
   const registry = createNodeRegistry();
   const aiProvider = getAiProviderForTenant(tenantId);
-  const stepsLimit = Number.isFinite(Number(maxSteps)) ? Number(maxSteps) : intEnv('EVENT_TRIGGER_MAX_STEPS', 50);
+  const stepsLimit = resolvePositiveStepLimit(maxSteps, intEnv('EVENT_TRIGGER_MAX_STEPS', 50));
   let steps = 0;
   const executionLedgerAdapter = executionId
     ? buildExecutionLedgerAdapter({

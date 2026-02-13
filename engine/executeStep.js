@@ -12,6 +12,7 @@
 
 const { runStep } = require('./runner');
 const { recordMetricsForStep } = require('./metrics');
+const logger = require('../api/utils/logger');
 
 function safeNumber(v, fallback) {
   const n = Number(v);
@@ -205,7 +206,17 @@ async function executeStep(state, compiledFlow, options) {
           errorMessage: err && err.message ? String(err.message) : String(err),
         });
       }
-    } catch (_) {}
+    } catch (ledgerErr) {
+      try {
+        logger.warn('[ExecutionLedger] Falha ao registrar node error', {
+          executionId,
+          nodeId,
+          nodeType,
+          stepIndex,
+          error: ledgerErr?.message || String(ledgerErr),
+        });
+      } catch (_) {}
+    }
 
     throw err;
   }
@@ -218,7 +229,17 @@ async function executeStep(state, compiledFlow, options) {
       next.metadata = next.metadata || {};
       next.metadata.executionStepIndex = stepIndex + 1;
     }
-  } catch (_) {}
+  } catch (ledgerErr) {
+    try {
+      logger.warn('[ExecutionLedger] Falha ao registrar node execution', {
+        executionId,
+        nodeId,
+        nodeType,
+        stepIndex,
+        error: ledgerErr?.message || String(ledgerErr),
+      });
+    } catch (_) {}
+  }
 
   // Métricas por nó / passo:
   // - Não afetam a execução (erros são ignorados).
@@ -265,5 +286,4 @@ async function executeStep(state, compiledFlow, options) {
 module.exports = {
   executeStep,
 };
-
 

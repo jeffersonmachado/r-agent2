@@ -138,6 +138,7 @@ function assertCriticalSmokeEvidence(evidence) {
     || l04.evidence.ok !== true
     || !l04.evidence.flow
     || !String(l04.evidence.flow.executionId || '').trim()
+    || Number(l04.evidence.flow.nodesCount || 0) <= 0
   ) {
     throw new Error('smoke_l04_runtime_evidence_missing');
   }

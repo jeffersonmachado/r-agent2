@@ -1,17 +1,17 @@
 {
   "smoke": "L-02",
-  "generatedAt": "2026-02-13T13:35:20.612Z",
+  "generatedAt": "2026-02-13T14:19:45.908Z",
   "ok": true,
   "authMode": "admin",
   "tenantId": "system",
   "versions": {
     "rollbackTargetVersion": 1,
-    "topVersionSignature": "dda55ee23f6b8bb99982a922"
+    "topVersionSignature": "69b74c877449edf493534de9"
   },
   "signatures": {
-    "v1": "dda55ee23f6b8bb99982a922",
-    "v2": "2c0c9849c5694a34ff40a313",
-    "rollback": "dda55ee23f6b8bb99982a922"
+    "v1": "69b74c877449edf493534de9",
+    "v2": "7a78b5121c9dc18eb9b61130",
+    "rollback": "69b74c877449edf493534de9"
   },
   "audit": {
     "source": "api.pbx.audit",
