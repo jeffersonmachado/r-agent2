@@ -60,6 +60,7 @@ function main() {
       launchPlanStatus: 'qa/launch-plan-status.json',
       launchPlanStatusMd: 'qa/launch-plan-status.md',
       releaseManifest: 'qa/release-manifest.json',
+      releaseSummary: 'qa/release-summary.md',
       evidencePackRoot: 'qa/release-evidence',
       releaseWindowReport: REPORT_PATH,
     },
@@ -91,6 +92,7 @@ function main() {
     );
     runStep(report, 'launch-plan-status', 'node tools/system/launch-plan-status.js');
     runStep(report, 'release-manifest', 'node tools/system/release-manifest.js');
+    runStep(report, 'release-summary', 'node tools/system/release-summary.js');
     runStep(
       report,
       'release-evidence-pack',

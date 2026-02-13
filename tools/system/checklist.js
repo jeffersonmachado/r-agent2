@@ -199,6 +199,10 @@ function checkQAScripts() {
       description: 'Checagem de alterações pendentes fora de artefatos QA'
     },
     {
+      name: 'system:release-summary',
+      description: 'Resumo executivo de release para handoff'
+    },
+    {
       name: 'system:release-window',
       description: 'Execução padronizada da janela de release'
     },
@@ -232,6 +236,7 @@ function checkLaunchEvidence() {
   const smokePath = path.join(ROOT_DIR, 'qa', 'smoke-evidence.json');
   const releaseWindowPath = path.join(ROOT_DIR, 'qa', 'release-window-report.json');
   const releaseManifestPath = path.join(ROOT_DIR, 'qa', 'release-manifest.json');
+  const releaseSummaryPath = path.join(ROOT_DIR, 'qa', 'release-summary.md');
 
   const evidenceFiles = [
     { name: 'Release gate report', path: releaseGatePath },
@@ -239,6 +244,7 @@ function checkLaunchEvidence() {
     { name: 'Go/No-Go report', path: goNoGoPath },
     { name: 'Release window report', path: releaseWindowPath },
     { name: 'Release manifest', path: releaseManifestPath },
+    { name: 'Release summary', path: releaseSummaryPath },
     { name: 'Smoke evidence summary', path: smokePath },
   ];
 
