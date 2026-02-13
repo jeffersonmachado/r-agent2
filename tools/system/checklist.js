@@ -175,6 +175,18 @@ function checkQAScripts() {
       description: 'Decisão consolidada de go/no-go'
     },
     {
+      name: 'system:launch-plan-status',
+      description: 'Status consolidado de marcos D-7/D-1/D0'
+    },
+    {
+      name: 'system:release-evidence-pack',
+      description: 'Empacotamento das evidências de release'
+    },
+    {
+      name: 'system:release-window',
+      description: 'Execução padronizada da janela de release'
+    },
+    {
       name: 'test:rpa',
       description: 'Script de testes RPA'
     }

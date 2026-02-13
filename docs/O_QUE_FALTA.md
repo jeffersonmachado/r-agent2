@@ -262,6 +262,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `voiceRuntime`
 
 ### D-1 (28/02/2026) — go/no-go técnico
+- [ ] execução padronizada da janela técnica (modo rápido):
+  - `RELEASE_WINDOW_FAST=1 npm run system:release-window`
+  - saída: `qa/release-window-report.json`
 - [ ] executar decisão consolidada (gate + rollback + smoke evidence):
   - `npm run system:go-no-go`
   - saída: `qa/go-no-go-report.json` com `decision=GO|NO_GO`
@@ -285,6 +288,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 ### D0 (01/03/2026) — execução de lançamento
 - [ ] abrir janela oficial de deploy e congelar mudanças paralelas
 - [ ] executar publicação/deploy da versão candidata
+- [ ] executar janela completa de release (modo full):
+  - `npm run system:release-window`
+  - saída: `qa/release-window-report.json`
 - [ ] executar smoke pós-release imediato:
   - `npm run system:release-gate` (ou, em contingência, `RELEASE_GATE_MODE=legacy npm run system:release-gate`)
 - [ ] consolidar status final da janela:
