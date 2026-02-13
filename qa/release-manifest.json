@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-02-13T22:55:10.352Z",
+  "generatedAt": "2026-02-13T23:02:13.424Z",
   "candidate": {
     "branch": "feat/f10-ai-envelope-safe-mode",
-    "commit": "4e62d01b4b8d46e0956f54164ba3320f055bdc8b",
-    "shortCommit": "4e62d01",
+    "commit": "ab48807d8323a2fcb7281a8993498bf46bd63111",
+    "shortCommit": "ab48807",
     "tag": null,
     "dirty": true
   },

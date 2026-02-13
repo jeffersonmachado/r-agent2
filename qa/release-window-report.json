@@ -1,7 +1,7 @@
 {
-  "startedAt": "2026-02-13T22:55:10.059Z",
-  "finishedAt": "2026-02-13T22:55:10.400Z",
-  "durationMs": 341,
+  "startedAt": "2026-02-13T23:02:13.260Z",
+  "finishedAt": "2026-02-13T23:02:13.502Z",
+  "durationMs": 242,
   "mode": "fast",
   "status": "pass",
   "steps": [
@@ -9,8 +9,8 @@
       "label": "release-clean-check",
       "command": "node tools/system/release-clean-check.js",
       "status": "skipped",
-      "startedAt": "2026-02-13T22:55:10.060Z",
-      "finishedAt": "2026-02-13T22:55:10.060Z",
+      "startedAt": "2026-02-13T23:02:13.261Z",
+      "finishedAt": "2026-02-13T23:02:13.261Z",
       "durationMs": 0,
       "error": null
     },
@@ -18,46 +18,65 @@
       "label": "go-no-go",
       "command": "node tools/system/go-no-go.js",
       "status": "pass",
-      "startedAt": "2026-02-13T22:55:10.060Z",
-      "finishedAt": "2026-02-13T22:55:10.152Z",
-      "durationMs": 92,
+      "startedAt": "2026-02-13T23:02:13.261Z",
+      "finishedAt": "2026-02-13T23:02:13.304Z",
+      "durationMs": 43,
       "error": null
     },
     {
       "label": "launch-plan-status",
       "command": "node tools/system/launch-plan-status.js",
       "status": "pass",
-      "startedAt": "2026-02-13T22:55:10.152Z",
-      "finishedAt": "2026-02-13T22:55:10.266Z",
-      "durationMs": 114,
+      "startedAt": "2026-02-13T23:02:13.304Z",
+      "finishedAt": "2026-02-13T23:02:13.348Z",
+      "durationMs": 44,
       "error": null
     },
     {
       "label": "release-manifest",
       "command": "node tools/system/release-manifest.js",
       "status": "pass",
-      "startedAt": "2026-02-13T22:55:10.266Z",
-      "finishedAt": "2026-02-13T22:55:10.360Z",
-      "durationMs": 94,
+      "startedAt": "2026-02-13T23:02:13.348Z",
+      "finishedAt": "2026-02-13T23:02:13.430Z",
+      "durationMs": 82,
+      "error": null
+    },
+    {
+      "label": "release-summary",
+      "command": "node tools/system/release-summary.js",
+      "status": "pass",
+      "startedAt": "2026-02-13T23:02:13.430Z",
+      "finishedAt": "2026-02-13T23:02:13.464Z",
+      "durationMs": 34,
       "error": null
     },
     {
       "label": "release-evidence-pack",
       "command": "node tools/system/release-evidence-pack.js",
       "status": "pass",
-      "startedAt": "2026-02-13T22:55:10.360Z",
-      "finishedAt": "2026-02-13T22:55:10.400Z",
-      "durationMs": 40,
+      "startedAt": "2026-02-13T23:02:13.464Z",
+      "finishedAt": "2026-02-13T23:02:13.502Z",
+      "durationMs": 38,
       "error": null
     },
     {
       "label": "release-evidence-verify",
       "command": "node tools/system/release-evidence-verify.js",
       "status": "skipped",
-      "startedAt": "2026-02-13T22:55:10.400Z",
-      "finishedAt": "2026-02-13T22:55:10.400Z",
+      "startedAt": "2026-02-13T23:02:13.502Z",
+      "finishedAt": "2026-02-13T23:02:13.502Z",
       "durationMs": 0,
       "error": null
+    },
+    {
+      "label": "release-evidence-prune",
+      "command": "node tools/system/release-evidence-prune.js",
+      "status": "skipped",
+      "startedAt": "2026-02-13T23:02:13.502Z",
+      "finishedAt": "2026-02-13T23:02:13.502Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "FAST_MODE"
     }
   ],
   "artifacts": {
@@ -65,8 +84,12 @@
     "launchPlanStatus": "qa/launch-plan-status.json",
     "launchPlanStatusMd": "qa/launch-plan-status.md",
     "releaseManifest": "qa/release-manifest.json",
+    "releaseSummary": "qa/release-summary.md",
     "evidencePackRoot": "qa/release-evidence",
     "releaseWindowReport": "qa/release-window-report.json"
+  },
+  "config": {
+    "pruneOldEvidence": false
   },
   "error": null
 }
