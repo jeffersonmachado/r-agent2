@@ -307,6 +307,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `qa/smoke-evidence.json`
   - `qa/rollback-drill-report.json`
   - `qa/go-no-go-report.json`
+  - `qa/release-window-report.json`
   - `qa/launch-plan-status.json`
   - `qa/launch-plan-status.md`
   - comando recomendado para pacote consolidado: `npm run system:release-evidence-pack`

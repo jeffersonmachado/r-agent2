@@ -9,6 +9,7 @@ const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/rel
 const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
 const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
 const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
+const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
 const OUTPUT_JSON_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
 const OUTPUT_MD_PATH = process.env.LAUNCH_PLAN_STATUS_MD_PATH || 'qa/launch-plan-status.md';
 
@@ -37,6 +38,7 @@ function buildStatus() {
   const drill = readJson(ROLLBACK_DRILL_REPORT_PATH);
   const smoke = readJson(SMOKE_EVIDENCE_SUMMARY_PATH);
   const goNoGo = readJson(GO_NO_GO_REPORT_PATH);
+  const releaseWindow = readJson(RELEASE_WINDOW_REPORT_PATH);
   const smokeOk = smokePasses(smoke);
 
   const d7 = [
@@ -54,6 +56,7 @@ function buildStatus() {
     makeItem(!!gate && gate.status === 'pass', 'Smoke pós-release em pass', RELEASE_GATE_REPORT_PATH),
     makeItem(smokeOk, 'Operação mínima por suíte (L-01..L-05)', SMOKE_EVIDENCE_SUMMARY_PATH),
     makeItem(!!goNoGo && goNoGo.decision === 'GO', 'Evidência final de GO', GO_NO_GO_REPORT_PATH),
+    makeItem(!!releaseWindow && releaseWindow.status === 'pass', 'Janela de release executada', RELEASE_WINDOW_REPORT_PATH),
   ];
 
   const doneCount = [...d7, ...d1, ...d0].filter((i) => i.done).length;
@@ -78,6 +81,7 @@ function buildStatus() {
       rollbackDrill: ROLLBACK_DRILL_REPORT_PATH,
       smokeEvidence: SMOKE_EVIDENCE_SUMMARY_PATH,
       goNoGo: GO_NO_GO_REPORT_PATH,
+      releaseWindow: RELEASE_WINDOW_REPORT_PATH,
     },
   };
 }

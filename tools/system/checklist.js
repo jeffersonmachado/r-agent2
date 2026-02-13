@@ -218,11 +218,13 @@ function checkLaunchEvidence() {
   const rollbackPath = path.join(ROOT_DIR, 'qa', 'rollback-drill-report.json');
   const goNoGoPath = path.join(ROOT_DIR, 'qa', 'go-no-go-report.json');
   const smokePath = path.join(ROOT_DIR, 'qa', 'smoke-evidence.json');
+  const releaseWindowPath = path.join(ROOT_DIR, 'qa', 'release-window-report.json');
 
   const evidenceFiles = [
     { name: 'Release gate report', path: releaseGatePath },
     { name: 'Rollback drill report', path: rollbackPath },
     { name: 'Go/No-Go report', path: goNoGoPath },
+    { name: 'Release window report', path: releaseWindowPath },
     { name: 'Smoke evidence summary', path: smokePath },
   ];
 
