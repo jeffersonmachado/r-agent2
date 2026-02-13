@@ -35,6 +35,7 @@
     "system:go-no-go": "node tools/system/go-no-go.js",
     "system:launch-plan-status": "node tools/system/launch-plan-status.js",
     "system:release-evidence-pack": "node tools/system/release-evidence-pack.js",
+    "system:release-clean-check": "node tools/system/release-clean-check.js",
     "system:release-window": "node tools/system/release-window.js",
     "validate:invariants": "node scripts/validate-invariants.js",
     "test:rpa:record": "node tests/rpa/record.js",

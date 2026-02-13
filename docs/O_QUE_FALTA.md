@@ -287,6 +287,8 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 ### D0 (01/03/2026) — execução de lançamento
 - [ ] abrir janela oficial de deploy e congelar mudanças paralelas
+- [ ] validar workspace de release (sem pendências fora de QA):
+  - `npm run system:release-clean-check`
 - [ ] executar publicação/deploy da versão candidata
 - [ ] executar janela completa de release (modo full):
   - `npm run system:release-window`

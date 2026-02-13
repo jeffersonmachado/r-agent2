@@ -84,6 +84,7 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
 1. Modo rápido de validação (sem rerodar suites pesadas):
    - `RELEASE_WINDOW_FAST=1 npm run system:release-window`
 2. Modo completo para a janela oficial:
+   - pre-check: `npm run system:release-clean-check`
    - `npm run system:release-window`
 3. Evidência consolidada da execução:
    - `qa/release-window-report.json`

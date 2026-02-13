@@ -65,6 +65,19 @@ function main() {
   };
 
   try {
+    if (!FAST_MODE) {
+      runStep(report, 'release-clean-check', 'node tools/system/release-clean-check.js');
+    } else {
+      report.steps.push({
+        label: 'release-clean-check',
+        command: 'node tools/system/release-clean-check.js',
+        status: 'skipped',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 0,
+        error: null,
+      });
+    }
     runStep(
       report,
       'go-no-go',

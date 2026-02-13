@@ -183,6 +183,10 @@ function checkQAScripts() {
       description: 'Empacotamento das evidências de release'
     },
     {
+      name: 'system:release-clean-check',
+      description: 'Checagem de alterações pendentes fora de artefatos QA'
+    },
+    {
       name: 'system:release-window',
       description: 'Execução padronizada da janela de release'
     },
