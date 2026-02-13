@@ -17,10 +17,47 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+mkdir -p qa/smoke
+L02_STATUS="not_run"
+L03_STATUS="not_run"
+L02_LOG_PATH="qa/smoke/l02-ura-publish-rollback.log"
+L03_LOG_PATH="qa/smoke/l03-pbx-voice-tts-asr.log"
+L02_EVIDENCE_PATH="qa/l02-ura-publish-rollback-evidence.json"
+L03_EVIDENCE_PATH="qa/l03-pbx-voice-tts-asr-evidence.json"
+SMOKE_EVIDENCE_SUMMARY_PATH="${SMOKE_EVIDENCE_SUMMARY_PATH:-qa/smoke-evidence.json}"
+
+run_with_log() {
+  local status_var="$1"
+  local log_path="$2"
+  shift 2
+  set +e
+  "$@" 2>&1 | tee "$log_path"
+  local cmd_rc=${PIPESTATUS[0]}
+  set -e
+  if [[ "$cmd_rc" -eq 0 ]]; then
+    printf -v "$status_var" '%s' "pass"
+    return 0
+  fi
+  printf -v "$status_var" '%s' "fail"
+  return "$cmd_rc"
+}
+
+write_smoke_evidence_summary() {
+  SMOKE_EVIDENCE_SUMMARY_PATH="$SMOKE_EVIDENCE_SUMMARY_PATH" \
+  L02_STATUS="$L02_STATUS" \
+  L03_STATUS="$L03_STATUS" \
+  L02_LOG_PATH="$L02_LOG_PATH" \
+  L03_LOG_PATH="$L03_LOG_PATH" \
+  L02_EVIDENCE_PATH="$L02_EVIDENCE_PATH" \
+  L03_EVIDENCE_PATH="$L03_EVIDENCE_PATH" \
+  node -e "const fs=require('fs');const p=process.env;const out=String(p.SMOKE_EVIDENCE_SUMMARY_PATH||'qa/smoke-evidence.json');const read=(f)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'));}catch(_){return null;}};const summary={generatedAt:new Date().toISOString(),smokes:{l02:{status:p.L02_STATUS||'unknown',logPath:p.L02_LOG_PATH||null,evidencePath:p.L02_EVIDENCE_PATH||null,evidence:read(p.L02_EVIDENCE_PATH||'')},l03:{status:p.L03_STATUS||'unknown',logPath:p.L03_LOG_PATH||null,evidencePath:p.L03_EVIDENCE_PATH||null,evidence:read(p.L03_EVIDENCE_PATH||'')}}};fs.mkdirSync(require('path').dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(summary,null,2)+'\n','utf8');console.log('[autotest-stack] Smoke evidence summary:', out);"
+}
+
 echo "[autotest-stack] Preparando token RPA..."
 export RPA_TOKEN="$(node -e "const { getOrCreateRpaToken } = require('./tests/rpa/utils/rpaTokenManager'); process.stdout.write(getOrCreateRpaToken());")"
 
 cleanup() {
+  write_smoke_evidence_summary || true
   echo
   echo "[autotest-stack] Limpando stack..."
   bash ./scripts/test-stack-down.sh || true
@@ -31,21 +68,27 @@ echo "[autotest-stack] Subindo stack..."
 bash ./scripts/test-stack-up.sh
 
 echo "[autotest-stack] Aguardando readiness..."
-API_URL="http://localhost:3001" FRONTEND_URL="http://localhost:5173" RAG_URL="http://localhost:8001" bash ./scripts/wait-ready.sh
+API_TEST_PORT="${API_TEST_PORT:-13001}"
+FRONTEND_TEST_PORT="${FRONTEND_TEST_PORT:-15173}"
+RAG_TEST_PORT="${RAG_TEST_PORT:-18001}"
+API_BASE_URL="http://localhost:${API_TEST_PORT}"
+FRONTEND_BASE_URL="http://localhost:${FRONTEND_TEST_PORT}"
+RAG_BASE_URL="http://localhost:${RAG_TEST_PORT}"
+API_URL="${API_BASE_URL}" FRONTEND_URL="${FRONTEND_BASE_URL}" RAG_URL="${RAG_BASE_URL}" bash ./scripts/wait-ready.sh
 
 echo
 echo "[autotest-stack] Verificando login RPA via API..."
-node -e "const token=process.env.RPA_TOKEN||''; fetch('http://localhost:3001/auth/rpa/login',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify({token, tenantId:'system'})}).then(async r=>{const t=await r.text().catch(()=>'' ); console.log('[rpa-login]', r.status, t); if(r.status>=400) process.exit(1);}).catch(e=>{ console.error(e); process.exit(1); })"
+node -e "const token=process.env.RPA_TOKEN||''; const base='${API_BASE_URL}'; fetch(base + '/auth/rpa/login',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify({token, tenantId:'system'})}).then(async r=>{const t=await r.text().catch(()=>'' ); console.log('[rpa-login]', r.status, t); if(r.status>=400) process.exit(1);}).catch(e=>{ console.error(e); process.exit(1); })"
 
 echo
 echo "[autotest-stack] Rodando selftest read-only..."
-node -e "fetch('http://localhost:3001/health/selftest').then(r=>r.json()).then(j=>{ console.log('[selftest]', j.status); if(!j||!j.status) process.exit(2); if(String(j.status).toUpperCase()==='FAIL') process.exit(1); }).catch(e=>{ console.error(e); process.exit(2); })"
+node -e "const base='${API_BASE_URL}'; fetch(base + '/health/selftest').then(r=>r.json()).then(j=>{ console.log('[selftest]', j.status); if(!j||!j.status) process.exit(2); if(String(j.status).toUpperCase()==='FAIL') process.exit(1); }).catch(e=>{ console.error(e); process.exit(2); })"
 
 echo
 echo "[autotest-stack] Exportando URLs padrão para RPA..."
-export TEST_BASE_URL="http://localhost:3001"
-export TEST_API_URL="http://localhost:3001"
-export TEST_FRONTEND_URL="http://localhost:5173"
+export TEST_BASE_URL="${API_BASE_URL}"
+export TEST_API_URL="${API_BASE_URL}"
+export TEST_FRONTEND_URL="${FRONTEND_BASE_URL}"
 export RPA_IGNORE_API_CONSOLE_ERRORS="true"
 export TEST_USERNAME="admin"
 export TEST_USER_PASSWORD="admin123"
@@ -63,7 +106,31 @@ npm run system:validate
 
 echo
 echo "[autotest-stack] Rodando smoke test PBX (Realtime/ODBC)..."
-bash ./scripts/test-pbx-realtime.sh
+API_URL="${API_BASE_URL}" bash ./scripts/test-pbx-realtime.sh
+
+echo
+echo "[autotest-stack] Rodando smoke test L-02 (URA publish/rollback + auditoria)..."
+run_with_log L02_STATUS "$L02_LOG_PATH" env URA_PUBLISH_ROLLBACK_EVIDENCE_PATH="$L02_EVIDENCE_PATH" node ./scripts/test-ura-publish-rollback-smoke.js
+
+echo
+echo "[autotest-stack] Rodando smoke test L-03 (PBX TTS+ASR runtime de voz + chamada real)..."
+run_with_log L03_STATUS "$L03_LOG_PATH" env PBX_VOICE_TTS_ASR_EVIDENCE_PATH="$L03_EVIDENCE_PATH" node ./scripts/test-pbx-voice-tts-asr-smoke.js
+
+echo
+echo "[autotest-stack] Rodando smoke test Voice Runtime (ingestão + métricas + selftest)..."
+node ./scripts/test-voice-runtime-smoke.js
+
+echo
+echo "[autotest-stack] Rodando smoke test Filas Físicas (kiosk/panel/station + métricas)..."
+node ./scripts/test-physical-queue-smoke.js
+
+echo
+echo "[autotest-stack] Rodando smoke test WhatsApp QR (conexão + evento + status)..."
+node ./scripts/test-whatsapp-qr-smoke.js
+
+echo
+echo "[autotest-stack] Rodando smoke test Inbox/Support/TicketMaintenance (UX-01)..."
+node ./scripts/test-inbox-runtime-smoke.js
 
 echo
 echo "[autotest-stack] Rodando testes do frontend (Vitest)..."
@@ -84,4 +151,3 @@ docker compose -f docker-compose.test.yml exec -T rag-service pytest --junitxml=
 
 echo
 echo "[autotest-stack] ✅ Tudo passou."
-

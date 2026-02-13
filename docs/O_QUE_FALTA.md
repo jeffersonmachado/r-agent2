@@ -7,6 +7,23 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 > Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
 
+## Update L-02/L-03 (13/02/2026)
+
+- [x] **L-02** fechado com smoke dedicado:
+  - `scripts/test-ura-publish-rollback-smoke.js`
+  - evidência: `qa/l02-ura-publish-rollback-evidence.json`
+  - log: `qa/smoke/l02-ura-publish-rollback.log`
+
+- [x] **L-03** fechado com TTS+ASR PBX + chamada real (originate) e evidência no gate:
+  - `scripts/test-pbx-voice-tts-asr-smoke.js`
+  - chamada real via `POST /api/cc/click2call` e validação CDR em `GET /api/pbx/cdr`
+  - evidência: `qa/l03-pbx-voice-tts-asr-evidence.json`
+  - log: `qa/smoke/l03-pbx-voice-tts-asr.log`
+
+- [x] Gate com consolidado e validação obrigatória de L-02/L-03:
+  - consolidado: `qa/smoke-evidence.json`
+  - validação no gate: `tools/system/release-gate.js`
+
 ---
 
 ## 1) Estado atual (Fev/2026) — o que já foi entregue (resumo)
@@ -172,4 +189,3 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - **Ledger por nó + replay**: execução auditável (inputs/outputs), replay parcial controlado, retenção por tenant.
 - **Queue/scheduler enterprise mínimo**: quotas, DLQ, métricas e selftest por limiar.
 - **Suites vendáveis** (Fast service + Orders/Delivery): estados consistentes + idempotência + auditoria + KPIs mínimos.
-
