@@ -93,6 +93,19 @@ function main() {
       'node tools/system/release-evidence-pack.js',
       FAST_MODE ? { RELEASE_EVIDENCE_DRY_RUN: '1' } : {}
     );
+    if (!FAST_MODE) {
+      runStep(report, 'release-evidence-verify', 'node tools/system/release-evidence-verify.js');
+    } else {
+      report.steps.push({
+        label: 'release-evidence-verify',
+        command: 'node tools/system/release-evidence-verify.js',
+        status: 'skipped',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 0,
+        error: null,
+      });
+    }
 
     report.status = 'pass';
   } catch (err) {
