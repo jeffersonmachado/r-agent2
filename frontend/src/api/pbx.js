@@ -30,6 +30,18 @@ export function rotateProvisioningToken(expiresInSec = null) {
   });
 }
 
+export function revokeProvisioningToken() {
+  return fetchJson('/api/pbx/provisioning-token/revoke', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export function listPbxAuditEvents({ hours = 72, limit = 300 } = {}) {
+  const qs = `?hours=${encodeURIComponent(String(hours))}&limit=${encodeURIComponent(String(limit))}`;
+  return fetchJson(`/api/pbx/audit${qs}`, { method: 'GET' });
+}
+
 export function listTrunks() {
   return fetchJson('/api/pbx/trunks', { method: 'GET' });
 }
@@ -57,6 +69,10 @@ export function listQueues() {
   return fetchJson('/api/pbx/queues', { method: 'GET' });
 }
 
+export function listQueueMetrics() {
+  return fetchJson('/api/pbx/queues/metrics', { method: 'GET' });
+}
+
 export function upsertQueue(payload) {
   return fetchJson('/api/pbx/queues', {
     method: 'POST',
@@ -70,6 +86,16 @@ export function dialplanPreview() {
 
 export function dialplanApply() {
   return fetchJson('/api/pbx/dialplan/apply', { method: 'POST', body: JSON.stringify({}) });
+}
+
+export function rollbackDialplan(version) {
+  const qs = `?version=${encodeURIComponent(String(version || ''))}`;
+  return fetchJson(`/api/pbx/dialplan/rollback${qs}`, { method: 'POST', body: JSON.stringify({}) });
+}
+
+export function listConfigVersions(limit = 20) {
+  const qs = `?limit=${encodeURIComponent(String(limit || 20))}`;
+  return fetchJson(`/api/pbx/config-versions${qs}`, { method: 'GET' });
 }
 
 export function pbxReload() {
@@ -140,6 +166,17 @@ export function scanRecordings() {
   return fetchJson('/api/pbx/recordings/scan', { method: 'POST', body: JSON.stringify({}) });
 }
 
+export function getRecordingPolicy() {
+  return fetchJson('/api/pbx/recordings/policy', { method: 'GET' });
+}
+
+export function saveRecordingPolicy(payload) {
+  return fetchJson('/api/pbx/recordings/policy', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
 export function listCdr(filters = {}) {
   const sp = new URLSearchParams();
   if (filters.limit != null) sp.set('limit', String(filters.limit));
@@ -151,4 +188,3 @@ export function listCdr(filters = {}) {
   const qs = sp.toString() ? `?${sp.toString()}` : '';
   return fetchJson(`/api/pbx/cdr${qs}`, { method: 'GET' });
 }
-

@@ -125,12 +125,16 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
       const answeredAt = billsec > 0 ? new Date(Math.max(calldate.getTime(), endedAt.getTime() - billsec * 1000)) : null;
 
       const correlationId = String(json.linkedid || json.uniqueid || json.id || '');
+      const callIdSource = json.linkedid ? 'linkedid' : (json.uniqueid ? 'uniqueid' : 'cdr_id');
       const subjectId = correlationId || cdrId;
 
       const basePayload = {
         cdrId: json.id,
         uniqueid: json.uniqueid || null,
         linkedid: json.linkedid || null,
+        callId: correlationId || null,
+        callIdSource,
+        tenantId,
         src: json.src || null,
         dst: json.dst || null,
         clid: json.clid || null,
@@ -206,4 +210,3 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
 module.exports = {
   scanPbxCdrAndEmitEvents,
 };
-

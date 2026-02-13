@@ -1,4 +1,4 @@
-# O que falta (Gaps) vs benchmarks: n8n + RD Station + BLIP/Huggy/Zenvia + Twilio Flex/Talkdesk/Five9 + LangFlow/Flowise + Qminder/QLess/Waitwhile/Skiplino + iFood/Uber Eats/Rappi/DoorDash
+# O que falta (Gaps) vs benchmarks: n8n + RD Station + BLIP/Huggy/Zenvia/ChatPro + Twilio Flex/Talkdesk/Five9 + LangFlow/Flowise + Qminder/QLess/Waitwhile/Skiplino + iFood/Uber Eats/Rappi/DoorDash
 
 > **Nota (Fev/2026)**: este documento virou **referência histórica**. A **fonte única** do “o que falta” (backlog operacional e critérios) é agora `docs/O_QUE_FALTA.md`.
 
@@ -97,7 +97,7 @@ Legenda de status:
 
 > Observação: existe `bulk-campaigns` e endpoints de segmentação (citados em `docs/BLIP_GAP_ANALYSIS.md`), o que pode servir como **ponto de partida**, mas ainda não cobre o “RD-like” (tracker, funil, ROI, jornadas).
 
-### 3.3) ATENDIMENTO (inspirado em BLIP/Huggy/Zenvia)
+### 3.3) ATENDIMENTO (inspirado em BLIP/Huggy/Zenvia/ChatPro)
 
 | Capacidade (benchmark: BLIP/Huggy/Zenvia) | Status | Evidência/Notas | Próximo passo recomendado |
 |---|---|---|---|
@@ -231,4 +231,3 @@ Legenda de status:
 - **Atendimento BLIP-like**: conversa↔ticket 1:1; idempotência no ticket; status por mensagem; roteamento por skills e SLA com alertas.
 - **Filas físicas (Qminder-like)**: emissão de senha idempotente, estados claros (waiting/called/in_service/done/abandoned), auditoria por estação, painel resiliente e métricas consistentes (espera/throughput/abandono).
 - **Delivery (iFood-like)**: pedido idempotente + ledger de eventos, estados consistentes, SLA mensurável (order_to_ready/order_to_deliver), incidentes integrados ao atendimento e métricas de cancel/refund/custo.
-

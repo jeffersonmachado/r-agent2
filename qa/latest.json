@@ -3,9 +3,9 @@
   "scope": [],
   "checks": [],
   "meta": {
-    "timestamp": "2026-02-05T17:38:31.126Z",
+    "timestamp": "2026-02-13T02:52:31.120Z",
     "source": "autotest",
-    "commit": "30523af35e434e9bc2ab074d783a5db0d78adfff",
+    "commit": "494d39eb85c6046c503d087235293e3d70848580",
     "branch": "feat/f10-ai-envelope-safe-mode"
   },
   "governance": {
@@ -15,11 +15,11 @@
     },
     "timeEvaluation": {
       "exceeded": false,
-      "executionTime": 0.057,
+      "executionTime": 0.051,
       "maxTime": 300,
       "unit": "seconds",
       "action": null
     },
-    "appliedAt": "2026-02-05T17:38:31.127Z"
+    "appliedAt": "2026-02-13T02:52:31.120Z"
   }
 }

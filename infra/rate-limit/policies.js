@@ -101,6 +101,11 @@ const DEFAULT_POLICIES = {
     points: getConfigValue('rateLimit.policies.publicTokens.station.points', 'RATE_LIMIT_PUBLIC_TOKENS_STATION_POINTS', 300),
     duration: getConfigValue('rateLimit.policies.publicTokens.station.duration', 'RATE_LIMIT_PUBLIC_TOKENS_STATION_DURATION', 60),
   },
+  // API pública com API Keys (por tokenId)
+  PUBLIC_API: {
+    points: getConfigValue('rateLimit.policies.publicApi.points', 'RATE_LIMIT_PUBLIC_API_POINTS', 120),
+    duration: getConfigValue('rateLimit.policies.publicApi.duration', 'RATE_LIMIT_PUBLIC_API_DURATION', 60),
+  },
 
   // -----------------------------------------------------------------------
   // Internal execution queue quotas (per tenant)
@@ -167,4 +172,3 @@ module.exports = {
   getScrapingDomainPolicy,
   getAllPolicies,
 };
-

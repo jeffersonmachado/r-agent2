@@ -5,7 +5,7 @@
   "description": "Editor visual de fluxo de chatbot baseado em React + Rete.js",
   "scripts": {
     "start": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite --config vite.config.cjs",
-    "test": "VITE_CACHE_DIR=/tmp/r-agent2-vite vitest --config vite.config.cjs",
+    "test": "VITE_CACHE_DIR=/tmp/r-agent2-vite vitest --config vitest.config.mjs",
     "build": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite build --config vite.config.cjs",
     "preview": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite preview --config vite.config.cjs"
   },

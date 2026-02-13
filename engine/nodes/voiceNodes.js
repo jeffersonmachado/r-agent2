@@ -29,6 +29,39 @@ function safeString(v) {
   return v == null ? '' : String(v);
 }
 
+function safePositiveNumber(v, fallback = null) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return n;
+}
+
+function optionalText(v) {
+  const s = safeString(v).trim();
+  return s ? s : null;
+}
+
+function buildTtsConfig(config) {
+  return {
+    provider: optionalText(config?.ttsProvider),
+    voice: optionalText(config?.ttsVoice),
+    language: optionalText(config?.ttsLanguage),
+    model: optionalText(config?.ttsModel),
+    speed: safePositiveNumber(config?.ttsSpeed, null),
+    pitch: safePositiveNumber(config?.ttsPitch, null),
+  };
+}
+
+function buildAsrConfig(config) {
+  return {
+    provider: optionalText(config?.asrProvider),
+    language: optionalText(config?.asrLanguage),
+    model: optionalText(config?.asrModel),
+    recordSeconds: safePositiveNumber(config?.recordSeconds, null),
+    maxSilenceSeconds: safePositiveNumber(config?.maxSilenceSeconds, null),
+    timeoutSeconds: safePositiveNumber(config?.timeoutSeconds, null),
+  };
+}
+
 function readVoiceInput(input) {
   if (!input || typeof input !== 'object') return { transcript: null, dtmf: null, recordingUrl: null };
   const v = input.voice && typeof input.voice === 'object' ? input.voice : {};
@@ -58,30 +91,67 @@ async function voicePromptListenNodeHandler(node, state, input) {
   }
 
   const renderedText = renderTemplate(textTemplate, nextState.variables || {});
-  const recordSeconds = node?.config?.recordSeconds != null ? Number(node.config.recordSeconds) : null;
+  const variableName = node?.config?.variable != null ? String(node.config.variable) : 'utterance';
   const bargeIn = node?.config?.bargeIn === true;
+  const ttsConfig = buildTtsConfig(node?.config || {});
+  const asrConfig = buildAsrConfig(node?.config || {});
+  const { transcript, recordingUrl } = readVoiceInput(input);
+
+  if (!transcript) {
+    /** @type {EngineStepOutput} */
+    const waiting = {
+      nextState,
+      events: [
+        createEngineEvent({
+          sessionId: state.sessionId,
+          flowId: state.flowId,
+          nodeId: node.id,
+          type: 'VOICE_WAIT_PROMPT_LISTEN',
+          payload: { variable: variableName, bargeIn },
+        }),
+      ],
+      output: {
+        type: 'voice',
+        action: 'prompt_listen',
+        text: renderedText,
+        variable: variableName,
+        bargeIn,
+        tts: ttsConfig,
+        asr: asrConfig,
+        waitForInput: true,
+      },
+    };
+    return waiting;
+  }
+
+  nextState.variables[variableName] = transcript;
+  if (recordingUrl) nextState.variables[`${variableName}_recording_url`] = recordingUrl;
 
   /** @type {EngineStepOutput} */
   const result = {
     nextState,
-    events: [],
+    events: [
+      createEngineEvent({
+        sessionId: state.sessionId,
+        flowId: state.flowId,
+        nodeId: node.id,
+        type: 'VOICE_PROMPT_LISTEN_IN',
+        payload: { transcript, variable: variableName, recordingUrl: recordingUrl || null, bargeIn },
+      }),
+    ],
     output: {
       type: 'voice',
-      action: 'prompt',
+      action: 'prompt_listen',
       text: renderedText,
+      transcript,
+      variable: variableName,
       bargeIn,
-      recordSeconds: Number.isFinite(recordSeconds) && recordSeconds > 0 ? recordSeconds : null,
+      recordingUrl: recordingUrl || null,
+      tts: ttsConfig,
+      asr: asrConfig,
+      waitForInput: false,
     },
   };
-
-  result.events.push(createEngineEvent({
-    sessionId: state.sessionId,
-    flowId: state.flowId,
-    nodeId: node.id,
-    type: 'VOICE_PROMPT',
-    payload: result.output,
-  }));
-
   return result;
 }
 
@@ -89,6 +159,7 @@ async function voiceListenAsrNodeHandler(node, state, input) {
   const nextState = cloneState(state);
 
   const variableName = node?.config?.variable != null ? String(node.config.variable) : 'utterance';
+  const asrConfig = buildAsrConfig(node?.config || {});
   const { transcript, recordingUrl } = readVoiceInput(input);
 
   if (!transcript) {
@@ -108,6 +179,7 @@ async function voiceListenAsrNodeHandler(node, state, input) {
         type: 'voice',
         action: 'listen_asr',
         variable: variableName,
+        asr: asrConfig,
         waitForInput: true,
       },
     };
@@ -135,6 +207,7 @@ async function voiceListenAsrNodeHandler(node, state, input) {
       transcript,
       recordingUrl: recordingUrl || null,
       variable: variableName,
+      asr: asrConfig,
       waitForInput: false,
     },
   };
@@ -145,7 +218,13 @@ async function voiceGatherDtmfNodeHandler(node, state, input) {
   const nextState = cloneState(state);
   const variableName = node?.config?.variable != null ? String(node.config.variable) : 'dtmf';
   const maxDigits = node?.config?.maxDigits != null ? Number(node.config.maxDigits) : null;
-  const timeoutMs = node?.config?.timeoutMs != null ? Number(node.config.timeoutMs) : null;
+  const timeoutMs = node?.config?.timeoutMs != null
+    ? Number(node.config.timeoutMs)
+    : (safePositiveNumber(node?.config?.timeoutSeconds, null) != null ? Number(node.config.timeoutSeconds) * 1000 : null);
+  const interDigitTimeoutMs = safePositiveNumber(node?.config?.interDigitTimeoutSeconds, null) != null
+    ? Number(node.config.interDigitTimeoutSeconds) * 1000
+    : null;
+  const terminator = node?.config?.terminator != null ? String(node.config.terminator).slice(0, 1) : null;
 
   const { dtmf } = readVoiceInput(input);
   if (!dtmf) {
@@ -167,6 +246,8 @@ async function voiceGatherDtmfNodeHandler(node, state, input) {
         variable: variableName,
         maxDigits: Number.isFinite(maxDigits) && maxDigits > 0 ? maxDigits : null,
         timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : null,
+        interDigitTimeoutMs: Number.isFinite(interDigitTimeoutMs) && interDigitTimeoutMs > 0 ? interDigitTimeoutMs : null,
+        terminator: terminator || null,
         waitForInput: true,
       },
     };
@@ -191,6 +272,10 @@ async function voiceGatherDtmfNodeHandler(node, state, input) {
       action: 'gather_dtmf',
       dtmf,
       variable: variableName,
+      maxDigits: Number.isFinite(maxDigits) && maxDigits > 0 ? maxDigits : null,
+      timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : null,
+      interDigitTimeoutMs: Number.isFinite(interDigitTimeoutMs) && interDigitTimeoutMs > 0 ? interDigitTimeoutMs : null,
+      terminator: terminator || null,
       waitForInput: false,
     },
   };
@@ -383,4 +468,3 @@ module.exports = {
   voiceTransferUtilsNodeHandler,
   voiceHangupNodeHandler,
 };
-

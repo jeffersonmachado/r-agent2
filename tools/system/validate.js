@@ -219,4 +219,3 @@ if (require.main === module) {
 }
 
 module.exports = { validateContracts, executeQA };
-

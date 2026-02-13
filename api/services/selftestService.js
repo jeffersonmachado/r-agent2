@@ -146,6 +146,356 @@ async function safeCheckRag() {
   }
 }
 
+async function safeCheckEventLedger() {
+  try {
+    const { getEventLedgerMetrics } = require('./eventLedgerMetricsService');
+    const result = await getEventLedgerMetrics({ tenantId: null });
+    if (!result.ok) return { status: 'degraded', error: result.error || 'event_ledger_metrics_unavailable' };
+    return {
+      status: 'healthy',
+      details: result.metrics,
+      error: null,
+    };
+  } catch (err) {
+    return { status: 'degraded', error: err.message || 'event_ledger_check_failed' };
+  }
+}
+
+async function safeCheckEventDispatchRuntime() {
+  try {
+    const { getEventLedgerMetrics } = require('./eventLedgerMetricsService');
+    const windowMinutes = intEnv('SELFTEST_EVENT_DISPATCH_WINDOW_MIN', 60);
+    const result = await getEventLedgerMetrics({ tenantId: null, windowMinutes });
+    if (!result.ok) {
+      return { status: 'degraded', error: result.error || 'event_dispatch_metrics_unavailable' };
+    }
+
+    const summary = result.metrics?.dispatch?.summary || {};
+    const byTarget = Array.isArray(result.metrics?.dispatch?.byTarget)
+      ? result.metrics.dispatch.byTarget
+      : [];
+
+    const deadWarn = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_WARN', 1);
+    const deadFail = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_FAIL', 20);
+    const deadRecentWarn = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_RECENT_WARN', 1);
+    const deadRecentFail = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_RECENT_FAIL', 10);
+    const retryWarn = intEnv('SELFTEST_EVENT_DISPATCH_RETRYING_WARN', 20);
+    const retryFail = intEnv('SELFTEST_EVENT_DISPATCH_RETRYING_FAIL', 200);
+    const lagWarn = intEnv('SELFTEST_EVENT_DISPATCH_LAG_WARN_SEC', 300);
+    const lagFail = intEnv('SELFTEST_EVENT_DISPATCH_LAG_FAIL_SEC', 1800);
+    const flowTriggerFailWarn = intEnv('SELFTEST_EVENT_DISPATCH_FLOW_TRIGGER_FAIL_WARN', 5);
+    const flowTriggerFailFail = intEnv('SELFTEST_EVENT_DISPATCH_FLOW_TRIGGER_FAIL_FAIL', 50);
+
+    const summaryDead = Number(summary.dead || 0);
+    const summaryDeadRecent = Number(summary.deadRecent || 0);
+    const summaryRetrying = Number(summary.retryingPending || 0);
+    const summaryFlowTriggerFailures = Number(summary.flowTriggerFailuresRecent || 0);
+
+    const maxLagSec = byTarget.reduce((max, item) => {
+      const lag = Number(item?.pendingLagSec || 0);
+      return lag > max ? lag : max;
+    }, 0);
+
+    const anyTargetFail = byTarget.some((item) => {
+      const dead = Number(item?.dead || 0);
+      const deadRecent = Number(item?.deadRecent || 0);
+      const retryingPending = Number(item?.retryingPending || 0);
+      const lagSec = Number(item?.pendingLagSec || 0);
+      const flowTriggerFailuresRecent = Number(item?.flowTriggerFailuresRecent || 0);
+      return (
+        dead >= deadFail ||
+        deadRecent >= deadRecentFail ||
+        retryingPending >= retryFail ||
+        lagSec >= lagFail ||
+        flowTriggerFailuresRecent >= flowTriggerFailFail
+      );
+    });
+
+    const anyTargetWarn = byTarget.some((item) => {
+      const dead = Number(item?.dead || 0);
+      const deadRecent = Number(item?.deadRecent || 0);
+      const retryingPending = Number(item?.retryingPending || 0);
+      const lagSec = Number(item?.pendingLagSec || 0);
+      const flowTriggerFailuresRecent = Number(item?.flowTriggerFailuresRecent || 0);
+      return (
+        dead >= deadWarn ||
+        deadRecent >= deadRecentWarn ||
+        retryingPending >= retryWarn ||
+        lagSec >= lagWarn ||
+        flowTriggerFailuresRecent >= flowTriggerFailWarn
+      );
+    });
+
+    const fail =
+      summaryDead >= deadFail ||
+      summaryDeadRecent >= deadRecentFail ||
+      summaryRetrying >= retryFail ||
+      maxLagSec >= lagFail ||
+      summaryFlowTriggerFailures >= flowTriggerFailFail ||
+      anyTargetFail;
+
+    const warn =
+      summaryDead >= deadWarn ||
+      summaryDeadRecent >= deadRecentWarn ||
+      summaryRetrying >= retryWarn ||
+      maxLagSec >= lagWarn ||
+      summaryFlowTriggerFailures >= flowTriggerFailWarn ||
+      anyTargetWarn;
+
+    return {
+      status: fail ? 'unhealthy' : warn ? 'degraded' : 'healthy',
+      details: {
+        windowMinutes: Number(result.windowMinutes || windowMinutes),
+        summary: {
+          pending: Number(summary.pending || 0),
+          retryingPending: summaryRetrying,
+          processing: Number(summary.processing || 0),
+          done: Number(summary.done || 0),
+          doneRecent: Number(summary.doneRecent || 0),
+          dead: summaryDead,
+          deadRecent: summaryDeadRecent,
+          flowTriggerFailuresRecent: summaryFlowTriggerFailures,
+          maxPendingLagSec: maxLagSec,
+        },
+        byTarget: byTarget.map((item) => ({
+          target: String(item?.target || 'combined'),
+          pending: Number(item?.pending || 0),
+          retryingPending: Number(item?.retryingPending || 0),
+          processing: Number(item?.processing || 0),
+          done: Number(item?.done || 0),
+          doneRecent: Number(item?.doneRecent || 0),
+          dead: Number(item?.dead || 0),
+          deadRecent: Number(item?.deadRecent || 0),
+          flowTriggerFailuresRecent: Number(item?.flowTriggerFailuresRecent || 0),
+          pendingLagSec: Number(item?.pendingLagSec || 0),
+        })),
+        thresholds: {
+          deadWarn,
+          deadFail,
+          deadRecentWarn,
+          deadRecentFail,
+          retryWarn,
+          retryFail,
+          lagWarn,
+          lagFail,
+          flowTriggerFailWarn,
+          flowTriggerFailFail,
+        },
+      },
+      error: fail ? 'event_dispatch_runtime_threshold_exceeded' : null,
+    };
+  } catch (err) {
+    return { status: 'degraded', error: err.message || 'event_dispatch_runtime_check_failed' };
+  }
+}
+
+async function safeCheckFlowExecutionLedger() {
+  try {
+    const { getFlowExecutionLedgerMetrics } = require('./flowExecutionLedgerMetricsService');
+    const result = await getFlowExecutionLedgerMetrics({ tenantId: null });
+    if (!result.ok) return { status: 'degraded', error: result.error || 'flow_execution_ledger_metrics_unavailable' };
+    return {
+      status: 'healthy',
+      details: result.metrics,
+      error: null,
+    };
+  } catch (err) {
+    return { status: 'degraded', error: err.message || 'flow_execution_ledger_check_failed' };
+  }
+}
+
+async function safeCheckPbxEventRuntime() {
+  try {
+    const { getExecutionQueueMetricsByKind } = require('./executionQueueService');
+    const queueMetrics = await getExecutionQueueMetricsByKind({
+      tenantId: null,
+      kinds: ['scan_pbx_cdr_events', 'dispatch_event_trigger'],
+    });
+    if (!queueMetrics.ok) {
+      return { status: 'degraded', error: queueMetrics.error || 'pbx_event_runtime_queue_metrics_unavailable' };
+    }
+
+    const byKind = {};
+    for (const item of Array.isArray(queueMetrics.items) ? queueMetrics.items : []) {
+      byKind[String(item.kind || '')] = item;
+    }
+    const scan = byKind.scan_pbx_cdr_events || {};
+    const dispatch = byKind.dispatch_event_trigger || {};
+
+    const scanDead = Number(scan.dead || 0);
+    const scanLagSec = Number(scan.pendingLagSec || 0);
+    const dispatchDead = Number(dispatch.dead || 0);
+    const dispatchRetrying = Number(dispatch.retryingPending || 0);
+
+    const scanDeadWarn = intEnv('SELFTEST_PBX_EVENT_SCAN_DEAD_WARN', 1);
+    const scanDeadFail = intEnv('SELFTEST_PBX_EVENT_SCAN_DEAD_FAIL', 5);
+    const scanLagWarn = intEnv('SELFTEST_PBX_EVENT_SCAN_LAG_WARN_SEC', 300);
+    const scanLagFail = intEnv('SELFTEST_PBX_EVENT_SCAN_LAG_FAIL_SEC', 1800);
+    const dispatchDeadWarn = intEnv('SELFTEST_PBX_EVENT_DISPATCH_DEAD_WARN', 1);
+    const dispatchDeadFail = intEnv('SELFTEST_PBX_EVENT_DISPATCH_DEAD_FAIL', 20);
+    const dispatchRetryWarn = intEnv('SELFTEST_PBX_EVENT_DISPATCH_RETRYING_WARN', 20);
+    const dispatchRetryFail = intEnv('SELFTEST_PBX_EVENT_DISPATCH_RETRYING_FAIL', 200);
+
+    const { getSequelize } = require('../db/sequelize');
+    const sequelize = getSequelize();
+    let recentPbxEvents = 0;
+    let flowTriggerFailuresRecent = 0;
+    const windowMinutes = intEnv('SELFTEST_PBX_EVENT_WINDOW_MIN', 60);
+    if (sequelize) {
+      const [rows] = await sequelize.query(
+        `SELECT
+           COUNT(*) FILTER (
+             WHERE type IN ('CallRinging', 'CallAnswered', 'CallEnded')
+               AND received_at >= NOW() - INTERVAL '${Math.floor(windowMinutes)} minutes'
+           ) AS recent_pbx_events
+         FROM event_ledger`
+      );
+      const r = Array.isArray(rows) && rows[0] ? rows[0] : {};
+      recentPbxEvents = Number(r.recent_pbx_events || 0);
+
+      const [failureRows] = await sequelize.query(
+        `SELECT
+           COUNT(*) FILTER (
+             WHERE kind = 'dispatch_event_trigger'
+               AND last_error = 'event_trigger_flows_failed'
+               AND updated_at >= NOW() - INTERVAL '${Math.floor(windowMinutes)} minutes'
+           ) AS flow_trigger_failures_recent
+         FROM execution_jobs`
+      );
+      const fr = Array.isArray(failureRows) && failureRows[0] ? failureRows[0] : {};
+      flowTriggerFailuresRecent = Number(fr.flow_trigger_failures_recent || 0);
+    }
+
+    const flowTriggerFailWarn = intEnv('SELFTEST_PBX_EVENT_FLOW_TRIGGER_FAIL_WARN', 5);
+    const flowTriggerFailFail = intEnv('SELFTEST_PBX_EVENT_FLOW_TRIGGER_FAIL_FAIL', 50);
+
+    const fail =
+      scanDead >= scanDeadFail ||
+      scanLagSec >= scanLagFail ||
+      dispatchDead >= dispatchDeadFail ||
+      dispatchRetrying >= dispatchRetryFail ||
+      flowTriggerFailuresRecent >= flowTriggerFailFail;
+    const warn =
+      scanDead >= scanDeadWarn ||
+      scanLagSec >= scanLagWarn ||
+      dispatchDead >= dispatchDeadWarn ||
+      dispatchRetrying >= dispatchRetryWarn ||
+      flowTriggerFailuresRecent >= flowTriggerFailWarn;
+
+    return {
+      status: fail ? 'unhealthy' : warn ? 'degraded' : 'healthy',
+      details: {
+        windowMinutes,
+        recentPbxEvents,
+        flowTriggerFailuresRecent,
+        scan: {
+          pending: Number(scan.pending || 0),
+          retryingPending: Number(scan.retryingPending || 0),
+          dead: scanDead,
+          pendingLagSec: scanLagSec,
+        },
+        dispatch: {
+          pending: Number(dispatch.pending || 0),
+          retryingPending: dispatchRetrying,
+          dead: dispatchDead,
+          pendingLagSec: Number(dispatch.pendingLagSec || 0),
+        },
+        thresholds: {
+          scanDeadWarn,
+          scanDeadFail,
+          scanLagWarn,
+          scanLagFail,
+          dispatchDeadWarn,
+          dispatchDeadFail,
+          dispatchRetryWarn,
+          dispatchRetryFail,
+          flowTriggerFailWarn,
+          flowTriggerFailFail,
+        },
+      },
+      error: fail ? 'pbx_event_runtime_threshold_exceeded' : null,
+    };
+  } catch (err) {
+    return { status: 'degraded', error: err.message || 'pbx_event_runtime_check_failed' };
+  }
+}
+
+async function safeCheckVoiceRuntime() {
+  try {
+    const windowMinutes = intEnv('SELFTEST_VOICE_RUNTIME_WINDOW_MIN', 60);
+    const activeWarn = intEnv('SELFTEST_VOICE_RUNTIME_ACTIVE_SESSIONS_WARN', 100);
+    const activeFail = intEnv('SELFTEST_VOICE_RUNTIME_ACTIVE_SESSIONS_FAIL', 500);
+    const ingestionSilenceWarnMin = intEnv('SELFTEST_VOICE_RUNTIME_INGEST_SILENCE_WARN_MIN', 120);
+    const ingestionSilenceFailMin = intEnv('SELFTEST_VOICE_RUNTIME_INGEST_SILENCE_FAIL_MIN', 720);
+
+    const { getSequelize } = require('../db/sequelize');
+    const sequelize = getSequelize();
+    if (!sequelize) {
+      return { status: 'degraded', error: 'db_unavailable' };
+    }
+
+    const [rows] = await sequelize.query(
+      `SELECT
+         COUNT(*) FILTER (
+           WHERE type IN ('VoiceCallRinging', 'VoiceCallAnswered', 'VoiceCallEnded', 'VoiceCallDtmf', 'VoiceCallTransfer')
+             AND received_at >= NOW() - (:windowMinutes * INTERVAL '1 minute')
+         )::int AS recent_voice_events,
+         COUNT(*) FILTER (
+           WHERE type IN ('VoiceCallEnded', 'CallEnded')
+             AND received_at >= NOW() - (:windowMinutes * INTERVAL '1 minute')
+         )::int AS recent_voice_ended
+       FROM event_ledger`,
+      { replacements: { windowMinutes: Number(windowMinutes) } },
+    );
+    const r = Array.isArray(rows) && rows[0] ? rows[0] : {};
+    const recentVoiceEvents = Number(r.recent_voice_events || 0);
+    const recentVoiceEnded = Number(r.recent_voice_ended || 0);
+
+    const { getVoiceRuntimeStats } = require('./voiceRuntimeService');
+    const stats = getVoiceRuntimeStats({ tenantId: null });
+    const activeSessions = Number(stats?.totalSessions || 0);
+
+    // best-effort: estima silêncio de ingestão por tenant global
+    let minutesSinceLastVoiceEvent = null;
+    try {
+      const [lastRows] = await sequelize.query(
+        `SELECT EXTRACT(EPOCH FROM (NOW() - MAX(received_at))) / 60.0 AS minutes_since_last
+         FROM event_ledger
+         WHERE type IN ('VoiceCallRinging', 'VoiceCallAnswered', 'VoiceCallEnded', 'VoiceCallDtmf', 'VoiceCallTransfer')`,
+      );
+      const lr = Array.isArray(lastRows) && lastRows[0] ? lastRows[0] : {};
+      minutesSinceLastVoiceEvent = lr.minutes_since_last != null ? Number(lr.minutes_since_last) : null;
+    } catch (_) {}
+
+    const fail =
+      activeSessions >= activeFail ||
+      (minutesSinceLastVoiceEvent != null && minutesSinceLastVoiceEvent >= ingestionSilenceFailMin);
+    const warn =
+      activeSessions >= activeWarn ||
+      (minutesSinceLastVoiceEvent != null && minutesSinceLastVoiceEvent >= ingestionSilenceWarnMin);
+
+    return {
+      status: fail ? 'unhealthy' : warn ? 'degraded' : 'healthy',
+      details: {
+        windowMinutes,
+        recentVoiceEvents,
+        recentVoiceEnded,
+        activeSessions,
+        minutesSinceLastVoiceEvent,
+        thresholds: {
+          activeWarn,
+          activeFail,
+          ingestionSilenceWarnMin,
+          ingestionSilenceFailMin,
+        },
+      },
+      error: fail ? 'voice_runtime_threshold_exceeded' : null,
+    };
+  } catch (err) {
+    return { status: 'degraded', error: err.message || 'voice_runtime_check_failed' };
+  }
+}
+
 /**
  * Executa selftest read-only.
  *
@@ -154,15 +504,20 @@ async function safeCheckRag() {
 async function runSelftest() {
   const startedAt = Date.now();
 
-  const [db, redis, rag, publicTokens, executionQueue] = await Promise.all([
+  const [db, redis, rag, publicTokens, executionQueue, eventLedger, eventDispatchRuntime, flowExecutionLedger, pbxEventRuntime, voiceRuntime] = await Promise.all([
     safeCheckDb(),
     safeCheckRedis(),
     safeCheckRag(),
     safeCheckPublicTokens(),
     safeCheckExecutionQueue(),
+    safeCheckEventLedger(),
+    safeCheckEventDispatchRuntime(),
+    safeCheckFlowExecutionLedger(),
+    safeCheckPbxEventRuntime(),
+    safeCheckVoiceRuntime(),
   ]);
 
-  const checks = { db, redis, rag, publicTokens, executionQueue };
+  const checks = { db, redis, rag, publicTokens, executionQueue, eventLedger, eventDispatchRuntime, flowExecutionLedger, pbxEventRuntime, voiceRuntime };
   const values = Object.values(checks);
 
   const anyUnhealthy = values.some((c) => c && c.status === 'unhealthy');
@@ -192,4 +547,3 @@ async function runSelftest() {
 }
 
 module.exports = { runSelftest };
-

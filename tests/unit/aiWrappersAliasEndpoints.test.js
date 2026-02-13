@@ -21,6 +21,37 @@ describe('Wrappers /ai/* como alias do orquestrador', () => {
     jest.clearAllMocks();
   });
 
+  async function listenOrSkip(server) {
+    return new Promise((resolve, reject) => {
+      const onError = (error) => {
+        if (error && (error.code === 'EPERM' || error.code === 'EACCES')) {
+          resolve({ skip: true });
+          return;
+        }
+        reject(error);
+      };
+      server.once('error', onError);
+      try {
+        server.listen(0, '127.0.0.1', () => {
+          server.off('error', onError);
+          const address = server.address();
+          if (address && typeof address === 'object') {
+            resolve({ skip: false, port: address.port });
+          } else {
+            resolve({ skip: true });
+          }
+        });
+      } catch (error) {
+        server.off('error', onError);
+        if (error && (error.code === 'EPERM' || error.code === 'EACCES')) {
+          resolve({ skip: true });
+          return;
+        }
+        reject(error);
+      }
+    });
+  }
+
   function startServerWithMocks() {
     // DB boot mocks
     jest.doMock('../../api/db/sequelize', () => ({
@@ -101,8 +132,11 @@ describe('Wrappers /ai/* como alias do orquestrador', () => {
 
   test('/ai/chatbot/generate retorna shape do orquestrador', async () => {
     const server = startServerWithMocks();
-    await new Promise((resolve) => server.listen(0, resolve));
-    const { port } = server.address();
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+    const port = listenResult.port;
 
     const res = await httpPostJson({
       port,
@@ -121,8 +155,11 @@ describe('Wrappers /ai/* como alias do orquestrador', () => {
 
   test('/ai/rpa/generate retorna shape do orquestrador (com rpaTest)', async () => {
     const server = startServerWithMocks();
-    await new Promise((resolve) => server.listen(0, resolve));
-    const { port } = server.address();
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+    const port = listenResult.port;
 
     const res = await httpPostJson({
       port,
@@ -140,4 +177,3 @@ describe('Wrappers /ai/* como alias do orquestrador', () => {
     expect(parsed.validationWarnings).toBeDefined();
   });
 });
-

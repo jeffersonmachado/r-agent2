@@ -70,6 +70,22 @@ function getUserModel() {
         allowNull: false,
         defaultValue: false,
       },
+      mfa_secret_encrypted: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      mfa_temp_secret_encrypted: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      mfa_temp_expires_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      mfa_recovery_codes: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
       invitation_token: {
         type: DataTypes.STRING,
         allowNull: true,

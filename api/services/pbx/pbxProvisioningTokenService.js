@@ -58,8 +58,24 @@ async function rotateProvisioningToken({ tenantKey, actorUserId = null, expiresI
   return { ok: true, token, expiresAt: settings.provisioningPublicTokenExpiresAt || null };
 }
 
+async function revokeProvisioningToken({ tenantKey, actorUserId = null }) {
+  const PbxTenant = models.PbxTenant();
+  const row = await PbxTenant.findOne({ where: { tenantKey } });
+  if (!row) return { ok: false, error: 'pbx_tenant_not_found' };
+  const json = row.toJSON ? row.toJSON() : row;
+  const settings = (json?.settings && typeof json.settings === 'object') ? { ...json.settings } : {};
+
+  delete settings.provisioningPublicToken;
+  delete settings.provisioningPublicTokenExpiresAt;
+  settings.provisioningPublicTokenUpdatedAt = new Date().toISOString();
+  settings.provisioningPublicTokenUpdatedBy = actorUserId ? String(actorUserId) : null;
+
+  await row.update({ settings });
+  return { ok: true };
+}
+
 module.exports = {
   getProvisioningToken,
   rotateProvisioningToken,
+  revokeProvisioningToken,
 };
-

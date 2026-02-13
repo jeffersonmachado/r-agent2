@@ -114,6 +114,24 @@ class VectorStore:
 
         with _get_conn() as conn:
             with conn.cursor() as cur:
+                # Garante linha pai em rag_documents para satisfazer FK de rag_chunks.
+                # Em fluxos de teste o documento pode não ter sido persistido antes.
+                cur.execute(
+                    """
+                    INSERT INTO rag_documents
+                      (id, tenant_key, title, content, metadata, permissions, status, indexed, indexed_at, chunks_count, created_at, updated_at)
+                    VALUES
+                      (%s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, 'active', true, NOW(), %s, NOW(), NOW())
+                    ON CONFLICT (id) DO UPDATE SET
+                      tenant_key = EXCLUDED.tenant_key,
+                      indexed = true,
+                      indexed_at = NOW(),
+                      chunks_count = EXCLUDED.chunks_count,
+                      updated_at = NOW()
+                    """,
+                    (doc_id, self.tenant_id, doc_id, "", len(rows)),
+                )
+
                 # reindex consistente: remove chunks antigos do documento e reinsere
                 cur.execute(
                     "DELETE FROM rag_chunks WHERE tenant_key = %s AND document_id = %s",
@@ -247,4 +265,3 @@ class VectorStore:
             "vectorStore": "postgres",
             "embeddingDimension": self.dimension,
         }
-

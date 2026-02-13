@@ -20,7 +20,7 @@ describe('voice nodes (kind=voice)', () => {
     return r;
   }
 
-  test('voice_listen_asr aguarda input e mantém no mesmo nó', async () => {
+  test('voice_prompt_listen aguarda input e segue após transcrição', async () => {
     const registry = createRegistry();
     const flow = {
       tenantId: 't1',
@@ -30,8 +30,7 @@ describe('voice nodes (kind=voice)', () => {
       kind: 'voice',
       nodes: [
         { id: 's', type: 'start', next: 'p', config: {} },
-        { id: 'p', type: 'voice_prompt_listen', next: 'l', config: { text: 'Diga algo' } },
-        { id: 'l', type: 'voice_listen_asr', next: 'h', config: { variable: 'utterance' } },
+        { id: 'p', type: 'voice_prompt_listen', next: 'h', config: { text: 'Diga algo', variable: 'utterance' } },
         { id: 'h', type: 'voice_hangup', config: {} },
       ],
     };
@@ -52,22 +51,56 @@ describe('voice nodes (kind=voice)', () => {
     state = out.nextState;
     expect(state.currentNodeId).toBe('p');
 
-    // p -> l
+    // p sem input -> mantém em p
     out = await runStep(flow, state, registry, undefined, {});
     state = out.nextState;
-    expect(state.currentNodeId).toBe('l');
+    expect(out.output).toMatchObject({ type: 'voice', action: 'prompt_listen', waitForInput: true });
+    expect(state.currentNodeId).toBe('p');
 
-    // l (sem input) -> mantém em l (waitForInput)
-    out = await runStep(flow, state, registry, undefined, {});
-    state = out.nextState;
-    expect(out.output).toMatchObject({ type: 'voice', action: 'listen_asr', waitForInput: true });
-    expect(state.currentNodeId).toBe('l');
-
-    // l (com input) -> h
+    // p com input -> h
     out = await runStep(flow, state, registry, { voice: { transcript: 'oi' } }, {});
     state = out.nextState;
     expect(state.variables.utterance).toBe('oi');
     expect(state.currentNodeId).toBe('h');
+  });
+
+  test('voice_listen_asr inclui parâmetros ASR no output', async () => {
+    const registry = createRegistry();
+    const flow = {
+      tenantId: 't1',
+      id: 'f1b',
+      name: 'URA ASR',
+      version: 1,
+      kind: 'voice',
+      nodes: [
+        { id: 's', type: 'start', next: 'l', config: {} },
+        { id: 'l', type: 'voice_listen_asr', next: 'h', config: { variable: 'utterance', timeoutSeconds: 9, maxSilenceSeconds: 2 } },
+        { id: 'h', type: 'voice_hangup', config: {} },
+      ],
+    };
+
+    let state = {
+      tenantId: 't1',
+      sessionId: 'sess-1b',
+      flowId: 'f1b',
+      flowVersion: 1,
+      currentNodeId: 's',
+      variables: {},
+      history: [],
+      metadata: { channel: 'voice' },
+    };
+
+    let out = await runStep(flow, state, registry, undefined, {});
+    state = out.nextState;
+    expect(state.currentNodeId).toBe('l');
+
+    out = await runStep(flow, state, registry, undefined, {});
+    expect(out.output).toMatchObject({
+      type: 'voice',
+      action: 'listen_asr',
+      waitForInput: true,
+      asr: { timeoutSeconds: 9, maxSilenceSeconds: 2 },
+    });
   });
 
   test('voice_gather_dtmf aguarda dígitos e mantém no mesmo nó', async () => {
@@ -114,4 +147,3 @@ describe('voice nodes (kind=voice)', () => {
     expect(state.currentNodeId).toBe('e');
   });
 });
-

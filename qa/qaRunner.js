@@ -13,7 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const logger = require('../api/utils/logger');
 
 // Carrega o mapa de impacto
@@ -35,12 +35,43 @@ try {
  */
 function getChangedFiles(baseRef = 'HEAD') {
   try {
+    const repoRoot = path.join(__dirname, '..');
+    let blockedBySandbox = false;
+    const runGit = (args) => {
+      const result = spawnSync('git', args, { encoding: 'utf8', cwd: repoRoot });
+      if (result.error) {
+        if (result.error.code === 'EPERM') {
+          blockedBySandbox = true;
+          return null;
+        }
+        throw result.error;
+      }
+      if (result.status !== 0) {
+        return null;
+      }
+      return result.stdout || '';
+    };
+
     // Em PR, compara com base. Em push, compara com commit anterior
-    const command = `git diff --name-only ${baseRef}...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo ''`;
-    const output = execSync(command, { encoding: 'utf8', cwd: path.join(__dirname, '..') });
+    let output = runGit(['diff', '--name-only', `${baseRef}...HEAD`]);
+    if (blockedBySandbox) {
+      logger.info('[qaRunner] Sandbox bloqueou git diff; usando lista vazia');
+      return [];
+    }
+    if (output === null) {
+      output = runGit(['diff', '--name-only', 'HEAD~1', 'HEAD']);
+    }
+    if (output === null) {
+      output = '';
+    }
+
     return output.trim().split('\n').filter(file => file.trim());
   } catch (error) {
-    logger.warn('[qaRunner] Erro ao detectar arquivos alterados, usando lista vazia', { error: error.message });
+    if (error.code !== 'EPERM') {
+      logger.warn('[qaRunner] Erro ao detectar arquivos alterados, usando lista vazia', { error: error.message });
+    } else {
+      logger.info('[qaRunner] Sandbox bloqueou git diff; usando lista vazia');
+    }
     return [];
   }
 }
@@ -456,4 +487,3 @@ module.exports = {
   determineAffectedScopes,
   generateQaResult
 };
-

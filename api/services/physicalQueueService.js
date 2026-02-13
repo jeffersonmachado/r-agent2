@@ -628,6 +628,58 @@ async function getMetrics({ tenantId, locationId = null }) {
   };
 }
 
+async function listTickets({
+  tenantId,
+  locationId = null,
+  queueId = null,
+  status = null,
+  stationId = null,
+  limit = 100,
+  offset = 0,
+} = {}) {
+  const TicketModel = PhysicalTicket();
+  const sequelize = TicketModel && TicketModel.sequelize ? TicketModel.sequelize : null;
+  if (!sequelize) return { ok: false, reason: 'db_unavailable' };
+
+  const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+
+  const replacements = {
+    tenantKey: String(tenantId),
+    limit: safeLimit,
+    offset: safeOffset,
+  };
+
+  let locSql = '';
+  if (locationId != null) {
+    locSql = `AND (context->>'locationId') = :locationId`;
+    replacements.locationId = String(locationId);
+  }
+  if (queueId) replacements.queueId = String(queueId);
+  if (status) replacements.status = String(status);
+  if (stationId) replacements.stationId = String(stationId);
+
+  const [rows] = await sequelize.query(
+    `SELECT *
+     FROM physical_tickets
+     WHERE tenant_key = :tenantKey
+       ${locSql}
+       ${queueId ? 'AND physical_queue_id = :queueId' : ''}
+       ${status ? 'AND status = :status' : ''}
+       ${stationId ? 'AND station_id = :stationId' : ''}
+     ORDER BY created_at DESC
+     LIMIT :limit OFFSET :offset`,
+    { replacements },
+  );
+
+  return {
+    ok: true,
+    items: Array.isArray(rows) ? rows : [],
+    limit: safeLimit,
+    offset: safeOffset,
+  };
+}
+
 async function finishTicket({ tenantId, ticketId }) {
   const TicketModel = PhysicalTicket();
   const row = await TicketModel.findOne({
@@ -692,5 +744,5 @@ module.exports = {
   abandonTicket,
   finishTicket,
   getMetrics,
+  listTickets,
 };
-

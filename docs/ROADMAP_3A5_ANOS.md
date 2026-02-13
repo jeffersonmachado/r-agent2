@@ -4,13 +4,21 @@ Este documento foi reestruturado para um formato **Now/Next/Later** (horizontes 
 
 > **Fonte única do backlog (“o que falta”)**: `docs/O_QUE_FALTA.md` (operacional, priorizado e com DoD/gates).
 
+## Links rápidos
+
+- **Roadmap (atalho)**: `ROADMAP.md`
+- **Inventário de endpoints (codebase)**: `API_ENDPOINTS_CODEBASE.md`
+- **Inventário completo (api/**/*.js)**: `API_ENDPOINTS_CODEBASE_FULL.md`
+- **Endpoints no codebase não citados nos roadmaps**: `API_ENDPOINTS_UNDOCUMENTED.md`
+- **Endpoints exatos não citados**: `API_ENDPOINTS_UNDOCUMENTED_EXACT.md`
+
 ## 1) Visão geral da plataforma (7 pilares)
 
 Esta plataforma converge **sete** categorias de benchmarks em **um único produto SaaS multi-tenant enterprise**:
 
 - **CORE de automação** (inspirado em **n8n**): runtime DAG, nodes, execuções por nó, replay, scheduler, fila distribuída, credenciais, versionamento, subflows, templates e marketplace.
 - **Marketing automation** (inspirado em **RD Station**): forms, landing pages, tracker JS, scoring, jornadas, email marketing, funil visual, analytics e ROI.
-- **Atendimento omnichannel** (inspirado em **BLIP/Huggy/Zenvia**): bot + humano, filas, SLA, distribuição inteligente, histórico completo do cliente.
+- **Atendimento omnichannel** (inspirado em **BLIP/Huggy/Zenvia/ChatPro**): bot + humano, filas, SLA, distribuição inteligente, histórico completo do cliente.
 - **Voz/contact center** (inspirado em **Twilio Flex/Talkdesk/Five9**): URA visual, filas de voz, transferências, gravação, click-to-call e eventos de chamada como triggers.
 - **IA nativa** (inspirado em **LangFlow/Flowise**): nodes reutilizáveis, classificação, priorização, sugestão de ações, enriquecimento de dados, contexto unificado e governança.
 - **Filas físicas / fast service** (inspirado em **Qminder / QLess / Waitwhile / Skiplino**): totem, senha, painel de chamada, estações, priorização e métricas de espera/throughput integradas ao DAG.
@@ -51,16 +59,16 @@ flowchart LR
   - Event ledger append-only: migration `api/db/migrations/20260204020000-create-event-ledger.js` + model `api/db/models/EventLedger.js` + serviço `api/services/eventLedgerService.js`.
   - Retenção mínima (prune): `api/services/pruneEventLedgerService.js` (por `EVENT_LEDGER_RETENTION_DAYS`).
   - PBX: trigger DB-level em `pbx_cdr` emitindo `PbxCdrIngested` no `event_ledger` (best-effort).
-  - Dispatcher v1 (parcial) para webhooks: `api/services/eventLedgerTriggerDispatcher.js` + cursor `event_dispatch_state` (migrations `20260204033000-event-dispatch-state-and-schedule.js` e `20260204034000-event-dispatch-state-add-last-event-id.js`).
-  - Trigger de flows por evento (best-effort): `api/services/flowEventTriggerService.js` (mapeamento via `metadata.eventTriggers`).
+  - Dispatcher v1 (parcial) para webhooks: `api/services/eventLedgerTriggerDispatcher.js` + cursor `event_dispatch_state` (migrations `api/db/migrations/20260204033000-event-dispatch-state-and-schedule.js` e `api/db/migrations/20260204034000-event-dispatch-state-add-last-event-id.js`).
+  - Trigger de flows por evento com modo estrito (retry/DLQ): `api/services/flowEventTriggerService.js` (mapeamento via `metadata.eventTriggers`).
 
 - **Execution Queue + Scheduler v1 (DB-first, interno)**:
   - Tabelas: `execution_jobs` + `schedules` em `api/db/migrations/20260204021000-create-exec-jobs-and-schedules.js`.
   - Worker: `api/services/executionQueueService.js` (claim com `SKIP LOCKED`, retry/backoff best-effort).
   - Scheduler: `api/services/schedulerService.js` (interval-based) + evento `ScheduledTriggerFired`.
   - Hooks operacionais iniciais: scanner de SLA em `api/services/opsSlaService.js` emitindo `DeliverySLARisk` e `PhysicalSLARisk`.
-  - Execution ledger por nó (v1, DB-first): `flow_executions` + `node_executions` (migration `20260204031000-create-flow-execution-ledger.js`) + serviço `api/services/flowExecutionLedgerService.js`.
-  - Quotas, DLQ e métricas operacionais: quotas por tenant (rate-limit), DLQ consultável/reprocessável e métricas em `GET /api/ops/execution-jobs/*` + selftest (`executionQueue`).
+  - Execution ledger por nó (v1, DB-first): `flow_executions` + `node_executions` (migration `api/db/migrations/20260204031000-create-flow-execution-ledger.js`) + serviço `api/services/flowExecutionLedgerService.js`.
+  - Quotas, DLQ e métricas operacionais: quotas por tenant (rate-limit), DLQ consultável/reprocessável e métricas em `GET /api/ops/execution-jobs/metrics`, `GET /api/ops/execution-jobs/metrics-by-kind`, `GET /api/ops/execution-jobs/dead` e `POST /api/ops/execution-jobs/retry` + selftest (`executionQueue`).
 
 - **Pedidos + storefront (público por token)**:
   - Backend: `POST /storefront/orders?token=...` e `GET /storefront/orders/:id?token=...` em `api/server.js` (cria pedido e consulta status).
@@ -118,7 +126,7 @@ flowchart LR
   - Compatibilidade CDR (Asterisk `cdr_adaptive_odbc`): migration `api/db/migrations/20260204011000-pbx-cdr-asterisk-adaptive.js`.
   - **Call events v0 (estado + schedule)**: migration `api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js` + serviço `api/services/pbx/pbxCallEventsService.js`.
   - API: rotas `GET/POST /api/pbx/*` em `api/server.js` (extensions, trunks, routes, queues, dialplan preview/apply, queue-members, audio-assets, recordings).
-  - UI: `frontend/src/pages/PbxLegacyPage.jsx` (CRUD básico no Postgres).
+  - UI: `frontend/src/pages/PbxPage.jsx` (CRUD básico no Postgres).
   - Porte legado (contrato inicial): `docs/PBX_LEGACY_PORTING.md` e `docs/PBX_V1_INVENTORY.md` (health/inventory/ramais via XML, estratégia gradual).
   - Apply pipeline com trilha mínima: `POST /api/pbx/dialplan/apply` passa a registrar versões `applied/failed` em `pbx_config_versions` (signature do dialplan).
   - **Provisionamento de ramais v1.1 (Grandstream/Avaya) acoplado ao cadastro**:
@@ -144,10 +152,10 @@ flowchart LR
   - Campanhas de email: `POST /api/marketing/email-campaigns/:id/send` (envio best-effort via outbound queue).
   - UI/admin completa para forms/leads/scoring/email + jornadas v1 e funil visual básico.
 
-- **Voice nodes v0 (engine)**:
+- **Voz v1 (base CCaaS)**:
+  - URA via editor de fluxos (kind=voice) + runtime dedicado.
   - Nodes básicos: `engine/nodes/voiceNodes.js`.
-  - Testes: `engine/__tests__/voiceNodes.test.js`.
-  - Ingestão básica de eventos de voz no `event_ledger`: `POST /api/voice/events`.
+  - Ingestão de eventos de voz no `event_ledger`: `POST /api/voice/events`.
 
 - **RPA Flow Pipeline v1 (preview/execução)**:
   - Serviço: `api/services/rpaFlowPipelineService.js` (análise → seeds → validação → conversão flow→RPA).
@@ -166,10 +174,10 @@ flowchart LR
   - Script utilitário: `scripts/create-super-admin.js`.
   - One-click bootstrap (super-admin): `POST /super-admin/bootstrap/one-click` + `api/services/oneClickBootstrapService.js`.
 
-- **Analytics/ROI v0 (primeiro corte)**:
-  - Serviço: `api/services/roiService.js` + endpoint `GET /analytics/roi`.
-  - UI: seção de ROI em `frontend/src/pages/AnalyticsPage.jsx`.
-  - Próximo foco: **Analytics/ROI v1** (funil básico, custos por canal e KPIs de SLA).
+- **Analytics/ROI v1 (entregue)**:
+  - Serviço: `api/services/roiService.js` + endpoints `GET /analytics/roi` e `GET /analytics/funnel`.
+  - UI: seção de ROI/funil em `frontend/src/pages/AnalyticsPage.jsx`.
+  - Custos por canal e KPIs de SLA mínimos (orders + filas físicas).
 
 - **Node marketplace v0 (catálogo estático)**:
   - Serviço: `api/services/nodeMarketplaceService.js` + endpoint `GET /api/node-marketplace/catalog`.
@@ -201,9 +209,9 @@ flowchart LR
 - **Execution queue/scheduler v1** já existe (DB-first), mas ainda falta:
   - cron/timezone por tenant e integração direta com execuções do DAG.
 - **Execution ledger por nó** já está integrado em simulação e processamento de mensagens, mas falta cobertura total do runtime e replay assistido em produção.
-- **Dispatcher de triggers do event_ledger** está funcional para webhooks e já existe disparo best-effort de flows via `metadata.eventTriggers`, mas falta integração completa com o runtime do DAG (idempotência/observabilidade/DLQ).
-- **Analytics/ROI** teve v0 entregue (ROI por janela), mas ainda faltam funil visual avançado, custos por canal e KPIs completos de SLA.
-- **Voz como evento no DAG** ainda está pré-core: já existe base de **call events v0** e **voice nodes v0**, mas falta ligar triggers/ações no runtime (URA/CCaaS-style).
+- **Dispatcher de triggers do event_ledger** já opera com webhooks+flows e falha estrita (retry/DLQ), com observabilidade por target; check operacional por domínio já entregue para PBX (`pbxEventRuntime`).
+- **Analytics/ROI** teve v1 entregue (ROI + funil + custos por canal + KPIs de SLA mínimos); faltam camadas avançadas de funil e custos operacionais completos.
+- **Voz como evento no DAG** já possui base v1 (URA via editor + runtime + ingestão de eventos); falta aprofundar integrações avançadas de CCaaS (fila/transferência/gravação enterprise) e observabilidade completa.
 
 ### 2.3) “Gaps” que destravam (ordem recomendada)
 
@@ -221,14 +229,16 @@ flowchart LR
 
 ### 3.1) Now (0–3 meses) — estabilizar MVPs e reduzir risco operacional
 
-- **Core DAG/Execution Ledger/Queue (prioridade máxima)**:
-  - Conectar **execution ledger por nó** ao runtime real + endpoints de consulta/replay assistido (RBAC).
-  - Endurecer **queue/scheduler** com quotas por tenant, DLQ formal e métricas (lag/retries/falhas).
-  - Fechar a conexão **event_ledger → runtime** (idempotência/observabilidade/DLQ).
+- **Core DAG/Execution Ledger/Queue (prioridade máxima)**: ✅ entregue
+  - Execution ledger por nó no runtime + endpoints de consulta/replay assistido (RBAC).
+  - Queue/scheduler com quotas por tenant, DLQ formal e métricas (lag/retries/falhas).
+  - Conexão **event_ledger → runtime** (idempotência/observabilidade/DLQ).
 
-- **PBX + voz (pré-CCaaS)**
-  - Consolidar call events v0 no `event_ledger` (ringing/answered/ended) e correlação básica.
-  - Endurecer apply/provisioning (trilha auditável, saneamento e templates por vendor).
+- **PBX + voz (pré-CCaaS)**: ✅ entregue (base v1)
+  - Call events v0 no `event_ledger` (ringing/answered/ended) e correlação básica.
+  - Apply/provisioning com trilha auditável, saneamento e templates por vendor.
+  - Ajuste de idempotência no runtime: dedupe por `eventId` (evita colapsar eventos distintos com mesmo `correlationId`).
+  - Selftest operacional dedicado: `pbxEventRuntime` (scan CDR + dispatch runtime + limiares por ambiente).
 
 - **Omnichannel (base operacional)**:
   - Unificação conversa↔ticket 1:1 com idempotência e status por mensagem na operação.
@@ -263,8 +273,8 @@ flowchart LR
   - Observabilidade por nó + replay parcial com controles em produção.
   - Cron/timezone por tenant e backpressure.
 
-- **PBX + voz (v0 operacional)**:
-  - Eventos de chamada como triggers e ações básicas (click-to-call), com gravação inicial.
+- **PBX + voz (v0 operacional)**: ✅ entregue (evoluiu para base v1)
+  - Eventos de chamada como triggers e ações básicas, com gravação inicial.
   - Integração mínima com filas e tickets (omnichannel).
 
 - **Omnichannel v1 (mínimo vendável)**:
@@ -288,7 +298,7 @@ flowchart LR
   - Triggers e handlers full-fidelity a partir do `event_ledger` para o runtime.
   - Ledger por nó com retenção por tenant e custo previsível.
 
-- **PBX + voz v1 (base CCaaS)**:
+- **PBX + voz v1 (base CCaaS)**: ✅ entregue
   - URA visual v1, filas de voz e gravação com trilha auditável.
   - Observabilidade de voz (CDR/eventos) e custos básicos.
 
@@ -305,8 +315,8 @@ flowchart LR
 ### 3.4) Later (12–24 meses) — plataforma integrada (marketplace/SDK + analytics/ROI + voz v1 no DAG)
 
 - **Marketplace/SDK** (nodes + templates) com governança, sandbox e versionamento.
-- **Analytics/ROI** (conversão, custo, receita, SLA e custos operacionais por canal).
-- **Voz v1 no DAG**:
+- **Analytics/ROI avançado** (conversão, custo, receita, SLA e custos operacionais por canal).
+- **Voz v1 no DAG** (base entregue; foco passa a integrações avançadas):
   - Integração progressiva com PBX v1 (configuração + materialização + observabilidade).
 
 ### 3.5) Longo (24–60 meses) — enterprise + ecossistema
@@ -563,8 +573,7 @@ flowchart LR
 ## 10) Versão executiva (bullets para diretoria)
 
 - **Tese**: unificar automação (n8n) + marketing (RD Station) + atendimento (BLIP/Huggy) + voz (Twilio Flex) + IA (LangFlow/Flowise) + **filas físicas (Qminder/Waitwhile)** + **delivery (iFood/Uber Eats/Rappi/DoorDash)** em um único SaaS multi-tenant enterprise.
-- **0–12m**: CORE confiável + ledger/replay + PBX/voz v0→v1 + omnichannel básico + marketing v1 (funil/jornadas).
+- **0–12m**: CORE confiável + ledger/replay + PBX/voz v1 + omnichannel básico + marketing v1 (funil/jornadas).
 - **12–24m**: marketplace/SDK + analytics/ROI + voz v1 no DAG (eventos/click-to-call/URA) + governança enterprise.
 - **24–36m**: enterprise (voz v2/CCaaS, SSO/SCIM, auditoria, ambientes, HA/DR, IA com guardrails).
 - **36–60m**: ecossistema (marketplace monetizado, extensões UI, verticalização, programa de parceiros).
-

@@ -1,0 +1,50 @@
+{
+  "tenantId": "test-tenant-full",
+  "synonyms": {},
+  "queryPatterns": {
+    "successful": [
+      {
+        "query": "Teste de query",
+        "success": true,
+        "confidence": 0.8,
+        "chunksFound": 2,
+        "timestamp": "2026-02-07T13:05:16.900339"
+      },
+      {
+        "query": "Teste de query",
+        "success": true,
+        "confidence": 0.8,
+        "chunksFound": 2,
+        "timestamp": "2026-02-07T13:12:15.593237"
+      },
+      {
+        "query": "Teste de query",
+        "success": true,
+        "confidence": 0.8,
+        "chunksFound": 2,
+        "timestamp": "2026-02-07T14:28:17.178260"
+      }
+    ],
+    "failed": []
+  },
+  "promptVariations": [],
+  "metrics": {
+    "totalQueries": 3,
+    "successfulQueries": 3,
+    "failedQueries": 0,
+    "avgConfidence": 0.21680000000000005,
+    "lastUpdated": "2026-02-07T14:28:17.178222"
+  },
+  "config": {
+    "minScore": 0.45,
+    "topK": 6,
+    "chunkOverlap": 75
+  },
+  "learningCycles": {
+    "total": 0,
+    "lastCycle": null,
+    "cycles": []
+  },
+  "createdAt": "2026-02-07T13:05:16.900226",
+  "updatedAt": "2026-02-07T14:28:17.178338"
+}

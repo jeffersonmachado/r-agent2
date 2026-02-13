@@ -1,11 +1,9 @@
-version: "3.9"
-
 # Stack de TESTE (reprodutível) para auto-test.
 # Objetivo: subir API + Frontend (Vite) + RAG + Postgres + Redis com portas
 # alinhadas aos defaults do RPA:
-# - API: http://localhost:3001
-# - Frontend: http://localhost:5173
-# - RAG: http://localhost:8001 (mapeia para 8000 no container)
+# - API: http://localhost:${API_TEST_PORT:-13001}
+# - Frontend: http://localhost:${FRONTEND_TEST_PORT:-15173}
+# - RAG: http://localhost:${RAG_TEST_PORT:-18001} (mapeia para 8000 no container)
 
 services:
   postgres:
@@ -59,7 +57,7 @@ services:
       DATABASE_URL: postgresql://results_app:StrongPass@postgres:5432/results_saas_test
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
-      - "8001:8000"
+      - "${RAG_TEST_PORT:-18001}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,7 +111,7 @@ services:
       PBX_RECORDING_ENABLED: "true"
       PBX_MIXMONITOR_DIR: /var/spool/asterisk/monitor/pbx
     ports:
-      - "3001:3001"
+      - "${API_TEST_PORT:-13001}:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -166,17 +164,19 @@ services:
     working_dir: /app/frontend
     environment:
       NODE_ENV: test
+      FRONTEND_PORT: ${FRONTEND_TEST_PORT:-15173}
       # Para o Vite falar com a API do host (Playwright roda no host):
-      # o frontend é servido em http://localhost:5173, e faz chamadas para http://localhost:3001
-      VITE_API_BASE_URL: http://localhost:3001
+      # o frontend é servido em http://localhost:${FRONTEND_TEST_PORT:-15173},
+      # e faz chamadas para http://localhost:${API_TEST_PORT:-13001}
+      VITE_API_BASE_URL: http://localhost:${API_TEST_PORT:-13001}
     volumes:
       - ./:/app
     ports:
-      - "5173:5173"
+      - "${FRONTEND_TEST_PORT:-15173}:${FRONTEND_TEST_PORT:-15173}"
     depends_on:
       api:
         condition: service_healthy
-    command: sh -c "npm ci && npm run start -- --host 0.0.0.0 --port 5173 --strictPort"
+    command: sh -c "npm ci && npm run start -- --host 0.0.0.0 --port ${FRONTEND_TEST_PORT:-15173} --strictPort"
 
 volumes:
   r-agent2-postgres-test-data:
@@ -184,4 +184,3 @@ volumes:
   r-agent2-rag-vector-test-store:
   r-agent2-pbx-media-test-data:
   r-agent2-pbx-recordings-test-data:
-

@@ -97,8 +97,14 @@ class ActionExecutor {
     try {
       const locator = this.page.locator(selector);
       const count = await locator.count().catch(() => null);
-      const firstVisible = await locator.first().isVisible().catch(() => false);
-      const firstText = await locator.first().innerText().catch(() => null);
+      const hasAnyMatch = typeof count === 'number' && count > 0;
+      const firstVisible = hasAnyMatch
+        ? await locator.first().isVisible().catch(() => false)
+        : false;
+      // Evita esperar timeout padrão (30s) em seletores inexistentes.
+      const firstText = hasAnyMatch
+        ? await locator.first().innerText({ timeout: 300 }).catch(() => null)
+        : null;
       return {
         selector,
         count,
@@ -1727,4 +1733,3 @@ class ActionExecutor {
 }
 
 module.exports = { ActionExecutor };
-

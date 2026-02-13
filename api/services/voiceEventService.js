@@ -24,6 +24,12 @@ function normalizeEventType(raw) {
   return EVENT_MAP[key] || null;
 }
 
+function floatEnv(name, def) {
+  const raw = process.env[name];
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : def;
+}
+
 async function ingestVoiceEvent({
   tenantId,
   eventType,
@@ -69,12 +75,16 @@ async function getVoiceMetrics({ tenantId, windowDays = 7 } = {}) {
   const Model = EventLedger();
   const Op = sequelize.constructor.Op;
   const since = new Date(Date.now() - (Number(days) * 24 * 60 * 60 * 1000));
+  const costPerMinute = floatEnv('VOICE_COST_PER_MINUTE', 0);
   const rows = await Model.findAll({
     attributes: ['type', [sequelize.fn('COUNT', sequelize.col('id')), 'total']],
     where: {
       tenant_key: String(tenantId),
       type: {
-        [Op.like]: 'VoiceCall%',
+        [Op.or]: [
+          { [Op.like]: 'VoiceCall%' },
+          { [Op.like]: 'Call%' },
+        ],
       },
       received_at: {
         [Op.gte]: since,
@@ -90,10 +100,39 @@ async function getVoiceMetrics({ tenantId, windowDays = 7 } = {}) {
     byType[String(json.type || 'unknown')] = Number(json.total || 0);
   }
 
+  let totalCalls = 0;
+  let totalBillSeconds = 0;
+  try {
+    const [durationRows] = await sequelize.query(
+      `SELECT
+         COUNT(DISTINCT subject_id)::int AS total_calls,
+         COALESCE(SUM(COALESCE((payload->>'billsec')::float, (payload->>'duration')::float, 0)), 0)::float AS total_billsec
+       FROM event_ledger
+       WHERE tenant_key = :tenantKey
+         AND type IN ('CallEnded', 'VoiceCallEnded')
+         AND received_at >= :since`,
+      { replacements: { tenantKey: String(tenantId), since } },
+    );
+    const row = Array.isArray(durationRows) && durationRows[0] ? durationRows[0] : {};
+    totalCalls = Number(row.total_calls || 0);
+    totalBillSeconds = Number(row.total_billsec || 0);
+  } catch (_) {}
+
+  const totalMinutes = totalBillSeconds > 0 ? Number((totalBillSeconds / 60).toFixed(2)) : 0;
+  const estimatedCost = costPerMinute > 0 ? Number((totalMinutes * costPerMinute).toFixed(2)) : 0;
+
   return {
     ok: true,
     windowDays: days,
     byType,
+    totals: {
+      totalCalls,
+      totalBillSeconds,
+      totalMinutes,
+      costPerMinute,
+      estimatedCost,
+      costPerCall: totalCalls > 0 ? Number((estimatedCost / totalCalls).toFixed(2)) : null,
+    },
   };
 }
 

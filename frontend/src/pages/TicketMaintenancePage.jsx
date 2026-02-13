@@ -6,6 +6,8 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
 import { useRouter } from '../hooks/useRouter';
+import { usePhoneMasking } from '../hooks/usePhoneMasking';
+import { MaskedPhone } from '../components/MaskedPhone';
 import logger from '../utils/logger';
 
 /**
@@ -38,6 +40,7 @@ export function TicketMaintenancePage() {
   const [metrics, setMetrics] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [queues, setQueues] = useState([]);
+  const { enabled: phoneMaskingEnabled } = usePhoneMasking();
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [pagination, setPagination] = useState({
@@ -727,7 +730,7 @@ export function TicketMaintenancePage() {
                         {getStatusLabel(ticket.status)}
                       </span>
                     </td>
-                    <td>{formatPhoneNumber(ticket.phoneNumber)}</td>
+                    <td><MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} /></td>
                     <td className="message-cell">
                       {ticket.lastUserMessage ? (
                         <span title={ticket.lastUserMessage}>
@@ -801,4 +804,3 @@ export function TicketMaintenancePage() {
     </div>
   );
 }
-

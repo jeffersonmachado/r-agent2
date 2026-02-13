@@ -57,18 +57,22 @@ describe('GenerateSystemPage', () => {
   });
 
   describe('Upload de Arquivos', () => {
-    it('deve renderizar seção de upload de arquivos', () => {
+    it('deve renderizar seção de upload de arquivos', async () => {
       render(<GenerateSystemPage />);
       
-      expect(screen.getByText(/Upload de Arquivos para RAG/i)).toBeInTheDocument();
-      expect(screen.getByText(/Selecione arquivos/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Upload de Arquivos para RAG/i)).toBeInTheDocument();
+        expect(screen.getByText(/Selecione arquivos/i)).toBeInTheDocument();
+      });
     });
 
-    it('não deve ter combobox de categoria', () => {
+    it('não deve ter combobox de categoria', async () => {
       render(<GenerateSystemPage />);
       
       // Não deve existir label "Categoria do arquivo"
-      expect(screen.queryByText(/Categoria do arquivo/i)).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText(/Categoria do arquivo/i)).not.toBeInTheDocument();
+      });
     });
 
     it('deve adicionar arquivo à fila de upload (sem processar automaticamente)', async () => {
@@ -671,4 +675,3 @@ describe('GenerateSystemPage', () => {
     }, 20000);
   });
 });
-

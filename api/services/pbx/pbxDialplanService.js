@@ -292,12 +292,18 @@ async function buildTenantDialplanRows({ tenantKey }) {
  * Materializa dialplan realtime no Postgres.
  */
 async function applyTenantDialplan({ tenantKey }) {
+  const rows = await buildTenantDialplanRows({ tenantKey });
+  const result = await applyTenantDialplanRows({ tenantKey, rows });
+  const signature = computeDialplanSignature(rows);
+  return { ...result, signature };
+}
+
+async function applyTenantDialplanRows({ tenantKey, rows = [] }) {
   const sq = getSequelize();
   if (!sq) throw new Error('Sequelize não inicializado');
   await ensureExtensionsTable();
 
-  const rows = await buildTenantDialplanRows({ tenantKey });
-
+  const safeRows = Array.isArray(rows) ? rows : [];
   // Remove dialplan antigo do tenant (apenas contextos no namespace do tenant)
   await sq.query(
     `DELETE FROM extensions WHERE context = :ctx OR context LIKE :prefix`,
@@ -305,7 +311,7 @@ async function applyTenantDialplan({ tenantKey }) {
   );
 
   // Insere
-  for (const r of rows) {
+  for (const r of safeRows) {
     await sq.query(
       `INSERT INTO extensions (context, exten, priority, app, appdata, created_at, updated_at)
        VALUES (:context, :exten, :priority, :app, :appdata, NOW(), NOW())
@@ -317,14 +323,13 @@ async function applyTenantDialplan({ tenantKey }) {
     );
   }
 
-  const signature = computeDialplanSignature(rows);
-  return { count: rows.length, signature };
+  return { count: safeRows.length };
 }
 
 module.exports = {
   buildTenantDialplanRows,
   applyTenantDialplan,
+  applyTenantDialplanRows,
   parseAsteriskDialplanText,
   computeDialplanSignature,
 };
-

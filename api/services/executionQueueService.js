@@ -357,6 +357,52 @@ async function getExecutionQueueMetrics({ tenantId = null } = {}) {
   };
 }
 
+async function getExecutionQueueMetricsByKind({ tenantId = null, kinds = null } = {}) {
+  const sequelize = getSequelize();
+  if (!sequelize) return { ok: false, error: 'db_unavailable' };
+
+  const replacements = {};
+  const whereTenant = tenantId ? 'tenant_key = :tenantKey' : '1=1';
+  if (tenantId) replacements.tenantKey = String(tenantId);
+
+  const kindsFilter = Array.isArray(kinds) && kinds.length ? kinds.map((k) => String(k)) : null;
+  const kindsSql = kindsFilter ? 'AND kind = ANY(:kinds)' : '';
+  if (kindsFilter) replacements.kinds = kindsFilter;
+
+  const [rows] = await sequelize.query(
+    `SELECT kind,
+            COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+            COUNT(*) FILTER (WHERE status = 'pending' AND attempts > 0) AS retrying_pending,
+            COUNT(*) FILTER (WHERE status = 'processing') AS processing,
+            COUNT(*) FILTER (WHERE status = 'done') AS done,
+            COUNT(*) FILTER (WHERE status = 'dead') AS dead,
+            MIN(next_attempt_at) FILTER (WHERE status = 'pending') AS oldest_pending_next_attempt_at
+       FROM execution_jobs
+      WHERE ${whereTenant}
+        ${kindsSql}
+      GROUP BY kind
+      ORDER BY kind ASC`,
+    { replacements },
+  );
+
+  const items = (Array.isArray(rows) ? rows : []).map((r) => {
+    const oldest = r.oldest_pending_next_attempt_at ? new Date(r.oldest_pending_next_attempt_at) : null;
+    const lagSec = oldest ? Math.max(0, Math.floor((Date.now() - oldest.getTime()) / 1000)) : 0;
+    return {
+      kind: String(r.kind || ''),
+      pending: Number(r.pending || 0),
+      retryingPending: Number(r.retrying_pending || 0),
+      processing: Number(r.processing || 0),
+      done: Number(r.done || 0),
+      dead: Number(r.dead || 0),
+      pendingLagSec: lagSec,
+      oldestPendingNextAttemptAt: oldest ? oldest.toISOString() : null,
+    };
+  });
+
+  return { ok: true, items };
+}
+
 // Worker management
 let _timer = null;
 let _running = false;
@@ -382,11 +428,18 @@ async function processJob(job) {
     await pruneEventLedger({ retentionDays: days });
     return;
   }
+  if (kind === 'prune_flow_execution_ledger') {
+    const { pruneFlowExecutionLedger } = require('./pruneFlowExecutionLedgerService');
+    const days = intEnv('FLOW_EXECUTION_LEDGER_RETENTION_DAYS', 30);
+    await pruneFlowExecutionLedger({ retentionDays: days });
+    return;
+  }
   if (kind === 'scan_event_triggers') {
     const { scanAndEnqueue } = require('./eventLedgerTriggerDispatcher');
     const consumer = job?.payload?.consumer || 'webhooks_v1';
     const batchSize = job?.payload?.batchSize || 100;
-    await scanAndEnqueue({ consumer, batchSize });
+    const dispatchTargets = Array.isArray(job?.payload?.dispatchTargets) ? job.payload.dispatchTargets : null;
+    await scanAndEnqueue({ consumer, batchSize, dispatchTargets });
     return;
   }
   if (kind === 'dispatch_event_trigger') {
@@ -394,7 +447,8 @@ async function processJob(job) {
     const tenantId = job?.tenant_key || job?.tenantId || 'system';
     const consumer = job?.payload?.consumer || 'webhooks_v1';
     const eventId = job?.payload?.eventId || null;
-    const out = await dispatchOne({ tenantId, consumer, eventId });
+    const dispatchTargets = Array.isArray(job?.payload?.dispatchTargets) ? job.payload.dispatchTargets : null;
+    const out = await dispatchOne({ tenantId, consumer, eventId, dispatchTargets });
     if (!out.ok && out.reason === 'event_not_found') {
       // Nada a fazer (idempotente): marca como done
       return;
@@ -458,7 +512,7 @@ module.exports = {
   listDeadJobs,
   retryDeadJob,
   getExecutionQueueMetrics,
+  getExecutionQueueMetricsByKind,
   startExecutionQueueWorker,
   stopExecutionQueueWorker,
 };
-

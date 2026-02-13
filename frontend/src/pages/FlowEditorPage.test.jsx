@@ -221,6 +221,9 @@ describe('pages/FlowEditorPage', () => {
   const TEST_TIMEOUT = 5000; // 5 segundos
   
   beforeEach(() => {
+    // Com isolate=false no Vitest, garantimos cache limpo para evitar
+    // interferência de mocks/imports vindos de outros arquivos.
+    vi.resetModules();
     mockValidation = null;
     // Usa fake timers para controlar todos os setTimeout
     vi.useFakeTimers();
@@ -356,6 +359,15 @@ describe('pages/FlowEditorPage', () => {
       );
     });
 
+    // Em alguns ambientes de teste a seção pode iniciar colapsada (window.innerWidth < 768).
+    const validationHeader = screen.getByText('Validação').closest('.section-header');
+    const toggleBtn = validationHeader?.querySelector('button');
+    if (toggleBtn?.getAttribute('title') === 'Expandir') {
+      await act(async () => {
+        toggleBtn.click();
+      });
+    }
+
     // O painel "Validação" deve listar warnings também.
     // OBS: usamos fake timers nesse arquivo; portanto evitamos `findBy*`/`waitFor`.
     expect(screen.getByText('Este é um warning')).toBeTruthy();
@@ -365,5 +377,3 @@ describe('pages/FlowEditorPage', () => {
 
   // Observação: o badge IA/Fallback (score/tentativas) é testado em `FlowCurrentDisplay.test.jsx`
 });
-
-

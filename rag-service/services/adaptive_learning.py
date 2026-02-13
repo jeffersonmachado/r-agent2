@@ -21,7 +21,12 @@ import math
 logger = logging.getLogger(__name__)
 
 # Caminho para armazenar dados de aprendizado por tenant
-LEARNING_DATA_PATH = Path("./data/adaptive_learning")
+# Permite isolamento de ambiente (ex.: testes) sem vazar estado entre execuções.
+LEARNING_DATA_PATH = Path(
+    os.getenv("ADAPTIVE_LEARNING_DATA_PATH")
+    or os.getenv("RAG_ADAPTIVE_LEARNING_PATH")
+    or "./data/adaptive_learning"
+)
 LEARNING_DATA_PATH.mkdir(parents=True, exist_ok=True)
 
 def find_project_root(start_path: Optional[Path] = None) -> Optional[Path]:
@@ -379,7 +384,9 @@ class AdaptiveLearningService:
         
         # Regra: Repetições
         if rules.get("repetition", {}).get("enabled", True):
-            words = q.lower().split()
+            # Normaliza tokens removendo pontuação para detectar repetições reais
+            # como "Studio? studio", que não deve ser considerado válido.
+            words = re.findall(r'[a-záàâãéêíóôõúç0-9]+', q.lower(), re.IGNORECASE)
             max_consecutive = rules["repetition"].get("maxConsecutiveRepetitions", 2)
             consecutive_count = 1
             last_word = ''
@@ -891,4 +898,3 @@ def get_adaptive_learning_service() -> AdaptiveLearningService:
     if _adaptive_learning_service is None:
         _adaptive_learning_service = AdaptiveLearningService()
     return _adaptive_learning_service
-

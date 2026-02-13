@@ -262,7 +262,7 @@ async function simulateFlow(flow, options) {
   try {
     if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
       // eslint-disable-next-line global-require
-      const { startFlowExecution, appendNodeExecution, finishFlowExecution } = require('../api/services/flowExecutionLedgerService');
+      const { startFlowExecution, buildExecutionLedgerAdapter } = require('../api/services/flowExecutionLedgerService');
       const started = await startFlowExecution({
         tenantId: flow.tenantId,
         flowId: flow.id,
@@ -276,7 +276,8 @@ async function simulateFlow(flow, options) {
       if (started && started.ok) {
         state.metadata = state.metadata || {};
         state.metadata.executionId = started.executionId;
-        executionLedgerAdapter = {
+        executionLedgerAdapter = buildExecutionLedgerAdapter({
+          tenantId: flow.tenantId,
           executionId: started.executionId,
           sanitizeInput: (inObj) => {
             if (!inObj || typeof inObj !== 'object') return {};
@@ -286,18 +287,7 @@ async function simulateFlow(flow, options) {
             return copy;
           },
           sanitizeOutput: (outObj) => (outObj && typeof outObj === 'object' ? outObj : {}),
-          appendNodeExecution: async (args) => appendNodeExecution({
-            tenantId: flow.tenantId,
-            executionId: started.executionId,
-            ...args,
-          }),
-          finishFlowExecution: async ({ status, metaPatch }) => finishFlowExecution({
-            tenantId: flow.tenantId,
-            executionId: started.executionId,
-            status,
-            metaPatch,
-          }),
-        };
+        });
       }
     }
   } catch (_) {}
@@ -463,5 +453,4 @@ async function simulateFlow(flow, options) {
 module.exports = {
   simulateFlow,
 };
-
 

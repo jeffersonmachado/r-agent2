@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import * as superAdminApi from '../api/superAdmin';
+import { setToken } from '../api/auth';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
@@ -24,6 +25,11 @@ export function SuperAdminPage() {
   const [metrics, setMetrics] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [planChangeTenant, setPlanChangeTenant] = useState(null);
+  const [showImpersonateModal, setShowImpersonateModal] = useState(false);
+  const [impersonateTenant, setImpersonateTenant] = useState(null);
+  const [impersonateAgents, setImpersonateAgents] = useState([]);
+  const [impersonateLoading, setImpersonateLoading] = useState(false);
+  const [impersonateAgentId, setImpersonateAgentId] = useState('');
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -106,8 +112,62 @@ export function SuperAdminPage() {
   };
 
   const handleImpersonate = async (tenant) => {
-    // TODO: Implementar seleção de usuário para impersonar
-    showToast('Funcionalidade de impersonação em desenvolvimento', 'info');
+    setImpersonateTenant(tenant);
+    setImpersonateAgents([]);
+    setImpersonateAgentId('');
+    setShowImpersonateModal(true);
+    setImpersonateLoading(true);
+    try {
+      const result = await superAdminApi.listTenantAgents(tenant.id);
+      const agents = Array.isArray(result.agents) ? result.agents : [];
+      setImpersonateAgents(agents);
+      if (agents.length === 0) {
+        showToast('Nenhum agente encontrado para este tenant', 'warning');
+      }
+    } catch (err) {
+      logger.error('Erro ao listar agentes para impersonação', err);
+      showToast('Erro ao listar agentes para impersonação', 'error');
+    } finally {
+      setImpersonateLoading(false);
+    }
+  };
+
+  const handleConfirmImpersonate = async () => {
+    if (!impersonateAgentId) {
+      showToast('Selecione um agente para impersonar', 'warning');
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: 'Impersonar Agente',
+      message: 'Você entrará como o agente selecionado. Continuar?',
+      confirmLabel: 'Impersonar',
+      cancelLabel: 'Cancelar',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const result = await superAdminApi.impersonateUser(impersonateAgentId);
+      if (!result || !result.token || !result.agent) {
+        showToast('Resposta inválida da impersonação', 'error');
+        return;
+      }
+
+      setToken(result.token);
+      try {
+        localStorage.setItem('auth_agent', JSON.stringify(result.agent));
+        localStorage.removeItem('auth_effective_tenant_id');
+      } catch (_) {}
+
+      showToast('Impersonação iniciada', 'success');
+      window.location.reload();
+    } catch (err) {
+      showToast(err.body?.message || 'Erro ao impersonar usuário', 'error');
+    } finally {
+      setShowImpersonateModal(false);
+    }
   };
 
   if (authLoading) {
@@ -357,6 +417,54 @@ export function SuperAdminPage() {
             }
           }}
         />
+      )}
+
+      {/* Modal de Impersonação */}
+      {showImpersonateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-bg-elevated rounded-xl border border-border-default p-6 w-full max-w-lg">
+            <h3 className="text-xl font-semibold text-text-primary mb-4">
+              Impersonar agente
+            </h3>
+            <p className="text-text-secondary mb-4">
+              Tenant: <strong>{impersonateTenant?.name || impersonateTenant?.id}</strong>
+            </p>
+            {impersonateLoading ? (
+              <p className="text-text-secondary">Carregando agentes...</p>
+            ) : (
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-text-primary">Agente</label>
+                <select
+                  value={impersonateAgentId}
+                  onChange={(e) => setImpersonateAgentId(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
+                >
+                  <option value="">Selecione um agente</option>
+                  {impersonateAgents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.username} ({agent.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => setShowImpersonateModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmImpersonate}
+                disabled={impersonateLoading || !impersonateAgentId}
+              >
+                Impersonar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <ToastContainer />

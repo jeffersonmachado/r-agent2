@@ -279,7 +279,7 @@ export function FlowTestChat({ flow, onSizeChange }) {
         setAttachedFiles((prev) => [...prev, fileObj]);
 
         // Processa arquivo com progresso
-        processFile(fileObj.file, {
+        Promise.resolve(processFile(fileObj.file, {
           compressImages: true,
           extractImageText: false, // OCR pode ser lento, desabilitado por padrão
           onProgress: (progress, message) => {
@@ -291,7 +291,7 @@ export function FlowTestChat({ flow, onSizeChange }) {
               )
             );
           },
-        })
+        }))
           .then(({ content, preview, file: processedFile }) => {
             setAttachedFiles((prev) =>
               prev.map((f) =>
@@ -1326,5 +1326,4 @@ export function FlowTestChat({ flow, onSizeChange }) {
     </div>
   );
 }
-
 

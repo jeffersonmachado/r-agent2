@@ -15,6 +15,7 @@ const EVENT_TYPES_V1 = new Set([
   'PhysicalServiceStarted',
   'PhysicalTicketSkipped',
   'PhysicalTicketTransferred',
+  'PhysicalTicketAbandoned',
   'PhysicalSLARisk',
 
   // Orders/Delivery
@@ -31,6 +32,19 @@ const EVENT_TYPES_V1 = new Set([
 
   // PBX
   'PbxCdrIngested',
+  'CallRinging',
+  'CallAnswered',
+  'CallEnded',
+
+  // Voice runtime / gateway
+  'VoiceCallRinging',
+  'VoiceCallAnswered',
+  'VoiceCallEnded',
+  'VoiceCallDtmf',
+  'VoiceCallTransfer',
+  'VoiceFlowInput',
+  'VoiceFlowAction',
+  'VoiceRecordingCaptured',
 ]);
 
 function makeId(prefix) {
@@ -120,4 +134,3 @@ module.exports = {
   EVENT_TYPES_V1,
   buildEventV1,
 };
-

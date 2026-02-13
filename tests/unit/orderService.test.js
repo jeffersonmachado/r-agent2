@@ -113,5 +113,54 @@ describe('orderService', () => {
     expect(res.items).toHaveLength(2);
     expect(findAndCountAll).toHaveBeenCalled();
   });
-});
 
+  test('getOrderMetrics retorna resumo diário e recorte por hora', async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce([[
+        {
+          created_count: 10,
+          confirmed_count: 8,
+          preparing_count: 5,
+          ready_count: 4,
+          dispatched_count: 3,
+          delivered_count: 2,
+          cancelled_count: 1,
+          avg_order_to_ready_seconds: 900,
+          avg_order_to_deliver_seconds: 1800,
+          sla_ready_breached_count: 2,
+          sla_deliver_breached_count: 1,
+        },
+      ]])
+      .mockResolvedValueOnce([[
+        { hour: 10, created_count: 4, confirmed_count: 3, preparing_count: 2, ready_count: 2, dispatched_count: 1, delivered_count: 1, cancelled_count: 0 },
+        { hour: 11, created_count: 6, confirmed_count: 5, preparing_count: 3, ready_count: 2, dispatched_count: 2, delivered_count: 1, cancelled_count: 1 },
+      ]]);
+
+    jest.doMock('../../api/db/models', () => ({
+      Order: () => ({ sequelize: { query } }),
+    }));
+
+    // eslint-disable-next-line global-require
+    const { getOrderMetrics } = require('../../api/services/orderService');
+    const out = await getOrderMetrics({ tenantId: 'tenant-1', locationId: 'loja-1' });
+
+    expect(out.ok).toBe(true);
+    expect(out.locationId).toBe('loja-1');
+    expect(out.today).toMatchObject({
+      createdCount: 10,
+      confirmedCount: 8,
+      preparingCount: 5,
+      readyCount: 4,
+      dispatchedCount: 3,
+      deliveredCount: 2,
+      cancelledCount: 1,
+      avgOrderToReadySeconds: 900,
+      avgOrderToDeliverSeconds: 1800,
+      slaOrderToReadyBreachedCount: 2,
+      slaOrderToDeliverBreachedCount: 1,
+    });
+    expect(out.byHour).toHaveLength(2);
+    expect(out.byHour[0]).toMatchObject({ hour: 10, created_count: 4 });
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+});

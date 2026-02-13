@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const models = require('../../db/models');
+const { getSequelize } = require('../../db/sequelize');
+const { getRecordingPolicy } = require('./pbxRecordingPolicyService');
 
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
@@ -68,18 +70,58 @@ async function scanAndUpsertRecordings({ tenantKey }) {
 
 async function listRecordings({ tenantKey, limit = 200 }) {
   const Model = models.PbxRecording();
+  const sequelize = getSequelize();
+  const Op = sequelize ? sequelize.constructor.Op : null;
+  const policyOut = await getRecordingPolicy({ tenantKey });
+  if (!policyOut?.ok) {
+    const err = new Error('recording_policy_unavailable');
+    err.code = 'recording_policy_unavailable';
+    throw err;
+  }
+  const policy = policyOut.policy || {};
   const rows = await Model.findAll({
-    where: { tenantKey },
+    where: {
+      tenantKey,
+      ...(Op && Number(policy.retentionDays) > 0 ? {
+        createdAt: { [Op.gte]: new Date(Date.now() - (Number(policy.retentionDays) * 24 * 60 * 60 * 1000)) },
+      } : {}),
+    },
     order: [['createdAt', 'DESC']],
     limit: Math.min(Math.max(Number(limit) || 200, 1), 1000),
   });
-  return rows.map(r => r.toJSON());
+  return rows.map((r) => {
+    const json = r.toJSON();
+    if (policy.maskPhoneNumbers) {
+      json.src = maskPhone(json.src);
+      json.dst = maskPhone(json.dst);
+    }
+    return json;
+  });
 }
 
 async function getRecordingFilePath({ tenantKey, id }) {
   const Model = models.PbxRecording();
+  const policyOut = await getRecordingPolicy({ tenantKey });
+  if (!policyOut?.ok) {
+    const err = new Error('recording_policy_unavailable');
+    err.code = 'recording_policy_unavailable';
+    throw err;
+  }
+  const policy = policyOut.policy || {};
+  if (!policy.enabled) {
+    const err = new Error('recording_access_disabled');
+    err.code = 'recording_access_disabled';
+    throw err;
+  }
   const row = await Model.findOne({ where: { id: String(id), tenantKey } });
   if (!row) return null;
+  if (Number(policy.retentionDays) > 0) {
+    const createdAtMs = new Date(row.createdAt).getTime();
+    const cutoffMs = Date.now() - (Number(policy.retentionDays) * 24 * 60 * 60 * 1000);
+    if (Number.isFinite(createdAtMs) && createdAtMs < cutoffMs) {
+      return null;
+    }
+  }
   const storage = row.storage || {};
   return storage.path || null;
 }
@@ -111,3 +153,11 @@ module.exports = {
   registerRecordingFromPath,
 };
 
+function maskPhone(value) {
+  const raw = value == null ? '' : String(value);
+  const digits = raw.replace(/\D+/g, '');
+  if (!digits) return value;
+  if (digits.length <= 4) return '*'.repeat(digits.length);
+  const keep = digits.slice(-4);
+  return `${'*'.repeat(Math.max(0, digits.length - 4))}${keep}`;
+}

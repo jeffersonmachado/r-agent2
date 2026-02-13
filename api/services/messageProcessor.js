@@ -328,11 +328,45 @@ async function processWhatsAppMessage(message, value, deps) {
       recording.save(recordingId);
     }
     
-    // Durante atendimento humano síncrono, mensagens são roteadas para o humano
-    // A implementação real de WebSocket/API deve ser feita na camada de API
-    // Por enquanto, apenas logamos
+    // Durante atendimento humano síncrono, mensagens são roteadas para o humano via WebSocket
+    // (best-effort). Se existir ticket associado à sessão, atualiza o histórico também.
+    const ts = message?.timestamp ? Number(message.timestamp) : null;
+    const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+    const humanSession = getHumanSession(sessionId);
+    let ticket = null;
+
+    try {
+      const ticketFromSession = getTicketBySession(sessionId, inboundTenantId);
+      if (ticketFromSession && ticketFromSession.status !== 'closed') {
+        updateLastMessage(ticketFromSession.id, text, messageId ? String(messageId) : null, iso);
+        ticket = getTicket(ticketFromSession.id);
+        if (ticket) {
+          emitEvent('ticket.message.received', {
+            ticketId: ticket.id,
+            message: text,
+            sender: 'user',
+            ticket,
+          }, { tenantId: ticket.tenantId, agentId: ticket.assignedTo });
+        }
+      }
+    } catch (_) {}
+
+    try {
+      emitEvent('human.live.message.received', {
+        sessionId,
+        humanSessionId: humanSession?.humanSessionId || null,
+        tenantId: inboundTenantId || null,
+        message: text,
+        sender: 'user',
+        channel: effectiveChannelType,
+        phoneNumber: from,
+        conversationId: conversationId || null,
+        ticketId: ticket?.id || null,
+        timestamp: iso || new Date().toISOString(),
+      }, { tenantId: inboundTenantId || ticket?.tenantId || null });
+    } catch (_) {}
+
     logger.debug(`[MessageProcessor] Mensagem recebida durante atendimento humano síncrono: ${sessionId}`);
-    // TODO: Roteamento para humano via WebSocket/API
     return;
   }
 
@@ -446,22 +480,18 @@ async function processWhatsAppMessage(message, value, deps) {
       const executionId = state?.metadata?.executionId || null;
       if (executionId) {
         // eslint-disable-next-line global-require
-        const { appendNodeExecution } = require('./flowExecutionLedgerService');
-        executionLedgerAdapter = {
+        const { buildExecutionLedgerAdapter } = require('./flowExecutionLedgerService');
+        executionLedgerAdapter = buildExecutionLedgerAdapter({
+          tenantId: inboundTenantId,
           executionId,
-          sanitizeInput: (inObj) => ({
+          sanitizeInput: () => ({
             text,
             messageId,
             channel: effectiveChannelType,
             // Mantemos raw fora do ledger (pode ser grande/variável)
           }),
-          sanitizeOutput: (outObj) => outObj && typeof outObj === 'object' ? outObj : {},
-          appendNodeExecution: async (args) => appendNodeExecution({
-            tenantId: inboundTenantId,
-            executionId,
-            ...args,
-          }),
-        };
+          sanitizeOutput: (outObj) => (outObj && typeof outObj === 'object' ? outObj : {}),
+        });
       }
     }
   } catch (_) {}
@@ -548,15 +578,36 @@ async function processWhatsAppMessage(message, value, deps) {
     if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
       const executionId = result?.state?.metadata?.executionId || state?.metadata?.executionId || null;
       const finished = !result?.state?.currentNodeId;
-      if (executionId && finished) {
+      const isTicketHandoffOutput = !!(result?.output && (
+        result.output.type === 'handoff' ||
+        (result.output.type === 'fallback_human' && result.output.escalationMode === ESCALATION_MODES.TICKET)
+      ));
+      const isHumanLiveOutput = !!(result?.output && (
+        result.output.type === 'fallback_human_live' ||
+        (result.output.type === 'fallback_human' && result.output.escalationMode === ESCALATION_MODES.HUMAN)
+      ));
+      const isInHumanHandoffState = !!(result?.state?.metadata && result.state.metadata.status === 'waiting_human');
+      const shouldFinishExecution = finished || isTicketHandoffOutput || isHumanLiveOutput || isInHumanHandoffState;
+
+      if (executionId && shouldFinishExecution) {
+        let finishedBy = 'end_node_or_no_current_node';
+        if (isTicketHandoffOutput) finishedBy = 'handoff_ticket';
+        else if (isHumanLiveOutput) finishedBy = 'handoff_human_live';
+        else if (isInHumanHandoffState) finishedBy = 'waiting_human';
+
         // eslint-disable-next-line global-require
-        const { finishFlowExecution } = require('./flowExecutionLedgerService');
-        await finishFlowExecution({
+        const { finishFlowExecutionSafe } = require('./flowExecutionLedgerService');
+        await finishFlowExecutionSafe({
           tenantId: inboundTenantId,
           executionId,
           status: 'done',
-          metaPatch: { finishedBy: 'end_node_or_no_current_node', finishedAt: new Date().toISOString() },
+          metaPatch: { finishedBy, finishedAt: new Date().toISOString() },
         }).catch(() => {});
+
+        // Evita manter execução "aberta" em sessões que migraram para humano.
+        if (result?.state?.metadata?.executionId) {
+          delete result.state.metadata.executionId;
+        }
       }
     }
   } catch (_) {}
@@ -736,7 +787,22 @@ async function processWhatsAppMessage(message, value, deps) {
       logger.info(`[HUMAN_LIVE] Sessão humana criada: ${humanSession.humanSessionId} para sessão ${sessionId}`);
       
       // Suspende processamento do bot - humano assume
-      // TODO: Implementar roteamento de mensagens para humano via WebSocket/API
+      try {
+        emitEvent('human.live.started', {
+          sessionId,
+          humanSessionId: humanSession.humanSessionId,
+          tenantId: inboundTenantId || result.state.tenantId || null,
+          channel: result.state.metadata?.channel || effectiveChannelType,
+          phoneNumber: from,
+          conversationId: conversationId || null,
+          context: {
+            flowId: humanSession.context?.flowId || result.state.flowId,
+            variables: humanSession.context?.variables || {},
+            metadata: humanSession.context?.metadata || {},
+          },
+          startedAt: humanSession.createdAt,
+        }, { tenantId: inboundTenantId || result.state.tenantId || null });
+      } catch (_) {}
       return; // Não continua processando como mensagem normal
     }
 
@@ -801,5 +867,3 @@ async function processWhatsAppMessage(message, value, deps) {
 module.exports = {
   processWhatsAppMessage,
 };
-
-

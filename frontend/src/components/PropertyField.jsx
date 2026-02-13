@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Input, Textarea } from '../styles/Input';
 import { fetchJson } from '../api/client';
+import { getTenantId } from '../api/auth';
 
 /**
  * Campo de propriedade com label, ajuda e validação
@@ -508,7 +509,7 @@ Gere palavras-chave novas que não estejam na lista acima.`;
         method: 'POST',
         body: JSON.stringify({
           prompt,
-          tenantId: null, // TODO: obter do contexto do agente autenticado
+          tenantId: getTenantId(),
         }),
       });
 
@@ -1234,4 +1235,3 @@ export function ScheduleRouterField({
     </PropertyField>
   );
 }
-

@@ -76,6 +76,7 @@ class MockWebSocket {
 
 // Substitui WebSocket global
 global.WebSocket = MockWebSocket;
+const OriginalWebSocket = global.WebSocket;
 
 describe('useWebSocket', () => {
   let mockWs;
@@ -94,15 +95,20 @@ describe('useWebSocket', () => {
     };
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (mockWs) {
-      try {
-        mockWs.close();
-      } catch (err) {
-        // Ignora erros
-      }
+      await act(async () => {
+        try {
+          // Fecha como normal para evitar reconexão assíncrona durante cleanup.
+          mockWs.close(1000, 'test cleanup');
+          await Promise.resolve();
+        } catch (err) {
+          // Ignora erros
+        }
+      });
       mockWs = null;
     }
+    global.WebSocket = OriginalWebSocket;
     vi.clearAllTimers();
     vi.clearAllMocks();
   });
@@ -359,4 +365,3 @@ describe('useWebSocket', () => {
     expect(result.current).toHaveProperty('reconnect');
   });
 });
-

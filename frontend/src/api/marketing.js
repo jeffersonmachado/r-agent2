@@ -50,3 +50,18 @@ export function sendMarketingEmailCampaign(campaignId, limit = 2000) {
     body: JSON.stringify({}),
   });
 }
+
+export function listMarketingLinks({ limit = 200, offset = 0 } = {}) {
+  const params = new URLSearchParams();
+  if (limit != null) params.set('limit', String(limit));
+  if (offset != null) params.set('offset', String(offset));
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return fetchJson(`/api/marketing/links${qs}`, { method: 'GET' });
+}
+
+export function createMarketingLink(payload) {
+  return fetchJson('/api/marketing/links', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}

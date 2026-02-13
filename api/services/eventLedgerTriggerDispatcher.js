@@ -3,7 +3,7 @@
  *
  * Implements:
  * - scanner job: scans event_ledger using a cursor and enqueues per-event dispatch jobs
- * - dispatch job: resolves event and triggers webhooks (event_ledger.<type>)
+ * - dispatch job: resolves event and triggers webhooks (event_ledger.<type>) and/or flows
  *
  * Idempotência/retry/DLQ:
  * - scanner enqueues with execution_jobs.idempotency_key = event.id
@@ -42,7 +42,15 @@ async function ensureStateRow({ consumer }) {
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
 
-async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}) {
+function boolEnv(name, def = false) {
+  const raw = process.env[name];
+  if (raw === undefined) return def;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return def;
+}
+
+async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispatchTargets = null } = {}) {
   const sequelize = getSequelize();
   if (!sequelize) return { ok: false, reason: 'db_unavailable' };
 
@@ -86,6 +94,10 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}
     let maxEventId = lastEventId;
     let enqueued = 0;
 
+    const splitTargets = Array.isArray(dispatchTargets) && dispatchTargets.length
+      ? dispatchTargets
+      : (boolEnv('EVENT_DISPATCH_SPLIT_TARGETS', false) ? ['webhooks', 'flows'] : null);
+
     for (const ev of events) {
       const json = ev.toJSON ? ev.toJSON() : ev;
       const tenantId = json.tenant_key;
@@ -100,20 +112,39 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}
         }
       }
 
-      // Enqueue per-event dispatch job (idempotent via execution_jobs unique index)
-      // eslint-disable-next-line no-await-in-loop
-      await enqueueJob({
-        tenantId,
-        kind: 'dispatch_event_trigger',
-        payload: {
-          consumer: String(consumer),
-          eventId: String(eventId),
-        },
-        runAt: new Date(),
-        priority: 0,
-        maxAttempts: 10,
-        idempotencyKey: `event_dispatch:${String(eventId)}`,
-      }).then(() => { enqueued += 1; }).catch(() => {});
+      if (splitTargets && splitTargets.length) {
+        for (const target of splitTargets) {
+          // eslint-disable-next-line no-await-in-loop
+          await enqueueJob({
+            tenantId,
+            kind: 'dispatch_event_trigger',
+            payload: {
+              consumer: String(consumer),
+              eventId: String(eventId),
+              dispatchTargets: [String(target)],
+            },
+            runAt: new Date(),
+            priority: 0,
+            maxAttempts: 10,
+            idempotencyKey: `event_dispatch:${String(eventId)}:${String(target)}`,
+          }).then(() => { enqueued += 1; }).catch(() => {});
+        }
+      } else {
+        // Enqueue per-event dispatch job (idempotent via execution_jobs unique index)
+        // eslint-disable-next-line no-await-in-loop
+        await enqueueJob({
+          tenantId,
+          kind: 'dispatch_event_trigger',
+          payload: {
+            consumer: String(consumer),
+            eventId: String(eventId),
+          },
+          runAt: new Date(),
+          priority: 0,
+          maxAttempts: 10,
+          idempotencyKey: `event_dispatch:${String(eventId)}`,
+        }).then(() => { enqueued += 1; }).catch(() => {});
+      }
     }
 
     await sequelize.query(
@@ -127,7 +158,7 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100 } = {}
   });
 }
 
-async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId }) {
+async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId, dispatchTargets = null }) {
   if (!dbAvailable()) return { ok: false, reason: 'db_unavailable' };
   if (!tenantId || !eventId) return { ok: false, reason: 'invalid_args' };
 
@@ -138,9 +169,13 @@ async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId }) {
   const json = ev.toJSON ? ev.toJSON() : ev;
   const type = String(json.type || '').trim();
 
-  // Trigger webhooks: event_ledger.<type>
-  const eventName = `event_ledger.${type}`;
-  await triggerWebhooks(String(tenantId), eventName, {
+  const hasExplicitTargets = Array.isArray(dispatchTargets) && dispatchTargets.length;
+  const targets = hasExplicitTargets
+    ? dispatchTargets.map((t) => String(t))
+    : ['webhooks', 'flows'];
+  const strictFailures = boolEnv('EVENT_DISPATCH_STRICT_FAILURES', true);
+
+  const eventPayload = {
     id: json.id,
     type: json.type,
     source: json.source,
@@ -150,31 +185,55 @@ async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId }) {
     subject: { type: json.subject_type || null, id: json.subject_id || null },
     actor: { type: json.actor_type || null, id: json.actor_id || null },
     payload: json.payload || {},
-  });
+  };
 
-  // Trigger flows (best-effort) via metadata.eventTriggers
-  try {
-    await dispatchFlowsForEvent({
-      tenantId: String(tenantId),
-      event: {
-        id: json.id,
-        type: json.type,
-        source: json.source,
-        occurredAt: json.occurred_at,
-        receivedAt: json.received_at,
-        correlationId: json.correlation_id,
-        subject: { type: json.subject_type || null, id: json.subject_id || null },
-        actor: { type: json.actor_type || null, id: json.actor_id || null },
-        payload: json.payload || {},
-      },
-    });
-  } catch (_) {}
+  let webhooksOk = null;
+  let flowsOk = null;
+  let webhookError = null;
 
-  return { ok: true, dispatched: true, eventName };
+  if (targets.includes('webhooks')) {
+    const eventName = `event_ledger.${type}`;
+    try {
+      await triggerWebhooks(String(tenantId), eventName, eventPayload);
+      webhooksOk = true;
+    } catch (err) {
+      webhooksOk = false;
+      webhookError = err;
+      if (!hasExplicitTargets) {
+        // Legacy behavior: if webhooks fail, abort job (flows won't run).
+        throw err;
+      }
+    }
+  }
+
+  if (targets.includes('flows')) {
+    try {
+      await dispatchFlowsForEvent({ tenantId: String(tenantId), event: eventPayload });
+      flowsOk = true;
+    } catch (err) {
+      flowsOk = false;
+      if (strictFailures) throw err;
+    }
+  }
+
+  const onlyWebhooks = targets.length === 1 && targets[0] === 'webhooks';
+  if (onlyWebhooks && webhooksOk === false && webhookError) {
+    throw webhookError;
+  }
+  if (strictFailures && webhooksOk === false && webhookError) {
+    throw webhookError;
+  }
+
+  return {
+    ok: true,
+    dispatched: true,
+    targets,
+    webhooksOk,
+    flowsOk,
+  };
 }
 
 module.exports = {
   scanAndEnqueue,
   dispatchOne,
 };
-

@@ -6,7 +6,7 @@
  * Este teste usa mocks para evitar boot real de DB/serviços.
  */
 
-const http = require('http');
+const { Readable, Writable } = require('stream');
 
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
@@ -88,51 +88,87 @@ describe('POST /flows/generate - validationWarnings', () => {
       getAuditStats: jest.fn(async () => ({})),
     }));
 
-    const { createServer } = require('../../api/server');
-    const server = createServer();
+    const { _internal } = require('../../api/server');
 
-    await new Promise((resolve) => server.listen(0, resolve));
-    const { port } = server.address();
-
-    const payload = JSON.stringify({
+    const payload = {
       name: 'Fluxo',
       description: 'qualquer',
       tenantId: 't1',
       useRag: false,
+    };
+
+    const { req, res, finished } = createMockReqRes({
+      method: 'POST',
+      url: '/flows/generate',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
     });
 
-    const resBody = await new Promise((resolve, reject) => {
-      const req = http.request(
-        {
-          method: 'POST',
-          hostname: '127.0.0.1',
-          port,
-          path: '/flows/generate',
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(payload),
-          },
-        },
-        (res) => {
-          let data = '';
-          res.on('data', (chunk) => (data += chunk));
-          res.on('end', () => resolve({ status: res.statusCode, body: data }));
-        }
-      );
-      req.on('error', reject);
-      req.write(payload);
-      req.end();
-    });
+    await _internal.requestHandler(req, res);
+    await finished;
 
-    await new Promise((resolve) => server.close(resolve));
+    const resPayload = res._body ? JSON.parse(res._body) : null;
 
-    expect(resBody.status).toBe(200);
-    const parsed = JSON.parse(resBody.body);
-    expect(parsed.success).toBe(true);
-    expect(parsed.validationWarnings).toBeDefined();
-    expect(parsed.validationWarnings.valid).toBe(false);
-    expect(parsed.validationWarnings.codes).toContain('START_HAS_INPUTS');
-    expect(Array.isArray(parsed.validationWarnings.errors)).toBe(true);
+    expect(res.statusCode).toBe(200);
+    expect(resPayload.success).toBe(true);
+    expect(resPayload.validationWarnings).toBeDefined();
+    expect(resPayload.validationWarnings.valid).toBe(false);
+    expect(resPayload.validationWarnings.codes).toContain('START_HAS_INPUTS');
+    expect(Array.isArray(resPayload.validationWarnings.errors)).toBe(true);
   }, 30000);
 });
 
+function createMockReqRes({ method, url, headers, body }) {
+  const req = new Readable({
+    read() {}
+  });
+  req.method = method;
+  req.url = url;
+  req.headers = headers || {};
+  req.connection = { remoteAddress: '127.0.0.1' };
+  req.socket = req.connection;
+
+  const resChunks = [];
+  const res = new Writable({
+    write(chunk, _enc, cb) {
+      resChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+      cb();
+    },
+  });
+  res.statusCode = 200;
+  res._headers = {};
+  res._body = '';
+
+  res.setHeader = (name, value) => {
+    res._headers[String(name).toLowerCase()] = value;
+  };
+  res.getHeader = (name) => res._headers[String(name).toLowerCase()];
+  res.writeHead = (statusCode, headersObj) => {
+    res.statusCode = statusCode;
+    if (headersObj) {
+      Object.entries(headersObj).forEach(([key, value]) => res.setHeader(key, value));
+    }
+  };
+  res.write = (chunk) => {
+    resChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  };
+
+  let resolveFinished;
+  const finished = new Promise((resolve) => {
+    resolveFinished = resolve;
+  });
+  res.end = (chunk) => {
+    if (chunk) {
+      resChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+    }
+    res._body = Buffer.concat(resChunks).toString('utf8');
+    resolveFinished();
+  };
+
+  if (body) {
+    req.push(body);
+  }
+  req.push(null);
+
+  return { req, res, finished };
+}

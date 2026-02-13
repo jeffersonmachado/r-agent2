@@ -1,0 +1,66 @@
+# Rollback Playbook - Suites Criticas (Orders / Fast Service / PBX)
+
+## Objetivo
+Padronizar rollback operacional para as suites criticas com evidencias minimas de execucao.
+
+## Pre-check geral
+1. Confirmar incidente e janela de rollback.
+2. Executar snapshot/backup antes de alterar estado:
+   - `bash scripts/backup-postgres.sh`
+3. Registrar inicio no incidente com data/hora e responsavel.
+
+## Suite: Orders/Delivery
+1. Validar saude atual:
+   - `curl -s http://localhost:3000/health/selftest`
+2. Reverter ultima mudanca de configuracao/flow da suite (deployment ou publish anterior).
+3. Executar smoke minimo:
+   - criar pedido publico
+   - validar status kitchen/dispatch
+4. Evidencias:
+   - logs da API
+   - payload do smoke
+   - status final de `/health/selftest`
+
+## Suite: Fast Service (Filas fisicas)
+1. Reverter configuracoes da fila/unidade para versao estavel.
+2. Executar smoke minimo:
+   - kiosk cria ticket
+   - station faz call/start/finish
+   - panel reflete fila
+3. Evidencias:
+   - respostas HTTP dos endpoints publicos
+   - screenshot/registro de panel
+
+## Suite: PBX/Voz
+1. Reverter dialplan/config para versao anterior.
+2. Validar integridade PBX:
+   - `bash scripts/test-pbx-realtime.sh`
+3. Validar runtime de voz:
+   - `node scripts/test-voice-runtime-smoke.js`
+4. Evidencias:
+   - output do smoke PBX
+   - output do smoke de voz
+   - `/health/selftest` sem `FAIL`
+
+## Restore/DR basico (quando necessario)
+1. Restaurar backup:
+   - `bash scripts/restore-postgres.sh`
+2. Reexecutar migracoes/boot se aplicavel:
+   - `npm run db:migrate`
+3. Validar import/export de backup por API:
+   - `GET /api/backup/export`
+   - `POST /api/backup/import`
+
+## Gate de encerramento
+1. Executar gate de release:
+   - `npm run system:release-gate`
+   - padrao: `RELEASE_GATE_MODE=stack` (executa stack completa sem repetir suites fora da stack)
+   - opcional diagnostico: `RELEASE_GATE_MODE=legacy npm run system:release-gate`
+2. Executar simulado de rollback e gerar evidência:
+   - `npm run system:rollback-drill`
+   - opcional (aplica rollback PBX no drill): `ROLLBACK_DRILL_APPLY_PBX=1 npm run system:rollback-drill`
+3. Arquivar evidencias:
+   - `qa/release-gate-report.json`
+   - `qa/rollback-drill-report.json`
+   - logs operacionais
+   - checklist de rollback preenchido

@@ -1,3 +1,5 @@
+ARG API_BASE_IMAGE=r-agent2-api-base:test
+
 FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
@@ -29,17 +31,12 @@ COPY qa/ ./qa/
 COPY lib/ ./lib/
 COPY scripts/ ./scripts/
 
-FROM node:22-bookworm-slim AS runtime
+FROM ${API_BASE_IMAGE} AS runtime
 
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
-
-# ffmpeg para conversão de áudio (PBX)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-  && rm -rf /var/lib/apt/lists/*
 
 # Copia apenas artefatos do builder
 COPY --from=builder /app/package.json /app/package-lock.json* ./
@@ -67,11 +64,6 @@ RUN npm prune --omit=dev && \
     npm cache clean --force && \
     mkdir -p /app/api/data /app/tests/rpa/reports /app/tests/rpa/replay
 
-# Garante browsers e dependências do Playwright disponíveis em produção.
-# Observação: em alguns cenários o `npm prune` remove o symlink `node_modules/.bin/playwright`,
-# então chamamos o CLI diretamente via `node .../playwright/cli.js`.
-RUN node ./node_modules/playwright/cli.js install --with-deps chromium
-
 # Mantém entrypoint
 RUN chmod +x ./api/entrypoint.sh
 
@@ -85,5 +77,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # Entrypoint executa migrations + seed + server
 ENTRYPOINT ["./api/entrypoint.sh"]
-
-

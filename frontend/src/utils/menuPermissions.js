@@ -21,6 +21,12 @@ export const menuItems = [
     permission: { resource: 'tickets', action: 'read' },
   },
   {
+    label: 'Inbox',
+    path: '/inbox',
+    icon: '📥',
+    permission: { resource: 'tickets', action: 'read' },
+  },
+  {
     label: 'Editor',
     path: '/editor',
     icon: '📝',
@@ -72,6 +78,69 @@ export const menuItems = [
     path: '/analytics',
     icon: '📊',
     permission: { resource: 'reports', action: 'read' },
+  },
+  {
+    label: 'Supervisor',
+    path: '/supervisor',
+    icon: '🧭',
+    permission: { resource: 'reports', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
+    label: 'RBAC',
+    path: '/rbac',
+    icon: '🔐',
+    permission: { resource: 'agents', action: 'update' },
+    roles: ['admin', 'owner'],
+  },
+  {
+    label: 'MFA',
+    path: '/mfa',
+    icon: '🛡️',
+    permission: { resource: 'config', action: 'update' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'URA WhatsApp',
+    path: '/whatsapp-ivr',
+    icon: '💬',
+    permission: { resource: 'config', action: 'update' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'WhatsApp QR',
+    path: '/whatsapp-connections',
+    icon: '📱',
+    permission: { resource: 'config', action: 'update' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'API Keys',
+    path: '/developer-keys',
+    icon: '🔑',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'Automações',
+    path: '/automations',
+    icon: '🧩',
+    permission: { resource: 'config', action: 'update' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'Tarefas',
+    path: '/tasks',
+    icon: '✅',
+    permission: { resource: 'config', action: 'update' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'SLA',
+    path: '/sla-policies',
+    icon: '⏱️',
+    permission: { resource: 'reports', action: 'read' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
   },
   {
     label: 'Exportação',
@@ -408,35 +477,73 @@ export function getVisibleMenuItems(agent) {
     return [];
   }
 
-  return menuItems.filter((item) => {
-    // Super Admin vê todos os itens do menu
-    if (isSuperAdmin(agent)) {
-      return true;
-    }
-
-    // Se o item tem restrição de roles, verifica primeiro
-    if (item.roles && Array.isArray(item.roles)) {
-      const agentRole = agent.role?.toLowerCase();
-      
-      // Para itens com role 'super_admin', verifica usando função isSuperAdmin
-      // (que inclui owner do tenant 'system')
-      if (item.roles.includes('super_admin')) {
-        return isSuperAdmin(agent);
-      }
-      
-      // Para outros roles, verifica normalmente
-      if (!item.roles.includes(agentRole)) {
-        return false;
-      }
-    }
-
-    // Se não tem permissão específica, é visível (após passar filtro de roles)
-    if (!item.permission) {
-      return true;
-    }
-
-    // Verifica permissão
-    return hasPermission(agent, item.permission.resource, item.permission.action);
-  });
+  return menuItems.filter((item) => canAccessMenuItem(agent, item));
 }
 
+function normalizePath(path) {
+  if (!path || typeof path !== 'string') {
+    return '/';
+  }
+  const withoutQuery = path.split('?')[0].split('#')[0];
+  if (withoutQuery.length > 1 && withoutQuery.endsWith('/')) {
+    return withoutQuery.slice(0, -1);
+  }
+  return withoutQuery;
+}
+
+function canAccessMenuItem(agent, item) {
+  if (!agent || !item) {
+    return false;
+  }
+
+  if (isSuperAdmin(agent)) {
+    return true;
+  }
+
+  if (item.roles && Array.isArray(item.roles)) {
+    const agentRole = agent.role?.toLowerCase();
+
+    if (item.roles.includes('super_admin')) {
+      return isSuperAdmin(agent);
+    }
+
+    if (!item.roles.includes(agentRole)) {
+      return false;
+    }
+  }
+
+  if (!item.permission) {
+    return true;
+  }
+
+  return hasPermission(agent, item.permission.resource, item.permission.action);
+}
+
+/**
+ * Verifica se um agente pode acessar uma rota do frontend com base nas regras do menu/RBAC.
+ *
+ * @param {Object} agent - Agente autenticado
+ * @param {string} path - URL/rota atual
+ * @param {Object} options
+ * @param {boolean} options.allowUnknown - Quando true, rotas sem mapeamento explícito são permitidas
+ * @returns {boolean}
+ */
+export function canAccessPath(agent, path, options = {}) {
+  const { allowUnknown = true } = options;
+  const targetPath = normalizePath(path);
+
+  if (!agent) {
+    return false;
+  }
+
+  const item = menuItems.find((menuItem) => {
+    const basePath = normalizePath(menuItem.path);
+    return targetPath === basePath || targetPath.startsWith(`${basePath}/`);
+  });
+
+  if (!item) {
+    return allowUnknown;
+  }
+
+  return canAccessMenuItem(agent, item);
+}

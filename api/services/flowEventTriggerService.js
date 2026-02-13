@@ -14,7 +14,7 @@ const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const { executeStep } = require('../../engine/executeStep');
 const { NodeRegistry } = require('../../engine/nodeRegistry');
 const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
-const { startFlowExecution, finishFlowExecution } = require('./flowExecutionLedgerService');
+const { startFlowExecution, finishFlowExecutionSafe, buildExecutionLedgerAdapter } = require('./flowExecutionLedgerService');
 
 const {
   startNodeHandler,
@@ -166,9 +166,15 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
       eventId: event?.id || null,
       eventType: event?.type || null,
       eventSource: event?.source || null,
+      eventCorrelationId: event?.correlationId || null,
+      eventSubjectType: event?.subject?.type || null,
+      eventSubjectId: event?.subject?.id || null,
     },
   });
   const executionId = start?.executionId || null;
+  if (start && start.reused) {
+    return { ok: true, steps: 0, executionId, reused: true, stoppedOnInput: false };
+  }
 
   let state = {
     tenantId,
@@ -197,52 +203,62 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
   const aiProvider = getAiProviderForTenant(tenantId);
   const stepsLimit = Number.isFinite(Number(maxSteps)) ? Number(maxSteps) : intEnv('EVENT_TRIGGER_MAX_STEPS', 50);
   let steps = 0;
+  const executionLedgerAdapter = executionId
+    ? buildExecutionLedgerAdapter({
+      tenantId,
+      executionId,
+      sanitizeInput: (inObj) => (inObj && typeof inObj === 'object' ? { event: inObj.event || null } : {}),
+      sanitizeOutput: (outObj) => (outObj && typeof outObj === 'object' ? outObj : {}),
+    })
+    : null;
 
-  while (state.currentNodeId && steps < stepsLimit) {
-    const currentNodeId = String(state.currentNodeId);
-    const node = Array.isArray(compiled.nodes) ? compiled.nodes.find((n) => n && String(n.id) === currentNodeId) : null;
-    const nodeType = node?.type || null;
+  try {
+    while (state.currentNodeId && steps < stepsLimit) {
+      const currentNodeId = String(state.currentNodeId);
+      const node = Array.isArray(compiled.nodes) ? compiled.nodes.find((n) => n && String(n.id) === currentNodeId) : null;
+      const nodeType = node?.type || null;
 
-    if (nodeType === 'user_input') {
-      break;
-    }
+      if (nodeType === 'user_input') {
+        break;
+      }
 
-    const input = {
-      event,
-      channel: 'event',
-      aiProvider,
-    };
+      const input = {
+        event,
+        channel: 'event',
+        aiProvider,
+      };
 
-    // eslint-disable-next-line no-await-in-loop
-    const result = await executeStep(state, compiled, {
-      registry,
-      input,
-      deps: {
-        persistence,
+      // eslint-disable-next-line no-await-in-loop
+      const result = await executeStep(state, compiled, {
         registry,
-        allowUnreviewedAiFlow: boolEnv('ALLOW_EVENT_TRIGGER_UNREVIEWED_AI_FLOW', false),
-        executionLedger: executionId
-          ? {
-            executionId,
-            sanitizeInput: (inObj) => (inObj && typeof inObj === 'object' ? { event: inObj.event || null } : {}),
-            sanitizeOutput: (outObj) => (outObj && typeof outObj === 'object' ? outObj : {}),
-            appendNodeExecution: async (args) => {
-              const { appendNodeExecution } = require('./flowExecutionLedgerService');
-              return appendNodeExecution({ tenantId, executionId, ...args });
-            },
-          }
-          : null,
-      },
-    });
+        input,
+        deps: {
+          persistence,
+          registry,
+          allowUnreviewedAiFlow: boolEnv('ALLOW_EVENT_TRIGGER_UNREVIEWED_AI_FLOW', false),
+          executionLedger: executionLedgerAdapter,
+        },
+      });
 
-    state = result.state;
-    steps += 1;
+      state = result.state;
+      steps += 1;
 
-    if (!state.currentNodeId) break;
+      if (!state.currentNodeId) break;
+    }
+  } catch (err) {
+    if (executionId) {
+      await finishFlowExecutionSafe({
+        tenantId,
+        executionId,
+        status: 'failed',
+        metaPatch: { error: err.message || String(err) },
+      }).catch(() => {});
+    }
+    throw err;
   }
 
   if (executionId) {
-    await finishFlowExecution({
+    await finishFlowExecutionSafe({
       tenantId,
       executionId,
       status: 'done',
@@ -254,21 +270,29 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
     }).catch(() => {});
   }
 
-  return { ok: true, steps, executionId, stoppedOnInput: !!state.currentNodeId };
+  return { ok: true, steps, executionId, stoppedOnInput: !!state.currentNodeId, reused: false };
 }
 
 async function dispatchFlowsForEvent({ tenantId, event }) {
   if (!tenantId || !event) return { ok: false, reason: 'invalid_args' };
   const flows = await listMatchingFlows({ tenantId, event });
   if (!flows.length) return { ok: true, matched: 0, executed: 0 };
+  const strictFailures = boolEnv('EVENT_TRIGGER_STRICT_FAILURES', true);
 
   let executed = 0;
+  let failed = 0;
+  const failures = [];
   for (const flow of flows) {
     try {
       // eslint-disable-next-line no-await-in-loop
       await executeFlowForEvent({ tenantId, flow, event });
       executed += 1;
     } catch (err) {
+      failed += 1;
+      failures.push({
+        flowId: flow?.id || null,
+        error: err?.message || String(err),
+      });
       logger.warn('[EventTrigger] Falha ao executar flow para evento', {
         tenantId,
         flowId: flow?.id || null,
@@ -278,7 +302,16 @@ async function dispatchFlowsForEvent({ tenantId, event }) {
     }
   }
 
-  return { ok: true, matched: flows.length, executed };
+  if (failed > 0 && strictFailures) {
+    const error = new Error('event_trigger_flows_failed');
+    // @ts-ignore
+    error.code = 'event_trigger_flows_failed';
+    // @ts-ignore
+    error.details = { matched: flows.length, executed, failed, failures };
+    throw error;
+  }
+
+  return { ok: true, matched: flows.length, executed, failed, failures };
 }
 
 module.exports = {

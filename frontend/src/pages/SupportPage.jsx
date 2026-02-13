@@ -28,6 +28,8 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useDebounce } from '../hooks/useDebounce';
+import { usePhoneMasking } from '../hooks/usePhoneMasking';
+import { MaskedPhone } from '../components/MaskedPhone';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
 
@@ -82,6 +84,7 @@ export function SupportPage() {
   const [showDeliveryFailuresModal, setShowDeliveryFailuresModal] = useState(false);
   const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
   const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
+  const { enabled: phoneMaskingEnabled } = usePhoneMasking();
 
   const applyTemplateVariables = useCallback((text, variables) => {
     if (!text) return '';
@@ -1397,8 +1400,8 @@ export function SupportPage() {
                       {getModeLabel(ticket.mode).label}
                     </span>
                   </div>
-                  <div className="support-ticket-phone" aria-label={`Telefone: ${formatPhoneNumber(ticket.phoneNumber)}`}>
-                    📞 {formatPhoneNumber(ticket.phoneNumber)}
+                  <div className="support-ticket-phone" aria-label={`Telefone: ${ticket.phoneNumber || '-'}`}>
+                    📞 <MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} />
                   </div>
                   {ticket.lastUserMessage && (
                     <div className="support-ticket-message">
@@ -1805,7 +1808,7 @@ export function SupportPage() {
                       </span>
                     </div>
                     <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                      <div>📞 <strong>{formatPhoneNumber(selectedTicket.phoneNumber)}</strong></div>
+                      <div>📞 <strong><MaskedPhone phone={selectedTicket.phoneNumber} mask={phoneMaskingEnabled} /></strong></div>
                       <div>Fila: <strong>{selectedTicket.queue}</strong></div>
                       <div>Status: <strong>{selectedTicket.status}</strong></div>
                       {selectedTicket.pauseReason ? (

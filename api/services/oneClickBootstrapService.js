@@ -125,6 +125,7 @@ async function bootstrapTenantOneClick({
   objetivo = 'operar',
   plan = 'trial',
   segment = 'geral',
+  suites = null,
   locationId = null,
   locationIds = null,
   adminEmail = '',
@@ -133,7 +134,7 @@ async function bootstrapTenantOneClick({
   createTokens = true,
   tokenKinds = null,
   createTemplates = true,
-  createPhysicalQueue = true,
+  createPhysicalQueue = null,
 } = {}) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
 
@@ -144,6 +145,8 @@ async function bootstrapTenantOneClick({
   const result = {
     ok: true,
     tenantKey: tk,
+    startedAt: new Date().toISOString(),
+    suites: Array.isArray(suites) ? suites.map((s) => String(s).trim()).filter(Boolean) : [],
     created: {
       tenant: false,
       adminUser: false,
@@ -241,8 +244,27 @@ async function bootstrapTenantOneClick({
   const locs = locsRaw.map((x) => (x == null ? null : String(x).trim())).filter((x) => x !== '');
   const effectiveLocs = locs.length > 0 ? locs : [null];
 
+  // Suite defaults (opções por suíte)
+  const suiteList = Array.isArray(suites) ? suites.map((s) => String(s).trim().toLowerCase()).filter(Boolean) : [];
+  const suiteTokenKinds = (() => {
+    if (!suiteList.length) return null;
+    const kinds = new Set();
+    if (suiteList.includes('fast_service') || suiteList.includes('physical')) {
+      kinds.add('kiosk');
+      kinds.add('panel');
+      kinds.add('station');
+    }
+    if (suiteList.includes('orders') || suiteList.includes('delivery') || suiteList.includes('storefront')) {
+      kinds.add('storefront');
+    }
+    return kinds.size ? Array.from(kinds) : null;
+  })();
+  const createPhysicalQueueEffective = createPhysicalQueue == null
+    ? (suiteList.length ? (suiteList.includes('fast_service') || suiteList.includes('physical')) : true)
+    : createPhysicalQueue === true;
+
   // 4) Physical queue default (location-aware)
-  if (createPhysicalQueue) {
+  if (createPhysicalQueueEffective) {
     for (const loc of effectiveLocs) {
       try {
         // eslint-disable-next-line no-await-in-loop
@@ -280,7 +302,7 @@ async function bootstrapTenantOneClick({
   if (createTokens) {
     const kinds = Array.isArray(tokenKinds) && tokenKinds.length
       ? tokenKinds.map((k) => String(k).trim()).filter(Boolean)
-      : ['storefront', 'kiosk', 'panel', 'station'];
+      : (suiteTokenKinds || ['storefront', 'kiosk', 'panel', 'station']);
     for (const loc of effectiveLocs) {
       for (const kind of kinds) {
         try {
@@ -324,10 +346,12 @@ async function bootstrapTenantOneClick({
     warnings: result.warnings.length,
   });
 
+  result.completedAt = new Date().toISOString();
+  result.durationMs = new Date(result.completedAt).getTime() - new Date(result.startedAt).getTime();
+
   return result;
 }
 
 module.exports = {
   bootstrapTenantOneClick,
 };
-

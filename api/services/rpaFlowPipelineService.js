@@ -59,6 +59,18 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   const tenantId = flow?.tenantId || null;
   const flowId = flow?.id || null;
   const flowName = flow?.name || null;
+  if (!tenantId || !flowId) {
+    return {
+      success: false,
+      flow,
+      dependencyResolution: null,
+      executedSeeds: [],
+      recording: null,
+      snapshot: null,
+      errors: ['tenantId e flowId são obrigatórios para executar o pipeline RPA'],
+      warnings: [],
+    };
+  }
 
   // Inicializa replay
   const replay = new ReplaySystem({
@@ -181,7 +193,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
         replay.recordEvent('seeds_execution_started', {
           seedsCount: dependencyResolution.requiredSeeds.length,
         });
-        recording.recordAction({
+        recordingSystem.recordAction({
           type: 'seed-execution',
           step: 'execute-seeds',
           value: { seedsCount: dependencyResolution.requiredSeeds.length },
@@ -241,12 +253,21 @@ async function executeRpaFlowPipeline(flow, options = {}) {
       logger.error('[RpaFlowPipeline] Erros críticos encontrados, abortando pipeline', {
         errors: result.errors,
       });
+      replay.recordEvent('pipeline_aborted', { errors: result.errors.slice(0, 20) });
+      replay.stop();
+      result.replayPath = replay.save(`${replayId}-aborted`);
+      recordingSystem.recordCustom('error', {
+        step: 'pipeline-aborted',
+        value: { errors: result.errors.slice(0, 20) },
+      });
+      recordingSystem.stop();
+      result.recordingPath = recordingSystem.save(`${recordingId}-aborted`);
       return result;
     }
 
     // PASSO 4: Conversão Fluxo → Gravação RPA
     logger.info('[RpaFlowPipeline] Passo 4: Convertendo fluxo para gravação RPA...');
-    recording.recordAction({
+    recordingSystem.recordAction({
       type: 'flow-conversion',
       step: 'convert-flow',
       value: { flowId: flow.id },
@@ -268,7 +289,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
 
     // PASSO 5: Preview dos passos (já está no recording)
     logger.info('[RpaFlowPipeline] Passo 5: Preview dos passos gerado', {
-      stepsCount: recording.steps.length,
+      stepsCount: rpaRecording.steps.length,
     });
 
     // PASSO 6: Salvamento da gravação
@@ -532,4 +553,3 @@ module.exports = {
   executeRpaFlowPipeline,
   previewRpaFlowPipeline,
 };
-

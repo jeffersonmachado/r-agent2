@@ -70,8 +70,15 @@ const {
 } = require('./services/onboardingService');
 const { requireAuth, requirePermission } = require('./middleware/auth');
 const { tenantRateLimitMiddleware } = require('./middleware/tenantRateLimit');
-const { canAccessTicket, canModifyTicket } = require('./services/rbacService');
 const {
+  canAccessTicket,
+  canModifyTicket,
+  listPermissions,
+  createRole,
+  getRoleDefinitions,
+} = require('./services/rbacService');
+const {
+  createTicket,
   listQueue,
   listQueues,
   createQueue,
@@ -85,6 +92,8 @@ const {
   startAutoCleanup,
   getMetrics,
   addAgentMessage,
+  addTicketNote,
+  transferTicket,
   updateOutboundMessageMeta,
   markMessagesAsRead,
   getTicketMessages,
@@ -139,6 +148,18 @@ const {
   getTrendMetrics,
   getAllMetrics,
 } = require('./services/analyticsService');
+const {
+  getSupervisorMetrics,
+  getSupervisorAgentStatus,
+  getSupervisorQueueStatus,
+} = require('./services/supervisorService');
+const {
+  setupMfa,
+  verifyMfa,
+  disableMfa,
+  consumeRecoveryCode,
+} = require('./services/mfaService');
+const crypto = require('crypto');
 const {
   exportTicketsCSV,
   exportMetricsCSV,
@@ -1348,6 +1369,71 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /mkt/l/:code - Redirect rastreável
+  if (method === 'GET' && pathname.startsWith('/mkt/l/')) {
+    try {
+      const code = decodeURIComponent(pathname.slice('/mkt/l/'.length)).trim();
+      if (!code) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      const service = require('./services/marketing/marketingLinkService');
+      const link = await service.getLinkByCode(code);
+      if (!link || link.status !== 'active') {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const trackedUrl = service.buildTrackedUrl(link, urlObj.searchParams.toString());
+
+      await service.recordClick({
+        link,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+        referrer: req.headers['referer'] || req.headers['referrer'] || null,
+      }).catch(() => {});
+
+      res.writeHead(302, { Location: trackedUrl });
+      res.end();
+    } catch (err) {
+      logger.error('[Marketing] Erro em GET /mkt/l/:code', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao redirecionar' });
+    }
+    return;
+  }
+
+  // GET /mkt/click?code=... - Pixel de click (sem redirect)
+  if ((method === 'GET' || method === 'POST') && pathname === '/mkt/click') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const code = urlObj.searchParams.get('code');
+      if (!code) {
+        sendJson(res, 400, { error: 'bad_request', message: 'code é obrigatório' });
+        return;
+      }
+      const service = require('./services/marketing/marketingLinkService');
+      const link = await service.getLinkByCode(code);
+      if (!link || link.status !== 'active') {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      await service.recordClick({
+        link,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+        referrer: req.headers['referer'] || req.headers['referrer'] || null,
+      }).catch(() => {});
+
+      res.writeHead(204);
+      res.end();
+    } catch (err) {
+      logger.error('[Marketing] Erro em /mkt/click', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao registrar click' });
+    }
+    return;
+  }
+
   // GET /lp/:slug?token=...  - Landing page simples para um form
   if (method === 'GET' && pathname.startsWith('/lp/')) {
     try {
@@ -2037,6 +2123,98 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // POST /api/pbx/provisioning-token/revoke - revoga token por tenant
+  if (method === 'POST' && pathname === '/api/pbx/provisioning-token/revoke') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const { revokeProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+      const result = await revokeProvisioningToken({ tenantKey, actorUserId: req.agent?.id || null });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant PBX não encontrado' });
+        return;
+      }
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.provisioning_token.revoke',
+          resource: 'pbx_provisioning_token',
+          resourceId: tenantKey,
+          details: {},
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/provisioning-token/revoke', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao revogar token de provisioning' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/audit?hours=...&limit=... - visão de auditoria PBX
+  if (method === 'GET' && pathname === '/api/pbx/audit') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const rawHours = Number(urlObj.searchParams.get('hours') || 72);
+      const rawLimit = Number(urlObj.searchParams.get('limit') || 300);
+      const hours = Number.isFinite(rawHours) ? Math.max(1, Math.min(24 * 30, Math.floor(rawHours))) : 72;
+      const limit = Number.isFinite(rawLimit) ? Math.max(10, Math.min(1000, Math.floor(rawLimit))) : 300;
+      const startDate = new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString();
+
+      const result = await queryLogs({
+        tenantId: tenantKey,
+        startDate,
+        limit,
+        offset: 0,
+      });
+      const pbxItems = (result?.items || []).filter((item) => String(item?.action || '').startsWith('pbx.'));
+      const byAction = {};
+      for (const item of pbxItems) {
+        const action = String(item?.action || 'unknown');
+        byAction[action] = (byAction[action] || 0) + 1;
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        hours,
+        total: pbxItems.length,
+        byAction,
+        items: pbxItems,
+      });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/audit', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao consultar auditoria PBX' });
+    }
+    return;
+  }
+
   // GET /api/pbx/trunks
   if (method === 'GET' && pathname === '/api/pbx/trunks') {
     const authResult = requireAuth(req);
@@ -2365,6 +2543,38 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /api/pbx/queues/metrics
+  if (method === 'GET' && pathname === '/api/pbx/queues/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const pbxQueues = require('./services/pbx/pbxQueuesService');
+      const items = await pbxQueues.getQueueOperationalMetrics({ tenantKey });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/queues/metrics', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queues_metrics_error',
+        message: err.message || 'Erro ao consultar métricas de fila PBX',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
   // POST /api/pbx/queues (upsert)
   if (method === 'POST' && pathname === '/api/pbx/queues') {
     const authResult = requireAuth(req);
@@ -2456,11 +2666,13 @@ async function requestHandler(req, res) {
 
     try {
       const pbxDialplan = require('./services/pbx/pbxDialplanService');
-      const result = await pbxDialplan.applyTenantDialplan({ tenantKey });
+      const rows = await pbxDialplan.buildTenantDialplanRows({ tenantKey });
+      const result = await pbxDialplan.applyTenantDialplanRows({ tenantKey, rows });
+      const signature = pbxDialplan.computeDialplanSignature(rows);
       // Registra versão aplicada (best-effort)
       try {
         const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
-        const actorUserId = req.user?.id || null;
+        const actorUserId = req.agent?.id || req.agent?.username || null;
         await pbxVersions.createVersion({
           tenantKey,
           status: 'applied',
@@ -2468,19 +2680,29 @@ async function requestHandler(req, res) {
           summary: {
             appliedAt: new Date().toISOString(),
             dialplan: {
-              count: result.count,
-              signature: result.signature || null,
+              count: rows.length,
+              signature: signature || null,
+              rows,
             },
           },
         });
+        const { logAction } = require('./services/auditService');
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.dialplan.publish',
+          resource: 'pbx_dialplan',
+          resourceId: signature || null,
+          details: { count: rows.length, signature: signature || null },
+        });
       } catch (_) {}
 
-      sendJson(res, 200, { ok: true, tenantKey, ...result });
+      sendJson(res, 200, { ok: true, tenantKey, count: result.count, signature });
     } catch (err) {
       // best-effort: registra falha como versão
       try {
         const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
-        const actorUserId = req.user?.id || null;
+        const actorUserId = req.agent?.id || req.agent?.username || null;
         await pbxVersions.createVersion({
           tenantKey,
           status: 'failed',
@@ -2496,6 +2718,113 @@ async function requestHandler(req, res) {
       sendJson(res, 500, buildApiError({
         code: 'pbx_dialplan_apply_error',
         message: err.message || 'Erro ao aplicar dialplan',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/config-versions?limit=...
+  if (method === 'GET' && pathname === '/api/pbx/config-versions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit') || '20';
+      const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+      const items = await pbxVersions.listVersions({ tenantKey, limit });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/config-versions', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_config_versions_list_error',
+        message: err.message || 'Erro ao listar versões PBX',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dialplan/rollback?version=...
+  if (method === 'POST' && pathname === '/api/pbx/dialplan/rollback') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const version = Number(urlObj.searchParams.get('version'));
+      if (!Number.isFinite(version) || version <= 0) {
+        badRequest(res, 'version obrigatório');
+        return;
+      }
+      const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+      const pbxDialplan = require('./services/pbx/pbxDialplanService');
+      const target = await pbxVersions.getVersionByNumber({ tenantKey, version });
+      const rows = Array.isArray(target?.summary?.dialplan?.rows) ? target.summary.dialplan.rows : null;
+      if (!target || !rows || rows.length === 0) {
+        sendJson(res, 404, { error: 'not_found', message: 'versão sem snapshot de dialplan' });
+        return;
+      }
+
+      const result = await pbxDialplan.applyTenantDialplanRows({ tenantKey, rows });
+      const signature = pbxDialplan.computeDialplanSignature(rows);
+      const actorUserId = req.agent?.id || req.agent?.username || null;
+      await pbxVersions.createVersion({
+        tenantKey,
+        status: 'applied',
+        createdByUserId: actorUserId,
+        summary: {
+          rollbackAt: new Date().toISOString(),
+          rolledBackFromVersion: Number(version),
+          dialplan: {
+            count: rows.length,
+            signature,
+            rows,
+          },
+        },
+      });
+      try {
+        const { logAction } = require('./services/auditService');
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.dialplan.rollback',
+          resource: 'pbx_dialplan',
+          resourceId: String(version),
+          details: { version: Number(version), count: rows.length, signature },
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, tenantKey, version, count: result.count, signature });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/dialplan/rollback', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dialplan_rollback_error',
+        message: err.message || 'Erro ao fazer rollback do dialplan',
         httpStatus: 500,
         retryable: true,
         details: null,
@@ -3226,6 +3555,77 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /api/pbx/recordings/policy
+  if (method === 'GET' && pathname === '/api/pbx/recordings/policy') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const policyService = require('./services/pbx/pbxRecordingPolicyService');
+      const out = await policyService.getRecordingPolicy({ tenantKey });
+      if (!out.ok) {
+        sendJson(res, 500, { error: 'internal_error', message: out.error || 'Erro ao obter política' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, policy: out.policy });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/recordings/policy', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter política de gravação' });
+    }
+    return;
+  }
+
+  // POST /api/pbx/recordings/policy
+  if (method === 'POST' && pathname === '/api/pbx/recordings/policy') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const body = await parseJsonBody(req);
+      const policyService = require('./services/pbx/pbxRecordingPolicyService');
+      const out = await policyService.setRecordingPolicy({ tenantKey, policy: body || {} });
+      if (!out.ok) {
+        sendJson(res, 500, { error: 'internal_error', message: out.error || 'Erro ao salvar política' });
+        return;
+      }
+      try {
+        const { logAction } = require('./services/auditService');
+        const actorUserId = req.agent?.id || req.agent?.username || null;
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.recordings.policy.update',
+          resource: 'pbx_recording_policy',
+          resourceId: tenantKey,
+          details: out.policy,
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, policy: out.policy });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/recordings/policy', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar política de gravação' });
+    }
+    return;
+  }
+
   // POST /api/pbx/recordings/scan
   if (method === 'POST' && pathname === '/api/pbx/recordings/scan') {
     const authResult = requireAuth(req);
@@ -3278,6 +3678,18 @@ async function requestHandler(req, res) {
         sendJson(res, 404, { error: 'not_found' });
         return;
       }
+      try {
+        const { logAction } = require('./services/auditService');
+        const actorUserId = req.agent?.id || req.agent?.username || null;
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.recordings.download',
+          resource: 'pbx_recording',
+          resourceId: String(id),
+          details: { id: String(id) },
+        });
+      } catch (_) {}
       // eslint-disable-next-line global-require
       const fs = require('fs');
       // eslint-disable-next-line global-require
@@ -3339,7 +3751,7 @@ async function requestHandler(req, res) {
   // Rotas públicas: /health, /version, /system/status, /system/websocket, OPTIONS
   // Rotas de autenticação não exigem tenant_id (login, reset, convites)
   // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
-  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket', '/storefront', '/physical', '/public-tokens/resolve', '/click2call', '/provision', '/config'];
+  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket', '/storefront', '/physical', '/public', '/public-tokens/resolve', '/click2call', '/provision', '/config'];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
   // Webhooks de provedores (inbound) não podem ser bloqueados por falta de tenant no início:
   // tenant é resolvido por channel_accounts e, se não resolver, deve retornar 200 OK com log warn.
@@ -6792,6 +7204,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         objetivo,
         plan,
         segment,
+        suites,
         locationId,
         locationIds,
         adminEmail,
@@ -6824,6 +7237,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         objetivo,
         plan,
         segment,
+        suites: Array.isArray(suites) ? suites : null,
         locationId,
         locationIds: Array.isArray(locationIds) ? locationIds : null,
         adminEmail,
@@ -6832,7 +7246,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         createTokens: createTokens !== false,
         tokenKinds: Array.isArray(tokenKinds) ? tokenKinds : null,
         createTemplates: createTemplates !== false,
-        createPhysicalQueue: createPhysicalQueue !== false,
+        createPhysicalQueue: createPhysicalQueue === undefined ? null : createPhysicalQueue !== false,
       });
 
       logAction({
@@ -7852,6 +8266,165 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       } else {
         logger.error('Erro ao resetar senha:', err);
         sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/mfa/setup - Inicia setup MFA
+  if (method === 'POST' && pathname === '/auth/mfa/setup') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const issuer = body && body.issuer ? String(body.issuer).trim() : null;
+      const label = body && body.label ? String(body.label).trim() : null;
+
+      const result = await setupMfa({
+        agentId: req.agent.id,
+        issuer,
+        label,
+      });
+
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_setup_failed' });
+        return;
+      }
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao iniciar MFA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/mfa/verify - Confirma MFA
+  if (method === 'POST' && pathname === '/auth/mfa/verify') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const token = body && body.token ? String(body.token).trim() : '';
+      if (!token) {
+        badRequest(res, 'token é obrigatório');
+        return;
+      }
+
+      const result = await verifyMfa({ agentId: req.agent.id, token });
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_verify_failed' });
+        return;
+      }
+
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao confirmar MFA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/mfa/disable - Desativa MFA
+  if (method === 'POST' && pathname === '/auth/mfa/disable') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const token = body && body.token ? String(body.token).trim() : null;
+      const recoveryCode = body && body.recoveryCode ? String(body.recoveryCode).trim() : null;
+      if (!token && !recoveryCode) {
+        badRequest(res, 'token ou recoveryCode é obrigatório');
+        return;
+      }
+
+      const result = await disableMfa({ agentId: req.agent.id, token, recoveryCode });
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_disable_failed' });
+        return;
+      }
+
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao desativar MFA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/mfa/recovery - Consome recovery code
+  if (method === 'POST' && pathname === '/auth/mfa/recovery') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const code = body && body.code ? String(body.code).trim() : '';
+      if (!code) {
+        badRequest(res, 'code é obrigatório');
+        return;
+      }
+
+      const result = await consumeRecoveryCode({ agentId: req.agent.id, code });
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_recovery_failed' });
+        return;
+      }
+
+      sendJson(res, 200, { ok: true, remaining: result.remaining });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao consumir recovery code:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
       }
     }
     return;
@@ -10160,6 +10733,48 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /api/physical/tickets?locationId=&queueId=&status=&stationId=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/physical/tickets') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const queueId = urlObj.searchParams.get('queueId');
+      const status = urlObj.searchParams.get('status');
+      const stationId = urlObj.searchParams.get('stationId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const { listTickets } = require('./services/physicalQueueService');
+      const result = await listTickets({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+        queueId: queueId ? String(queueId) : null,
+        status: status ? String(status) : null,
+        stationId: stationId ? String(stationId) : null,
+        limit: limit != null ? Number(limit) : 100,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.reason || 'physical_tickets_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[PhysicalAdmin] Erro ao listar tickets físicos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar tickets físicos' });
+    }
+    return;
+  }
+
   // GET /api/orders/metrics?locationId=...
   if (method === 'GET' && pathname === '/api/orders/metrics') {
     const authResult = requireAuth(req);
@@ -10249,6 +10864,84 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[Marketing] Erro ao upsert form:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar form' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/links
+  if (method === 'GET' && pathname === '/api/marketing/links') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const service = require('./services/marketing/marketingLinkService');
+      const out = await service.listLinks({
+        tenantId: req.tenantId,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: out.error || 'links_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar links:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar links' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/links
+  if (method === 'POST' && pathname === '/api/marketing/links') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/marketing/marketingLinkService');
+      const out = await service.createLink({
+        tenantId: req.tenantId,
+        name: body && body.name ? String(body.name).trim() : null,
+        targetUrl: body && body.targetUrl ? String(body.targetUrl).trim() : null,
+        source: body && body.source ? String(body.source).trim() : null,
+        campaign: body && body.campaign ? String(body.campaign).trim() : null,
+        medium: body && body.medium ? String(body.medium).trim() : null,
+        content: body && body.content ? String(body.content).trim() : null,
+        term: body && body.term ? String(body.term).trim() : null,
+        code: body && body.code ? String(body.code).trim() : null,
+        status: body && body.status ? String(body.status).trim() : 'active',
+        metadata: body && body.metadata ? body.metadata : {},
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error });
+        return;
+      }
+      sendJson(res, 201, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao criar link:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar link' });
     }
     return;
   }
@@ -10446,6 +11139,97 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // -----------------------------------------------------------------------
   // Ops: Execution Queue (DLQ/metrics) - autenticado
   // -----------------------------------------------------------------------
+  // GET /api/ops/event-ledger/metrics
+  if (method === 'GET' && pathname === '/api/ops/event-ledger/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowMinutes = urlObj.searchParams.get('windowMinutes');
+      const { getEventLedgerMetrics } = require('./services/eventLedgerMetricsService');
+      const result = await getEventLedgerMetrics({
+        tenantId: req.tenantId,
+        windowMinutes: windowMinutes != null ? Number(windowMinutes) : null,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'event_ledger_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics, windowMinutes: result.windowMinutes });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas do event_ledger:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas do event_ledger' });
+    }
+    return;
+  }
+
+  // GET /api/ops/flow-executions/metrics
+  if (method === 'GET' && pathname === '/api/ops/flow-executions/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowMinutes = urlObj.searchParams.get('windowMinutes');
+      const { getFlowExecutionLedgerMetrics } = require('./services/flowExecutionLedgerMetricsService');
+      const result = await getFlowExecutionLedgerMetrics({
+        tenantId: req.tenantId,
+        windowMinutes: windowMinutes != null ? Number(windowMinutes) : null,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'flow_execution_ledger_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics, windowMinutes: result.windowMinutes });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas do execution ledger:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas do execution ledger' });
+    }
+    return;
+  }
+
+  // GET /api/ops/execution-queue/metrics (alias de /api/ops/execution-jobs/metrics)
+  if (method === 'GET' && pathname === '/api/ops/execution-queue/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getExecutionQueueMetrics } = require('./services/executionQueueService');
+      const result = await getExecutionQueueMetrics({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'queue_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas da execution queue (alias):', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas da execution queue' });
+    }
+    return;
+  }
+
   // GET /api/ops/execution-jobs/metrics
   if (method === 'GET' && pathname === '/api/ops/execution-jobs/metrics') {
     const authResult = requireAuth(req);
@@ -10469,6 +11253,43 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[Ops] Erro ao obter métricas da execution queue:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas da execution queue' });
+    }
+    return;
+  }
+
+  // GET /api/ops/execution-jobs/metrics-by-kind?kind=...&kind=...
+  if (method === 'GET' && pathname === '/api/ops/execution-jobs/metrics-by-kind') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const rawKinds = urlObj.searchParams.getAll('kind');
+      const kinds = rawKinds
+        .flatMap((k) => String(k || '').split(','))
+        .map((k) => k.trim())
+        .filter(Boolean);
+
+      const { getExecutionQueueMetricsByKind } = require('./services/executionQueueService');
+      const result = await getExecutionQueueMetricsByKind({
+        tenantId: req.tenantId,
+        kinds: kinds.length ? kinds : null,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'queue_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, items: result.items });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas por kind da execution queue:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas por kind' });
     }
     return;
   }
@@ -10607,6 +11428,49 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /api/executions/ledger (alias de /api/executions)
+  if (method === 'GET' && pathname === '/api/executions/ledger') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const correlationId = urlObj.searchParams.get('correlationId');
+      const sessionId = urlObj.searchParams.get('sessionId');
+      const subjectType = urlObj.searchParams.get('subjectType');
+      const subjectId = urlObj.searchParams.get('subjectId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+
+      const { listFlowExecutions } = require('./services/flowExecutionLedgerService');
+      const result = await listFlowExecutions({
+        tenantId: req.tenantId,
+        correlationId: correlationId ? String(correlationId) : null,
+        sessionId: sessionId ? String(sessionId) : null,
+        subjectType: subjectType ? String(subjectType) : null,
+        subjectId: subjectId ? String(subjectId) : null,
+        limit: limit != null ? Number(limit) : 50,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'execution_ledger_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao listar execuções (alias):', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar execuções' });
+    }
+    return;
+  }
+
   // GET /api/executions/:id
   if (method === 'GET' && pathname.startsWith('/api/executions/')) {
     const authResult = requireAuth(req);
@@ -10679,7 +11543,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         const msgMap = {
           replay_disabled: 'Replay está desabilitado. Defina ENABLE_EXECUTION_LEDGER_REPLAY=true para habilitar.',
           replay_only_supported_for_simulation: 'Replay a partir do ledger só é suportado para execuções de simulação (meta.mode=simulation), a menos que ENABLE_EXECUTION_LEDGER_REPLAY_REAL=true esteja habilitado.',
+          replay_execution_running: 'Replay não permitido para execuções em andamento. Aguarde a conclusão da execução.',
+          replay_real_not_allowed: 'Replay real bloqueado por allowlist. Configure EXECUTION_LEDGER_REPLAY_REAL_ALLOWLIST_EXECUTIONS ou EXECUTION_LEDGER_REPLAY_REAL_ALLOWLIST_CORRELATIONS.',
           from_node_not_found: 'Node de origem não encontrado nesta execução.',
+          replay_not_allowed_for_tenant: 'Replay não permitido para este tenant.',
         };
         sendJson(res, 400, { error: String(result.error || 'replay_failed'), message: msgMap[result.error] || 'Não foi possível executar replay' });
         return;
@@ -10749,6 +11616,134 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[VoiceEvents] Erro ao ingerir evento de voz:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao ingerir evento de voz' });
+    }
+    return;
+  }
+
+  // POST /api/voice/runtime/start - inicia fluxo de voz (URA) via editor
+  if (method === 'POST' && pathname === '/api/voice/runtime/start') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { runVoiceSession } = require('./services/voiceRuntimeService');
+      const out = await runVoiceSession({
+        tenantId: req.tenantId,
+        flowId: body?.flowId || body?.flow_id,
+        callId: body?.callId || body?.call_id,
+        input: body?.input || null,
+        variables: body?.variables || null,
+        maxSteps: body?.maxSteps || body?.max_steps || 40,
+        startIfMissing: true,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_runtime_start_failed' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao iniciar fluxo de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao iniciar fluxo de voz' });
+    }
+    return;
+  }
+
+  // POST /api/voice/runtime/step - executa próximo passo com input
+  if (method === 'POST' && pathname === '/api/voice/runtime/step') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { runVoiceSession } = require('./services/voiceRuntimeService');
+      const hasFlow = !!(body?.flowId || body?.flow_id);
+      const out = await runVoiceSession({
+        tenantId: req.tenantId,
+        flowId: body?.flowId || body?.flow_id,
+        callId: body?.callId || body?.call_id,
+        input: body?.input || null,
+        variables: body?.variables || null,
+        maxSteps: body?.maxSteps || body?.max_steps || 40,
+        startIfMissing: hasFlow,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_runtime_step_failed' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao executar passo de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar passo de voz' });
+    }
+    return;
+  }
+
+  // DELETE /api/voice/runtime/session/:callId - encerra sessão de voz (best-effort)
+  if (method === 'DELETE' && pathname.startsWith('/api/voice/runtime/session/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const callId = decodeURIComponent(pathname.slice('/api/voice/runtime/session/'.length));
+      const { clearVoiceSession } = require('./services/voiceRuntimeService');
+      const cleared = clearVoiceSession({ tenantId: req.tenantId, callId });
+      sendJson(res, 200, { ok: true, cleared: !!cleared });
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao limpar sessão de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao limpar sessão de voz' });
+    }
+    return;
+  }
+
+  // GET /api/voice/runtime/stats - sessões ativas de runtime de voz
+  if (method === 'GET' && pathname === '/api/voice/runtime/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getVoiceRuntimeStats } = require('./services/voiceRuntimeService');
+      const out = getVoiceRuntimeStats({ tenantId: req.tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao obter stats de runtime:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats de runtime' });
     }
     return;
   }
@@ -10843,19 +11838,29 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     if (!tenantId) return;
     try {
       const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
-      const allowedKeys = new Set(['sso', 'scim']);
+      const allowedKeys = new Set(['sso', 'scim', 'phone-masking']);
       if (!allowedKeys.has(String(key))) {
-        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim' });
+        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim|phone-masking' });
         return;
       }
       const service = require('./services/tenantSettingsService');
       const out = await service.getSetting({ tenantId, key });
+      // Fallback resiliente para ambientes sem DB: não quebrar UI nem RPA.
+      if (String(key) === 'phone-masking' && !out.ok) {
+        sendJson(res, 200, { ok: true, key, value: { enabled: false }, fallback: true });
+        return;
+      }
       if (!out.ok) {
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
       }
       sendJson(res, 200, { ok: true, key, value: out.value });
     } catch (err) {
+      const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
+      if (String(key) === 'phone-masking') {
+        sendJson(res, 200, { ok: true, key, value: { enabled: false }, fallback: true });
+        return;
+      }
       logger.error('[TenantSettings] Erro ao obter setting:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter setting' });
     }
@@ -10882,9 +11887,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
     try {
       const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
-      const allowedKeys = new Set(['sso', 'scim']);
+      const allowedKeys = new Set(['sso', 'scim', 'phone-masking']);
       if (!allowedKeys.has(String(key))) {
-        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim' });
+        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim|phone-masking' });
         return;
       }
       const body = await parseJsonBody(req);
@@ -10898,6 +11903,532 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[TenantSettings] Erro ao salvar setting:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar setting' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // WhatsApp IVR (URA WhatsApp empacotada)
+  // -----------------------------------------------------------------------
+  // GET /whatsapp/ivr
+  if (method === 'GET' && pathname === '/whatsapp/ivr') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/tenantSettingsService');
+      const out = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      const value = out.value && typeof out.value === 'object' ? out.value : {};
+      sendJson(res, 200, {
+        ok: true,
+        value: {
+          enabled: value.enabled === true,
+          departments: Array.isArray(value.departments) ? value.departments : [],
+          rules: Array.isArray(value.rules) ? value.rules : [],
+        },
+      });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao obter setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter setting' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/ivr
+  if (method === 'POST' && pathname === '/whatsapp/ivr') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const value = {
+        enabled: body && body.enabled === true,
+        departments: Array.isArray(body?.departments) ? body.departments : [],
+        rules: Array.isArray(body?.rules) ? body.rules : [],
+      };
+      const service = require('./services/tenantSettingsService');
+      const out = await service.upsertSetting({ tenantId, key: 'whatsapp_ivr', value });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, value: out.value });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao salvar setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar setting' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/ivr/department
+  if (method === 'POST' && pathname === '/whatsapp/ivr/department') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      const queue = body && body.queue ? String(body.queue).trim() : '';
+      if (!name || !queue) {
+        badRequest(res, 'name e queue são obrigatórios');
+        return;
+      }
+      const id = body && body.id ? String(body.id).trim() : `wivr-dept-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+      const enabled = body && body.enabled !== undefined ? body.enabled === true : true;
+
+      const service = require('./services/tenantSettingsService');
+      const current = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
+      const value = current.value && typeof current.value === 'object' ? current.value : {};
+      const departments = Array.isArray(value.departments) ? value.departments : [];
+      const existingIndex = departments.findIndex((d) => d && d.id === id);
+      const next = { id, name, queue, enabled };
+      if (existingIndex >= 0) {
+        departments[existingIndex] = { ...departments[existingIndex], ...next };
+      } else {
+        departments.push(next);
+      }
+      const out = await service.upsertSetting({
+        tenantId,
+        key: 'whatsapp_ivr',
+        value: {
+          enabled: value.enabled === true,
+          departments,
+          rules: Array.isArray(value.rules) ? value.rules : [],
+        },
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, department: next, value: out.value });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao salvar departamento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar departamento' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/ivr/rule
+  if (method === 'POST' && pathname === '/whatsapp/ivr/rule') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const keyword = body && body.keyword ? String(body.keyword).trim() : '';
+      const departmentId = body && body.departmentId ? String(body.departmentId).trim() : '';
+      if (!keyword || !departmentId) {
+        badRequest(res, 'keyword e departmentId são obrigatórios');
+        return;
+      }
+      const id = body && body.id ? String(body.id).trim() : `wivr-rule-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+      const enabled = body && body.enabled !== undefined ? body.enabled === true : true;
+      const priority = body && body.priority != null ? Number(body.priority) : 0;
+
+      const service = require('./services/tenantSettingsService');
+      const current = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
+      const value = current.value && typeof current.value === 'object' ? current.value : {};
+      const rules = Array.isArray(value.rules) ? value.rules : [];
+      const existingIndex = rules.findIndex((r) => r && r.id === id);
+      const next = { id, keyword, departmentId, priority, enabled };
+      if (existingIndex >= 0) {
+        rules[existingIndex] = { ...rules[existingIndex], ...next };
+      } else {
+        rules.push(next);
+      }
+      const out = await service.upsertSetting({
+        tenantId,
+        key: 'whatsapp_ivr',
+        value: {
+          enabled: value.enabled === true,
+          departments: Array.isArray(value.departments) ? value.departments : [],
+          rules,
+        },
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, rule: next, value: out.value });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao salvar regra:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar regra' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // WhatsApp QR Connections (além da Cloud API)
+  // -----------------------------------------------------------------------
+  // GET /whatsapp/connections
+  if (method === 'GET' && pathname === '/whatsapp/connections') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/whatsappQrService');
+      const out = await service.listConnections(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connections: out.connections || [] });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao listar conexões:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar conexões' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections
+  if (method === 'POST' && pathname === '/whatsapp/connections') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/whatsappQrService');
+      const out = await service.createConnection(tenantId, body || {});
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao criar conexão:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar conexão' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/qr
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/qr')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/qr'.length));
+      const service = require('./services/whatsappQrService');
+      const out = await service.generateQr(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection, qr: out.qr });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao gerar QR:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao gerar QR' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/disconnect
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/disconnect')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/disconnect'.length));
+      const service = require('./services/whatsappQrService');
+      const out = await service.disconnectConnection(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao desconectar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao desconectar' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/status
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/status')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/status'.length));
+      const body = await parseJsonBody(req);
+      const service = require('./services/whatsappQrService');
+      const out = await service.setConnectionStatus(tenantId, id, body || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        if (out.error === 'invalid_status') {
+          sendJson(res, 400, { error: 'invalid_status', message: 'Status inválido. Use connected|pairing|disconnected|error' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao atualizar status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar status' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/events
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/events')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/events'.length));
+      const body = await parseJsonBody(req);
+      const service = require('./services/whatsappQrService');
+      const out = await service.ingestConnectionEvent(tenantId, id, body || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        if (out.error === 'event_type_required') {
+          sendJson(res, 400, { error: 'event_type_required', message: 'eventType é obrigatório' });
+          return;
+        }
+        if (out.error === 'invalid_event_type') {
+          sendJson(res, 400, { error: 'invalid_event_type', message: 'eventType inválido. Use qr|pairing|connected|ready|disconnected|logout|closed|error|failed' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao ingerir evento de conexão:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao ingerir evento de conexão' });
+    }
+    return;
+  }
+
+  // GET /whatsapp/connections/:id/status
+  if (method === 'GET' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/status')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/status'.length));
+      const service = require('./services/whatsappQrService');
+      const out = await service.getStatus(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao obter status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter status' });
+    }
+    return;
+  }
+
+  // POST /webhooks/whatsapp-qr/events (integração com worker externo)
+  if (method === 'POST' && pathname === '/webhooks/whatsapp-qr/events') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const secretExpected = String(process.env.WHATSAPP_QR_WEBHOOK_SECRET || '').trim();
+      if (secretExpected) {
+        const provided = String(req.headers['x-whatsapp-qr-secret'] || '').trim();
+        if (!provided || provided !== secretExpected) {
+          sendJson(res, 401, { error: 'unauthorized', message: 'Invalid webhook secret' });
+          return;
+        }
+      }
+      const tenantId = body?.tenantId || body?.tenant_id;
+      const connectionId = body?.connectionId || body?.connection_id;
+      if (!tenantId || !connectionId) {
+        sendJson(res, 400, { error: 'invalid_payload', message: 'tenantId e connectionId são obrigatórios' });
+        return;
+      }
+      const service = require('./services/whatsappQrService');
+      const out = await service.ingestConnectionEvent(String(tenantId), String(connectionId), body || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        if (out.error === 'event_type_required' || out.error === 'invalid_event_type') {
+          sendJson(res, 400, { error: out.error, message: 'eventType inválido ou ausente' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro no webhook de eventos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao processar webhook de evento' });
+    }
+    return;
+  }
+
+  // GET /api/whatsapp/qr-bridge/stats
+  if (method === 'GET' && pathname === '/api/whatsapp/qr-bridge/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getWhatsAppQrBridgeStats } = require('./services/whatsappQrBridgeService');
+      sendJson(res, 200, { ok: true, ...getWhatsAppQrBridgeStats() });
+    } catch (err) {
+      logger.error('[WhatsAppQRBridge] Erro ao obter stats:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats do bridge' });
     }
     return;
   }
@@ -11036,6 +12567,645 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[Backup] Erro ao importar backup:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao importar backup' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Developer API Keys (API pública com API Keys + rate limit)
+  // -----------------------------------------------------------------------
+  // GET /developer/keys - lista chaves de API (kind=developer)
+  if (method === 'GET' && pathname === '/developer/keys') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const includeTokenParam = urlObj.searchParams.get('includeToken');
+      const activeParam = urlObj.searchParams.get('active');
+      const active = activeParam === null ? null : (activeParam === 'true' ? true : activeParam === 'false' ? false : null);
+      const includeToken = includeTokenParam === 'true';
+
+      if (includeToken) {
+        const permSecrets = requirePermission(req, 'config', 'update');
+        if (!permSecrets.allowed) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para incluir tokens em texto claro' });
+          return;
+        }
+      }
+
+      const { listPublicTokens } = require('./services/publicAccessTokenService');
+      const items = await listPublicTokens({
+        tenantId: req.tenantId,
+        kind: 'developer',
+        active,
+        includeToken,
+      });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[DeveloperKeys] Erro ao listar chaves:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar chaves' });
+    }
+    return;
+  }
+
+  // POST /developer/keys - cria chave de API (kind=developer)
+  if (method === 'POST' && pathname === '/developer/keys') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      const description = body && body.description ? String(body.description).trim() : '';
+      const expiresInSec = body && body.expiresInSec != null ? Number(body.expiresInSec) : null;
+      const meta = {
+        name: name || null,
+        description: description || null,
+      };
+
+      const { createPublicToken } = require('./services/publicAccessTokenService');
+      const tokenRow = await createPublicToken({
+        tenantId: req.tenantId,
+        kind: 'developer',
+        meta,
+        expiresInSec,
+      });
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'developer_key_create',
+          resource: 'developer_key',
+          resourceId: tokenRow.id,
+          details: { name: name || null, expiresInSec: expiresInSec || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, key: tokenRow });
+    } catch (err) {
+      logger.error('[DeveloperKeys] Erro ao criar chave:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar chave' });
+    }
+    return;
+  }
+
+  // GET /developer/usage - estatísticas de uso (kind=developer)
+  if (method === 'GET' && pathname === '/developer/usage') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getPublicTokenStats, listPublicTokens } = require('./services/publicAccessTokenService');
+      const result = await getPublicTokenStats({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'developer_usage_unavailable' });
+        return;
+      }
+      const items = Array.isArray(result.items) ? result.items.filter((it) => it.kind === 'developer') : [];
+      const keys = await listPublicTokens({ tenantId: req.tenantId, kind: 'developer', includeToken: false });
+      const routesMap = new Map();
+      for (const key of keys || []) {
+        const usageByRoute = key?.meta?.usageByRoute && typeof key.meta.usageByRoute === 'object'
+          ? key.meta.usageByRoute
+          : {};
+        for (const [routeKey, routeInfo] of Object.entries(usageByRoute)) {
+          const current = routesMap.get(routeKey) || {
+            route: routeKey,
+            count: 0,
+            lastUsedAt: null,
+            lastStatusCode: null,
+            keys: 0,
+          };
+          const count = Number(routeInfo?.count || 0);
+          const lastUsedAtRaw = routeInfo?.lastUsedAt ? new Date(routeInfo.lastUsedAt) : null;
+          current.count += count;
+          current.keys += 1;
+          current.lastStatusCode = Number(routeInfo?.lastStatusCode || current.lastStatusCode || 0) || current.lastStatusCode;
+          if (lastUsedAtRaw && !Number.isNaN(lastUsedAtRaw.getTime())) {
+            if (!current.lastUsedAt || lastUsedAtRaw > new Date(current.lastUsedAt)) {
+              current.lastUsedAt = lastUsedAtRaw.toISOString();
+            }
+          }
+          routesMap.set(routeKey, current);
+        }
+      }
+      const routes = Array.from(routesMap.values()).sort((a, b) => b.count - a.count).slice(0, 100);
+      const totals = items.reduce((acc, it) => {
+        acc.total += it.total;
+        acc.active += it.active;
+        acc.inactive += it.inactive;
+        acc.revoked += it.revoked;
+        acc.expired += it.expired;
+        return acc;
+      }, { total: 0, active: 0, inactive: 0, revoked: 0, expired: 0 });
+      sendJson(res, 200, { ok: true, tenantId: req.tenantId, totals, items, routes });
+    } catch (err) {
+      logger.error('[DeveloperKeys] Erro ao obter uso:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter uso' });
+    }
+    return;
+  }
+
+  // POST /public/* - endpoint público (API Keys)
+  if (method === 'POST' && pathname.startsWith('/public/')) {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const apiKey = (() => {
+        const headerKey = req.headers['x-api-key'] || req.headers['x-api_key'] || null;
+        if (headerKey) return String(headerKey).trim();
+        const authHeader = req.headers.authorization ? String(req.headers.authorization) : '';
+        if (authHeader.toLowerCase().startsWith('bearer ')) {
+          return authHeader.slice(7).trim();
+        }
+        if (authHeader.toLowerCase().startsWith('apikey ')) {
+          return authHeader.slice(7).trim();
+        }
+        return null;
+      })();
+      if (!apiKey) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'API key obrigatória' });
+        return;
+      }
+
+      const { resolvePublicToken, recordPublicTokenUsage } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token: apiKey, allowedKinds: ['developer'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'API key inválida' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_API',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const response = {
+        ok: true,
+        route: pathname,
+        tenantId: resolved.tenantId,
+        tokenId: resolved.tokenId,
+        received: body || null,
+      };
+
+      try {
+        await recordPublicTokenUsage({
+          tokenId: resolved.tokenId,
+          route: pathname,
+          method,
+          statusCode: 200,
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, response);
+    } catch (err) {
+      logger.error('[PublicAPI] Erro ao processar request:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao processar request público' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Automações low-code (MVP)
+  // -----------------------------------------------------------------------
+  // GET /automations
+  if (method === 'GET' && pathname === '/automations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/automationService');
+      const out = await service.listAutomations(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automations: out.automations || [] });
+    } catch (err) {
+      logger.error('[Automations] Erro ao listar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar automações' });
+    }
+    return;
+  }
+
+  // POST /automations
+  if (method === 'POST' && pathname === '/automations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      if (!name) {
+        badRequest(res, 'name é obrigatório');
+        return;
+      }
+      const service = require('./services/automationService');
+      const out = await service.upsertAutomation(tenantId, {
+        id: body?.id || null,
+        name,
+        description: body?.description || '',
+        status: body?.status || 'draft',
+        definition: body?.definition || {},
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automation: out.automation });
+    } catch (err) {
+      logger.error('[Automations] Erro ao salvar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar automação' });
+    }
+    return;
+  }
+
+  // POST /automations/:id/publish
+  if (method === 'POST' && pathname.startsWith('/automations/') && pathname.endsWith('/publish')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/automations/'.length, -'/publish'.length));
+      const service = require('./services/automationService');
+      const out = await service.publishAutomation(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Automação não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automation: out.automation });
+    } catch (err) {
+      logger.error('[Automations] Erro ao publicar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao publicar automação' });
+    }
+    return;
+  }
+
+  // POST /automations/:id/run
+  if (method === 'POST' && pathname.startsWith('/automations/') && pathname.endsWith('/run')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/automations/'.length, -'/run'.length));
+      const service = require('./services/automationService');
+      const out = await service.runAutomation(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Automação não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automation: out.automation, run: out.run });
+    } catch (err) {
+      logger.error('[Automations] Erro ao executar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar automação' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Tarefas e lembretes (MVP)
+  // -----------------------------------------------------------------------
+  // GET /tasks
+  if (method === 'GET' && pathname === '/tasks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/tasksService');
+      const out = await service.listTasks(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, tasks: out.tasks || [] });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao listar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar tarefas' });
+    }
+    return;
+  }
+
+  // POST /tasks
+  if (method === 'POST' && pathname === '/tasks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const title = body && body.title ? String(body.title).trim() : '';
+      if (!title) {
+        badRequest(res, 'title é obrigatório');
+        return;
+      }
+      const service = require('./services/tasksService');
+      const out = await service.createTask(tenantId, {
+        title,
+        description: body?.description || '',
+        dueAt: body?.dueAt || null,
+        priority: body?.priority || 'normal',
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 201, { ok: true, task: out.task });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao criar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar tarefa' });
+    }
+    return;
+  }
+
+  // POST /tasks/:id/complete
+  if (method === 'POST' && pathname.startsWith('/tasks/') && pathname.endsWith('/complete')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/tasks/'.length, -'/complete'.length));
+      const service = require('./services/tasksService');
+      const out = await service.completeTask(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Tarefa não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, task: out.task });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao completar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao completar tarefa' });
+    }
+    return;
+  }
+
+  // POST /tasks/:id/reminder
+  if (method === 'POST' && pathname.startsWith('/tasks/') && pathname.endsWith('/reminder')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/tasks/'.length, -'/reminder'.length));
+      const body = await parseJsonBody(req);
+      const reminderAt = body && body.reminderAt ? String(body.reminderAt) : null;
+      const service = require('./services/tasksService');
+      const out = await service.scheduleReminder(tenantId, id, reminderAt);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Tarefa não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, task: out.task });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao agendar lembrete:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao agendar lembrete' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // SLA por cliente (MVP)
+  // -----------------------------------------------------------------------
+  // GET /sla/policies
+  if (method === 'GET' && pathname === '/sla/policies') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/slaService');
+      const out = await service.listPolicies(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'sla_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, policies: out.policies || [] });
+    } catch (err) {
+      logger.error('[SLA] Erro ao listar policies:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar policies' });
+    }
+    return;
+  }
+
+  // POST /sla/policies
+  if (method === 'POST' && pathname === '/sla/policies') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      if (!name) {
+        badRequest(res, 'name é obrigatório');
+        return;
+      }
+      const service = require('./services/slaService');
+      const out = await service.upsertPolicy(tenantId, {
+        id: body?.id || null,
+        name,
+        description: body?.description || '',
+        customerSegment: body?.customerSegment || 'default',
+        responseTimeMin: body?.responseTimeMin,
+        resolutionTimeMin: body?.resolutionTimeMin,
+        enabled: body?.enabled !== false,
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'sla_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, policy: out.policy });
+    } catch (err) {
+      logger.error('[SLA] Erro ao salvar policy:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar policy' });
+    }
+    return;
+  }
+
+  // GET /sla/breaches
+  if (method === 'GET' && pathname === '/sla/breaches') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/slaService');
+      const out = await service.listBreaches(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'sla_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, breaches: out.breaches || [] });
+    } catch (err) {
+      logger.error('[SLA] Erro ao listar breaches:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar breaches' });
     }
     return;
   }
@@ -12591,6 +14761,70 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
   }
 
+  // GET /deliveries/:id - obtém delivery
+  if (method === 'GET' && pathname.startsWith('/deliveries/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const deliveryId = decodeURIComponent(pathname.slice('/deliveries/'.length));
+      const { Delivery } = require('./db/models');
+      const DeliveryModel = Delivery();
+      const row = await DeliveryModel.findOne({ where: { tenant_key: req.tenantId, id: String(deliveryId) } });
+      if (!row) {
+        sendJson(res, 404, { error: 'delivery_not_found', message: 'Delivery não encontrado' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, delivery: row.toJSON ? row.toJSON() : row });
+    } catch (err) {
+      logger.error('[Delivery] Erro ao obter delivery:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter delivery' });
+    }
+    return;
+  }
+
+  // PUT /deliveries/:id/status - atualiza status do delivery
+  if (method === 'PUT' && pathname.match(/^\/deliveries\/[^\/]+\/status$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const deliveryId = decodeURIComponent(pathname.split('/')[2]);
+      const body = await parseJsonBody(req);
+      const status = body && body.status ? String(body.status).trim() : '';
+      const { updateDeliveryStatus } = require('./services/deliveryService');
+      const delivery = await updateDeliveryStatus({ tenantId: req.tenantId, deliveryId, status });
+      sendJson(res, 200, { ok: true, delivery });
+    } catch (err) {
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'delivery_not_found') {
+        sendJson(res, 404, { error: 'delivery_not_found', message: 'Delivery não encontrado' });
+        return;
+      }
+      logger.error('[Delivery] Erro ao atualizar status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar status do delivery' });
+    }
+    return;
+  }
+
   // PUT /orders/:id/status - atualiza status do pedido
   if (method === 'PUT' && pathname.match(/^\/orders\/[^\/]+\/status$/)) {
     const authResult = requireAuth(req);
@@ -12616,6 +14850,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const status = body && body.status ? String(body.status).trim() : '';
       const { updateOrderStatus } = require('./services/orderService');
       const order = await updateOrderStatus({ tenantId: req.tenantId, orderId, status });
+      // Best-effort: sincroniza delivery quando aplicável
+      try {
+        if (status === 'dispatched' || status === 'delivered' || status === 'cancelled') {
+          const { getDeliveryByOrderId, updateDeliveryStatus } = require('./services/deliveryService');
+          const delivery = await getDeliveryByOrderId({ tenantId: req.tenantId, orderId });
+          if (delivery && delivery.id) {
+            await updateDeliveryStatus({
+              tenantId: req.tenantId,
+              deliveryId: delivery.id,
+              status: status === 'cancelled' ? 'cancelled' : status,
+            }).catch(() => {});
+          }
+        }
+      } catch (_) {}
       sendJson(res, 200, { ok: true, order });
     } catch (err) {
       const code = err && err.code ? String(err.code) : null;
@@ -12672,7 +14920,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         const { getOrderIncident } = require('./services/orderService');
         const existingIncident = await getOrderIncident({ tenantId: req.tenantId, orderId: order.id });
         const existingTicketId = existingIncident?.ticketId || null;
-        if (existingTicketId) {
+        const existingStatus = existingIncident?.status || null;
+        if (existingTicketId && existingStatus !== 'closed') {
           let existingTicket = null;
           try {
             existingTicket = getTicket(existingTicketId) || null;
@@ -13113,6 +15362,352 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     sendJson(res, 200, tickets);
+    return;
+  }
+
+  // GET /inbox/conversations - Lista conversas do inbox (tickets não fechados por padrão)
+  if (method === 'GET' && pathname === '/inbox/conversations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const status = urlObj.searchParams.get('status');
+    const queue = urlObj.searchParams.get('queue');
+    const assignedTo = urlObj.searchParams.get('assignedTo');
+    const limitRaw = urlObj.searchParams.get('limit');
+    const offsetRaw = urlObj.searchParams.get('offset');
+
+    const base = listAllTickets({
+      tenantId: req.tenantId,
+      status: status && status !== 'open' ? status : undefined,
+      queue,
+      limit: 10000,
+      offset: 0,
+    });
+
+    let list = Array.isArray(base.tickets) ? base.tickets : [];
+
+    if (!status || status === 'open') {
+      list = list.filter((ticket) => ticket.status !== 'closed');
+    }
+
+    if (assignedTo) {
+      list = list.filter((ticket) => ticket.assignedTo === assignedTo);
+    }
+
+    if (req.agent.role === 'agent') {
+      list = list.filter((ticket) => canAccessTicket(req.agent, ticket));
+    }
+
+    const total = list.length;
+    const limit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 200), 10000);
+    const offset = Math.max(0, parseInt(offsetRaw, 10) || 0);
+    const paginated = list.slice(offset, offset + limit);
+
+    sendJson(res, 200, { tickets: paginated, total, limit, offset });
+    return;
+  }
+
+  // GET /inbox/conversations/:id - Obtém conversa específica do inbox
+  if (method === 'GET' && pathname.startsWith('/inbox/conversations/') &&
+      !pathname.endsWith('/assign') && !pathname.endsWith('/transfer') && !pathname.endsWith('/notes')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!canAccessTicket(req.agent, ticket)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você não tem permissão para acessar este ticket' });
+      return;
+    }
+
+    sendJson(res, 200, ticket);
+    return;
+  }
+
+  // POST /inbox/conversations/:id/assign - Atribui ticket (atalho para inbox)
+  if (method === 'POST' && pathname.startsWith('/inbox/conversations/') && pathname.endsWith('/assign')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'assign');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length, -'/assign'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      let assignedTo = req.agent.id;
+      if (body && body.assignedTo) {
+        if (req.agent.role === 'admin' || req.agent.role === 'supervisor') {
+          assignedTo = String(body.assignedTo);
+        } else {
+          assignedTo = req.agent.id;
+        }
+      }
+
+      const updatedTicket = assignTicket(id, assignedTo);
+      if (!updatedTicket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      const tenantId = req.tenantId;
+      triggerWebhooks(tenantId, 'ticket.assigned', {
+        ticketId: id,
+        assignedTo,
+        assignedBy: req.agent.id,
+      }).catch((err) => {
+        logger.error('[Webhook] Erro ao disparar webhook para ticket.assigned (inbox):', err);
+      });
+
+      emitEvent('ticket.assigned', {
+        ticketId: id,
+        assignedTo,
+        assignedBy: req.agent.id,
+        ticket: updatedTicket,
+      }, { tenantId, agentId: assignedTo });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'ticket_assign',
+        resource: 'ticket',
+        resourceId: id,
+        details: { assignedTo, source: 'inbox' },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, updatedTicket);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao atribuir ticket (inbox):', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /inbox/conversations/:id/transfer - Transfere ticket de fila/atendente
+  if (method === 'POST' && pathname.startsWith('/inbox/conversations/') && pathname.endsWith('/transfer')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length, -'/transfer'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!canModifyTicket(req.agent, ticket)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você não tem permissão para modificar este ticket' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const queue = body && body.queue ? String(body.queue).trim() : null;
+      if (!queue) {
+        badRequest(res, 'queue é obrigatório');
+        return;
+      }
+
+      let assignedTo;
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'assignedTo')) {
+        if (body.assignedTo === null || body.assignedTo === '') {
+          assignedTo = null;
+        } else if (req.agent.role === 'admin' || req.agent.role === 'supervisor') {
+          assignedTo = String(body.assignedTo);
+        } else {
+          assignedTo = req.agent.id;
+        }
+      } else {
+        assignedTo = null; // por padrão, transfere para fila e desatribui
+      }
+
+      const updatedTicket = transferTicket(id, { queue, assignedTo });
+      if (!updatedTicket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      emitEvent('ticket.updated', {
+        ticketId: id,
+        ticket: updatedTicket,
+        updatedBy: req.agent.id,
+      }, { tenantId: req.tenantId });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'ticket_transfer',
+        resource: 'ticket',
+        resourceId: id,
+        details: { queue, assignedTo, source: 'inbox' },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, updatedTicket);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao transferir ticket (inbox):', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /inbox/conversations/:id/notes - Adiciona nota interna
+  if (method === 'POST' && pathname.startsWith('/inbox/conversations/') && pathname.endsWith('/notes')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length, -'/notes'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!canModifyTicket(req.agent, ticket)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você não tem permissão para modificar este ticket' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const note = body && body.note ? String(body.note).trim() : '';
+      if (!note) {
+        badRequest(res, 'note é obrigatório');
+        return;
+      }
+
+      const updatedTicket = addTicketNote(id, note, req.agent);
+      if (!updatedTicket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      emitEvent('ticket.updated', {
+        ticketId: id,
+        ticket: updatedTicket,
+        updatedBy: req.agent.id,
+      }, { tenantId: req.tenantId });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'ticket_note',
+        resource: 'ticket',
+        resourceId: id,
+        details: { noteLength: note.length, source: 'inbox' },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, updatedTicket);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao adicionar nota (inbox):', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
     return;
   }
 
@@ -17729,6 +20324,264 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // Dashboard de Análise (Analytics)
   // -----------------------------------------------------------------------
 
+  // -----------------------------------------------------------------------
+  // Painel Supervisor
+  // -----------------------------------------------------------------------
+
+  // GET /supervisor/metrics?groupBy=agent|queue&period=day|hour&from=...&to=...
+  if (method === 'GET' && pathname === '/supervisor/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const groupBy = urlObj.searchParams.get('groupBy') || 'agent';
+      const period = urlObj.searchParams.get('period') || 'day';
+      const from = urlObj.searchParams.get('from') || undefined;
+      const to = urlObj.searchParams.get('to') || undefined;
+
+      const metrics = await getSupervisorMetrics({
+        tenantId,
+        groupBy,
+        period,
+        from,
+        to,
+      });
+
+      const summary = await getGeneralMetrics({
+        tenantId,
+        startDate: from || undefined,
+        endDate: to || undefined,
+      });
+
+      sendJson(res, 200, { summary, ...metrics });
+    } catch (err) {
+      logger.error('Erro ao obter métricas de supervisor:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /supervisor/agents/status
+  if (method === 'GET' && pathname === '/supervisor/agents/status') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const agents = await getSupervisorAgentStatus({ tenantId });
+      sendJson(res, 200, { agents });
+    } catch (err) {
+      logger.error('Erro ao obter status de agentes:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /supervisor/queues/status
+  if (method === 'GET' && pathname === '/supervisor/queues/status') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const queues = await getSupervisorQueueStatus({ tenantId });
+      sendJson(res, 200, { queues });
+    } catch (err) {
+      logger.error('Erro ao obter status de filas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // RBAC
+  // -----------------------------------------------------------------------
+
+  // GET /rbac/roles
+  if (method === 'GET' && pathname === '/rbac/roles') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'agents', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const roles = getRoleDefinitions();
+      sendJson(res, 200, { roles });
+    } catch (err) {
+      logger.error('Erro ao listar roles:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rbac/roles
+  if (method === 'POST' && pathname === '/rbac/roles') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const role = body && body.role ? String(body.role).trim() : '';
+      const permissions = body && Array.isArray(body.permissions) ? body.permissions : [];
+
+      const result = createRole(role, permissions);
+      if (!result.success) {
+        sendJson(res, 400, { error: 'invalid_role', message: result.error });
+        return;
+      }
+
+      sendJson(res, 201, { role: result.role, permissions: result.permissions });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao criar role:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // GET /rbac/permissions
+  if (method === 'GET' && pathname === '/rbac/permissions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'agents', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const permissions = listPermissions();
+      sendJson(res, 200, { permissions });
+    } catch (err) {
+      logger.error('Erro ao listar permissões:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rbac/assign
+  if (method === 'POST' && pathname === '/rbac/assign') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'agents', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const agentId = body && body.agentId ? String(body.agentId).trim() : '';
+      const role = body && body.role ? String(body.role).trim() : '';
+      if (!agentId || !role) {
+        badRequest(res, 'agentId e role são obrigatórios');
+        return;
+      }
+
+      const target = await getAgent(agentId);
+      if (!target) {
+        sendJson(res, 404, { error: 'agent_not_found' });
+        return;
+      }
+
+      if (target.tenantId && target.tenantId !== tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Agente não pertence ao seu tenant' });
+        return;
+      }
+
+      const result = await updateAgent(agentId, { role });
+      if (!result.success) {
+        sendJson(res, 400, { error: 'update_failed', message: result.error });
+        return;
+      }
+
+      sendJson(res, 200, { agent: result.agent });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao atribuir role:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
   // GET /analytics/metrics - Obtém todas as métricas
   if (method === 'GET' && pathname === '/analytics/metrics') {
     const authResult = requireAuth(req);
@@ -21918,8 +24771,10 @@ function createServer() {
     });
   });
 
-  // Inicializa WebSocket
-  initializeWebSocket(server);
+  // Inicializa WebSocket (pode ser desabilitado por env)
+  if (process.env.DISABLE_WEBSOCKET !== 'true') {
+    initializeWebSocket(server);
+  }
 
   return server;
 }
@@ -22154,6 +25009,7 @@ process.on('SIGINT', () => {
   try { outboundWorker.stop(); } catch (_) {}
   try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
   try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
+  try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
@@ -22163,6 +25019,7 @@ process.on('SIGTERM', () => {
   try { outboundWorker.stop(); } catch (_) {}
   try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
   try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
+  try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
@@ -22267,6 +25124,16 @@ if (require.main === module) {
         logger.warn('[Scheduler] Falha ao iniciar scheduler (ignorado)', { error: err.message });
       }
     }
+
+    // WhatsApp QR bridge (opcional): integra provider QR real (ex.: whatsapp-web.js)
+    try {
+      const { startWhatsAppQrBridge } = require('./services/whatsappQrBridgeService');
+      startWhatsAppQrBridge().catch((err) => {
+        logger.warn('[WhatsAppQRBridge] Falha ao iniciar bridge (ignorado)', { error: err?.message || String(err) });
+      });
+    } catch (err) {
+      logger.warn('[WhatsAppQRBridge] Bridge indisponível (ignorado)', { error: err?.message || String(err) });
+    }
   }).catch((error) => {
     console.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
     console.error('[Server] Erro:', error);
@@ -22294,6 +25161,7 @@ module.exports = {
   server,
   // também exportamos helpers principais para facilitar testes isolados, se preciso
   _internal: {
+    requestHandler,
     parseJsonBody,
     sendJson,
     notFound,
@@ -22304,5 +25172,3 @@ module.exports = {
     sessionEvents,
   },
 };
-
-

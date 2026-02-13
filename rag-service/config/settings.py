@@ -251,9 +251,4 @@ def get_settings() -> Settings:
     global _settings
     if _settings is None:
         _settings = Settings()
-        # Log da fonte de configuração
-        if _CONFIG_JSON:
-            print("[Settings] Configurações carregadas de config.json")
-        else:
-            print("[Settings] Usando valores padrão e variáveis de ambiente")
     return _settings

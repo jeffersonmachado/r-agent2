@@ -4,7 +4,7 @@ Este índice organiza a documentação do projeto em camadas (visão → arquite
 
 1) **Automação** (inspirado em **n8n**)  
 2) **Marketing automation** (inspirado em **RD Station**)  
-3) **Atendimento omnichannel** (inspirado em **BLIP / Huggy / Zenvia**)  
+3) **Atendimento omnichannel** (inspirado em **BLIP / Huggy / Zenvia / ChatPro**)  
 4) **Voz / Contact Center** (inspirado em **Twilio Flex / Talkdesk / Five9**)  
 5) **Orquestração de IA** (inspirado em **LangFlow / Flowise**)  
 6) **Filas físicas / Fast service** (inspirado em **Qminder / QLess / Waitwhile / Skiplino**)  
@@ -52,4 +52,3 @@ Este repositório já contém documentação detalhada por área. Alguns pontos 
   - `RAG_POR_TENANT.md`
   - `COMO_TESTAR_RAG.md`
   - `CONFIGURACAO_IA.md`
-

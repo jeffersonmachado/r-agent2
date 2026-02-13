@@ -42,6 +42,31 @@ let wss = null;
  */
 const clients = new Map();
 
+function getConnectedAgentsByTenant(tenantId) {
+  const result = new Map();
+  if (!tenantId) return result;
+  for (const client of clients.values()) {
+    if (!client || client.tenantId !== tenantId) continue;
+    if (!client.agentId) continue;
+    const agentId = String(client.agentId);
+    const existing = result.get(agentId);
+    if (!existing) {
+      result.set(agentId, {
+        agentId,
+        connections: 1,
+        lastActivity: client.lastActivity ? client.lastActivity.toISOString() : null,
+      });
+    } else {
+      existing.connections += 1;
+      const last = client.lastActivity ? client.lastActivity.toISOString() : null;
+      if (last && (!existing.lastActivity || last > existing.lastActivity)) {
+        existing.lastActivity = last;
+      }
+    }
+  }
+  return result;
+}
+
 /**
  * Inicializa o servidor WebSocket.
  * 
@@ -57,6 +82,10 @@ function initializeWebSocket(httpServer) {
     server: httpServer,
     path: '/ws',
     clientTracking: true,
+  });
+
+  wss.on('error', (err) => {
+    logger.error('[WebSocketService] Erro no servidor WebSocket:', err);
   });
 
   wss.on('connection', (ws, req) => {
@@ -480,8 +509,43 @@ function getOnlineAgentsByTenant(tenantId) {
   return Array.from(set.values());
 }
 
+/**
+ * Encerra o servidor WebSocket e limpa conexões.
+ *
+ * @returns {Promise<void>}
+ */
+async function shutdownWebSocket() {
+  if (!wss) return;
+
+  try {
+    for (const client of clients.values()) {
+      try {
+        if (client.ws && client.ws.readyState === WebSocket.OPEN) {
+          client.ws.close();
+        }
+      } catch {
+        // best-effort
+      }
+    }
+    clients.clear();
+  } catch {
+    // best-effort
+  }
+
+  await new Promise((resolve) => {
+    try {
+      wss.close(() => resolve());
+    } catch {
+      resolve();
+    }
+  });
+
+  wss = null;
+}
+
 module.exports = {
   initializeWebSocket,
+  shutdownWebSocket,
   sendToClient,
   broadcastToTenant,
   broadcastToExecution,
@@ -492,5 +556,5 @@ module.exports = {
   getWebSocketServer,
   isAgentOnline,
   getOnlineAgentsByTenant,
+  getConnectedAgentsByTenant,
 };
-

@@ -253,6 +253,40 @@ async function resolvePublicToken({ token, allowedKinds }) {
 }
 
 /**
+ * Registra uso operacional de token por rota/método.
+ * Armazena agregado em meta.usageByRoute para relatórios de consumo.
+ */
+async function recordPublicTokenUsage({ tokenId, route, method = 'POST', statusCode = 200 } = {}) {
+  if (!tokenId) return { ok: false, error: 'token_id_required' };
+  const Model = PublicAccessToken();
+  const row = await Model.findOne({ where: { id: String(tokenId) } });
+  if (!row) return { ok: false, error: 'token_not_found' };
+
+  const safeRoute = String(route || '/public/unknown').trim().slice(0, 240) || '/public/unknown';
+  const safeMethod = String(method || 'POST').trim().toUpperCase().slice(0, 12) || 'POST';
+  const key = `${safeMethod} ${safeRoute}`;
+  const nowIso = new Date().toISOString();
+
+  const prevMeta = row.meta && typeof row.meta === 'object' ? { ...row.meta } : {};
+  const usageByRoute = prevMeta.usageByRoute && typeof prevMeta.usageByRoute === 'object' ? { ...prevMeta.usageByRoute } : {};
+  const previous = usageByRoute[key] && typeof usageByRoute[key] === 'object' ? usageByRoute[key] : {};
+
+  usageByRoute[key] = {
+    count: Number(previous.count || 0) + 1,
+    lastUsedAt: nowIso,
+    lastStatusCode: Number(statusCode || 0) || 0,
+  };
+
+  row.meta = {
+    ...prevMeta,
+    usageByRoute,
+  };
+  row.last_used_at = new Date();
+  await row.save();
+  return { ok: true };
+}
+
+/**
  * Estatísticas mínimas de uso por kind (para dashboards operacionais).
  *
  * @param {object} args
@@ -310,9 +344,9 @@ async function getPublicTokenStats({ tenantId }) {
 module.exports = {
   createPublicToken,
   resolvePublicToken,
+  recordPublicTokenUsage,
   listPublicTokens,
   revokePublicToken,
   rotatePublicToken,
   getPublicTokenStats,
 };
-

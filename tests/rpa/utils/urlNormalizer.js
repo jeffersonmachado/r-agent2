@@ -78,6 +78,33 @@ function normalizeRpaTestUrls(test) {
     // URL relativa sem barra inicial
     return baseUrl + '/' + url;
   }
+
+  function findNearestFlowNavigateUrl(stepIndex) {
+    if (!test.steps || !Array.isArray(test.steps)) return null;
+    for (let i = stepIndex - 1; i >= 0; i -= 1) {
+      const candidateStep = test.steps[i];
+      if (!candidateStep || candidateStep.type !== 'navigate') continue;
+      const candidateUrl = candidateStep.url || candidateStep.value;
+      if (typeof candidateUrl !== 'string') continue;
+      const normalized = normalizeUrl(candidateUrl);
+      if (typeof normalized === 'string' && normalized.includes('flowId=')) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  function normalizeExpectedUrl(expected, stepIndex) {
+    if (typeof expected !== 'string' || !expected.trim()) return expected;
+    const normalizedExpected = normalizeUrl(expected);
+    const isBaseOnly =
+      normalizedExpected === baseUrl ||
+      normalizedExpected === `${baseUrl}/`;
+    if (!isBaseOnly) return normalizedExpected;
+
+    const nearestFlowUrl = findNearestFlowNavigateUrl(stepIndex);
+    return nearestFlowUrl || normalizedExpected;
+  }
   
   // Normaliza URLs nos steps
   if (test.steps && Array.isArray(test.steps)) {
@@ -128,6 +155,26 @@ function normalizeRpaTestUrls(test) {
           }
         }
       }
+
+      // Wrapper: { type: 'assert', assert: { type: 'url', expected } }
+      if (step.type === 'assert' && step.assert && step.assert.type === 'url') {
+        if (typeof step.assert.expected === 'string') {
+          step.assert.expected = normalizeExpectedUrl(step.assert.expected, index);
+        }
+      }
+
+      // Formato legado: { action: 'assert', type: 'url', expected|value|title }
+      if (step.action === 'assert' && step.type === 'url') {
+        if (typeof step.expected === 'string') {
+          step.expected = normalizeExpectedUrl(step.expected, index);
+        }
+        if (typeof step.value === 'string' && /^https?:\/\//.test(step.value)) {
+          step.value = normalizeExpectedUrl(step.value, index);
+        }
+        if (typeof step.title === 'string' && /^https?:\/\//.test(step.title)) {
+          step.title = normalizeExpectedUrl(step.title, index);
+        }
+      }
     });
   }
   
@@ -144,4 +191,3 @@ function normalizeRpaTestUrls(test) {
 module.exports = {
   normalizeRpaTestUrls,
 };
-

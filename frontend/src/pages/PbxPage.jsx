@@ -2,16 +2,21 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   dialplanApply,
   dialplanPreview,
+  rollbackDialplan,
+  listConfigVersions,
   listAudioAssets,
   listCallRules,
   listCdr,
   listDids,
   listExtensions,
   listQueueMembers,
+  listQueueMetrics,
   listQueues,
   listRecordings,
+  getRecordingPolicy,
   listRoutes,
   listTrunks,
+  saveRecordingPolicy,
   scanRecordings,
   upsertCallRule,
   upsertDid,
@@ -24,6 +29,8 @@ import {
   pbxReload,
   getProvisioningToken,
   rotateProvisioningToken,
+  revokeProvisioningToken,
+  listPbxAuditEvents,
   uploadAudioAsset,
   deleteQueueMember,
 } from '../api/pbx';
@@ -38,6 +45,16 @@ function safeJsonParse(text, fallback) {
   }
 }
 
+function formatRemainingMs(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return 'expirado';
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 export function PbxPage() {
   const [tab, setTab] = useState('extensions');
   const [loading, setLoading] = useState(false);
@@ -47,6 +64,7 @@ export function PbxPage() {
   const [trunks, setTrunks] = useState([]);
   const [routes, setRoutes] = useState([]);
   const [queues, setQueues] = useState([]);
+  const [queueMetrics, setQueueMetrics] = useState([]);
   const [dids, setDids] = useState([]);
   const [ivrRules, setIvrRules] = useState([]);
 
@@ -58,11 +76,18 @@ export function PbxPage() {
   const [audioFile, setAudioFile] = useState(null);
 
   const [recordings, setRecordings] = useState([]);
+  const [recordingPolicy, setRecordingPolicy] = useState({
+    enabled: false,
+    retentionDays: 30,
+    maskPhoneNumbers: true,
+    requireConsent: false,
+  });
 
   const [cdrFilters, setCdrFilters] = useState({ limit: 200, from: '', to: '', src: '', dst: '', uniqueid: '' });
   const [cdrItems, setCdrItems] = useState([]);
 
   const [dialplanRows, setDialplanRows] = useState(null);
+  const [configVersions, setConfigVersions] = useState([]);
 
   const [formExt, setFormExt] = useState({
     extension: '',
@@ -79,6 +104,9 @@ export function PbxPage() {
   const [provisioningTokenUpdatedAt, setProvisioningTokenUpdatedAt] = useState(null);
   const [rotateExpiresInSec, setRotateExpiresInSec] = useState('');
   const [rotatedToken, setRotatedToken] = useState(null);
+  const [pbxAuditHours, setPbxAuditHours] = useState('72');
+  const [pbxAuditItems, setPbxAuditItems] = useState([]);
+  const [pbxAuditByAction, setPbxAuditByAction] = useState({});
   const [bulkJson, setBulkJson] = useState('[\n  {\n    "extension": "1001",\n    "displayName": "Ramal 1001",\n    "authUsername": "1001",\n    "authPassword": "SenhaForte123",\n    "provisioning": {\n      "enabled": true,\n      "vendor": "grandstream",\n      "mac": "001122AABBCC",\n      "model": "GXP1620"\n    }\n  }\n]');
   const [bulkResult, setBulkResult] = useState(null);
   const canSaveExt = useMemo(() => {
@@ -133,22 +161,45 @@ export function PbxPage() {
 
   const [formQm, setFormQm] = useState({ memberType: 'extension', memberRef: '', penalty: '', paused: false });
   const canSaveQm = useMemo(() => selectedQueueId && (formQm.memberRef || '').trim().length > 0, [selectedQueueId, formQm.memberRef]);
+  const tokenGovernance = useMemo(() => {
+    if (!provisioningToken) {
+      return { level: 'neutral', message: 'Sem token ativo', remainingLabel: null };
+    }
+    if (!provisioningTokenExpiresAt) {
+      return { level: 'warn', message: 'Token sem expiração', remainingLabel: null };
+    }
+    const expiresMs = new Date(provisioningTokenExpiresAt).getTime() - Date.now();
+    if (!Number.isFinite(expiresMs) || expiresMs <= 0) {
+      return { level: 'critical', message: 'Token expirado', remainingLabel: 'expirado' };
+    }
+    if (expiresMs <= 24 * 60 * 60 * 1000) {
+      return { level: 'critical', message: 'Expira em menos de 24h', remainingLabel: formatRemainingMs(expiresMs) };
+    }
+    if (expiresMs <= 72 * 60 * 60 * 1000) {
+      return { level: 'warn', message: 'Expira em menos de 72h', remainingLabel: formatRemainingMs(expiresMs) };
+    }
+    return { level: 'ok', message: 'Token saudável', remainingLabel: formatRemainingMs(expiresMs) };
+  }, [provisioningToken, provisioningTokenExpiresAt]);
 
   async function refreshCore() {
-    const [rExt, rTrunks, rRoutes, rQueues, rDids, rRules] = await Promise.all([
+    const [rExt, rTrunks, rRoutes, rQueues, rQueueMetrics, rDids, rRules, rVersions] = await Promise.all([
       listExtensions(),
       listTrunks(),
       listRoutes(),
       listQueues(),
+      listQueueMetrics(),
       listDids(),
       listCallRules('ivr_dialplan_text'),
+      listConfigVersions(30),
     ]);
     setExtensions(rExt?.items || []);
     setTrunks(rTrunks?.items || []);
     setRoutes(rRoutes?.items || []);
     setQueues(rQueues?.items || []);
+    setQueueMetrics(rQueueMetrics?.items || []);
     setDids(rDids?.items || []);
     setIvrRules(rRules?.items || []);
+    setConfigVersions(rVersions?.items || []);
 
     try {
       const tokenInfo = await getProvisioningToken();
@@ -165,12 +216,26 @@ export function PbxPage() {
   }
 
   async function refreshAux() {
-    const [rAudio, rRec] = await Promise.all([
+    const [rAudio, rRec, rPolicy] = await Promise.all([
       listAudioAssets(audioKind),
       listRecordings(200),
+      getRecordingPolicy(),
     ]);
     setAudioAssets(rAudio?.items || []);
     setRecordings(rRec?.items || []);
+    if (rPolicy?.ok && rPolicy?.policy) {
+      setRecordingPolicy((prev) => ({ ...prev, ...rPolicy.policy }));
+    }
+  }
+
+  async function refreshPbxAudit() {
+    const hours = Number(pbxAuditHours || 72);
+    const r = await listPbxAuditEvents({
+      hours: Number.isFinite(hours) ? hours : 72,
+      limit: 300,
+    });
+    setPbxAuditItems(r?.items || []);
+    setPbxAuditByAction(r?.byAction || {});
   }
 
   async function refreshAll() {
@@ -179,6 +244,7 @@ export function PbxPage() {
     try {
       await refreshCore();
       await refreshAux();
+      await refreshPbxAudit();
     } catch (e) {
       logger.error('[PbxPage] refresh failed', e);
       setError(e?.message || String(e));
@@ -255,8 +321,40 @@ export function PbxPage() {
       const out = await rotateProvisioningToken(Number.isFinite(exp) ? exp : null);
       if (out?.ok && out?.token) {
         setRotatedToken(out.token);
-        await refreshCore();
+        await Promise.all([refreshCore(), refreshPbxAudit()]);
       }
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleQuickRotate(expiresInSec) {
+    setRotateExpiresInSec(String(expiresInSec));
+    setLoading(true);
+    setError(null);
+    try {
+      const out = await rotateProvisioningToken(expiresInSec);
+      if (out?.ok && out?.token) {
+        setRotatedToken(out.token);
+        await Promise.all([refreshCore(), refreshPbxAudit()]);
+      }
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRevokeProvisioningToken() {
+    setLoading(true);
+    setError(null);
+    try {
+      await revokeProvisioningToken();
+      setRotatedToken(null);
+      setRotateExpiresInSec('');
+      await Promise.all([refreshCore(), refreshPbxAudit()]);
     } catch (e) {
       setError(e?.message || String(e));
     } finally {
@@ -477,9 +575,24 @@ export function PbxPage() {
     setError(null);
     try {
       await dialplanApply();
-      await handleDialplanPreview();
+      await Promise.all([handleDialplanPreview(), refreshCore()]);
     } catch (e) {
       logger.error('[PbxPage] dialplan apply failed', e);
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRollbackVersion(version) {
+    if (!version) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await rollbackDialplan(version);
+      await Promise.all([handleDialplanPreview(), refreshCore()]);
+    } catch (e) {
+      logger.error('[PbxPage] dialplan rollback failed', e);
       setError(e?.message || String(e));
     } finally {
       setLoading(false);
@@ -556,6 +669,29 @@ export function PbxPage() {
     }
   }
 
+  async function handleSaveRecordingPolicy() {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        enabled: !!recordingPolicy.enabled,
+        retentionDays: Number(recordingPolicy.retentionDays || 30),
+        maskPhoneNumbers: !!recordingPolicy.maskPhoneNumbers,
+        requireConsent: !!recordingPolicy.requireConsent,
+      };
+      const out = await saveRecordingPolicy(payload);
+      if (out?.ok && out?.policy) {
+        setRecordingPolicy((prev) => ({ ...prev, ...out.policy }));
+      }
+      await handleRecordingsRefresh();
+    } catch (e) {
+      logger.error('[PbxPage] save recording policy failed', e);
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleCdrSearch() {
     setLoading(true);
     setError(null);
@@ -589,6 +725,7 @@ export function PbxPage() {
     ['media', 'Mídia'],
     ['recordings', 'Gravações'],
     ['cdr', 'CDR'],
+    ['governance', 'Governança'],
   ];
 
   return (
@@ -682,8 +819,15 @@ export function PbxPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <strong>Token de Provisionamento</strong>
                 <span style={{ opacity: 0.75 }}>{provisioningToken || '—'}</span>
+                <span style={{ opacity: 0.85 }}>
+                  status: {tokenGovernance.message}
+                  {tokenGovernance.remainingLabel ? ` (${tokenGovernance.remainingLabel})` : ''}
+                </span>
                 {provisioningTokenExpiresAt ? (
                   <span style={{ opacity: 0.75 }}>expira: {new Date(provisioningTokenExpiresAt).toLocaleString()}</span>
+                ) : null}
+                {provisioningTokenUpdatedAt ? (
+                  <span style={{ opacity: 0.7 }}>atualizado: {new Date(provisioningTokenUpdatedAt).toLocaleString()}</span>
                 ) : null}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
@@ -695,6 +839,21 @@ export function PbxPage() {
                 />
                 <button onClick={handleRotateProvisioningToken} disabled={loading} style={{ padding: '6px 10px' }}>
                   Rotacionar token
+                </button>
+                <button onClick={() => handleQuickRotate(24 * 60 * 60)} disabled={loading} style={{ padding: '6px 10px' }}>
+                  Rotação 24h
+                </button>
+                <button onClick={() => handleQuickRotate(7 * 24 * 60 * 60)} disabled={loading} style={{ padding: '6px 10px' }}>
+                  Rotação 7d
+                </button>
+                <button onClick={() => handleQuickRotate(30 * 24 * 60 * 60)} disabled={loading} style={{ padding: '6px 10px' }}>
+                  Rotação 30d
+                </button>
+                <button onClick={() => handleQuickRotate(0)} disabled={loading} style={{ padding: '6px 10px' }}>
+                  Sem expiração
+                </button>
+                <button onClick={handleRevokeProvisioningToken} disabled={loading} style={{ padding: '6px 10px' }}>
+                  Revogar token
                 </button>
                 {rotatedToken ? (
                   <span style={{ opacity: 0.9 }}>Novo token: <code>{rotatedToken}</code></span>
@@ -754,6 +913,30 @@ export function PbxPage() {
                   {!extensions.length ? (
                     <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhum ramal encontrado.</td></tr>
                   ) : null}
+                </tbody>
+              </table>
+            </div>
+            <h4 style={{ marginTop: 16 }}>Métricas operacionais de fila</h4>
+            <div style={{ overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Fila</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Membros</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ativos</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Pausados</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queueMetrics.map((m) => (
+                    <tr key={m.queueId}>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.name}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.totalMembers ?? 0}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.activeMembers ?? 0}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.pausedMembers ?? 0}</td>
+                    </tr>
+                  ))}
+                  {!queueMetrics.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Sem métricas de filas.</td></tr> : null}
                 </tbody>
               </table>
             </div>
@@ -1040,6 +1223,42 @@ export function PbxPage() {
                 {dialplanRows.length > 500 ? <div>… (truncado)</div> : null}
               </pre>
             ) : null}
+            <h4 style={{ marginTop: 16 }}>Histórico de versões</h4>
+            <div style={{ overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Versão</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Assinatura</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Data</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {configVersions.map((v) => (
+                    <tr key={v.id}>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v.version}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v.status || '—'}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v?.summary?.dialplan?.signature || '—'}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        {v.createdAt ? new Date(v.createdAt).toLocaleString() : '—'}
+                      </td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <button
+                          onClick={() => handleRollbackVersion(v.version)}
+                          disabled={loading || !Array.isArray(v?.summary?.dialplan?.rows) || v.summary.dialplan.rows.length === 0}
+                          style={{ padding: '6px 10px' }}
+                        >
+                          Rollback
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!configVersions.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Sem versões registradas.</td></tr> : null}
+                </tbody>
+              </table>
+            </div>
           </>
         ) : null}
 
@@ -1084,6 +1303,41 @@ export function PbxPage() {
         {tab === 'recordings' ? (
           <>
             <h3 style={{ marginTop: 0 }}>Gravações</h3>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
+              <strong>Política de gravação (tenant)</strong>
+              <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 220px 220px auto', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!recordingPolicy.enabled}
+                    onChange={(e) => setRecordingPolicy((s) => ({ ...s, enabled: e.target.checked }))}
+                  />
+                  Gravação habilitada
+                </label>
+                <input
+                  placeholder="Retenção (dias)"
+                  value={recordingPolicy.retentionDays}
+                  onChange={(e) => setRecordingPolicy((s) => ({ ...s, retentionDays: e.target.value }))}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!recordingPolicy.maskPhoneNumbers}
+                    onChange={(e) => setRecordingPolicy((s) => ({ ...s, maskPhoneNumbers: e.target.checked }))}
+                  />
+                  Mascarar números
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!recordingPolicy.requireConsent}
+                    onChange={(e) => setRecordingPolicy((s) => ({ ...s, requireConsent: e.target.checked }))}
+                  />
+                  Exigir consentimento
+                </label>
+                <button onClick={handleSaveRecordingPolicy} disabled={loading} style={{ padding: '8px 12px' }}>Salvar política</button>
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
               <button onClick={handleRecordingsRefresh} disabled={loading} style={{ padding: '8px 12px' }}>Atualizar</button>
               <button onClick={handleRecordingsScan} disabled={loading} style={{ padding: '8px 12px' }}>Scan volume</button>
@@ -1093,6 +1347,8 @@ export function PbxPage() {
                 <thead>
                   <tr>
                     <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Uniqueid</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Origem</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Destino</th>
                     <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Download</th>
                   </tr>
                 </thead>
@@ -1100,12 +1356,14 @@ export function PbxPage() {
                   {recordings.map((r) => (
                     <tr key={r.id}>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.uniqueid || '—'}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.src || '—'}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.dst || '—'}</td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <a href={buildApiUrl(`/api/pbx/recordings/file?id=${encodeURIComponent(r.id)}`)}>baixar</a>
                       </td>
                     </tr>
                   ))}
-                  {!recordings.length ? <tr><td colSpan={2} style={{ padding: 8, opacity: 0.75 }}>Nenhuma gravação encontrada.</td></tr> : null}
+                  {!recordings.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhuma gravação encontrada.</td></tr> : null}
                 </tbody>
               </table>
             </div>
@@ -1153,8 +1411,71 @@ export function PbxPage() {
             </div>
           </>
         ) : null}
+
+        {tab === 'governance' ? (
+          <>
+            <h3 style={{ marginTop: 0 }}>Governança PBX</h3>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div><strong>Token:</strong> {provisioningToken || '—'}</div>
+                <div><strong>Status:</strong> {tokenGovernance.message}{tokenGovernance.remainingLabel ? ` (${tokenGovernance.remainingLabel})` : ''}</div>
+                <div><strong>Expira em:</strong> {provisioningTokenExpiresAt ? new Date(provisioningTokenExpiresAt).toLocaleString() : 'sem expiração'}</div>
+                <div><strong>Atualizado em:</strong> {provisioningTokenUpdatedAt ? new Date(provisioningTokenUpdatedAt).toLocaleString() : '—'}</div>
+              </div>
+            </div>
+
+            <h4 style={{ marginTop: 0 }}>Auditoria PBX (ações `pbx.*`)</h4>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
+              <input
+                placeholder="janela em horas"
+                value={pbxAuditHours}
+                onChange={(e) => setPbxAuditHours(e.target.value)}
+                style={{ maxWidth: 180 }}
+              />
+              <button onClick={refreshPbxAudit} disabled={loading} style={{ padding: '8px 12px' }}>
+                Atualizar auditoria
+              </button>
+            </div>
+            <div style={{ marginBottom: 12, opacity: 0.8 }}>
+              {Object.entries(pbxAuditByAction).slice(0, 6).map(([action, count]) => (
+                <span key={action} style={{ marginRight: 14 }}>{action}: <strong>{count}</strong></span>
+              ))}
+              {!Object.keys(pbxAuditByAction).length ? 'Sem eventos na janela selecionada.' : null}
+            </div>
+            <div style={{ overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Timestamp</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ação</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Usuário</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Recurso</th>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Detalhes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pbxAuditItems.map((item, idx) => (
+                    <tr key={`${item.timestamp || 't'}-${item.action || 'a'}-${idx}`}>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        {item.timestamp ? new Date(item.timestamp).toLocaleString() : '—'}
+                      </td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.action || '—'}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.username || item.agentId || '—'}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.resource || '—'}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <code style={{ opacity: 0.9 }}>{JSON.stringify(item.details || {}).slice(0, 220)}</code>
+                      </td>
+                    </tr>
+                  ))}
+                  {!pbxAuditItems.length ? (
+                    <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhum evento PBX encontrado.</td></tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
 }
-

@@ -86,6 +86,8 @@ const getMarketingFormSubmission = require('./MarketingFormSubmission');
 const getMarketingScoringRule = require('./MarketingScoringRule');
 const getMarketingEmailCampaign = require('./MarketingEmailCampaign');
 const getMarketingEmailSend = require('./MarketingEmailSend');
+const getMarketingLink = require('./MarketingLink');
+const getMarketingLinkClick = require('./MarketingLinkClick');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -171,6 +173,8 @@ const MarketingFormSubmission = () => getMarketingFormSubmission();
 const MarketingScoringRule = () => getMarketingScoringRule();
 const MarketingEmailCampaign = () => getMarketingEmailCampaign();
 const MarketingEmailSend = () => getMarketingEmailSend();
+const MarketingLink = () => getMarketingLink();
+const MarketingLinkClick = () => getMarketingLinkClick();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -473,4 +477,6 @@ module.exports = {
   getMarketingScoringRule,
   getMarketingEmailCampaign,
   getMarketingEmailSend,
+  getMarketingLink,
+  getMarketingLinkClick,
 };

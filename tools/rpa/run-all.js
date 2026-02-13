@@ -241,6 +241,15 @@ function saveReport(report) {
 async function main() {
   console.log('=== Executando Testes RPA ===\n');
 
+  // Pré-seed: garante flows básicos para os testes RPA (best-effort)
+  try {
+    const { ensureRpaFlows } = require('../../tests/rpa/ensure-rpa-flows');
+    const seedResult = await ensureRpaFlows();
+    console.log(`[RPA Seed] Flows criados: ${seedResult.created}, já existentes: ${seedResult.skipped}`);
+  } catch (err) {
+    console.warn('[RPA Seed] Aviso: não foi possível garantir flows para RPA:', err.message);
+  }
+
   if (process.env.RPA_SKIP_IF_FRONTEND_UNREACHABLE === 'true') {
     const frontendUrl = resolveFrontendUrl();
     const reachable = await isFrontendReachable(frontendUrl);
@@ -304,4 +313,3 @@ if (require.main === module) {
 }
 
 module.exports = { findRpaTestFiles, runRpaTest, generateReport, saveReport };
-

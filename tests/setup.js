@@ -2,6 +2,9 @@
  * Setup global para testes Jest - proteção contra travamentos
  */
 
+process.env.NODE_ENV = 'test';
+process.env.DISABLE_BACKGROUND_INIT = 'true';
+
 // Timeout global para hooks
 jest.setTimeout(10000);
 
@@ -21,6 +24,16 @@ afterEach(() => {
   // Limpa sessionStorage se disponível
   if (typeof sessionStorage !== 'undefined') {
     sessionStorage.clear();
+  }
+});
+
+// Finaliza WebSocket no fim de cada arquivo de teste
+afterAll(async () => {
+  try {
+    const { shutdownWebSocket } = require('../api/services/websocketService');
+    await shutdownWebSocket();
+  } catch (err) {
+    // best-effort
   }
 });
 
@@ -107,4 +120,3 @@ afterEach(() => {
 });
 
 console.log('✅ Proteções contra travamentos ativadas nos testes Jest');
-

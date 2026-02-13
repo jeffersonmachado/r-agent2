@@ -34,7 +34,26 @@ async function createVersion({
   return row.toJSON ? row.toJSON() : row;
 }
 
+async function listVersions({ tenantKey, limit = 20 }) {
+  const PbxConfigVersion = models.PbxConfigVersion();
+  const rows = await PbxConfigVersion.findAll({
+    where: { tenantKey },
+    order: [['version', 'DESC']],
+    limit: Math.min(Math.max(Number(limit) || 20, 1), 200),
+  });
+  return rows.map((r) => (r.toJSON ? r.toJSON() : r));
+}
+
+async function getVersionByNumber({ tenantKey, version }) {
+  const PbxConfigVersion = models.PbxConfigVersion();
+  const row = await PbxConfigVersion.findOne({
+    where: { tenantKey, version: Number(version) },
+  });
+  return row ? (row.toJSON ? row.toJSON() : row) : null;
+}
+
 module.exports = {
   createVersion,
+  listVersions,
+  getVersionByNumber,
 };
-

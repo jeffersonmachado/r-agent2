@@ -1,4 +1,5 @@
 import { describe, expect, test, vi, beforeAll, beforeEach } from 'vitest';
+import { act } from 'react';
 
 vi.mock('../utils/logger', () => ({
   default: {
@@ -35,7 +36,11 @@ describe('createEditor.loadFromJson - robustez', () => {
     container.style.height = '600px';
     document.body.appendChild(container);
 
-    const instance = await createEditor(container, {});
+    let instance;
+    await act(async () => {
+      instance = await createEditor(container, {});
+      await Promise.resolve();
+    });
 
     // JSON: message -> start (destino sem input "in")
     const reteJson = {
@@ -66,12 +71,18 @@ describe('createEditor.loadFromJson - robustez', () => {
       },
     };
 
-    await expect(instance.loadFromJson(reteJson)).resolves.toBeUndefined();
+    await act(async () => {
+      await expect(instance.loadFromJson(reteJson)).resolves.toBeUndefined();
+      await Promise.resolve();
+    });
 
     // Deve ter logado warning (best-effort) ao falhar criar conexão
     expect(logger.warn).toHaveBeenCalled();
 
-    instance.destroy?.();
+    await act(async () => {
+      instance.destroy?.();
+      await Promise.resolve();
+    });
     container.remove();
   });
 
@@ -81,7 +92,11 @@ describe('createEditor.loadFromJson - robustez', () => {
     container.style.height = '600px';
     document.body.appendChild(container);
 
-    const instance = await createEditor(container, {});
+    let instance;
+    await act(async () => {
+      instance = await createEditor(container, {});
+      await Promise.resolve();
+    });
     const translateSpy = vi.spyOn(instance.area, 'translate');
 
     // JSON mínimo: 2 nós sem "position"
@@ -101,7 +116,10 @@ describe('createEditor.loadFromJson - robustez', () => {
       },
     };
 
-    await expect(instance.loadFromJson(reteJson)).resolves.toBeUndefined();
+    await act(async () => {
+      await expect(instance.loadFromJson(reteJson)).resolves.toBeUndefined();
+      await Promise.resolve();
+    });
 
     // Deve ter aplicado translate com posições diferentes (grade)
     const positions = translateSpy.mock.calls
@@ -112,8 +130,10 @@ describe('createEditor.loadFromJson - robustez', () => {
     expect(positions.length).toBeGreaterThanOrEqual(2);
     expect(new Set(positions).size).toBeGreaterThan(1);
 
-    instance.destroy?.();
+    await act(async () => {
+      instance.destroy?.();
+      await Promise.resolve();
+    });
     container.remove();
   });
 });
-

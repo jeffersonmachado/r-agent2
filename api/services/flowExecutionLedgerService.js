@@ -37,6 +37,18 @@ function normalizeDateOrNull(v) {
   return d;
 }
 
+function parseAllowlist(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const items = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  return items.length ? new Set(items) : null;
+}
+
+function allowlistIncludes(allowlist, value) {
+  if (!allowlist) return true;
+  if (value == null) return false;
+  return allowlist.has(String(value));
+}
+
 async function startFlowExecution({
   tenantId,
   flowId,
@@ -54,16 +66,42 @@ async function startFlowExecution({
   const Model = FlowExecution();
   // Idempotência best-effort para triggers de evento
   if (meta && meta.mode === 'event' && correlationId) {
-    const existing = await Model.findOne({
-      where: {
-        tenant_key: String(tenantId),
-        flow_id: String(flowId),
-        correlation_id: String(correlationId),
-      },
-      order: [['started_at', 'DESC']],
-    });
-    if (existing) {
-      return { ok: true, executionId: existing.id, reused: true };
+    const eventId = meta?.eventId ? String(meta.eventId) : null;
+    if (eventId) {
+      const sequelize = getSequelize();
+      const [rows] = await sequelize.query(
+        `SELECT id
+         FROM flow_executions
+         WHERE tenant_key = :tenantKey
+           AND flow_id = :flowId
+           AND correlation_id = :correlationId
+           AND meta->>'mode' = 'event'
+           AND meta->>'eventId' = :eventId
+         ORDER BY started_at DESC
+         LIMIT 1`,
+        {
+          replacements: {
+            tenantKey: String(tenantId),
+            flowId: String(flowId),
+            correlationId: String(correlationId),
+            eventId,
+          },
+        },
+      );
+      const existing = Array.isArray(rows) && rows[0] ? rows[0] : null;
+      if (existing?.id) return { ok: true, executionId: existing.id, reused: true };
+    } else {
+      const existing = await Model.findOne({
+        where: {
+          tenant_key: String(tenantId),
+          flow_id: String(flowId),
+          correlation_id: String(correlationId),
+        },
+        order: [['started_at', 'DESC']],
+      });
+      if (existing) {
+        return { ok: true, executionId: existing.id, reused: true };
+      }
     }
   }
 
@@ -150,6 +188,34 @@ async function finishFlowExecution({ tenantId, executionId, status = 'done', met
   await row.save();
 
   return { ok: true };
+}
+
+function buildExecutionLedgerAdapter({ tenantId, executionId, sanitizeInput = null, sanitizeOutput = null } = {}) {
+  if (!tenantId || !executionId) return null;
+  return {
+    executionId,
+    sanitizeInput: typeof sanitizeInput === 'function' ? sanitizeInput : null,
+    sanitizeOutput: typeof sanitizeOutput === 'function' ? sanitizeOutput : null,
+    appendNodeExecution: async (args) => appendNodeExecution({
+      tenantId,
+      executionId,
+      ...args,
+    }),
+    finishFlowExecution: async ({ status, metaPatch }) => finishFlowExecution({
+      tenantId,
+      executionId,
+      status,
+      metaPatch,
+    }),
+  };
+}
+
+async function finishFlowExecutionSafe({ tenantId, executionId, status = 'done', metaPatch = null } = {}) {
+  try {
+    return await finishFlowExecution({ tenantId, executionId, status, metaPatch });
+  } catch (_) {
+    return { ok: false, error: 'finish_failed' };
+  }
 }
 
 async function getFlowExecutionDetails({ tenantId, executionId }) {
@@ -295,6 +361,10 @@ async function replayFromNode({
   const enabled = process.env.ENABLE_EXECUTION_LEDGER_REPLAY === 'true';
   if (!enabled) return { ok: false, error: 'replay_disabled' };
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
+  const allowlist = parseAllowlist(process.env.EXECUTION_LEDGER_REPLAY_ALLOWLIST_TENANTS || '');
+  if (allowlist && !allowlist.has(String(tenantId || ''))) {
+    return { ok: false, error: 'replay_not_allowed_for_tenant' };
+  }
 
   const details = await getFlowExecutionDetails({ tenantId, executionId });
   if (!details.ok) return details;
@@ -305,6 +375,16 @@ async function replayFromNode({
     const allowReal = process.env.ENABLE_EXECUTION_LEDGER_REPLAY_REAL === 'true';
     if (!allowReal) {
       return { ok: false, error: 'replay_only_supported_for_simulation' };
+    }
+    if (String(header.status || '') === 'running') {
+      return { ok: false, error: 'replay_execution_running' };
+    }
+    const executionAllowlist = parseAllowlist(process.env.EXECUTION_LEDGER_REPLAY_REAL_ALLOWLIST_EXECUTIONS || '');
+    const correlationAllowlist = parseAllowlist(process.env.EXECUTION_LEDGER_REPLAY_REAL_ALLOWLIST_CORRELATIONS || '');
+    const execAllowed = allowlistIncludes(executionAllowlist, header.id);
+    const corrAllowed = allowlistIncludes(correlationAllowlist, header.correlation_id);
+    if ((executionAllowlist || correlationAllowlist) && !(execAllowed || corrAllowed)) {
+      return { ok: false, error: 'replay_real_not_allowed' };
     }
   }
 
@@ -459,8 +539,9 @@ module.exports = {
   startFlowExecution,
   appendNodeExecution,
   finishFlowExecution,
+  finishFlowExecutionSafe,
   getFlowExecutionDetails,
   listFlowExecutions,
   replayFromNode,
+  buildExecutionLedgerAdapter,
 };
-

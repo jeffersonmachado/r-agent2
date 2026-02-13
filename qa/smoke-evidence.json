@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-02-13T12:34:30.544Z",
+  "smokes": {
+    "l02": {
+      "status": "pass",
+      "logPath": "qa/smoke/l02-ura-publish-rollback.log",
+      "evidencePath": "qa/l02-ura-publish-rollback-evidence.json",
+      "evidence": {
+        "smoke": "L-02",
+        "generatedAt": "2026-02-13T12:31:55.986Z",
+        "ok": true,
+        "authMode": "admin",
+        "tenantId": "system",
+        "versions": {
+          "rollbackTargetVersion": 1,
+          "topVersionSignature": "26869384b33a540250226afa"
+        },
+        "signatures": {
+          "v1": "26869384b33a540250226afa",
+          "v2": "c09cd8d0220036b3d8d4c216",
+          "rollback": "26869384b33a540250226afa"
+        },
+        "audit": {
+          "source": "api.pbx.audit",
+          "publishCount": 2,
+          "rollbackCount": 1
+        }
+      }
+    },
+    "l03": {
+      "status": "pass",
+      "logPath": "qa/smoke/l03-pbx-voice-tts-asr.log",
+      "evidencePath": "qa/l03-pbx-voice-tts-asr-evidence.json",
+      "evidence": {
+        "smoke": "L-03",
+        "generatedAt": "2026-02-13T12:33:27.634Z",
+        "ok": true,
+        "authMode": "admin",
+        "tenantId": "system",
+        "flowId": "flow-voice-tts-asr-smoke-1770985916268",
+        "callId": "call-voice-tts-asr-1770985916268",
+        "extension": "1168",
+        "dialplanSignature": "c09cd8d0220036b3d8d4c216",
+        "runtime": {
+          "startAction": "prompt_listen",
+          "asrAction": "listen_asr",
+          "hangupAction": "hangup"
+        },
+        "realCall": {
+          "attempted": true,
+          "click2callId": "cc_c2c-1770985916376-0c288cd471ff",
+          "click2callStatus": "originated",
+          "cdrFound": false,
+          "cdr": null
+        },
+        "selftestStatus": "WARN"
+      }
+    }
+  }
+}

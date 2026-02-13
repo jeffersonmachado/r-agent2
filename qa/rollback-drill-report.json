@@ -1,0 +1,20 @@
+{
+  "startedAt": "2026-02-08T21:27:49.475Z",
+  "finishedAt": "2026-02-08T21:27:49.519Z",
+  "durationMs": 44,
+  "status": "fail",
+  "config": {
+    "baseUrl": "http://localhost:3001",
+    "applyPbxRollback": false,
+    "reportPath": "qa/rollback-drill-report.json"
+  },
+  "auth": null,
+  "checks": {
+    "preSelftest": null,
+    "orders": null,
+    "fastService": null,
+    "pbx": null,
+    "postSelftest": null
+  },
+  "error": "fetch failed"
+}

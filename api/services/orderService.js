@@ -292,6 +292,24 @@ async function getOrderMetrics({ tenantId, locationId = null }) {
     { replacements },
   );
   const r = Array.isArray(rows) && rows[0] ? rows[0] : {};
+  const [byHourRows] = await sequelize.query(
+    `SELECT
+       EXTRACT(HOUR FROM created_at)::int AS hour,
+       COUNT(*)::int AS created_count,
+       COUNT(*) FILTER (WHERE status = 'confirmed')::int AS confirmed_count,
+       COUNT(*) FILTER (WHERE status = 'preparing')::int AS preparing_count,
+       COUNT(*) FILTER (WHERE status = 'ready')::int AS ready_count,
+       COUNT(*) FILTER (WHERE status = 'dispatched')::int AS dispatched_count,
+       COUNT(*) FILTER (WHERE status = 'delivered')::int AS delivered_count,
+       COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled_count
+     FROM orders
+     WHERE tenant_key = :tenantKey
+       ${locSql}
+       AND created_at::date = CURRENT_DATE
+     GROUP BY EXTRACT(HOUR FROM created_at)
+     ORDER BY hour ASC`,
+    { replacements },
+  );
 
   return {
     ok: true,
@@ -312,6 +330,7 @@ async function getOrderMetrics({ tenantId, locationId = null }) {
       slaOrderToReadyMinutes: slaReadyMin,
       slaOrderToDeliverMinutes: slaDeliverMin,
     },
+    byHour: Array.isArray(byHourRows) ? byHourRows : [],
   };
 }
 
@@ -324,4 +343,3 @@ module.exports = {
   setOrderIncident,
   getOrderMetrics,
 };
-

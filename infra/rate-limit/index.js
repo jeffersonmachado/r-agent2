@@ -98,6 +98,18 @@ function getLimiter(operationType) {
 
   let limiter;
   const allowRedisToMemoryFallback = config.get('fallbacks.rateLimitRedisToMemory', false) === true;
+  const nodeEnv = process.env.NODE_ENV || 'development';
+
+  // Em testes, força limiter em memória para evitar dependência de Redis
+  if (nodeEnv === 'test') {
+    limiter = new RateLimiterMemory({
+      points: policy.points,
+      duration: policy.duration,
+      blockDuration: 0,
+    });
+    limitersCache.set(operationType, limiter);
+    return limiter;
+  }
 
   // Tenta usar Redis, fallback para memória
   const redisClient = getRateLimitClient();
@@ -236,7 +248,7 @@ async function checkRateLimit(options) {
     const response = {
       allowed: true,
       remainingPoints: result.remainingPoints,
-      totalPoints: result.totalPoints,
+      totalPoints: result.totalPoints != null ? result.totalPoints : policy.points,
       msBeforeNext: result.msBeforeNext,
     };
 
@@ -295,7 +307,7 @@ async function checkRateLimit(options) {
       allowed: false,
       retryAfter,
       remainingPoints: 0,
-      totalPoints: rateLimiterRes.totalPoints,
+      totalPoints: rateLimiterRes.totalPoints != null ? rateLimiterRes.totalPoints : policy.points,
     };
   }
 }
@@ -672,4 +684,3 @@ module.exports = {
   clearLimitersCache,
   clearRedisRateLimitKeys,
 };
-

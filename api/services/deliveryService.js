@@ -14,6 +14,26 @@ async function createDeliveryForOrder({
   context = {},
 }) {
   const Model = Delivery();
+  const sequelize = Model.sequelize;
+  const idk = context && context.idempotencyKey ? String(context.idempotencyKey) : null;
+  if (idk && sequelize) {
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT id
+         FROM deliveries
+         WHERE tenant_key = :tenantKey
+           AND (context->>'idempotencyKey') = :idk
+           AND created_at::date = CURRENT_DATE
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        { replacements: { tenantKey: tenantId, idk } },
+      );
+      if (Array.isArray(rows) && rows[0] && rows[0].id) {
+        const existing = await Model.findOne({ where: { tenant_key: tenantId, id: String(rows[0].id) } });
+        if (existing) return existing.toJSON ? existing.toJSON() : existing;
+      }
+    } catch (_) {}
+  }
   const id = makeId();
   const row = await Model.create({
     id,
@@ -66,6 +86,7 @@ async function updateDeliveryStatus({ tenantId, deliveryId, status, patch = {} }
   const timestamps = {};
   if (next === 'dispatched') timestamps.dispatched_at = now;
   if (next === 'delivered') timestamps.delivered_at = now;
+  if (next === 'cancelled') timestamps.cancelled_at = now;
   await row.update({
     status: next,
     ...timestamps,
@@ -101,4 +122,3 @@ module.exports = {
   getDeliveryByOrderId,
   updateDeliveryStatus,
 };
-

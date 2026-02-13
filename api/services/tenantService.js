@@ -1243,6 +1243,28 @@ async function getTenantUsage(tenantId) {
       { replacements: { tenant: tenantId } }
     ).catch(() => [[{ count: 0 }]]);
 
+    let usageMetrics = null;
+    try {
+      const { getSetting } = require('./tenantSettingsService');
+      const settings = await getSetting({ tenantId, key: 'usage_metrics' });
+      usageMetrics = settings && settings.ok ? (settings.value || null) : null;
+    } catch (_) {
+      usageMetrics = null;
+    }
+
+    const usageMonthStart = usageMetrics && usageMetrics.monthStart ? String(usageMetrics.monthStart) : null;
+    const currentMonthStart = monthStart.toISOString();
+    const usageCounters = usageMonthStart === currentMonthStart && usageMetrics && usageMetrics.counters && typeof usageMetrics.counters === 'object'
+      ? usageMetrics.counters
+      : {};
+
+    const getCounter = (key) => {
+      const v = usageCounters && Object.prototype.hasOwnProperty.call(usageCounters, key)
+        ? Number(usageCounters[key])
+        : 0;
+      return Number.isFinite(v) ? v : 0;
+    };
+
     return {
       tenantId,
       // compatibilidade com nomes antigos de plano
@@ -1253,11 +1275,11 @@ async function getTenantUsage(tenantId) {
       max_conversas_mes: ticketsMonthRow?.count ?? 0,
       conversas_canais_mes: channelConversationsRow?.count ?? 0,
       // mantém estrutura anterior
-      agentes_ia: 0,
-      execucoes_rpa: 0,
-      tokens_ia: 0,
+      agentes_ia: getCounter('agentes_ia'),
+      execucoes_rpa: getCounter('execucoes_rpa'),
+      tokens_ia: getCounter('tokens_ia'),
       documentos_rag: ragDocsRow?.count ?? 0,
-      storage_mb: 0,
+      storage_mb: getCounter('storage_mb'),
       periodo: 'mensal',
       window: { monthStart: monthStart.toISOString(), nextMonthStart: nextMonthStart.toISOString() },
     };
@@ -1332,4 +1354,3 @@ module.exports = {
     clearTenantContexts: () => tenantContexts.clear(),
   },
 };
-

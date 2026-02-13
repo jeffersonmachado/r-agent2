@@ -3511,6 +3511,55 @@ div:has(svg[data-testid="connection"]) {
   box-shadow: 0 0 0 2px var(--color-accent-light);
 }
 
+.support-card {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.support-card-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.support-card-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.support-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.support-table th,
+.support-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border-default);
+  text-align: left;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.support-table th {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.support-table tbody tr:hover {
+  background-color: var(--color-bg-hover);
+}
+
 .support-button-full {
   width: 100%;
   margin-top: 8px;
@@ -5511,4 +5560,3 @@ body.flow-editor-active .user-menu-dropdown {
   width: 100%;
   justify-content: center;
 }
-

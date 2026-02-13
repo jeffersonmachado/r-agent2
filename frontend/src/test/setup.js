@@ -190,3 +190,43 @@ if (process.env.NODE_ENV === 'test') {
   console.log('⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)');
 }
 
+// ---------------------------------------------------------------------------
+// Mock global de fetch para evitar tráfego real em localhost durante testes.
+// - Testes específicos podem sobrescrever com vi.spyOn/global.fetch.mock...
+// - Mantém payload mínimo para /config usado por várias telas/hooks.
+// ---------------------------------------------------------------------------
+if (typeof globalThis.fetch !== 'function' || !globalThis.fetch.__riaTestDefaultMock) {
+  const defaultFetch = vi.fn(async (input) => {
+    const rawUrl = typeof input === 'string'
+      ? input
+      : (input && typeof input === 'object' && 'url' in input ? String(input.url || '') : '');
+    const normalizedUrl = String(rawUrl || '');
+    const pathname = (() => {
+      try {
+        const u = new URL(normalizedUrl, 'http://localhost:3000');
+        return u.pathname || '/';
+      } catch {
+        return normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
+      }
+    })();
+
+    let payload = { ok: true };
+    if (pathname === '/config') {
+      payload = {
+        frontend: {
+          enableFileExtraction: true,
+          autoExtractFileContent: false,
+          autoInferFileCategory: false,
+        },
+        ai: {},
+      };
+    }
+
+    return new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+  Object.defineProperty(defaultFetch, '__riaTestDefaultMock', { value: true });
+  globalThis.fetch = defaultFetch;
+}

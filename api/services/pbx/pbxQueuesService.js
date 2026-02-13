@@ -136,8 +136,45 @@ async function upsertQueue({ tenantKey, payload, actorUserId = null }) {
   return row.toJSON();
 }
 
+async function getQueueOperationalMetrics({ tenantKey }) {
+  const PbxQueue = models.PbxQueue();
+  const PbxQueueMember = models.PbxQueueMember();
+  const queues = await PbxQueue.findAll({ where: { tenantKey }, order: [['name', 'ASC']] });
+  const queueIds = queues.map((q) => q.id);
+  const members = queueIds.length > 0
+    ? await PbxQueueMember.findAll({ where: { tenantKey, queueId: queueIds } })
+    : [];
+
+  const grouped = new Map();
+  for (const m of members) {
+    const json = m.toJSON ? m.toJSON() : m;
+    const key = String(json.queueId);
+    if (!grouped.has(key)) grouped.set(key, { totalMembers: 0, pausedMembers: 0, byType: {} });
+    const cur = grouped.get(key);
+    cur.totalMembers += 1;
+    if (json.paused) cur.pausedMembers += 1;
+    const t = String(json.memberType || 'unknown');
+    cur.byType[t] = Number(cur.byType[t] || 0) + 1;
+  }
+
+  return queues.map((q) => {
+    const json = q.toJSON ? q.toJSON() : q;
+    const stats = grouped.get(String(json.id)) || { totalMembers: 0, pausedMembers: 0, byType: {} };
+    return {
+      queueId: json.id,
+      name: json.name,
+      displayName: json.displayName || null,
+      strategy: json.strategy || null,
+      totalMembers: stats.totalMembers,
+      pausedMembers: stats.pausedMembers,
+      activeMembers: Math.max(0, stats.totalMembers - stats.pausedMembers),
+      byType: stats.byType,
+    };
+  });
+}
+
 module.exports = {
   listQueues,
   upsertQueue,
+  getQueueOperationalMetrics,
 };
-

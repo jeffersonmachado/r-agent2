@@ -69,8 +69,18 @@ export async function getFunnelMetrics(options = {}) {
   return fetchJson(`/analytics/funnel${query ? `?${query}` : ''}`);
 }
 
-export async function getOrderMetrics() {
-  return fetchJson('/api/orders/metrics');
+export async function getOrderMetrics(options = {}) {
+  const params = new URLSearchParams();
+  if (options.locationId) params.append('locationId', options.locationId);
+  const query = params.toString();
+  return fetchJson(`/api/orders/metrics${query ? `?${query}` : ''}`);
+}
+
+export async function getPhysicalMetrics(options = {}) {
+  const params = new URLSearchParams();
+  if (options.locationId) params.append('locationId', options.locationId);
+  const query = params.toString();
+  return fetchJson(`/api/physical/metrics${query ? `?${query}` : ''}`);
 }
 
 export async function getPublicTokenStats() {

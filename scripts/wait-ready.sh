@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-API_URL="${API_URL:-http://localhost:3001}"
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
-RAG_URL="${RAG_URL:-http://localhost:8001}"
+API_URL="${API_URL:-http://localhost:13001}"
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:15173}"
+RAG_URL="${RAG_URL:-http://localhost:18001}"
 
 MAX_SECONDS="${MAX_SECONDS:-180}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-2}"
@@ -36,4 +36,3 @@ wait_for "Frontend" "${FRONTEND_URL}/"
 wait_for "RAG health" "${RAG_URL}/health"
 
 echo "[wait-ready] Tudo pronto."
-
