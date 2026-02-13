@@ -161,7 +161,10 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 #### 2.2 Triggers do runtime a partir do `event_ledger`
 - **Consumer/dispatcher** de `event_ledger` para acionar execuções (regras mínimas)
   - retry/backoff e DLQ integrados ao runtime/queue
-  - falta conexão completa com o runtime do DAG (idempotência/observabilidade/DLQ).
+  - **Status (13/02/2026)**:
+    - caminho `event_ledger -> execution_jobs(dispatch_event_trigger) -> worker -> runtime` validado no smoke L-04
+    - gate exige evidência de queue (`jobsDone > 0` e `jobsDead = 0`) e execução real de nós (`nodesCount > 0`)
+  - pendente: ampliar cobertura para cenários de falha em produção (thresholds operacionais por tenant e rotina de reprocesso assistido no runbook).
 
 #### 2.3 PBX: integração de call events v0 ao runtime
 - acionar triggers/ações do DAG a partir dos eventos de chamada (ringing/answered/ended)
