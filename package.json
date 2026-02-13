@@ -34,6 +34,7 @@
     "system:rollback-drill": "node tools/system/rollback-drill.js",
     "system:go-no-go": "node tools/system/go-no-go.js",
     "system:launch-plan-status": "node tools/system/launch-plan-status.js",
+    "system:release-evidence-pack": "node tools/system/release-evidence-pack.js",
     "validate:invariants": "node scripts/validate-invariants.js",
     "test:rpa:record": "node tests/rpa/record.js",
     "rpa:demo": "node tests/rpa/demo.js",

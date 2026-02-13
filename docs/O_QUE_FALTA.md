@@ -298,6 +298,10 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `qa/release-gate-report.json`
   - `qa/smoke-evidence.json`
   - `qa/rollback-drill-report.json`
+  - `qa/go-no-go-report.json`
+  - `qa/launch-plan-status.json`
+  - `qa/launch-plan-status.md`
+  - comando recomendado para pacote consolidado: `npm run system:release-evidence-pack`
 
 ### 4.1 Checklist executável (foco: ChatPro + Fila + PBX TTS/ASR)
 

@@ -74,5 +74,7 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
    - `qa/go-no-go-report.json`
    - `qa/launch-plan-status.json`
    - `qa/launch-plan-status.md`
-   - logs operacionais
-   - checklist de rollback preenchido
+   - pacote consolidado: `npm run system:release-evidence-pack`
+     - dry-run de validação: `RELEASE_EVIDENCE_DRY_RUN=1 npm run system:release-evidence-pack`
+    - logs operacionais
+    - checklist de rollback preenchido
