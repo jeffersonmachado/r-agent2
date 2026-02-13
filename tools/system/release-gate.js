@@ -115,6 +115,7 @@ function assertCriticalSmokeEvidence(evidence) {
   const l02 = evidence.data.smokes.l02 || null;
   const l03 = evidence.data.smokes.l03 || null;
   const l04 = evidence.data.smokes.l04 || null;
+  const l05 = evidence.data.smokes.l05 || null;
   if (!l02 || l02.status !== 'pass') {
     throw new Error('smoke_l02_not_pass');
   }
@@ -149,6 +150,26 @@ function assertCriticalSmokeEvidence(evidence) {
     || Number(l04.evidence.pipeline.queue.jobsDead || 0) !== 0
   ) {
     throw new Error('smoke_l04_queue_evidence_missing');
+  }
+  if (!l05 || l05.status !== 'pass') {
+    throw new Error('smoke_l05_not_pass');
+  }
+  if (
+    !l05.evidence
+    || l05.evidence.ok !== true
+    || !l05.evidence.ticket
+    || !String(l05.evidence.ticket.id || '').trim()
+    || !l05.evidence.operations
+    || l05.evidence.operations.assign !== true
+    || l05.evidence.operations.transfer !== true
+    || l05.evidence.operations.note !== true
+    || l05.evidence.operations.addTag !== true
+    || l05.evidence.operations.removeTag !== true
+    || l05.evidence.operations.quickReplyCreate !== true
+    || l05.evidence.operations.quickReplyUse !== true
+    || l05.evidence.operations.quickReplyList !== true
+  ) {
+    throw new Error('smoke_l05_omnichannel_evidence_missing');
   }
 }
 

@@ -7,7 +7,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 > Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
 
-## Update L-02/L-03 (13/02/2026)
+## Update L-02/L-03/L-04/L-05 (13/02/2026)
 
 - [x] **L-02** fechado com smoke dedicado:
   - `scripts/test-ura-publish-rollback-smoke.js`
@@ -28,7 +28,13 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - evidência: `qa/l04-pbx-call-events-runtime-evidence.json`
   - log: `qa/smoke/l04-pbx-call-events-runtime.log`
 
-- [x] Gate com consolidado e validação obrigatória de L-02/L-03/L-04:
+- [x] **L-05** fechado com smoke ChatPro/omnichannel (inbox runtime) + evidência dedicada:
+  - `scripts/test-inbox-runtime-smoke.js`
+  - valida assign/transfer/note/tags/quick replies e consistência de conversa/ticket
+  - evidência: `qa/l05-chatpro-omnichannel-evidence.json`
+  - log: `qa/smoke/l05-chatpro-omnichannel.log`
+
+- [x] Gate com consolidado e validação obrigatória de L-02/L-03/L-04/L-05:
   - consolidado: `qa/smoke-evidence.json`
   - validação no gate: `tools/system/release-gate.js`
 
@@ -240,7 +246,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `npm run system:release-gate`
 - [ ] validar evidências mínimas atualizadas:
   - `qa/release-gate-report.json`
-  - `qa/smoke-evidence.json` (L-02/L-03/L-04 em `pass`)
+  - `qa/smoke-evidence.json` (L-02/L-03/L-04/L-05 em `pass`)
 - [ ] registrar baseline de selftest e checks críticos:
   - `eventDispatchRuntime`
   - `pbxEventRuntime`
@@ -257,6 +263,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - selftest sem `FAIL`
   - evidência de chamada real PBX `originated` (L-03)
   - evidência de trigger runtime por call event (L-04 com `flow.executionId`)
+  - evidência ChatPro/omnichannel (L-05 com `ticket.id` + operações críticas em `true`)
 - [ ] formalizar decisão go/no-go com registro de data/hora e responsáveis
 
 ### D0 (01/03/2026) — execução de lançamento
@@ -278,7 +285,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 #### D-7 (22/02/2026) — preparação e baseline
 - [ ] **ChatPro (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
-  evidência: `qa/smoke-evidence.json` com status de atendimento/omnichannel em `pass`.
+  evidência: `qa/l05-chatpro-omnichannel-evidence.json` + `qa/smoke-evidence.json` com `l05.status=pass`.
 - [ ] **Fila física (owner: Fast Service/API+Frontend)**  
   comando: `npm run system:release-gate`  
   evidência: fluxo `kiosk -> station -> panel` sem falhas no `qa/release-gate-report.json`.
@@ -296,6 +303,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   aceite: chamada real `originated=true`; trigger por call event com `flow.executionId`; quando `cdrFound=false`, evidência de originação + runtime aceita.
+- [ ] **ChatPro evidência dedicada (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  aceite: `qa/l05-chatpro-omnichannel-evidence.json` com `ok=true` e operações críticas (`assign/transfer/note/tags/quick replies`) validadas.
 - [ ] **Rollback readiness (owner: Engenharia de Plataforma)**  
   comando: `npm run system:rollback-drill`  
   evidência: `qa/rollback-drill-report.json` sem bloqueadores.
@@ -310,6 +320,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   evidência: L-03 e L-04 em `pass`, com logs em `qa/smoke/`.
+- [ ] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  evidência: L-05 em `pass`, com log em `qa/smoke/l05-chatpro-omnichannel.log`.
 
 ### Contingência (qualquer momento da janela)
 - [ ] se incidente crítico, acionar `docs/ROLLBACK_PLAYBOOK_SUITES_CRITICAS.md`

@@ -15,6 +15,8 @@
  */
 
 const { getOrCreateRpaToken } = require('../tests/rpa/utils/rpaTokenManager');
+const fs = require('fs');
+const path = require('path');
 
 function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
@@ -74,10 +76,57 @@ function payloadSnippet(payload) {
   }
 }
 
+function evidencePath() {
+  return String(process.env.INBOX_RUNTIME_EVIDENCE_PATH || 'qa/l05-chatpro-omnichannel-evidence.json');
+}
+
+function writeEvidence(payload) {
+  const out = evidencePath();
+  const abs = path.resolve(process.cwd(), out);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  return out;
+}
+
 async function main() {
   const baseUrl = apiBaseUrl();
-  const token = (await loginAdmin(baseUrl)) || (await loginRpa(baseUrl));
+  const adminToken = await loginAdmin(baseUrl);
+  const token = adminToken || (await loginRpa(baseUrl));
+  const authMode = adminToken ? 'admin' : 'rpa';
+  const tenantId = process.env.TEST_TENANT_ID || 'system';
   const ts = Date.now();
+
+  const evidence = {
+    smoke: 'L-05',
+    generatedAt: new Date().toISOString(),
+    ok: false,
+    authMode,
+    tenantId,
+    ticket: {
+      id: null,
+      created: false,
+      assignedTo: null,
+      queueAfterTransfer: null,
+      originalQueue: null,
+      originalAssignedTo: null,
+    },
+    conversation: {
+      noteFound: false,
+      messagesCount: 0,
+    },
+    operations: {
+      assign: false,
+      transfer: false,
+      note: false,
+      addTag: false,
+      removeTag: false,
+      quickReplyCreate: false,
+      quickReplyUse: false,
+      quickReplyList: false,
+      phoneMaskingToggle: 'not_attempted',
+    },
+    warnings: [],
+  };
 
   const cleanup = {
     ticketId: null,
@@ -120,6 +169,10 @@ async function main() {
         ? targetTicket.assignedTo
         : null;
     }
+    evidence.ticket.id = cleanup.ticketId;
+    evidence.ticket.created = cleanup.createdTicket;
+    evidence.ticket.originalQueue = cleanup.originalQueue;
+    evidence.ticket.originalAssignedTo = cleanup.originalAssignedTo;
 
     const assignRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}/assign`, {
       method: 'POST',
@@ -127,6 +180,8 @@ async function main() {
       body: {},
     });
     expect(assignRes.ok && assignRes.payload?.assignedTo, `inbox_assign_failed:${assignRes.status}`);
+    evidence.operations.assign = true;
+    evidence.ticket.assignedTo = assignRes.payload?.assignedTo || null;
 
     const transferQueue = `ux1_smoke_${ts}`;
     const transferRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}/transfer`, {
@@ -135,6 +190,8 @@ async function main() {
       body: { queue: transferQueue, assignedTo: null },
     });
     expect(transferRes.ok && transferRes.payload?.queue === transferQueue, `inbox_transfer_failed:${transferRes.status}`);
+    evidence.operations.transfer = true;
+    evidence.ticket.queueAfterTransfer = transferRes.payload?.queue || null;
 
     const noteText = `Nota interna smoke ${ts}`;
     const noteRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}/notes`, {
@@ -143,6 +200,7 @@ async function main() {
       body: { note: noteText },
     });
     expect(noteRes.ok, `inbox_note_failed:${noteRes.status}`);
+    evidence.operations.note = true;
 
     const addTagRes = await reqJson(`${baseUrl}/tickets/${encodeURIComponent(cleanup.ticketId)}/tags`, {
       method: 'POST',
@@ -150,12 +208,14 @@ async function main() {
       body: { tag: 'smoke-ux01' },
     });
     expect(addTagRes.ok && Array.isArray(addTagRes.payload?.tags) && addTagRes.payload.tags.includes('smoke-ux01'), `ticket_tag_add_failed:${addTagRes.status}`);
+    evidence.operations.addTag = true;
 
     const removeTagRes = await reqJson(`${baseUrl}/tickets/${encodeURIComponent(cleanup.ticketId)}/tags/smoke-ux01`, {
       method: 'DELETE',
       token,
     });
     expect(removeTagRes.ok, `ticket_tag_remove_failed:${removeTagRes.status}`);
+    evidence.operations.removeTag = true;
 
     const conversationRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}`, {
       method: 'GET',
@@ -164,6 +224,8 @@ async function main() {
     expect(conversationRes.ok, `inbox_conversation_failed:${conversationRes.status}`);
     const messages = Array.isArray(conversationRes.payload?.messages) ? conversationRes.payload.messages : [];
     expect(messages.some((m) => m?.sender === 'note' && String(m?.text || '').includes(`smoke ${ts}`)), 'inbox_note_not_found_in_conversation');
+    evidence.conversation.messagesCount = messages.length;
+    evidence.conversation.noteFound = true;
 
     const createQrRes = await reqJson(`${baseUrl}/quick-replies`, {
       method: 'POST',
@@ -177,6 +239,7 @@ async function main() {
     });
     expect(createQrRes.ok && createQrRes.payload?.id, `quick_reply_create_failed:${createQrRes.status}`);
     cleanup.quickReplyId = createQrRes.payload.id;
+    evidence.operations.quickReplyCreate = true;
 
     const useQrRes = await reqJson(`${baseUrl}/quick-replies/${encodeURIComponent(cleanup.quickReplyId)}/use`, {
       method: 'POST',
@@ -184,6 +247,7 @@ async function main() {
       body: {},
     });
     expect(useQrRes.ok, `quick_reply_use_failed:${useQrRes.status}`);
+    evidence.operations.quickReplyUse = true;
 
     const listQrRes = await reqJson(`${baseUrl}/quick-replies?search=${encodeURIComponent(`UX01 Smoke ${ts}`)}`, {
       method: 'GET',
@@ -192,6 +256,7 @@ async function main() {
     expect(listQrRes.ok, `quick_reply_list_failed:${listQrRes.status}`);
     const quickReplies = Array.isArray(listQrRes.payload?.quickReplies) ? listQrRes.payload.quickReplies : [];
     expect(quickReplies.some((item) => item?.id === cleanup.quickReplyId), 'quick_reply_not_listed');
+    evidence.operations.quickReplyList = true;
 
     const getMaskingRes = await reqJson(`${baseUrl}/api/tenant-settings/phone-masking`, {
       method: 'GET',
@@ -212,6 +277,8 @@ async function main() {
     if (maskingUnavailable) {
       // eslint-disable-next-line no-console
       console.warn(`[inbox-smoke] WARN phone_masking_unavailable:${setMaskingRes.status}`);
+      evidence.operations.phoneMaskingToggle = 'unavailable';
+      evidence.warnings.push(`phone_masking_unavailable:${setMaskingRes.status}`);
     } else {
       expect(setMaskingRes.ok && setMaskingRes.payload?.ok === true, `phone_masking_set_failed:${setMaskingRes.status}`);
 
@@ -220,10 +287,14 @@ async function main() {
         token,
       });
       expect(verifyMaskingRes.ok && verifyMaskingRes.payload?.value?.enabled === nextEnabled, `phone_masking_verify_failed:${verifyMaskingRes.status}`);
+      evidence.operations.phoneMaskingToggle = `${previousEnabled}->${nextEnabled}`;
     }
 
+    evidence.ok = true;
+    const evPath = writeEvidence(evidence);
+
     // eslint-disable-next-line no-console
-    console.log(`[inbox-smoke] OK ticket=${cleanup.ticketId} queue=${transferQueue} quickReply=${cleanup.quickReplyId} phoneMasking=${previousEnabled}->${nextEnabled}`);
+    console.log(`[inbox-smoke] OK ticket=${cleanup.ticketId} queue=${transferQueue} quickReply=${cleanup.quickReplyId} phoneMasking=${previousEnabled}->${nextEnabled} evidence=${evPath}`);
   } finally {
     if (cleanup.quickReplyId) {
       const qrDelete = await reqJson(`${baseUrl}/quick-replies/${encodeURIComponent(cleanup.quickReplyId)}`, {
@@ -274,6 +345,16 @@ async function main() {
 
 if (require.main === module) {
   main().catch((err) => {
+    try {
+      const out = writeEvidence({
+        smoke: 'L-05',
+        generatedAt: new Date().toISOString(),
+        ok: false,
+        error: err?.message || String(err),
+      });
+      // eslint-disable-next-line no-console
+      console.error(`[inbox-smoke] evidence=${out}`);
+    } catch (_) {}
     // eslint-disable-next-line no-console
     console.error('[inbox-smoke] FAIL', err?.message || err);
     process.exit(1);
