@@ -92,6 +92,7 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
    - pre-check: `npm run system:release-clean-check`
    - `npm run system:release-window`
    - opcional (já limpar snapshots antigos ao final): `RELEASE_WINDOW_PRUNE_OLD=1 npm run system:release-window`
+   - observação: o modo full já executa `system:checklist` em modo estrito (`CHECKLIST_REQUIRE_LAUNCH_EVIDENCE=1`)
 3. Evidência consolidada da execução:
    - `qa/release-window-report.json`
    - `qa/release-manifest.json`

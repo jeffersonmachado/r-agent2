@@ -131,6 +131,25 @@ function main() {
         reason: !FAST_MODE ? 'RELEASE_WINDOW_PRUNE_OLD=0' : 'FAST_MODE',
       });
     }
+    if (!FAST_MODE) {
+      runStep(
+        report,
+        'checklist-strict',
+        'node tools/system/checklist.js',
+        { CHECKLIST_REQUIRE_LAUNCH_EVIDENCE: '1' }
+      );
+    } else {
+      report.steps.push({
+        label: 'checklist-strict',
+        command: 'node tools/system/checklist.js',
+        status: 'skipped',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 0,
+        error: null,
+        reason: 'FAST_MODE',
+      });
+    }
 
     report.status = 'pass';
   } catch (err) {
