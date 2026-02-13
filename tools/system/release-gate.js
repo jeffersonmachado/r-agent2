@@ -142,6 +142,14 @@ function assertCriticalSmokeEvidence(evidence) {
   ) {
     throw new Error('smoke_l04_runtime_evidence_missing');
   }
+  if (
+    !l04.evidence.pipeline
+    || !l04.evidence.pipeline.queue
+    || Number(l04.evidence.pipeline.queue.jobsDone || 0) <= 0
+    || Number(l04.evidence.pipeline.queue.jobsDead || 0) !== 0
+  ) {
+    throw new Error('smoke_l04_queue_evidence_missing');
+  }
 }
 
 async function main() {

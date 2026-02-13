@@ -1,12 +1,12 @@
 {
-  "startedAt": "2026-02-13T14:13:49.007Z",
+  "startedAt": "2026-02-13T15:10:12.350Z",
   "status": "pass",
   "steps": [
     {
       "label": "autotest de stack (validação completa)",
       "command": "bash scripts/system-autotest-stack.sh",
       "status": "pass",
-      "durationMs": 533481
+      "durationMs": 560489
     }
   ],
   "selftest": {
@@ -17,7 +17,7 @@
     "path": "qa/smoke-evidence.json",
     "found": true,
     "data": {
-      "generatedAt": "2026-02-13T14:22:19.834Z",
+      "generatedAt": "2026-02-13T15:19:11.007Z",
       "smokes": {
         "l02": {
           "status": "pass",
@@ -25,18 +25,18 @@
           "evidencePath": "qa/l02-ura-publish-rollback-evidence.json",
           "evidence": {
             "smoke": "L-02",
-            "generatedAt": "2026-02-13T14:19:45.908Z",
+            "generatedAt": "2026-02-13T15:16:21.059Z",
             "ok": true,
             "authMode": "admin",
             "tenantId": "system",
             "versions": {
               "rollbackTargetVersion": 1,
-              "topVersionSignature": "69b74c877449edf493534de9"
+              "topVersionSignature": "a62a37d23dcf35b7765672a9"
             },
             "signatures": {
-              "v1": "69b74c877449edf493534de9",
-              "v2": "7a78b5121c9dc18eb9b61130",
-              "rollback": "69b74c877449edf493534de9"
+              "v1": "a62a37d23dcf35b7765672a9",
+              "v2": "8293e83830389136690c0623",
+              "rollback": "a62a37d23dcf35b7765672a9"
             },
             "audit": {
               "source": "api.pbx.audit",
@@ -51,14 +51,14 @@
           "evidencePath": "qa/l03-pbx-voice-tts-asr-evidence.json",
           "evidence": {
             "smoke": "L-03",
-            "generatedAt": "2026-02-13T14:21:17.628Z",
+            "generatedAt": "2026-02-13T15:17:52.027Z",
             "ok": true,
             "authMode": "admin",
             "tenantId": "system",
-            "flowId": "flow-voice-tts-asr-smoke-1770992386206",
-            "callId": "call-voice-tts-asr-1770992386206",
-            "extension": "1106",
-            "dialplanSignature": "7a78b5121c9dc18eb9b61130",
+            "flowId": "flow-voice-tts-asr-smoke-1770995781137",
+            "callId": "call-voice-tts-asr-1770995781137",
+            "extension": "1137",
+            "dialplanSignature": "8293e83830389136690c0623",
             "runtime": {
               "startAction": "prompt_listen",
               "asrAction": "listen_asr",
@@ -66,7 +66,7 @@
             },
             "realCall": {
               "attempted": true,
-              "click2callId": "cc_c2c-1770992386282-c6aff21cb8c4",
+              "click2callId": "cc_c2c-1770995781205-ca36666ccd9b",
               "click2callStatus": "originated",
               "cdrFound": false,
               "cdr": null
@@ -80,13 +80,13 @@
           "evidencePath": "qa/l04-pbx-call-events-runtime-evidence.json",
           "evidence": {
             "smoke": "L-04",
-            "generatedAt": "2026-02-13T14:21:19.423Z",
+            "generatedAt": "2026-02-13T15:18:06.841Z",
             "ok": true,
             "authMode": "admin",
             "tenantId": "system",
             "cdr": {
-              "id": "cdr-l04-1770992477800",
-              "uniqueid": "l04-1770992477800",
+              "id": "cdr-l04-1770995872153",
+              "uniqueid": "l04-1770995872153",
               "source": "synthetic_insert"
             },
             "trigger": {
@@ -96,24 +96,40 @@
             "pipeline": {
               "scan": {
                 "ok": true,
-                "scanned": 2,
-                "emitted": 6,
+                "scanned": 1,
+                "emitted": 3,
                 "cursor": {
-                  "calldate": "2026-02-13T14:21:18.220Z",
-                  "cdrId": "cdr-l04-1770992477800"
+                  "calldate": "2026-02-13T15:17:52.577Z",
+                  "cdrId": "cdr-l04-1770995872153"
                 }
               },
               "eventIds": [
-                "evt-1770992479183-49a27f6cc17c",
-                "evt-1770992479187-59a12b8bb2bd",
-                "evt-1770992479190-abf86fce6f00"
-              ]
+                "evt-1770995873302-371826f1caa2",
+                "evt-1770995873321-9c2c2f70d888",
+                "evt-1770995873325-52d4ad17840e"
+              ],
+              "queue": {
+                "consumer": "webhooks_l04_1770995873334",
+                "enqueue": {
+                  "ok": true,
+                  "enqueued": 16,
+                  "cursor": {
+                    "receivedAt": "2026-02-13T15:17:53.325Z",
+                    "eventId": "evt-1770995873325-52d4ad17840e"
+                  }
+                },
+                "jobsTotal": 3,
+                "jobsDone": 3,
+                "jobsDead": 0,
+                "jobsPending": 0,
+                "lastErrors": []
+              }
             },
             "flow": {
-              "flowId": "flow-pbx-call-events-runtime-smoke-1770992477800",
-              "executionId": "fx-1770992479246-32cf6487b050",
+              "flowId": "flow-pbx-call-events-runtime-smoke-1770995872153",
+              "executionId": "fx-1770995886139-82d76ec210fc",
               "status": "done",
-              "latencyMs": 58,
+              "latencyMs": 327,
               "nodesCount": 3
             },
             "dispatch": {
@@ -128,6 +144,6 @@
     }
   },
   "error": null,
-  "finishedAt": "2026-02-13T14:22:42.490Z",
-  "durationMs": 533482
+  "finishedAt": "2026-02-13T15:19:32.840Z",
+  "durationMs": 560490
 }

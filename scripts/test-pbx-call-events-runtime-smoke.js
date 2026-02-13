@@ -23,19 +23,33 @@ function apiBaseUrl() {
 async function reqJson(url, { method = 'GET', token = null, body = null } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body == null ? undefined : JSON.stringify(body),
-  });
-  const txt = await res.text().catch(() => '');
-  let payload = {};
-  try {
-    payload = txt ? JSON.parse(txt) : {};
-  } catch (_) {
-    payload = { raw: txt };
+  const retries = Math.max(1, Number(process.env.L04_HTTP_RETRIES || 3));
+  let lastErr = null;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: body == null ? undefined : JSON.stringify(body),
+      });
+      const txt = await res.text().catch(() => '');
+      let payload = {};
+      try {
+        payload = txt ? JSON.parse(txt) : {};
+      } catch (_) {
+        payload = { raw: txt };
+      }
+      return { ok: res.ok, status: res.status, payload };
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(250 * attempt);
+        continue;
+      }
+    }
   }
-  return { ok: res.ok, status: res.status, payload };
+  throw lastErr || new Error('request_failed');
 }
 
 function expect(condition, message) {
@@ -284,7 +298,7 @@ async function runPbxEventPipeline({ tenantId, uniqueid }) {
   const js = `
 const { connect, getSequelize, close } = require('./api/db/sequelize');
 const { scanPbxCdrAndEmitEvents } = require('./api/services/pbx/pbxCallEventsService');
-const { dispatchOne } = require('./api/services/eventLedgerTriggerDispatcher');
+const { scanAndEnqueue } = require('./api/services/eventLedgerTriggerDispatcher');
 (async () => {
   await connect();
   const sq = getSequelize();
@@ -296,10 +310,35 @@ const { dispatchOne } = require('./api/services/eventLedgerTriggerDispatcher');
     { replacements: { tenant, cid } }
   );
   const evIds = (Array.isArray(events) ? events : []).map((r) => String(r.id || '')).filter(Boolean);
-  for (const eventId of evIds) {
-    await dispatchOne({ tenantId: tenant, consumer: 'webhooks_l04_' + Date.now(), eventId, dispatchTargets: ['flows'] });
+  const consumer = 'webhooks_l04_' + Date.now();
+  const enqueue = await scanAndEnqueue({ consumer, batchSize: 1000, dispatchTargets: ['flows'] });
+  const deadline = Date.now() + 45000;
+  let jobs = [];
+  while (Date.now() < deadline) {
+    const [rows] = await sq.query(
+      "SELECT id, status, attempts, last_error, payload FROM execution_jobs WHERE kind = 'dispatch_event_trigger' AND payload->>'eventId' IN (:ids) ORDER BY created_at ASC",
+      { replacements: { ids: evIds } }
+    );
+    jobs = Array.isArray(rows) ? rows : [];
+    const relevant = jobs.filter((j) => evIds.includes(String(j?.payload?.eventId || '')));
+    const done = relevant.filter((j) => String(j.status) === 'done').length;
+    const dead = relevant.filter((j) => String(j.status) === 'dead').length;
+    if (relevant.length >= evIds.length && (done + dead) >= evIds.length) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  process.stdout.write('${marker}' + JSON.stringify({ scan, eventIds: evIds }));
+  const relevantJobs = jobs.filter((j) => evIds.includes(String(j?.payload?.eventId || '')));
+  const queue = {
+    consumer,
+    enqueue: enqueue || null,
+    jobsTotal: relevantJobs.length,
+    jobsDone: relevantJobs.filter((j) => String(j.status) === 'done').length,
+    jobsDead: relevantJobs.filter((j) => String(j.status) === 'dead').length,
+    jobsPending: relevantJobs.filter((j) => String(j.status) === 'pending' || String(j.status) === 'processing').length,
+    lastErrors: relevantJobs.filter((j) => j && j.last_error).map((j) => String(j.last_error)).slice(-5),
+  };
+  process.stdout.write('${marker}' + JSON.stringify({ scan, eventIds: evIds, queue }));
   await close();
 })().catch(async (e) => {
   try { await close(); } catch (_) {}
@@ -422,6 +461,10 @@ async function main() {
     uniqueid,
   });
   expect(Array.isArray(pipeline.eventIds) && pipeline.eventIds.length > 0, 'pbx_events_not_emitted');
+  if (pipeline.queue && typeof pipeline.queue === 'object') {
+    expect(Number(pipeline.queue.jobsDone || 0) >= pipeline.eventIds.length, `dispatch_jobs_not_done:${JSON.stringify(pipeline.queue)}`);
+    expect(Number(pipeline.queue.jobsDead || 0) === 0, `dispatch_jobs_dead:${JSON.stringify(pipeline.queue)}`);
+  }
 
   const waited = await waitExecution({
     baseUrl,
@@ -457,6 +500,7 @@ async function main() {
     pipeline: {
       scan: pipeline.scan || null,
       eventIds: pipeline.eventIds,
+      queue: pipeline.queue || null,
     },
     flow: {
       flowId,
