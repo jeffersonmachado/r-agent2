@@ -13,6 +13,8 @@ const EVENT_TYPES_V1 = new Set([
   'PhysicalTicketCalled',
   'PhysicalTicketFinished',
   'PhysicalServiceStarted',
+  'PhysicalServicePaused',
+  'PhysicalServiceResumed',
   'PhysicalTicketSkipped',
   'PhysicalTicketTransferred',
   'PhysicalTicketAbandoned',

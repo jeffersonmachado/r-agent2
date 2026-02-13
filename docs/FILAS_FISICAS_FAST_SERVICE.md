@@ -59,7 +59,9 @@ Benchmarks de referência (explicitamente):
 - `PhysicalQueueJoined`
 - `PhysicalTicketCalled`
 - `PhysicalServiceStarted`
-- `PhysicalServiceCompleted`
+- `PhysicalServicePaused`
+- `PhysicalServiceResumed`
+- `PhysicalTicketFinished`
 - `PhysicalTicketAbandoned`
 - `PhysicalSLARisk` (espera excedeu meta)
 
@@ -126,4 +128,3 @@ Totem/check-in → DAG roda triagem com IA → define fila e prioridade → cham
 - **Offline/instabilidade**: totem precisa modo degradado (cache local) e ressincronização.
 - **Privacidade (LGPD)**: consentimento explícito para contato; retenção configurável.
 - **Observabilidade**: auditoria de chamadas de painel/estação e métricas por unidade.
-

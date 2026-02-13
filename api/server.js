@@ -14237,6 +14237,172 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /physical/station/pause?token=... - pausa atendimento (in_service -> paused)
+  if (method === 'POST' && pathname === '/physical/station/pause') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const reason = body && body.reason ? String(body.reason).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { pauseService } = require('./services/physicalQueueService');
+      const ticket = await pauseService({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_pause',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            reason: reason || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao pausar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao pausar atendimento' });
+    }
+    return;
+  }
+
+  // POST /physical/station/resume?token=... - retoma atendimento (paused -> in_service)
+  if (method === 'POST' && pathname === '/physical/station/resume') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { resumeService } = require('./services/physicalQueueService');
+      const ticket = await resumeService({ tenantId: resolved.tenantId, ticketId, stationId, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_resume',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao retomar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao retomar atendimento' });
+    }
+    return;
+  }
+
   // POST /physical/station/transfer?token=... - transfere senha para outra fila
   if (method === 'POST' && pathname === '/physical/station/transfer') {
     if (!hasJsonContentType(req)) {

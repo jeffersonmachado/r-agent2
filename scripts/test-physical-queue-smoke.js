@@ -7,7 +7,7 @@
  * - cria tokens publicos kiosk/panel/station
  * - cria senha no kiosk
  * - valida painel (fila de espera)
- * - call-next + start + finish no station
+ * - call-next + start + pause + resume + finish no station
  * - valida metricas minimas admin
  */
 
@@ -122,6 +122,27 @@ async function main() {
   });
   expect(startService.ok && startService.payload?.ticket?.status === 'in_service', `physical_start_failed:${startService.status}`);
 
+  const pauseService = await reqJson(`${base}/physical/station/pause?token=${encodeURIComponent(stationToken)}`, {
+    method: 'POST',
+    body: {
+      ticketId,
+      stationId,
+      reason: 'smoke_pause',
+      idempotencyKey: `${idempotencyKey}:pause`,
+    },
+  });
+  expect(pauseService.ok && pauseService.payload?.ticket?.status === 'paused', `physical_pause_failed:${pauseService.status}`);
+
+  const resumeService = await reqJson(`${base}/physical/station/resume?token=${encodeURIComponent(stationToken)}`, {
+    method: 'POST',
+    body: {
+      ticketId,
+      stationId,
+      idempotencyKey: `${idempotencyKey}:resume`,
+    },
+  });
+  expect(resumeService.ok && resumeService.payload?.ticket?.status === 'in_service', `physical_resume_failed:${resumeService.status}`);
+
   const finishService = await reqJson(`${base}/physical/station/finish?token=${encodeURIComponent(stationToken)}`, {
     method: 'POST',
     body: { ticketId },
@@ -134,6 +155,7 @@ async function main() {
   });
   expect(metrics.ok && metrics.payload?.ok === true, `physical_metrics_failed:${metrics.status}`);
   expect(Number(metrics.payload?.today?.doneCount || 0) >= 1, 'physical_metrics_done_count_invalid');
+  expect(Number(metrics.payload?.today?.pausedCount || 0) >= 0, 'physical_metrics_paused_count_invalid');
   expect(Array.isArray(metrics.payload?.byQueue), 'physical_metrics_byqueue_missing');
 
   // eslint-disable-next-line no-console

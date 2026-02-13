@@ -346,6 +346,145 @@ async function startService({ tenantId, ticketId, stationId = null, idempotencyK
   return json;
 }
 
+async function pauseService({ tenantId, ticketId, stationId = null, reason = null, idempotencyKey = null }) {
+  const TicketModel = PhysicalTicket();
+  const row = await TicketModel.findOne({ where: { tenant_key: tenantId, id: ticketId } });
+  if (!row) {
+    const err = new Error('physical_ticket_not_found');
+    // @ts-ignore
+    err.code = 'physical_ticket_not_found';
+    throw err;
+  }
+
+  const ctx0 = (row.context && typeof row.context === 'object') ? row.context : {};
+  const keys0 = (ctx0.idempotencyKeys && typeof ctx0.idempotencyKeys === 'object') ? ctx0.idempotencyKeys : {};
+  if (idempotencyKey && row.status === 'paused' && keys0.pauseService === String(idempotencyKey)) {
+    return row.toJSON ? row.toJSON() : row;
+  }
+
+  if (row.status !== 'in_service' && row.status !== 'paused') {
+    const err = new Error('invalid_transition');
+    // @ts-ignore
+    err.code = 'physical_ticket_invalid_transition';
+    // @ts-ignore
+    err.details = { from: row.status, to: 'paused' };
+    throw err;
+  }
+
+  const pausedAt = row.status === 'paused' && row.context?.pause?.pausedAt
+    ? row.context.pause.pausedAt
+    : new Date().toISOString();
+
+  const pauseCount = Number(ctx0.pauseCount || 0) + (row.status === 'paused' ? 0 : 1);
+  const ctx = {
+    ...ctx0,
+    pauseCount,
+    pause: {
+      pausedAt,
+      reason: reason ? String(reason) : (ctx0.pause?.reason || null),
+      stationId: stationId || row.station_id || null,
+    },
+    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { pauseService: String(idempotencyKey) } : {}) },
+  };
+
+  await row.update({
+    status: 'paused',
+    ...(stationId ? { station_id: stationId } : {}),
+    context: ctx,
+  });
+  const json = row.toJSON ? row.toJSON() : row;
+  try {
+    const correlationId = json?.context?.correlationId || null;
+    await appendEventV1({
+      tenantId,
+      type: 'PhysicalServicePaused',
+      source: 'physical.station',
+      occurredAt: new Date(),
+      correlationId,
+      subject: { type: 'physical_ticket', id: json.id },
+      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
+      idempotencyKey: idempotencyKey
+        ? `physical_service_paused:${tenantId}:${json.id}:${String(idempotencyKey)}`
+        : `physical_service_paused:${tenantId}:${json.id}:${String(json.updated_at || '')}`,
+      payload: {
+        ticketId: json.id,
+        ticketNumber: json.ticket_number,
+        stationId: json.station_id || null,
+        reason: reason || null,
+        status: 'paused',
+      },
+    });
+  } catch (_) {}
+  return json;
+}
+
+async function resumeService({ tenantId, ticketId, stationId = null, idempotencyKey = null }) {
+  const TicketModel = PhysicalTicket();
+  const row = await TicketModel.findOne({ where: { tenant_key: tenantId, id: ticketId } });
+  if (!row) {
+    const err = new Error('physical_ticket_not_found');
+    // @ts-ignore
+    err.code = 'physical_ticket_not_found';
+    throw err;
+  }
+
+  const ctx0 = (row.context && typeof row.context === 'object') ? row.context : {};
+  const keys0 = (ctx0.idempotencyKeys && typeof ctx0.idempotencyKeys === 'object') ? ctx0.idempotencyKeys : {};
+  if (idempotencyKey && row.status === 'in_service' && keys0.resumeService === String(idempotencyKey)) {
+    return row.toJSON ? row.toJSON() : row;
+  }
+
+  if (row.status !== 'paused' && row.status !== 'in_service') {
+    const err = new Error('invalid_transition');
+    // @ts-ignore
+    err.code = 'physical_ticket_invalid_transition';
+    // @ts-ignore
+    err.details = { from: row.status, to: 'in_service' };
+    throw err;
+  }
+
+  const resumeCount = Number(ctx0.resumeCount || 0) + (row.status === 'in_service' ? 0 : 1);
+  const ctx = {
+    ...ctx0,
+    resumeCount,
+    pause: {
+      ...(ctx0.pause && typeof ctx0.pause === 'object' ? ctx0.pause : {}),
+      resumedAt: new Date().toISOString(),
+      resumedByStationId: stationId || row.station_id || null,
+    },
+    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { resumeService: String(idempotencyKey) } : {}) },
+  };
+
+  await row.update({
+    status: 'in_service',
+    ...(stationId ? { station_id: stationId } : {}),
+    context: ctx,
+  });
+  const json = row.toJSON ? row.toJSON() : row;
+  try {
+    const correlationId = json?.context?.correlationId || null;
+    await appendEventV1({
+      tenantId,
+      type: 'PhysicalServiceResumed',
+      source: 'physical.station',
+      occurredAt: new Date(),
+      correlationId,
+      subject: { type: 'physical_ticket', id: json.id },
+      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
+      idempotencyKey: idempotencyKey
+        ? `physical_service_resumed:${tenantId}:${json.id}:${String(idempotencyKey)}`
+        : `physical_service_resumed:${tenantId}:${json.id}:${String(json.updated_at || '')}`,
+      payload: {
+        ticketId: json.id,
+        ticketNumber: json.ticket_number,
+        stationId: json.station_id || null,
+        status: 'in_service',
+      },
+    });
+  } catch (_) {}
+  return json;
+}
+
 async function skipTicket({ tenantId, ticketId, stationId = null, reason = null, idempotencyKey = null }) {
   const TicketModel = PhysicalTicket();
   const row = await TicketModel.findOne({ where: { tenant_key: tenantId, id: ticketId } });
@@ -539,6 +678,7 @@ async function getMetrics({ tenantId, locationId = null }) {
        COUNT(*) FILTER (WHERE status = 'waiting')::int AS waiting_count,
        COUNT(*) FILTER (WHERE status = 'called')::int AS called_count,
        COUNT(*) FILTER (WHERE status = 'in_service')::int AS in_service_count,
+       COUNT(*) FILTER (WHERE status = 'paused')::int AS paused_count,
        AVG(EXTRACT(EPOCH FROM (called_at - created_at))) FILTER (WHERE called_at IS NOT NULL)::float AS avg_wait_seconds,
        AVG(EXTRACT(EPOCH FROM (finished_at - started_at))) FILTER (WHERE finished_at IS NOT NULL AND started_at IS NOT NULL)::float AS avg_service_seconds,
        AVG(COALESCE((context->>'skipCount')::int, 0))::float AS avg_skip_count
@@ -572,7 +712,7 @@ async function getMetrics({ tenantId, locationId = null }) {
        physical_queue_id,
        COUNT(*) FILTER (WHERE status = 'done')::int AS done_count,
        COUNT(*) FILTER (WHERE status = 'abandoned')::int AS abandoned_count,
-       COUNT(*) FILTER (WHERE status IN ('waiting','called','in_service'))::int AS active_count,
+       COUNT(*) FILTER (WHERE status IN ('waiting','called','in_service','paused'))::int AS active_count,
        AVG(EXTRACT(EPOCH FROM (called_at - created_at))) FILTER (WHERE called_at IS NOT NULL)::float AS avg_wait_seconds
      FROM physical_tickets
      WHERE tenant_key = :tenantKey
@@ -616,7 +756,8 @@ async function getMetrics({ tenantId, locationId = null }) {
       waitingCount: Number(r.waiting_count || 0),
       calledCount: Number(r.called_count || 0),
       inServiceCount: Number(r.in_service_count || 0),
-      activeCount: Number(r.waiting_count || 0) + Number(r.called_count || 0) + Number(r.in_service_count || 0),
+      pausedCount: Number(r.paused_count || 0),
+      activeCount: Number(r.waiting_count || 0) + Number(r.called_count || 0) + Number(r.in_service_count || 0) + Number(r.paused_count || 0),
       avgWaitSeconds: r.avg_wait_seconds != null ? Number(r.avg_wait_seconds) : null,
       avgServiceSeconds: r.avg_service_seconds != null ? Number(r.avg_service_seconds) : null,
       avgSkipCount: r.avg_skip_count != null ? Number(r.avg_skip_count) : null,
@@ -698,7 +839,7 @@ async function finishTicket({ tenantId, ticketId }) {
   }
   // Robustez: em cenários legados/mocks, `status` pode vir nulo. Considera como "called".
   const effectiveStatus = currentStatus == null ? 'called' : currentStatus;
-  if (effectiveStatus !== 'in_service' && effectiveStatus !== 'called') {
+  if (effectiveStatus !== 'in_service' && effectiveStatus !== 'called' && effectiveStatus !== 'paused') {
     const err = new Error('invalid_transition');
     // @ts-ignore
     err.code = 'physical_ticket_invalid_transition';
@@ -739,6 +880,8 @@ module.exports = {
   getPanelState,
   callNext,
   startService,
+  pauseService,
+  resumeService,
   skipTicket,
   transferTicket,
   abandonTicket,

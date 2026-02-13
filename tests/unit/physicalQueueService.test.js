@@ -121,5 +121,54 @@ describe('physicalQueueService', () => {
       .rejects
       .toMatchObject({ code: 'physical_ticket_not_found' });
   });
-});
 
+  test('pauseService/resumeService alterna in_service <-> paused', async () => {
+    const row = {
+      id: 'pt-1',
+      status: 'in_service',
+      station_id: 'A1',
+      context: {},
+      update: jest.fn(async (patch) => {
+        if (Object.prototype.hasOwnProperty.call(patch, 'status')) row.status = patch.status;
+        if (Object.prototype.hasOwnProperty.call(patch, 'context')) row.context = patch.context;
+        if (Object.prototype.hasOwnProperty.call(patch, 'station_id')) row.station_id = patch.station_id;
+      }),
+      toJSON: () => ({
+        id: row.id,
+        status: row.status,
+        station_id: row.station_id,
+        context: row.context,
+      }),
+    };
+    const findOne = jest.fn(async ({ where }) => (where.id === 'pt-1' ? row : null));
+
+    jest.doMock('../../api/db/models', () => ({
+      PhysicalTicket: () => ({ findOne }),
+      PhysicalTicketSequence: () => ({ sequelize: null }),
+    }));
+
+    // eslint-disable-next-line global-require
+    const { pauseService, resumeService } = require('../../api/services/physicalQueueService');
+
+    const paused = await pauseService({
+      tenantId: 'tenant-1',
+      ticketId: 'pt-1',
+      stationId: 'A1',
+      reason: 'intervalo',
+      idempotencyKey: 'idem-pause',
+    });
+    expect(paused.status).toBe('paused');
+    expect(paused.context.pause.reason).toBe('intervalo');
+    expect(paused.context.pauseCount).toBe(1);
+
+    const resumed = await resumeService({
+      tenantId: 'tenant-1',
+      ticketId: 'pt-1',
+      stationId: 'A1',
+      idempotencyKey: 'idem-resume',
+    });
+    expect(resumed.status).toBe('in_service');
+    expect(resumed.context.resumeCount).toBe(1);
+    expect(resumed.context.pause.resumedByStationId).toBe('A1');
+  });
+});

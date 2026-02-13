@@ -42,6 +42,22 @@ export function startPhysicalService(token, payload = {}) {
   });
 }
 
+export function pausePhysicalService(token, payload = {}) {
+  const qs = new URLSearchParams({ token }).toString();
+  return fetchPublicJson(`/physical/station/pause?${qs}`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resumePhysicalService(token, payload = {}) {
+  const qs = new URLSearchParams({ token }).toString();
+  return fetchPublicJson(`/physical/station/resume?${qs}`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function skipPhysicalTicket(token, payload = {}) {
   const qs = new URLSearchParams({ token }).toString();
   return fetchPublicJson(`/physical/station/skip?${qs}`, {
@@ -65,4 +81,3 @@ export function abandonPhysicalTicket(token, payload = {}) {
     body: JSON.stringify(payload),
   });
 }
-

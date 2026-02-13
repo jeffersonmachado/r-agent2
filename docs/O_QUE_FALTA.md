@@ -57,7 +57,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 ### Suites verticais (MVP→v1 operacional)
 - **Fast service (filas físicas)**:
   - público por token: `/physical/*` (kiosk/panel/station) em `api/server.js`
-  - operações adicionais (station): `start/skip/transfer`
+  - operações adicionais (station): `start/pause/resume/skip/transfer`
   - admin: `GET/POST /api/physical/queues`, `GET /api/physical/metrics`
   - sequenciamento robusto: `physical_ticket_sequences` (migration `20260204022000-physical-queues-multiunit-and-sequences.js`)
 - **Pedidos/Storefront/Delivery**:

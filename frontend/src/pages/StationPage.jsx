@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { abandonPhysicalTicket, callNext, finishPhysicalTicket, skipPhysicalTicket, startPhysicalService, transferPhysicalTicket } from '../api/physicalQueuePublic';
+import {
+  abandonPhysicalTicket,
+  callNext,
+  finishPhysicalTicket,
+  pausePhysicalService,
+  resumePhysicalService,
+  skipPhysicalTicket,
+  startPhysicalService,
+  transferPhysicalTicket,
+} from '../api/physicalQueuePublic';
 
 function getQueryParam(name) {
   try {
@@ -84,6 +93,42 @@ export function StationPage() {
       setCurrent(null);
     } catch (e) {
       setError(e?.body?.message || e?.message || 'Erro ao pular');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onPause = async () => {
+    setError(null);
+    if (!token) {
+      setError('Token ausente na URL.');
+      return;
+    }
+    if (!current?.id) return;
+    setLoading(true);
+    try {
+      const res = await pausePhysicalService(token, { ticketId: current.id, stationId, reason: 'pause' });
+      setCurrent(res?.ticket || current);
+    } catch (e) {
+      setError(e?.body?.message || e?.message || 'Erro ao pausar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onResume = async () => {
+    setError(null);
+    if (!token) {
+      setError('Token ausente na URL.');
+      return;
+    }
+    if (!current?.id) return;
+    setLoading(true);
+    try {
+      const res = await resumePhysicalService(token, { ticketId: current.id, stationId });
+      setCurrent(res?.ticket || current);
+    } catch (e) {
+      setError(e?.body?.message || e?.message || 'Erro ao retomar');
     } finally {
       setLoading(false);
     }
@@ -176,6 +221,20 @@ export function StationPage() {
                   Iniciar atendimento
                 </button>
                 <button
+                  onClick={onPause}
+                  disabled={loading}
+                  style={{ padding: '0.75rem', borderRadius: 12, border: '1px solid #f59e0b', background: 'white', color: '#92400e', cursor: 'pointer', width: '100%' }}
+                >
+                  Pausar atendimento
+                </button>
+                <button
+                  onClick={onResume}
+                  disabled={loading}
+                  style={{ padding: '0.75rem', borderRadius: 12, border: '1px solid #10b981', background: 'white', color: '#065f46', cursor: 'pointer', width: '100%' }}
+                >
+                  Retomar atendimento
+                </button>
+                <button
                   onClick={onSkip}
                   disabled={loading}
                   style={{ padding: '0.75rem', borderRadius: 12, border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', width: '100%' }}
@@ -224,4 +283,3 @@ export function StationPage() {
     </div>
   );
 }
-
