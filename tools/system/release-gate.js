@@ -114,6 +114,7 @@ function assertCriticalSmokeEvidence(evidence) {
   }
   const l02 = evidence.data.smokes.l02 || null;
   const l03 = evidence.data.smokes.l03 || null;
+  const l04 = evidence.data.smokes.l04 || null;
   if (!l02 || l02.status !== 'pass') {
     throw new Error('smoke_l02_not_pass');
   }
@@ -128,6 +129,17 @@ function assertCriticalSmokeEvidence(evidence) {
     || String(l03.evidence.realCall.click2callStatus || '').toLowerCase() !== 'originated'
   ) {
     throw new Error('smoke_l03_real_call_evidence_missing');
+  }
+  if (!l04 || l04.status !== 'pass') {
+    throw new Error('smoke_l04_not_pass');
+  }
+  if (
+    !l04.evidence
+    || l04.evidence.ok !== true
+    || !l04.evidence.flow
+    || !String(l04.evidence.flow.executionId || '').trim()
+  ) {
+    throw new Error('smoke_l04_runtime_evidence_missing');
   }
 }
 

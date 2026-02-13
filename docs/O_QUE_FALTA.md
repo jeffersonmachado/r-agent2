@@ -20,7 +20,13 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - evidência: `qa/l03-pbx-voice-tts-asr-evidence.json`
   - log: `qa/smoke/l03-pbx-voice-tts-asr.log`
 
-- [x] Gate com consolidado e validação obrigatória de L-02/L-03:
+- [x] **L-04** fechado com integração PBX call events v0 -> runtime (trigger por evento):
+  - `scripts/test-pbx-call-events-runtime-smoke.js`
+  - valida trigger `CallEnded` (`source=pbx.cdr`) em flow real, com execução registrada
+  - evidência: `qa/l04-pbx-call-events-runtime-evidence.json`
+  - log: `qa/smoke/l04-pbx-call-events-runtime.log`
+
+- [x] Gate com consolidado e validação obrigatória de L-02/L-03/L-04:
   - consolidado: `qa/smoke-evidence.json`
   - validação no gate: `tools/system/release-gate.js`
 

@@ -14,6 +14,7 @@
     "test:voice:smoke": "node scripts/test-voice-runtime-smoke.js",
     "test:ura:publish-rollback:smoke": "node scripts/test-ura-publish-rollback-smoke.js",
     "test:pbx:voice:tts-asr:smoke": "node scripts/test-pbx-voice-tts-asr-smoke.js",
+    "test:pbx:call-events-runtime:smoke": "node scripts/test-pbx-call-events-runtime-smoke.js",
     "test:physical:smoke": "node scripts/test-physical-queue-smoke.js",
     "test:whatsapp:qr:smoke": "node scripts/test-whatsapp-qr-smoke.js",
     "test:inbox:smoke": "node scripts/test-inbox-runtime-smoke.js",

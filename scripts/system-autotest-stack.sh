@@ -20,10 +20,13 @@ cd "$ROOT_DIR"
 mkdir -p qa/smoke
 L02_STATUS="not_run"
 L03_STATUS="not_run"
+L04_STATUS="not_run"
 L02_LOG_PATH="qa/smoke/l02-ura-publish-rollback.log"
 L03_LOG_PATH="qa/smoke/l03-pbx-voice-tts-asr.log"
+L04_LOG_PATH="qa/smoke/l04-pbx-call-events-runtime.log"
 L02_EVIDENCE_PATH="qa/l02-ura-publish-rollback-evidence.json"
 L03_EVIDENCE_PATH="qa/l03-pbx-voice-tts-asr-evidence.json"
+L04_EVIDENCE_PATH="qa/l04-pbx-call-events-runtime-evidence.json"
 SMOKE_EVIDENCE_SUMMARY_PATH="${SMOKE_EVIDENCE_SUMMARY_PATH:-qa/smoke-evidence.json}"
 
 run_with_log() {
@@ -46,11 +49,14 @@ write_smoke_evidence_summary() {
   SMOKE_EVIDENCE_SUMMARY_PATH="$SMOKE_EVIDENCE_SUMMARY_PATH" \
   L02_STATUS="$L02_STATUS" \
   L03_STATUS="$L03_STATUS" \
+  L04_STATUS="$L04_STATUS" \
   L02_LOG_PATH="$L02_LOG_PATH" \
   L03_LOG_PATH="$L03_LOG_PATH" \
+  L04_LOG_PATH="$L04_LOG_PATH" \
   L02_EVIDENCE_PATH="$L02_EVIDENCE_PATH" \
   L03_EVIDENCE_PATH="$L03_EVIDENCE_PATH" \
-  node -e "const fs=require('fs');const p=process.env;const out=String(p.SMOKE_EVIDENCE_SUMMARY_PATH||'qa/smoke-evidence.json');const read=(f)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'));}catch(_){return null;}};const summary={generatedAt:new Date().toISOString(),smokes:{l02:{status:p.L02_STATUS||'unknown',logPath:p.L02_LOG_PATH||null,evidencePath:p.L02_EVIDENCE_PATH||null,evidence:read(p.L02_EVIDENCE_PATH||'')},l03:{status:p.L03_STATUS||'unknown',logPath:p.L03_LOG_PATH||null,evidencePath:p.L03_EVIDENCE_PATH||null,evidence:read(p.L03_EVIDENCE_PATH||'')}}};fs.mkdirSync(require('path').dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(summary,null,2)+'\n','utf8');console.log('[autotest-stack] Smoke evidence summary:', out);"
+  L04_EVIDENCE_PATH="$L04_EVIDENCE_PATH" \
+  node -e "const fs=require('fs');const p=process.env;const out=String(p.SMOKE_EVIDENCE_SUMMARY_PATH||'qa/smoke-evidence.json');const read=(f)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'));}catch(_){return null;}};const summary={generatedAt:new Date().toISOString(),smokes:{l02:{status:p.L02_STATUS||'unknown',logPath:p.L02_LOG_PATH||null,evidencePath:p.L02_EVIDENCE_PATH||null,evidence:read(p.L02_EVIDENCE_PATH||'')},l03:{status:p.L03_STATUS||'unknown',logPath:p.L03_LOG_PATH||null,evidencePath:p.L03_EVIDENCE_PATH||null,evidence:read(p.L03_EVIDENCE_PATH||'')},l04:{status:p.L04_STATUS||'unknown',logPath:p.L04_LOG_PATH||null,evidencePath:p.L04_EVIDENCE_PATH||null,evidence:read(p.L04_EVIDENCE_PATH||'')}}};fs.mkdirSync(require('path').dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(summary,null,2)+'\n','utf8');console.log('[autotest-stack] Smoke evidence summary:', out);"
 }
 
 echo "[autotest-stack] Preparando token RPA..."
@@ -115,6 +121,10 @@ run_with_log L02_STATUS "$L02_LOG_PATH" env URA_PUBLISH_ROLLBACK_EVIDENCE_PATH="
 echo
 echo "[autotest-stack] Rodando smoke test L-03 (PBX TTS+ASR runtime de voz + chamada real)..."
 run_with_log L03_STATUS "$L03_LOG_PATH" env PBX_VOICE_TTS_ASR_EVIDENCE_PATH="$L03_EVIDENCE_PATH" node ./scripts/test-pbx-voice-tts-asr-smoke.js
+
+echo
+echo "[autotest-stack] Rodando smoke test L-04 (PBX call events -> runtime trigger)..."
+run_with_log L04_STATUS "$L04_LOG_PATH" env PBX_CALL_EVENTS_RUNTIME_EVIDENCE_PATH="$L04_EVIDENCE_PATH" node ./scripts/test-pbx-call-events-runtime-smoke.js
 
 echo
 echo "[autotest-stack] Rodando smoke test Voice Runtime (ingestão + métricas + selftest)..."
