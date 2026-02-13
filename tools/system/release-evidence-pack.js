@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..', '..');
 const BASE_DIR = process.env.RELEASE_EVIDENCE_BASE_DIR || 'qa/release-evidence';
@@ -51,6 +52,12 @@ function copyFile(relSrc, relDst) {
   const dst = abs(relDst);
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.copyFileSync(src, dst);
+}
+
+function sha256File(absPath) {
+  const hash = crypto.createHash('sha256');
+  hash.update(fs.readFileSync(absPath));
+  return hash.digest('hex');
 }
 
 function buildManifest(foundRequired, missingRequired, foundOptional, missingOptional) {
@@ -113,6 +120,15 @@ function main() {
     }
     fs.writeFileSync(abs(path.join(PACK_DIR, 'manifest.json')), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
     fs.writeFileSync(abs(path.join(PACK_DIR, 'README.md')), renderReadme(manifest), 'utf8');
+    const checksums = [];
+    for (const rel of [...foundRequired, ...foundOptional, 'manifest.json', 'README.md']) {
+      const relInPack = rel === 'manifest.json' || rel === 'README.md' ? rel : path.join(PACK_DIR, rel).replace(`${PACK_DIR}/`, '');
+      const absInPack = rel === 'manifest.json' || rel === 'README.md'
+        ? abs(path.join(PACK_DIR, rel))
+        : abs(path.join(PACK_DIR, rel));
+      checksums.push(`${sha256File(absInPack)}  ${relInPack}`);
+    }
+    fs.writeFileSync(abs(path.join(PACK_DIR, 'SHA256SUMS')), `${checksums.join('\n')}\n`, 'utf8');
   }
 
   // eslint-disable-next-line no-console
