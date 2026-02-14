@@ -13,6 +13,7 @@ const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-re
 const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
 const OUTPUT_JSON_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
 const OUTPUT_MD_PATH = process.env.LAUNCH_PLAN_STATUS_MD_PATH || 'qa/launch-plan-status.md';
+const ALLOW_PENDING_RELEASE_WINDOW = String(process.env.LAUNCH_PLAN_ALLOW_PENDING_RELEASE_WINDOW || '0') === '1';
 
 function readJson(relPath) {
   const absPath = path.join(ROOT, relPath);
@@ -48,7 +49,9 @@ function buildStatus() {
   const rollbackOk = !!drill && drill.status === 'pass';
   const goNoGoOk = !!goNoGo && goNoGo.decision === 'GO';
   const gateOk = !!gate && gate.status === 'pass';
-  const releaseWindowOk = !!releaseWindow && releaseWindow.status === 'pass';
+  const releaseWindowOk = ALLOW_PENDING_RELEASE_WINDOW
+    ? !!releaseWindow
+    : !!releaseWindow && releaseWindow.status === 'pass';
 
   const d7 = [
     makeItem(gateOk, 'Executar gate completo', RELEASE_GATE_REPORT_PATH),
