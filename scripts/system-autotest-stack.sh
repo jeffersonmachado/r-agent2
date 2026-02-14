@@ -39,8 +39,20 @@ run_with_log() {
   local status_var="$1"
   local log_path="$2"
   shift 2
+  local timeout_sec="${RUN_WITH_LOG_TIMEOUT_SEC:-0}"
+  case "$status_var" in
+    L01_STATUS) timeout_sec="${L01_TIMEOUT_SEC:-$timeout_sec}" ;;
+    L02_STATUS) timeout_sec="${L02_TIMEOUT_SEC:-$timeout_sec}" ;;
+    L03_STATUS) timeout_sec="${L03_TIMEOUT_SEC:-$timeout_sec}" ;;
+    L04_STATUS) timeout_sec="${L04_TIMEOUT_SEC:-$timeout_sec}" ;;
+    L05_STATUS) timeout_sec="${L05_TIMEOUT_SEC:-$timeout_sec}" ;;
+  esac
   set +e
-  "$@" 2>&1 | tee "$log_path"
+  if command -v timeout >/dev/null 2>&1 && [[ "$timeout_sec" =~ ^[0-9]+$ ]] && [[ "$timeout_sec" -gt 0 ]]; then
+    timeout --signal=TERM --kill-after=30s "${timeout_sec}s" "$@" 2>&1 | tee "$log_path"
+  else
+    "$@" 2>&1 | tee "$log_path"
+  fi
   local cmd_rc=${PIPESTATUS[0]}
   set -e
   if [[ "$cmd_rc" -eq 0 ]]; then

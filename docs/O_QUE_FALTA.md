@@ -193,7 +193,8 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 #### 2.4 Execução “enterprise mínima” (core DAG)
 - **Conectar o execution ledger por nó ao runtime + expor consulta/replay assistido**
-  - **Status**: base DB-first já existe (`flow_executions`/`node_executions` + `flowExecutionLedgerService`); integração full do runtime ainda parcial.
+  - **Status**: base DB-first já existe (`flow_executions`/`node_executions` + `flowExecutionLedgerService`) e os runtimes principais (mensageria/eventos/voz) já registram execução por nó.
+  - **Update (14/02/2026)**: selftest passou a validar cobertura de runtime real no ledger (métricas por modo em `flowExecutionLedger`: `simulation/message/event/voice`), degradando quando houver apenas execução de simulação na janela.
   - **Saídas mínimas**:
     - registrar execuções reais do DAG (não só simulation/flows específicos)
   - **Critério de pronto**: responder “o que aconteceu em qual node” e permitir replay controlado com rastreabilidade.
@@ -204,7 +205,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - **Status (13/02/2026)**:
     - caminho `event_ledger -> execution_jobs(dispatch_event_trigger) -> worker -> runtime` validado no smoke L-04
     - gate exige evidência de queue (`jobsDone > 0` e `jobsDead = 0`) e execução real de nós (`nodesCount > 0`)
-  - pendente: ampliar cobertura para cenários de falha em produção (thresholds operacionais por tenant e rotina de reprocesso assistido no runbook).
+  - **Update (14/02/2026)**: cobertura de falha ampliada com thresholds operacionais por tenant no selftest (`SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON`) e rotina de reprocesso assistido documentada no runbook (`docs/RUNBOOK_SUITES_V1.md`).
 
 ### Next (3–6 meses) — produto inicial por suíte + analytics/ROI v1
 
@@ -319,6 +320,11 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 ### 4.1 Checklist executável (foco: ChatPro + Fila + PBX TTS/ASR)
 
+- **Update (14/02/2026)**:
+  - `tools/system/launch-plan-status.js` agora consolida prontidão por pilar (`chatpro`, `queue`, `pbx`) com base em `qa/smoke-evidence.json`.
+  - `tools/system/go-no-go.js` passou a incluir o bloco `checks.smoke.pillars` no relatório para decisão GO/NO_GO por pilar.
+  - evidências ficam em `qa/launch-plan-status.json` e `qa/go-no-go-report.json`.
+
 #### D-7 (22/02/2026) — preparação e baseline
 - [ ] **ChatPro (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
@@ -370,3 +376,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `bash scripts/backup-postgres.sh`
 - [ ] após rollback, rerodar gate técnico mínimo:
   - `npm run system:release-gate`
+
+- **Automação (14/02/2026)**:
+  - fluxo unificado de contingência: `npm run system:release-contingency`
+  - relatório: `qa/release-contingency-report.json`
+  - modo dry-run (sem executar comandos): `RELEASE_CONTINGENCY_DRY_RUN=1 npm run system:release-contingency`
+  - janela full com backup opcional antes do checklist final: `RELEASE_WINDOW_RUN_BACKUP=1 npm run system:release-window`

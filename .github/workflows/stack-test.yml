@@ -16,11 +16,58 @@ on:
         required: false
         default: '1'
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
+  prewarm-images:
+    name: Prewarm imagens de teste (GHCR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name != 'pull_request'
+    outputs:
+      test_image_prefix: ${{ steps.vars.outputs.test_image_prefix }}
+      test_image_tag: ${{ steps.vars.outputs.test_image_tag }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Definir prefix/tag de imagens
+        id: vars
+        run: |
+          SHORT_SHA="${GITHUB_SHA::12}"
+          TEST_IMAGE_PREFIX="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-test"
+          TEST_IMAGE_TAG="ci-${SHORT_SHA}"
+          echo "test_image_prefix=${TEST_IMAGE_PREFIX}" >> "$GITHUB_OUTPUT"
+          echo "test_image_tag=${TEST_IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "TEST_IMAGE_PREFIX=${TEST_IMAGE_PREFIX}" >> "$GITHUB_ENV"
+          echo "TEST_IMAGE_TAG=${TEST_IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build imagens pré-aquecidas
+        run: |
+          TEST_IMAGE_PREFIX="${TEST_IMAGE_PREFIX}" TEST_IMAGE_TAG="${TEST_IMAGE_TAG}" bash ./scripts/prewarm-test-images.sh build
+
+      - name: Push imagens pré-aquecidas
+        run: |
+          TEST_IMAGE_PREFIX="${TEST_IMAGE_PREFIX}" TEST_IMAGE_TAG="${TEST_IMAGE_TAG}" bash ./scripts/prewarm-test-images.sh push
+
   stack-autotest:
     name: Autotest com stack completa
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    needs: [prewarm-images]
+    if: |
+      always() &&
+      (needs.prewarm-images.result == 'success' || needs.prewarm-images.result == 'skipped')
 
     steps:
       - name: Checkout código
@@ -40,8 +87,12 @@ jobs:
 
       - name: Rodar autotest com stack (Compose)
         env:
-          RPA_TRACE: ${{ inputs.enable_trace }}
-          RPA_CAPTURE_HTTP_ERRORS: ${{ inputs.capture_http_errors }}
+          RPA_TRACE: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_trace || '0' }}
+          RPA_CAPTURE_HTTP_ERRORS: ${{ github.event_name == 'workflow_dispatch' && inputs.capture_http_errors || '1' }}
+          TEST_IMAGE_PREFIX: ${{ needs.prewarm-images.outputs.test_image_prefix || 'r-agent2' }}
+          TEST_IMAGE_TAG: ${{ needs.prewarm-images.outputs.test_image_tag || 'test' }}
+          STACK_PULL_IMAGES: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
+          STACK_NO_BUILD: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
         run: |
           bash ./scripts/system-autotest-stack.sh
 
@@ -68,4 +119,3 @@ jobs:
             tests/rpa/traces/**/*.zip
           retention-days: 7
           if-no-files-found: ignore
-

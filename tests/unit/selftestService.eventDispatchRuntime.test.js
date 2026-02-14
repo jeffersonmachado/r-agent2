@@ -5,9 +5,10 @@ describe('selftestService - eventDispatchRuntime', () => {
     jest.resetModules();
     jest.clearAllMocks();
     delete process.env.SELFTEST_EVENT_DISPATCH_DEAD_RECENT_FAIL;
+    delete process.env.SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON;
   });
 
-  function setupCommonMocks({ dispatchSummary }) {
+  function setupCommonMocks({ dispatchSummary, byTenant = null }) {
     const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 
     jest.doMock('../../api/utils/logger', () => logger);
@@ -63,6 +64,22 @@ describe('selftestService - eventDispatchRuntime', () => {
                 pendingLagSec: Number(dispatchSummary.pendingLagSec || 0),
               },
             ],
+            byTenant: Array.isArray(byTenant)
+              ? byTenant
+              : [
+                  {
+                    tenantKey: 'system',
+                    pending: Number(dispatchSummary.pending || 0),
+                    retryingPending: Number(dispatchSummary.retryingPending || 0),
+                    processing: Number(dispatchSummary.processing || 0),
+                    done: Number(dispatchSummary.done || 0),
+                    doneRecent: Number(dispatchSummary.doneRecent || 0),
+                    dead: Number(dispatchSummary.dead || 0),
+                    deadRecent: Number(dispatchSummary.deadRecent || 0),
+                    flowTriggerFailuresRecent: Number(dispatchSummary.flowTriggerFailuresRecent || 0),
+                    pendingLagSec: Number(dispatchSummary.pendingLagSec || 0),
+                  },
+                ],
           },
         },
       }),
@@ -125,5 +142,47 @@ describe('selftestService - eventDispatchRuntime', () => {
     expect(out.checks.eventDispatchRuntime.error).toBe('event_dispatch_runtime_threshold_exceeded');
     expect(out.status).toBe('FAIL');
   });
-});
 
+  test('applies tenant-specific thresholds when provided', async () => {
+    process.env.SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON = JSON.stringify({
+      tenantA: { deadFail: 1 },
+    });
+    setupCommonMocks({
+      dispatchSummary: {
+        pending: 0,
+        retryingPending: 0,
+        processing: 0,
+        done: 10,
+        doneRecent: 10,
+        dead: 0,
+        deadRecent: 0,
+        flowTriggerFailuresRecent: 0,
+        pendingLagSec: 0,
+      },
+      byTenant: [
+        {
+          tenantKey: 'tenantA',
+          pending: 0,
+          retryingPending: 0,
+          processing: 0,
+          done: 5,
+          doneRecent: 5,
+          dead: 1,
+          deadRecent: 0,
+          flowTriggerFailuresRecent: 0,
+          pendingLagSec: 0,
+        },
+      ],
+    });
+
+    const { runSelftest } = require('../../api/services/selftestService');
+    const out = await runSelftest();
+    const tenantRow = out.checks.eventDispatchRuntime.details.byTenant.find((item) => item.tenantKey === 'tenantA');
+
+    expect(tenantRow).toBeTruthy();
+    expect(tenantRow.thresholds.deadFail).toBe(1);
+    expect(tenantRow.status).toBe('unhealthy');
+    expect(out.checks.eventDispatchRuntime.status).toBe('unhealthy');
+    expect(out.status).toBe('FAIL');
+  });
+});

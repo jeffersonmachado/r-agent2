@@ -1,11 +1,11 @@
 {
   "smoke": "L-01",
-  "generatedAt": "2026-02-13T22:24:40.074Z",
+  "generatedAt": "2026-02-14T14:10:42.777Z",
   "ok": true,
   "tenantId": "system",
-  "locationId": "smoke-loc-1771021480074",
-  "queueId": "pq-1771021480083-ff319f716d35",
-  "ticketId": "pt-1771021480144-4760384b1a66",
+  "locationId": "smoke-loc-1771078242777",
+  "queueId": "pq-1771078242788-a0ee07c4dfac",
+  "ticketId": "pt-1771078242851-5ad8cb4a8795",
   "stationId": "A1",
   "transitions": {
     "callNext": true,

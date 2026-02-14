@@ -1,20 +1,29 @@
 # Launch Plan Status (D-7 / D-1 / D0)
 
-- Generated at: 2026-02-13T23:07:40.305Z
+- Generated at: 2026-02-14T15:05:30.765Z
 - Overall: READY
-- Progress: 9/9 (100%)
+- Progress: 18/18 (100%)
 
 ## D-7
 - [x] Executar gate completo (qa/release-gate-report.json)
 - [x] Validar L-01..L-05 em pass (qa/smoke-evidence.json)
+- [x] ChatPro com evidência operacional (qa/smoke-evidence.json#l05)
+- [x] Fila física com jornada completa (qa/smoke-evidence.json#l01)
+- [x] PBX TTS/ASR + call events com runtime (qa/smoke-evidence.json#l03-l04)
 
 ## D-1
 - [x] Executar decisão consolidada (qa/go-no-go-report.json)
 - [x] Executar rollback drill (qa/rollback-drill-report.json)
 - [x] Revalidar release gate (qa/release-gate-report.json)
+- [x] ChatPro sem divergência mensagem/ticket/SLA (qa/smoke-evidence.json#l05)
+- [x] Fila física (call/start/pause/resume/finish/skip/transfer) (qa/smoke-evidence.json#l01)
+- [x] PBX com originated + trigger de runtime (qa/smoke-evidence.json#l03-l04)
 
 ## D0
 - [x] Smoke pós-release em pass (qa/release-gate-report.json)
 - [x] Operação mínima por suíte (L-01..L-05) (qa/smoke-evidence.json)
 - [x] Evidência final de GO (qa/go-no-go-report.json)
 - [x] Janela de release executada (qa/release-window-report.json)
+- [x] ChatPro pós-release em pass (qa/smoke-evidence.json#l05)
+- [x] Fila física pós-release em pass (qa/smoke-evidence.json#l01)
+- [x] PBX TTS/ASR pós-release em pass (qa/smoke-evidence.json#l03-l04)

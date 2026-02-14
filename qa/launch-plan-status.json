@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-02-13T23:07:40.305Z",
+  "generatedAt": "2026-02-14T15:05:30.765Z",
   "overall": "ready",
   "summary": {
-    "done": 9,
-    "total": 9,
+    "done": 18,
+    "total": 18,
     "progressPct": 100
   },
   "milestones": {
@@ -17,6 +17,21 @@
         "done": true,
         "label": "Validar L-01..L-05 em pass",
         "detail": "qa/smoke-evidence.json"
+      },
+      {
+        "done": true,
+        "label": "ChatPro com evidência operacional",
+        "detail": "qa/smoke-evidence.json#l05"
+      },
+      {
+        "done": true,
+        "label": "Fila física com jornada completa",
+        "detail": "qa/smoke-evidence.json#l01"
+      },
+      {
+        "done": true,
+        "label": "PBX TTS/ASR + call events com runtime",
+        "detail": "qa/smoke-evidence.json#l03-l04"
       }
     ],
     "d1": [
@@ -34,6 +49,21 @@
         "done": true,
         "label": "Revalidar release gate",
         "detail": "qa/release-gate-report.json"
+      },
+      {
+        "done": true,
+        "label": "ChatPro sem divergência mensagem/ticket/SLA",
+        "detail": "qa/smoke-evidence.json#l05"
+      },
+      {
+        "done": true,
+        "label": "Fila física (call/start/pause/resume/finish/skip/transfer)",
+        "detail": "qa/smoke-evidence.json#l01"
+      },
+      {
+        "done": true,
+        "label": "PBX com originated + trigger de runtime",
+        "detail": "qa/smoke-evidence.json#l03-l04"
       }
     ],
     "d0": [
@@ -56,8 +86,50 @@
         "done": true,
         "label": "Janela de release executada",
         "detail": "qa/release-window-report.json"
+      },
+      {
+        "done": true,
+        "label": "ChatPro pós-release em pass",
+        "detail": "qa/smoke-evidence.json#l05"
+      },
+      {
+        "done": true,
+        "label": "Fila física pós-release em pass",
+        "detail": "qa/smoke-evidence.json#l01"
+      },
+      {
+        "done": true,
+        "label": "PBX TTS/ASR pós-release em pass",
+        "detail": "qa/smoke-evidence.json#l03-l04"
       }
     ]
+  },
+  "pillars": {
+    "chatpro": {
+      "ok": true,
+      "ticketId": "default-1771078243291-ps9hrtu"
+    },
+    "queue": {
+      "ok": true,
+      "queueId": "pq-1771078242788-a0ee07c4dfac",
+      "ticketId": "pt-1771078242851-5ad8cb4a8795",
+      "doneCount": 1
+    },
+    "pbx": {
+      "ok": true,
+      "l03": {
+        "ok": true,
+        "click2callStatus": "originated",
+        "originated": true,
+        "cdrFound": false,
+        "acceptedWithoutCdr": true
+      },
+      "l04": {
+        "ok": true,
+        "executionId": "fx-1771078241807-3a874da9d385",
+        "nodesCount": 3
+      }
+    }
   },
   "sources": {
     "releaseGate": "qa/release-gate-report.json",

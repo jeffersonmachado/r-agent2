@@ -85,6 +85,15 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
     - logs operacionais
     - checklist de rollback preenchido
 
+## Atalho de contingencia (automatizado)
+1. Rodar fluxo consolidado de contingência:
+   - `npm run system:release-contingency`
+2. Opções úteis:
+   - sem backup (quando já existe snapshot externo): `RELEASE_CONTINGENCY_RUN_BACKUP=0 npm run system:release-contingency`
+   - apenas validação de pipeline (dry-run): `RELEASE_CONTINGENCY_DRY_RUN=1 npm run system:release-contingency`
+3. Evidência:
+   - `qa/release-contingency-report.json`
+
 ## Execução padronizada da janela (recomendado)
 1. Modo rápido de validação (sem rerodar suites pesadas):
    - `RELEASE_WINDOW_FAST=1 npm run system:release-window`

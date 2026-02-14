@@ -1,6 +1,6 @@
 {
-  "startedAt": "2026-02-13T23:07:40.278Z",
-  "finishedAt": "2026-02-13T23:07:40.279Z",
+  "startedAt": "2026-02-14T15:05:30.737Z",
+  "finishedAt": "2026-02-14T15:05:30.738Z",
   "status": "pass",
   "decision": "GO",
   "steps": [
@@ -31,10 +31,38 @@
       "loaded": true,
       "status": "pass",
       "pbx": {
+        "ok": true,
         "click2callStatus": "originated",
         "originated": true,
         "cdrFound": false,
         "acceptedWithoutCdr": true
+      },
+      "pillars": {
+        "chatpro": {
+          "ok": true,
+          "ticketId": "default-1771078243291-ps9hrtu"
+        },
+        "queue": {
+          "ok": true,
+          "queueId": "pq-1771078242788-a0ee07c4dfac",
+          "ticketId": "pt-1771078242851-5ad8cb4a8795",
+          "doneCount": 1
+        },
+        "pbx": {
+          "ok": true,
+          "l03": {
+            "ok": true,
+            "click2callStatus": "originated",
+            "originated": true,
+            "cdrFound": false,
+            "acceptedWithoutCdr": true
+          },
+          "l04": {
+            "ok": true,
+            "executionId": "fx-1771078241807-3a874da9d385",
+            "nodesCount": 3
+          }
+        }
       },
       "reasons": []
     }

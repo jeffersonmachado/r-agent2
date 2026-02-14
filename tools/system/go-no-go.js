@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { evaluatePillars } = require('./lib/pillar-readiness');
 
 const ROOT = path.join(__dirname, '..', '..');
 const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
@@ -30,87 +31,6 @@ function runStep(command, label) {
     env: process.env,
   });
   return { label, command, status: 'pass' };
-}
-
-function hasTruthy(v) {
-  return !(v == null || v === false || v === '');
-}
-
-function validateSmoke(smokes) {
-  const reasons = [];
-
-  const l01 = smokes?.l01 || null;
-  const l02 = smokes?.l02 || null;
-  const l03 = smokes?.l03 || null;
-  const l04 = smokes?.l04 || null;
-  const l05 = smokes?.l05 || null;
-
-  if (!l01 || l01.status !== 'pass') reasons.push('l01_not_pass');
-  if (!l02 || l02.status !== 'pass') reasons.push('l02_not_pass');
-  if (!l03 || l03.status !== 'pass') reasons.push('l03_not_pass');
-  if (!l04 || l04.status !== 'pass') reasons.push('l04_not_pass');
-  if (!l05 || l05.status !== 'pass') reasons.push('l05_not_pass');
-
-  const l01Done = Number(l01?.evidence?.metrics?.doneCount || 0);
-  const l01Transitions = l01?.evidence?.transitions || {};
-  if (
-    !hasTruthy(l01?.evidence?.queueId)
-    || !hasTruthy(l01?.evidence?.ticketId)
-    || l01Transitions.callNext !== true
-    || l01Transitions.start !== true
-    || l01Transitions.pause !== true
-    || l01Transitions.resume !== true
-    || l01Transitions.finish !== true
-    || l01Done < 1
-  ) {
-    reasons.push('l01_evidence_invalid');
-  }
-
-  const click2callStatus = String(l03?.evidence?.realCall?.click2callStatus || '').toLowerCase();
-  const cdrFound = l03?.evidence?.realCall?.cdrFound === true;
-  const originated = click2callStatus === 'originated';
-  if (
-    l03?.evidence?.ok !== true
-    || l03?.evidence?.realCall?.attempted !== true
-    || !originated
-  ) {
-    reasons.push('l03_real_call_invalid');
-  }
-
-  if (
-    l04?.evidence?.ok !== true
-    || !hasTruthy(l04?.evidence?.flow?.executionId)
-    || Number(l04?.evidence?.flow?.nodesCount || 0) <= 0
-  ) {
-    reasons.push('l04_runtime_invalid');
-  }
-
-  const l05Ops = l05?.evidence?.operations || {};
-  if (
-    l05?.evidence?.ok !== true
-    || !hasTruthy(l05?.evidence?.ticket?.id)
-    || l05Ops.assign !== true
-    || l05Ops.transfer !== true
-    || l05Ops.note !== true
-    || l05Ops.addTag !== true
-    || l05Ops.removeTag !== true
-    || l05Ops.quickReplyCreate !== true
-    || l05Ops.quickReplyUse !== true
-    || l05Ops.quickReplyList !== true
-  ) {
-    reasons.push('l05_omnichannel_invalid');
-  }
-
-  return {
-    ok: reasons.length === 0,
-    reasons,
-    pbx: {
-      click2callStatus,
-      originated,
-      cdrFound,
-      acceptedWithoutCdr: !cdrFound && originated,
-    },
-  };
 }
 
 function writeReport(report) {
@@ -173,12 +93,13 @@ function main() {
       };
       report.reasons.push('smoke_evidence_missing');
     } else {
-      const smokeCheck = validateSmoke(smokeSummary.smokes);
+      const smokeCheck = evaluatePillars(smokeSummary.smokes);
       report.checks.smoke = {
         path: SMOKE_EVIDENCE_SUMMARY_PATH,
         loaded: true,
         status: smokeCheck.ok ? 'pass' : 'fail',
-        pbx: smokeCheck.pbx,
+        pbx: smokeCheck.pillars.pbx.l03,
+        pillars: smokeCheck.pillars,
         reasons: smokeCheck.reasons,
       };
       if (!smokeCheck.ok) {
@@ -214,4 +135,3 @@ function main() {
 }
 
 main();
-

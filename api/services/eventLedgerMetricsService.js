@@ -83,6 +83,63 @@ async function getEventLedgerMetrics({ windowMinutes = null, tenantId = null } =
       oldestPendingNextAttemptAt: oldest ? oldest.toISOString() : null,
     };
   });
+  const [dispatchByTenantRows] = await sequelize.query(
+    `WITH base AS (
+       SELECT
+         tenant_key,
+         status,
+         attempts,
+         next_attempt_at,
+         updated_at,
+         last_error
+       FROM execution_jobs
+       WHERE kind = 'dispatch_event_trigger'
+         ${tenantId ? 'AND tenant_key = :tenantKey' : ''}
+     )
+     SELECT
+       tenant_key,
+       COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+       COUNT(*) FILTER (WHERE status = 'pending' AND attempts > 0) AS retrying_pending,
+       COUNT(*) FILTER (WHERE status = 'processing') AS processing,
+       COUNT(*) FILTER (WHERE status = 'done') AS done,
+       COUNT(*) FILTER (WHERE status = 'dead') AS dead,
+       COUNT(*) FILTER (
+         WHERE status = 'dead'
+           AND updated_at >= NOW() - INTERVAL '${Math.floor(minutes)} minutes'
+       ) AS dead_recent,
+       COUNT(*) FILTER (
+         WHERE status = 'done'
+           AND updated_at >= NOW() - INTERVAL '${Math.floor(minutes)} minutes'
+       ) AS done_recent,
+       COUNT(*) FILTER (WHERE last_error = 'event_trigger_flows_failed') AS flow_trigger_failures_total,
+       COUNT(*) FILTER (
+         WHERE last_error = 'event_trigger_flows_failed'
+           AND updated_at >= NOW() - INTERVAL '${Math.floor(minutes)} minutes'
+       ) AS flow_trigger_failures_recent,
+       MIN(next_attempt_at) FILTER (WHERE status = 'pending') AS oldest_pending_next_attempt_at
+     FROM base
+     GROUP BY tenant_key
+     ORDER BY tenant_key ASC`,
+    { replacements },
+  );
+  const byTenant = (Array.isArray(dispatchByTenantRows) ? dispatchByTenantRows : []).map((row) => {
+    const oldest = row.oldest_pending_next_attempt_at ? new Date(row.oldest_pending_next_attempt_at) : null;
+    const lagSec = oldest ? Math.max(0, Math.floor((Date.now() - oldest.getTime()) / 1000)) : 0;
+    return {
+      tenantKey: String(row.tenant_key || 'unknown'),
+      pending: Number(row.pending || 0),
+      retryingPending: Number(row.retrying_pending || 0),
+      processing: Number(row.processing || 0),
+      done: Number(row.done || 0),
+      dead: Number(row.dead || 0),
+      doneRecent: Number(row.done_recent || 0),
+      deadRecent: Number(row.dead_recent || 0),
+      flowTriggerFailuresTotal: Number(row.flow_trigger_failures_total || 0),
+      flowTriggerFailuresRecent: Number(row.flow_trigger_failures_recent || 0),
+      pendingLagSec: lagSec,
+      oldestPendingNextAttemptAt: oldest ? oldest.toISOString() : null,
+    };
+  });
   const dispatchSummary = byTarget.reduce((acc, item) => ({
     pending: acc.pending + item.pending,
     retryingPending: acc.retryingPending + item.retryingPending,
@@ -115,6 +172,7 @@ async function getEventLedgerMetrics({ windowMinutes = null, tenantId = null } =
       dispatch: {
         summary: dispatchSummary,
         byTarget,
+        byTenant,
       },
     },
   };

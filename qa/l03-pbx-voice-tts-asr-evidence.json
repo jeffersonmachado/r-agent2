@@ -1,13 +1,13 @@
 {
   "smoke": "L-03",
-  "generatedAt": "2026-02-13T22:24:24.951Z",
+  "generatedAt": "2026-02-14T14:10:27.748Z",
   "ok": true,
   "authMode": "admin",
   "tenantId": "system",
-  "flowId": "flow-voice-tts-asr-smoke-1771021374118",
-  "callId": "call-voice-tts-asr-1771021374118",
-  "extension": "1118",
-  "dialplanSignature": "ea8a16a6ec9cf30295a51848",
+  "flowId": "flow-voice-tts-asr-smoke-1771078136744",
+  "callId": "call-voice-tts-asr-1771078136744",
+  "extension": "1144",
+  "dialplanSignature": "c8284d0947ac776830ba11ff",
   "runtime": {
     "startAction": "prompt_listen",
     "asrAction": "listen_asr",
@@ -15,7 +15,7 @@
   },
   "realCall": {
     "attempted": true,
-    "click2callId": "cc_c2c-1771021374189-ac59c9e51669",
+    "click2callId": "cc_c2c-1771078136824-7de0de2b54b7",
     "click2callStatus": "originated",
     "cdrFound": false,
     "cdr": null

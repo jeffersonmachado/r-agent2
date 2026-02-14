@@ -58,6 +58,21 @@ describe('eventLedgerMetricsService', () => {
           flow_trigger_failures_recent: '1',
           oldest_pending_next_attempt_at: null,
         },
+      ]])
+      .mockResolvedValueOnce([[
+        {
+          tenant_key: 'tenant-a',
+          pending: '3',
+          retrying_pending: '2',
+          processing: '2',
+          done: '16',
+          dead: '3',
+          done_recent: '7',
+          dead_recent: '1',
+          flow_trigger_failures_total: '3',
+          flow_trigger_failures_recent: '2',
+          oldest_pending_next_attempt_at: oldestPending,
+        },
       ]]);
     getSequelize.mockReturnValue({ query });
 
@@ -106,6 +121,19 @@ describe('eventLedgerMetricsService', () => {
       oldestPendingNextAttemptAt: null,
       pendingLagSec: 0,
     });
-    expect(query).toHaveBeenCalledTimes(2);
+    expect(out.metrics.dispatch.byTenant).toHaveLength(1);
+    expect(out.metrics.dispatch.byTenant[0]).toMatchObject({
+      tenantKey: 'tenant-a',
+      pending: 3,
+      retryingPending: 2,
+      processing: 2,
+      done: 16,
+      dead: 3,
+      doneRecent: 7,
+      deadRecent: 1,
+      flowTriggerFailuresTotal: 3,
+      flowTriggerFailuresRecent: 2,
+    });
+    expect(query).toHaveBeenCalledTimes(3);
   });
 });

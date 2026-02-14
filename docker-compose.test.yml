@@ -29,7 +29,7 @@ services:
     build:
       context: ./redis
       dockerfile: ./Dockerfile
-    image: r-agent2-redis:test
+    image: ${TEST_IMAGE_PREFIX:-r-agent2}-redis:${TEST_IMAGE_TAG:-test}
     container_name: r-agent2-redis-test
     ports:
       - "6380:6379"
@@ -46,7 +46,7 @@ services:
     build:
       context: ./rag-service
       dockerfile: ./Dockerfile
-    image: r-agent2-rag-service:test
+    image: ${TEST_IMAGE_PREFIX:-r-agent2}-rag-service:${TEST_IMAGE_TAG:-test}
     container_name: r-agent2-rag-service-test
     environment:
       HOST: 0.0.0.0
@@ -76,7 +76,9 @@ services:
     build:
       context: .
       dockerfile: ./api/Dockerfile
-    image: r-agent2-api:test
+      args:
+        API_BASE_IMAGE: ${TEST_API_BASE_IMAGE:-r-agent2-api-base:test}
+    image: ${TEST_IMAGE_PREFIX:-r-agent2}-api:${TEST_IMAGE_TAG:-test}
     container_name: r-agent2-api-test
     environment:
       NODE_ENV: test
@@ -134,7 +136,7 @@ services:
     build:
       context: ./pbx/asterisk
       dockerfile: ./Dockerfile
-    image: r-agent2-asterisk:test
+    image: ${TEST_IMAGE_PREFIX:-r-agent2}-asterisk:${TEST_IMAGE_TAG:-test}
     container_name: r-agent2-asterisk-test
     depends_on:
       postgres:

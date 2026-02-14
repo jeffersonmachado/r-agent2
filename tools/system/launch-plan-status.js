@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { evaluatePillars } = require('./lib/pillar-readiness');
 
 const ROOT = path.join(__dirname, '..', '..');
 const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
@@ -40,23 +41,40 @@ function buildStatus() {
   const goNoGo = readJson(GO_NO_GO_REPORT_PATH);
   const releaseWindow = readJson(RELEASE_WINDOW_REPORT_PATH);
   const smokeOk = smokePasses(smoke);
+  const pillars = smoke && smoke.smokes ? evaluatePillars(smoke.smokes) : null;
+  const chatproOk = pillars?.pillars?.chatpro?.ok === true;
+  const queueOk = pillars?.pillars?.queue?.ok === true;
+  const pbxOk = pillars?.pillars?.pbx?.ok === true;
+  const rollbackOk = !!drill && drill.status === 'pass';
+  const goNoGoOk = !!goNoGo && goNoGo.decision === 'GO';
+  const gateOk = !!gate && gate.status === 'pass';
+  const releaseWindowOk = !!releaseWindow && releaseWindow.status === 'pass';
 
   const d7 = [
-    makeItem(!!gate && gate.status === 'pass', 'Executar gate completo', RELEASE_GATE_REPORT_PATH),
+    makeItem(gateOk, 'Executar gate completo', RELEASE_GATE_REPORT_PATH),
     makeItem(smokeOk, 'Validar L-01..L-05 em pass', SMOKE_EVIDENCE_SUMMARY_PATH),
+    makeItem(chatproOk, 'ChatPro com evidência operacional', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l05`),
+    makeItem(queueOk, 'Fila física com jornada completa', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l01`),
+    makeItem(pbxOk, 'PBX TTS/ASR + call events com runtime', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l03-l04`),
   ];
 
   const d1 = [
-    makeItem(!!goNoGo && goNoGo.decision === 'GO', 'Executar decisão consolidada', GO_NO_GO_REPORT_PATH),
-    makeItem(!!drill && drill.status === 'pass', 'Executar rollback drill', ROLLBACK_DRILL_REPORT_PATH),
-    makeItem(!!gate && gate.status === 'pass', 'Revalidar release gate', RELEASE_GATE_REPORT_PATH),
+    makeItem(goNoGoOk, 'Executar decisão consolidada', GO_NO_GO_REPORT_PATH),
+    makeItem(rollbackOk, 'Executar rollback drill', ROLLBACK_DRILL_REPORT_PATH),
+    makeItem(gateOk, 'Revalidar release gate', RELEASE_GATE_REPORT_PATH),
+    makeItem(chatproOk, 'ChatPro sem divergência mensagem/ticket/SLA', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l05`),
+    makeItem(queueOk, 'Fila física (call/start/pause/resume/finish/skip/transfer)', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l01`),
+    makeItem(pbxOk, 'PBX com originated + trigger de runtime', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l03-l04`),
   ];
 
   const d0 = [
-    makeItem(!!gate && gate.status === 'pass', 'Smoke pós-release em pass', RELEASE_GATE_REPORT_PATH),
+    makeItem(gateOk, 'Smoke pós-release em pass', RELEASE_GATE_REPORT_PATH),
     makeItem(smokeOk, 'Operação mínima por suíte (L-01..L-05)', SMOKE_EVIDENCE_SUMMARY_PATH),
-    makeItem(!!goNoGo && goNoGo.decision === 'GO', 'Evidência final de GO', GO_NO_GO_REPORT_PATH),
-    makeItem(!!releaseWindow && releaseWindow.status === 'pass', 'Janela de release executada', RELEASE_WINDOW_REPORT_PATH),
+    makeItem(goNoGoOk, 'Evidência final de GO', GO_NO_GO_REPORT_PATH),
+    makeItem(releaseWindowOk, 'Janela de release executada', RELEASE_WINDOW_REPORT_PATH),
+    makeItem(chatproOk, 'ChatPro pós-release em pass', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l05`),
+    makeItem(queueOk, 'Fila física pós-release em pass', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l01`),
+    makeItem(pbxOk, 'PBX TTS/ASR pós-release em pass', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l03-l04`),
   ];
 
   const doneCount = [...d7, ...d1, ...d0].filter((i) => i.done).length;
@@ -76,6 +94,7 @@ function buildStatus() {
       d1,
       d0,
     },
+    pillars: pillars ? pillars.pillars : null,
     sources: {
       releaseGate: RELEASE_GATE_REPORT_PATH,
       rollbackDrill: ROLLBACK_DRILL_REPORT_PATH,

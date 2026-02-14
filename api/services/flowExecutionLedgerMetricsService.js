@@ -21,13 +21,36 @@ async function getFlowExecutionLedgerMetrics({ windowMinutes = null, tenantId = 
     `SELECT
        COUNT(*) AS total,
        COUNT(*) FILTER (WHERE started_at >= NOW() - INTERVAL '${Math.floor(minutes)} minutes') AS recent,
-       COUNT(*) FILTER (WHERE status = 'failed') AS failed_total
+       COUNT(*) FILTER (WHERE status = 'failed') AS failed_total,
+       COUNT(*) FILTER (
+         WHERE status = 'failed'
+           AND started_at >= NOW() - INTERVAL '${Math.floor(minutes)} minutes'
+       ) AS failed_recent
      FROM flow_executions
      ${whereTenant}`,
     { replacements },
   );
+  const [modeRows] = await sequelize.query(
+    `SELECT
+       COALESCE(NULLIF(meta->>'mode', ''), 'unknown') AS mode,
+       COUNT(*) FILTER (WHERE started_at >= NOW() - INTERVAL '${Math.floor(minutes)} minutes') AS recent
+     FROM flow_executions
+     ${whereTenant}
+     GROUP BY COALESCE(NULLIF(meta->>'mode', ''), 'unknown')
+     ORDER BY mode ASC`,
+    { replacements },
+  );
 
   const r = Array.isArray(rows) && rows[0] ? rows[0] : {};
+  const recentByMode = {};
+  for (const row of Array.isArray(modeRows) ? modeRows : []) {
+    const key = String(row?.mode || 'unknown');
+    recentByMode[key] = Number(row?.recent || 0);
+  }
+  const nonSimulationRecent = Object.entries(recentByMode).reduce((acc, [mode, count]) => {
+    if (mode === 'simulation') return acc;
+    return acc + Number(count || 0);
+  }, 0);
 
   return {
     ok: true,
@@ -37,6 +60,9 @@ async function getFlowExecutionLedgerMetrics({ windowMinutes = null, tenantId = 
       total: Number(r.total || 0),
       recent: Number(r.recent || 0),
       failedTotal: Number(r.failed_total || 0),
+      failedRecent: Number(r.failed_recent || 0),
+      recentByMode,
+      nonSimulationRecent: Number(nonSimulationRecent || 0),
     },
   };
 }

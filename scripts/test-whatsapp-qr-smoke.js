@@ -22,23 +22,46 @@ function apiBaseUrl() {
 async function reqJson(url, { method = 'GET', token = null, body = null } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body == null ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text().catch(() => '');
-  let payload = {};
-  try {
-    payload = text ? JSON.parse(text) : {};
-  } catch (_) {
-    payload = { raw: text };
+  const timeoutMs = Math.max(3000, Number(process.env.WA_QR_HTTP_TIMEOUT_MS || 20000));
+  const retries = Math.max(1, Number(process.env.WA_QR_HTTP_RETRIES || 2));
+  let lastErr = null;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers,
+        signal: controller.signal,
+        body: body == null ? undefined : JSON.stringify(body),
+      });
+      const text = await res.text().catch(() => '');
+      let payload = {};
+      try {
+        payload = text ? JSON.parse(text) : {};
+      } catch (_) {
+        payload = { raw: text };
+      }
+      clearTimeout(timeout);
+      return { ok: res.ok, status: res.status, payload };
+    } catch (err) {
+      clearTimeout(timeout);
+      lastErr = err;
+      if (attempt < retries) {
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(250 * attempt);
+      }
+    }
   }
-  return { ok: res.ok, status: res.status, payload };
+  throw lastErr || new Error('request_failed');
 }
 
 function expect(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function loginRpa(base) {

@@ -73,6 +73,88 @@ function intEnv(name, def) {
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : def;
 }
 
+function safeThreshold(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback;
+}
+
+function eventDispatchBaseThresholds() {
+  return {
+    deadWarn: intEnv('SELFTEST_EVENT_DISPATCH_DEAD_WARN', 1),
+    deadFail: intEnv('SELFTEST_EVENT_DISPATCH_DEAD_FAIL', 20),
+    deadRecentWarn: intEnv('SELFTEST_EVENT_DISPATCH_DEAD_RECENT_WARN', 1),
+    deadRecentFail: intEnv('SELFTEST_EVENT_DISPATCH_DEAD_RECENT_FAIL', 10),
+    retryWarn: intEnv('SELFTEST_EVENT_DISPATCH_RETRYING_WARN', 20),
+    retryFail: intEnv('SELFTEST_EVENT_DISPATCH_RETRYING_FAIL', 200),
+    lagWarn: intEnv('SELFTEST_EVENT_DISPATCH_LAG_WARN_SEC', 300),
+    lagFail: intEnv('SELFTEST_EVENT_DISPATCH_LAG_FAIL_SEC', 1800),
+    flowTriggerFailWarn: intEnv('SELFTEST_EVENT_DISPATCH_FLOW_TRIGGER_FAIL_WARN', 5),
+    flowTriggerFailFail: intEnv('SELFTEST_EVENT_DISPATCH_FLOW_TRIGGER_FAIL_FAIL', 50),
+  };
+}
+
+function parseEventDispatchTenantThresholdOverrides() {
+  const raw = process.env.SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON;
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch (err) {
+    logger.warn('[Selftest] SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON invalido, ignorando', {
+      error: err.message,
+    });
+    return {};
+  }
+}
+
+function eventDispatchThresholdsForTenant(base, overrides, tenantKey) {
+  const tenantCfg = overrides && typeof overrides === 'object' ? overrides[String(tenantKey || '')] : null;
+  if (!tenantCfg || typeof tenantCfg !== 'object' || Array.isArray(tenantCfg)) return base;
+  return {
+    deadWarn: safeThreshold(tenantCfg.deadWarn, base.deadWarn),
+    deadFail: safeThreshold(tenantCfg.deadFail, base.deadFail),
+    deadRecentWarn: safeThreshold(tenantCfg.deadRecentWarn, base.deadRecentWarn),
+    deadRecentFail: safeThreshold(tenantCfg.deadRecentFail, base.deadRecentFail),
+    retryWarn: safeThreshold(tenantCfg.retryWarn, base.retryWarn),
+    retryFail: safeThreshold(tenantCfg.retryFail, base.retryFail),
+    lagWarn: safeThreshold(tenantCfg.lagWarn, base.lagWarn),
+    lagFail: safeThreshold(tenantCfg.lagFail, base.lagFail),
+    flowTriggerFailWarn: safeThreshold(tenantCfg.flowTriggerFailWarn, base.flowTriggerFailWarn),
+    flowTriggerFailFail: safeThreshold(tenantCfg.flowTriggerFailFail, base.flowTriggerFailFail),
+  };
+}
+
+function eventDispatchItemStatus(item, thresholds) {
+  const dead = Number(item?.dead || 0);
+  const deadRecent = Number(item?.deadRecent || 0);
+  const retryingPending = Number(item?.retryingPending || 0);
+  const lagSec = Number(item?.pendingLagSec || 0);
+  const flowTriggerFailuresRecent = Number(item?.flowTriggerFailuresRecent || 0);
+
+  const fail =
+    dead >= thresholds.deadFail ||
+    deadRecent >= thresholds.deadRecentFail ||
+    retryingPending >= thresholds.retryFail ||
+    lagSec >= thresholds.lagFail ||
+    flowTriggerFailuresRecent >= thresholds.flowTriggerFailFail;
+  const warn =
+    dead >= thresholds.deadWarn ||
+    deadRecent >= thresholds.deadRecentWarn ||
+    retryingPending >= thresholds.retryWarn ||
+    lagSec >= thresholds.lagWarn ||
+    flowTriggerFailuresRecent >= thresholds.flowTriggerFailWarn;
+  return {
+    fail,
+    warn,
+    dead,
+    deadRecent,
+    retryingPending,
+    lagSec,
+    flowTriggerFailuresRecent,
+  };
+}
+
 async function safeCheckExecutionQueue() {
   try {
     const { getExecutionQueueMetrics } = require('./executionQueueService');
@@ -171,20 +253,11 @@ async function safeCheckEventDispatchRuntime() {
     }
 
     const summary = result.metrics?.dispatch?.summary || {};
-    const byTarget = Array.isArray(result.metrics?.dispatch?.byTarget)
-      ? result.metrics.dispatch.byTarget
-      : [];
+    const byTarget = Array.isArray(result.metrics?.dispatch?.byTarget) ? result.metrics.dispatch.byTarget : [];
+    const byTenant = Array.isArray(result.metrics?.dispatch?.byTenant) ? result.metrics.dispatch.byTenant : [];
 
-    const deadWarn = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_WARN', 1);
-    const deadFail = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_FAIL', 20);
-    const deadRecentWarn = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_RECENT_WARN', 1);
-    const deadRecentFail = intEnv('SELFTEST_EVENT_DISPATCH_DEAD_RECENT_FAIL', 10);
-    const retryWarn = intEnv('SELFTEST_EVENT_DISPATCH_RETRYING_WARN', 20);
-    const retryFail = intEnv('SELFTEST_EVENT_DISPATCH_RETRYING_FAIL', 200);
-    const lagWarn = intEnv('SELFTEST_EVENT_DISPATCH_LAG_WARN_SEC', 300);
-    const lagFail = intEnv('SELFTEST_EVENT_DISPATCH_LAG_FAIL_SEC', 1800);
-    const flowTriggerFailWarn = intEnv('SELFTEST_EVENT_DISPATCH_FLOW_TRIGGER_FAIL_WARN', 5);
-    const flowTriggerFailFail = intEnv('SELFTEST_EVENT_DISPATCH_FLOW_TRIGGER_FAIL_FAIL', 50);
+    const baseThresholds = eventDispatchBaseThresholds();
+    const tenantThresholdOverrides = parseEventDispatchTenantThresholdOverrides();
 
     const summaryDead = Number(summary.dead || 0);
     const summaryDeadRecent = Number(summary.deadRecent || 0);
@@ -196,51 +269,48 @@ async function safeCheckEventDispatchRuntime() {
       return lag > max ? lag : max;
     }, 0);
 
-    const anyTargetFail = byTarget.some((item) => {
-      const dead = Number(item?.dead || 0);
-      const deadRecent = Number(item?.deadRecent || 0);
-      const retryingPending = Number(item?.retryingPending || 0);
-      const lagSec = Number(item?.pendingLagSec || 0);
-      const flowTriggerFailuresRecent = Number(item?.flowTriggerFailuresRecent || 0);
-      return (
-        dead >= deadFail ||
-        deadRecent >= deadRecentFail ||
-        retryingPending >= retryFail ||
-        lagSec >= lagFail ||
-        flowTriggerFailuresRecent >= flowTriggerFailFail
-      );
-    });
+    const anyTargetFail = byTarget.some((item) => eventDispatchItemStatus(item, baseThresholds).fail);
+    const anyTargetWarn = byTarget.some((item) => eventDispatchItemStatus(item, baseThresholds).warn);
 
-    const anyTargetWarn = byTarget.some((item) => {
-      const dead = Number(item?.dead || 0);
-      const deadRecent = Number(item?.deadRecent || 0);
-      const retryingPending = Number(item?.retryingPending || 0);
-      const lagSec = Number(item?.pendingLagSec || 0);
-      const flowTriggerFailuresRecent = Number(item?.flowTriggerFailuresRecent || 0);
-      return (
-        dead >= deadWarn ||
-        deadRecent >= deadRecentWarn ||
-        retryingPending >= retryWarn ||
-        lagSec >= lagWarn ||
-        flowTriggerFailuresRecent >= flowTriggerFailWarn
-      );
+    const byTenantWithStatus = byTenant.map((item) => {
+      const tenantKey = String(item?.tenantKey || 'unknown');
+      const thresholds = eventDispatchThresholdsForTenant(baseThresholds, tenantThresholdOverrides, tenantKey);
+      const status = eventDispatchItemStatus(item, thresholds);
+      return {
+        tenantKey,
+        pending: Number(item?.pending || 0),
+        retryingPending: status.retryingPending,
+        processing: Number(item?.processing || 0),
+        done: Number(item?.done || 0),
+        doneRecent: Number(item?.doneRecent || 0),
+        dead: status.dead,
+        deadRecent: status.deadRecent,
+        flowTriggerFailuresRecent: status.flowTriggerFailuresRecent,
+        pendingLagSec: status.lagSec,
+        status: status.fail ? 'unhealthy' : status.warn ? 'degraded' : 'healthy',
+        thresholds,
+      };
     });
+    const anyTenantFail = byTenantWithStatus.some((item) => item.status === 'unhealthy');
+    const anyTenantWarn = byTenantWithStatus.some((item) => item.status === 'degraded');
 
     const fail =
-      summaryDead >= deadFail ||
-      summaryDeadRecent >= deadRecentFail ||
-      summaryRetrying >= retryFail ||
-      maxLagSec >= lagFail ||
-      summaryFlowTriggerFailures >= flowTriggerFailFail ||
-      anyTargetFail;
+      summaryDead >= baseThresholds.deadFail ||
+      summaryDeadRecent >= baseThresholds.deadRecentFail ||
+      summaryRetrying >= baseThresholds.retryFail ||
+      maxLagSec >= baseThresholds.lagFail ||
+      summaryFlowTriggerFailures >= baseThresholds.flowTriggerFailFail ||
+      anyTargetFail ||
+      anyTenantFail;
 
     const warn =
-      summaryDead >= deadWarn ||
-      summaryDeadRecent >= deadRecentWarn ||
-      summaryRetrying >= retryWarn ||
-      maxLagSec >= lagWarn ||
-      summaryFlowTriggerFailures >= flowTriggerFailWarn ||
-      anyTargetWarn;
+      summaryDead >= baseThresholds.deadWarn ||
+      summaryDeadRecent >= baseThresholds.deadRecentWarn ||
+      summaryRetrying >= baseThresholds.retryWarn ||
+      maxLagSec >= baseThresholds.lagWarn ||
+      summaryFlowTriggerFailures >= baseThresholds.flowTriggerFailWarn ||
+      anyTargetWarn ||
+      anyTenantWarn;
 
     return {
       status: fail ? 'unhealthy' : warn ? 'degraded' : 'healthy',
@@ -269,18 +339,8 @@ async function safeCheckEventDispatchRuntime() {
           flowTriggerFailuresRecent: Number(item?.flowTriggerFailuresRecent || 0),
           pendingLagSec: Number(item?.pendingLagSec || 0),
         })),
-        thresholds: {
-          deadWarn,
-          deadFail,
-          deadRecentWarn,
-          deadRecentFail,
-          retryWarn,
-          retryFail,
-          lagWarn,
-          lagFail,
-          flowTriggerFailWarn,
-          flowTriggerFailFail,
-        },
+        byTenant: byTenantWithStatus,
+        thresholds: baseThresholds,
       },
       error: fail ? 'event_dispatch_runtime_threshold_exceeded' : null,
     };
@@ -292,12 +352,38 @@ async function safeCheckEventDispatchRuntime() {
 async function safeCheckFlowExecutionLedger() {
   try {
     const { getFlowExecutionLedgerMetrics } = require('./flowExecutionLedgerMetricsService');
-    const result = await getFlowExecutionLedgerMetrics({ tenantId: null });
+    const windowMinutes = intEnv('SELFTEST_FLOW_EXECUTION_LEDGER_WINDOW_MIN', intEnv('FLOW_EXECUTION_LEDGER_METRICS_WINDOW_MIN', 60));
+    const result = await getFlowExecutionLedgerMetrics({ tenantId: null, windowMinutes });
     if (!result.ok) return { status: 'degraded', error: result.error || 'flow_execution_ledger_metrics_unavailable' };
+    const metrics = result.metrics || {};
+    const failedRecent = Number(metrics.failedRecent || 0);
+    const failedWarn = intEnv('SELFTEST_FLOW_EXECUTION_LEDGER_FAILED_RECENT_WARN', 5);
+    const failedFail = intEnv('SELFTEST_FLOW_EXECUTION_LEDGER_FAILED_RECENT_FAIL', 50);
+
+    const modeBreakdownAvailable = !!(metrics.recentByMode && typeof metrics.recentByMode === 'object');
+    const nonSimulationRecent = Number(metrics.nonSimulationRecent || 0);
+    const recent = Number(metrics.recent || 0);
+    const requireRuntimeRecent = String(process.env.SELFTEST_FLOW_EXECUTION_LEDGER_REQUIRE_RUNTIME_RECENT || '1') !== '0';
+    const runtimeMissing = modeBreakdownAvailable && requireRuntimeRecent && recent > 0 && nonSimulationRecent <= 0;
+
+    const fail = failedRecent >= failedFail;
+    const warn = failedRecent >= failedWarn || runtimeMissing;
+
     return {
-      status: 'healthy',
-      details: result.metrics,
-      error: null,
+      status: fail ? 'unhealthy' : warn ? 'degraded' : 'healthy',
+      details: {
+        ...metrics,
+        thresholds: {
+          failedRecentWarn: failedWarn,
+          failedRecentFail: failedFail,
+          requireRuntimeRecent,
+        },
+      },
+      error: fail
+        ? 'flow_execution_ledger_failed_recent_threshold_exceeded'
+        : runtimeMissing
+          ? 'flow_execution_ledger_no_runtime_recent'
+          : null,
     };
   } catch (err) {
     return { status: 'degraded', error: err.message || 'flow_execution_ledger_check_failed' };

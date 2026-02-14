@@ -1,7 +1,7 @@
 {
-  "startedAt": "2026-02-13T23:07:40.255Z",
-  "finishedAt": "2026-02-13T23:07:40.442Z",
-  "durationMs": 187,
+  "startedAt": "2026-02-14T15:05:30.706Z",
+  "finishedAt": "2026-02-14T15:05:30.885Z",
+  "durationMs": 179,
   "mode": "fast",
   "status": "pass",
   "steps": [
@@ -9,8 +9,8 @@
       "label": "release-clean-check",
       "command": "node tools/system/release-clean-check.js",
       "status": "skipped",
-      "startedAt": "2026-02-13T23:07:40.255Z",
-      "finishedAt": "2026-02-13T23:07:40.255Z",
+      "startedAt": "2026-02-14T15:05:30.707Z",
+      "finishedAt": "2026-02-14T15:05:30.707Z",
       "durationMs": 0,
       "error": null
     },
@@ -18,26 +18,26 @@
       "label": "go-no-go",
       "command": "node tools/system/go-no-go.js",
       "status": "pass",
-      "startedAt": "2026-02-13T23:07:40.255Z",
-      "finishedAt": "2026-02-13T23:07:40.282Z",
-      "durationMs": 27,
+      "startedAt": "2026-02-14T15:05:30.707Z",
+      "finishedAt": "2026-02-14T15:05:30.743Z",
+      "durationMs": 36,
       "error": null
     },
     {
       "label": "launch-plan-status",
       "command": "node tools/system/launch-plan-status.js",
       "status": "pass",
-      "startedAt": "2026-02-13T23:07:40.282Z",
-      "finishedAt": "2026-02-13T23:07:40.315Z",
-      "durationMs": 33,
+      "startedAt": "2026-02-14T15:05:30.743Z",
+      "finishedAt": "2026-02-14T15:05:30.772Z",
+      "durationMs": 29,
       "error": null
     },
     {
       "label": "release-manifest",
       "command": "node tools/system/release-manifest.js",
       "status": "pass",
-      "startedAt": "2026-02-13T23:07:40.315Z",
-      "finishedAt": "2026-02-13T23:07:40.368Z",
+      "startedAt": "2026-02-14T15:05:30.772Z",
+      "finishedAt": "2026-02-14T15:05:30.825Z",
       "durationMs": 53,
       "error": null
     },
@@ -45,26 +45,26 @@
       "label": "release-summary",
       "command": "node tools/system/release-summary.js",
       "status": "pass",
-      "startedAt": "2026-02-13T23:07:40.368Z",
-      "finishedAt": "2026-02-13T23:07:40.402Z",
-      "durationMs": 34,
+      "startedAt": "2026-02-14T15:05:30.825Z",
+      "finishedAt": "2026-02-14T15:05:30.854Z",
+      "durationMs": 29,
       "error": null
     },
     {
       "label": "release-evidence-pack",
       "command": "node tools/system/release-evidence-pack.js",
       "status": "pass",
-      "startedAt": "2026-02-13T23:07:40.402Z",
-      "finishedAt": "2026-02-13T23:07:40.442Z",
-      "durationMs": 40,
+      "startedAt": "2026-02-14T15:05:30.854Z",
+      "finishedAt": "2026-02-14T15:05:30.885Z",
+      "durationMs": 31,
       "error": null
     },
     {
       "label": "release-evidence-verify",
       "command": "node tools/system/release-evidence-verify.js",
       "status": "skipped",
-      "startedAt": "2026-02-13T23:07:40.442Z",
-      "finishedAt": "2026-02-13T23:07:40.442Z",
+      "startedAt": "2026-02-14T15:05:30.885Z",
+      "finishedAt": "2026-02-14T15:05:30.885Z",
       "durationMs": 0,
       "error": null
     },
@@ -72,8 +72,18 @@
       "label": "release-evidence-prune",
       "command": "node tools/system/release-evidence-prune.js",
       "status": "skipped",
-      "startedAt": "2026-02-13T23:07:40.442Z",
-      "finishedAt": "2026-02-13T23:07:40.442Z",
+      "startedAt": "2026-02-14T15:05:30.885Z",
+      "finishedAt": "2026-02-14T15:05:30.885Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "FAST_MODE"
+    },
+    {
+      "label": "postgres-backup",
+      "command": "bash scripts/backup-postgres.sh",
+      "status": "skipped",
+      "startedAt": "2026-02-14T15:05:30.885Z",
+      "finishedAt": "2026-02-14T15:05:30.885Z",
       "durationMs": 0,
       "error": null,
       "reason": "FAST_MODE"
@@ -82,8 +92,8 @@
       "label": "checklist-strict",
       "command": "node tools/system/checklist.js",
       "status": "skipped",
-      "startedAt": "2026-02-13T23:07:40.442Z",
-      "finishedAt": "2026-02-13T23:07:40.442Z",
+      "startedAt": "2026-02-14T15:05:30.885Z",
+      "finishedAt": "2026-02-14T15:05:30.885Z",
       "durationMs": 0,
       "error": null,
       "reason": "FAST_MODE"
@@ -99,7 +109,8 @@
     "releaseWindowReport": "qa/release-window-report.json"
   },
   "config": {
-    "pruneOldEvidence": false
+    "pruneOldEvidence": false,
+    "runBackup": false
   },
   "error": null
 }

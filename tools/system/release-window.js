@@ -9,6 +9,7 @@ const ROOT = path.join(__dirname, '..', '..');
 const REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
 const FAST_MODE = String(process.env.RELEASE_WINDOW_FAST || '0') === '1';
 const PRUNE_OLD = String(process.env.RELEASE_WINDOW_PRUNE_OLD || '0') === '1';
+const RUN_BACKUP = !FAST_MODE && String(process.env.RELEASE_WINDOW_RUN_BACKUP || '0') === '1';
 
 function runStep(report, label, command, envPatch = {}) {
   const startedAt = Date.now();
@@ -66,6 +67,7 @@ function main() {
     },
     config: {
       pruneOldEvidence: PRUNE_OLD,
+      runBackup: RUN_BACKUP,
     },
     error: null,
   };
@@ -129,6 +131,20 @@ function main() {
         durationMs: 0,
         error: null,
         reason: !FAST_MODE ? 'RELEASE_WINDOW_PRUNE_OLD=0' : 'FAST_MODE',
+      });
+    }
+    if (RUN_BACKUP) {
+      runStep(report, 'postgres-backup', 'bash scripts/backup-postgres.sh');
+    } else {
+      report.steps.push({
+        label: 'postgres-backup',
+        command: 'bash scripts/backup-postgres.sh',
+        status: 'skipped',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 0,
+        error: null,
+        reason: FAST_MODE ? 'FAST_MODE' : 'RELEASE_WINDOW_RUN_BACKUP=0',
       });
     }
     if (!FAST_MODE) {

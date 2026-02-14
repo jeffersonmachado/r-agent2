@@ -207,6 +207,10 @@ function checkQAScripts() {
       description: 'Execução padronizada da janela de release'
     },
     {
+      name: 'system:release-contingency',
+      description: 'Fluxo de contingência (backup + gate mínimo pós-rollback)'
+    },
+    {
       name: 'test:rpa',
       description: 'Script de testes RPA'
     }
