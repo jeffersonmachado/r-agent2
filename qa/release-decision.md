@@ -1,13 +1,13 @@
 # Release Decision Record
 
-- Recorded at: 2026-02-14T19:05:54.277Z
+- Recorded at: 2026-02-14T21:34:31.179Z
 - Status: PASS
 - Decision: GO
 
 ## Candidate
 - Branch: feat/f10-ai-envelope-safe-mode
-- Tag: v2026.03.01-rc5-4-g1b4ad02
-- Commit: 1b4ad02d47a5098298c31be055035a8b6b61e3fb
+- Tag: v2026.03.01-rc5-5-gf54823c
+- Commit: f54823c29bf9d5f2a2b2916b337fe41ab63141f4
 
 ## Scope Freeze
 - Frozen: yes

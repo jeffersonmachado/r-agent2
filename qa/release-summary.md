@@ -1,7 +1,7 @@
 # Release Summary
 
-- Generated at: 2026-02-14T19:05:54.492Z
-- Candidate: 1b4ad02 (feat/f10-ai-envelope-safe-mode)
+- Generated at: 2026-02-14T21:34:31.323Z
+- Candidate: f54823c (feat/f10-ai-envelope-safe-mode)
 - Decision: READY
 
 ## Gates

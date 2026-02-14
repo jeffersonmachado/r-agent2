@@ -1,6 +1,6 @@
 {
-  "startedAt": "2026-02-14T19:10:06.920Z",
-  "finishedAt": "2026-02-14T19:10:06.921Z",
+  "startedAt": "2026-02-14T21:34:31.569Z",
+  "finishedAt": "2026-02-14T21:34:31.570Z",
   "durationMs": 1,
   "dryRun": true,
   "status": "pass",
@@ -9,8 +9,8 @@
       "label": "release-clean-check",
       "command": "node tools/system/release-clean-check.js",
       "status": "skipped",
-      "startedAt": "2026-02-14T19:10:06.921Z",
-      "finishedAt": "2026-02-14T19:10:06.921Z",
+      "startedAt": "2026-02-14T21:34:31.570Z",
+      "finishedAt": "2026-02-14T21:34:31.570Z",
       "durationMs": 0,
       "error": null,
       "reason": "DRY_RUN"
@@ -19,8 +19,8 @@
       "label": "deploy-candidate",
       "command": "",
       "status": "skipped",
-      "startedAt": "2026-02-14T19:10:06.921Z",
-      "finishedAt": "2026-02-14T19:10:06.921Z",
+      "startedAt": "2026-02-14T21:34:31.570Z",
+      "finishedAt": "2026-02-14T21:34:31.570Z",
       "durationMs": 0,
       "error": null,
       "reason": "DRY_RUN"
@@ -29,8 +29,8 @@
       "label": "release-window-full",
       "command": "node tools/system/release-window.js",
       "status": "skipped",
-      "startedAt": "2026-02-14T19:10:06.921Z",
-      "finishedAt": "2026-02-14T19:10:06.921Z",
+      "startedAt": "2026-02-14T21:34:31.570Z",
+      "finishedAt": "2026-02-14T21:34:31.570Z",
       "durationMs": 0,
       "error": null,
       "reason": "DRY_RUN"
@@ -39,8 +39,8 @@
       "label": "release-gate-post-deploy",
       "command": "node tools/system/release-gate.js",
       "status": "skipped",
-      "startedAt": "2026-02-14T19:10:06.921Z",
-      "finishedAt": "2026-02-14T19:10:06.921Z",
+      "startedAt": "2026-02-14T21:34:31.570Z",
+      "finishedAt": "2026-02-14T21:34:31.570Z",
       "durationMs": 0,
       "error": null,
       "reason": "DRY_RUN"
@@ -49,8 +49,8 @@
       "label": "launch-plan-status-final",
       "command": "node tools/system/launch-plan-status.js",
       "status": "skipped",
-      "startedAt": "2026-02-14T19:10:06.921Z",
-      "finishedAt": "2026-02-14T19:10:06.921Z",
+      "startedAt": "2026-02-14T21:34:31.570Z",
+      "finishedAt": "2026-02-14T21:34:31.570Z",
       "durationMs": 0,
       "error": null,
       "reason": "DRY_RUN"
