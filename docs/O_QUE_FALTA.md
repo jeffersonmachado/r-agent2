@@ -261,50 +261,64 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [x] validar pipeline candidato da stack (RC):
   - referência: `v2026.03.01-rc5`
   - run: `https://github.com/jeffersonmachado/r-agent2/actions/runs/22020947013`
-- [ ] gerar status consolidado do plano (D-7/D-1/D0):
+- [x] gerar status consolidado do plano (D-7/D-1/D0):
   - `npm run system:launch-plan-status`
   - saídas: `qa/launch-plan-status.json` e `qa/launch-plan-status.md`
-- [ ] congelar escopo de release (apenas correções críticas e blockers)
-- [ ] confirmar branch/tag candidata e owners de plantão (engenharia + operação)
-- [ ] executar gate completo:
+  - update (14/02/2026): `overall=ready` (`progress=18/18`)
+- [x] congelar escopo de release (apenas correções críticas e blockers)
+  - `npm run system:release-decision`
+  - saída: `qa/release-decision.json` (`scope.frozen=true`)
+- [x] confirmar branch/tag candidata e owners de plantão (engenharia + operação)
+  - `npm run system:release-decision`
+  - saída: `qa/release-decision.json` (`candidate.branch/tag` + `owners.engineering/operations`)
+- [x] executar gate completo:
   - `npm run system:release-gate`
-- [ ] validar evidências mínimas atualizadas:
+  - update (14/02/2026): `PASS` (report em `qa/release-gate-report.json`)
+- [x] validar evidências mínimas atualizadas:
   - `qa/release-gate-report.json`
   - `qa/smoke-evidence.json` (L-01/L-02/L-03/L-04/L-05 em `pass`)
-- [ ] registrar baseline de selftest e checks críticos:
+  - update (14/02/2026): `l01/l02/l03/l04/l05=pass`
+- [x] registrar baseline de selftest e checks críticos:
   - `eventDispatchRuntime`
   - `pbxEventRuntime`
   - `voiceRuntime`
+  - update (14/02/2026): baseline salvo em `qa/selftest-baseline.json` (`status=WARN`; `eventDispatchRuntime=degraded`, `pbxEventRuntime=degraded`, `voiceRuntime=healthy`)
 
 ### D-1 (28/02/2026) — go/no-go técnico
-- [ ] execução padronizada da janela técnica (modo rápido):
+- [x] execução padronizada da janela técnica (modo rápido):
   - `RELEASE_WINDOW_FAST=1 npm run system:release-window`
   - saída: `qa/release-window-report.json`
-- [ ] executar decisão consolidada (gate + rollback + smoke evidence):
+- [x] executar decisão consolidada (gate + rollback + smoke evidence):
   - `npm run system:go-no-go`
   - saída: `qa/go-no-go-report.json` com `decision=GO|NO_GO`
-- [ ] atualizar status consolidado do plano:
+- [x] atualizar status consolidado do plano:
   - `npm run system:launch-plan-status`
   - regra: `overall=ready` para avançar com liberação
-- [ ] rerodar gate completo em janela controlada:
+- [x] formalizar decisão go/no-go com registro de data/hora e responsáveis:
+  - `npm run system:release-decision`
+  - saídas: `qa/release-decision.json` e `qa/release-decision.md`
+- [x] rerodar gate completo em janela controlada:
   - `npm run system:release-gate`
-- [ ] executar drill de rollback:
+- [x] executar drill de rollback:
   - `npm run system:rollback-drill`
   - opcional com rollback PBX aplicado: `ROLLBACK_DRILL_APPLY_PBX=1 npm run system:rollback-drill`
   - observação: o drill valida evidência PBX L-03/L-04 no `qa/smoke-evidence.json` por padrão (`ROLLBACK_DRILL_REQUIRE_PBX_SMOKE_EVIDENCE=1`).
-- [ ] revisar critérios de aceite:
+- [x] revisar critérios de aceite:
   - release gate `PASS`
   - selftest sem `FAIL`
   - evidência de chamada real PBX `originated` (L-03)
   - evidência de trigger runtime por call event (L-04 com `flow.executionId`)
   - evidência ChatPro/omnichannel (L-05 com `ticket.id` + operações críticas em `true`)
-- [ ] formalizar decisão go/no-go com registro de data/hora e responsáveis
 
 ### D0 (01/03/2026) — execução de lançamento
 - [ ] abrir janela oficial de deploy e congelar mudanças paralelas
 - [ ] validar workspace de release (sem pendências fora de QA):
   - `npm run system:release-clean-check`
 - [ ] executar publicação/deploy da versão candidata
+- [ ] execução guiada de D0 (opcional, comando único):
+  - dry-run (padrão seguro): `npm run system:release-d0`
+  - execução real: `RELEASE_D0_DRY_RUN=0 RELEASE_D0_DEPLOY_COMMAND="<comando_deploy>" npm run system:release-d0`
+  - saída: `qa/release-d0-report.json`
 - [ ] executar janela completa de release (modo full):
   - `npm run system:release-window`
   - saída: `qa/release-window-report.json`
@@ -325,6 +339,8 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `qa/smoke-evidence.json`
   - `qa/rollback-drill-report.json`
   - `qa/go-no-go-report.json`
+  - `qa/release-decision.json`
+  - `qa/release-decision.md`
   - `qa/release-window-report.json`
   - `qa/release-manifest.json`
   - `qa/release-summary.md`
@@ -340,33 +356,33 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - evidências ficam em `qa/launch-plan-status.json` e `qa/go-no-go-report.json`.
 
 #### D-7 (22/02/2026) — preparação e baseline
-- [ ] **ChatPro (owner: Atendimento/API)**  
+- [x] **ChatPro (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
   evidência: `qa/l05-chatpro-omnichannel-evidence.json` + `qa/smoke-evidence.json` com `l05.status=pass`.
-- [ ] **Fila física (owner: Fast Service/API+Frontend)**  
+- [x] **Fila física (owner: Fast Service/API+Frontend)**  
   comando: `npm run system:release-gate`  
   evidência: `qa/l01-physical-queue-evidence.json` + fluxo `kiosk -> station -> panel` sem falhas no `qa/release-gate-report.json`.
-- [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
+- [x] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   evidência: `qa/l03-pbx-voice-tts-asr-evidence.json` e `qa/l04-pbx-call-events-runtime-evidence.json` atualizados.
 
 #### D-1 (28/02/2026) — go/no-go técnico por pilar
-- [ ] **Decisão consolidada (owner: Engenharia de Plataforma)**  
+- [x] **Decisão consolidada (owner: Engenharia de Plataforma)**  
   comando: `npm run system:go-no-go`  
   aceite: `qa/go-no-go-report.json` com `decision=GO`; qualquer `NO_GO` bloqueia release até correção.
-- [ ] **ChatPro (owner: Atendimento/API)**  
+- [x] **ChatPro (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
   aceite: sem divergência mensagem↔ticket↔SLA no gate; sem `FAIL` no selftest.
-- [ ] **Fila física (owner: Fast Service/API+Frontend)**  
+- [x] **Fila física (owner: Fast Service/API+Frontend)**  
   comando: `npm run system:release-gate`  
   aceite: operação de estação (`call/start/pause/resume/finish/skip/transfer`) validada e painel consistente.
-- [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
+- [x] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   aceite: chamada real `originated=true`; trigger por call event com `flow.executionId`; quando `cdrFound=false`, evidência de originação + runtime aceita.
-- [ ] **ChatPro evidência dedicada (owner: Atendimento/API)**  
+- [x] **ChatPro evidência dedicada (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
   aceite: `qa/l05-chatpro-omnichannel-evidence.json` com `ok=true` e operações críticas (`assign/transfer/note/tags/quick replies`) validadas.
-- [ ] **Rollback readiness (owner: Engenharia de Plataforma)**  
+- [x] **Rollback readiness (owner: Engenharia de Plataforma)**  
   comando: `npm run system:rollback-drill`  
   evidência: `qa/rollback-drill-report.json` sem bloqueadores, incluindo `checks.pbxSmokeEvidence` válido (L-03/L-04).
 

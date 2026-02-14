@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-02-14T17:30:10.052Z",
+  "generatedAt": "2026-02-14T19:05:54.340Z",
   "overall": "ready",
   "summary": {
-    "done": 18,
-    "total": 18,
+    "done": 21,
+    "total": 21,
     "progressPct": 100
   },
   "milestones": {
@@ -17,6 +17,16 @@
         "done": true,
         "label": "Validar L-01..L-05 em pass",
         "detail": "qa/smoke-evidence.json"
+      },
+      {
+        "done": true,
+        "label": "Congelar escopo da release",
+        "detail": "qa/release-decision.json#scope"
+      },
+      {
+        "done": true,
+        "label": "Confirmar branch/tag candidata e owners de plantao",
+        "detail": "qa/release-decision.json#candidate-owners"
       },
       {
         "done": true,
@@ -39,6 +49,11 @@
         "done": true,
         "label": "Executar decisão consolidada",
         "detail": "qa/go-no-go-report.json"
+      },
+      {
+        "done": true,
+        "label": "Formalizar decisão go/no-go (data/hora/responsáveis)",
+        "detail": "qa/release-decision.json"
       },
       {
         "done": true,
@@ -107,12 +122,12 @@
   "pillars": {
     "chatpro": {
       "ok": true,
-      "ticketId": "default-1771083594065-1cxp9vf"
+      "ticketId": "default-1771095425311-cquolls"
     },
     "queue": {
       "ok": true,
-      "queueId": "pq-1771083593489-84874dff465b",
-      "ticketId": "pt-1771083593540-0a236def5deb",
+      "queueId": "pq-1771095424650-6a3e0b62c05a",
+      "ticketId": "pt-1771095424745-5af3949fe610",
       "doneCount": 1
     },
     "pbx": {
@@ -126,7 +141,7 @@
       },
       "l04": {
         "ok": true,
-        "executionId": "fx-1771083592460-2ed0be739ffb",
+        "executionId": "fx-1771095423547-e348fe64e39d",
         "nodesCount": 3
       }
     }
@@ -136,6 +151,7 @@
     "rollbackDrill": "qa/rollback-drill-report.json",
     "smokeEvidence": "qa/smoke-evidence.json",
     "goNoGo": "qa/go-no-go-report.json",
+    "releaseDecision": "qa/release-decision.json",
     "releaseWindow": "qa/release-window-report.json"
   }
 }

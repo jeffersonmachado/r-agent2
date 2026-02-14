@@ -114,7 +114,9 @@ node -e "const token=process.env.RPA_TOKEN||''; const base='${API_BASE_URL}'; fe
 
 echo
 echo "[autotest-stack] Rodando selftest read-only..."
-node -e "const base='${API_BASE_URL}'; fetch(base + '/health/selftest').then(r=>r.json()).then(j=>{ console.log('[selftest]', j.status); if(!j||!j.status) process.exit(2); if(String(j.status).toUpperCase()==='FAIL') process.exit(1); }).catch(e=>{ console.error(e); process.exit(2); })"
+SELFTEST_BASELINE_PATH="${SELFTEST_BASELINE_PATH:-qa/selftest-baseline.json}" \
+RELEASE_GATE_REQUIRED_CHECKS="${RELEASE_GATE_REQUIRED_CHECKS:-eventDispatchRuntime,pbxEventRuntime,voiceRuntime}" \
+node -e "const fs=require('fs'); const path=require('path'); const base='${API_BASE_URL}'; const out=process.env.SELFTEST_BASELINE_PATH||'qa/selftest-baseline.json'; const req=(process.env.RELEASE_GATE_REQUIRED_CHECKS||'eventDispatchRuntime,pbxEventRuntime,voiceRuntime').split(',').map(s=>String(s||'').trim()).filter(Boolean); fetch(base + '/health/selftest').then(async r=>{ if(!r.ok){ console.error('[selftest] http', r.status); process.exit(2);} const j=await r.json(); console.log('[selftest]', j.status); if(!j||!j.status) process.exit(2); const checks=(j&&j.checks&&typeof j.checks==='object')?j.checks:{}; const critical={}; for(const key of req){ const item=checks[key]||null; critical[key]={ status:item&&item.status||'missing', message:item&&item.message||null, details:item&&item.details||null }; if(!item) { console.error('[selftest] missing_check', key); process.exit(1);} if(String(item.status||'').toLowerCase()==='unhealthy'){ console.error('[selftest] unhealthy_check', key); process.exit(1);} } const baseline={ generatedAt:new Date().toISOString(), url:base + '/health/selftest', status:j.status, criticalChecks:critical }; fs.mkdirSync(path.dirname(out),{recursive:true}); fs.writeFileSync(out, JSON.stringify(baseline,null,2)+'\n','utf8'); console.log('[selftest] baseline:', out); if(String(j.status).toUpperCase()==='FAIL') process.exit(1); }).catch(e=>{ console.error(e); process.exit(2); })"
 
 echo
 echo "[autotest-stack] Exportando URLs padrão para RPA..."

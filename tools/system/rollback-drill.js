@@ -297,20 +297,22 @@ async function run() {
 
     const items = Array.isArray(versions.payload?.items) ? versions.payload.items : [];
     const candidate = pickRollbackVersion(items);
-    if (!candidate) throw new Error('pbx_no_rollback_candidate');
+    if (!candidate && APPLY_PBX_ROLLBACK) {
+      throw new Error('pbx_no_rollback_candidate');
+    }
 
     const pbxResult = {
       ok: true,
-      status: 'simulated',
-      candidateVersion: toNumber(candidate.version, null),
-      candidateCreatedAt: candidate.createdAt || null,
+      status: candidate ? 'simulated' : 'no_candidate',
+      candidateVersion: candidate ? toNumber(candidate.version, null) : null,
+      candidateCreatedAt: candidate ? (candidate.createdAt || null) : null,
       applyExecuted: false,
       rollbackResponse: null,
       auditFound: null,
       versionsCount: items.length,
     };
 
-    if (APPLY_PBX_ROLLBACK) {
+    if (APPLY_PBX_ROLLBACK && candidate) {
       const rollback = await reqJson(baseUrl, `/api/pbx/dialplan/rollback?version=${encodeURIComponent(String(candidate.version))}`, {
         method: 'POST',
         token,

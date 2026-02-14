@@ -13,6 +13,7 @@ const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || '
 const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
 const RUN_RELEASE_GATE = String(process.env.GO_NO_GO_RUN_RELEASE_GATE || '1') !== '0';
 const RUN_ROLLBACK_DRILL = String(process.env.GO_NO_GO_RUN_ROLLBACK_DRILL || '1') !== '0';
+const ROLLBACK_WITH_STACK = String(process.env.GO_NO_GO_ROLLBACK_WITH_STACK || '1') !== '0';
 
 function readJson(relPath) {
   const abs = path.join(ROOT, relPath);
@@ -31,6 +32,26 @@ function runStep(command, label) {
     env: process.env,
   });
   return { label, command, status: 'pass' };
+}
+
+function runRollbackDrillStep() {
+  if (!ROLLBACK_WITH_STACK) {
+    return runStep('node tools/system/rollback-drill.js', 'rollback-drill');
+  }
+
+  const command = [
+    'bash -lc',
+    '\'set -euo pipefail;',
+    'cleanup(){ bash scripts/test-stack-down.sh || true; };',
+    'trap cleanup EXIT;',
+    'bash scripts/test-stack-up.sh;',
+    'bash scripts/wait-ready.sh;',
+    'ROLLBACK_DRILL_API_URL="${ROLLBACK_DRILL_API_URL:-http://localhost:13001}"',
+    'TEST_TENANT_ID="${TEST_TENANT_ID:-system}"',
+    'node tools/system/rollback-drill.js\'',
+  ].join(' ');
+
+  return runStep(command, 'rollback-drill');
 }
 
 function writeReport(report) {
@@ -62,7 +83,7 @@ function main() {
     }
 
     if (RUN_ROLLBACK_DRILL) {
-      report.steps.push(runStep('node tools/system/rollback-drill.js', 'rollback-drill'));
+      report.steps.push(runRollbackDrillStep());
     } else {
       report.steps.push({ label: 'rollback-drill', command: 'node tools/system/rollback-drill.js', status: 'skipped' });
     }

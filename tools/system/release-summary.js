@@ -8,6 +8,7 @@ const ROOT = path.join(__dirname, '..', '..');
 const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
 const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
 const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
+const RELEASE_DECISION_PATH = process.env.RELEASE_DECISION_PATH || 'qa/release-decision.json';
 const LAUNCH_PLAN_STATUS_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
 const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
 const RELEASE_MANIFEST_PATH = process.env.RELEASE_MANIFEST_PATH || 'qa/release-manifest.json';
@@ -32,6 +33,7 @@ function main() {
   const gate = readJson(RELEASE_GATE_REPORT_PATH);
   const drill = readJson(ROLLBACK_DRILL_REPORT_PATH);
   const goNoGo = readJson(GO_NO_GO_REPORT_PATH);
+  const releaseDecision = readJson(RELEASE_DECISION_PATH);
   const plan = readJson(LAUNCH_PLAN_STATUS_PATH);
   const window = readJson(RELEASE_WINDOW_REPORT_PATH);
   const manifest = readJson(RELEASE_MANIFEST_PATH);
@@ -47,6 +49,7 @@ function main() {
   lines.push(statusLine('Release gate', gate?.status));
   lines.push(statusLine('Rollback drill', drill?.status));
   lines.push(statusLine('Go/No-Go', goNoGo?.decision));
+  lines.push(statusLine('Release decision', releaseDecision?.status));
   lines.push(statusLine('Launch plan', plan?.overall));
   lines.push(statusLine('Release window', window?.status));
   lines.push('');
@@ -54,6 +57,7 @@ function main() {
   lines.push(statusLine('Release gate report', RELEASE_GATE_REPORT_PATH));
   lines.push(statusLine('Rollback drill report', ROLLBACK_DRILL_REPORT_PATH));
   lines.push(statusLine('Go/No-Go report', GO_NO_GO_REPORT_PATH));
+  lines.push(statusLine('Release decision record', RELEASE_DECISION_PATH));
   lines.push(statusLine('Launch plan status', LAUNCH_PLAN_STATUS_PATH));
   lines.push(statusLine('Release window report', RELEASE_WINDOW_REPORT_PATH));
   lines.push(statusLine('Release manifest', RELEASE_MANIFEST_PATH));

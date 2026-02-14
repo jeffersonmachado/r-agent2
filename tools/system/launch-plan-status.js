@@ -10,6 +10,7 @@ const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/rel
 const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
 const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
 const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
+const RELEASE_DECISION_PATH = process.env.RELEASE_DECISION_PATH || 'qa/release-decision.json';
 const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
 const OUTPUT_JSON_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
 const OUTPUT_MD_PATH = process.env.LAUNCH_PLAN_STATUS_MD_PATH || 'qa/launch-plan-status.md';
@@ -40,6 +41,7 @@ function buildStatus() {
   const drill = readJson(ROLLBACK_DRILL_REPORT_PATH);
   const smoke = readJson(SMOKE_EVIDENCE_SUMMARY_PATH);
   const goNoGo = readJson(GO_NO_GO_REPORT_PATH);
+  const releaseDecision = readJson(RELEASE_DECISION_PATH);
   const releaseWindow = readJson(RELEASE_WINDOW_REPORT_PATH);
   const smokeOk = smokePasses(smoke);
   const pillars = smoke && smoke.smokes ? evaluatePillars(smoke.smokes) : null;
@@ -48,6 +50,15 @@ function buildStatus() {
   const pbxOk = pillars?.pillars?.pbx?.ok === true;
   const rollbackOk = !!drill && drill.status === 'pass';
   const goNoGoOk = !!goNoGo && goNoGo.decision === 'GO';
+  const releaseDecisionOk = !!releaseDecision && releaseDecision.status === 'pass' && releaseDecision.decision === 'GO';
+  const releaseScopeFrozen = !!releaseDecision && releaseDecision.scope && releaseDecision.scope.frozen === true;
+  const releaseOwnersConfirmed = !!releaseDecision
+    && !!releaseDecision.candidate
+    && !!releaseDecision.candidate.branch
+    && !!releaseDecision.candidate.tag
+    && !!releaseDecision.owners
+    && !!releaseDecision.owners.engineering
+    && !!releaseDecision.owners.operations;
   const gateOk = !!gate && gate.status === 'pass';
   const releaseWindowOk = ALLOW_PENDING_RELEASE_WINDOW
     ? !!releaseWindow
@@ -56,6 +67,8 @@ function buildStatus() {
   const d7 = [
     makeItem(gateOk, 'Executar gate completo', RELEASE_GATE_REPORT_PATH),
     makeItem(smokeOk, 'Validar L-01..L-05 em pass', SMOKE_EVIDENCE_SUMMARY_PATH),
+    makeItem(releaseScopeFrozen, 'Congelar escopo da release', `${RELEASE_DECISION_PATH}#scope`),
+    makeItem(releaseOwnersConfirmed, 'Confirmar branch/tag candidata e owners de plantao', `${RELEASE_DECISION_PATH}#candidate-owners`),
     makeItem(chatproOk, 'ChatPro com evidência operacional', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l05`),
     makeItem(queueOk, 'Fila física com jornada completa', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l01`),
     makeItem(pbxOk, 'PBX TTS/ASR + call events com runtime', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l03-l04`),
@@ -63,6 +76,7 @@ function buildStatus() {
 
   const d1 = [
     makeItem(goNoGoOk, 'Executar decisão consolidada', GO_NO_GO_REPORT_PATH),
+    makeItem(releaseDecisionOk, 'Formalizar decisão go/no-go (data/hora/responsáveis)', RELEASE_DECISION_PATH),
     makeItem(rollbackOk, 'Executar rollback drill', ROLLBACK_DRILL_REPORT_PATH),
     makeItem(gateOk, 'Revalidar release gate', RELEASE_GATE_REPORT_PATH),
     makeItem(chatproOk, 'ChatPro sem divergência mensagem/ticket/SLA', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l05`),
@@ -103,6 +117,7 @@ function buildStatus() {
       rollbackDrill: ROLLBACK_DRILL_REPORT_PATH,
       smokeEvidence: SMOKE_EVIDENCE_SUMMARY_PATH,
       goNoGo: GO_NO_GO_REPORT_PATH,
+      releaseDecision: RELEASE_DECISION_PATH,
       releaseWindow: RELEASE_WINDOW_REPORT_PATH,
     },
   };

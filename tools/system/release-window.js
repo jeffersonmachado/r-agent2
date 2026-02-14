@@ -92,6 +92,7 @@ function main() {
       'node tools/system/go-no-go.js',
       FAST_MODE ? { GO_NO_GO_RUN_RELEASE_GATE: '0', GO_NO_GO_RUN_ROLLBACK_DRILL: '0' } : {}
     );
+    runStep(report, 'release-decision', 'node tools/system/release-decision.js');
     runStep(
       report,
       'launch-plan-status',

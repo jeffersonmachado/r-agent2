@@ -1,6 +1,6 @@
 {
-  "startedAt": "2026-02-14T15:41:12.244Z",
-  "finishedAt": "2026-02-14T15:41:12.246Z",
+  "startedAt": "2026-02-14T19:05:54.233Z",
+  "finishedAt": "2026-02-14T19:05:54.234Z",
   "status": "pass",
   "decision": "GO",
   "steps": [
@@ -40,12 +40,12 @@
       "pillars": {
         "chatpro": {
           "ok": true,
-          "ticketId": "default-1771083594065-1cxp9vf"
+          "ticketId": "default-1771095425311-cquolls"
         },
         "queue": {
           "ok": true,
-          "queueId": "pq-1771083593489-84874dff465b",
-          "ticketId": "pt-1771083593540-0a236def5deb",
+          "queueId": "pq-1771095424650-6a3e0b62c05a",
+          "ticketId": "pt-1771095424745-5af3949fe610",
           "doneCount": 1
         },
         "pbx": {
@@ -59,7 +59,7 @@
           },
           "l04": {
             "ok": true,
-            "executionId": "fx-1771083592460-2ed0be739ffb",
+            "executionId": "fx-1771095423547-e348fe64e39d",
             "nodesCount": 3
           }
         }

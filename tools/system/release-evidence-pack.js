@@ -15,6 +15,8 @@ const REQUIRED_FILES = [
   'qa/release-gate-report.json',
   'qa/rollback-drill-report.json',
   'qa/go-no-go-report.json',
+  'qa/release-decision.json',
+  'qa/release-decision.md',
   'qa/launch-plan-status.json',
   'qa/launch-plan-status.md',
   'qa/release-window-report.json',
@@ -34,6 +36,7 @@ const OPTIONAL_FILES = [
   'qa/smoke/l03-pbx-voice-tts-asr.log',
   'qa/smoke/l04-pbx-call-events-runtime.log',
   'qa/smoke/l05-chatpro-omnichannel.log',
+  'qa/release-d0-report.json',
 ];
 
 function abs(rel) {

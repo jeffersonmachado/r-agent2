@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-02-14T15:34:55.644Z",
+  "generatedAt": "2026-02-14T19:05:54.444Z",
   "candidate": {
     "branch": "feat/f10-ai-envelope-safe-mode",
-    "commit": "11d29cc27ff6c97de23edb64b855c0f5c6fb551c",
-    "shortCommit": "11d29cc",
+    "commit": "1b4ad02d47a5098298c31be055035a8b6b61e3fb",
+    "shortCommit": "1b4ad02",
     "tag": null,
     "dirty": true
   },
@@ -26,7 +26,7 @@
     },
     "releaseWindow": {
       "path": "qa/release-window-report.json",
-      "status": "fail"
+      "status": "pass"
     }
   },
   "decision": "READY"

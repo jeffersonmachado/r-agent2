@@ -1,7 +1,7 @@
 {
-  "startedAt": "2026-02-14T15:16:59.266Z",
-  "finishedAt": "2026-02-14T15:16:59.449Z",
-  "durationMs": 183,
+  "startedAt": "2026-02-14T19:02:37.124Z",
+  "finishedAt": "2026-02-14T19:02:37.629Z",
+  "durationMs": 506,
   "status": "pass",
   "config": {
     "baseUrl": "http://localhost:13001",
@@ -14,7 +14,7 @@
     "tenantId": "system",
     "evidence": {
       "status": 200,
-      "durationMs": 66
+      "durationMs": 138
     },
     "error": null
   },
@@ -23,29 +23,29 @@
       "ok": true,
       "status": 200,
       "selftestStatus": "WARN",
-      "durationMs": 40
+      "durationMs": 225
     },
     "orders": {
       "ok": true,
       "status": 200,
-      "durationMs": 10,
+      "durationMs": 26,
       "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"createdCount\":0,\"confirmedCount\":0,\"preparingCount\":0,\"readyCount\":0,\"dispatchedCount\":0,\"deliveredCount\":0,\"cancelledCount\":0,\"avgOrderToReadySeconds\":null,\"avgOrderToDeliverSeconds\":null,\"slaOrderToReadyBreachedCount\":0,\"slaOrderToDeliverBreachedCount\":0,\"slaOrderToReadyMinutes\":25,\"slaOrderToDeliverMinutes\":60},\"byHour\":[]}"
     },
     "fastService": {
       "ok": true,
       "status": 200,
-      "durationMs": 11,
+      "durationMs": 21,
       "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"doneCount\":0,\"abandonedCount\":0,\"waitingCount\":0,\"calledCount\":0,\"inServiceCount\":0,\"pausedCount\":0,\"activeCount\":0,\"avgWaitSeconds\":null,\"avgServiceSeconds\":null,\"avgSkipCount\":null,\"abandonmentRate\":0},\"byStation\":[],\"byQueue\":[],\"byHour\":[]}"
     },
     "pbx": {
       "ok": true,
-      "status": "simulated",
-      "candidateVersion": 3,
-      "candidateCreatedAt": "2026-02-14T15:16:52.242Z",
+      "status": "no_candidate",
+      "candidateVersion": null,
+      "candidateCreatedAt": null,
       "applyExecuted": false,
       "rollbackResponse": null,
       "auditFound": null,
-      "versionsCount": 3
+      "versionsCount": 0
     },
     "pbxSmokeEvidence": {
       "required": true,
@@ -64,7 +64,7 @@
         "l04": {
           "status": "pass",
           "evidenceOk": true,
-          "executionId": "fx-1771081866479-d682697bf6b9",
+          "executionId": "fx-1771095423547-e348fe64e39d",
           "nodesCount": 3
         }
       },
@@ -74,7 +74,7 @@
       "ok": true,
       "status": 200,
       "selftestStatus": "WARN",
-      "durationMs": 48
+      "durationMs": 84
     }
   },
   "error": null

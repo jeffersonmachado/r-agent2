@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-02-14T18:54:33.610Z",
+  "url": "http://localhost:13001/health/selftest",
+  "status": "WARN",
+  "criticalChecks": {
+    "eventDispatchRuntime": {
+      "status": "degraded",
+      "message": null,
+      "details": null
+    },
+    "pbxEventRuntime": {
+      "status": "degraded",
+      "message": null,
+      "details": null
+    },
+    "voiceRuntime": {
+      "status": "healthy",
+      "message": null,
+      "details": {
+        "windowMinutes": 60,
+        "recentVoiceEvents": 0,
+        "recentVoiceEnded": 0,
+        "activeSessions": 0,
+        "minutesSinceLastVoiceEvent": null,
+        "thresholds": {
+          "activeWarn": 100,
+          "activeFail": 500,
+          "ingestionSilenceWarnMin": 120,
+          "ingestionSilenceFailMin": 720
+        }
+      }
+    }
+  }
+}

@@ -175,6 +175,10 @@ function checkQAScripts() {
       description: 'Decisão consolidada de go/no-go'
     },
     {
+      name: 'system:release-decision',
+      description: 'Formalização da decisão de release com owners/on-call'
+    },
+    {
       name: 'system:launch-plan-status',
       description: 'Status consolidado de marcos D-7/D-1/D0'
     },
@@ -207,6 +211,10 @@ function checkQAScripts() {
       description: 'Execução padronizada da janela de release'
     },
     {
+      name: 'system:release-d0',
+      description: 'Execução padronizada do dia D0 (deploy + validação pós-release)'
+    },
+    {
       name: 'system:release-contingency',
       description: 'Fluxo de contingência (backup + gate mínimo pós-rollback)'
     },
@@ -237,6 +245,7 @@ function checkLaunchEvidence() {
   const releaseGatePath = path.join(ROOT_DIR, 'qa', 'release-gate-report.json');
   const rollbackPath = path.join(ROOT_DIR, 'qa', 'rollback-drill-report.json');
   const goNoGoPath = path.join(ROOT_DIR, 'qa', 'go-no-go-report.json');
+  const releaseDecisionPath = path.join(ROOT_DIR, 'qa', 'release-decision.json');
   const smokePath = path.join(ROOT_DIR, 'qa', 'smoke-evidence.json');
   const releaseWindowPath = path.join(ROOT_DIR, 'qa', 'release-window-report.json');
   const releaseManifestPath = path.join(ROOT_DIR, 'qa', 'release-manifest.json');
@@ -246,6 +255,7 @@ function checkLaunchEvidence() {
     { name: 'Release gate report', path: releaseGatePath },
     { name: 'Rollback drill report', path: rollbackPath },
     { name: 'Go/No-Go report', path: goNoGoPath },
+    { name: 'Release decision record', path: releaseDecisionPath },
     { name: 'Release window report', path: releaseWindowPath },
     { name: 'Release manifest', path: releaseManifestPath },
     { name: 'Release summary', path: releaseSummaryPath },
