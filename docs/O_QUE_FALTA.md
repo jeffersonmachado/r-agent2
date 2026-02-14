@@ -1,6 +1,6 @@
 # O que falta (fonte única) — backlog operacional e critérios de “v1 vendável”
 
-- **Última atualização**: Fev/2026 (13/02)
+- **Última atualização**: Fev/2026 (14/02)
 
 Este documento é a **fonte de verdade única** do “o que falta” a partir do estado atual do repositório (Fev/2026).  
 Ele substitui a visão antiga “capability-driven vs benchmarks” como lista operacional de execução.
@@ -43,6 +43,17 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [x] Gate com consolidado e validação obrigatória de L-01/L-02/L-03/L-04/L-05:
   - consolidado: `qa/smoke-evidence.json`
   - validação no gate: `tools/system/release-gate.js`
+
+## Update RC de lançamento (14/02/2026)
+
+- [x] Pipeline **Stack Test (Docker Compose)** estabilizado no fluxo de RC:
+  - login GHCR no job de autoteste para pull de imagens pré-aquecidas
+  - alinhamento da origem do `RPA_TOKEN` no autoteste (evita divergência com env do runner)
+  - recuperação de permissão em `frontend/node_modules` com fallback de limpeza via container
+- [x] RC validado com sucesso:
+  - tag: `v2026.03.01-rc5`
+  - run: `22020947013`
+  - resultado: `Prewarm imagens de teste (GHCR)=success` e `Autotest com stack completa=success`
 
 ---
 
@@ -247,6 +258,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 > Regra de decisão: sem `PASS` no gate e sem evidências completas, **não liberar**.
 
 ### D-7 (22/02/2026) — freeze técnico e baseline
+- [x] validar pipeline candidato da stack (RC):
+  - referência: `v2026.03.01-rc5`
+  - run: `https://github.com/jeffersonmachado/r-agent2/actions/runs/22020947013`
 - [ ] gerar status consolidado do plano (D-7/D-1/D0):
   - `npm run system:launch-plan-status`
   - saídas: `qa/launch-plan-status.json` e `qa/launch-plan-status.md`
