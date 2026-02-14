@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-14T15:05:30.765Z",
+  "generatedAt": "2026-02-14T15:41:12.305Z",
   "overall": "ready",
   "summary": {
     "done": 18,
@@ -107,12 +107,12 @@
   "pillars": {
     "chatpro": {
       "ok": true,
-      "ticketId": "default-1771078243291-ps9hrtu"
+      "ticketId": "default-1771083594065-1cxp9vf"
     },
     "queue": {
       "ok": true,
-      "queueId": "pq-1771078242788-a0ee07c4dfac",
-      "ticketId": "pt-1771078242851-5ad8cb4a8795",
+      "queueId": "pq-1771083593489-84874dff465b",
+      "ticketId": "pt-1771083593540-0a236def5deb",
       "doneCount": 1
     },
     "pbx": {
@@ -126,7 +126,7 @@
       },
       "l04": {
         "ok": true,
-        "executionId": "fx-1771078241807-3a874da9d385",
+        "executionId": "fx-1771083592460-2ed0be739ffb",
         "nodesCount": 3
       }
     }

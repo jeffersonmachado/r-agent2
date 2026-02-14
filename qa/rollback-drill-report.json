@@ -1,7 +1,7 @@
 {
-  "startedAt": "2026-02-13T22:04:26.601Z",
-  "finishedAt": "2026-02-13T22:04:26.949Z",
-  "durationMs": 348,
+  "startedAt": "2026-02-14T15:16:59.266Z",
+  "finishedAt": "2026-02-14T15:16:59.449Z",
+  "durationMs": 183,
   "status": "pass",
   "config": {
     "baseUrl": "http://localhost:13001",
@@ -14,7 +14,7 @@
     "tenantId": "system",
     "evidence": {
       "status": 200,
-      "durationMs": 53
+      "durationMs": 66
     },
     "error": null
   },
@@ -23,25 +23,25 @@
       "ok": true,
       "status": 200,
       "selftestStatus": "WARN",
-      "durationMs": 119
+      "durationMs": 40
     },
     "orders": {
       "ok": true,
       "status": 200,
-      "durationMs": 41,
+      "durationMs": 10,
       "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"createdCount\":0,\"confirmedCount\":0,\"preparingCount\":0,\"readyCount\":0,\"dispatchedCount\":0,\"deliveredCount\":0,\"cancelledCount\":0,\"avgOrderToReadySeconds\":null,\"avgOrderToDeliverSeconds\":null,\"slaOrderToReadyBreachedCount\":0,\"slaOrderToDeliverBreachedCount\":0,\"slaOrderToReadyMinutes\":25,\"slaOrderToDeliverMinutes\":60},\"byHour\":[]}"
     },
     "fastService": {
       "ok": true,
       "status": 200,
-      "durationMs": 38,
+      "durationMs": 11,
       "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"doneCount\":0,\"abandonedCount\":0,\"waitingCount\":0,\"calledCount\":0,\"inServiceCount\":0,\"pausedCount\":0,\"activeCount\":0,\"avgWaitSeconds\":null,\"avgServiceSeconds\":null,\"avgSkipCount\":null,\"abandonmentRate\":0},\"byStation\":[],\"byQueue\":[],\"byHour\":[]}"
     },
     "pbx": {
       "ok": true,
       "status": "simulated",
       "candidateVersion": 3,
-      "candidateCreatedAt": "2026-02-13T22:04:19.945Z",
+      "candidateCreatedAt": "2026-02-14T15:16:52.242Z",
       "applyExecuted": false,
       "rollbackResponse": null,
       "auditFound": null,
@@ -64,7 +64,7 @@
         "l04": {
           "status": "pass",
           "evidenceOk": true,
-          "executionId": "fx-1771019709501-122e12037f89",
+          "executionId": "fx-1771081866479-d682697bf6b9",
           "nodesCount": 3
         }
       },
@@ -74,7 +74,7 @@
       "ok": true,
       "status": 200,
       "selftestStatus": "WARN",
-      "durationMs": 85
+      "durationMs": 48
     }
   },
   "error": null

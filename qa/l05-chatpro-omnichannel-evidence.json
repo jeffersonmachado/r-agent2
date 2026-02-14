@@ -1,14 +1,14 @@
 {
   "smoke": "L-05",
-  "generatedAt": "2026-02-14T14:10:43.262Z",
+  "generatedAt": "2026-02-14T15:39:54.051Z",
   "ok": true,
   "authMode": "admin",
   "tenantId": "system",
   "ticket": {
-    "id": "default-1771078243291-ps9hrtu",
+    "id": "default-1771083594065-1cxp9vf",
     "created": true,
-    "assignedTo": "75703861-8255-4da4-b92f-b84b233d5171",
-    "queueAfterTransfer": "ux1_smoke_1771078243262",
+    "assignedTo": "cc3dc44b-3422-4f2c-b6e1-696d6f9596b7",
+    "queueAfterTransfer": "ux1_smoke_1771083594051",
     "originalQueue": "default",
     "originalAssignedTo": null
   },

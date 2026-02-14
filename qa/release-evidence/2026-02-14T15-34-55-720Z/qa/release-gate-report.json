@@ -1,0 +1,214 @@
+{
+  "startedAt": "2026-02-14T15:29:03.391Z",
+  "status": "pass",
+  "steps": [
+    {
+      "label": "autotest de stack (validação completa)",
+      "command": "bash scripts/system-autotest-stack.sh",
+      "status": "pass",
+      "durationMs": 352129
+    }
+  ],
+  "selftest": {
+    "status": "validated_in_stack",
+    "info": "Selftest já validado dentro de scripts/system-autotest-stack.sh"
+  },
+  "smokeEvidence": {
+    "path": "qa/smoke-evidence.json",
+    "found": true,
+    "data": {
+      "generatedAt": "2026-02-14T15:34:32.975Z",
+      "smokes": {
+        "l01": {
+          "status": "pass",
+          "logPath": "qa/smoke/l01-physical-queue.log",
+          "evidencePath": "qa/l01-physical-queue-evidence.json",
+          "evidence": {
+            "smoke": "L-01",
+            "generatedAt": "2026-02-14T15:33:33.451Z",
+            "ok": true,
+            "tenantId": "system",
+            "locationId": "smoke-loc-1771083213451",
+            "queueId": "pq-1771083213461-82b1dcce4132",
+            "ticketId": "pt-1771083213521-9cf3639844da",
+            "stationId": "A1",
+            "transitions": {
+              "callNext": true,
+              "start": true,
+              "pause": true,
+              "resume": true,
+              "finish": true
+            },
+            "metrics": {
+              "doneCount": 1,
+              "pausedCount": 0,
+              "byQueueCount": 1
+            }
+          }
+        },
+        "l02": {
+          "status": "pass",
+          "logPath": "qa/smoke/l02-ura-publish-rollback.log",
+          "evidencePath": "qa/l02-ura-publish-rollback-evidence.json",
+          "evidence": {
+            "smoke": "L-02",
+            "generatedAt": "2026-02-14T15:31:47.257Z",
+            "ok": true,
+            "authMode": "admin",
+            "tenantId": "system",
+            "versions": {
+              "rollbackTargetVersion": 1,
+              "topVersionSignature": "74092a6453999327ba65ac80"
+            },
+            "signatures": {
+              "v1": "74092a6453999327ba65ac80",
+              "v2": "01d92e2874cfc46fac8b3511",
+              "rollback": "74092a6453999327ba65ac80"
+            },
+            "audit": {
+              "source": "api.pbx.audit",
+              "publishCount": 2,
+              "rollbackCount": 1
+            }
+          }
+        },
+        "l03": {
+          "status": "pass",
+          "logPath": "qa/smoke/l03-pbx-voice-tts-asr.log",
+          "evidencePath": "qa/l03-pbx-voice-tts-asr-evidence.json",
+          "evidence": {
+            "smoke": "L-03",
+            "generatedAt": "2026-02-14T15:33:18.867Z",
+            "ok": true,
+            "authMode": "admin",
+            "tenantId": "system",
+            "flowId": "flow-voice-tts-asr-smoke-1771083107480",
+            "callId": "call-voice-tts-asr-1771083107480",
+            "extension": "1180",
+            "dialplanSignature": "01d92e2874cfc46fac8b3511",
+            "runtime": {
+              "startAction": "prompt_listen",
+              "asrAction": "listen_asr",
+              "hangupAction": "hangup"
+            },
+            "realCall": {
+              "attempted": true,
+              "click2callId": "cc_c2c-1771083107556-26eecafb5f04",
+              "click2callStatus": "originated",
+              "cdrFound": false,
+              "cdr": null
+            },
+            "selftestStatus": "WARN"
+          }
+        },
+        "l04": {
+          "status": "pass",
+          "logPath": "qa/smoke/l04-pbx-call-events-runtime.log",
+          "evidencePath": "qa/l04-pbx-call-events-runtime-evidence.json",
+          "evidence": {
+            "smoke": "L-04",
+            "generatedAt": "2026-02-14T15:33:33.179Z",
+            "ok": true,
+            "authMode": "admin",
+            "tenantId": "system",
+            "cdr": {
+              "id": "cdr-l04-1771083198982",
+              "uniqueid": "l04-1771083198982",
+              "source": "synthetic_insert"
+            },
+            "trigger": {
+              "type": "CallEnded",
+              "source": "pbx.cdr"
+            },
+            "pipeline": {
+              "scan": {
+                "ok": true,
+                "scanned": 1,
+                "emitted": 3,
+                "cursor": {
+                  "calldate": "2026-02-14T15:33:19.379Z",
+                  "cdrId": "cdr-l04-1771083198982"
+                }
+              },
+              "eventIds": [
+                "evt-1771083200186-8a7af2534607",
+                "evt-1771083200203-5cb48dfff410",
+                "evt-1771083200207-68828f4707bd"
+              ],
+              "queue": {
+                "consumer": "webhooks_l04_1771083200215",
+                "enqueue": {
+                  "ok": true,
+                  "enqueued": 16,
+                  "cursor": {
+                    "receivedAt": "2026-02-14T15:33:20.207Z",
+                    "eventId": "evt-1771083200207-68828f4707bd"
+                  }
+                },
+                "jobsTotal": 3,
+                "jobsDone": 3,
+                "jobsDead": 0,
+                "jobsPending": 0,
+                "lastErrors": []
+              }
+            },
+            "flow": {
+              "flowId": "flow-pbx-call-events-runtime-smoke-1771083198982",
+              "executionId": "fx-1771083212443-34a4bfbf804e",
+              "status": "done",
+              "latencyMs": 291,
+              "nodesCount": 3
+            },
+            "dispatch": {
+              "metricsAvailable": false,
+              "doneRecent": 0,
+              "deadRecent": 0,
+              "flowTriggerFailuresRecent": 0
+            }
+          }
+        },
+        "l05": {
+          "status": "pass",
+          "logPath": "qa/smoke/l05-chatpro-omnichannel.log",
+          "evidencePath": "qa/l05-chatpro-omnichannel-evidence.json",
+          "evidence": {
+            "smoke": "L-05",
+            "generatedAt": "2026-02-14T15:33:33.967Z",
+            "ok": true,
+            "authMode": "admin",
+            "tenantId": "system",
+            "ticket": {
+              "id": "default-1771083213983-yg2pcvs",
+              "created": true,
+              "assignedTo": "77706389-0dce-462a-a2a4-96b8459f9522",
+              "queueAfterTransfer": "ux1_smoke_1771083213967",
+              "originalQueue": "default",
+              "originalAssignedTo": null
+            },
+            "conversation": {
+              "noteFound": true,
+              "messagesCount": 6
+            },
+            "operations": {
+              "assign": true,
+              "transfer": true,
+              "note": true,
+              "addTag": true,
+              "removeTag": true,
+              "quickReplyCreate": true,
+              "quickReplyUse": true,
+              "quickReplyList": true,
+              "phoneMaskingToggle": "unavailable"
+            },
+            "warnings": [
+              "phone_masking_unavailable:503"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "error": null,
+  "finishedAt": "2026-02-14T15:34:55.522Z",
+  "durationMs": 352131
+}

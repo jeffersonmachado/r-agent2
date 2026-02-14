@@ -1,102 +1,101 @@
 {
-  "startedAt": "2026-02-14T15:05:30.706Z",
-  "finishedAt": "2026-02-14T15:05:30.885Z",
-  "durationMs": 179,
-  "mode": "fast",
+  "startedAt": "2026-02-14T15:29:03.297Z",
+  "finishedAt": "2026-02-14T15:34:55.818Z",
+  "durationMs": 352521,
+  "mode": "full",
   "status": "pass",
   "steps": [
     {
       "label": "release-clean-check",
       "command": "node tools/system/release-clean-check.js",
-      "status": "skipped",
-      "startedAt": "2026-02-14T15:05:30.707Z",
-      "finishedAt": "2026-02-14T15:05:30.707Z",
-      "durationMs": 0,
+      "status": "pass",
+      "startedAt": "2026-02-14T15:29:03.298Z",
+      "finishedAt": "2026-02-14T15:29:03.334Z",
+      "durationMs": 36,
       "error": null
     },
     {
       "label": "go-no-go",
       "command": "node tools/system/go-no-go.js",
       "status": "pass",
-      "startedAt": "2026-02-14T15:05:30.707Z",
-      "finishedAt": "2026-02-14T15:05:30.743Z",
-      "durationMs": 36,
+      "startedAt": "2026-02-14T15:29:03.334Z",
+      "finishedAt": "2026-02-14T15:34:55.542Z",
+      "durationMs": 352208,
       "error": null
     },
     {
       "label": "launch-plan-status",
       "command": "node tools/system/launch-plan-status.js",
       "status": "pass",
-      "startedAt": "2026-02-14T15:05:30.743Z",
-      "finishedAt": "2026-02-14T15:05:30.772Z",
-      "durationMs": 29,
+      "startedAt": "2026-02-14T15:34:55.542Z",
+      "finishedAt": "2026-02-14T15:34:55.595Z",
+      "durationMs": 53,
       "error": null
     },
     {
       "label": "release-manifest",
       "command": "node tools/system/release-manifest.js",
       "status": "pass",
-      "startedAt": "2026-02-14T15:05:30.772Z",
-      "finishedAt": "2026-02-14T15:05:30.825Z",
-      "durationMs": 53,
+      "startedAt": "2026-02-14T15:34:55.595Z",
+      "finishedAt": "2026-02-14T15:34:55.650Z",
+      "durationMs": 55,
       "error": null
     },
     {
       "label": "release-summary",
       "command": "node tools/system/release-summary.js",
       "status": "pass",
-      "startedAt": "2026-02-14T15:05:30.825Z",
-      "finishedAt": "2026-02-14T15:05:30.854Z",
-      "durationMs": 29,
+      "startedAt": "2026-02-14T15:34:55.650Z",
+      "finishedAt": "2026-02-14T15:34:55.685Z",
+      "durationMs": 35,
       "error": null
     },
     {
       "label": "release-evidence-pack",
       "command": "node tools/system/release-evidence-pack.js",
       "status": "pass",
-      "startedAt": "2026-02-14T15:05:30.854Z",
-      "finishedAt": "2026-02-14T15:05:30.885Z",
-      "durationMs": 31,
+      "startedAt": "2026-02-14T15:34:55.685Z",
+      "finishedAt": "2026-02-14T15:34:55.734Z",
+      "durationMs": 49,
       "error": null
     },
     {
       "label": "release-evidence-verify",
       "command": "node tools/system/release-evidence-verify.js",
-      "status": "skipped",
-      "startedAt": "2026-02-14T15:05:30.885Z",
-      "finishedAt": "2026-02-14T15:05:30.885Z",
-      "durationMs": 0,
+      "status": "pass",
+      "startedAt": "2026-02-14T15:34:55.734Z",
+      "finishedAt": "2026-02-14T15:34:55.777Z",
+      "durationMs": 43,
       "error": null
     },
     {
       "label": "release-evidence-prune",
       "command": "node tools/system/release-evidence-prune.js",
       "status": "skipped",
-      "startedAt": "2026-02-14T15:05:30.885Z",
-      "finishedAt": "2026-02-14T15:05:30.885Z",
+      "startedAt": "2026-02-14T15:34:55.777Z",
+      "finishedAt": "2026-02-14T15:34:55.777Z",
       "durationMs": 0,
       "error": null,
-      "reason": "FAST_MODE"
+      "reason": "RELEASE_WINDOW_PRUNE_OLD=0"
     },
     {
       "label": "postgres-backup",
       "command": "bash scripts/backup-postgres.sh",
       "status": "skipped",
-      "startedAt": "2026-02-14T15:05:30.885Z",
-      "finishedAt": "2026-02-14T15:05:30.885Z",
+      "startedAt": "2026-02-14T15:34:55.777Z",
+      "finishedAt": "2026-02-14T15:34:55.777Z",
       "durationMs": 0,
       "error": null,
-      "reason": "FAST_MODE"
+      "reason": "RELEASE_WINDOW_RUN_BACKUP=0"
     },
     {
       "label": "checklist-strict",
       "command": "node tools/system/checklist.js",
-      "status": "skipped",
-      "startedAt": "2026-02-14T15:05:30.885Z",
-      "finishedAt": "2026-02-14T15:05:30.885Z",
-      "durationMs": 0,
-      "error": null,
-      "reason": "FAST_MODE"
+      "status": "pass",
+      "startedAt": "2026-02-14T15:34:55.777Z",
+      "finishedAt": "2026-02-14T15:34:55.818Z",
+      "durationMs": 41,
+      "error": null
     }
   ],
   "artifacts": {

@@ -1,0 +1,59 @@
+{
+  "startedAt": "2026-02-14T15:23:18.941Z",
+  "finishedAt": "2026-02-14T15:28:43.489Z",
+  "durationMs": 324548,
+  "mode": "full",
+  "status": "fail",
+  "steps": [
+    {
+      "label": "release-clean-check",
+      "command": "node tools/system/release-clean-check.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T15:23:18.942Z",
+      "finishedAt": "2026-02-14T15:23:18.981Z",
+      "durationMs": 39,
+      "error": null
+    },
+    {
+      "label": "go-no-go",
+      "command": "node tools/system/go-no-go.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T15:23:18.981Z",
+      "finishedAt": "2026-02-14T15:28:43.280Z",
+      "durationMs": 324299,
+      "error": null
+    },
+    {
+      "label": "launch-plan-status",
+      "command": "node tools/system/launch-plan-status.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T15:28:43.280Z",
+      "finishedAt": "2026-02-14T15:28:43.392Z",
+      "durationMs": 112,
+      "error": null
+    },
+    {
+      "label": "release-manifest",
+      "command": "node tools/system/release-manifest.js",
+      "status": "fail",
+      "startedAt": "2026-02-14T15:28:43.392Z",
+      "finishedAt": "2026-02-14T15:28:43.489Z",
+      "durationMs": 97,
+      "error": "Command failed: node tools/system/release-manifest.js"
+    }
+  ],
+  "artifacts": {
+    "goNoGo": "qa/go-no-go-report.json",
+    "launchPlanStatus": "qa/launch-plan-status.json",
+    "launchPlanStatusMd": "qa/launch-plan-status.md",
+    "releaseManifest": "qa/release-manifest.json",
+    "releaseSummary": "qa/release-summary.md",
+    "evidencePackRoot": "qa/release-evidence",
+    "releaseWindowReport": "qa/release-window-report.json"
+  },
+  "config": {
+    "pruneOldEvidence": false,
+    "runBackup": false
+  },
+  "error": "Command failed: node tools/system/release-manifest.js"
+}

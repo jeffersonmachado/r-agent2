@@ -1,7 +1,7 @@
 # Release Summary
 
-- Generated at: 2026-02-14T15:05:30.847Z
-- Candidate: 308eca9 (feat/f10-ai-envelope-safe-mode)
+- Generated at: 2026-02-14T15:34:55.676Z
+- Candidate: 11d29cc (feat/f10-ai-envelope-safe-mode)
 - Decision: READY
 
 ## Gates
@@ -9,7 +9,7 @@
 - Rollback drill: pass
 - Go/No-Go: GO
 - Launch plan: ready
-- Release window: pass
+- Release window: fail
 
 ## Reports
 - Release gate report: qa/release-gate-report.json
