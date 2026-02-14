@@ -84,7 +84,9 @@ write_smoke_evidence_summary() {
 }
 
 echo "[autotest-stack] Preparando token RPA..."
-export RPA_TOKEN="$(node -e "const { getOrCreateRpaToken } = require('./tests/rpa/utils/rpaTokenManager'); process.stdout.write(getOrCreateRpaToken());")"
+# Força o token usado no stack a vir do arquivo de config de teste para
+# evitar divergência com um RPA_TOKEN externo do runner.
+export RPA_TOKEN="$(RPA_TOKEN='' node -e "const m = require('./tests/rpa/utils/rpaTokenManager'); let t = m.loadRpaToken(); if (!t) t = m.generateAndSaveRpaToken(); process.stdout.write(t);")"
 
 cleanup() {
   write_smoke_evidence_summary || true
