@@ -85,6 +85,14 @@ jobs:
       - name: Instalar Playwright (Chromium)
         run: npx playwright install chromium --with-deps
 
+      - name: Login no GHCR (autotest)
+        if: needs.prewarm-images.result == 'success'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Rodar autotest com stack (Compose)
         env:
           RPA_TRACE: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_trace || '0' }}
