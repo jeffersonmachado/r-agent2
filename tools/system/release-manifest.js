@@ -12,6 +12,7 @@ const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa
 const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
 const LAUNCH_PLAN_STATUS_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
 const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
+const ALLOW_PENDING_RELEASE_WINDOW = String(process.env.RELEASE_MANIFEST_ALLOW_PENDING_RELEASE_WINDOW || '0') === '1';
 
 function readJson(relPath) {
   const abs = path.join(ROOT, relPath);
@@ -56,7 +57,9 @@ function buildManifest() {
   const drillPass = rollbackDrill && rollbackDrill.status === 'pass';
   const go = goNoGo && goNoGo.decision === 'GO';
   const planReady = launchPlan && launchPlan.overall === 'ready';
-  const windowPass = releaseWindow && releaseWindow.status === 'pass';
+  const windowPass = ALLOW_PENDING_RELEASE_WINDOW
+    ? !!releaseWindow
+    : releaseWindow && releaseWindow.status === 'pass';
 
   return {
     generatedAt: new Date().toISOString(),

@@ -98,7 +98,12 @@ function main() {
       'node tools/system/launch-plan-status.js',
       { LAUNCH_PLAN_ALLOW_PENDING_RELEASE_WINDOW: '1' }
     );
-    runStep(report, 'release-manifest', 'node tools/system/release-manifest.js');
+    runStep(
+      report,
+      'release-manifest',
+      'node tools/system/release-manifest.js',
+      { RELEASE_MANIFEST_ALLOW_PENDING_RELEASE_WINDOW: '1' }
+    );
     runStep(report, 'release-summary', 'node tools/system/release-summary.js');
     runStep(
       report,
