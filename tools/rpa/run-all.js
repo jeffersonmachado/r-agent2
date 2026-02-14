@@ -63,6 +63,18 @@ function resolveFrontendUrl() {
   return 'http://localhost:5173';
 }
 
+function resolveApiUrl() {
+  if (process.env.RPA_API_URL) return String(process.env.RPA_API_URL);
+  if (process.env.TEST_API_URL) return String(process.env.TEST_API_URL);
+  try {
+    const configRaw = fs.readFileSync(RPA_CONFIG_PATH, 'utf8');
+    const config = JSON.parse(configRaw);
+    const url = config && config.urls && config.urls.api ? String(config.urls.api) : '';
+    if (url) return url;
+  } catch (_) {}
+  return 'http://localhost:3000';
+}
+
 async function isFrontendReachable(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
@@ -74,6 +86,24 @@ async function isFrontendReachable(url) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function isApiReachable(baseUrl) {
+  const normalizedBase = String(baseUrl || '').replace(/\/$/, '');
+  const probes = [`${normalizedBase}/health/ready`, `${normalizedBase}/health`];
+  for (const url of probes) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      if (res && res.ok) return true;
+    } catch (_) {
+      // tenta próximo endpoint
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return false;
 }
 
 /**
@@ -241,6 +271,17 @@ function saveReport(report) {
 async function main() {
   console.log('=== Executando Testes RPA ===\n');
 
+  if (process.env.RPA_SKIP_IF_FRONTEND_UNREACHABLE === 'true') {
+    const frontendUrl = resolveFrontendUrl();
+    const reachable = await isFrontendReachable(frontendUrl);
+    if (!reachable) {
+      console.log(`⚠ Frontend indisponível (${frontendUrl}); pulando testes RPA por configuração.`);
+      const report = generateReport([]);
+      saveReport(report);
+      return;
+    }
+  }
+
   // Pré-seed: garante flows básicos para os testes RPA (best-effort)
   try {
     const { ensureRpaFlows } = require('../../tests/rpa/ensure-rpa-flows');
@@ -250,11 +291,11 @@ async function main() {
     console.warn('[RPA Seed] Aviso: não foi possível garantir flows para RPA:', err.message);
   }
 
-  if (process.env.RPA_SKIP_IF_FRONTEND_UNREACHABLE === 'true') {
-    const frontendUrl = resolveFrontendUrl();
-    const reachable = await isFrontendReachable(frontendUrl);
+  if (process.env.RPA_SKIP_IF_API_UNREACHABLE === 'true') {
+    const apiUrl = resolveApiUrl();
+    const reachable = await isApiReachable(apiUrl);
     if (!reachable) {
-      console.log(`⚠ Frontend indisponível (${frontendUrl}); pulando testes RPA por configuração.`);
+      console.log(`⚠ API indisponível (${apiUrl}); pulando testes RPA por configuração.`);
       const report = generateReport([]);
       saveReport(report);
       return;

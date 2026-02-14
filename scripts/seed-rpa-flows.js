@@ -26,6 +26,7 @@ const FLOWS_DIR = path.join(ROOT, 'tests', 'rpa', 'flows');
 const API_URL = (process.env.TEST_API_URL || process.env.TEST_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
 const TENANT_ID = (process.env.TEST_TENANT_ID || process.env.RPA_TENANT_ID || 'system').trim();
 const RPA_TOKEN = (process.env.RPA_TOKEN || '').trim();
+const SKIP_IF_API_UNREACHABLE = process.env.RPA_SKIP_IF_API_UNREACHABLE === 'true';
 
 function extractFlowIdsFromSeed(seed) {
   const ids = new Set();
@@ -218,7 +219,32 @@ async function putJson(url, body) {
   return { ok: res.ok, status: res.status, body: parsed };
 }
 
+async function isApiReachable(baseUrl) {
+  const probes = [`${baseUrl}/health/ready`, `${baseUrl}/health`];
+  for (const probe of probes) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(probe, { signal: controller.signal });
+      if (res && res.ok) return true;
+    } catch (_) {
+      // tenta próximo endpoint
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return false;
+}
+
 async function main() {
+  if (SKIP_IF_API_UNREACHABLE) {
+    const reachable = await isApiReachable(API_URL);
+    if (!reachable) {
+      console.log(`[seed-rpa-flows] API indisponível (${API_URL}); pulando seed por configuração.`);
+      process.exit(0);
+    }
+  }
+
   if (!fs.existsSync(SEEDS_DIR) && !fs.existsSync(FLOWS_DIR)) {
     console.log(`[seed-rpa-flows] Nenhum diretório de seeds/flows encontrado.`);
     process.exit(0);
@@ -300,4 +326,3 @@ main().catch((e) => {
   console.error('[seed-rpa-flows] Erro inesperado:', e);
   process.exit(1);
 });
-

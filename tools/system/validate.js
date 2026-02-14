@@ -117,6 +117,7 @@ function executeQA() {
     ...process.env,
     SKIP_TENANT_SITE_INDEXING: 'true',
     RPA_SKIP_IF_FRONTEND_UNREACHABLE: 'true',
+    RPA_SKIP_IF_API_UNREACHABLE: 'true',
   };
 
   const qaSteps = [

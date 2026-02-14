@@ -34,6 +34,14 @@ jobs:
     
     - name: Start Frontend (Vite) and run official system validation
       run: |
+        cleanup() {
+          kill "${VITE_PID:-}" 2>/dev/null || true
+          kill "${API_PID:-}" 2>/dev/null || true
+        }
+        trap cleanup EXIT
+        npm run start:api &
+        API_PID=$!
+        node -e "const net=require('net'); let tries=90; (function ping(){ const s=net.connect(3000,'127.0.0.1'); s.on('connect',()=>{s.end(); process.exit(0);}); s.on('error',()=>{ if(--tries<=0) process.exit(1); setTimeout(ping,1000); }); })();"
         cd frontend
         npm ci
         npm run start -- --host 0.0.0.0 --port 5173 --strictPort &
@@ -41,7 +49,6 @@ jobs:
         cd ..
         node -e "const http=require('http'); const url='http://127.0.0.1:5173'; let tries=60; (function ping(){ http.get(url,res=>{process.exit(0)}).on('error',()=>{ if(--tries<=0) process.exit(1); setTimeout(ping,1000); });})();"
         npm run system:validate
-        kill $VITE_PID || true
     
     - name: Upload RPA reports
       if: always()
