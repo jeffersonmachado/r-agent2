@@ -29,6 +29,12 @@ function getTenantService() {
 const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
 const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
 
+function normalizeTenantId(tenantId) {
+  if (tenantId === null || tenantId === undefined) return null;
+  const tid = String(tenantId).trim();
+  return tid || null;
+}
+
 /**
  * Obtém a URL do serviço RAG para um tenant específico.
  * 
@@ -38,6 +44,7 @@ const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.
  * @returns {string} URL do serviço RAG
  */
 function getRagServiceUrl(tenantId) {
+  tenantId = normalizeTenantId(tenantId);
   // 1) Prioridade: variável de ambiente (override de tudo)
   if (process.env.RAG_SERVICE_URL) {
     return process.env.RAG_SERVICE_URL;
@@ -203,6 +210,66 @@ async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT
 }
 
 /**
+ * Gera embeddings em batch reutilizando o modelo do serviço RAG (Python).
+ *
+ * Observação: este endpoint é "utilitário" e não faz busca vetorial, apenas gera embeddings.
+ *
+ * @param {string[]} texts
+ * @param {string} tenantId
+ * @param {{ timeoutMs?: number }} [options]
+ * @returns {Promise<{success: boolean, embeddings: number[][], model?: string, dimensions?: number, error?: string}>}
+ */
+async function generateEmbeddingsBatch(texts, tenantId, options = {}) {
+  tenantId = normalizeTenantId(tenantId);
+  if (!tenantId) throw new Error('tenantId é obrigatório');
+
+  const safeTexts = (Array.isArray(texts) ? texts : [])
+    .map((t) => (t === null || t === undefined ? '' : String(t)).trim())
+    .filter(Boolean)
+    .map((t) => (t.length > 4000 ? t.slice(0, 4000) : t))
+    .slice(0, 128);
+
+  if (safeTexts.length === 0) {
+    return { success: true, embeddings: [], dimensions: 0 };
+  }
+
+  const serviceUrl = getRagServiceUrl(tenantId);
+  const timeout = Number.isFinite(options.timeoutMs) ? options.timeoutMs : Math.min(getRagTimeout(tenantId) * 2, 15000);
+
+  const url = `${serviceUrl}/rag/embeddings`;
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts: safeTexts, tenantId }),
+    },
+    timeout
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Erro ao gerar embeddings via RAG: HTTP ${response.status} ${errorText || response.statusText}`);
+  }
+
+  const result = await response.json();
+  if (!result || result.success !== true || !Array.isArray(result.embeddings)) {
+    return {
+      success: false,
+      embeddings: [],
+      error: result?.error || 'Resposta inválida do endpoint de embeddings',
+    };
+  }
+
+  return {
+    success: true,
+    embeddings: result.embeddings,
+    model: result.model,
+    dimensions: result.dimensions,
+  };
+}
+
+/**
  * Consulta RAG.
  *
  * @param {string} query - Query do usuário
@@ -227,11 +294,12 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
   if (shouldRecordReplay) {
     replay = new ReplaySystem({
       storagePath: path.join(process.cwd(), 'replays', 'rag'),
+      tenantId,
       context: 'rag',
       enableScreenshots: false,
     });
     
-    replayId = `rag-query-${tenantId}-${Date.now()}`;
+    replayId = `${tenantId}-rag-query-${Date.now()}`;
     replay.start(replayId, {
       tenantId,
       query: query.substring(0, 100), // Primeiros 100 chars
@@ -243,11 +311,12 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
   if (shouldRecord) {
     recording = new RecordingSystem({
       storagePath: path.join(process.cwd(), 'recordings', 'rag'),
+      tenantId,
       context: 'rag',
       enableTimestamps: true,
     });
     
-    recordingId = `rag-query-${tenantId}-${Date.now()}`;
+    recordingId = `${tenantId}-rag-query-${Date.now()}`;
     recording.start(recordingId, {
       name: 'Consulta RAG',
       description: 'Consulta ao sistema RAG',
@@ -262,6 +331,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     });
   }
 
+  tenantId = normalizeTenantId(tenantId);
   if (!tenantId) {
     throw new Error('tenantId é obrigatório');
   }
@@ -496,6 +566,7 @@ async function indexDocument(document, tenantId) {
     throw new Error('Documento deve ter content');
   }
 
+  tenantId = normalizeTenantId(tenantId);
   if (!tenantId) {
     throw new Error('tenantId é obrigatório');
   }
@@ -1173,6 +1244,29 @@ async function cleanOrphanedDocuments(tenantId, documentIds) {
   }
 }
 
+/**
+ * Lista documentIds presentes no vector store (por tenant).
+ *
+ * @param {string} tenantId
+ * @param {{ limit?: number }} [options]
+ * @returns {Promise<{success: boolean, tenantId: string, documentIds: string[], documentCount: number, chunkCount: number, error?: string}>}
+ */
+async function listVectorDocuments(tenantId, options = {}) {
+  if (!tenantId) throw new Error('tenantId é obrigatório');
+  const limit = Number.isFinite(options.limit) ? options.limit : 5000;
+
+  const serviceUrl = getRagServiceUrl(tenantId);
+  const timeout = getRagTimeout(tenantId);
+  const url = `${serviceUrl}/rag/documents?tenant_id=${encodeURIComponent(tenantId)}&limit=${encodeURIComponent(String(limit))}`;
+
+  const response = await fetchWithTimeout(url, { method: 'GET' }, Math.min(4000, timeout));
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Erro ao listar documentos do vector store: HTTP ${response.status} ${errorText || response.statusText}`);
+  }
+  return await response.json();
+}
+
 module.exports = {
   queryRag,
   indexDocument,
@@ -1183,6 +1277,7 @@ module.exports = {
   getRagDomainConfig,
   isRagDomainEnabled,
   getRagDomainSources,
+  generateEmbeddingsBatch,
   updateSynonymsFromDocuments,
   getLearningMetrics,
   triggerLearning,
@@ -1191,5 +1286,6 @@ module.exports = {
   deleteSynonym,
   cleanInvalidQueries,
   cleanOrphanedDocuments,
+  listVectorDocuments,
 };
 

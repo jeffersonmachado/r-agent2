@@ -31,6 +31,7 @@ tests/rpa/replay/
 tests/rpa/reports/
 tests/rpa/screenshots/
 tests/rpa/flows/
+tests/rpa/traces/
 
 # Artefatos gerados por RPA em runtime (novo local)
 rpa/replay/
@@ -43,8 +44,18 @@ data/executions/
 recordings/
 replays/
 
+# Dumps/importações locais (não versionar)
+remote-dumps/
+remote-dumps2/
+
 # Coverage (gerado)
 coverage/
+
+# Artefatos de teste do frontend (JUnit)
+frontend/test-results/
+
+# Dados locais do vector store do rag-service (não versionar)
+rag-service/data/vector_store/
 
 # Build outputs
 dist/

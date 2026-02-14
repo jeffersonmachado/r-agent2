@@ -18,7 +18,9 @@ const path = require('path');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const { validateGenerationContract } = require('../utils/contractValidator');
-const { generateFlowFromDescription } = require('./flowGeneratorService');
+const { generateFlowFromDescription: generateFlowFromDescriptionWithAiModule } = require('./aiFlowGenerator');
+const { planSubflows } = require('./subflowPlannerService');
+const { buildDiverseRagContext } = require('./ragContextBuilder');
 const { analyzeFlowDependencies, resolveDependencies } = require('./rpaTestDependencyAnalyzer');
 const { generateRpaTestFromFlow } = require('./rpaTestGeneratorService');
 const { validateFlow } = require('../../engine/validator');
@@ -75,6 +77,31 @@ function loadRagContract() {
     logger.error('[orchestrateGeneration] Erro ao carregar contrato RAG', err);
     return null;
   }
+}
+
+function buildRagContextFromDiverse(diverse, { executionId = null } = {}) {
+  const contextSources = Array.isArray(diverse?.contextSources) ? diverse.contextSources : [];
+  const chunks = contextSources.slice(0, 18).map((s) => ({
+    sourceFile: s?.sourceId || s?.sourceType || 'unknown',
+    content: String(s?.text || s?.excerpt || '').slice(0, 2400),
+  }));
+
+  const bySourceId = new Map();
+  for (const s of contextSources) {
+    const id = s?.sourceId || s?.sourceType || 'unknown';
+    bySourceId.set(id, (bySourceId.get(id) || 0) + 1);
+  }
+  const sources = Array.from(bySourceId.entries()).slice(0, 40).map(([documentId, chunksCount]) => ({
+    documentId,
+    chunksCount,
+  }));
+
+  return {
+    enabled: true,
+    executionId: executionId || null,
+    chunks,
+    sources,
+  };
 }
 
 /**
@@ -416,7 +443,7 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
       
       const executionResult = await executeRecording(recording.id, {
         headless: options.headless !== false, // Headless por padrão para validação
-        slowMo: 100, // Rápido para validação
+        slowMo: 0, // Mais rápido possível para validação
         timeout: 30000,
       }, {});
       
@@ -424,7 +451,13 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
       
       // Aguarda conclusão (polling)
       let attempts = 0;
-      const maxAttempts = 120; // 2 minutos máximo
+      const stepsCount = Array.isArray(recording.steps) ? recording.steps.length : 0;
+      // Timeout dinâmico: em validação bootstrap, cada step pode levar dezenas de segundos (waitForSelector/goto).
+      // Então usamos uma margem conservadora por step e um mínimo maior que 2 minutos.
+      const baseMaxAttempts = 300; // 5 minutos mínimo
+      const perStepSeconds = 15; // margem por step
+      const computedMaxAttempts = stepsCount > 0 ? Math.ceil(stepsCount * perStepSeconds) : baseMaxAttempts;
+      const maxAttempts = Math.min(900, Math.max(baseMaxAttempts, computedMaxAttempts)); // cap 15min
       
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1 segundo
@@ -498,7 +531,26 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
       }
       
       // Timeout
-      throw new Error('Timeout ao aguardar conclusão do teste RPA');
+      const finalStatus = getExecutionStatus(executionId);
+      logger.error('Timeout aguardando conclusão do teste RPA', {
+        executionId,
+        testId: rpaTest.id,
+        stepsCount,
+        maxAttempts,
+        finalStatus: finalStatus ? {
+          status: finalStatus.status,
+          progress: finalStatus.progress,
+          currentStep: finalStatus.currentStep,
+          totalSteps: finalStatus.totalSteps,
+          paused: finalStatus.paused,
+          stepByStep: finalStatus.stepByStep,
+          lastLogs: Array.isArray(finalStatus.logs) ? finalStatus.logs.slice(-10) : [],
+        } : null,
+      });
+      const summary = finalStatus
+        ? `status=${finalStatus.status} progress=${finalStatus.progress} currentStep=${finalStatus.currentStep || 'n/a'} paused=${!!finalStatus.paused}`
+        : 'status=unknown';
+      throw new Error(`Timeout ao aguardar conclusão do teste RPA (${summary}; rpaExecutionId=${executionId}; steps=${stepsCount}; maxWaitSec=${maxAttempts})`);
       
     } finally {
       // Remove gravação temporária
@@ -538,6 +590,8 @@ function createAuditMetadata(payload, context, flow, rpaTest, contract) {
       scrapingTargets: payload.scrapingTargets || [],
       generateRpaTest: payload.generateRpaTest || false,
       rpaMode: payload.rpaMode || null,
+      includeQuestions: payload.includeQuestions === true,
+      questionsCount: Array.isArray(payload.questions) ? payload.questions.length : 0,
     },
     context: {
       sources: context.sources,
@@ -570,15 +624,24 @@ async function orchestrateGeneration(payload, options = {}) {
   const startTime = Date.now();
   const tenantId = options.tenantId || 'demo-tenant';
   const dryRun = options.dryRun || false;
+  const signal = options.signal || null;
+  const throwIfAborted = () => {
+    if (signal && signal.aborted) {
+      const err = new Error('Operação cancelada pelo cliente');
+      err.name = 'AbortError';
+      throw err;
+    }
+  };
 
   // Inicializa Sistema de Replay
   const replay = new ReplaySystem({
     storagePath: path.join(process.cwd(), 'replays', 'generation'),
+    tenantId,
     context: 'generation',
     enableScreenshots: false,
   });
 
-  const replayId = `generate-${payload.name || 'unknown'}-${Date.now()}`;
+  const replayId = `${tenantId}-generate-${payload.name || 'unknown'}-${Date.now()}`;
   replay.start(replayId, {
     tenantId,
     payloadName: payload.name,
@@ -590,6 +653,33 @@ async function orchestrateGeneration(payload, options = {}) {
     bootstrap: payload.bootstrap,
     dryRun,
   });
+
+  // Inicializa Recording (best-effort): não pode quebrar o pipeline
+  let recording = null;
+  let recordingId = null;
+  try {
+    const shouldRecord = process.env.ENABLE_GENERATION_RECORDING !== 'false';
+    if (shouldRecord) {
+      recording = new RecordingSystem({
+        storagePath: path.join(process.cwd(), 'recordings', 'generation'),
+        tenantId,
+        context: 'generation',
+        enableTimestamps: true,
+      });
+      recordingId = `${tenantId}-generation-${payload.name || 'unknown'}-${Date.now()}`;
+      recording.start(recordingId, {
+        name: 'Orquestração de geração',
+        description: 'Geração de fluxo e artefatos',
+        tenantId,
+        payloadName: payload.name,
+        source: 'automatic',
+      });
+    }
+  } catch (err) {
+    logger.warn('[GenerationOrchestrator] Recording desabilitado (best-effort)', { error: err.message });
+    recording = null;
+    recordingId = null;
+  }
 
   logger.info('Iniciando orquestração de geração', { 
     payloadName: payload.name,
@@ -619,7 +709,7 @@ async function orchestrateGeneration(payload, options = {}) {
       }
     );
 
-    recording.recordAction({
+    recording?.recordAction?.({
       type: 'validation',
       step: 'validate-payload',
       value: {
@@ -631,19 +721,22 @@ async function orchestrateGeneration(payload, options = {}) {
     if (!contractValidation.valid) {
       const error = new Error(`Validação de contrato falhou: ${contractValidation.errors.join('; ')}`);
       replay.recordError(error, 'validate-payload');
-      recording.recordCustom('error', {
+      recording?.recordCustom?.('error', {
         step: 'validate-payload-error',
         value: { error: error.message },
       });
       replay.stop();
       replay.save(replayId);
-      recording.stop();
-      recording.save(recordingId);
+      recording?.stop?.();
+      if (recordingId) recording?.save?.(recordingId);
       throw error;
     }
 
     // Carrega contrato para hash
     const contract = loadGenerationContract();
+
+    // Se o cliente já abortou, não siga consumindo recursos
+    throwIfAborted();
 
     // Passo 2: Resolve contexto de conhecimento
     const context = await resolveKnowledgeContext(payload.description, {
@@ -657,14 +750,14 @@ async function orchestrateGeneration(payload, options = {}) {
     if (dryRun) {
       logger.info('Modo DRY-RUN: retornando apenas validação e contexto');
       replay.recordEvent('dry_run_completed');
-      recording.recordCustom('dry-run', {
+      recording?.recordCustom?.('dry-run', {
         step: 'dry-run-completed',
         value: { status: 'completed' },
       });
       replay.stop();
       const replayPath = replay.save(replayId);
-      recording.stop();
-      const recordingPath = recording.save(recordingId);
+      recording?.stop?.();
+      const recordingPath = recordingId ? (recording?.save?.(recordingId) || null) : null;
       
       return {
         success: true,
@@ -686,7 +779,7 @@ async function orchestrateGeneration(payload, options = {}) {
     // Passo 3: Gera fluxo usando IA
     logger.info('Gerando fluxo por IA', { descriptionLength: payload.description.length });
     replay.recordEvent('flow_generation_started');
-    recording.recordGeneration('flow', {
+    recording?.recordGeneration?.('flow', {
       description: payload.description,
       useRag: payload.useRag,
       useWebScraping: payload.useWebScraping,
@@ -702,9 +795,16 @@ async function orchestrateGeneration(payload, options = {}) {
       ragSources: payload.ragSources,
       useWebScraping: payload.useWebScraping,
       scrapingTargets: payload.scrapingTargets,
+      includeQuestions: payload.includeQuestions === true,
+      questions: Array.isArray(payload.questions) ? payload.questions : [],
+      // Best-effort: permite ajustar tentativas quando caller enviar
+      maxFixAttempts: payload.maxFixAttempts,
+      // Cancelamento real propagado para a cadeia de geração
+      signal,
     };
     
-    // Se contexto RAG foi fornecido pelo pipeline, usa ele (obrigatório quando useRag=true)
+    // Se contexto RAG foi fornecido pelo pipeline, usa ele.
+    // Caso contrário, se useRag=true, monta contexto RAG persistido (para suportar /flows/generate sem pipeline).
     if (payload.ragContext && payload.ragContext.enabled) {
       generationOptions.ragContext = {
         enabled: true,
@@ -726,11 +826,161 @@ async function orchestrateGeneration(payload, options = {}) {
         throw new Error(`Contexto RAG do pipeline tem apenas ${generationOptions.ragContext.chunks.length} chunks, mínimo requerido: ${minChunks}`);
       }
     } else if (payload.useRag) {
-      // Se useRag=true mas não há contexto RAG, isso é um erro
-      throw new Error('useRag=true mas contexto RAG não foi fornecido pelo pipeline. Etapa ragContextBuilt deve ser concluída antes.');
+      const contract = loadRagContract();
+      const minChunks = contract?.rag?.grounding?.minChunks || 3;
+      const desiredSources = Array.isArray(payload.ragSources) ? payload.ragSources : [];
+
+      logger.info('[orchestrateGeneration] Construindo contexto RAG persistido (sem pipeline)', {
+        tenantId,
+        minChunks,
+        ragSources: desiredSources,
+      });
+
+      // Query baseada na própria descrição do usuário (mais relevante do que query genérica)
+      const query = `${payload.name ? `${payload.name}\n` : ''}${payload.description}`.slice(0, 1800);
+      const diverse = await buildDiverseRagContext({
+        query,
+        tenantId,
+        totalK: Math.max(12, minChunks),
+        minUploaded: 0,
+        minWeb: 0,
+        minScore: 0.12,
+        maxTokens: 4500,
+      });
+
+      const ragContext = buildRagContextFromDiverse(diverse, {
+        executionId: options.executionId || null,
+      });
+
+      if (!Array.isArray(ragContext.chunks) || ragContext.chunks.length < minChunks) {
+        throw new Error(
+          `useRag=true mas o RAG não retornou chunks suficientes (${ragContext.chunks?.length || 0}/${minChunks}). ` +
+          `Verifique se há documentos indexados para este tenant e, se necessário, reindexe.`
+        );
+      }
+
+      generationOptions.ragContext = ragContext;
     }
     
-    const flow = await generateFlowFromDescription(payload.description, generationOptions);
+    // ------------------------------------------------------------
+    // Subfluxos (best-effort): planejar e gerar antes do fluxo principal
+    // ------------------------------------------------------------
+    const clampInt = (v, { min, max, fallback }) => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return fallback;
+      const i = Math.trunc(n);
+      return Math.max(min, Math.min(max, i));
+    };
+    const subflowMax = clampInt(payload.subflowMax, { min: 0, max: 5, fallback: 2 });
+    const makeFlowId = () => {
+      try {
+        if (typeof crypto.randomUUID === 'function') return `flow-${crypto.randomUUID()}`;
+      } catch (_) {}
+      return `flow-${crypto.randomBytes(8).toString('hex')}`;
+    };
+
+    /** @type {any[]} */
+    const subflows = [];
+    try {
+      throwIfAborted();
+      const planned = await planSubflows({
+        tenantId,
+        name: payload.name,
+        description: payload.description,
+        subflowMax,
+        signal,
+      });
+
+      if (Array.isArray(planned) && planned.length > 0) {
+        logger.info('[orchestrateGeneration] Subfluxos planejados', {
+          tenantId,
+          planned: planned.length,
+          subflowMax,
+        });
+
+        for (const sf of planned.slice(0, subflowMax)) {
+          throwIfAborted();
+          const subflowId = makeFlowId();
+          const subName = (sf?.name ? String(sf.name) : 'Subfluxo').slice(0, 120);
+          const subRole = sf?.role ? String(sf.role).slice(0, 80) : null;
+          const subDesc = String(sf?.description || '').trim();
+          if (!subDesc) continue;
+
+          // Regras explícitas: subfluxo não deve criar subfluxos.
+          const subflowPrompt = [
+            subDesc,
+            '',
+            'Regras obrigatórias (subfluxo):',
+            '- NÃO crie nós do tipo "subflow" neste fluxo.',
+            '- Este fluxo deve ser coeso e terminar em um nó "end".',
+            '- Use variáveis do contexto compartilhado quando necessário.',
+            '',
+          ].join('\n').trim();
+
+          // eslint-disable-next-line no-await-in-loop
+          const subRes = await generateFlowFromDescriptionWithAiModule(subflowPrompt, {
+            ...generationOptions,
+            flowId: subflowId,
+            flowName: payload.name ? `${payload.name} — ${subName}` : subName,
+            // Não forçar subflowMax aqui: só o orquestrador cria subfluxos
+          });
+
+          const subFlowDef = subRes?.flowDefinition || subRes?.flow || subRes;
+          if (subFlowDef && typeof subFlowDef === 'object') {
+            // Garantia: id e metadata mínimas para debug
+            subFlowDef.id = subFlowDef.id || subflowId;
+            subFlowDef.metadata = {
+              ...(subFlowDef.metadata && typeof subFlowDef.metadata === 'object' ? subFlowDef.metadata : {}),
+              subflow: true,
+              subflowRole: subRole,
+              parentFlowHint: payload.name || null,
+            };
+            subflows.push(subFlowDef);
+          }
+        }
+      }
+    } catch (e) {
+      // best-effort: nunca falhar a geração principal por causa de subfluxos
+      logger.warn('[orchestrateGeneration] Falha ao planejar/gerar subfluxos (best-effort)', {
+        tenantId,
+        error: e?.message || String(e),
+      });
+    }
+
+    // Enriquecer descrição do fluxo principal com instruções de subfluxos
+    const mainDescription = (() => {
+      if (!Array.isArray(subflows) || subflows.length === 0) return payload.description;
+      const list = subflows.map((sf) => {
+        const id = sf?.id ? String(sf.id) : 'unknown';
+        const nm = sf?.name ? String(sf.name) : 'Subfluxo';
+        const role = sf?.metadata?.subflowRole ? String(sf.metadata.subflowRole) : '';
+        const label = role ? `${nm} (${role})` : nm;
+        return `- ${label}: use flowId "${id}"`;
+      });
+
+      return [
+        payload.description,
+        '',
+        '## Subfluxos disponíveis (OBRIGATÓRIO)',
+        'Você DEVE modularizar sempre que possível usando nós do tipo "subflow".',
+        'Para chamar um subfluxo, crie um nó com:',
+        '- type: "subflow"',
+        '- config: { "flowId": "<ID_DO_SUBFLUXO>" }',
+        '',
+        'Subfluxos:',
+        ...list,
+        '',
+        'Regras adicionais:',
+        '- Use o subfluxo quando o usuário entrar no tema correspondente.',
+        '- Após o subfluxo terminar (nó end), continue o fluxo principal.',
+        '- NÃO crie recursão (subfluxo chamando o fluxo principal).',
+        '',
+      ].join('\n').trim();
+    })();
+
+    throwIfAborted();
+    const generationResult = await generateFlowFromDescriptionWithAiModule(mainDescription, generationOptions);
+    const flow = generationResult?.flowDefinition || generationResult?.flow || generationResult;
 
     // Valida fluxo gerado
     const flowValidation = validateFlow(flow);
@@ -760,7 +1010,7 @@ async function orchestrateGeneration(payload, options = {}) {
         rpaMode: payload.rpaMode,
       });
 
-      recording.recordGeneration('rpa', {
+      recording?.recordGeneration?.('rpa', {
         flowId: flow.id,
         rpaMode: payload.rpaMode,
       }, {
@@ -798,106 +1048,15 @@ async function orchestrateGeneration(payload, options = {}) {
       }
     }
 
-    // Passo 4.5: Modo Bootstrap - Executa e valida RPA antes de persistir
-    let bootstrapValidation = null;
-    if (payload.bootstrap === true && rpaArtifact?.rpaTest) {
-      logger.info('Modo Bootstrap: Executando e validando RPA antes de persistir', {
-        flowId: flow.id,
-        testId: rpaArtifact.rpaTest.id,
-      });
-
-      bootstrapValidation = await executeAndValidateRpa(rpaArtifact.rpaTest, {
-        headless: options.headless !== false,
-      });
-
-      if (!bootstrapValidation.success) {
-        // Rollback: nada foi persistido ainda, apenas retorna erro
-        const errorMessage = bootstrapValidation.error || 'Erro desconhecido na validação RPA';
-        const errors = bootstrapValidation.errors || [];
-        
-        // Log detalhado com todos os erros
-        logger.error('Modo Bootstrap: RPA falhou, nada será persistido', {
-          flowId: flow.id,
-          testId: rpaArtifact.rpaTest.id,
-          error: errorMessage,
-          executionId: bootstrapValidation.executionId,
-          errorsCount: errors.length,
-          allErrors: errors.map((e, idx) => ({
-            index: idx,
-            step: e.step,
-            action: e.action,
-            error: e.error,
-            message: e.message,
-          })),
-          firstError: errors[0] ? {
-            step: errors[0].step,
-            action: errors[0].action,
-            error: errors[0].error,
-            message: errors[0].message,
-          } : null,
-          fullBootstrapValidation: JSON.stringify(bootstrapValidation, null, 2),
-        });
-        
-        replay.recordEvent('bootstrap_validation_failed', {
-          error: errorMessage,
-          errorsCount: errors.length,
-        });
-        throw new Error(`Validação RPA falhou no modo Bootstrap: ${errorMessage}`);
-      }
-
-      replay.recordEvent('bootstrap_validation_passed', {
-        rpaTestId: rpaArtifact.rpaTest.id,
-      });
-      
-      logger.info('Modo Bootstrap: RPA passou, prosseguindo com persistência', {
-        flowId: flow.id,
-        testId: rpaArtifact.rpaTest.id,
-      });
-    }
-
-    // Passo 5: Persiste artefatos (apenas se não for bootstrap ou se RPA passou)
-    if (payload.bootstrap !== true) {
-      // Modo normal: persiste fluxo se necessário
-      // (O fluxo geralmente é persistido pelo chamador, mas podemos salvar aqui também)
-    } else {
-      // Modo Bootstrap: persiste tudo agora que RPA passou
-      logger.info('Modo Bootstrap: Persistindo artefatos após validação RPA bem-sucedida', {
-        flowId: flow.id,
-      });
-
-      // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA antes de persistir
-      // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
-      const isAiGenerated = flow.metadata?.generatedBy === 'ai' || flow.metadata?.generated === true;
-      if (isAiGenerated) {
-        const { validateGeneratedPlanOrThrow } = require('../../engine/ai/validateGeneratedPlan');
-        try {
-          validateGeneratedPlanOrThrow(flow, 'chatbot');
-          logger.info('[orchestrateGeneration] Fluxo gerado por IA passou no gate de validação antes de persistir', {
-            flowId: flow.id,
-            flowName: flow.name
-          });
-        } catch (validationError) {
-          logger.error('[orchestrateGeneration] Gate de validação bloqueou fluxo gerado por IA', {
-            flowId: flow.id,
-            flowName: flow.name,
-            error: validationError.message
-          });
-          throw new Error(`Gate de validação bloqueou fluxo gerado por IA: ${validationError.message}`);
-        }
-      }
-
-      // Salva fluxo
-      // Dados agora estão no banco de dados PostgreSQL
-
-      // Salva teste RPA
-      if (rpaArtifact?.rpaTest) {
-        const rpaFilePath = saveRpaTestFile(rpaArtifact.rpaTest);
-        rpaArtifact.rpaTest.filePath = rpaFilePath;
-      }
-
-      // TODO: Salvar seed base se necessário
-      // (Implementar quando houver serviço de seed)
-    }
+    // Passo 4.5 (BOOTSTRAP):
+    // Antes, o bootstrap executava/validava o RPA AQUI dentro da geração (abrindo browser enquanto o pipeline
+    // ainda estava em "Gerando fluxo"). Isso deixava o pipeline visual "fora de ordem" e sem atualização no nó RPA.
+    //
+    // Agora, a execução/validação do RPA (bootstrap) fica DEFERIDA para o pipeline (etapas rpaGenerated/rpaExecuted),
+    // que é o lugar correto para refletir o progresso no frontend e permitir rollback determinístico.
+    const bootstrapValidation = (payload.bootstrap === true && rpaArtifact?.rpaTest)
+      ? { success: null, deferredToPipeline: true }
+      : null;
 
     // Passo 6: Cria metadata de auditoria
     const auditMetadata = createAuditMetadata(
@@ -952,6 +1111,7 @@ async function orchestrateGeneration(payload, options = {}) {
     return {
       success: true,
       flowDefinition: flow,
+      subflows: (Array.isArray(subflows) && subflows.length > 0) ? subflows : null,
       rpaTest: rpaArtifact?.rpaTest || null,
       dependencies: rpaArtifact?.dependencies || null,
       resolution: rpaArtifact?.resolution || null,
@@ -959,6 +1119,9 @@ async function orchestrateGeneration(payload, options = {}) {
         ...auditMetadata,
         replayPath,
       },
+      // Envelope (quando disponível) e warnings de validação (não-bloqueantes)
+      envelope: generationResult?.envelope || null,
+      validationWarnings: generationResult?.validationWarnings || null,
       validation: {
         flow: flowValidation,
         contract: contractValidation,
@@ -980,12 +1143,12 @@ async function orchestrateGeneration(payload, options = {}) {
     const replayPath = replay.save(`${replayId}-error`);
 
     // Registra erro na gravação
-    recording.recordCustom('error', {
+    recording?.recordCustom?.('error', {
       step: 'generation-error',
       value: { error: err.message },
     });
-    recording.stop();
-    const recordingPath = recording.save(`${recordingId}-error`);
+    recording?.stop?.();
+    const recordingPath = recordingId ? (recording?.save?.(`${recordingId}-error`) || null) : null;
     
     logger.error('Erro na orquestração de geração', {
       error: err.message,
@@ -1013,6 +1176,9 @@ module.exports = {
   resolveKnowledgeContext,
   generateRpaArtifact,
   saveRpaTestFile,
+  convertRpaTestToRecording,
+  saveTemporaryRecording,
+  removeTemporaryRecording,
   createAuditMetadata,
   calculateContractHash,
   executeAndValidateRpa,

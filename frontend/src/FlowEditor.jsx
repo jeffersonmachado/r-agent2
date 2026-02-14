@@ -100,6 +100,7 @@ export const FlowEditor = forwardRef(function FlowEditor({
       arrange: editorInstance.arrange,
       clearEditor: editorInstance.clearEditor,
       loadFromJson: editorInstance.loadFromJson,
+      updateNodeIO: editorInstance.updateNodeIO,
       // Métodos auxiliares para compatibilidade
       zoomToFit: () => {
         if (editorInstance.area && editorInstance.editor) {

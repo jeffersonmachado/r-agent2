@@ -78,28 +78,52 @@ const mockTenantAICredentialModel = {
   create: jest.fn(),
 };
 
+const mockTenantContextModel = {
+  findByPk: jest.fn(),
+  findAll: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  destroy: jest.fn(),
+};
+
+const mockFlowModel = {
+  findOne: jest.fn(),
+  findAll: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  destroy: jest.fn(),
+};
+
 const mockAuditLogModel = {
   create: jest.fn(),
   findAll: jest.fn(),
 };
 
-jest.mock('../../api/db/models', () => ({
-  Tenant: jest.fn(() => mockTenantModel),
-  User: jest.fn(() => mockUserModel),
-  TenantUser: jest.fn(() => mockTenantUserModel),
-  TenantSetting: jest.fn(() => mockTenantSettingModel),
-  TenantAISetting: jest.fn(() => mockTenantAISettingModel),
-  TenantAICredential: jest.fn(() => mockTenantAICredentialModel),
-  AuditLog: jest.fn(() => mockAuditLogModel),
-  defineRelationships: jest.fn(),
-  getTenant: jest.fn(() => mockTenantModel),
-  getUser: jest.fn(() => mockUserModel),
-  getTenantUser: jest.fn(() => mockTenantUserModel),
-  getTenantSetting: jest.fn(() => mockTenantSettingModel),
-  getTenantAISetting: jest.fn(() => mockTenantAISettingModel),
-  getTenantAICredential: jest.fn(() => mockTenantAICredentialModel),
-  getAuditLog: jest.fn(() => mockAuditLogModel),
-}));
+const mockModelsFactory = () => {
+  return {
+    Tenant: () => mockTenantModel,
+    User: () => mockUserModel,
+    TenantUser: () => mockTenantUserModel,
+    TenantSetting: () => mockTenantSettingModel,
+    TenantAISetting: () => mockTenantAISettingModel,
+    TenantAICredential: () => mockTenantAICredentialModel,
+    TenantContext: () => mockTenantContextModel,
+    Flow: () => mockFlowModel,
+    AuditLog: () => mockAuditLogModel,
+    defineRelationships: jest.fn(),
+    getTenant: () => mockTenantModel,
+    getUser: () => mockUserModel,
+    getTenantUser: () => mockTenantUserModel,
+    getTenantSetting: () => mockTenantSettingModel,
+    getTenantAISetting: () => mockTenantAISettingModel,
+    getTenantAICredential: () => mockTenantAICredentialModel,
+    getTenantContext: () => mockTenantContextModel,
+    getFlow: () => mockFlowModel,
+    getAuditLog: () => mockAuditLogModel,
+  };
+};
+
+jest.mock('../../api/db/models', () => mockModelsFactory());
 
 /**
  * Retorna os mocks dos models para uso nos testes
@@ -114,6 +138,8 @@ function mockDatabase() {
       TenantSetting: mockTenantSettingModel,
       TenantAISetting: mockTenantAISettingModel,
       TenantAICredential: mockTenantAICredentialModel,
+      TenantContext: mockTenantContextModel,
+      Flow: mockFlowModel,
       AuditLog: mockAuditLogModel,
     },
   };
@@ -131,9 +157,9 @@ function clearDatabaseMocks() {
  * Cria um tenant mockado para retornar em queries
  */
 function createMockTenant(overrides = {}) {
-  return {
+  const tenant = {
     id: overrides.id || overrides.tenant_key || 'test-tenant-id',
-    tenant_key: overrides.tenant_key || 'test-tenant',
+    tenant_key: overrides.tenant_key || overrides.id || 'test-tenant',
     name: overrides.name || 'Test Tenant',
     site: overrides.site || 'https://test.com',
     ramo_atividade: overrides.ramo_atividade || 'Teste',
@@ -157,8 +183,15 @@ function createMockTenant(overrides = {}) {
     toJSON: jest.fn(function() {
       return this;
     }),
+    update: jest.fn(async (data = {}) => {
+      Object.assign(tenant, data);
+      return tenant;
+    }),
+    reload: jest.fn(async () => tenant),
+    destroy: jest.fn(async () => true),
     ...overrides,
   };
+  return tenant;
 }
 
 /**
@@ -197,6 +230,7 @@ function setupMultipleTenants(mockModels, tenantsData = []) {
 
 module.exports = {
   mockDatabase,
+  mockModelsFactory,
   clearDatabaseMocks,
   createMockTenant,
   setupTenantMock,

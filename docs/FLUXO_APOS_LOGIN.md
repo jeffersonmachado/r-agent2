@@ -14,9 +14,10 @@
 - Estado `isAuthenticated` é definido como `true`
 
 ### 3. **Redirecionamento Automático**
-- Após login bem-sucedido, você é **redirecionado automaticamente** para `/support`
-- Toast de sucesso é exibido: "Login realizado com sucesso!"
-- A página de atendimento é carregada
+- Após login bem-sucedido, o sistema **verifica se o tenant possui provider de IA válido** (`GET /tenants/:id/ai-provider-status`).
+- **Se o provider estiver válido**: você é redirecionado para `/support`.
+- **Se o provider não estiver configurado/for inválido**: você é redirecionado para `/config?tab=ai` (e, quando aplicável, `?tab=ai&tenant=<tenantId>`).
+- **Se ocorrer erro na verificação (rede/401/500/timeout)**: o fluxo **não é ignorado** — o sistema redireciona para a configuração de IA para correção.
 
 ### 4. **Acesso às Funcionalidades**
 

@@ -67,6 +67,29 @@ function ensureTenantId(tenantId) {
   return tenantId.trim();
 }
 
+async function touchConversation({ tenantId, conversationId, status = null } = {}) {
+  if (!dbAvailable()) return;
+  if (!tenantId || !conversationId) return;
+  try {
+    const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
+    if (!ConversationModel) return;
+    const patch = {
+      last_message_at: new Date(),
+      updated_at: new Date(),
+    };
+    if (status) patch.status = String(status);
+    await ConversationModel.update(patch, {
+      where: { tenant_key: String(tenantId), id: String(conversationId) },
+    });
+  } catch (err) {
+    logger.debug('[ConversationTicketLink] Falha ao atualizar conversation (ignorado)', {
+      tenantId,
+      conversationId,
+      error: err.message,
+    });
+  }
+}
+
 /**
  * Resolve ou cria a conversa (ChannelConversation) e garante um ticket aberto associado.
  *
@@ -298,7 +321,9 @@ function appendTicketMessage(ticketId, normalizedMessage = {}) {
   }
 
   if (dir === 'in') {
-    return queueService.updateLastMessage(ticketId, text, externalMessageId, timestamp);
+    const updated = queueService.updateLastMessage(ticketId, text, externalMessageId, timestamp);
+    touchConversation({ tenantId: ticket.tenantId, conversationId: ticket.conversationId }).catch(() => {});
+    return updated;
   }
 
   // Outbound: mantém compatibilidade; registra como "agent" no histórico do ticket
@@ -313,7 +338,9 @@ function appendTicketMessage(ticketId, normalizedMessage = {}) {
   });
   ticket.updatedAt = new Date().toISOString();
   // Persist best-effort via updateTicket
-  return queueService.updateTicket(ticketId, { messages: ticket.messages });
+  const updated = queueService.updateTicket(ticketId, { messages: ticket.messages });
+  touchConversation({ tenantId: ticket.tenantId, conversationId: ticket.conversationId }).catch(() => {});
+  return updated;
 }
 
 module.exports = {
@@ -321,4 +348,3 @@ module.exports = {
   resolveOrCreateTicketFromIncomingMessage,
   appendTicketMessage,
 };
-

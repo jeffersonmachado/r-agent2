@@ -61,6 +61,6 @@ docker run -p 8000:8000 rag-service
 
 - FastAPI: Framework web
 - sentence-transformers: Embeddings
-- faiss-cpu: Busca vetorial
+- psycopg2-binary: Acesso ao Postgres (pgvector)
 - openai: LLM (opcional)
 

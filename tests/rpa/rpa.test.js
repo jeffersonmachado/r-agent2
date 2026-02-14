@@ -2,11 +2,11 @@
  * Testes para sistema RPA.
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
-const { ActionRecorder } = require('./actionRecorder');
-const config = require('./rpaConfig');
 const fs = require('fs');
 const path = require('path');
+
+const SHOULD_RUN = process.env.RPA_SKIP_IF_FRONTEND_UNREACHABLE !== 'true'
+  && process.env.RPA_SKIP_TESTS !== 'true';
 
 /**
  * Helper para limpar arquivo de teste.
@@ -22,9 +22,20 @@ function cleanupTestFile(filename) {
   }
 }
 
-describe('Sistema RPA', () => {
-  let runner;
-  const testFilesToCleanup = []; // Rastreia arquivos criados pelos testes
+if (!SHOULD_RUN) {
+  describe('Sistema RPA', () => {
+    test('pula quando RPA_SKIP_IF_FRONTEND_UNREACHABLE/RPA_SKIP_TESTS está habilitado', () => {
+      expect(true).toBe(true);
+    });
+  });
+} else {
+  const { RpaTestRunner } = require('./rpaTestRunner');
+  const { ActionRecorder } = require('./actionRecorder');
+  const config = require('./rpaConfig');
+
+  describe('Sistema RPA', () => {
+    let runner;
+    const testFilesToCleanup = []; // Rastreia arquivos criados pelos testes
 
   beforeAll(async () => {
     runner = new RpaTestRunner({
@@ -212,5 +223,6 @@ describe('Sistema RPA', () => {
       expect(testValue).toBe('test-123');
     }, 30000);
   });
-});
+  });
+}
 

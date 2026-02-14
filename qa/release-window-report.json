@@ -1,0 +1,125 @@
+{
+  "startedAt": "2026-02-14T21:34:31.123Z",
+  "finishedAt": "2026-02-14T21:34:31.363Z",
+  "durationMs": 240,
+  "mode": "fast",
+  "status": "pass",
+  "steps": [
+    {
+      "label": "release-clean-check",
+      "command": "node tools/system/release-clean-check.js",
+      "status": "skipped",
+      "startedAt": "2026-02-14T21:34:31.123Z",
+      "finishedAt": "2026-02-14T21:34:31.123Z",
+      "durationMs": 0,
+      "error": null
+    },
+    {
+      "label": "go-no-go",
+      "command": "node tools/system/go-no-go.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T21:34:31.123Z",
+      "finishedAt": "2026-02-14T21:34:31.154Z",
+      "durationMs": 31,
+      "error": null
+    },
+    {
+      "label": "release-decision",
+      "command": "node tools/system/release-decision.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T21:34:31.154Z",
+      "finishedAt": "2026-02-14T21:34:31.202Z",
+      "durationMs": 48,
+      "error": null
+    },
+    {
+      "label": "launch-plan-status",
+      "command": "node tools/system/launch-plan-status.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T21:34:31.202Z",
+      "finishedAt": "2026-02-14T21:34:31.236Z",
+      "durationMs": 34,
+      "error": null
+    },
+    {
+      "label": "release-manifest",
+      "command": "node tools/system/release-manifest.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T21:34:31.237Z",
+      "finishedAt": "2026-02-14T21:34:31.299Z",
+      "durationMs": 62,
+      "error": null
+    },
+    {
+      "label": "release-summary",
+      "command": "node tools/system/release-summary.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T21:34:31.299Z",
+      "finishedAt": "2026-02-14T21:34:31.330Z",
+      "durationMs": 31,
+      "error": null
+    },
+    {
+      "label": "release-evidence-pack",
+      "command": "node tools/system/release-evidence-pack.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T21:34:31.330Z",
+      "finishedAt": "2026-02-14T21:34:31.363Z",
+      "durationMs": 33,
+      "error": null
+    },
+    {
+      "label": "release-evidence-verify",
+      "command": "node tools/system/release-evidence-verify.js",
+      "status": "skipped",
+      "startedAt": "2026-02-14T21:34:31.363Z",
+      "finishedAt": "2026-02-14T21:34:31.363Z",
+      "durationMs": 0,
+      "error": null
+    },
+    {
+      "label": "release-evidence-prune",
+      "command": "node tools/system/release-evidence-prune.js",
+      "status": "skipped",
+      "startedAt": "2026-02-14T21:34:31.363Z",
+      "finishedAt": "2026-02-14T21:34:31.363Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "FAST_MODE"
+    },
+    {
+      "label": "postgres-backup",
+      "command": "bash scripts/backup-postgres.sh",
+      "status": "skipped",
+      "startedAt": "2026-02-14T21:34:31.363Z",
+      "finishedAt": "2026-02-14T21:34:31.363Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "FAST_MODE"
+    },
+    {
+      "label": "checklist-strict",
+      "command": "node tools/system/checklist.js",
+      "status": "skipped",
+      "startedAt": "2026-02-14T21:34:31.363Z",
+      "finishedAt": "2026-02-14T21:34:31.363Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "FAST_MODE"
+    }
+  ],
+  "artifacts": {
+    "goNoGo": "qa/go-no-go-report.json",
+    "launchPlanStatus": "qa/launch-plan-status.json",
+    "launchPlanStatusMd": "qa/launch-plan-status.md",
+    "releaseManifest": "qa/release-manifest.json",
+    "releaseSummary": "qa/release-summary.md",
+    "evidencePackRoot": "qa/release-evidence",
+    "releaseWindowReport": "qa/release-window-report.json"
+  },
+  "config": {
+    "pruneOldEvidence": false,
+    "runBackup": false
+  },
+  "error": null
+}

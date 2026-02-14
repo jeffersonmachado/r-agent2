@@ -179,8 +179,8 @@ async function forceReindexAll() {
   }
 
   // 4. Verifica status final
-  console.log('\n🔍 Verificando status do serviço RAG...');
-  const healthResponse = await makeRequest('GET', 'http://localhost:9000/rag/health');
+  console.log('\n🔍 Verificando health do RAG (BD vs Vector Store)...');
+  const healthResponse = await makeRequest('GET', `/rag/health?tenantId=${encodeURIComponent(TENANT_ID)}`);
   if (healthResponse.status === 200) {
     console.log('✅ Serviço RAG:', healthResponse.body);
   } else {

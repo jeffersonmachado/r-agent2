@@ -43,6 +43,19 @@ export async function impersonateUser(agentId) {
 }
 
 /**
+ * Lista agentes de um tenant específico (Super Admin).
+ * Usa X-Tenant-Id para escopo do tenant.
+ */
+export async function listTenantAgents(tenantId) {
+  return fetchJson('/auth/agents', {
+    method: 'GET',
+    headers: {
+      'X-Tenant-Id': tenantId,
+    },
+  });
+}
+
+/**
  * Bloqueia um tenant (Super Admin)
  */
 export async function blockTenant(tenantId, reason) {

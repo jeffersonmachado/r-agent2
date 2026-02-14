@@ -1,0 +1,18 @@
+{
+  "tenantId": "tenant-demo",
+  "id": "flow-demo",
+  "name": "Fluxo Sem Fallback",
+  "version": 1,
+  "metadata": {
+    "generatedBy": "ai",
+    "generated": true,
+    "status": "draft",
+    "requiresReview": true
+  },
+  "nodes": [
+    { "id": "start_1", "type": "start", "config": {}, "next": "message_1" },
+    { "id": "message_1", "type": "message", "config": { "text": "Olá!" }, "next": "end_1" },
+    { "id": "end_1", "type": "end", "config": {} }
+  ]
+}
+

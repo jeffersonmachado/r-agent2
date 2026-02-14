@@ -3,11 +3,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react';
 import { GenerateSystemPage } from './GenerateSystemPage';
+import { FileUploadProvider } from '../context/FileUploadContext';
 import * as ragDocumentsApi from '../api/ragDocuments';
 import * as fileProcessor from '../utils/fileProcessor';
 import * as clientApi from '../api/client';
+
+const showToastMock = vi.hoisted(() => vi.fn());
 
 // Mock dos módulos
 vi.mock('../api/ragDocuments');
@@ -27,16 +30,22 @@ vi.mock('../hooks/useRouter', () => ({
 }));
 vi.mock('../components/Toast', () => ({
   useToast: () => ({
-    showToast: vi.fn(),
+    showToast: showToastMock,
     ToastContainer: () => null,
   }),
 }));
 vi.mock('../context/WebSocketContext', () => ({
   useWebSocketContext: () => ({
-    sendMessage: vi.fn(),
-    isConnected: true,
+    // Interface do hook real: { connected, authenticated, send, reconnect }
+    connected: true,
+    authenticated: true,
+    send: vi.fn(),
+    reconnect: vi.fn(),
   }),
 }));
+function render(ui) {
+  return rtlRender(<FileUploadProvider>{ui}</FileUploadProvider>);
+}
 
 describe('GenerateSystemPage', () => {
   beforeEach(() => {
@@ -48,21 +57,25 @@ describe('GenerateSystemPage', () => {
   });
 
   describe('Upload de Arquivos', () => {
-    it('deve renderizar seção de upload de arquivos', () => {
+    it('deve renderizar seção de upload de arquivos', async () => {
       render(<GenerateSystemPage />);
       
-      expect(screen.getByText(/Upload de Arquivos para RAG/i)).toBeInTheDocument();
-      expect(screen.getByText(/Selecione arquivos/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Upload de Arquivos para RAG/i)).toBeInTheDocument();
+        expect(screen.getByText(/Selecione arquivos/i)).toBeInTheDocument();
+      });
     });
 
-    it('não deve ter combobox de categoria', () => {
+    it('não deve ter combobox de categoria', async () => {
       render(<GenerateSystemPage />);
       
       // Não deve existir label "Categoria do arquivo"
-      expect(screen.queryByText(/Categoria do arquivo/i)).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText(/Categoria do arquivo/i)).not.toBeInTheDocument();
+      });
     });
 
-    it('deve processar arquivo e extrair conteúdo', async () => {
+    it('deve adicionar arquivo à fila de upload (sem processar automaticamente)', async () => {
       const file = new File(['conteúdo de teste'], 'test.txt', { type: 'text/plain' });
       
       // Mock processFile
@@ -96,30 +109,17 @@ describe('GenerateSystemPage', () => {
       
       fireEvent.change(fileInput);
 
-      // Aguarda processamento
       await waitFor(() => {
-        expect(fileProcessor.processFile).toHaveBeenCalledWith(
-          expect.any(File),
-          expect.objectContaining({
-            compressImages: false, // Não é imagem
-            extractImageText: false, // Não é imagem
-          })
-        );
+        expect(screen.getByText('test.txt')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      // Verifica que a inferência de categoria foi chamada
-      await waitFor(() => {
-        expect(clientApi.fetchJson).toHaveBeenCalledWith(
-          '/api/ai/generate',
-          expect.objectContaining({
-            method: 'POST',
-            body: expect.stringContaining('promocoes'),
-          })
-        );
-      });
+      // Não processa/inferre/upload automaticamente; ocorre ao clicar em "Executar"
+      expect(fileProcessor.processFile).not.toHaveBeenCalled();
+      expect(clientApi.fetchJson).not.toHaveBeenCalledWith('/api/ai/generate', expect.anything());
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
 
-    it('deve processar imagem com OCR', async () => {
+    it('deve adicionar imagem à fila de upload (sem OCR automático)', async () => {
       const blob = new Blob(['fake image'], { type: 'image/png' });
       const file = new File([blob], 'test.png', { type: 'image/png' });
       
@@ -153,17 +153,14 @@ describe('GenerateSystemPage', () => {
       fireEvent.change(fileInput);
 
       await waitFor(() => {
-        expect(fileProcessor.processFile).toHaveBeenCalledWith(
-          expect.any(File),
-          expect.objectContaining({
-            compressImages: true,
-            extractImageText: true,
-          })
-        );
+        expect(screen.getByText('test.png')).toBeInTheDocument();
       });
+
+      expect(fileProcessor.processFile).not.toHaveBeenCalled();
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
 
-    it('deve processar PDF e extrair texto', async () => {
+    it('deve adicionar PDF à fila de upload (sem extração automática)', async () => {
       const blob = new Blob(['fake pdf'], { type: 'application/pdf' });
       const file = new File([blob], 'test.pdf', { type: 'application/pdf' });
       
@@ -197,24 +194,14 @@ describe('GenerateSystemPage', () => {
       fireEvent.change(fileInput);
 
       await waitFor(() => {
-        expect(fileProcessor.processFile).toHaveBeenCalled();
+        expect(screen.getByText('test.pdf')).toBeInTheDocument();
       });
 
-      await waitFor(() => {
-        expect(ragDocumentsApi.uploadDocument).toHaveBeenCalledWith(
-          expect.any(File),
-          expect.objectContaining({
-            category: 'tabelas_preco',
-            metadata: expect.objectContaining({
-              extractedContent: expect.stringContaining('Conteúdo do PDF extraído'),
-            }),
-            autoIndex: true,
-          })
-        );
-      });
+      expect(fileProcessor.processFile).not.toHaveBeenCalled();
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
 
-    it('deve usar fallback quando IA falhar na inferência de categoria', async () => {
+    it('não deve inferir categoria automaticamente ao selecionar arquivo', async () => {
       const file = new File(['conteúdo'], 'promocao.txt', { type: 'text/plain' });
       
       // Mock processFile
@@ -244,18 +231,15 @@ describe('GenerateSystemPage', () => {
       
       fireEvent.change(fileInput);
 
-      // Deve usar fallback (análise de palavras-chave)
       await waitFor(() => {
-        expect(ragDocumentsApi.uploadDocument).toHaveBeenCalledWith(
-          expect.any(File),
-          expect.objectContaining({
-            category: 'promocoes', // Fallback detecta "promocao" no nome
-          })
-        );
+        expect(screen.getByText('promocao.txt')).toBeInTheDocument();
       });
+
+      expect(clientApi.fetchJson).not.toHaveBeenCalled();
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
 
-    it('deve processar múltiplos arquivos', async () => {
+    it('deve adicionar múltiplos arquivos à fila (sem processar automaticamente)', async () => {
       const file1 = new File(['conteúdo 1'], 'test1.txt', { type: 'text/plain' });
       const file2 = new File(['conteúdo 2'], 'test2.txt', { type: 'text/plain' });
       
@@ -295,15 +279,15 @@ describe('GenerateSystemPage', () => {
       fireEvent.change(fileInput);
 
       await waitFor(() => {
-        expect(fileProcessor.processFile).toHaveBeenCalledTimes(2);
+        expect(screen.getByText('test1.txt')).toBeInTheDocument();
+        expect(screen.getByText('test2.txt')).toBeInTheDocument();
       });
 
-      await waitFor(() => {
-        expect(ragDocumentsApi.uploadDocument).toHaveBeenCalledTimes(2);
-      });
+      expect(fileProcessor.processFile).not.toHaveBeenCalled();
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
 
-    it('deve exibir erro quando upload falhar', async () => {
+    it('não deve tentar upload automaticamente ao selecionar arquivo', async () => {
       const file = new File(['conteúdo'], 'test.txt', { type: 'text/plain' });
       
       // Mock processFile
@@ -334,13 +318,15 @@ describe('GenerateSystemPage', () => {
       fireEvent.change(fileInput);
 
       await waitFor(() => {
-        expect(ragDocumentsApi.uploadDocument).toHaveBeenCalled();
+        expect(screen.getByText('test.txt')).toBeInTheDocument();
       });
+
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
   });
 
   describe('Inferência de Categoria', () => {
-    it('deve inferir categoria usando IA', async () => {
+    it('não deve inferir categoria automaticamente ao selecionar arquivo', async () => {
       const file = new File(['conteúdo'], 'promocao.txt', { type: 'text/plain' });
       
       // Mock processFile
@@ -373,17 +359,13 @@ describe('GenerateSystemPage', () => {
       fireEvent.change(fileInput);
 
       await waitFor(() => {
-        expect(clientApi.fetchJson).toHaveBeenCalledWith(
-          '/api/ai/generate',
-          expect.objectContaining({
-            method: 'POST',
-            body: expect.stringContaining('promocoes'),
-          })
-        );
+        expect(screen.getByText('promocao.txt')).toBeInTheDocument();
       });
+
+      expect(clientApi.fetchJson).not.toHaveBeenCalled();
     });
 
-    it('deve usar fallback quando IA retornar categoria inválida', async () => {
+    it('não deve aplicar fallback automaticamente ao selecionar arquivo', async () => {
       const file = new File(['conteúdo'], 'promocao.txt', { type: 'text/plain' });
       
       // Mock processFile
@@ -415,20 +397,16 @@ describe('GenerateSystemPage', () => {
       
       fireEvent.change(fileInput);
 
-      // Deve usar fallback (detecta "promocao" no nome)
       await waitFor(() => {
-        expect(ragDocumentsApi.uploadDocument).toHaveBeenCalledWith(
-          expect.any(File),
-          expect.objectContaining({
-            category: 'promocoes',
-          })
-        );
+        expect(screen.getByText('promocao.txt')).toBeInTheDocument();
       });
+
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
   });
 
   describe('Extração de Conteúdo', () => {
-    it('deve extrair conteúdo de todos os tipos de arquivo', async () => {
+    it('não deve extrair conteúdo automaticamente ao selecionar arquivo', async () => {
       const testCases = [
         {
           file: new File(['texto'], 'test.txt', { type: 'text/plain' }),
@@ -485,26 +463,17 @@ describe('GenerateSystemPage', () => {
         fireEvent.change(fileInput);
 
         await waitFor(() => {
-          expect(fileProcessor.processFile).toHaveBeenCalled();
+          expect(screen.getByText(testCase.file.name)).toBeInTheDocument();
         });
-
-        await waitFor(() => {
-          expect(ragDocumentsApi.uploadDocument).toHaveBeenCalledWith(
-            expect.any(File),
-            expect.objectContaining({
-              metadata: expect.objectContaining({
-                extractedContent: expect.stringContaining(testCase.expectedContent),
-              }),
-            })
-          );
-        });
+        expect(fileProcessor.processFile).not.toHaveBeenCalled();
+        expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
 
         // Limpa o componente antes do próximo teste
         unmount();
       }
     });
 
-    it('deve indexar conteúdo extraído no RAG', async () => {
+    it('não deve indexar no RAG automaticamente ao selecionar arquivo', async () => {
       const file = new File(['conteúdo extraído'], 'test.txt', { type: 'text/plain' });
       
       // Mock processFile
@@ -537,17 +506,172 @@ describe('GenerateSystemPage', () => {
       fireEvent.change(fileInput);
 
       await waitFor(() => {
-        expect(ragDocumentsApi.uploadDocument).toHaveBeenCalledWith(
-          expect.any(File),
-          expect.objectContaining({
-            autoIndex: true, // Deve indexar automaticamente
-            metadata: expect.objectContaining({
-              extractedContent: 'conteúdo extraído',
-            }),
-          })
-        );
+        expect(screen.getByText('test.txt')).toBeInTheDocument();
       });
+
+      expect(ragDocumentsApi.uploadDocument).not.toHaveBeenCalled();
     });
   });
-});
 
+  describe('Gate de Web Scraping (tenant)', () => {
+    it('não deve continuar o pipeline se successCount === 0', async () => {
+      // Ativa modo tenant via querystring (o componente lê window.location.search)
+      window.history.pushState({}, '', '/generate-system?mode=tenant');
+
+      clientApi.fetchJson.mockImplementation(async (path) => {
+        if (path === '/system/pipeline/validate-prereqs') {
+          return { ok: true, providerValidated: true, ragValidated: true };
+        }
+        if (path === '/web-scraping/scrape-batch') {
+          return {
+            total: 1,
+            success: 0,
+            failed: 1,
+            new: 0,
+            duplicates: 0,
+            results: [
+              {
+                url: 'https://studiooly.com.br/',
+                success: false,
+                status: 'failed',
+                error: { name: 'Error', message: 'Falha no scraping', stack: 'stack...' },
+                durationMs: 10,
+              },
+            ],
+            errorSummary: [
+              { url: 'https://studiooly.com.br/', name: 'Error', message: 'Falha no scraping' },
+            ],
+          };
+        }
+        // Se chegar aqui, é um endpoint que NÃO deveria ser chamado após o gate
+        if (path === '/system/suggest-description' || path === '/tenants/generate-by-ai' || path === '/system/generate-and-validate') {
+          throw new Error(`Endpoint não deveria ser chamado após gate: ${path}`);
+        }
+        return {};
+      });
+
+      render(<GenerateSystemPage />);
+
+      // Preenche nome obrigatório (tenant)
+      fireEvent.change(screen.getByPlaceholderText(/Empresa XYZ/i), {
+        target: { value: 'Tenant Teste' },
+      });
+
+      // Preenche URL válida para scraping
+      fireEvent.change(screen.getByPlaceholderText('https://exemplo.com'), {
+        target: { value: 'https://studiooly.com.br/' },
+      });
+
+      // Executa
+      fireEvent.click(screen.getByRole('button', { name: /Executar/i }));
+
+      await waitFor(() => {
+        expect(clientApi.fetchJson).toHaveBeenCalledWith(
+          '/web-scraping/scrape-batch',
+          expect.any(Object)
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Nenhuma URL foi raspada com sucesso/i)).toBeInTheDocument();
+      });
+
+      // Gate: não deve avançar para sugestão/geração
+      expect(clientApi.fetchJson).not.toHaveBeenCalledWith('/system/suggest-description', expect.anything());
+      expect(clientApi.fetchJson).not.toHaveBeenCalledWith('/tenants/generate-by-ai', expect.anything());
+      expect(clientApi.fetchJson).not.toHaveBeenCalledWith('/system/generate-and-validate', expect.anything());
+    });
+
+    it('quando receber NO_INDEXED_CONTEXT no suggest-description deve abortar e NÃO chamar generate-by-ai', async () => {
+      // Ativa modo tenant via querystring (o componente lê window.location.search)
+      window.history.pushState({}, '', '/generate-system?mode=tenant');
+
+      clientApi.fetchJson.mockImplementation(async (path) => {
+        if (path === '/system/pipeline/validate-prereqs') {
+          return { ok: true, providerValidated: true, ragValidated: true };
+        }
+        if (path === '/web-scraping/scrape-batch') {
+          return {
+            total: 1,
+            success: 1,
+            failed: 0,
+            new: 1,
+            duplicates: 0,
+            results: [
+              {
+                url: 'https://studiooly.com.br/',
+                success: true,
+                status: 'indexed',
+                durationMs: 10,
+              },
+            ],
+            errorSummary: [],
+          };
+        }
+        if (path === '/system/suggest-description') {
+          const err = new Error('Nenhum contexto indexado disponível');
+          // contrato do fetchJson (Error Envelope normalizado)
+          // @ts-ignore
+          err.code = 'NO_INDEXED_CONTEXT';
+          // @ts-ignore
+          err.details = { tenantId: 't1', indexedChunks: 0 };
+          // @ts-ignore
+          err.status = 422;
+          throw err;
+        }
+        // Endpoints que NÃO devem ser chamados após NO_INDEXED_CONTEXT
+        if (path === '/tenants/generate-by-ai' || path === '/system/generate-and-validate') {
+          throw new Error(`Endpoint não deveria ser chamado após NO_INDEXED_CONTEXT: ${path}`);
+        }
+        return {};
+      });
+
+      render(<GenerateSystemPage />);
+
+      // Desativa bootstrap para permitir seguir para sugestão de descrição (RAG habilitado pelo fluxo)
+      fireEvent.click(screen.getByLabelText(/Gerar tudo do zero \(Bootstrap\)/i));
+      await waitFor(() => {
+        expect(screen.queryByText(/Modo Bootstrap ativo/i)).not.toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByPlaceholderText(/Empresa XYZ/i), {
+        target: { value: 'Tenant Teste' },
+      });
+      fireEvent.change(screen.getByPlaceholderText('https://exemplo.com'), {
+        target: { value: 'https://studiooly.com.br/' },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Executar/i })).not.toBeDisabled();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Executar/i }));
+
+      // Confirma que o fluxo de execução realmente iniciou
+      await waitFor(() => {
+        expect(clientApi.fetchJson).toHaveBeenCalledWith(
+          '/system/pipeline/validate-prereqs',
+          expect.any(Object)
+        );
+      });
+
+      await waitFor(() => {
+        expect(clientApi.fetchJson).toHaveBeenCalledWith('/web-scraping/scrape-batch', expect.any(Object));
+      });
+
+      await waitFor(() => {
+        expect(clientApi.fetchJson).toHaveBeenCalledWith(
+          '/system/suggest-description',
+          expect.any(Object)
+        );
+      }, { timeout: 8000 });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Nenhum contexto indexado/i)).toBeInTheDocument();
+      }, { timeout: 8000 });
+
+      expect(clientApi.fetchJson).not.toHaveBeenCalledWith('/tenants/generate-by-ai', expect.anything());
+      expect(clientApi.fetchJson).not.toHaveBeenCalledWith('/system/generate-and-validate', expect.anything());
+    }, 20000);
+  });
+});

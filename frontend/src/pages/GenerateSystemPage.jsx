@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -6,14 +6,22 @@ import { Button } from '../styles/Button';
 import { Input, Textarea } from '../styles/Input';
 import { generateAndValidate, checkRateLimit } from '../api/system';
 import { useWebSocketContext } from '../context/WebSocketContext';
+import { usePipelineMachine, PipelineStage, PIPELINE_STAGE_ORDER } from '../hooks/usePipelineMachine';
+import { useFileUpload } from '../context/FileUploadContext';
 import { uploadDocument } from '../api/ragDocuments';
 import { processFile } from '../utils/fileProcessor';
-import { fetchJson } from '../api/client';
+import { fetchBlob, fetchJson } from '../api/client';
 import { Dialog } from '../components/Dialog';
 import * as tenantsApi from '../api/tenants';
 import logger from '../utils/logger';
-import { getRpaReplay } from '../api/flows';
+import { getFallbackFlag } from '../utils/fallbacksConfig';
+import { getRpaReplay, createFlow } from '../api/flows';
 import { executeRpaRecording } from '../api/rpa';
+import { getBasePath } from '../utils';
+import { fetchQuestionGenerationRules } from '../utils/fetchQuestionGenerationRules';
+import { generateQuestionsFromContent, mergeUniqueQuestions, parseQuestionsFromText, getDefaultQuestionGenerationRules } from '../utils/ragQuestionGenerator';
+import { AutoInitialGraphCanvas } from '../components/AutoInitialGraphCanvas';
+import { usePipelineSocket } from '../hooks/usePipelineSocket';
 
 /**
  * Tela Única - Centro Operacional da Plataforma
@@ -22,27 +30,47 @@ import { executeRpaRecording } from '../api/rpa';
  * Nada fora dessa tela é considerado válido.
  */
 export function GenerateSystemPage() {
-  const { isAuthenticated, loading: authLoading, agent } = useAuth();
+  const { isAuthenticated, loading: authLoading, agent, updateAgent } = useAuth();
   const { navigate, currentPath } = useRouter();
-  const { showToast, ToastContainer } = useToast();
+  const { ToastContainer, showToast } = useToast();
+  const pipelineSocket = usePipelineSocket(showToast);
+
+  // Estado efêmero do pipeline (reusado por helpers, ex.: FAQ/fluxo no modo tenant)
+  const pipelineExecutionIdRef = useRef(null);
+  const useInlineChunksForSuggestRef = useRef(false);
+  const ephemeralChunksRef = useRef([]);
+  const fileCategoryInferenceIssuesRef = useRef({ count: 0, last: null });
+  // No modo tenant (super-admin), o tenant de *persistência* pode ser diferente do tenant do agente (contexto/provedor).
+  // Guardamos aqui o tenant-alvo (recém-criado) para indexação/persistência posterior.
+  const targetTenantIdRef = useRef(null);
 
   // Detecta se está no modo de geração de tenant
+  // Importante: o roteador interno observa apenas `pathname` (não querystring),
+  // então precisamos observar `window.location.search` explicitamente para reagir ao ?mode=tenant.
+  const [locationSearch, setLocationSearch] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return window.location.search || '';
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const update = () => setLocationSearch(window.location.search || '');
+    window.addEventListener('popstate', update);
+    // Evento customizado disparado pelo nosso useRouter()
+    window.addEventListener('router:change', update);
+    return () => {
+      window.removeEventListener('popstate', update);
+      window.removeEventListener('router:change', update);
+    };
+  }, []);
+
   const isTenantMode = useMemo(() => {
     if (typeof window === 'undefined') return false;
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(locationSearch || '');
     return urlParams.get('mode') === 'tenant';
-  }, [currentPath]);
+  }, [locationSearch]);
 
-  // Ajusta o comportamento quando está no modo tenant
-  useEffect(() => {
-    if (isTenantMode) {
-      // No modo tenant, ativa web scraping por padrão para obter informações do site
-      // Mas permite que o usuário configure tudo conforme necessário
-      if (!useWebScraping && scrapingTargets.length === 0) {
-        setUseWebScraping(true);
-      }
-    }
-  }, [isTenantMode]);
+  // (effects movidos para após os useState, para evitar TDZ/ReferenceError)
 
   // BLOCO 1 - Intenção do Usuário
   const [generateFlow, setGenerateFlow] = useState(false);
@@ -62,17 +90,213 @@ export function GenerateSystemPage() {
   const [scrapingTargets, setScrapingTargets] = useState(['']);
   
   // Upload de arquivos para RAG
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [uploadingFiles, setUploadingFiles] = useState([]);
+  const { files: uploadedFiles, addSelectedFiles, updateFile: updateUploadedFile, removeFile: removeUploadedFile, FileStatus } = useFileUpload();
+  const uploadedFilesRef = useRef([]);
+  useEffect(() => {
+    uploadedFilesRef.current = Array.isArray(uploadedFiles) ? uploadedFiles : [];
+  }, [uploadedFiles]);
   const [selectedFileDetails, setSelectedFileDetails] = useState(null); // Arquivo selecionado para ver detalhes
 
-  // BLOCO 3 - Configuração da Execução
+  // BLOCO 3 - Perguntas (FAQ / Aprendizado Adaptivo)
+  const [includeQuestions, setIncludeQuestions] = useState(false);
+  const [questionsText, setQuestionsText] = useState('');
+  const [questionsList, setQuestionsList] = useState([]);
+  const [questionGenerationRules, setQuestionGenerationRules] = useState(null);
+  const [faqGroups, setFaqGroups] = useState(null); // [{category, questions}]
+  const [faqCoverage, setFaqCoverage] = useState(null); // 0..1
+  const [faqCoverageMeta, setFaqCoverageMeta] = useState(null); // {chunkTextsEffective, chunkCoverageMode} (best-effort)
+  const [faqExclusions, setFaqExclusions] = useState(null); // string[]
+  const [showFaqExclusions, setShowFaqExclusions] = useState(false);
+  const [initialFlow, setInitialFlow] = useState(null); // Engine FlowDefinition (será renderizado no editor)
+  const [initialFlowEntities, setInitialFlowEntities] = useState(null); // entidades extraídas (escopo do atendimento)
+  const [initialGraphLoading, setInitialGraphLoading] = useState(false);
+  const [showInitialFlowModal, setShowInitialFlowModal] = useState(false);
+  const [initialFlowModalSize, setInitialFlowModalSize] = useState({ width: null, height: null });
+  const [showGeneratedFlowModal, setShowGeneratedFlowModal] = useState(false);
+  const [generatedFlowModalSize, setGeneratedFlowModalSize] = useState({ width: null, height: null });
+  const [generatedFlowForModal, setGeneratedFlowForModal] = useState(null);
+  const [generatedFlowEditorUrl, setGeneratedFlowEditorUrl] = useState('');
+  const [isPersistingInitialFlow, setIsPersistingInitialFlow] = useState(false);
+  const [isInitialFlowFullscreen, setIsInitialFlowFullscreen] = useState(false);
+  const [isInitialFlowMinimized, setIsInitialFlowMinimized] = useState(false);
+  const [showInitialFlowObjectiveEditor, setShowInitialFlowObjectiveEditor] = useState(false);
+  const [initialFlowObjectiveDraft, setInitialFlowObjectiveDraft] = useState('');
+  const [isGeneratedFlowFullscreen, setIsGeneratedFlowFullscreen] = useState(false);
+  const initialFlowPrevAgentRef = useRef(null);
+  const generatedFlowPrevAgentRef = useRef(null);
+  const lastInitialFlowSignatureRef = useRef(null);
+  const initialFlowRequestInFlightRef = useRef(false);
+
+  const extractTenantFromInitialFlowId = useCallback((flowId) => {
+    try {
+      const s = String(flowId || '');
+      const prefix = 'initial-';
+      const marker = '-exec-';
+      if (!s.startsWith(prefix)) return null;
+      const idx = s.indexOf(marker);
+      if (idx <= prefix.length) return null;
+      return s.slice(prefix.length, idx) || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Tenant context por localStorage (super-admin) foi desabilitado:
+  // - O WebSocket usa o tenant do token (não do localStorage), então trocar localStorage não resolve o roteamento.
+  // - Além disso, isso causa efeitos globais (X-Tenant-Id) e pode persistir documentos no tenant errado.
+  // Tenant switching deve acontecer via headers por requisição (X-Tenant-Id) e/ou persistTenantId.
+  const applyTenantContextForEditor = useCallback(() => false, []);
+
+  const restoreTenantContextAfterEditor = useCallback(() => {}, []);
+
+  const downloadJsonFile = useCallback((data, filenameBase) => {
+    try {
+      const safeBase = (filenameBase && String(filenameBase).trim()) ? String(filenameBase).trim() : 'export';
+      const filename = safeBase.endsWith('.json') ? safeBase : `${safeBase}.json`;
+      const payload = JSON.stringify(data ?? null, null, 2);
+      const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      logger.warn('[UI] Falha ao exportar JSON', { error: e?.message || String(e) });
+      showToast?.('Não foi possível exportar o JSON.', 'error');
+    }
+  }, [showToast]);
+
+  // Modal desacoplado do fluxo auxiliar:
+  // - `generateInitialFlow()` é best-effort
+  // - No modo tenant, abre automaticamente quando o fluxo ficar disponível (1x por assinatura)
+  const pipelineMachine = usePipelineMachine();
+  useEffect(() => {
+    if (!isTenantMode) return;
+    if (!initialFlow || typeof initialFlow !== 'object') return;
+
+    // Evita reabrir o modal repetidamente se o usuário fechar.
+    const signature = JSON.stringify({
+      id: initialFlow?.id || null,
+      nodes: Array.isArray(initialFlow?.nodes) ? initialFlow.nodes.length : null,
+      edges: Array.isArray(initialFlow?.edges) ? initialFlow.edges.length : null,
+    });
+    if (lastInitialFlowSignatureRef.current === signature) return;
+    lastInitialFlowSignatureRef.current = signature;
+
+    setShowInitialFlowModal(true);
+  }, [isTenantMode, initialFlow]);
+
+  const ensureInitialFlowLoaded = async () => {
+    if (initialFlow && typeof initialFlow === 'object') return initialFlow;
+    if (initialFlowRequestInFlightRef.current) return null;
+
+    const contextTenantId = validatedTenantId || agent?.tenantId || null;
+    const execId = pipelineExecutionIdRef.current || null;
+    // Em dry-run, não temos tenant real para persistência; no real, o tenant alvo é o criado.
+    const tenantTargetId = result?.tenant?.id || result?.tenantId || null;
+
+    if (!contextTenantId || !execId) return null;
+
+    initialFlowRequestInFlightRef.current = true;
+    setInitialGraphLoading(true);
+    // Fallback local: pode demorar até o primeiro snapshot WS refletir currentStage.
+    try {
+      updatePipelineWithDetails({
+        initialFlowGenerated: {
+          status: 'in_progress',
+          progress: 0,
+          message: 'Gerando fluxo inicial (intents + respostas)...',
+        },
+      }, 'initial-flow-on-demand');
+    } catch {
+      // best-effort
+    }
+    try {
+      // Abre o modal imediatamente; quando `initialFlow` chegar, o Dialog monta e aparece.
+      setShowInitialFlowModal(true);
+
+      const resp = await fetchJson('/system/generate-initial-flow', {
+        method: 'POST',
+        body: JSON.stringify({
+          tenantId: contextTenantId,
+          executionId: execId,
+          targetTenantId: tenantTargetId,
+          dryRun: executionMode === 'dry-run',
+          persistFlow: executionMode !== 'dry-run',
+          // Cobertura: além do FAQ interno, inclui as perguntas geradas (quando existirem)
+          questions: Array.isArray(questionsList) ? questionsList.slice(0, 200) : [],
+          ...(executionMode === 'dry-run' && useInlineChunksForSuggestRef.current
+            ? { chunks: (ephemeralChunksRef.current || []).slice(0, 30).map(c => ({ ...c, text: (c?.text || '').slice(0, 5000) })) }
+            : {}),
+        }),
+        // Essa chamada envolve múltiplas etapas de IA; 12s abortava com frequência.
+        timeoutMs: 60000,
+        silent: true,
+      });
+
+      const flow = resp?.initialFlow || resp?.data?.initialFlow || null;
+      const entities = resp?.entities || resp?.data?.entities || null;
+      if (entities && typeof entities === 'object') setInitialFlowEntities(entities);
+      if (flow && typeof flow === 'object') {
+        setInitialFlow(flow);
+        return flow;
+      }
+      return null;
+    } catch (e) {
+      logger.warn('[TenantMode] Falha ao carregar/gerar fluxo inicial (on-demand)', { error: e?.message || String(e) });
+      setError('Não foi possível carregar o fluxo inicial automaticamente. Tente novamente.');
+      try {
+        updatePipelineWithDetails({
+          initialFlowGenerated: {
+            status: 'error',
+            progress: 0,
+            message: 'Falha ao gerar fluxo inicial.',
+          },
+        }, 'initial-flow-on-demand-error');
+      } catch {
+        // best-effort
+      }
+      return null;
+    } finally {
+      initialFlowRequestInFlightRef.current = false;
+      setInitialGraphLoading(false);
+    }
+  };
+
+  // Ajusta o comportamento quando está no modo tenant
+  useEffect(() => {
+    if (!isTenantMode) return;
+    // No modo tenant, ativa web scraping por padrão para obter informações do site
+    // Mas permite que o usuário configure tudo conforme necessário
+    if (!useWebScraping && scrapingTargets.length === 0) {
+      setUseWebScraping(true);
+    }
+  }, [isTenantMode, useWebScraping, scrapingTargets]);
+
+  // Carrega regras de geração de perguntas (best-effort)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const rules = await fetchQuestionGenerationRules();
+      if (!mounted) return;
+      setQuestionGenerationRules(rules || null);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // BLOCO 4 - Configuração da Execução
   const [executionMode, setExecutionMode] = useState('dry-run'); // 'dry-run' ou 'real'
   const [rpaMode, setRpaMode] = useState('infer'); // 'infer', 'record', 'hybrid'
 
   // Dados básicos
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionMode, setDescriptionMode] = useState('institutional'); // 'institutional' | 'technical'
 
   // BLOCO 4 - Validações Automáticas
   const [validationStatus, setValidationStatus] = useState({
@@ -86,11 +310,14 @@ export function GenerateSystemPage() {
   const [pipelineStatus, setPipelineStatus] = useState({
     providerValidated: false,
     ragValidated: false,
+    webScraping: false,
     descriptionSuggested: false,
+    questionsGenerated: false,
     filesInferred: false,
     payloadValid: false,
     contractValid: false,
     contextBuilt: false,
+    ragContextBuilt: false,
     aiExecuted: false,
     flowGenerated: false,
     seedGenerated: false,
@@ -103,11 +330,14 @@ export function GenerateSystemPage() {
   const [pipelineDetails, setPipelineDetails] = useState({
     providerValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
     ragValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
-    descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
+    webScraping: { status: 'pending', timestamp: null, message: null, progress: 0 },
+    descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0, meta: null },
+    questionsGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
     filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
     payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
     contractValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
     contextBuilt: { status: 'pending', timestamp: null, message: null, progress: 0 },
+    ragContextBuilt: { status: 'pending', timestamp: null, message: null, progress: 0 },
     aiExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
     flowGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
     seedGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -116,10 +346,14 @@ export function GenerateSystemPage() {
     approved: { status: 'pending', timestamp: null, message: null, progress: 0 },
   });
 
+  // Progresso do pipeline é 100% via WebSocket (pipeline.status)
+
   // BLOCO 6 - Resultado Final
   const [executing, setExecuting] = useState(false);
+  const executingRef = useRef(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const lastErrorToastRef = useRef(null);
   
   // Rate Limit
   const [rateLimitUntil, setRateLimitUntil] = useState(null); // Timestamp até quando o rate limit está ativo
@@ -135,10 +369,90 @@ export function GenerateSystemPage() {
   const [replayStepByStep, setReplayStepByStep] = useState(false);
   const [currentReplayStep, setCurrentReplayStep] = useState(0);
 
+  // Preenche o editor de "objetivo" com o melhor texto disponível (best-effort).
+  // Prioridade:
+  // - entidades extraídas (escopo do atendimento do fluxo)
+  // - descrição do tenant criado (modo real)
+  // - descrição do formulário (modo dry-run / antes de criar tenant)
+  useEffect(() => {
+    if (!showInitialFlowModal) return;
+    const normalizeWs = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    const formatList = (arr, max = 10) => {
+      const items = (Array.isArray(arr) ? arr : [])
+        .map((x) => normalizeWs(typeof x === 'string' ? x : (x?.name || x?.label || x?.title || '')))
+        .filter(Boolean);
+      const unique = Array.from(new Set(items.map((x) => x.toLowerCase()))).map((k) => items.find((x) => x.toLowerCase() === k));
+      return unique.filter(Boolean).slice(0, max);
+    };
+    const entities = initialFlowEntities && typeof initialFlowEntities === 'object' ? initialFlowEntities : null;
+    const services = formatList(entities?.services, 10);
+    const plans = formatList(entities?.plans, 10);
+    const prices = formatList(entities?.prices, 8);
+    const schedules = formatList(entities?.schedules, 8);
+
+    const objectiveFromEntities = (() => {
+      const lines = [];
+      if (services.length) lines.push(`Serviços atendidos: ${services.join(', ')}`);
+      if (plans.length) lines.push(`Planos: ${plans.join(', ')}`);
+      if (prices.length) lines.push(`Preços/condições: ${prices.join(', ')}`);
+      if (schedules.length) lines.push(`Horários: ${schedules.join(', ')}`);
+      return lines.join('\n');
+    })();
+
+    const objective =
+      normalizeWs(objectiveFromEntities) ||
+      normalizeWs(result?.tenant?.description) ||
+      normalizeWs(description) ||
+      '';
+    // Não sobrescreve se o usuário já editou manualmente.
+    setInitialFlowObjectiveDraft((prev) => (prev && prev.trim() ? prev : objective));
+  }, [showInitialFlowModal, initialFlowEntities, result?.tenant?.description, description]);
+
+  useEffect(() => {
+    executingRef.current = executing;
+  }, [executing]);
+
+  // Toast de erro “global” desta página (deduplicado).
+  // Importante: vários caminhos usam setError() sem chamar showToast().
+  useEffect(() => {
+    if (!error) return;
+    const msg = typeof error === 'string' ? error.trim() : String(error);
+    if (!msg) return;
+    if (lastErrorToastRef.current === msg) return;
+    lastErrorToastRef.current = msg;
+    showToast?.(msg, 'error', 10000);
+  }, [error, showToast]);
+
+  // Tenant context swap via localStorage foi removido (ver applyTenantContextForEditor acima).
+
   // Função auxiliar para atualizar pipeline com detalhes
   const updatePipelineWithDetails = (statusUpdate, source = 'unknown') => {
     const timestamp = new Date().toISOString();
     logger.debug(`[Pipeline] Atualização recebida de ${source}`, { statusUpdate, timestamp });
+
+    // Importante: o pipeline determinístico (etapas centrais) é atualizado SOMENTE via websocket
+    // e consumido pela PipelineMachine.
+    //
+    // Porém, precisamos permitir que o frontend atualize *detalhes/progresso* (mensagem/percentual)
+    // dessas etapas (ex.: filesInferred por arquivo, RPA em execução), sem marcar conclusão localmente.
+    const machineKeys = new Set([
+      'providerValidated',
+      'ragValidated',
+      'filesInferred',
+      'webScraping',
+      'descriptionSuggested',
+      'payloadValid',
+      'contractValid',
+      'contextBuilt',
+      'questionsGenerated',
+      'aiExecuted',
+      'flowGenerated',
+      'seedGenerated',
+      'rpaGenerated',
+      'rpaExecuted',
+      'approved',
+      'failed',
+    ]);
     
     // Prepara atualização de status simples (booleanos) baseado nos objetos de detalhes
     const statusUpdateSimple = {};
@@ -146,54 +460,91 @@ export function GenerateSystemPage() {
     
     Object.keys(statusUpdate).forEach(key => {
       const value = statusUpdate[key];
+      const isMachineKey = machineKeys.has(key);
       if (value === true) {
-        statusUpdateSimple[key] = true;
-        detailsUpdate[key] = {
-          status: 'completed',
-          timestamp: timestamp,
-          message: getStepMessage(key, 'completed'),
-          progress: 100,
-        };
+        // Para etapas do state machine, não marcamos como concluídas via update local.
+        // (Conclusão vem do websocket/pipeline.status)
+        if (!isMachineKey) {
+          statusUpdateSimple[key] = true;
+          detailsUpdate[key] = {
+            status: 'completed',
+            timestamp: timestamp,
+            message: getStepMessage(key, 'completed') || `Etapa concluída: ${key}`,
+            progress: 100,
+          };
+        }
       } else if (value === false) {
-        statusUpdateSimple[key] = false;
-        detailsUpdate[key] = {
-          status: 'pending',
-          timestamp: null,
-          message: null,
-          progress: 0,
-        };
+        if (!isMachineKey) {
+          statusUpdateSimple[key] = false;
+        }
+        // IMPORTANTE:
+        // Muitos produtores (callback/websocket) enviam o estado completo do pipeline com "false"
+        // para etapas ainda não concluídas. Se tratarmos isso como "reset", regressamos etapas já
+        // concluídas e o pipeline parece "travado". O reset real é feito explicitamente no início
+        // do handleExecute via setPipelineStatus/setPipelineDetails.
+        //
+        // Portanto, aqui "false" atualiza apenas o booleano (status simples) e NÃO sobrescreve
+        // detalhes (timestamp/mensagem/status) já existentes.
       } else if (typeof value === 'object' && value !== null) {
         // Se for um objeto com detalhes
-        const status = value.status || 'pending';
-        // Atualiza status simples: true apenas se completed, false caso contrário
-        statusUpdateSimple[key] = status === 'completed';
-        detailsUpdate[key] = {
-          status: status,
-          timestamp: value.timestamp || timestamp,
-          message: value.message || getStepMessage(key, status),
-          progress: value.progress !== undefined ? value.progress : (status === 'completed' ? 100 : 0),
-        };
+        const { status: rawStatus, timestamp: rawTimestamp, message: rawMessage, progress: rawProgress, ...rest } = value;
+        const status = rawStatus || 'pending';
+        // A partir de agora, o pipeline visível é 100% alimentado por eventos do backend (WS).
+        // Portanto, ignoramos updates locais para etapas do state machine (machineKeys),
+        // inclusive detalhes/progresso, para garantir "um tipo só".
+        if (!isMachineKey) {
+          // Atualiza status simples: true apenas se completed, false caso contrário
+          statusUpdateSimple[key] = status === 'completed';
+          detailsUpdate[key] = {
+            status: status,
+            timestamp: rawTimestamp || timestamp,
+            message: rawMessage || getStepMessage(key, status),
+            progress: rawProgress !== undefined ? rawProgress : (status === 'completed' ? 100 : 0),
+            ...rest,
+          };
+        }
       }
     });
     
     // Atualiza status simples
-    setPipelineStatus(prev => ({ ...prev, ...statusUpdateSimple }));
+    setPipelineStatus(prev => {
+      const next = { ...prev, ...statusUpdateSimple };
+      // Regra: "IA executada" deve vir antes de "Aprovado"
+      // (Evita UI mostrar aprovado quando o backend ainda não refletiu aiExecuted por algum motivo)
+      if (next.approved === true && next.aiExecuted !== true) {
+        next.approved = false;
+      }
+      return next;
+    });
     
-    // Atualiza detalhes com timestamps e mensagens
+    // Atualiza detalhes com timestamps e mensagens (apenas para steps fora do state machine)
     setPipelineDetails(prev => {
       const updated = { ...prev };
       Object.keys(detailsUpdate).forEach(key => {
-        if (updated[key]) {
-          updated[key] = detailsUpdate[key];
-          if (detailsUpdate[key].status === 'completed') {
-            logger.info(`[Pipeline] Etapa ${key} concluída`, { timestamp: detailsUpdate[key].timestamp, source });
-          } else if (detailsUpdate[key].status === 'error') {
-            logger.error(`[Pipeline] Etapa ${key} falhou`, { timestamp: detailsUpdate[key].timestamp, source, message: detailsUpdate[key].message });
-          }
+        // Se a chave não existia (ex.: etapa exibida condicionalmente),
+        // ainda assim queremos persistir timestamp/mensagem para o card não ficar "sem hora".
+        updated[key] = detailsUpdate[key];
+        if (detailsUpdate[key].status === 'completed') {
+          logger.info(`[Pipeline] Etapa ${key} concluída`, { timestamp: detailsUpdate[key].timestamp, source });
+        } else if (detailsUpdate[key].status === 'error') {
+          logger.error(`[Pipeline] Etapa ${key} falhou`, { timestamp: detailsUpdate[key].timestamp, source, message: detailsUpdate[key].message });
         }
       });
+
       return updated;
     });
+  };
+
+  const getDescriptionSuggestionMeta = (suggestionResponse) => {
+    const warnings = Array.isArray(suggestionResponse?.warnings) ? suggestionResponse.warnings : [];
+    const fallback = warnings.some(w => String(w?.code || '') === 'NO_INDEXED_CONTEXT_FALLBACK');
+    const confidence =
+      (typeof suggestionResponse?.confidence === 'number')
+        ? suggestionResponse.confidence
+        : (typeof suggestionResponse?.entityProfile?.confidence === 'number' ? suggestionResponse.entityProfile.confidence : null);
+    const mode = suggestionResponse?.mode === 'technical' ? 'technical' : 'institutional';
+
+    return { mode, fallback, confidence, warningsCount: warnings.length };
   };
   
   // Função auxiliar para obter mensagens de cada etapa
@@ -215,10 +566,20 @@ export function GenerateSystemPage() {
         in_progress: 'Validando serviço RAG...',
         error: 'Serviço RAG não disponível',
       },
+      webScraping: {
+        completed: 'Web scraping concluído',
+        in_progress: 'Raspando URLs (web scraping)...',
+        error: 'Nenhuma URL foi raspada com sucesso',
+      },
       descriptionSuggested: {
         completed: 'Descrição sugerida pela IA',
         in_progress: 'Sugerindo descrição com IA...',
         error: 'Erro ao sugerir descrição',
+      },
+      questionsGenerated: {
+        completed: 'Perguntas geradas',
+        in_progress: 'Gerando perguntas...',
+        error: 'Erro ao gerar perguntas',
       },
       filesInferred: {
         completed: 'Arquivos processados e indexados no RAG',
@@ -239,6 +600,11 @@ export function GenerateSystemPage() {
         completed: 'Contexto montado com sucesso',
         in_progress: 'Montando contexto para IA...',
         error: 'Erro ao montar contexto',
+      },
+      ragContextBuilt: {
+        completed: 'Contexto RAG construído',
+        in_progress: 'Buscando evidências no RAG...',
+        error: 'Evidência insuficiente no RAG',
       },
       aiExecuted: {
         completed: 'IA executada com sucesso',
@@ -274,17 +640,66 @@ export function GenerateSystemPage() {
     return messages[step]?.[status] || `${step}: ${status}`;
   };
 
-  // WebSocket para receber atualizações de progresso
-  useWebSocketContext({
+  const PIPELINE_LABELS = useMemo(() => ({
+    providerValidated: 'Provider de IA validado',
+    ragValidated: 'Serviço RAG validado',
+    webScraping: 'Web scraping',
+    descriptionSuggested: 'Sugerir descrição',
+    questionsGenerated: 'Perguntas geradas',
+    filesInferred: 'Arquivos inferidos e indexados',
+    payloadValid: 'Payload válido',
+    contractValid: 'Contrato válido',
+    contextBuilt: 'Contexto montado',
+    ragContextBuilt: 'Contexto RAG construído',
+    aiExecuted: 'Executando IA (geração do fluxo)',
+    flowGenerated: 'Fluxo gerado',
+    seedGenerated: 'Seed gerado',
+    rpaGenerated: 'RPA gerado',
+    rpaExecuted: 'RPA executado',
+    approved: 'Aprovado',
+  }), []);
+
+  const ws = useWebSocketContext({
     enabled: true,
     onEvent: (event, data) => {
-      if (event === 'generation.progress') {
-        logger.debug('[WebSocket] Progresso recebido via WebSocket', { event, data });
-        updatePipelineWithDetails(data, 'websocket');
+      if (event === 'pipeline.status') {
+        logger.debug('[WebSocket] pipeline.status recebido', { event, data });
+        pipelineMachine.dispatch({ type: 'PIPELINE_STATUS', payload: data });
       }
     },
-    subscribeEvents: ['generation.progress'],
+    subscribeEvents: ['pipeline.status'],
   });
+
+  // Garantia: antes de iniciar um pipeline "backend-only", precisamos que o WS esteja autenticado,
+  // senão o backend vai broadcastar para 0 clientes (tenant não associado no servidor).
+  const wsStateRef = useRef({ connected: false, authenticated: false });
+  // Marca que a execução atual foi abortada (para suprimir efeitos colaterais de tarefas em background)
+  const pipelineAbortRef = useRef(false);
+  useEffect(() => {
+    wsStateRef.current = { connected: !!ws?.connected, authenticated: !!ws?.authenticated };
+  }, [ws?.connected, ws?.authenticated]);
+
+  const ensureWebSocketAuthenticated = useCallback(async (timeoutMs = 5000) => {
+    const start = Date.now();
+
+    // Se já estiver autenticado, ok.
+    if (wsStateRef.current.connected && wsStateRef.current.authenticated) return true;
+
+    // Tenta reconectar (vai re-enviar auth com token atual no onopen).
+    try {
+      ws?.reconnect?.();
+    } catch (_) {
+      // best-effort
+    }
+
+    // Aguarda autenticação (polling curto).
+    while (Date.now() - start < timeoutMs) {
+      if (wsStateRef.current.connected && wsStateRef.current.authenticated) return true;
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return false;
+  }, [ws]);
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -435,6 +850,172 @@ export function GenerateSystemPage() {
     return getValidationError === null;
   }, [getValidationError]);
 
+  const handleAddQuestionsFromText = () => {
+    const parsed = parseQuestionsFromText(questionsText);
+    if (parsed.length === 0) return;
+    setQuestionsList((prev) => mergeUniqueQuestions(prev, parsed, 50));
+    setQuestionsText('');
+                      // Lista manual: invalida agrupamento/coverage anterior
+    setFaqGroups(null);
+    setFaqCoverage(null);
+    setFaqCoverageMeta(null);
+    setFaqExclusions(null);
+    setShowFaqExclusions(false);
+                      setInitialFlow(null);
+  };
+
+  const suggestQuestionsAutoList = async () => {
+    const isPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+    const normalizeQuestionRules = (maybeRules) => {
+      const defaults = getDefaultQuestionGenerationRules();
+      if (!isPlainObject(maybeRules)) return defaults;
+
+      // Alguns formatos externos podem vir como flags (ex.: titleBased: true).
+      // Se a estrutura não for compatível, usamos defaults para evitar gerar 0 perguntas.
+      if (!isPlainObject(maybeRules.titleBased)) return defaults;
+
+      const merged = {
+        titleBased: { ...defaults.titleBased, ...(isPlainObject(maybeRules.titleBased) ? maybeRules.titleBased : {}) },
+        keywordPatterns: { ...defaults.keywordPatterns, ...(isPlainObject(maybeRules.keywordPatterns) ? maybeRules.keywordPatterns : {}) },
+        domainCoverage: {
+          ...defaults.domainCoverage,
+          ...(isPlainObject(maybeRules.domainCoverage) ? maybeRules.domainCoverage : {}),
+          entities: {
+            ...defaults.domainCoverage.entities,
+            ...(isPlainObject(maybeRules.domainCoverage?.entities) ? maybeRules.domainCoverage.entities : {}),
+          },
+          templates: {
+            ...defaults.domainCoverage.templates,
+            ...(isPlainObject(maybeRules.domainCoverage?.templates) ? maybeRules.domainCoverage.templates : {}),
+          },
+          triggers: {
+            ...defaults.domainCoverage.triggers,
+            ...(isPlainObject(maybeRules.domainCoverage?.triggers) ? maybeRules.domainCoverage.triggers : {}),
+          },
+        },
+        contentBased: { ...defaults.contentBased, ...(isPlainObject(maybeRules.contentBased) ? maybeRules.contentBased : {}) },
+        deduplication: { ...defaults.deduplication, ...(isPlainObject(maybeRules.deduplication) ? maybeRules.deduplication : {}) },
+        limits: { ...defaults.limits, ...(isPlainObject(maybeRules.limits) ? maybeRules.limits : {}) },
+      };
+
+      // Garantia mínima: se por algum motivo desabilitar tudo, cai no default.
+      const anyEnabled =
+        merged.titleBased?.enabled ||
+        merged.keywordPatterns?.enabled ||
+        merged.domainCoverage?.enabled ||
+        merged.contentBased?.enabled;
+      return anyEnabled ? merged : defaults;
+    };
+
+    const rules = normalizeQuestionRules(questionGenerationRules);
+
+    // 1) Preferência: usar gerador do backend (embeddings + clusterização + ranking + coverage)
+    try {
+      const tenantId = agent?.tenantId || null;
+      if (tenantId) {
+        // executionId é obrigatório nas rotas do pipeline (mesmo em ações isoladas como gerar perguntas)
+        if (!pipelineExecutionIdRef.current) {
+          const id = `exec-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          pipelineExecutionIdRef.current = id;
+          pipelineMachine.start(id);
+          pipelineSocket.subscribe(id);
+        }
+        const uploadedFileNames = Array.from(new Set(
+          (Array.isArray(uploadedFiles) ? uploadedFiles : [])
+            .map(f => (typeof f?.name === 'string' ? f.name.trim() : ''))
+            .filter(Boolean)
+        ));
+        const validUrls = (Array.isArray(scrapingTargets) ? scrapingTargets : [])
+          .filter(url => validateUrl(url));
+
+        const resp = await fetchJson('/system/generate-faq', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: name?.trim() || null,
+            description: description?.trim() || null,
+            tenantId,
+            urls: validUrls.slice(0, 5),
+            fileNames: uploadedFileNames.slice(0, 10),
+            // Pipeline visível 100% pelo backend: sempre enviar executionId quando disponível.
+            executionId: pipelineExecutionIdRef.current,
+            // Indica ao backend que esta chamada representa "Perguntas geradas" (não o FAQ do tenant).
+            pipelineStage: 'questionsGenerated',
+            contextMode: executionMode === 'dry-run' ? 'ephemeral' : 'auto',
+            ...(executionMode === 'dry-run' && useInlineChunksForSuggestRef.current
+              ? { chunks: (ephemeralChunksRef.current || []).slice(0, 30).map(c => ({ ...c, text: (c?.text || '').slice(0, 5000) })) }
+              : {}),
+            rules,
+          }),
+          // Pode envolver embeddings + LLM (exclusões/categorias). 20s tende a abortar e ficar “estranho”.
+          timeoutMs: 60000,
+          silent: true,
+        });
+
+        const faq = Array.isArray(resp?.faq)
+          ? resp.faq
+          : (Array.isArray(resp?.data?.faq) ? resp.data.faq : null);
+        const coverage = (typeof resp?.coverage === 'number')
+          ? resp.coverage
+          : (typeof resp?.data?.coverage === 'number' ? resp.data.coverage : null);
+        const exclusions = Array.isArray(resp?.exclusions)
+          ? resp.exclusions
+          : (Array.isArray(resp?.data?.exclusions) ? resp.data.exclusions : null);
+        const flat = Array.isArray(resp?.flatQuestions)
+          ? resp.flatQuestions
+          : (Array.isArray(resp?.data?.flatQuestions) ? resp.data.flatQuestions : null);
+
+        if (Array.isArray(faq) && faq.length > 0) {
+          setFaqGroups(faq);
+          setFaqCoverage(typeof coverage === 'number' ? coverage : null);
+          setFaqCoverageMeta(resp?.meta && typeof resp.meta === 'object' ? resp.meta : (resp?.data?.meta && typeof resp.data.meta === 'object' ? resp.data.meta : null));
+          setFaqExclusions(Array.isArray(exclusions) && exclusions.length > 0 ? exclusions : null);
+          setShowFaqExclusions(false);
+          if (Array.isArray(flat) && flat.length > 0) return mergeUniqueQuestions([], flat, 50);
+          // fallback: achata pelo cliente
+          const flattened = faq.flatMap(g => Array.isArray(g?.questions) ? g.questions : []);
+          return mergeUniqueQuestions([], flattened, 50);
+        }
+      }
+    } catch (e) {
+      // Regra arquitetural: se o backend falhou para gerar perguntas (ex.: 422 QUESTIONS_GENERATION_FAILED),
+      // o pipeline deve encerrar e o frontend NÃO deve "inventar" perguntas via fallback local.
+      throw e;
+    }
+  };
+
+  const handleSuggestQuestionsFromDescription = async () => {
+    let suggested = null;
+    try {
+      suggested = await suggestQuestionsAutoList();
+    } catch (e) {
+      const msg = e?.message || 'Falha ao gerar perguntas automaticamente. Adicione ao menos 1 pergunta.';
+      setError(msg);
+      showToast?.(msg, 'error');
+      return;
+    }
+    if (!suggested || suggested.length === 0) return;
+    const hadExisting = Array.isArray(questionsList) && questionsList.length > 0;
+    if (hadExisting) {
+      // Se já havia perguntas manuais, o agrupamento calculado pode não refletir o merge.
+      setFaqGroups(null);
+      setFaqCoverage(null);
+      setFaqCoverageMeta(null);
+      setFaqExclusions(null);
+      setShowFaqExclusions(false);
+    }
+    setQuestionsList((prev) => mergeUniqueQuestions(hadExisting ? prev : [], suggested, 50));
+  };
+
+  const handleRemoveQuestion = (index) => {
+    setQuestionsList((prev) => prev.filter((_, i) => i !== index));
+    setFaqGroups(null);
+    setFaqCoverage(null);
+    setFaqCoverageMeta(null);
+    setFaqExclusions(null);
+    setShowFaqExclusions(false);
+                  setInitialFlow(null);
+  };
+
   // Gera payload único
   const generatePayload = () => {
     const payload = {
@@ -454,6 +1035,11 @@ export function GenerateSystemPage() {
       rpaMode: rpaMode,
       executeFullValidation: executeFullValidation,
     };
+
+    if (bootstrap || includeQuestions) {
+      payload.includeQuestions = true;
+      payload.questions = Array.isArray(questionsList) ? questionsList.slice(0, 50) : [];
+    }
 
     // Remove campos undefined
     Object.keys(payload).forEach(key => {
@@ -493,18 +1079,18 @@ export function GenerateSystemPage() {
     if (isTenantMode) {
       // Validação do nome (sempre obrigatório)
       if (!name || !name.trim() || name.trim().length < 3) {
-        showToast('Por favor, preencha o nome do tenant (mínimo 3 caracteres)', 'error');
+        setError('Por favor, preencha o nome do tenant (mínimo 3 caracteres)');
         return;
       }
       // Validação da descrição (obrigatória apenas no modo real)
       if (executionMode === 'real') {
         if (!description || !description.trim() || description.trim().length < 10) {
-          showToast('Por favor, preencha a descrição do tenant (mínimo 10 caracteres) - obrigatória no modo execução real', 'error');
+          setError('Por favor, preencha a descrição do tenant (mínimo 10 caracteres) - obrigatória no modo execução real');
           return;
         }
       } else if (description.trim() && description.trim().length < 10) {
         // No dry-run, se preencheu mas está muito curta, avisa
-        showToast('A descrição do tenant deve ter pelo menos 10 caracteres', 'error');
+        setError('A descrição do tenant deve ter pelo menos 10 caracteres');
         return;
       }
       // No dry-run, se descrição estiver vazia, será sugerida pela IA
@@ -512,11 +1098,20 @@ export function GenerateSystemPage() {
       setExecuting(true);
       setError(null);
       setResult(null);
+      pipelineAbortRef.current = false;
+      // Reset do fluxo inicial e modal para permitir reabrir a cada execução
+      setInitialFlow(null);
+      setInitialFlowEntities(null);
+      setShowInitialFlowModal(false);
+      setInitialFlowModalSize({ width: null, height: null });
+      lastInitialFlowSignatureRef.current = null;
+      setInitialGraphLoading(false);
       
       // Reseta pipeline status
       const resetStatus = {
         providerValidated: false,
         ragValidated: false,
+        webScraping: false,
         descriptionSuggested: false,
         filesInferred: false,
         payloadValid: false,
@@ -535,7 +1130,8 @@ export function GenerateSystemPage() {
       setPipelineDetails({
         providerValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
         ragValidated: { status: 'pending', timestamp: null, message: null, progress: 0 },
-        descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        webScraping: { status: 'pending', timestamp: null, message: null, progress: 0 },
+        descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0, meta: null },
         filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
         payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
         contractValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -548,430 +1144,340 @@ export function GenerateSystemPage() {
         approved: { status: 'pending', timestamp: null, message: null, progress: 0 },
       });
 
-      // Validação do provider de IA ANTES de iniciar processamento
+      // tenantId do contexto (header X-Tenant-Id / tenant do agente) para chamadas do pipeline.
+      // No tenant-mode (super-admin), este NÃO é o tenant de persistência do novo tenant.
+      let validatedTenantId = null;
+      // Guard para evitar rodar scraping duas vezes no mesmo fluxo
+      let webScrapingDone = false;
+
+      // executionId único por execução do pipeline (real e dry-run), reutilizado em todas as chamadas.
+      // Importante: deve ser estável para correlacionar eventos `pipeline.status`.
+      const pipelineExecutionId = `exec-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      pipelineExecutionIdRef.current = pipelineExecutionId;
+      pipelineMachine.start(pipelineExecutionId);
+      pipelineSocket.subscribe(pipelineExecutionId);
+
       try {
-        updatePipelineWithDetails({ 
-          providerValidated: { status: 'in_progress', progress: 0, message: 'Validando provider de IA...' }
-        }, 'provider-validation');
-        
-        logger.info('[TenantMode] Validando provider de IA antes de iniciar processamento...');
-        
-        // Validação rigorosa: verifica se o tenant do usuário tem provider configurado
-        // Não usa fallback - se o tenant não tiver provider, para o processamento
+        // Pipeline visível 100% pelo backend: garantir WS autenticado antes do backend emitir eventos.
+        const wsOk = await ensureWebSocketAuthenticated(6000);
+        if (!wsOk) {
+          logger.warn('[WebSocket] WS não autenticou a tempo; o pipeline visível pode não atualizar', {
+            executionId: pipelineExecutionId,
+            connected: wsStateRef.current.connected,
+            authenticated: wsStateRef.current.authenticated,
+          });
+        }
+
+        // Pré-requisitos do pipeline (backend-only): provider + rag (gating).
         const tenantId = agent?.tenantId;
         if (!tenantId) {
-          const errorMsg = 'Tenant não identificado. Faça login novamente e tente novamente.';
-          logger.error('[TenantMode] Tenant não identificado');
-          
-          updatePipelineWithDetails({ 
-            providerValidated: { 
-              status: 'error', 
-              progress: 0, 
-              message: errorMsg,
-              timestamp: new Date().toISOString()
-            }
-          }, 'provider-validation-error');
-          
-          showToast(errorMsg, 'error', 10000);
+          setError('Tenant não identificado. Faça login novamente e tente novamente.');
           setExecuting(false);
           return;
         }
-        
-        // Faz uma chamada de teste para verificar se o provider está disponível para este tenant
-        // Se falhar, significa que o tenant não tem provider configurado
-        try {
-          logger.info('[TenantMode] Verificando se provider está disponível para o tenant', { tenantId });
-          const testResponse = await fetchJson('/system/suggest-description', {
-            method: 'POST',
-            body: JSON.stringify({ 
-              prompt: 'test',
-              name: 'test',
-              tenantId: tenantId
-            }),
-            timeoutMs: 5000
-          });
-          
-          // Se chegou aqui, o provider está disponível para o tenant
-          logger.info('[TenantMode] Provider disponível para o tenant', { tenantId });
-        } catch (testError) {
-          // Se falhar com erro de provider não configurado, para o processamento
-          const errorMessage = testError.body?.message || testError.message || '';
-          if (errorMessage.includes('Nenhum provider de IA configurado')) {
-            const errorMsg = `Provider de IA não configurado para o tenant "${tenantId}". Configure um provider de IA para este tenant antes de usar esta funcionalidade.`;
-            logger.error('[TenantMode] Provider de IA não configurado para o tenant', { tenantId, errorMessage });
-            
-            updatePipelineWithDetails({ 
-              providerValidated: { 
-                status: 'error', 
-                progress: 0, 
-                message: errorMsg,
-                timestamp: new Date().toISOString()
-              }
-            }, 'provider-validation-error');
-            
-            showToast(errorMsg, 'error', 10000);
-            setExecuting(false);
-            return;
-          }
-          // Se for outro erro (timeout, servidor, etc), também para para evitar problemas
-          const errorMsg = `Erro ao verificar provider de IA para o tenant "${tenantId}": ${errorMessage}`;
-          logger.error('[TenantMode] Erro ao verificar provider', { tenantId, error: testError });
-          
-          updatePipelineWithDetails({ 
-            providerValidated: { 
-              status: 'error', 
-              progress: 0, 
-              message: errorMsg,
-              timestamp: new Date().toISOString()
-            }
-          }, 'provider-validation-error');
-          
-          showToast(errorMsg, 'error', 10000);
-          setExecuting(false);
-          return;
-        }
-        
-        logger.info('[TenantMode] Provider de IA validado para o tenant', { 
-          tenantId 
+        validatedTenantId = tenantId; // tenant de contexto (ex.: system)
+        targetTenantIdRef.current = null; // sempre reseta no início da execução
+        await fetchJson('/system/pipeline/validate-prereqs', {
+          method: 'POST',
+          body: JSON.stringify({ executionId: pipelineExecutionId, useRag: true }),
+          timeoutMs: 15000,
         });
-        
-        updatePipelineWithDetails({ 
-          providerValidated: { 
-            status: 'completed', 
-            progress: 100, 
-            message: `Provider de IA validado para o tenant "${tenantId}"`,
-            timestamp: new Date().toISOString()
-          }
-        }, 'provider-validation');
-        
-        // Armazena o tenantId validado para usar em todas as chamadas subsequentes (sem fallback)
-        const validatedTenantId = tenantId;
-      } catch (providerError) {
-        logger.error('[TenantMode] Erro ao validar provider de IA', providerError);
-        const errorMsg = 'Erro ao verificar configuração do provider de IA. Verifique se o servidor está respondendo.';
-        
-        updatePipelineWithDetails({ 
-          providerValidated: { 
-            status: 'error', 
-            progress: 0, 
-            message: errorMsg,
-            timestamp: new Date().toISOString()
-          }
-        }, 'provider-validation-error');
-        
-        showToast(errorMsg, 'error', 10000);
+      } catch (prereqErr) {
+        const msg = prereqErr?.body?.message || prereqErr?.message || 'Falha ao validar pré-requisitos do pipeline';
+        logger.error('[TenantMode] Falha ao validar pré-requisitos do pipeline', { error: prereqErr, message: msg });
+        setError(msg);
+        showToast?.(msg, 'error');
         setExecuting(false);
         return;
       }
-
-      // Validação do RAG ANTES de iniciar processamento
-      try {
-        updatePipelineWithDetails({ 
-          ragValidated: { status: 'in_progress', progress: 0, message: 'Validando serviço RAG...' }
-        }, 'rag-validation');
-        
-        logger.info('[TenantMode] Validando serviço RAG antes de iniciar processamento...');
-        const systemStatusResponse = await fetchJson('/system/status', { 
-          method: 'GET',
-          timeoutMs: 5000 
-        });
-        
-        const ragService = systemStatusResponse?.services?.ragService;
-        if (!ragService || ragService.status !== 'healthy') {
-          const errorMsg = 'Serviço RAG não está disponível. Verifique se o serviço RAG está rodando e tente novamente.';
-          logger.error('[TenantMode] Serviço RAG não disponível', { 
-            ragService,
-            systemStatus: systemStatusResponse 
-          });
-          
-          updatePipelineWithDetails({ 
-            ragValidated: { 
-              status: 'error', 
-              progress: 0, 
-              message: errorMsg,
-              timestamp: new Date().toISOString()
-            }
-          }, 'rag-validation-error');
-          
-          showToast(errorMsg, 'error', 10000);
-          setExecuting(false);
-          return;
-        }
-        
-        logger.info('[TenantMode] Serviço RAG validado', { 
-          status: ragService.status,
-          details: ragService.details 
-        });
-        
-        updatePipelineWithDetails({ 
-          ragValidated: { 
-            status: 'completed', 
-            progress: 100, 
-            message: 'Serviço RAG validado e disponível',
-            timestamp: new Date().toISOString()
-          }
-        }, 'rag-validation');
-      } catch (ragError) {
-        logger.error('[TenantMode] Erro ao validar serviço RAG', ragError);
-        const errorMsg = 'Erro ao verificar serviço RAG. Verifique se o serviço RAG está rodando e acessível.';
-        
-        updatePipelineWithDetails({ 
-          ragValidated: { 
-            status: 'error', 
-            progress: 0, 
-            message: errorMsg,
-            timestamp: new Date().toISOString()
-          }
-        }, 'rag-validation-error');
-        
-        showToast(errorMsg, 'error', 10000);
-        setExecuting(false);
-        return;
-      }
-      
-      // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
-      if (executionMode === 'dry-run') {
-        // Se descrição está vazia, executa a sugestão
-        if (!description || !description.trim()) {
-          try {
-            // ETAPA 1: Processa web scraping ANTES de sugerir descrição (se houver URLs)
-            const validUrls = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
-            
-            if (useWebScraping && validUrls.length > 0) {
-              updatePipelineWithDetails({ 
-                filesInferred: { status: 'in_progress', progress: 0, message: `Processando web scraping de ${validUrls.length} URL(s)...` }
-              }, 'web-scraping');
-              
-              logger.info('[Pipeline] Processando web scraping antes de sugerir descrição', { 
-                urlsCount: validUrls.length,
-                urls: validUrls 
-              });
-              
-              try {
-                // Processa web scraping em batch
-                const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    urls: validUrls,
-                    autoIndex: true, // Indexa automaticamente no RAG
-                    source: 'web_scraping',
-                    category: 'general',
-                    tenantId: validatedTenantId,
-                  }),
-                });
-                
-                if (scrapingResponse && Array.isArray(scrapingResponse.results)) {
-                  const successCount = scrapingResponse.results.filter(r => r.success).length;
-                  logger.info('[Pipeline] Web scraping processado', { 
-                    total: validUrls.length,
-                    success: successCount,
-                    failed: validUrls.length - successCount
-                  });
-                  
-                  updatePipelineWithDetails({ 
-                    filesInferred: { 
-                      status: 'completed', 
-                      progress: 100, 
-                      message: `Web scraping concluído: ${successCount}/${validUrls.length} URL(s) processada(s) e indexadas`,
-                      timestamp: new Date().toISOString()
-                    }
-                  }, 'web-scraping');
-                  
-                  // Aguarda um pouco para garantir que o conteúdo foi indexado
-                  // Aumenta o tempo de espera para garantir que a indexação foi concluída
-                  logger.info('[Pipeline] Aguardando indexação completar...', { 
-                    waitTime: 2000 
-                  });
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                } else {
-                  logger.warn('[Pipeline] Resposta de web scraping inválida', scrapingResponse);
-                }
-              } catch (scrapingError) {
-                logger.error('[Pipeline] Erro ao processar web scraping', scrapingError);
-                updatePipelineWithDetails({ 
-                  filesInferred: { 
-                    status: 'error', 
-                    progress: 0, 
-                    message: 'Erro ao processar web scraping. Continuando sem conteúdo...',
-                    timestamp: new Date().toISOString()
-                  }
-                }, 'web-scraping-error');
-                // Continua mesmo se web scraping falhar
-              }
-            }
-            
-            // ETAPA 2: Sugere descrição usando conteúdo indexado (arquivos + web scraping)
-            updatePipelineWithDetails({ 
-              descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição com IA usando conteúdo indexado...' }
-            }, 'description-suggestion');
-            
-            // Chama API para sugerir descrição (que agora consulta RAG automaticamente)
-            const suggestionResponse = await fetchJson('/system/suggest-description', {
-              method: 'POST',
-              body: JSON.stringify({ 
-                prompt: `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`,
-                name: name.trim(),
-                tenantId: validatedTenantId,
-                urls: validUrls // Envia URLs para referência
-              }),
-            });
-            
-            if (suggestionResponse?.suggestion) {
-              // Atualiza a descrição com a sugestão
-              const suggestedDescription = suggestionResponse.suggestion.trim();
-              setDescription(suggestedDescription);
-              
-              updatePipelineWithDetails({ 
-                descriptionSuggested: { 
-                  status: 'completed', 
-                  progress: 100, 
-                  message: 'Descrição sugerida pela IA e aplicada automaticamente',
-                  timestamp: new Date().toISOString()
-                }
-              }, 'description-suggestion');
-              
-              logger.info('[Pipeline] Descrição sugerida e aplicada', { 
-                suggestedLength: suggestedDescription.length 
-              });
-            } else {
-              throw new Error('A IA não retornou uma descrição sugerida');
-            }
-          } catch (suggestionError) {
-            logger.error('[Pipeline] Erro ao sugerir descrição', suggestionError);
-            updatePipelineWithDetails({ 
-              descriptionSuggested: { 
-                status: 'error', 
-                progress: 0, 
-                message: 'Erro ao sugerir descrição. Continuando sem descrição...',
-                timestamp: new Date().toISOString()
-              }
-            }, 'description-suggestion');
-            // Continua mesmo se a sugestão falhar
-          }
-        } else {
-          // Descrição já preenchida, marca como concluída (não precisa sugerir)
-          updatePipelineWithDetails({ 
-            descriptionSuggested: { 
-              status: 'completed', 
-              progress: 100, 
-              message: 'Descrição já fornecida pelo usuário',
-              timestamp: new Date().toISOString()
-            }
-          }, 'description-suggestion');
-        }
-      }
+      // Observação: a sugestão de descrição (dry-run) acontece no fluxo principal abaixo.
+      // Mantemos apenas UM pipeline de (arquivos -> scraping -> sugestão) para evitar duplicidade.
 
       try {
         // Se está em dry-run, mostra a etapa de sugestão (mesmo que descrição já esteja preenchida)
         let finalDescription = description.trim();
+        useInlineChunksForSuggestRef.current = false;
+        ephemeralChunksRef.current = [];
+        const dryRunExecutionId = (executionMode === 'dry-run') ? pipelineExecutionId : null;
+        const ephemeralChunks = ephemeralChunksRef.current;
+        
+        // ETAPA 0 (tenant): sempre processa arquivos pendentes ANTES de web scraping / sugestão.
+        // Também marca o step como concluído quando não houver arquivos pendentes,
+        // para o pipeline visual não ficar "pendente" indefinidamente.
+        const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
+        if (pendingFiles.length > 0) {
+          // Reset de rastreamento de erros de inferência (para refletir warning no step)
+          fileCategoryInferenceIssuesRef.current = { count: 0, last: null };
+
+          logger.info('[TenantMode] Processando arquivos pendentes antes de continuar pipeline', {
+            pendingFilesCount: pendingFiles.length,
+            files: pendingFiles.map(f => ({ id: f.id, name: f.name })),
+          });
+          
+          updatePipelineWithDetails({
+            filesInferred: { status: 'in_progress', progress: 0, message: `Processando ${pendingFiles.length} arquivo(s) antes de continuar...` }
+          }, 'file-processing');
+          
+          // Importante: evitar tempestade de chamadas para IA (429) — processamos em série.
+          // Isso melhora a previsibilidade e reduz risco de quota/rate-limit, especialmente quando
+          // inferFileCategoryWithAI chama /api/ai/generate.
+          let processedCount = 0;
+          for (const fileObj of pendingFiles) {
+            try {
+              setPipelineDetails(prev => ({
+                ...prev,
+                filesInferred: {
+                  status: 'in_progress',
+                  timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
+                  message: `Processando: ${fileObj.name}`,
+                  progress: prev.filesInferred.progress || 0,
+                },
+              }));
+
+              const inferredCategory = await inferFileCategoryWithAI(fileObj.file);
+              updateUploadedFile(fileObj.id, { category: inferredCategory });
+
+              const uploadRes = await handleFileUpload({ ...fileObj, category: inferredCategory });
+              // No tenant-mode, antes do tenant alvo existir, coletamos evidências localmente (sem persistência no RAG).
+              const shouldCollectEvidence = executionMode === 'dry-run' || (executionMode !== 'dry-run' && isTenantMode);
+              if (shouldCollectEvidence && uploadRes && uploadRes.ok && uploadRes.text) {
+                ephemeralChunks.push({
+                  sourceType: uploadRes.sourceType || 'uploaded_file',
+                  sourceId: uploadRes.sourceId || fileObj.name,
+                  text: uploadRes.text,
+                });
+              }
+            } catch (error) {
+              logger.error(`[TenantMode] Erro ao processar arquivo ${fileObj.name}`, {
+                error: error.message,
+                stack: error.stack,
+                fileId: fileObj.id,
+              });
+              updateUploadedFile(fileObj.id, { status: FileStatus.error, error: error.message || 'Erro ao processar arquivo', progress: 0 });
+            } finally {
+              processedCount += 1;
+              const progress = Math.round((processedCount / pendingFiles.length) * 100);
+              setPipelineDetails(prev => ({
+                ...prev,
+                filesInferred: {
+                  status: 'in_progress',
+                  timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
+                  message: `Processados ${processedCount}/${pendingFiles.length} arquivo(s) (último: ${fileObj.name})`,
+                  progress,
+                },
+              }));
+            }
+          }
+          
+          const issuesCount = Number(fileCategoryInferenceIssuesRef.current?.count) || 0;
+          const lastIssue = fileCategoryInferenceIssuesRef.current?.last || null;
+          const baseMessage = executionMode === 'dry-run'
+            ? `${pendingFiles.length} arquivo(s) processado(s) (dry-run: não indexado(s) no RAG)`
+            : (isTenantMode
+                ? `${pendingFiles.length} arquivo(s) processado(s) (pré-criação: persistência/indexação no tenant alvo ocorre após criar o tenant)`
+                : `${pendingFiles.length} arquivo(s) processado(s) e indexado(s) no RAG`);
+          const warningMessage = issuesCount > 0
+            ? `${baseMessage}. Categoria de ${issuesCount} arquivo(s) inferida via fallback (IA indisponível: ${lastIssue?.code || lastIssue?.httpStatus || 'erro'}).`
+            : baseMessage;
+
+          updatePipelineWithDetails({
+            filesInferred: {
+              status: issuesCount > 0 ? 'warning' : 'completed',
+              progress: 100,
+              message: warningMessage,
+              timestamp: new Date().toISOString(),
+              ...(issuesCount > 0 ? { warning: { issuesCount, lastIssue } } : {}),
+            }
+          }, 'file-processing');
+
+          // Aguarda indexação completar
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          updatePipelineWithDetails({
+            filesInferred: {
+              status: 'completed',
+              progress: 100,
+              message: 'Nenhum arquivo pendente para inferir/indexar',
+              timestamp: new Date().toISOString(),
+            }
+          }, 'file-processing');
+
+        }
         
         if (executionMode === 'dry-run') {
+          // Importante: em dry-run, se os arquivos já estavam com status "success" (execução anterior),
+          // não haverá "pendingFiles" para reprocessar e, portanto, `ephemeralChunks` ficaria vazio.
+          // Isso causaria fallback no /system/suggest-description (NO_INDEXED_CONTEXT_FALLBACK/LOW_CONFIDENCE).
+          // Reaproveitamos o `extractedContent` já salvo no state como evidência local.
+          try {
+            const seen = new Set(ephemeralChunks.map(c => `${c?.sourceType || 'unknown'}|${c?.sourceId || ''}`));
+            const existingFileChunks = (Array.isArray(uploadedFiles) ? uploadedFiles : [])
+              .filter(f => f && f.status === 'success')
+              .map(f => ({
+                sourceType: 'uploaded_file',
+                sourceId: (typeof f?.name === 'string' && f.name.trim()) ? f.name.trim() : (f?.id || 'arquivo'),
+                text: (typeof f?.extractedContent === 'string' ? f.extractedContent : '').trim(),
+              }))
+              .filter(c => c.text && c.text.length >= 20)
+              .slice(0, 30);
+
+            for (const c of existingFileChunks) {
+              const k = `${c.sourceType}|${c.sourceId}`;
+              if (seen.has(k)) continue;
+              seen.add(k);
+              ephemeralChunks.push({ ...c, text: c.text.slice(0, 5000) });
+            }
+          } catch {
+            // ignora (apenas melhoria de qualidade; não pode quebrar a execução)
+          }
+
           // Se descrição está vazia, executa a sugestão
           if (!description.trim()) {
           try {
-            // ETAPA 0: Processa arquivos pendentes ANTES de sugerir descrição (se houver arquivos)
-            const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
-            if (pendingFiles.length > 0) {
-              logger.info('[TenantMode] Processando arquivos pendentes antes de sugerir descrição', {
-                pendingFilesCount: pendingFiles.length,
-                files: pendingFiles.map(f => ({ id: f.id, name: f.name })),
-              });
-              
-              updatePipelineWithDetails({ 
-                filesInferred: { status: 'in_progress', progress: 0, message: `Processando ${pendingFiles.length} arquivo(s) antes de sugerir descrição...` }
-              }, 'file-processing');
-              
-              // Processa arquivos em paralelo para acelerar
-              const fileProcessingPromises = pendingFiles.map(async (fileObj, index) => {
-                try {
-                  logger.debug(`[TenantMode] Processando arquivo ${index + 1}/${pendingFiles.length}`, {
-                    fileName: fileObj.name,
-                    fileId: fileObj.id,
-                  });
-                  
-                  // Atualiza progresso
-                  const progress = Math.round(((index + 1) / pendingFiles.length) * 100);
-                  setPipelineDetails(prev => ({
-                    ...prev,
-                    filesInferred: {
-                      status: 'in_progress',
-                      timestamp: prev.filesInferred.timestamp || new Date().toISOString(),
-                      message: `Processando arquivo ${index + 1}/${pendingFiles.length}: ${fileObj.name}`,
-                      progress: progress,
-                    },
-                  }));
-                  
-                  // Infere categoria
-                  logger.debug(`[TenantMode] Inferindo categoria para arquivo ${fileObj.name}`);
-                  const inferredCategory = await inferFileCategoryWithAI(fileObj.file);
-                  logger.info(`[TenantMode] Categoria inferida: ${inferredCategory}`, {
-                    fileName: fileObj.name,
-                    category: inferredCategory,
-                  });
-                  
-                  // Atualiza a categoria do arquivo no estado
-                  setUploadedFiles(prev => prev.map(f => 
-                    f.id === fileObj.id ? { ...f, category: inferredCategory } : f
-                  ));
-                  
-                  // Cria uma cópia do objeto com a categoria inferida para usar no upload
-                  const fileObjWithCategory = {
-                    ...fileObj,
-                    category: inferredCategory,
-                  };
-                  
-                  // Faz upload imediatamente após inferir
-                  logger.debug(`[TenantMode] Fazendo upload do arquivo ${fileObj.name}`);
-                  await handleFileUpload(fileObjWithCategory);
-                  logger.info(`[TenantMode] Upload concluído para arquivo ${fileObj.name}`);
-                } catch (error) {
-                  logger.error(`[TenantMode] Erro ao processar arquivo ${fileObj.name}`, {
-                    error: error.message,
-                    stack: error.stack,
-                    fileId: fileObj.id,
-                  });
-                  // Marca como erro no estado
-                  setUploadedFiles(prev => prev.map(f => 
-                    f.id === fileObj.id 
-                      ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' } 
-                      : f
-                  ));
-                }
-              });
-              
-              // Aguarda todos os arquivos serem processados
-              await Promise.all(fileProcessingPromises);
-              
-              logger.info('[TenantMode] Todos os arquivos processados antes de sugerir descrição', {
-                totalFiles: uploadedFiles.length,
-                processedFiles: pendingFiles.length,
-                successFiles: uploadedFiles.filter(f => f.status === 'success').length,
-                errorFiles: uploadedFiles.filter(f => f.status === 'error').length,
-              });
-              
-              updatePipelineWithDetails({ 
-                filesInferred: { 
-                  status: 'completed', 
-                  progress: 100, 
-                  message: `${pendingFiles.length} arquivo(s) processado(s) e indexado(s) no RAG`,
-                  timestamp: new Date().toISOString()
-                }
-              }, 'file-processing');
-              
-              // Aguarda um pouco para garantir que o conteúdo foi indexado no RAG
-              logger.info('[TenantMode] Aguardando indexação dos arquivos completar...', { 
-                waitTime: 2000 
-              });
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
+            // Arquivos já foram processados na ETAPA 0 acima.
             
             // ETAPA 1: Processa web scraping ANTES de sugerir descrição (se houver URLs)
             const validUrls = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
             
             if (useWebScraping && validUrls.length > 0) {
+              webScrapingDone = true;
               updatePipelineWithDetails({ 
-                filesInferred: { status: 'in_progress', progress: 0, message: `Processando web scraping de ${validUrls.length} URL(s)...` }
-              }, 'web-scraping');
+                webScraping: {
+                  status: 'in_progress',
+                  progress: 0,
+                  message: `Processando web scraping (dry-run) de ${validUrls.length} URL(s)...`,
+                  urlsTotal: validUrls.length,
+                }
+              }, 'webScrapingStarted');
+
+              try {
+                const scrapingStartedAt = Date.now();
+                const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
+                  method: 'POST',
+                  headers: validatedTenantId ? { 'X-Tenant-Id': validatedTenantId } : undefined,
+                  body: JSON.stringify({
+                    urls: validUrls,
+                    executionId: pipelineExecutionId,
+                    dryRun: true,
+                    autoIndex: false,
+                    source: 'web_scraping',
+                    category: 'general',
+                  }),
+                  // Playwright/web scraping pode ser lento em alguns sites; em dry-run queremos resiliente.
+                  timeoutMs: 60000,
+                });
+                const durationMs = Date.now() - scrapingStartedAt;
+
+                const results = Array.isArray(scrapingResponse?.results) ? scrapingResponse.results : [];
+                const successCount = Number.isFinite(scrapingResponse?.success)
+                  ? Number(scrapingResponse.success)
+                  : results.filter(r => r && r.success).length;
+                const failedCount = Number.isFinite(scrapingResponse?.failed)
+                  ? Number(scrapingResponse.failed)
+                  : (validUrls.length - successCount);
+
+                // Captura texto extraído para contexto efêmero
+                for (const r of results) {
+                  const url = r?.url;
+                  const text = (r?.extractedText || '').trim();
+                  if (url && text && text.length >= 20) {
+                    ephemeralChunks.push({ sourceType: 'web_scraping', sourceId: url, text });
+                  }
+                }
+
+                // Gate: em dry-run, só aborta se não houver qualquer outra evidência local (ex.: arquivos/OCR).
+                if (successCount === 0) {
+                  const hasOtherEvidence = Array.isArray(ephemeralChunks) && ephemeralChunks.some(c => c && typeof c.text === 'string' && c.text.trim().length >= 20);
+                  if (hasOtherEvidence) {
+                    updatePipelineWithDetails({
+                      webScraping: {
+                        status: 'warning',
+                        progress: 100,
+                        message: 'Nenhuma URL foi raspada com sucesso. Continuando com evidências dos arquivos (dry-run).',
+                        timestamp: new Date().toISOString(),
+                        urlsTotal: validUrls.length,
+                        successCount,
+                        failedCount,
+                        durationMs,
+                      }
+                    }, 'webScrapingCompleted');
+                    // segue o pipeline sem abortar
+                  } else {
+                    setError('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.');
+                  updatePipelineWithDetails({
+                    webScraping: {
+                      status: 'error',
+                      progress: 0,
+                      message: 'Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.',
+                      timestamp: new Date().toISOString(),
+                      urlsTotal: validUrls.length,
+                      successCount,
+                      failedCount,
+                      durationMs,
+                    }
+                  }, 'webScrapingCompleted');
+                  setExecuting(false);
+                  return;
+                  }
+                }
+
+                updatePipelineWithDetails({
+                  webScraping: {
+                    status: 'completed',
+                    progress: 100,
+                    message: `Web scraping (dry-run) concluído: ${successCount}/${validUrls.length} URL(s) processada(s)`,
+                    timestamp: new Date().toISOString(),
+                    urlsTotal: validUrls.length,
+                    successCount,
+                    failedCount,
+                    durationMs,
+                  }
+                }, 'webScrapingCompleted');
+              } catch (scrapingError) {
+                logger.warn('[TenantMode] Web scraping dry-run falhou', scrapingError);
+                const hasOtherEvidence = Array.isArray(ephemeralChunks) && ephemeralChunks.some(c => c && typeof c.text === 'string' && c.text.trim().length >= 20);
+                if (hasOtherEvidence) {
+                  updatePipelineWithDetails({
+                    webScraping: {
+                      status: 'warning',
+                      progress: 100,
+                      message: 'Web scraping falhou. Continuando com evidências dos arquivos (dry-run).',
+                      timestamp: new Date().toISOString(),
+                      urlsTotal: validUrls.length,
+                      successCount: 0,
+                      failedCount: validUrls.length,
+                      error: scrapingError?.message || 'erro',
+                    }
+                  }, 'webScrapingCompleted');
+                  // segue o pipeline sem abortar
+                } else {
+                  updatePipelineWithDetails({
+                    webScraping: {
+                      status: 'error',
+                      progress: 0,
+                      message: 'Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.',
+                      timestamp: new Date().toISOString(),
+                      urlsTotal: validUrls.length,
+                      successCount: 0,
+                      failedCount: validUrls.length,
+                      error: scrapingError?.message || 'erro',
+                    }
+                  }, 'webScrapingCompleted');
+                  setError('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.');
+                  setExecuting(false);
+                  return;
+                }
+              }
+            } else if (useWebScraping && validUrls.length > 0 && executionMode !== 'dry-run') {
+              webScrapingDone = true;
+              updatePipelineWithDetails({ 
+                webScraping: {
+                  status: 'in_progress',
+                  progress: 0,
+                  message: `Processando web scraping de ${validUrls.length} URL(s)...`,
+                  urlsTotal: validUrls.length,
+                }
+              }, 'webScrapingStarted');
               
               logger.info('[TenantMode] Processando web scraping antes de sugerir descrição', { 
                 urlsCount: validUrls.length,
@@ -979,30 +1485,79 @@ export function GenerateSystemPage() {
               });
               
               try {
+                const scrapingStartedAt = Date.now();
                 // Processa web scraping em batch
                 const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
                   method: 'POST',
+                  headers: validatedTenantId ? { 'X-Tenant-Id': validatedTenantId } : undefined,
                   body: JSON.stringify({
                     urls: validUrls,
+                    executionId: pipelineExecutionId,
                     autoIndex: true, // Indexa automaticamente no RAG
                     source: 'web_scraping',
                     category: 'general',
-                    tenantId: validatedTenantId,
                   }),
+                  // Playwright/web scraping pode ser lento em alguns sites; evita timeout do client
+                  timeoutMs: 60000,
                 });
+                const durationMs = Date.now() - scrapingStartedAt;
                 
                 if (scrapingResponse && Array.isArray(scrapingResponse.results)) {
-                  const successCount = scrapingResponse.results.filter(r => r.success).length;
-                  const duplicateCount = scrapingResponse.results.filter(r => r.success && r.isDuplicate).length;
-                  const newCount = successCount - duplicateCount;
+                  const successCount = Number.isFinite(scrapingResponse?.success)
+                    ? Number(scrapingResponse.success)
+                    : scrapingResponse.results.filter(r => r.success).length;
+                  const failedCount = Number.isFinite(scrapingResponse?.failed)
+                    ? Number(scrapingResponse.failed)
+                    : (validUrls.length - successCount);
+                  const duplicateCount = Number.isFinite(scrapingResponse?.duplicates)
+                    ? Number(scrapingResponse.duplicates)
+                    : scrapingResponse.results.filter(r => r.success && r.isDuplicate).length;
+                  const newCount = Number.isFinite(scrapingResponse?.new)
+                    ? Number(scrapingResponse.new)
+                    : (successCount - duplicateCount);
+
+                  const errorSummary = Array.isArray(scrapingResponse?.errorSummary)
+                    ? scrapingResponse.errorSummary
+                    : scrapingResponse.results
+                        .filter(r => !r.success)
+                        .map(r => ({
+                          url: r.url,
+                          name: r.error?.name || 'Error',
+                          message: r.error?.message || (typeof r.error === 'string' ? r.error : 'Erro desconhecido'),
+                        }));
                   
-                  logger.info('[TenantMode] Web scraping processado', { 
-                    total: validUrls.length,
-                    success: successCount,
-                    new: newCount,
-                    duplicates: duplicateCount,
-                    failed: validUrls.length - successCount
+                  logger.info('[Pipeline][webScraping] Web scraping concluído', {
+                    urlsTotal: validUrls.length,
+                    successCount,
+                    failedCount,
+                    durationMs,
+                    errorSummary,
                   });
+
+                  // Avisos do scraping não geram toast local — o backend é a fonte do feedback via WS.
+
+                  // Gate: não continua se nenhuma URL foi raspada com sucesso
+                  if (successCount === 0) {
+                    setError('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.');
+                    console.error('[TenantMode][webScraping] Nenhuma URL raspada com sucesso. Resumo de erros:', errorSummary);
+
+                    updatePipelineWithDetails({
+                      webScraping: {
+                        status: 'error',
+                        progress: 0,
+                        message: 'Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.',
+                        timestamp: new Date().toISOString(),
+                        urlsTotal: validUrls.length,
+                        successCount,
+                        failedCount,
+                        durationMs,
+                        errorSummary,
+                      }
+                    }, 'webScrapingCompleted');
+
+                    setExecuting(false);
+                    return;
+                  }
                   
                   let message = `Web scraping concluído: ${successCount}/${validUrls.length} URL(s) processada(s)`;
                   if (duplicateCount > 0) {
@@ -1012,13 +1567,18 @@ export function GenerateSystemPage() {
                   }
                   
                   updatePipelineWithDetails({ 
-                    filesInferred: { 
+                    webScraping: { 
                       status: 'completed', 
                       progress: 100, 
                       message: message,
-                      timestamp: new Date().toISOString()
+                      timestamp: new Date().toISOString(),
+                      urlsTotal: validUrls.length,
+                      successCount,
+                      failedCount,
+                      durationMs,
+                      errorSummary,
                     }
-                  }, 'web-scraping');
+                  }, 'webScrapingCompleted');
                   
                   // Aguarda um pouco para garantir que o conteúdo foi indexado
                   // Aumenta o tempo de espera para garantir que a indexação foi concluída
@@ -1032,14 +1592,17 @@ export function GenerateSystemPage() {
               } catch (scrapingError) {
                 logger.error('[TenantMode] Erro ao processar web scraping', scrapingError);
                 updatePipelineWithDetails({ 
-                  filesInferred: { 
+                  webScraping: { 
                     status: 'error', 
                     progress: 0, 
-                    message: 'Erro ao processar web scraping. Continuando sem conteúdo...',
+                    message: 'Erro ao processar web scraping. Verifique os logs do scraping.',
                     timestamp: new Date().toISOString()
                   }
-                }, 'web-scraping-error');
-                // Continua mesmo se web scraping falhar
+                }, 'webScrapingCompleted');
+
+                setError('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.');
+                setExecuting(false);
+                return;
               }
             }
             
@@ -1047,57 +1610,114 @@ export function GenerateSystemPage() {
             updatePipelineWithDetails({ 
               descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição do tenant com IA usando conteúdo indexado...' }
             }, 'description-suggestion');
-            
-            // Prepara prompt melhorado que considera URLs de scraping se disponíveis
-            let promptText;
-            
-            if (validUrls.length > 0) {
-              // Se houver URLs, instrui a IA a usar o conteúdo real do site
-              promptText = `Com base no nome do tenant "${name.trim()}" e no conteúdo do site ${validUrls[0]}, sugira uma descrição detalhada e completa para este tenant. 
 
-IMPORTANTE: 
-- Use APENAS informações reais do site fornecido
-- Não invente informações que não estejam no site
-- Se o site não estiver acessível ou não tiver informações suficientes, seja cauteloso e mencione apenas o que é evidente
-- A descrição deve explicar o tipo de empresa, ramo de atividade e objetivos baseado no conteúdo real do site
+            // Dry-run: envia evidências para Redis+TTL e pede sugestão baseada no contexto efêmero.
+            // Importante: se o backend cair em fallback "memory" (sem Redis pronto),
+            // o contexto pode NÃO estar disponível na próxima requisição (restart/nodemon/múltiplas instâncias).
+            // Nesses casos, enviamos chunks inline para garantir que a sugestão tenha evidências.
+            let useInlineChunksForSuggest = false;
+            if (executionMode === 'dry-run' && dryRunExecutionId) {
+              try {
+                if (!ephemeralChunks || ephemeralChunks.length === 0) {
+                  logger.warn('[TenantMode] Nenhum chunk efêmero para persistir (dry-run). Isso pode causar fallback no suggest-description.', {
+                    tenantId: validatedTenantId,
+                    executionId: dryRunExecutionId,
+                  });
+                } else {
+                  logger.info('[TenantMode] Persistindo contexto efêmero (dry-run) no backend...', {
+                    tenantId: validatedTenantId,
+                    executionId: dryRunExecutionId,
+                    chunksToSend: ephemeralChunks.length,
+                  });
+                }
 
-Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
-            } else {
-              // Sem URLs, usa prompt mais cauteloso
-              promptText = `Com base no nome do tenant "${name.trim()}", sugira uma descrição detalhada e completa para este tenant. 
+                const ephRes = await fetchJson('/rag/ephemeral/context', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    tenantId: validatedTenantId,
+                    executionId: dryRunExecutionId,
+                    chunks: ephemeralChunks,
+                    replace: true,
+                  }),
+                  timeoutMs: 15000,
+                });
 
-IMPORTANTE: 
-- Seja cauteloso e não invente informações específicas
-- Use apenas inferências genéricas baseadas no nome
-- A descrição deve ser genérica e mencionar que mais informações são necessárias
-- Explique o tipo de empresa, ramo de atividade e objetivos de forma genérica
+                logger.info('[TenantMode] Contexto efêmero persistido (dry-run)', {
+                  tenantId: validatedTenantId,
+                  executionId: dryRunExecutionId,
+                  stored: ephRes?.stored ?? null,
+                  used: ephRes?.used ?? null,
+                  key: ephRes?.key ?? null,
+                  stats: ephRes?.stats ?? null,
+                });
 
-Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
+                // Se NÃO foi persistido em Redis, não confiamos no "memory" para a próxima chamada.
+                // Preferimos enviar inline para evitar NO_INDEXED_CONTEXT_FALLBACK/LOW_CONFIDENCE por falta de evidências.
+                if (ephRes?.used && String(ephRes.used) !== 'redis') {
+                  useInlineChunksForSuggest = true;
+                  useInlineChunksForSuggestRef.current = true;
+                  logger.warn('[TenantMode] Contexto efêmero não persistido em Redis. Enviando chunks inline para sugestão.', {
+                    tenantId: validatedTenantId,
+                    executionId: dryRunExecutionId,
+                    used: ephRes?.used,
+                  });
+                }
+              } catch (e) {
+                // Importante: se Redis falhar e continuarmos enviando contextMode=ephemeral,
+                // o backend NÃO terá contexto e cairá em fallback. Então mandamos os chunks inline.
+                useInlineChunksForSuggest = true;
+                useInlineChunksForSuggestRef.current = true;
+                logger.warn('[TenantMode] Falha ao persistir contexto efêmero (Redis). Enviando chunks inline para sugestão.', e);
+              }
             }
             
+            // O backend gera a descrição (institucional ou técnica) via RAG + consolidação.
+            
             // Chama API para sugerir descrição do tenant
+            const uploadedFileNames = Array.from(new Set(
+              uploadedFiles
+                .map(f => (typeof f?.name === 'string' ? f.name.trim() : ''))
+                .filter(Boolean)
+            ));
+
             const suggestionResponse = await fetchJson('/system/suggest-description', {
               method: 'POST',
               body: JSON.stringify({ 
-                prompt: promptText,
                 name: name.trim(),
                 tenantId: validatedTenantId,
-                urls: validUrls // Envia URLs para possível uso futuro no backend
+                urls: validUrls, // Envia URLs para referência
+                fileNames: uploadedFileNames, // Ajuda o backend a montar query do RAG incluindo docs enviados
+                mode: descriptionMode,
+                dryRun: executionMode === 'dry-run',
+                // Sempre envia executionId para permitir correlacionar falhas via websocket.
+                executionId: pipelineExecutionId,
+                ...(executionMode === 'dry-run'
+                  ? (useInlineChunksForSuggest
+                      ? { chunks: ephemeralChunks.slice(0, 30).map(c => ({ ...c, text: (c?.text || '').slice(0, 5000) })) }
+                      : { contextMode: 'ephemeral' })
+                  : {}),
               }),
+              timeoutMs: 60000,
             });
+
+            // Avisos/entidades não geram toast local — o backend é a fonte do feedback via WS.
+
+            const confidence = (typeof suggestionResponse?.confidence === 'number')
+              ? suggestionResponse.confidence
+              : (typeof suggestionResponse?.entityProfile?.confidence === 'number' ? suggestionResponse.entityProfile.confidence : null);
+            // Baixa confiança não gera toast local — feedback vem do backend via WS.
             
             if (suggestionResponse?.suggestion) {
               finalDescription = suggestionResponse.suggestion.trim();
               setDescription(finalDescription);
-              
-              updatePipelineWithDetails({ 
-                descriptionSuggested: { 
-                  status: 'completed', 
-                  progress: 100, 
-                  message: 'Descrição do tenant sugerida pela IA e aplicada automaticamente',
-                  timestamp: new Date().toISOString()
-                }
-              }, 'description-suggestion');
+
+              // Se o backend retornou fluxo inicial, renderiza imediatamente no canvas (editor existente)
+              if (suggestionResponse?.initialFlow && typeof suggestionResponse.initialFlow === 'object') {
+                setInitialFlow(suggestionResponse.initialFlow);
+              }
+
+              const meta = getDescriptionSuggestionMeta(suggestionResponse);
               
               logger.info('[TenantMode] Descrição sugerida e aplicada', { 
                 suggestedLength: finalDescription.length 
@@ -1107,56 +1727,120 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               const errorMsg = 'A IA não retornou uma descrição sugerida. Não é possível continuar sem descrição.';
               logger.error('[TenantMode] Descrição não sugerida', { suggestionResponse });
               
-              updatePipelineWithDetails({ 
-                descriptionSuggested: { 
-                  status: 'error', 
-                  progress: 0, 
-                  message: errorMsg,
-                  timestamp: new Date().toISOString()
-                }
-              }, 'description-suggestion-error');
-              
-              showToast(errorMsg, 'error', 10000);
+              setError(errorMsg);
               setExecuting(false);
               return;
             }
           } catch (suggestionError) {
             logger.error('[TenantMode] Erro ao sugerir descrição', suggestionError);
-            
-            // Extrai mensagem de erro
-            let errorMsg = 'Erro ao sugerir descrição. Não é possível continuar sem descrição.';
-            if (suggestionError.body?.message) {
-              errorMsg = suggestionError.body.message;
-            } else if (suggestionError.message) {
-              errorMsg = suggestionError.message;
-            }
-            
-            updatePipelineWithDetails({ 
-              descriptionSuggested: { 
-                status: 'error', 
-                progress: 0, 
-                message: errorMsg,
-                timestamp: new Date().toISOString()
-              }
+            const msg = suggestionError?.body?.message || suggestionError?.message || 'Erro ao sugerir descrição. Não é possível continuar sem descrição.';
+            updatePipelineWithDetails({
+              descriptionSuggested: { status: 'error', progress: 0, message: msg, timestamp: new Date().toISOString() }
             }, 'description-suggestion-error');
-            
-            showToast(errorMsg, 'error', 10000);
+            setError(msg);
+
+            // Em tenant mode, sem descrição não pode continuar
             setExecuting(false);
             return;
           }
           } else {
             // Descrição já preenchida, marca como concluída (não precisa sugerir)
-            updatePipelineWithDetails({ 
-              descriptionSuggested: { 
-                status: 'completed', 
-                progress: 100, 
-                message: 'Descrição já fornecida pelo usuário',
-                timestamp: new Date().toISOString()
-              }
-            }, 'description-suggestion');
+            // (Pipeline visível é alimentado apenas por WS/backend)
           }
         } else {
           finalDescription = description.trim();
+        }
+
+        // Web scraping (tenant): roda mesmo quando descrição já foi fornecida (gate obrigatório)
+        const validUrlsForScraping = scrapingTargets.filter(url => url && url.trim() && url.trim().startsWith('http'));
+        if (useWebScraping && validUrlsForScraping.length > 0 && !webScrapingDone) {
+          webScrapingDone = true;
+          if (executionMode !== 'dry-run') {
+          const scrapingStartedAt = Date.now();
+          try {
+            // No modo tenant (super-admin), antes do tenant alvo existir, NÃO persistimos no RAG.
+            // Apenas extraímos conteúdo para uso como evidência (descrição/FAQ/fluxo inicial).
+            const shouldPersistScraping = !isTenantMode;
+            const scrapingResponse = await fetchJson('/web-scraping/scrape-batch', {
+              method: 'POST',
+              headers: validatedTenantId ? { 'X-Tenant-Id': validatedTenantId } : undefined,
+              body: JSON.stringify({
+                urls: validUrlsForScraping,
+                autoIndex: shouldPersistScraping,
+                source: 'web_scraping',
+                category: 'general',
+                executionId: pipelineExecutionIdRef.current || null,
+                dryRun: !shouldPersistScraping,
+              }),
+              // Playwright/web scraping pode ser lento em alguns sites; evita timeout do client
+              timeoutMs: 60000,
+            });
+            const durationMs = Date.now() - scrapingStartedAt;
+
+            const results = Array.isArray(scrapingResponse?.results) ? scrapingResponse.results : [];
+            const successCount = Number.isFinite(scrapingResponse?.success)
+              ? Number(scrapingResponse.success)
+              : results.filter(r => r.success).length;
+            const failedCount = Number.isFinite(scrapingResponse?.failed)
+              ? Number(scrapingResponse.failed)
+              : (validUrlsForScraping.length - successCount);
+            const errorSummary = Array.isArray(scrapingResponse?.errorSummary)
+              ? scrapingResponse.errorSummary
+              : results
+                  .filter(r => !r.success)
+                  .map(r => ({
+                    url: r.url,
+                    name: r.error?.name || 'Error',
+                    message: r.error?.message || (typeof r.error === 'string' ? r.error : 'Erro desconhecido'),
+                  }));
+
+            logger.info('[Pipeline][webScraping] Web scraping concluído', {
+              urlsTotal: validUrlsForScraping.length,
+              successCount,
+              failedCount,
+              durationMs,
+              errorSummary,
+            });
+
+            if (successCount === 0) {
+              setError('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.');
+              console.error('[TenantMode][webScraping] Nenhuma URL raspada com sucesso. Resumo de erros:', errorSummary);
+
+              setExecuting(false);
+              return;
+            }
+
+            // Captura texto extraído para contexto efêmero (tenant-mode, pré-criação)
+            try {
+              if (isTenantMode && !shouldPersistScraping) {
+                const resultsForChunks = Array.isArray(results) ? results : [];
+                for (const r of resultsForChunks) {
+                  const url = r?.url;
+                  const text = (r?.extractedText || '').trim();
+                  if (url && text && text.length >= 20) {
+                    ephemeralChunksRef.current.push({ sourceType: 'web_scraping', sourceId: url, text });
+                  }
+                }
+              }
+            } catch (_) {
+              // noop
+            }
+
+            // Aguarda indexação completar
+            if (shouldPersistScraping) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          } catch (scrapingError) {
+            const durationMs = Date.now() - scrapingStartedAt;
+            logger.error('[TenantMode] Erro ao processar web scraping', scrapingError);
+
+            setError('Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.');
+            console.error('[TenantMode][webScraping] Falha no scraping (request crash). URLs:', validUrlsForScraping, scrapingError);
+
+            setExecuting(false);
+            return;
+          }
+          }
         }
         
         // Gera tenant por IA usando a descrição (sugerida ou fornecida)
@@ -1164,7 +1848,17 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           aiExecuted: { status: 'in_progress', progress: 0, message: 'Executando IA para gerar tenant...' }
         }, 'tenant-generation');
         
-        const generateResult = await tenantsApi.generateTenantByAI(finalDescription);
+        const firstUrl = (Array.isArray(scrapingTargets) ? scrapingTargets : []).find(u => typeof u === 'string' && u.trim().startsWith('http')) || '';
+        const siteHint = firstUrl ? `Site: ${firstUrl.trim()}\n\n` : '';
+        const descriptionForTenantAi = name.trim()
+          ? `Nome: ${name.trim()}\n\n${siteHint}${finalDescription}`
+          : `${siteHint}${finalDescription}`;
+
+        // Em modo real, pedimos criação em safe-mode (draft para aprovação / pending_review).
+        const generateResult = await tenantsApi.generateTenantByAI(descriptionForTenantAi, {
+          create: executionMode === 'real',
+          executionId: pipelineExecutionIdRef.current,
+        });
         
         if (generateResult.tenant) {
           // Marca IA como concluída com sucesso
@@ -1176,21 +1870,13 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               timestamp: new Date().toISOString()
             }
           }, 'tenant-generation');
-          // Cria o tenant automaticamente (usa nome do formulário se fornecido)
-          const tenantData = {
-            ...generateResult.tenant,
-            name: name.trim() || generateResult.tenant.name, // Permite sobrescrever o nome gerado
-            plan: 'trial',
-            active: true,
-          };
-          
           let createdTenant;
           
           // Em modo dry-run, não cria o tenant de fato, apenas simula
           logger.info('[TenantMode] Verificando modo de execução antes de criar tenant', { 
             executionMode, 
             isDryRun: executionMode === 'dry-run',
-            tenantData: { name: tenantData.name, site: tenantData.site }
+            tenantData: { name: generateResult?.tenant?.name, site: generateResult?.tenant?.site }
           });
           
           if (executionMode === 'dry-run') {
@@ -1198,7 +1884,9 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             // Simula criação do tenant sem persistir
             createdTenant = {
               tenant: {
-                ...tenantData,
+                ...(generateResult.tenant || {}),
+                // Permite sobrescrever o nome informado no formulário para o cenário de simulação
+                name: name.trim() || generateResult?.tenant?.name,
                 id: `tenant-dry-run-${Date.now()}`,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -1210,22 +1898,198 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               dryRun: true,
               message: 'Tenant simulado (modo dry-run - não foi persistido)'
             }, 'tenant-creation');
-            showToast('Modo dry-run: Tenant simulado (não foi criado de fato)', 'info', 5000);
           } else {
-            // Modo real: cria o tenant de fato
-            logger.info('[TenantMode] Modo real: criando tenant de fato');
-            createdTenant = await tenantsApi.createTenant(tenantData);
-            logger.info('[TenantMode] Tenant criado com sucesso', { tenantId: createdTenant?.tenant?.id });
-            updatePipelineWithDetails({ payloadValid: true }, 'tenant-creation');
+            // Modo real: tenant já é criado pelo endpoint /tenants/generate-by-ai com create=true (safe-mode)
+            const tenantFromServer = generateResult?.createdTenant || generateResult?.existingTenant || null;
+            if (!tenantFromServer) {
+              throw new Error('Tenant não foi criado/reutilizado no modo seguro (createdTenant/existingTenant ausente).');
+            }
+            if (tenantFromServer.status !== 'pending_review') {
+              throw new Error('Tenant existente para este site não está em modo draft (pending_review). Não é seguro continuar.');
+            }
+            createdTenant = { tenant: tenantFromServer, dryRun: false };
+            logger.info(
+              generateResult?.existingTenant ? '[TenantMode] Tenant existente reaproveitado (site duplicado)' : '[TenantMode] Tenant criado em modo seguro (pending_review)',
+              { tenantId: createdTenant?.tenant?.id }
+            );
+            updatePipelineWithDetails({
+              payloadValid: true,
+              message: generateResult?.existingTenant
+                ? 'Tenant existente reaproveitado (site já cadastrado)'
+                : 'Tenant criado em modo seguro (pendente de aprovação)',
+            }, 'tenant-creation');
+          }
+
+          // -------------------------------------------------------------------
+          // Tenant-mode (real): após criar/reutilizar o tenant alvo, persistimos RAG nele.
+          // Importante:
+          // - Mantemos o tenant de contexto (validatedTenantId / system) para o pipeline/WS
+          // - Persistimos no tenant alvo via persistTenantId
+          // -------------------------------------------------------------------
+          if (executionMode !== 'dry-run') {
+            const contextTenantId = validatedTenantId || agent?.tenantId || null;
+            const tenantTargetId = createdTenant?.tenant?.id || null;
+            if (contextTenantId && tenantTargetId) {
+              targetTenantIdRef.current = tenantTargetId;
+              try {
+                // 1) Persistir uploads (se houver)
+                const filesSnapshot = Array.isArray(uploadedFilesRef.current) ? uploadedFilesRef.current : [];
+                const filesToPersist = filesSnapshot
+                  .filter(f => f && f.status === 'success')
+                  .filter(f => !f.documentId); // ainda não persistido
+
+                for (const f of filesToPersist) {
+                  try {
+                    const res = await uploadDocument(f.file, {
+                      executionId: pipelineExecutionIdRef.current,
+                      tenantId: contextTenantId, // contexto/WS
+                      persistTenantId: tenantTargetId, // persistência no tenant alvo
+                      headers: { 'X-Tenant-Id': contextTenantId },
+                      category: f.category,
+                      tags: [f.category, 'generate-system'],
+                      metadata: {
+                        uploadedFrom: 'generate-system',
+                        originalFileName: f.name,
+                        fileName: f.name,
+                        fileSize: f.size,
+                        extractedContent: (typeof f.extractedContent === 'string' ? f.extractedContent : null),
+                        deferredPersist: true,
+                        deferredPersistReason: f.deferredPersistReason || 'tenant_mode_pre_creation',
+                      },
+                      autoIndex: true,
+                    });
+
+                    updateUploadedFile(f.id, {
+                      documentId: res?.document?.id || res?.id || null,
+                      isDuplicate: !!(res?.isDuplicate),
+                      deferredPersist: false,
+                      persistedTenantId: tenantTargetId,
+                    });
+                  } catch (e) {
+                    logger.warn('[TenantMode] Falha ao persistir arquivo no tenant alvo', {
+                      fileName: f?.name,
+                      tenantTargetId,
+                      error: e?.message || String(e),
+                    });
+                  }
+                }
+
+                // 2) Persistir web scraping (se houver URLs válidas)
+                const validUrlsToPersist = (Array.isArray(scrapingTargets) ? scrapingTargets : [])
+                  .filter(url => url && String(url).trim().startsWith('http'));
+                if (useWebScraping && validUrlsToPersist.length > 0) {
+                  await fetchJson('/web-scraping/scrape-batch', {
+                    method: 'POST',
+                    headers: { 'X-Tenant-Id': contextTenantId },
+                    body: JSON.stringify({
+                      urls: validUrlsToPersist,
+                      autoIndex: true,
+                      source: 'web_scraping',
+                      category: 'general',
+                      executionId: pipelineExecutionIdRef.current || null,
+                      dryRun: false,
+                      persistTenantId: tenantTargetId,
+                    }),
+                    timeoutMs: 60000,
+                    silent: true,
+                  });
+
+                  // Aguarda indexação completar (best-effort)
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+              } catch (e) {
+                logger.warn('[TenantMode] Falha ao persistir conteúdo no tenant alvo (best-effort)', {
+                  tenantTargetId,
+                  error: e?.message || String(e),
+                });
+              }
+            }
           }
           
+          const startInitialFlowBestEffort = () => {
+            // Não inicia se já houve abort.
+            if (pipelineAbortRef.current) return;
+
+            setInitialGraphLoading(true);
+            (async () => {
+              const tenantTargetId = createdTenant?.tenant?.id || null;
+              if (!tenantTargetId) return;
+
+              const contextTenantId = validatedTenantId || agent?.tenantId || null;
+              const execId = pipelineExecutionId;
+              if (!contextTenantId || !execId) return;
+
+              const resp = await fetchJson('/system/generate-initial-flow', {
+                method: 'POST',
+                body: JSON.stringify({
+                  tenantId: contextTenantId,
+                  executionId: execId,
+                  targetTenantId: tenantTargetId,
+                  dryRun: executionMode === 'dry-run',
+                  persistFlow: executionMode !== 'dry-run',
+                  // Cobertura: além do FAQ interno, inclui as perguntas geradas (quando existirem)
+                  questions: Array.isArray(questionsList) ? questionsList.slice(0, 200) : [],
+                  ...(executionMode === 'dry-run' && useInlineChunksForSuggestRef.current
+                    ? { chunks: (ephemeralChunksRef.current || []).slice(0, 30).map(c => ({ ...c, text: (c?.text || '').slice(0, 5000) })) }
+                    : {}),
+                }),
+                timeoutMs: 120000,
+                silent: true,
+              });
+
+              // Se a execução foi abortada por falha anterior, não aplica resultados/toasts.
+              if (pipelineAbortRef.current) return;
+
+              if (resp?.entities && Array.isArray(resp.entities.services) && resp.entities.services.length === 0) {
+                // Sem toast local: feedback visual vem do backend via WS.
+              }
+              if (resp?.entities && typeof resp.entities === 'object') {
+                setInitialFlowEntities(resp.entities);
+              }
+
+              const flow = resp?.initialFlow || resp?.data?.initialFlow || null;
+              if (flow && typeof flow === 'object') {
+                setInitialFlow(flow);
+              }
+            })().catch((graphErr) => {
+              logger.warn('[TenantMode] Falha ao gerar fluxo inicial automaticamente (best-effort)', {
+                error: graphErr?.message || String(graphErr),
+              });
+            }).finally(() => {
+              setInitialGraphLoading(false);
+            });
+          };
+
           // Se o usuário selecionou gerar fluxo/RPA/seed, executa a geração completa
           if (generateFlow || generateRpa || generateSeed) {
-            if (executionMode === 'dry-run') {
-              showToast('Tenant simulado! Iniciando geração de artefatos (modo dry-run)...', 'info');
-            } else {
-              showToast('Tenant criado! Iniciando geração de artefatos...', 'success');
-            }
+            // Sem toast local: feedback visual vem do backend via WS.
+
+            // IMPORTANTE (coerência do pipeline visível):
+            // Até aqui, o pipeline também foi usado para mostrar progresso de "criar tenant" (que pode
+            // usar IA). Antes de iniciar o generate-and-validate (artefatos), resetamos apenas os steps
+            // de artefatos para evitar "resíduos" (ex.: flowGenerated preso com mensagem de IA do tenant).
+            setPipelineStatus(prev => ({
+              ...prev,
+              contractValid: false,
+              contextBuilt: false,
+              aiExecuted: false,
+              flowGenerated: false,
+              seedGenerated: false,
+              rpaGenerated: false,
+              rpaExecuted: false,
+              approved: false,
+            }));
+            setPipelineDetails(prev => ({
+              ...prev,
+              contractValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
+              contextBuilt: { status: 'pending', timestamp: null, message: null, progress: 0 },
+              aiExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
+              flowGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+              seedGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+              rpaGenerated: { status: 'pending', timestamp: null, message: null, progress: 0 },
+              rpaExecuted: { status: 'pending', timestamp: null, message: null, progress: 0 },
+              approved: { status: 'pending', timestamp: null, message: null, progress: 0 },
+            }));
             
             // Gera payload para criação de artefatos
             const payload = generatePayload();
@@ -1233,6 +2097,38 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             payload.name = name.trim();
             // Não define payload.tenantId - o servidor deve usar o tenant do usuário logado
             // (que tem o provider de IA configurado) ao invés do tenant recém-criado
+
+            // Perguntas (FAQ): auto-gerar como o "sugerir descrição"
+            if (payload.includeQuestions === true && (!Array.isArray(payload.questions) || payload.questions.length === 0)) {
+              try {
+                const autoQuestions = await suggestQuestionsAutoList();
+                if (!autoQuestions || autoQuestions.length === 0) {
+                  pipelineAbortRef.current = true;
+                  const msg = 'Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.';
+                  setError(msg);
+                  showToast?.(msg, 'error');
+                  setExecuting(false);
+                  return;
+                }
+                setQuestionsList(autoQuestions);
+                payload.questions = autoQuestions.slice(0, 50);
+                // Só inicia fluxo inicial após as perguntas terem passado (evita gastar IA em background quando aborta aqui).
+                startInitialFlowBestEffort();
+              } catch (e) {
+                logger.warn('[Questions] Falha ao gerar perguntas automaticamente (tenant mode)', { error: e?.message });
+                pipelineAbortRef.current = true;
+                const msg = e?.message || 'Falha ao gerar perguntas automaticamente. Adicione ao menos 1 pergunta.';
+                setError(msg);
+                showToast?.(msg, 'error');
+                setExecuting(false);
+                return;
+              }
+            } else if (payload.includeQuestions === true && Array.isArray(payload.questions) && payload.questions.length > 0) {
+              // Perguntas já presentes no payload
+              // (Pipeline visível é alimentado apenas por WS/backend)
+              // Mesmo com perguntas existentes, podemos iniciar o fluxo inicial aqui (a partir daqui não deve abortar por perguntas).
+              startInitialFlowBestEffort();
+            }
             
             // Arquivos já foram processados antes da sugestão de descrição
             // Não precisa processar novamente aqui
@@ -1240,7 +2136,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               totalFiles: uploadedFiles.length,
               filesByStatus: {
                 pending: uploadedFiles.filter(f => f.status === 'pending').length,
-                uploading: uploadedFiles.filter(f => f.status === 'uploading').length,
+                processing: uploadedFiles.filter(f => f.status === 'processing').length,
                 success: uploadedFiles.filter(f => f.status === 'success').length,
                 error: uploadedFiles.filter(f => f.status === 'error').length,
               },
@@ -1264,7 +2160,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                 logger.error('[TenantMode] Servidor não está disponível', healthError);
                 const errorMessage = 'Servidor não está respondendo. Verifique se o servidor está rodando e tente novamente.';
                 setError(errorMessage);
-                showToast(errorMessage, 'error', 10000);
+                showToast?.(errorMessage, 'error');
                 updatePipelineWithDetails({ 
                   aiExecuted: { 
                     status: 'error', 
@@ -1279,22 +2175,32 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             }
             
             // Executa geração de artefatos
-            const response = await generateAndValidate(payload, (status) => {
-              updatePipelineWithDetails(status, 'callback');
-            });
+            // Opção A: mantém um único executionId para todo o pipeline tenant,
+            // incluindo generate-initial-flow (intents) e generate-and-validate (artefatos).
+            payload.executionId = pipelineExecutionId;
+            payload.tenantPipeline = true;
+
+            // UX: o backend só marca `contractValid` quando chega na etapa; para não parecer "travado"
+            // até o primeiro evento WS, marcamos o card como "em progresso" localmente (sem completar).
+            const response = await generateAndValidate(payload);
             
+            // Se o orquestrador retornou flowDefinition, disponibiliza no modal/canvas também.
+            // Isso garante botão/modal mesmo quando o best-effort de /system/generate-initial-flow falhar.
+            try {
+              const flowFromArtifacts = response?.flowDefinition || null;
+              if (flowFromArtifacts && typeof flowFromArtifacts === 'object') {
+                setInitialFlow(prev => (prev ? prev : flowFromArtifacts));
+              }
+            } catch (_) {
+              // noop
+            }
+
             setResult({
               success: true,
               tenant: createdTenant.tenant,
               generated: true,
               ...response,
             });
-            
-            if (response.success) {
-              showToast('Tenant e artefatos criados com sucesso!', 'success');
-            } else {
-              showToast('Tenant criado, mas houve problemas na geração de artefatos', 'warning');
-            }
           } else {
             // Apenas cria o tenant, sem gerar artefatos
             // Mas ainda processa arquivos se houver (para indexar no RAG)
@@ -1323,9 +2229,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                     });
                     
                     // Atualiza a categoria do arquivo no estado
-                    setUploadedFiles(prev => prev.map(f => 
-                      f.id === fileObj.id ? { ...f, category: inferredCategory } : f
-                    ));
+                    updateUploadedFile(fileObj.id, { category: inferredCategory });
                     
                     // Cria uma cópia do objeto com a categoria inferida para usar no upload
                     const fileObjWithCategory = {
@@ -1344,11 +2248,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                       fileId: fileObj.id,
                     });
                     // Marca como erro no estado
-                    setUploadedFiles(prev => prev.map(f => 
-                      f.id === fileObj.id 
-                        ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' } 
-                        : f
-                    ));
+                    updateUploadedFile(fileObj.id, { status: FileStatus.error, error: error.message || 'Erro ao processar arquivo', progress: 0 });
                   }
                 }
                 
@@ -1366,8 +2266,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               tenant: createdTenant.tenant,
               generated: true,
             });
-            
-            showToast('Tenant criado com sucesso!', 'success');
             
             // Navega de volta para a página de tenants após 2 segundos
             setTimeout(() => {
@@ -1393,10 +2291,25 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         // Extrai mensagem de erro de forma mais robusta
         let errorMessage = 'Erro ao gerar tenant por IA';
         
-        if (err.body) {
-          errorMessage = err.body.message || err.body.details || err.body.error || errorMessage;
-        } else if (err.message) {
+        const body = err?.body;
+        if (body) {
+          errorMessage =
+            body?.error?.message ||
+            body?.message ||
+            body?.details ||
+            body?.error ||
+            errorMessage;
+        } else if (err?.message) {
           errorMessage = err.message;
+        }
+
+        // Garante string (evita crash em errorMessage.includes quando vier object/array)
+        if (typeof errorMessage !== 'string') {
+          try {
+            errorMessage = JSON.stringify(errorMessage);
+          } catch {
+            errorMessage = String(errorMessage);
+          }
         }
         
         // Mensagens mais amigáveis para erros comuns
@@ -1407,7 +2320,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         }
         
         setError(errorMessage);
-        showToast(errorMessage, 'error', 8000); // Aumenta duração para 8 segundos para erros importantes
       } finally {
         setExecuting(false);
       }
@@ -1417,9 +2329,25 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
     setExecuting(true);
     setError(null);
     setResult(null);
+    // executionId obrigatório para todas as rotas do pipeline (backend é a fonte da verdade)
+    if (!pipelineExecutionIdRef.current) {
+      const pipelineExecutionId = `exec-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      pipelineExecutionIdRef.current = pipelineExecutionId;
+      pipelineMachine.start(pipelineExecutionId);
+      pipelineSocket.subscribe(pipelineExecutionId);
+    }
+      // Sem polling: progresso do pipeline é via WebSocket
+    // Reset do fluxo inicial e modal para permitir reabrir a cada execução
+    setInitialFlow(null);
+    setInitialFlowEntities(null);
+    setShowInitialFlowModal(false);
+    setInitialFlowModalSize({ width: null, height: null });
+    lastInitialFlowSignatureRef.current = null;
+    setInitialGraphLoading(false);
     
     // Reseta pipeline status
     const resetStatus = {
+      webScraping: false,
       descriptionSuggested: false,
       filesInferred: false,
       payloadValid: false,
@@ -1436,7 +2364,8 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
     
     // Reseta pipeline details
     setPipelineDetails({
-      descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0 },
+      webScraping: { status: 'pending', timestamp: null, message: null, progress: 0 },
+      descriptionSuggested: { status: 'pending', timestamp: null, message: null, progress: 0, meta: null },
       filesInferred: { status: 'pending', timestamp: null, message: null, progress: 0 },
       payloadValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
       contractValid: { status: 'pending', timestamp: null, message: null, progress: 0 },
@@ -1455,7 +2384,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       if (!agent?.tenantId) {
         const errorMsg = 'Tenant não identificado. Faça login novamente e tente novamente.';
         setError(errorMsg);
-        showToast(errorMsg, 'error', 10000);
         setExecuting(false);
         return;
       }
@@ -1465,29 +2393,46 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição com IA...' }
         }, 'description-suggestion');
         
-        // Gera descrição sugerida usando IA via API
-        const suggestionPrompt = `Com base no nome do sistema "${name.trim()}" e nas fontes de conhecimento disponíveis, sugira uma descrição detalhada e completa para este sistema. A descrição deve explicar o propósito, funcionalidades principais e objetivos do sistema. Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
+        // Gera descrição sugerida via RAG + consolidação (backend)
+        const uploadedFileNames = Array.from(new Set(
+          uploadedFiles
+            .map(f => (typeof f?.name === 'string' ? f.name.trim() : ''))
+            .filter(Boolean)
+        ));
         
         // Chama API para sugerir descrição (sem fallback de tenantId)
         const suggestionResponse = await fetchJson('/system/suggest-description', {
           method: 'POST',
           body: JSON.stringify({ 
-            prompt: suggestionPrompt,
             name: name.trim(),
-            tenantId: agent.tenantId
+            tenantId: agent.tenantId,
+            fileNames: uploadedFileNames,
+            mode: descriptionMode,
+            executionId: pipelineExecutionIdRef.current,
           }),
+          timeoutMs: 60000,
         });
+
+        // Sem toast local: avisos vêm do backend via WS.
+
+        const confidence = (typeof suggestionResponse?.confidence === 'number')
+          ? suggestionResponse.confidence
+          : (typeof suggestionResponse?.entityProfile?.confidence === 'number' ? suggestionResponse.entityProfile.confidence : null);
+        // Sem toast local: baixa confiança vem do backend via WS.
         
         if (suggestionResponse?.suggestion) {
           // Atualiza a descrição com a sugestão
           const suggestedDescription = suggestionResponse.suggestion.trim();
           setDescription(suggestedDescription);
+
+          const meta = getDescriptionSuggestionMeta(suggestionResponse);
           
           updatePipelineWithDetails({ 
             descriptionSuggested: { 
               status: 'completed', 
               progress: 100, 
               message: 'Descrição sugerida pela IA e aplicada automaticamente',
+              meta,
               timestamp: new Date().toISOString()
             }
           }, 'description-suggestion');
@@ -1500,15 +2445,20 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         }
       } catch (suggestionError) {
         logger.error('[Pipeline] Erro ao sugerir descrição', suggestionError);
-        updatePipelineWithDetails({ 
-          descriptionSuggested: { 
-            status: 'error', 
-            progress: 0, 
-            message: 'Erro ao sugerir descrição. Continuando sem descrição...',
-            timestamp: new Date().toISOString()
-          }
+        const msg = suggestionError?.body?.message || suggestionError?.message || 'Erro ao sugerir descrição.';
+        const code = suggestionError?.body?.error?.code || suggestionError?.body?.code || suggestionError?.code || null;
+        updatePipelineWithDetails({
+          descriptionSuggested: { status: 'error', progress: 0, message: msg, timestamp: new Date().toISOString() }
         }, 'description-suggestion');
-        // Continua mesmo se a sugestão falhar
+        setError(msg);
+
+        // Sem contexto indexado: aborta pipeline (não deve seguir)
+        if (code === 'NO_INDEXED_CONTEXT') {
+          setExecuting(false);
+          return;
+        }
+
+        // Continua mesmo se a sugestão falhar (outros erros)
       }
     }
     
@@ -1542,7 +2492,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             message += `\n\nModo Dry-Run: 50 execuções por minuto\nNormalmente seria necessário aguardar ${remaining} segundos, mas como super-admin você pode continuar.`;
           }
           
-          showToast(message, 'warning', 8000);
           logger.warn('[Execute] Rate limit local excedido (super-admin - apenas informativo)', {
             remaining,
             operationType,
@@ -1562,7 +2511,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           message += `. Tente novamente em ${remaining} segundos.`;
           
           setError(message);
-          showToast(message, 'error', 8000);
           setExecuting(false);
           return;
         }
@@ -1598,7 +2546,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               message += `\n\nModo Dry-Run: 50 execuções por minuto\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin você pode continuar.`;
             }
             
-            showToast(message, 'warning', 8000);
             logger.warn('[Execute] Rate limit excedido (super-admin - apenas informativo)', {
               retryAfter,
               remainingPoints: rateLimitCheck.remainingPoints,
@@ -1621,7 +2568,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             message += `. Tente novamente em ${retryAfter} segundos.`;
             
             setError(message);
-            showToast(message, 'error', 8000);
             setExecuting(false);
             logger.warn('[Execute] Rate limit verificado no servidor: bloqueado', {
               retryAfter,
@@ -1634,13 +2580,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           // Para super-admins, mostra informação sobre rate limit mesmo quando permitido
           const remaining = rateLimitCheck.remainingPoints || 0;
           const total = rateLimitCheck.totalPoints || 0;
-          if (remaining < total * 0.2) { // Se restam menos de 20% dos pontos
-            showToast(
-              `ℹ️ Atenção: Você está usando ${total - remaining}/${total} pontos de rate limit. Como super-admin, você pode continuar mesmo após exceder o limite.`,
-              'info',
-              5000
-            );
-          }
+          // Sem toast local: feedback visual vem do backend via WS.
         }
         
         logger.debug('[Execute] Rate limit verificado no servidor: permitido', {
@@ -1711,9 +2651,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             });
             
             // Atualiza a categoria do arquivo no estado
-            setUploadedFiles(prev => prev.map(f => 
-              f.id === fileObj.id ? { ...f, category: inferredCategory } : f
-            ));
+            updateUploadedFile(fileObj.id, { category: inferredCategory });
             
             // Cria uma cópia do objeto com a categoria inferida para usar no upload
             const fileObjWithCategory = {
@@ -1732,11 +2670,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
               fileId: fileObj.id,
             });
             // Marca como erro no estado
-            setUploadedFiles(prev => prev.map(f => 
-              f.id === fileObj.id 
-                ? { ...f, status: 'error', error: error.message || 'Erro ao processar arquivo' } 
-                : f
-            ));
+            updateUploadedFile(fileObj.id, { status: FileStatus.error, error: error.message || 'Erro ao processar arquivo', progress: 0 });
           }
         }
         
@@ -1752,7 +2686,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           totalFiles: uploadedFiles.length,
           filesByStatus: {
             pending: uploadedFiles.filter(f => f.status === 'pending').length,
-            uploading: uploadedFiles.filter(f => f.status === 'uploading').length,
+            processing: uploadedFiles.filter(f => f.status === 'processing').length,
             success: uploadedFiles.filter(f => f.status === 'success').length,
             error: uploadedFiles.filter(f => f.status === 'error').length,
           },
@@ -1794,7 +2728,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           logger.error('[Execute] Servidor não está disponível', healthError);
           const errorMessage = 'Servidor não está respondendo. Verifique se o servidor está rodando e tente novamente.';
           setError(errorMessage);
-          showToast(errorMessage, 'error', 10000);
           updatePipelineWithDetails({ 
             aiExecuted: { 
               status: 'error', 
@@ -1808,12 +2741,60 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         }
       }
       
+      // Perguntas (FAQ): auto-gerar como o "sugerir descrição"
+      if (payload.includeQuestions === true && (!Array.isArray(payload.questions) || payload.questions.length === 0)) {
+        try {
+          updatePipelineWithDetails({
+            questionsGenerated: {
+              status: 'in_progress',
+              progress: 0,
+              message: getStepMessage('questionsGenerated', 'in_progress'),
+              timestamp: new Date().toISOString(),
+            },
+          }, 'questions-auto');
+          const autoQuestions = await suggestQuestionsAutoList();
+          if (!autoQuestions || autoQuestions.length === 0) {
+            updatePipelineWithDetails({
+              questionsGenerated: {
+                status: 'error',
+                progress: 0,
+                message: 'Não foi possível gerar perguntas automaticamente',
+                timestamp: new Date().toISOString(),
+              },
+            }, 'questions-auto');
+            setError('Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.');
+            setExecuting(false);
+            return;
+          }
+          setQuestionsList(autoQuestions);
+          payload.questions = autoQuestions.slice(0, 50);
+          updatePipelineWithDetails({ questionsGenerated: true }, 'questions-auto');
+        } catch (e) {
+          logger.warn('[Questions] Falha ao gerar perguntas automaticamente', { error: e?.message });
+          updatePipelineWithDetails({
+            questionsGenerated: {
+              status: 'error',
+              progress: 0,
+              message: 'Falha ao gerar perguntas automaticamente',
+              timestamp: new Date().toISOString(),
+            },
+          }, 'questions-auto');
+          setError(e?.message || 'Falha ao gerar perguntas automaticamente. Adicione ao menos 1 pergunta.');
+          setExecuting(false);
+          return;
+        }
+      } else if (payload.includeQuestions === true && Array.isArray(payload.questions) && payload.questions.length > 0) {
+        updatePipelineWithDetails({ questionsGenerated: true }, 'questions-existing');
+      }
+
       logger.info('[Execute] Chamando generateAndValidate');
-      const response = await generateAndValidate(payload, (status) => {
-        // Callback para atualizar pipeline em tempo real (combinado com WebSocket)
-        logger.debug('[Execute] Callback de progresso recebido', status);
-        updatePipelineWithDetails(status, 'callback');
-      });
+      // IMPORTANTÍSSIMO (Opção A):
+      // usa o MESMO executionId do pipeline tenant para correlacionar TODOS os steps
+      // (generate-faq, generate-initial-flow, generate-and-validate) e só marcar "Aprovado"
+      // quando tudo terminar.
+      payload.executionId = pipelineExecutionId;
+      payload.tenantPipeline = isTenantMode === true;
+      const response = await generateAndValidate(payload);
       
       logger.info('[Execute] generateAndValidate concluído', {
         success: response?.success,
@@ -1825,11 +2806,19 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       });
 
       setResult(response);
-      
-      if (response.success) {
-        showToast('Geração concluída com sucesso!', 'success');
-      } else {
-        showToast('Geração concluída com avisos', 'warning');
+
+      // Feedback UX: sucesso parcial (warnings / RPA falhou) não deve virar erro.
+      try {
+        const warnings = Array.isArray(response?.warnings) ? response.warnings : [];
+        if (response?.success && (warnings.length > 0 || response?.rpaPassed === false)) {
+          const msg =
+            warnings.length > 0
+              ? `Concluído com avisos (${warnings.length}). Revisão humana recomendada.`
+              : 'Concluído, mas o teste RPA não passou. Revisão humana recomendada.';
+          showToast?.(msg, 'warning', 10000);
+        }
+      } catch {
+        // best-effort
       }
     } catch (err) {
       logger.error('Erro ao executar geração', err);
@@ -1859,7 +2848,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             message += `\n\nModo Dry-Run: 50 execuções por minuto\nNormalmente seria necessário aguardar ${retryAfter} segundos, mas como super-admin a execução continua.`;
           }
           
-          showToast(message, 'warning', 8000);
           logger.warn('[Execute] Rate limit excedido durante execução (super-admin - apenas informativo)', {
             operationType,
             retryAfter,
@@ -1895,7 +2883,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           });
           
           setError(message);
-          showToast(message, 'error', 10000); // Aumenta duração para 10 segundos
           setExecuting(false);
           return;
         }
@@ -1917,7 +2904,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         if (err.connectionRefused || err.status === 0 || err.message === 'Failed to fetch') {
           const errorMessage = 'Servidor não está respondendo. Verifique se o servidor está rodando e tente novamente.';
           setError(errorMessage);
-          showToast(errorMessage, 'error', 10000);
           updatePipelineWithDetails({ 
             aiExecuted: { 
               status: 'error', 
@@ -1927,8 +2913,37 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             }
           }, 'server-unavailable');
         } else {
-          setError(err.message || 'Erro desconhecido');
-          showToast(`Erro: ${err.message || 'Erro desconhecido'}`, 'error');
+          if (err?.code) {
+            // Se o pipeline abortou, tenta inferir qual etapa realmente falhou
+            // (ex.: RPA) para evitar UI "travada" em contractValid.
+            let inferredStepKey = 'aiExecuted';
+            try {
+              const details = err?.details ?? err?.body?.error?.details ?? null;
+              const code = err?.code || err?.body?.error?.code || null;
+              if (code === 'PIPELINE_ABORTED' && details) {
+                const rpa = details?.rpa || null;
+                if (rpa?.executed) inferredStepKey = 'rpaExecuted';
+                else if (rpa?.generated) inferredStepKey = 'rpaGenerated';
+                else if (details?.contextBuilt === false) inferredStepKey = 'contextBuilt';
+                else if (details?.contractValid === false) inferredStepKey = 'contractValid';
+              }
+            } catch (e) {
+              // best-effort
+            }
+
+            const msg = err?.body?.message || err?.message || 'Erro na execução do pipeline';
+            updatePipelineWithDetails({
+              [inferredStepKey]: {
+                status: 'error',
+                progress: 0,
+                message: msg,
+                timestamp: new Date().toISOString(),
+              },
+            }, 'execute-error');
+            setError(msg);
+          } else {
+            setError(err.message || 'Erro desconhecido');
+          }
         }
       }
     } finally {
@@ -1948,7 +2963,6 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         setRateLimitUntil(null);
         setRateLimitSecondsRemaining(0);
         setError(null);
-        showToast('Rate limit limpo com sucesso!', 'success');
         logger.info('[RateLimit] Rate limit limpo com sucesso', response);
       } else {
         throw new Error(response.message || 'Erro ao limpar rate limit');
@@ -1956,9 +2970,9 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[RateLimit] Erro ao limpar rate limit', err);
       if (err.status === 403) {
-        showToast('Este recurso está disponível apenas em desenvolvimento', 'warning');
+        setError('Este recurso está disponível apenas em desenvolvimento');
       } else {
-        showToast(`Erro ao limpar rate limit: ${err.message || 'Erro desconhecido'}`, 'error');
+        setError(`Erro ao limpar rate limit: ${err.message || 'Erro desconhecido'}`);
       }
     }
   };
@@ -1994,24 +3008,14 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       fileSizes: files.map(f => f.size),
     });
 
-    // Adiciona arquivos à lista de upload inicialmente com categoria temporária
-    const newFiles = files.map(file => ({
-      file,
-      id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: file.name,
-      size: file.size,
-      category: 'outros', // Categoria temporária, será atualizada após inferência
-      status: 'pending', // pending, uploading, success, error
-      error: null,
-    }));
+    // Adiciona arquivos via FileUploadContext (pending → processing → success|error)
+    const newFiles = addSelectedFiles(files);
 
     logger.info('[FileSelect] Arquivos adicionados à lista de upload', {
       newFilesCount: newFiles.length,
       totalFilesCount: uploadedFiles.length + newFiles.length,
       fileIds: newFiles.map(f => f.id),
     });
-
-    setUploadedFiles([...uploadedFiles, ...newFiles]);
     
     // Não faz inferência nem upload automaticamente - será feito ao clicar em Executar
     logger.debug('[FileSelect] Arquivos adicionados, aguardando execução para processar');
@@ -2019,10 +3023,8 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
 
   const handleFileUpload = async (fileObj) => {
     try {
-      // Atualiza status para uploading
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === fileObj.id ? { ...f, status: 'uploading' } : f
-      ));
+      // Atualiza status para processing (sub-state machine)
+      updateUploadedFile(fileObj.id, { status: FileStatus.processing, progress: 0, error: null });
 
       const isImage = fileObj.file.type.startsWith('image/');
       const isPdf = fileObj.file.type === 'application/pdf';
@@ -2041,12 +3043,11 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           onProgress: (progress, message) => {
             // Atualiza progresso durante processamento
             logger.debug(`Processando arquivo ${fileObj.name}: ${message} (${progress}%)`);
-            // Atualiza status com progresso
-            setUploadedFiles(prev => prev.map(f => 
-              f.id === fileObj.id 
-                ? { ...f, status: 'uploading', progress: Math.round(progress) } 
-                : f
-            ));
+            // Atualiza status com progresso (nunca volta para pending)
+            const raw = Number(progress);
+            const pct = Number.isFinite(raw) ? Math.round(raw) : 0;
+            const safePct = Math.max(0, Math.min(100, pct));
+            updateUploadedFile(fileObj.id, { status: FileStatus.processing, progress: safePct });
           },
         });
         
@@ -2102,17 +3103,62 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         }
       }
 
-      // Obtém tenantId do agente (obrigatório para indexação correta, sem fallback)
+      // DRY-RUN: não grava no banco / não indexa no RAG. Mantém apenas extração local para UX.
+      if (executionMode === 'dry-run') {
+        updateUploadedFile(fileObj.id, {
+          status: FileStatus.success,
+          documentId: null,
+          preview,
+          progress: 100,
+          extractedContent, // mantém para visualização
+          isDuplicate: false,
+          dryRun: true,
+        });
+        return {
+          ok: true,
+          sourceType: 'uploaded_file',
+          sourceId: fileObj.name,
+          text: extractedContent,
+        };
+      }
+
+      // Obtém tenantId do agente (tenant de contexto / provider).
       if (!agent?.tenantId) {
         const errorMsg = 'Tenant não identificado. Faça login novamente e tente novamente.';
-        showToast(errorMsg, 'error', 10000);
+        setError(errorMsg);
         throw new Error(errorMsg);
       }
-      const tenantId = agent.tenantId;
+      const contextTenantId = agent.tenantId;
+
+      // Tenant-mode (super-admin): antes do tenant alvo existir, NÃO persistimos no RAG.
+      // Mantemos extração local e marcamos como "deferredPersist" para persistir depois do create.
+      if (isTenantMode && !targetTenantIdRef.current) {
+        updateUploadedFile(fileObj.id, {
+          status: FileStatus.success,
+          documentId: null,
+          preview,
+          progress: 100,
+          extractedContent,
+          isDuplicate: false,
+          dryRun: false,
+          deferredPersist: true,
+          deferredPersistReason: 'tenant_mode_pre_creation',
+        });
+        return {
+          ok: true,
+          sourceType: 'uploaded_file',
+          sourceId: fileObj.name,
+          text: extractedContent,
+        };
+      }
+      const persistTenantId = (isTenantMode && targetTenantIdRef.current)
+        ? targetTenantIdRef.current
+        : contextTenantId;
       
       logger.info('[FileUpload] Preparando upload para RAG', {
         fileName: fileObj.name,
-        tenantId,
+        tenantId: contextTenantId,
+        persistTenantId: persistTenantId,
         hasExtractedContent: !!extractedContent,
         extractedContentLength: extractedContent?.length || 0,
         autoIndex: true,
@@ -2120,7 +3166,10 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       
       // Faz upload do arquivo processado com conteúdo extraído
       const result = await uploadDocument(processedFile, {
-        tenantId: tenantId, // Passa tenantId explicitamente
+        executionId: pipelineExecutionIdRef.current,
+        tenantId: contextTenantId, // compatibilidade (o header já define o tenant de contexto)
+        ...(persistTenantId && persistTenantId !== contextTenantId ? { persistTenantId } : {}),
+        headers: contextTenantId ? { 'X-Tenant-Id': contextTenantId } : undefined,
         category: fileObj.category,
         tags: [fileObj.category, 'generate-system'],
         metadata: {
@@ -2135,6 +3184,8 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
         },
         autoIndex: true, // Indexa automaticamente no RAG
       });
+
+      // Avisos (PDF/OCR/etc.) não geram toast local — o backend é a fonte do feedback visual via WS.
       
       logger.info('[FileUpload] Upload concluído', {
         fileName: fileObj.name,
@@ -2147,45 +3198,66 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       const isDuplicate = result.isDuplicate || false;
 
       // Atualiza status para success com preview se disponível
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === fileObj.id 
-          ? { 
-              ...f, 
-              status: 'success', 
-              documentId: result.document?.id || result.id,
-              preview: preview,
-              progress: 100,
-              extractedContent: extractedContent, // Salva conteúdo extraído para exibição
-              isDuplicate: isDuplicate, // Marca se é duplicata
-            } 
-          : f
-      ));
+      updateUploadedFile(fileObj.id, {
+        status: FileStatus.success,
+        documentId: result.document?.id || result.id,
+        preview,
+        progress: 100,
+        extractedContent, // Salva conteúdo extraído para exibição
+        isDuplicate, // Marca se é duplicata
+      });
 
       if (isDuplicate) {
-        showToast(`Arquivo "${fileObj.name}" já existe no RAG. Usando documento existente.`, 'info', 5000);
         logger.info('[FileUpload] Arquivo duplicado detectado', {
           fileName: fileObj.name,
           documentId: result.document?.id || result.id,
         });
-      } else {
-        showToast(`Arquivo "${fileObj.name}" processado e indexado no RAG com sucesso!`, 'success');
       }
     } catch (error) {
       logger.error('Erro ao fazer upload do arquivo:', error);
       
       // Atualiza status para error
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === fileObj.id 
-          ? { ...f, status: 'error', error: error.message || 'Erro desconhecido', progress: 0 } 
-          : f
-      ));
+      updateUploadedFile(fileObj.id, { status: FileStatus.error, error: error.message || 'Erro desconhecido', progress: 0 });
 
-      showToast(`Erro ao processar arquivo "${fileObj.name}": ${error.message}`, 'error');
+      const msg = `Erro ao processar arquivo "${fileObj.name}": ${error.message}`;
+      setError(msg);
+      showToast?.(msg, 'error');
+      return { ok: false, error: error.message || 'Erro ao processar arquivo' };
     }
   };
 
-  const removeUploadedFile = (fileId) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+  const downloadRagOriginalFile = async (documentId, filenameHint = null, mode = 'download') => {
+    if (!documentId) return;
+    try {
+      const path = `/rag/documents/${encodeURIComponent(documentId)}/download`;
+      const res = await fetchBlob(path, { method: 'GET', timeoutMs: 45000 });
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      if (mode === 'open') {
+        window.open(objectUrl, '_blank', 'noopener,noreferrer');
+        // Revoga depois para dar tempo do navegador carregar
+        setTimeout(() => {
+          try { URL.revokeObjectURL(objectUrl); } catch {}
+        }, 15000);
+        return;
+      }
+
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filenameHint || `documento-${documentId}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      const status = e?.status;
+      if (status === 404) {
+        setError('Arquivo original não encontrado no banco (404).');
+        return;
+      }
+      setError('Não foi possível baixar/abrir o arquivo original do RAG.');
+    }
   };
 
   /**
@@ -2278,6 +3350,21 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       return inferFileCategoryFallback(file);
     } catch (error) {
       logger.error('Erro ao inferir categoria com IA, usando fallback', error);
+      // Rastreia problema para refletir no pipeline visual (ex.: quota/rate limit)
+      try {
+        const code = error?.body?.error?.code || error?.code || null;
+        const httpStatus = error?.status || error?.body?.error?.httpStatus || null;
+        fileCategoryInferenceIssuesRef.current = {
+          count: (Number(fileCategoryInferenceIssuesRef.current?.count) || 0) + 1,
+          last: {
+            code: code ? String(code) : null,
+            httpStatus: httpStatus ? Number(httpStatus) : null,
+            message: String(error?.message || error?.body?.error?.message || ''),
+          },
+        };
+      } catch (_) {
+        // noop
+      }
       // Fallback em caso de erro
       return inferFileCategoryFallback(file);
     }
@@ -2389,13 +3476,13 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
   // Executa um replay ao clicar no Replay ID e abre a tela de reprodução
   const handleReplayClick = async (replayId, detail) => {
     if (!replayId) {
-      showToast('Replay ID não encontrado', 'error');
+      setError('Replay ID não encontrado');
       return;
     }
 
     try {
-      showToast('Buscando informações do replay...', 'info');
-      
+      // Sem toast local: feedback visual do pipeline vem do backend via WS.
+
       // Tenta usar o recordingId diretamente do detail se disponível
       let recordingId = detail?.recordingId;
       let replayFilename = null;
@@ -2453,22 +3540,21 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       if (replayLink) {
         await handleViewReport(replayLink);
       } else {
-        showToast('Não foi possível encontrar o arquivo de replay', 'warning');
+        setError('Não foi possível encontrar o arquivo de replay');
         logger.warn('ReplayLink não encontrado', { replayId, detail });
       }
       
       // Executa o replay se tiver recordingId
       if (recordingId) {
-        showToast(`Executando replay: ${recordingId}...`, 'info');
-        
+        // Sem toast local: feedback visual do pipeline vem do backend via WS.
+
         // Executa o recording
         const result = await executeRpaRecording(recordingId, {}, {});
         
         if (result && result.success !== false) {
-          showToast('Replay executado com sucesso!', 'success');
           logger.info('Replay executado com sucesso', { replayId, recordingId, result });
         } else {
-          showToast('Erro ao executar replay', 'error');
+          setError('Erro ao executar replay');
           logger.error('Erro ao executar replay', { replayId, recordingId, result });
         }
       } else {
@@ -2476,7 +3562,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
       }
     } catch (err) {
       logger.error('Erro ao executar replay', err);
-      showToast(err.message || 'Erro ao executar replay', 'error');
+      setError(err.message || 'Erro ao executar replay');
     }
   };
 
@@ -2631,6 +3717,16 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                 />
                 <span>Gerar Seed</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer text-text-primary">
+                <input
+                  type="checkbox"
+                  checked={bootstrap ? true : includeQuestions}
+                  onChange={(e) => setIncludeQuestions(e.target.checked)}
+                  disabled={bootstrap}
+                  className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
+                />
+                <span>Incluir perguntas (FAQ) no fluxo</span>
+              </label>
             <label className="flex items-center gap-2 cursor-pointer text-text-primary">
               <input
                 type="checkbox"
@@ -2643,7 +3739,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             </div>
           {bootstrap && (
             <div className="mt-4 p-3 bg-status-warning/10 border border-status-warning/30 rounded-lg text-status-warning">
-              ⚠️ Modo Bootstrap ativo: Fluxo, RPA e Seed serão gerados automaticamente. RAG desativado.
+              ⚠️ Modo Bootstrap ativo: Fluxo, RPA e Seed serão gerados automaticamente. RAG desativado. FAQ habilitado automaticamente.
             </div>
           )}
         </div>
@@ -2747,7 +3843,7 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                             ? 'bg-status-success/10 border-status-success/30'
                             : fileObj.status === 'error'
                             ? 'bg-status-error/10 border-status-error/30'
-                            : fileObj.status === 'uploading'
+                            : fileObj.status === 'processing'
                             ? 'bg-status-warning/10 border-status-warning/30'
                             : 'bg-bg-secondary border-border-default'
                         } ${fileObj.status === 'success' ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
@@ -2784,8 +3880,8 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                             }`}>
                               {fileObj.status === 'pending' ? 'Pendente' : getCategoryLabel(fileObj.category)}
                             </span>
-                            {fileObj.status === 'uploading' && (
-                              <span className="text-xs text-status-warning animate-pulse">⏳ Enviando...</span>
+                            {fileObj.status === 'processing' && (
+                              <span className="text-xs text-status-warning animate-pulse">⏳ Processando...</span>
                             )}
                             {fileObj.status === 'success' && (
                               <>
@@ -2813,7 +3909,25 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                                 {fileObj.progress !== undefined && ` • ${fileObj.progress}%`}
                               </>
                             )}
+                            {fileObj.status === 'processing' &&
+                              typeof fileObj.progress === 'number' &&
+                              Number.isFinite(fileObj.progress) && (
+                                <> • {Math.max(0, Math.min(100, Math.round(fileObj.progress)))}%</>
+                              )}
                           </p>
+                          {fileObj.status === 'processing' &&
+                            typeof fileObj.progress === 'number' &&
+                            Number.isFinite(fileObj.progress) && (
+                              <div className="mt-2 h-2 w-full bg-bg-secondary border border-border-default rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-status-warning"
+                                  style={{
+                                    width: `${Math.max(0, Math.min(100, Math.round(fileObj.progress)))}%`,
+                                    transition: 'width 180ms ease-out',
+                                  }}
+                                />
+                              </div>
+                            )}
                         </div>
                         <button
                           onClick={(e) => {
@@ -2904,6 +4018,17 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   ? 'Descrição *' 
                   : 'Descrição (opcional no modo dry-run)'}
             </label>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm text-text-secondary">Modo da sugestão:</span>
+              <select
+                value={descriptionMode}
+                onChange={(e) => setDescriptionMode(e.target.value)}
+                className="px-3 py-2 rounded-lg bg-bg-secondary border border-border-default text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+              >
+                <option value="institutional">Institucional (padrão)</option>
+                <option value="technical">Técnico (auditoria)</option>
+              </select>
+            </div>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -2933,9 +4058,275 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           </div>
         </div>
 
-        {/* BLOCO 3 - Configuração da Execução */}
+        {/* BLOCO 3 - Perguntas (FAQ / Aprendizado Adaptivo) */}
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 3 — Configuração da Execução</h2>
+          <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 3 — Perguntas (FAQ / Aprendizado Adaptivo)</h2>
+
+          {(includeQuestions || bootstrap) && (
+            <div className="mt-4">
+              <p className="text-sm text-text-secondary mb-3">
+                Adicione perguntas que o bot deve ser capaz de responder. Elas serão incorporadas na geração do fluxo.
+              </p>
+
+              <div className="flex flex-wrap gap-2 mb-3">
+                <Button
+                  onClick={handleSuggestQuestionsFromDescription}
+                  disabled={!name.trim() && !description.trim()}
+                >
+                  Sugerir
+                </Button>
+                <Button
+                  onClick={() => {
+                    setQuestionsList([]);
+                    setFaqGroups(null);
+                    setFaqCoverage(null);
+                    setFaqExclusions(null);
+                    setShowFaqExclusions(false);
+                    setInitialFlow(null);
+                  }}
+                  disabled={questionsList.length === 0}
+                >
+                  Limpar lista
+                </Button>
+              </div>
+
+              {(() => {
+                const hasExclusions = Array.isArray(faqExclusions) && faqExclusions.length > 0;
+                const count = hasExclusions ? faqExclusions.length : 0;
+                return (
+                  <div className="mb-3 border border-border-default rounded-lg bg-bg-secondary p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-semibold text-text-primary">
+                        Exclusões dinâmicas (anti-ruído)
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => (hasExclusions ? setShowFaqExclusions((v) => !v) : null)}
+                          className="text-xs text-text-secondary border border-border-default rounded-full px-2 py-1 hover:bg-bg-hover"
+                          title={hasExclusions
+                            ? 'Termos inferidos para excluir ruído técnico das perguntas'
+                            : 'Os termos serão inferidos após gerar o FAQ'}
+                          disabled={!hasExclusions}
+                        >
+                          {count} termo(s) {showFaqExclusions && hasExclusions ? '▲' : '▼'}
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-accent-primary hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!hasExclusions}
+                          onClick={async () => {
+                            if (!hasExclusions) return;
+                            try {
+                              const txt = faqExclusions.join('\n');
+                              if (navigator?.clipboard?.writeText) {
+                                await navigator.clipboard.writeText(txt);
+                              } else {
+                                setError('Clipboard indisponível');
+                              }
+                            } catch {
+                              setError('Falha ao copiar exclusões');
+                            }
+                          }}
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    </div>
+
+                    {!hasExclusions && (
+                      <div className="mt-2 text-xs text-text-tertiary">
+                        Ainda não há termos inferidos. Eles aparecem automaticamente quando você gerar o FAQ (via “Sugerir”).
+                      </div>
+                    )}
+
+                    {showFaqExclusions && hasExclusions && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {faqExclusions.slice(0, 30).map((t) => (
+                          <span key={t} className="text-xs border border-border-default rounded-full px-2 py-0.5 text-text-secondary">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <Textarea
+                value={questionsText}
+                onChange={(e) => setQuestionsText(e.target.value)}
+                placeholder="Digite uma pergunta por linha. Ex.:&#10;Como resetar minha senha?&#10;Quais são as formas de pagamento?"
+                rows={4}
+                className="w-full"
+              />
+
+              <div className="flex items-center gap-3 mt-2">
+                <Button onClick={handleAddQuestionsFromText} disabled={!questionsText.trim()}>
+                  Adicionar perguntas
+                </Button>
+                <span className="text-xs text-text-tertiary">
+                  {questionsList.length} pergunta(s) na lista
+                </span>
+              </div>
+
+              {questionsList.length > 0 && (
+                <div className="mt-4 border border-border-default rounded-lg bg-bg-secondary p-3">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="text-sm font-semibold text-text-primary">Perguntas incluídas</div>
+                    {typeof faqCoverage === 'number' && (
+                      <span className="text-xs text-text-secondary border border-border-default rounded-full px-2 py-1">
+                        Cobertura do conhecimento: {Math.round(Math.max(0, Math.min(1, faqCoverage)) * 100)}%
+                        {Number.isFinite(Number(faqCoverageMeta?.chunkTextsEffective)) ? (
+                          <span className="text-text-tertiary">
+                            {' '}
+                            ({Number(faqCoverageMeta.chunkTextsEffective)} chunks {faqCoverageMeta?.chunkCoverageMode === 'relevant' ? 'relevantes' : 'totais'})
+                          </span>
+                        ) : null}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 max-h-56 overflow-y-auto">
+                    {Array.isArray(faqGroups) && faqGroups.length > 0 ? (
+                      faqGroups.map((group, gIdx) => (
+                        <div key={`${gIdx}-${group?.category || 'categoria'}`} className="border border-border-default/60 rounded-lg p-2">
+                          <div className="text-xs font-semibold text-text-secondary">
+                            {group?.category || 'Outros'}
+                          </div>
+                          <div className="space-y-2 mt-2">
+                            {(Array.isArray(group?.questions) ? group.questions : []).map((q) => {
+                              const idx = questionsList.indexOf(q);
+                              return (
+                                <div key={q} className="flex items-start justify-between gap-3">
+                                  <div className="text-sm text-text-primary whitespace-pre-wrap">{q}</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => (idx >= 0 ? handleRemoveQuestion(idx) : null)}
+                                    className="text-status-error hover:opacity-80 text-sm flex-shrink-0"
+                                    title="Remover"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      questionsList.map((q, idx) => (
+                        <div key={`${idx}-${q}`} className="flex items-start justify-between gap-3">
+                          <div className="text-sm text-text-primary whitespace-pre-wrap">{q}</div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveQuestion(idx)}
+                            className="text-status-error hover:opacity-80 text-sm flex-shrink-0"
+                            title="Remover"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Fluxo inicial (auto) - Canvas Rete */}
+        {(initialGraphLoading || initialFlow) && (
+          isTenantMode ? (
+            <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h2 className="text-xl font-semibold text-text-primary">Fluxo inicial (auto)</h2>
+                <div className="flex items-center gap-2">
+                  {initialGraphLoading && (
+                    <span className="text-xs text-text-secondary border border-border-default rounded-full px-2 py-1">
+                      Gerando...
+                    </span>
+                  )}
+                  <Button
+                    variant="default"
+                    type="button"
+                    onClick={() => {
+                      if (!initialFlow) return;
+                      const execId = pipelineExecutionIdRef.current || 'sem-execucao';
+                      const tenantId = validatedTenantId || agent?.tenantId || 'tenant';
+                      downloadJsonFile(initialFlow, `initial-flow-${tenantId}-${execId}`);
+                    }}
+                    disabled={!initialFlow}
+                    title={!initialFlow ? 'Aguardando fluxo inicial...' : 'Baixar JSON do fluxo inicial'}
+                  >
+                    Exportar JSON
+                  </Button>
+                  <Button
+                    variant="default"
+                    type="button"
+                    onClick={() => setShowInitialFlowModal(true)}
+                    disabled={!initialFlow}
+                    title={!initialFlow ? 'Aguardando fluxo inicial...' : 'Abrir fluxo em modal'}
+                  >
+                    Abrir em modal
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-sm text-text-secondary">
+                No modo tenant, o fluxo é exibido em um <strong>modal redimensionável</strong> para não ocupar a tela inteira.
+              </p>
+
+              {!initialFlow && initialGraphLoading && (
+                <div className="mt-3 text-sm text-text-secondary">
+                  Gerando grafo visual automaticamente a partir do FAQ...
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="text-xl font-semibold text-text-primary">
+                  Fluxo inicial (auto)
+                </h2>
+                <div className="flex items-center gap-2">
+                  {initialGraphLoading && (
+                    <span className="text-xs text-text-secondary border border-border-default rounded-full px-2 py-1">
+                      Gerando...
+                    </span>
+                  )}
+                  <Button
+                    variant="default"
+                    type="button"
+                    onClick={() => {
+                      if (!initialFlow) return;
+                      const execId = pipelineExecutionIdRef.current || 'sem-execucao';
+                      const tenantId = validatedTenantId || agent?.tenantId || 'tenant';
+                      downloadJsonFile(initialFlow, `initial-flow-${tenantId}-${execId}`);
+                    }}
+                    disabled={!initialFlow}
+                    title={!initialFlow ? 'Aguardando fluxo inicial...' : 'Baixar JSON do fluxo inicial'}
+                  >
+                    Exportar JSON
+                  </Button>
+                </div>
+              </div>
+              {initialFlow && (
+                <AutoInitialGraphCanvas flow={initialFlow} />
+              )}
+              {!initialFlow && initialGraphLoading && (
+                <div className="text-sm text-text-secondary">
+                  Gerando grafo visual automaticamente a partir do FAQ...
+                </div>
+              )}
+            </div>
+          )
+        )}
+
+        {/* BLOCO 4 - Configuração da Execução */}
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
+          <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 4 — Configuração da Execução</h2>
           <div className="mb-4">
             <label className="block mb-2 font-semibold text-text-primary">
               Modo de execução:
@@ -2981,9 +4372,9 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           </div>
         </div>
 
-        {/* BLOCO 4 - Validações Automáticas */}
+        {/* BLOCO 5 - Validações Automáticas */}
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 4 — Validações Automáticas</h2>
+          <h2 className="text-xl font-semibold text-text-primary mb-4">BLOCO 5 — Validações Automáticas</h2>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-text-primary">
               {validationStatus.contract === 'valid' && <span className="text-status-success">✔</span>}
@@ -3017,34 +4408,193 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                 { key: 'providerValidated', label: 'Provider de IA validado' },
                 { key: 'ragValidated', label: 'Serviço RAG validado' },
               ] : []),
+              { key: 'filesInferred', label: executionMode === 'dry-run' ? 'Arquivos processados (dry-run)' : 'Arquivos inferidos e indexados' },
+              ...(isTenantMode && useWebScraping ? [{ key: 'webScraping', label: 'Web scraping' }] : []),
               ...(needsDescriptionSuggestion ? [{ key: 'descriptionSuggested', label: 'Sugerir descrição' }] : []),
-              { key: 'filesInferred', label: 'Arquivos inferidos e indexados' },
+              ...((includeQuestions || bootstrap) ? [{ key: 'questionsGenerated', label: 'Perguntas geradas' }] : []),
+              ...(isTenantMode ? [
+                { key: 'faqGenerated', label: 'FAQ gerado (tenant)' },
+                { key: 'initialFlowGenerated', label: 'Fluxo inicial gerado (tenant)' },
+              ] : []),
               { key: 'payloadValid', label: 'Payload válido' },
               { key: 'contractValid', label: 'Contrato válido' },
               { key: 'contextBuilt', label: 'Contexto montado' },
-              { key: 'aiExecuted', label: 'IA executada' },
+              ...(useRag && !bootstrap ? [{ key: 'ragContextBuilt', label: 'Contexto RAG construído' }] : []),
               { key: 'flowGenerated', label: 'Fluxo gerado' },
               { key: 'seedGenerated', label: 'Seed gerado' },
-              { key: 'rpaGenerated', label: 'RPA gerado' },
-              { key: 'rpaExecuted', label: 'RPA executado' },
+              ...(isTenantMode
+                ? [{ key: 'rpa', label: 'RPA' }]
+                : [
+                    { key: 'rpaGenerated', label: 'RPA gerado' },
+                    { key: 'rpaExecuted', label: 'RPA executado' },
+                  ]),
               { key: 'approved', label: 'Aprovado' },
             ].map(({ key, label }) => {
-              const detail = pipelineDetails[key];
-              const status = pipelineStatus[key];
+              const { detail, status } = (() => {
+                if (key !== 'rpa') {
+                  // Fonte única de verdade (pipeline): máquina de estados via websocket
+                  if (PIPELINE_STAGE_ORDER.includes(key) || key === PipelineStage.failed) {
+                    const completed = pipelineMachine.state.completedStages.has(key);
+                    const failed = pipelineMachine.state.stage === PipelineStage.failed;
+                    const meta = pipelineMachine.state.stageMeta?.[key] || null;
+                    const failedStage = pipelineMachine.state.failedStage || null;
+                    const isCurrentStage =
+                      pipelineMachine.state.executionStatus === 'running' &&
+                      pipelineMachine.state.currentStage === key &&
+                      pipelineMachine.state.currentStageStatus === 'in_progress';
+                    const isApprovedStageCompleted =
+                      key === PipelineStage.approved && pipelineMachine.state.executionStatus === 'approved';
+
+                    const keyIdx = PIPELINE_STAGE_ORDER.indexOf(key);
+                    const failedIdx = failedStage ? PIPELINE_STAGE_ORDER.indexOf(failedStage) : -1;
+                    const isAfterFailure =
+                      failed && failedIdx >= 0 && keyIdx >= 0 && keyIdx > failedIdx;
+
+                    // Se falhou:
+                    // - Apenas a etapa que falhou fica em erro
+                    // - Etapas posteriores ficam pendentes (não executadas)
+                    const isFailedStage = failed && !!failedStage && key === failedStage;
+                    const derivedStatusBase = completed
+                      ? 'completed'
+                      : isApprovedStageCompleted
+                        ? 'completed'
+                        : (isCurrentStage ? 'in_progress' : (
+                          failed
+                            ? (isFailedStage ? 'error' : (isAfterFailure ? 'pending' : 'pending'))
+                            : 'pending'
+                        ));
+
+                    // Progresso de upload (filesInferred) pode acontecer *antes* do primeiro evento WS.
+                    // Nesses casos, usamos o progresso local para alimentar a UI do pipeline.
+                    const localDetail = pipelineDetails?.[key] || null;
+                    const localInProgress = localDetail && localDetail.status === 'in_progress';
+                    const allowLocalOverride =
+                      (key === 'filesInferred' || key === 'initialFlowGenerated') &&
+                      localInProgress &&
+                      (pipelineMachine.state.executionStatus !== 'running' || !pipelineMachine.state.currentStage);
+
+                    const derivedStatus = allowLocalOverride ? 'in_progress' : derivedStatusBase;
+
+                    const derivedDetail = {
+                      status: derivedStatus,
+                      timestamp:
+                        (derivedStatus === 'in_progress'
+                          ? ((allowLocalOverride ? (localDetail?.timestamp || null) : null) || pipelineMachine.state.currentStageTimestamp || meta?.timestamp)
+                          : meta?.timestamp) || null,
+                      message:
+                        (derivedStatus === 'in_progress'
+                          ? ((allowLocalOverride ? (localDetail?.message || null) : null) || (isCurrentStage ? pipelineMachine.state.currentStageMessage : null) || meta?.message)
+                          : ((isFailedStage && !completed ? (pipelineMachine.state.failedReason || 'Pipeline falhou') : null) || meta?.message)) || null,
+                      progress:
+                        completed
+                          ? 100
+                          : (derivedStatus === 'in_progress'
+                            ? ((key === 'filesInferred' || key === 'initialFlowGenerated')
+                              ? (Number.isFinite(localDetail?.progress) ? localDetail.progress : 0)
+                              : 0)
+                            : 0),
+                    };
+
+                    return { detail: derivedDetail, status: completed };
+                  }
+
+                  // Steps auxiliares (fora do state machine) permanecem locais por enquanto
+                  return { detail: pipelineDetails[key], status: pipelineStatus[key] };
+                }
+
+                const genDetail = pipelineDetails?.rpaGenerated || null;
+                const execDetail = pipelineDetails?.rpaExecuted || null;
+
+                const genStatus = genDetail?.status;
+                const execStatus = execDetail?.status;
+
+                const rpaGeneratedDone = pipelineMachine.state.completedStages.has(PipelineStage.rpaGenerated);
+                const rpaExecutedDone = pipelineMachine.state.completedStages.has(PipelineStage.rpaExecuted);
+                const isCurrentRpaStage =
+                  pipelineMachine.state.executionStatus === 'running' &&
+                  (pipelineMachine.state.currentStage === PipelineStage.rpaGenerated || pipelineMachine.state.currentStage === PipelineStage.rpaExecuted) &&
+                  pipelineMachine.state.currentStageStatus === 'in_progress';
+
+                const failed = pipelineMachine.state.stage === PipelineStage.failed;
+                const failedStage = pipelineMachine.state.failedStage || null;
+                const failedAtRpa =
+                  failedStage === PipelineStage.rpaGenerated || failedStage === PipelineStage.rpaExecuted;
+
+                const derivedStatus =
+                  (execStatus === 'error' || genStatus === 'error')
+                    ? 'error'
+                    : (failed && failedAtRpa)
+                      ? 'error'
+                      : (execStatus === 'in_progress' || genStatus === 'in_progress' || isCurrentRpaStage)
+                      ? 'error'
+                      : (execStatus === 'in_progress' || genStatus === 'in_progress' || isCurrentRpaStage)
+                        ? 'in_progress'
+                        : (rpaExecutedDone || rpaGeneratedDone)
+                          ? 'completed'
+                          : 'pending';
+
+                const progress = Math.max(
+                  typeof genDetail?.progress === 'number' ? genDetail.progress : 0,
+                  typeof execDetail?.progress === 'number' ? execDetail.progress : 0
+                );
+
+                const timestamp =
+                  execDetail?.timestamp ||
+                  genDetail?.timestamp ||
+                  pipelineMachine.state.currentStageTimestamp ||
+                  pipelineMachine.state.stageMeta?.[PipelineStage.rpaExecuted]?.timestamp ||
+                  pipelineMachine.state.stageMeta?.[PipelineStage.rpaGenerated]?.timestamp ||
+                  null;
+
+                const [fallbackStep, fallbackStatus] = (() => {
+                  if (execStatus === 'error') return ['rpaExecuted', 'error'];
+                  if (genStatus === 'error') return ['rpaGenerated', 'error'];
+                  if (execStatus === 'in_progress') return ['rpaExecuted', 'in_progress'];
+                  if (genStatus === 'in_progress') return ['rpaGenerated', 'in_progress'];
+                  if (pipelineStatus?.rpaExecuted) return ['rpaExecuted', 'completed'];
+                  if (pipelineStatus?.rpaGenerated) return ['rpaGenerated', 'completed'];
+                  return [null, null];
+                })();
+
+                const message =
+                  execDetail?.message ||
+                  genDetail?.message ||
+                  (isCurrentRpaStage ? pipelineMachine.state.currentStageMessage : null) ||
+                  pipelineMachine.state.stageMeta?.[PipelineStage.rpaExecuted]?.message ||
+                  pipelineMachine.state.stageMeta?.[PipelineStage.rpaGenerated]?.message ||
+                  ((failed && failedAtRpa) ? (pipelineMachine.state.failedReason || 'Pipeline falhou') : null) ||
+                  (fallbackStep && fallbackStatus ? getStepMessage(fallbackStep, fallbackStatus) : null);
+
+                const derivedDetail = {
+                  status: derivedStatus,
+                  timestamp,
+                  message,
+                  progress,
+                };
+
+                const derivedCompleted = !!(rpaExecutedDone || rpaGeneratedDone);
+
+                return { detail: derivedDetail, status: derivedCompleted };
+              })();
               const isCompleted = status === true;
               const isInProgress = detail?.status === 'in_progress';
               const hasError = detail?.status === 'error';
+              const isWarning = detail?.status === 'warning';
+              const showProgressAfterComplete = key === 'filesInferred' && isCompleted && (detail?.progress || 0) > 0;
+              const showProgress = (isInProgress && detail.progress > 0) || showProgressAfterComplete;
               
               return (
                 <div
                   key={key}
                   className={`p-3 rounded-lg border ${
-                    isCompleted
-                      ? 'bg-status-success/10 border-status-success/30'
+                    hasError
+                      ? 'bg-status-error/10 border-status-error/30'
                       : isInProgress
                       ? 'bg-status-warning/10 border-status-warning/30'
-                      : hasError
-                      ? 'bg-status-error/10 border-status-error/30'
+                      : isWarning
+                      ? 'bg-status-warning/10 border-status-warning/30'
+                      : isCompleted
+                      ? 'bg-status-success/10 border-status-success/30'
                       : 'bg-bg-secondary border-border-default'
                   }`}
                 >
@@ -3057,6 +4607,8 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-status-warning"></div>
                       ) : hasError ? (
                         <span className="text-status-error text-lg">✗</span>
+                      ) : isWarning ? (
+                        <span className="text-status-warning text-lg">!</span>
                       ) : (
                         <span className="text-text-tertiary text-lg">○</span>
                       )}
@@ -3066,15 +4618,58 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-text-primary">{label}</span>
-                        {isInProgress && detail.progress > 0 && (
+                        {isTenantMode && key === 'initialFlowGenerated' && (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="text-xs"
+                            onClick={() => ensureInitialFlowLoaded()}
+                            disabled={initialGraphLoading}
+                            title={
+                              initialGraphLoading
+                                ? 'Gerando fluxo inicial...'
+                                : (initialFlow ? 'Abrir fluxo em modal' : 'Gerar/carregar fluxo inicial')
+                            }
+                          >
+                            {initialFlow ? 'Abrir fluxo →' : 'Carregar fluxo →'}
+                          </Button>
+                        )}
+                        {key === 'descriptionSuggested' && detail?.meta && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-bg-secondary border border-border-default text-text-tertiary">
+                              modo: <strong className="text-text-secondary">{detail.meta.mode}</strong>
+                            </span>
+                            {detail.meta.fallback && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-status-warning/10 border border-status-warning/30 text-status-warning">
+                                fallback
+                              </span>
+                            )}
+                            {typeof detail.meta.confidence === 'number' && (
+                              <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                                detail.meta.confidence < 0.5
+                                  ? 'bg-status-warning/10 border-status-warning/30 text-status-warning'
+                                  : 'bg-status-success/10 border-status-success/30 text-status-success'
+                              }`}>
+                                confiança: <strong>{Math.round(detail.meta.confidence * 100)}%</strong>
+                              </span>
+                            )}
+                            {Number.isFinite(detail.meta.warningsCount) && detail.meta.warningsCount > 0 && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-bg-secondary border border-border-default text-text-tertiary">
+                                avisos: <strong className="text-text-secondary">{detail.meta.warningsCount}</strong>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {showProgress && (
                           <span className="text-xs text-text-tertiary">({detail.progress}%)</span>
                         )}
                       </div>
                       {detail?.message && (
                         <p className={`text-xs mt-1 ${
-                          isCompleted ? 'text-status-success' :
-                          isInProgress ? 'text-status-warning' :
                           hasError ? 'text-status-error' :
+                          isInProgress ? 'text-status-warning' :
+                          isWarning ? 'text-status-warning' :
+                          isCompleted ? 'text-status-success' :
                           'text-text-tertiary'
                         }`}>
                           {detail.message}
@@ -3087,12 +4682,14 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                       )}
                     </div>
                     
-                    {/* Barra de progresso (se em progresso) */}
-                    {isInProgress && detail.progress > 0 && (
+                    {/* Barra de progresso */}
+                    {showProgress && (
                       <div className="flex-shrink-0 w-24">
                         <div className="w-full bg-bg-secondary rounded-full h-2">
                           <div
-                            className="bg-status-warning h-2 rounded-full transition-all duration-300"
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              isInProgress ? 'bg-status-warning' : 'bg-status-success'
+                            }`}
                             style={{ width: `${detail.progress}%` }}
                           ></div>
                         </div>
@@ -3109,7 +4706,10 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
             <div className="mt-4 p-3 bg-bg-secondary rounded-lg border border-border-default">
               <div className="flex items-center gap-2 text-sm text-text-secondary">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent-primary"></div>
-                <span>Pipeline em execução...</span>
+                <span>
+                  Pipeline em execução...
+                  {/* Sem fallback de polling: progresso vem apenas via WS */}
+                </span>
               </div>
             </div>
           )}
@@ -3297,7 +4897,26 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                           </div>
                           {result.flowDefinition.id && (
                             <Button
-                              onClick={() => navigate(`/flows/${result.flowDefinition.id}`)}
+                              onClick={() => {
+                                if (isTenantMode) {
+                                  const flow = result.flowDefinition;
+                                  setGeneratedFlowForModal(flow);
+                                  // Se for super-admin, passamos tenantId via querystring para o editor,
+                                  // que fará chamadas com X-Tenant-Id por requisição (sem mutar localStorage).
+                                  const flowTenantId =
+                                    flow?.tenantId ||
+                                    result?.tenant?.id ||
+                                    result?.tenantId ||
+                                    null;
+                                  const basePath = getBasePath() || '';
+                                  const flowId = flow?.id || '';
+                                  const tenantParam = flowTenantId ? `&tenantId=${encodeURIComponent(flowTenantId)}` : '';
+                                  setGeneratedFlowEditorUrl(`${basePath}/editor?flowId=${encodeURIComponent(flowId)}${tenantParam}`);
+                                  setShowGeneratedFlowModal(true);
+                                  return;
+                                }
+                                navigate(`/flows/${result.flowDefinition.id}`);
+                              }}
                               variant="ghost"
                               size="xs"
                               className="text-xs"
@@ -3458,12 +5077,12 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   <p className={`font-medium ${
                     selectedFileDetails.status === 'success' ? 'text-status-success' :
                     selectedFileDetails.status === 'error' ? 'text-status-error' :
-                    selectedFileDetails.status === 'uploading' ? 'text-status-warning' :
+                    selectedFileDetails.status === 'processing' ? 'text-status-warning' :
                     'text-text-secondary'
                   }`}>
                     {selectedFileDetails.status === 'success' ? '✓ Indexado' :
                      selectedFileDetails.status === 'error' ? '✗ Erro' :
-                     selectedFileDetails.status === 'uploading' ? '⏳ Enviando...' :
+                     selectedFileDetails.status === 'processing' ? '⏳ Processando...' :
                      '⏸ Pendente'}
                   </p>
                 </div>
@@ -3471,6 +5090,32 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
                   <div className="col-span-2">
                     <span className="text-text-tertiary">ID do Documento RAG:</span>
                     <p className="text-text-primary font-mono text-xs break-all">{selectedFileDetails.documentId}</p>
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        className="text-xs px-2 py-1 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary"
+                        onClick={() => downloadRagOriginalFile(
+                          selectedFileDetails.documentId,
+                          selectedFileDetails.name,
+                          'open'
+                        )}
+                        title="Abrir o arquivo original salvo no RAG em nova aba"
+                      >
+                        🔎 Abrir original (RAG)
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs px-2 py-1 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary"
+                        onClick={() => downloadRagOriginalFile(
+                          selectedFileDetails.documentId,
+                          selectedFileDetails.name,
+                          'download'
+                        )}
+                        title="Baixar o arquivo original salvo no RAG"
+                      >
+                        ⬇️ Baixar original (RAG)
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -3596,6 +5241,350 @@ Retorne APENAS a descrição sugerida, sem explicações adicionais.`;
           </div>
         )}
       </Dialog>
+
+      {/* Modal do Fluxo Inicial (modo tenant) */}
+      {isTenantMode && initialFlow && (
+        <Dialog
+          isOpen={showInitialFlowModal}
+          onClose={() => {
+            setShowInitialFlowModal(false);
+            setInitialFlowModalSize({ width: null, height: null });
+            setIsInitialFlowFullscreen(false);
+            setIsInitialFlowMinimized(false);
+            setShowInitialFlowObjectiveEditor(false);
+            setInitialFlowObjectiveDraft('');
+          }}
+          title={<span>Fluxo inicial (auto)</span>}
+          headerActions={
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowInitialFlowObjectiveEditor((v) => !v);
+                }}
+                className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+                title={showInitialFlowObjectiveEditor ? 'Fechar objetivo' : 'Ver/editar objetivo do fluxo'}
+                disabled={isInitialFlowMinimized}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4h10M11 8h10M4 12h17M4 16h17M4 20h17" />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Minimizar sempre sai do fullscreen
+                  if (!isInitialFlowMinimized && isInitialFlowFullscreen) setIsInitialFlowFullscreen(false);
+                  setIsInitialFlowMinimized((v) => !v);
+                }}
+                className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+                title={isInitialFlowMinimized ? 'Restaurar' : 'Minimizar'}
+              >
+                {isInitialFlowMinimized ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 14h16M4 10h16" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18h12" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Fullscreen sempre des-minimiza
+                  if (!isInitialFlowFullscreen && isInitialFlowMinimized) setIsInitialFlowMinimized(false);
+                  setIsInitialFlowFullscreen(!isInitialFlowFullscreen);
+                }}
+                className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+                title={isInitialFlowFullscreen ? 'Sair da tela cheia (F11)' : 'Tela cheia (F11)'}
+                disabled={isInitialFlowMinimized}
+              >
+                {isInitialFlowFullscreen ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          }
+          size={isInitialFlowFullscreen ? "full" : "xl"}
+          draggable={!isInitialFlowFullscreen}
+          resizable={!isInitialFlowFullscreen && !isInitialFlowMinimized}
+          dynamicSize={
+            isInitialFlowMinimized
+              ? { width: 420, isCollapsed: true }
+              : (isInitialFlowFullscreen ? { width: window.innerWidth - 32, isCollapsed: false } : null)
+          }
+          onSizeChange={(size) => setInitialFlowModalSize(size)}
+        >
+          {(() => {
+            const rawFlowId = initialFlow?.id || null;
+            const isDryRunId = rawFlowId && String(rawFlowId).includes('dry-run');
+            const flowId = rawFlowId && !isDryRunId ? rawFlowId : null;
+            const basePath = getBasePath() || '';
+            const contentHeight = isInitialFlowFullscreen
+              ? 'calc(100vh - 6rem)'
+              : (initialFlowModalSize?.height ? Math.max(260, initialFlowModalSize.height - 140) : 600);
+            const targetTenantId =
+              initialFlow?.tenantId ||
+              extractTenantFromInitialFlowId(rawFlowId) ||
+              result?.tenant?.id ||
+              result?.tenantId ||
+              null;
+            // Em modo tenant, para super-admin, passamos tenantId via querystring para o editor,
+            // que fará chamadas com X-Tenant-Id por requisição (sem mutar localStorage/token).
+            const tenantParam =
+              agent?.role === 'super_admin' && targetTenantId
+                ? `&tenantId=${encodeURIComponent(targetTenantId)}`
+                : '';
+            const editorUrl = flowId ? `${basePath}/editor?flowId=${encodeURIComponent(flowId)}${tenantParam}` : '';
+
+            const warnings = initialFlow?.validationWarnings || null;
+            const warningCount = Array.isArray(warnings?.errors) ? warnings.errors.length : 0;
+            const hasWarnings = warnings && warnings.valid === false && warningCount > 0;
+
+            const Badges = () => (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-status-info/10 border border-status-info/30 text-status-info">
+                  IA
+                </span>
+                {isDryRunId && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-status-warning/10 border border-status-warning/30 text-status-warning">
+                    dry-run
+                  </span>
+                )}
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-bg-secondary border border-border-default text-text-tertiary">
+                  nós: <strong className="text-text-secondary">{Array.isArray(initialFlow?.nodes) ? initialFlow.nodes.length : 0}</strong>
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-bg-secondary border border-border-default text-text-tertiary">
+                  arestas: <strong className="text-text-secondary">{Array.isArray(initialFlow?.edges) ? initialFlow.edges.length : 0}</strong>
+                </span>
+                {hasWarnings && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-status-warning/10 border border-status-warning/30 text-status-warning">
+                    avisos: <strong>{warningCount}</strong>
+                  </span>
+                )}
+              </div>
+            );
+
+            const ObjectiveEditor = () => (
+              <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs text-text-tertiary uppercase tracking-wider font-medium">
+                    Objetivo do fluxo (o que ele vai atender)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={async () => {
+                        try {
+                          const txt = String(initialFlowObjectiveDraft || '').trim();
+                          if (!txt) return;
+                          if (navigator?.clipboard?.writeText) {
+                            await navigator.clipboard.writeText(txt);
+                          }
+                        } catch {
+                          // best-effort
+                        }
+                      }}
+                      disabled={!String(initialFlowObjectiveDraft || '').trim()}
+                      title="Copiar objetivo"
+                    >
+                      Copiar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => setShowInitialFlowObjectiveEditor(false)}
+                      title="Fechar"
+                    >
+                      Fechar
+                    </Button>
+                  </div>
+                </div>
+                <textarea
+                  value={initialFlowObjectiveDraft}
+                  onChange={(e) => setInitialFlowObjectiveDraft(e.target.value)}
+                  placeholder="Descreva o objetivo/escopo do atendimento deste fluxo..."
+                  className="w-full p-3 border border-border-default rounded-md bg-bg-primary text-text-primary placeholder-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-default focus:border-transparent"
+                  rows={5}
+                />
+                <div className="text-xs text-text-tertiary">
+                  Dica: escreva em 2–5 frases (serviços atendidos, público-alvo, regras e o que não deve atender).
+                </div>
+              </div>
+            );
+
+            const ValidationWarnings = () => (
+              hasWarnings ? (
+                <div className="p-3 rounded-md bg-status-warning/10 border border-status-warning/20 text-status-warning text-sm">
+                  <strong>Avisos de validação:</strong> {warningCount} item(ns).
+                </div>
+              ) : null
+            );
+
+            const StatusRow = () => {
+              if (flowId) {
+                return (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
+                    <div className="text-sm text-text-secondary">
+                      Fluxo persistido. Abrindo editor embutido no modal.
+                    </div>
+                    {editorUrl ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => {
+                          try {
+                            window.open(editorUrl, '_blank', 'noopener,noreferrer');
+                          } catch {
+                            // best-effort
+                          }
+                        }}
+                        title="Abrir o editor em uma nova aba"
+                      >
+                        Abrir em nova aba
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="flex items-center justify-between gap-3 bg-status-warning/10 border border-status-warning/30 rounded-lg p-3 text-sm">
+                  <div className="text-text-secondary">
+                    Este fluxo inicial não está persistido (normal em <strong>dry-run</strong>). Para abrir no editor completo, é preciso <strong>persistir</strong> o fluxo.
+                  </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    type="button"
+                    disabled={isPersistingInitialFlow}
+                    onClick={async () => {
+                      if (isPersistingInitialFlow) return;
+                      setIsPersistingInitialFlow(true);
+                      try {
+                        const safeName = initialFlow?.name || 'Fluxo inicial (auto)';
+                        // Importante: não envia id \"fake\" (dry-run). Deixa o backend gerar um id real.
+                        const { id: _ignoredId, ...payload } = (initialFlow || {});
+                        const saved = await createFlow({ ...payload, name: safeName });
+                        if (saved && typeof saved === 'object') {
+                          setInitialFlow(saved);
+                        } else {
+                          throw new Error('Resposta inválida ao persistir fluxo');
+                        }
+                      } catch (e) {
+                        const msg = e?.body?.message || e?.message || 'Falha ao persistir fluxo para abrir no editor.';
+                        setError(msg);
+                      } finally {
+                        setIsPersistingInitialFlow(false);
+                      }
+                    }}
+                    title="Persistir o fluxo e abrir no editor"
+                  >
+                    {isPersistingInitialFlow ? 'Persistindo...' : 'Persistir e abrir'}
+                  </Button>
+                </div>
+              );
+            };
+
+            return (
+              <div className="space-y-3">
+                <Badges />
+                {showInitialFlowObjectiveEditor && <ObjectiveEditor />}
+                <ValidationWarnings />
+                <StatusRow />
+                <div
+                  className="w-full overflow-hidden rounded-lg border border-border-default bg-bg-primary"
+                  style={{ height: contentHeight }}
+                >
+                  {flowId ? (
+                    <iframe
+                      title="Editor de Fluxos"
+                      src={editorUrl}
+                      className="w-full h-full"
+                      style={{ border: 0 }}
+                    />
+                  ) : (
+                    <AutoInitialGraphCanvas
+                      flow={initialFlow}
+                      height="100%"
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </Dialog>
+      )}
+
+      {/* Modal do Fluxo Gerado (artefato) - modo tenant */}
+      {isTenantMode && generatedFlowForModal && (
+        <Dialog
+          isOpen={showGeneratedFlowModal}
+          onClose={() => {
+            setShowGeneratedFlowModal(false);
+            setGeneratedFlowModalSize({ width: null, height: null });
+            setGeneratedFlowEditorUrl('');
+            setIsGeneratedFlowFullscreen(false);
+          }}
+          title={<span>Fluxo gerado (artefato)</span>}
+          headerActions={
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsGeneratedFlowFullscreen(!isGeneratedFlowFullscreen);
+              }}
+              className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+              title={isGeneratedFlowFullscreen ? 'Sair da tela cheia (F11)' : 'Tela cheia (F11)'}
+            >
+              {isGeneratedFlowFullscreen ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              )}
+            </button>
+          }
+          size={isGeneratedFlowFullscreen ? "full" : "xl"}
+          draggable={!isGeneratedFlowFullscreen}
+          resizable={!isGeneratedFlowFullscreen}
+          dynamicSize={isGeneratedFlowFullscreen ? { width: window.innerWidth - 32, isCollapsed: false } : null}
+          onSizeChange={(size) => setGeneratedFlowModalSize(size)}
+        >
+          <div
+            className="w-full overflow-hidden rounded-lg border border-border-default bg-bg-primary"
+            style={{
+              height: isGeneratedFlowFullscreen
+                ? 'calc(100vh - 6rem)'
+                : (generatedFlowModalSize?.height ? Math.max(260, generatedFlowModalSize.height - 140) : 600),
+            }}
+          >
+            {/* Abre o editor completo (/editor) dentro do modal */}
+            {(() => {
+              return (
+                <iframe
+                  title="Editor de Fluxos"
+                  src={generatedFlowEditorUrl}
+                  className="w-full h-full"
+                  style={{ border: 0 }}
+                />
+              );
+            })()}
+          </div>
+        </Dialog>
+      )}
 
       {/* Modal de Relatório/Log RPA */}
       <Dialog

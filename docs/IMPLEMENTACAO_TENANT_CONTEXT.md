@@ -70,7 +70,7 @@ Este documento resume a implementação consolidada do sistema multi-tenant com 
 
 - **Isolamento total implementado**:
   - `tenant_id` obrigatório em todas as entidades
-  - Vector stores separados por tenant (FAISS)
+  - Vector store no Postgres (pgvector) com isolamento por `tenant_key`
   - Documentos filtrados por `tenant_id`
   - Fluxos isolados por `tenant_id`
   - Execuções isoladas por `tenant_id`
@@ -184,7 +184,7 @@ Este documento resume a implementação consolidada do sistema multi-tenant com 
 ┌─────────────────────────────────────────────────────────────┐
 │ 3. Busca vetorial                                            │
 │    - Query processada com NLP (ramo_atividade como viés)     │
-│    - Busca no índice FAISS do tenant específico             │
+│    - Busca no Postgres (pgvector) do tenant específico      │
 │    - Filtros por tenant_id (isolamento)                     │
 └─────────────────────────────────────────────────────────────┘
                         ↓

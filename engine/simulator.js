@@ -43,6 +43,8 @@ const { runStep } = require('./runner');
  *   - estado atual
  *   - saída do passo anterior (ou null no primeiro passo)
  *   - índice do próximo passo
+ * @property {Object} [executionLedger] - Adapter opcional para registrar execução no ledger
+ * @property {boolean} [allowUnreviewedAiFlow] - Permite execução de fluxo em safe-mode
  */
 
 /**
@@ -62,6 +64,10 @@ const { runStep } = require('./runner');
 async function runUntilHalt(flow, initialState, registry, options) {
   const maxSteps = (options && options.maxSteps) || 100;
   const inputProvider = options && options.inputProvider;
+  const executionLedger = options && options.executionLedger ? options.executionLedger : null;
+  const allowUnreviewedAiFlow = options && options.allowUnreviewedAiFlow === true;
+  const useExecuteStep = !!executionLedger || allowUnreviewedAiFlow || (options && options.useExecuteStep === true);
+  const executeStep = useExecuteStep ? require('./executeStep').executeStep : null;
 
   /** @type {SimulationStep[]} */
   const steps = [];
@@ -85,20 +91,34 @@ async function runUntilHalt(flow, initialState, registry, options) {
       input = await inputProvider(currentState, lastStepOutput, i);
     }
 
-    const stepResult = await runStep(flow, currentState, registry, input);
+    const stepResult = useExecuteStep
+      ? await executeStep(currentState, flow, {
+        registry,
+        input,
+        deps: {
+          registry,
+          executionLedger,
+          allowUnreviewedAiFlow,
+        },
+      })
+      : await runStep(flow, currentState, registry, input);
+
+    const normalized = useExecuteStep
+      ? { nextState: stepResult.state, output: stepResult.output, events: stepResult.events }
+      : stepResult;
 
     const simStep = {
       index: i,
       stateBefore: currentState,
-      stateAfter: stepResult.nextState,
-      output: stepResult.output,
-      events: stepResult.events,
+      stateAfter: normalized.nextState,
+      output: normalized.output,
+      events: normalized.events,
     };
     steps.push(simStep);
-    allEvents.push(...stepResult.events);
+    allEvents.push(...normalized.events);
 
-    currentState = stepResult.nextState;
-    lastStepOutput = stepResult;
+    currentState = normalized.nextState;
+    lastStepOutput = normalized;
 
     // Se a conversa terminou neste passo, encerramos.
     if (!currentState.currentNodeId) {
@@ -191,5 +211,3 @@ module.exports = {
   runUntilHalt,
   createSimulator,
 };
-
-

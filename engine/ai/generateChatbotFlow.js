@@ -17,7 +17,10 @@
 const fs = require('fs');
 const path = require('path');
 const { validateGeneratedPlan } = require('./validateGeneratedPlan');
-const logger = require('../../api/utils/logger');
+// NOTE: este módulo roda no contexto da engine e não deve depender da API.
+// Para logs, usamos console (compatível com .debug/.info/.warn/.error).
+const logger = console;
+const { buildAiEnvelope, validateAiEnvelopeOrThrow, validateByContract } = require('./aiEnvelope');
 
 // Caminho do prompt oficial
 // Corrigido: usa caminho absoluto baseado na raiz do projeto
@@ -49,18 +52,11 @@ function simulateAiGeneration(userInput, prompt) {
   // SIMULAÇÃO: Retorna um fluxo básico válido
   // Em produção, aqui seria a chamada real à IA com o prompt
   return {
-    action: "create_flow",
-    metadata: {
-      name: userInput.substring(0, 50) || "Fluxo Gerado",
-      description: userInput || "Fluxo gerado automaticamente"
-    },
     nodes: [
       {
         id: "start_1",
         type: "start",
-        config: {
-          message: "Bem-vindo"
-        },
+        config: {},
         next: "message_1"
       },
       {
@@ -69,6 +65,15 @@ function simulateAiGeneration(userInput, prompt) {
         config: {
           text: "Olá! Como posso ajudar?"
         },
+        next: "fallback_1"
+      },
+      {
+        id: "fallback_1",
+        type: "fallback",
+        config: {
+          maxAttempts: 3,
+          escalationMode: "ticket"
+        },
         next: "end_1"
       },
       {
@@ -76,8 +81,7 @@ function simulateAiGeneration(userInput, prompt) {
         type: "end",
         config: {}
       }
-    ],
-    edges: []
+    ]
   };
 }
 
@@ -91,14 +95,24 @@ function simulateAiGeneration(userInput, prompt) {
 function ensureFlowMetadata(flow, options = {}) {
   const tenantId = options.tenantId || 'demo-tenant';
   const flowId = options.flowId || `flow-${Date.now()}`;
-  const flowName = options.flowName || flow.metadata?.name || 'Fluxo Gerado';
+  const flowName = options.flowName || flow?.metadata?.name || flow?.name || 'Fluxo Gerado';
   
   return {
-    ...flow,
+    // Sanitiza: mantém apenas shape do FlowDefinition (schema RAG_CHATBOT)
+    nodes: Array.isArray(flow?.nodes) ? flow.nodes : [],
     id: flow.id || flowId,
     tenantId: flow.tenantId || tenantId,
     version: typeof flow.version === 'number' && flow.version >= 1 ? flow.version : 1,
     name: flow.name || flowName,
+    metadata: {
+      ...(flow && typeof flow.metadata === 'object' ? flow.metadata : {}),
+      generatedBy: 'ai',
+      generated: true,
+      generatedAt: new Date().toISOString(),
+      // Safe-mode obrigatório
+      status: 'draft',
+      requiresReview: true,
+    }
   };
 }
 
@@ -115,8 +129,17 @@ function ensureFlowMetadata(flow, options = {}) {
  */
 async function generateChatbotFlow(userInput, options = {}) {
   if (!userInput || typeof userInput !== 'string') {
+    const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('chatbot_flow', {}, {
+      valid: false,
+      errors: [{ type: 'INVALID_INPUT', message: 'Input do usuário deve ser uma string não vazia' }],
+      warnings: [],
+      qualityScore: 0,
+      riskFlags: ['INVALID_INPUT'],
+    }, options?._aiMeta || {}));
+
     return {
       success: false,
+      envelope,
       error: {
         type: 'INVALID_INPUT',
         message: 'Input do usuário deve ser uma string não vazia'
@@ -139,7 +162,28 @@ async function generateChatbotFlow(userInput, options = {}) {
     const flowWithMetadata = ensureFlowMetadata(generatedFlow, options);
 
     // 3. Validação OBRIGATÓRIA pelo gate
-    const validation = validateGeneratedPlan(flowWithMetadata, 'chatbot');
+    const gateValidation = validateGeneratedPlan(flowWithMetadata, 'chatbot');
+
+    // 3.1 Validação OBRIGATÓRIA por contrato (AJV) (FORMA)
+    const contractPath = 'api/data/rag/chatbot/schema/flow.schema.json';
+    const contractValidation = validateByContract(contractPath, flowWithMetadata);
+
+    /** @type {any} */
+    const validation = {
+      ...gateValidation,
+      valid: gateValidation.valid === true && contractValidation.valid === true,
+      errors: [
+        ...(Array.isArray(gateValidation.errors) ? gateValidation.errors : []),
+        ...(contractValidation.valid
+          ? []
+          : [{
+            type: 'AJV_CONTRACT_VALIDATION_FAILED',
+            message: `Fluxo não passou no contrato AJV (${contractPath})`,
+            rule: 'CONTRACT_AJV',
+            details: contractValidation.errors || [],
+          }]),
+      ],
+    };
     
     if (!validation.valid) {
       logger.warn('[generateChatbotFlow] Fluxo rejeitado pelo gate', {
@@ -147,9 +191,17 @@ async function generateChatbotFlow(userInput, options = {}) {
         errors: validation.errors
       });
 
+      const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope(
+        'chatbot_flow',
+        flowWithMetadata,
+        validation,
+        options?._aiMeta || {},
+      ));
+
       return {
         success: false,
         validation,
+        envelope,
         error: {
           type: 'VALIDATION_FAILED',
           message: 'Fluxo gerado não passou na validação do gate',
@@ -164,20 +216,43 @@ async function generateChatbotFlow(userInput, options = {}) {
       domain: validation.domain
     });
 
-    // 4. Fluxo válido - retorna para uso
+    // 4. Envelope padronizado (obrigatório) + contrato AJV (envelope)
+    const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope(
+      'chatbot_flow',
+      flowWithMetadata,
+      validation,
+      options?._aiMeta || {},
+    ));
+
+    // 5. Fluxo válido - retorna para uso
     // NOTA: Não persiste automaticamente - o chamador decide o que fazer
 
     return {
       success: true,
       flow: flowWithMetadata,
       validation,
+      envelope,
       promptVersion: '1.0.0' // Versão do prompt utilizado
     };
 
   } catch (error) {
     logger.error('[generateChatbotFlow] Erro na geração', { error: error.message, stack: error.stack });
+    const envelope = (() => {
+      try {
+        return validateAiEnvelopeOrThrow(buildAiEnvelope('chatbot_flow', {}, {
+          valid: false,
+          errors: [{ type: 'GENERATION_ERROR', message: error.message }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['GENERATION_ERROR'],
+        }, options?._aiMeta || {}));
+      } catch {
+        return null;
+      }
+    })();
     return {
       success: false,
+      envelope,
       error: {
         type: 'GENERATION_ERROR',
         message: error.message,

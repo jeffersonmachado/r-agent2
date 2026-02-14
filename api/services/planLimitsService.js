@@ -11,6 +11,7 @@
  */
 
 const { getTenant, getTenantUsage } = require('./tenantService');
+const { getSetting, upsertSetting } = require('./tenantSettingsService');
 const logger = require('../utils/logger');
 
 /**
@@ -85,6 +86,16 @@ function getPlanLimits(plan) {
   return PLAN_LIMITS[plan] || PLAN_LIMITS.trial;
 }
 
+function normalizeResource(resource) {
+  if (resource === 'max_mensagens_mes') return 'max_conversas_mes';
+  return resource;
+}
+
+function getMonthStartIso(date = new Date()) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1, 0, 0, 0));
+  return d.toISOString();
+}
+
 /**
  * Verifica se um tenant pode realizar uma ação baseado nos limites do plano.
  * 
@@ -101,7 +112,7 @@ async function checkLimit(tenantId, resource, amount = 1) {
 
   // Compatibilidade: alguns lugares chamam "max_mensagens_mes" (mensagens/mês),
   // mas internamente usamos "max_conversas_mes" como quota mensal principal.
-  const normalizedResource = (resource === 'max_mensagens_mes') ? 'max_conversas_mes' : resource;
+  const normalizedResource = normalizeResource(resource);
 
   const limits = tenant.limits || getPlanLimits(tenant.plan);
   const limit = limits[normalizedResource];
@@ -164,8 +175,59 @@ function requireLimit(resource, amount = 1) {
  * @param {number} amount - Quantidade a incrementar
  */
 function incrementUsage(tenantId, resource, amount = 1) {
-  // TODO: Implementar contador de uso persistente
-  logger.debug('[PlanLimits] Uso incrementado', { tenantId, resource, amount });
+  const normalizedResource = normalizeResource(resource);
+  const safeAmount = Number.isFinite(amount) ? amount : 1;
+
+  if (!tenantId || !normalizedResource) {
+    logger.debug('[PlanLimits] Uso incrementado (ignorado: tenantId/resource inválidos)', {
+      tenantId,
+      resource,
+      amount: safeAmount,
+    });
+    return;
+  }
+
+  const monthStart = getMonthStartIso();
+
+  setImmediate(async () => {
+    try {
+      const current = await getSetting({ tenantId, key: 'usage_metrics' });
+      const existing = current && current.ok ? (current.value || {}) : {};
+      const existingMonth = existing.monthStart || null;
+      const counters = existingMonth === monthStart && existing.counters && typeof existing.counters === 'object'
+        ? { ...existing.counters }
+        : {};
+
+      const currentValue = Number.isFinite(counters[normalizedResource])
+        ? Number(counters[normalizedResource])
+        : 0;
+      counters[normalizedResource] = currentValue + safeAmount;
+
+      await upsertSetting({
+        tenantId,
+        key: 'usage_metrics',
+        value: {
+          monthStart,
+          counters,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+
+      logger.debug('[PlanLimits] Uso incrementado (persistido)', {
+        tenantId,
+        resource: normalizedResource,
+        amount: safeAmount,
+        total: counters[normalizedResource],
+        monthStart,
+      });
+    } catch (err) {
+      logger.debug('[PlanLimits] Falha ao persistir uso (ignorado)', {
+        tenantId,
+        resource: normalizedResource,
+        error: err.message,
+      });
+    }
+  });
 }
 
 /**

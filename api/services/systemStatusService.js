@@ -13,6 +13,8 @@ const config = require('../utils/config');
 const { isRedisAvailable, getRateLimitClient } = require('../../infra/redis/rateLimitClient');
 const { isRagAvailable, getRagServiceUrl } = require('./ragService');
 const { getWebSocketServer } = require('./websocketService');
+const { getSequelize } = require('../db/sequelize');
+const { RagDocument: RagDocumentGetter } = require('../db/models');
 
 /**
  * Extrai a porta de uma URL.
@@ -203,6 +205,43 @@ async function checkRagServiceStatus() {
           
           // Extrai a porta da URL do serviço RAG
           const port = extractPortFromUrl(ragServiceUrl, 8000);
+
+          // -------------------------------------------------------------------
+          // Unificação: também reporta consistência BD vs Vector Store (agregado)
+          // - /system/status é público, então NÃO usa tenantId (agregado).
+          // - Compara apenas contagens (não vaza conteúdo).
+          // -------------------------------------------------------------------
+          let dbIndexedDocuments = null;
+          let dbInconsistentDocuments = null;
+          let consistency = null;
+          try {
+            if (getSequelize()) {
+              const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+              dbIndexedDocuments = await RagDocumentModel.count({ where: { index_status: 'indexed' } });
+              dbInconsistentDocuments = await RagDocumentModel.count({ where: { inconsistent: true } });
+
+              const vectorDocs = data.indexedDocuments || 0;
+              const vectorChunks = data.indexedChunks || 0;
+              const inconsistent =
+                (dbIndexedDocuments || 0) > 0 &&
+                (vectorChunks === 0 || vectorDocs === 0);
+
+              consistency = {
+                status: inconsistent ? 'warning' : 'ok',
+                dbIndexedDocuments,
+                dbInconsistentDocuments,
+                vectorIndexedDocuments: vectorDocs,
+                vectorIndexedChunks: vectorChunks,
+                deltaDocuments: (dbIndexedDocuments || 0) - vectorDocs,
+                message: inconsistent
+                  ? `Inconsistência RAG detectada (BD indexed=${dbIndexedDocuments}, vector docs=${vectorDocs}, vector chunks=${vectorChunks})`
+                  : 'Consistência RAG OK (BD vs Vector Store)',
+              };
+            }
+          } catch (dbErr) {
+            // Best-effort: não quebra /system/status se DB estiver indisponível
+            logger.debug('[SystemStatus] Não foi possível obter contagem do BD para consistência RAG', { error: dbErr.message });
+          }
           
           return {
             status: 'healthy',
@@ -212,6 +251,9 @@ async function checkRagServiceStatus() {
               embeddingModel: data.embeddingModel,
               indexedDocuments: data.indexedDocuments || 0,
               indexedChunks: data.indexedChunks || 0,
+              dbIndexedDocuments,
+              dbInconsistentDocuments,
+              consistency,
             },
           };
         }

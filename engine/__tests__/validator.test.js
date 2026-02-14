@@ -194,6 +194,34 @@ describe('validator', () => {
       expect(loopError).toBeDefined();
       expect(loopError.nodeIds).toContain('loop');
     });
+
+    test('permite loop controlado quando há saída limit_exceeded para fora do ciclo', () => {
+      const flow = {
+        tenantId,
+        id: 'flow-controlled-loop',
+        name: 'Fluxo com loop controlado',
+        version: 1,
+        nodes: [
+          { id: 'start', type: 'start', next: 'router' },
+          {
+            id: 'router',
+            type: 'router',
+            config: {
+              loopMaxAttempts: 3,
+              rules: [{ condition: { op: 'always' }, next: 'b' }],
+            },
+            next: { default: 'b', limit_exceeded: 'end' },
+          },
+          { id: 'b', type: 'message', config: { text: 'B' }, next: 'router' },
+          { id: 'end', type: 'end' },
+        ],
+        metadata: {},
+      };
+
+      const result = validateFlow(flow);
+      expect(result.valid).toBe(true);
+      expect(result.errors.find((e) => e.code === 'INVALID_LOOP')).toBeUndefined();
+    });
   });
 
   describe('validateFlow - tipos incompatíveis', () => {

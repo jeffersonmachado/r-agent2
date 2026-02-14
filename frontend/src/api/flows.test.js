@@ -1,41 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock do client ANTES de importar flows
-vi.mock('./client', () => ({
-  fetchJson: vi.fn(),
-}));
-
-// eslint-disable-next-line import/first
-import {
-  listFlows,
-  getFlow,
-  createFlow,
-  updateFlow,
-  validateFlow,
-  simulateFlow,
-  getReplay,
-} from './flows';
-
-// eslint-disable-next-line import/first
-import { fetchJson } from './client';
+/**
+ * Estes testes precisam isolar o módulo `./client` para evitar chamadas reais de rede
+ * quando outros testes já carregaram o módulo antes deste arquivo.
+ */
 
 describe('api/flows', () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
-    vi.mocked(fetchJson).mockReset();
-    vi.mocked(fetchJson).mockClear();
   });
 
+  async function setup() {
+    vi.doMock('./client', () => ({
+      fetchJson: vi.fn(),
+    }));
+
+    const flows = await import('./flows');
+    const client = await import('./client');
+    return { ...flows, fetchJson: client.fetchJson };
+  }
+
   it('listFlows chama /flows com GET', async () => {
+    const { listFlows, fetchJson } = await setup();
     const mockFetch = vi.mocked(fetchJson);
     mockFetch.mockResolvedValue([]);
 
     const result = await listFlows();
 
-    // Verifica que fetchJson foi chamado
     expect(mockFetch).toHaveBeenCalled();
-    
-    // Verifica os argumentos da chamada
     const calls = mockFetch.mock.calls;
     expect(calls.length).toBeGreaterThan(0);
     expect(calls[0][0]).toBe('/flows');
@@ -44,6 +37,7 @@ describe('api/flows', () => {
   });
 
   it('getFlow chama /flows/:id com GET', async () => {
+    const { getFlow, fetchJson } = await setup();
     vi.mocked(fetchJson).mockResolvedValue({ id: 'flow-1' });
 
     const result = await getFlow('flow-1');
@@ -53,6 +47,7 @@ describe('api/flows', () => {
   });
 
   it('createFlow chama POST /flows com body', async () => {
+    const { createFlow, fetchJson } = await setup();
     const flow = { id: 'new', nodes: [] };
     vi.mocked(fetchJson).mockResolvedValue(flow);
 
@@ -66,6 +61,7 @@ describe('api/flows', () => {
   });
 
   it('updateFlow chama PUT /flows/:id com body', async () => {
+    const { updateFlow, fetchJson } = await setup();
     const flow = { id: 'flow-1', nodes: [] };
     vi.mocked(fetchJson).mockResolvedValue(flow);
 
@@ -79,6 +75,7 @@ describe('api/flows', () => {
   });
 
   it('validateFlow chama POST /flows/validate', async () => {
+    const { validateFlow, fetchJson } = await setup();
     const flow = { id: 'flow-1', nodes: [] };
     const validation = { valid: true, errors: [] };
     vi.mocked(fetchJson).mockResolvedValue(validation);
@@ -93,6 +90,7 @@ describe('api/flows', () => {
   });
 
   it('simulateFlow chama POST /flows/simulate com flowId e options', async () => {
+    const { simulateFlow, fetchJson } = await setup();
     const simulation = { steps: [] };
     vi.mocked(fetchJson).mockResolvedValue(simulation);
 
@@ -105,7 +103,32 @@ describe('api/flows', () => {
     expect(result).toEqual(simulation);
   });
 
+  it('generateFlowFromDescription usa timeout padrão 120s e inclui subflowMax/maxFixAttempts quando fornecidos', async () => {
+    const { fetchJson } = await setup();
+    const { generateFlowFromDescription } = await import('./flows');
+
+    vi.mocked(fetchJson).mockResolvedValue({ success: true, flowDefinition: { id: 'f1', nodes: [] } });
+
+    await generateFlowFromDescription('desc', {
+      flowName: 'X',
+      useRag: false,
+      useWebScraping: false,
+      includeQuestions: false,
+      subflowMax: 2,
+      maxFixAttempts: 1,
+    });
+
+    expect(fetchJson).toHaveBeenCalled();
+    const [path, init] = vi.mocked(fetchJson).mock.calls[0];
+    expect(path).toBe('/flows/generate');
+    expect(init.timeoutMs).toBe(120000);
+    const body = JSON.parse(init.body);
+    expect(body.subflowMax).toBe(2);
+    expect(body.maxFixAttempts).toBe(1);
+  });
+
   it('getReplay chama GET /replay/:sessionId', async () => {
+    const { getReplay, fetchJson } = await setup();
     const replay = { messages: [] };
     vi.mocked(fetchJson).mockResolvedValue(replay);
 

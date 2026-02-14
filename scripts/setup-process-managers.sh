@@ -20,7 +20,7 @@ fi
 
 # Instala nodemon como dependência de desenvolvimento
 echo -e "${YELLOW}Instalando nodemon...${NC}"
-npm install --save-dev nodemon pm2
+npm install --save-dev nodemon
 
 # Cria diretório de logs
 mkdir -p logs

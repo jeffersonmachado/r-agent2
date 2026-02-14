@@ -14,6 +14,7 @@ const { execSync } = require('child_process');
 const RPA_SEEDS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'seeds');
 const RPA_FLOWS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'flows');
 const REPORTS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'reports');
+const RPA_CONFIG_PATH = path.join(__dirname, '..', '..', 'tests', 'rpa', 'rpa.config.json');
 
 // Garante que os diretórios existem
 if (!fs.existsSync(REPORTS_DIR)) {
@@ -51,6 +52,60 @@ function findRpaTestFiles() {
   return testFiles;
 }
 
+function resolveFrontendUrl() {
+  if (process.env.RPA_FRONTEND_URL) return String(process.env.RPA_FRONTEND_URL);
+  try {
+    const configRaw = fs.readFileSync(RPA_CONFIG_PATH, 'utf8');
+    const config = JSON.parse(configRaw);
+    const url = config && config.urls && config.urls.frontend ? String(config.urls.frontend) : '';
+    if (url) return url;
+  } catch (_) {}
+  return 'http://localhost:5173';
+}
+
+function resolveApiUrl() {
+  if (process.env.RPA_API_URL) return String(process.env.RPA_API_URL);
+  if (process.env.TEST_API_URL) return String(process.env.TEST_API_URL);
+  try {
+    const configRaw = fs.readFileSync(RPA_CONFIG_PATH, 'utf8');
+    const config = JSON.parse(configRaw);
+    const url = config && config.urls && config.urls.api ? String(config.urls.api) : '';
+    if (url) return url;
+  } catch (_) {}
+  return 'http://localhost:3000';
+}
+
+async function isFrontendReachable(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    return res && res.ok;
+  } catch (_) {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function isApiReachable(baseUrl) {
+  const normalizedBase = String(baseUrl || '').replace(/\/$/, '');
+  const probes = [`${normalizedBase}/health/ready`, `${normalizedBase}/health`];
+  for (const url of probes) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      if (res && res.ok) return true;
+    } catch (_) {
+      // tenta próximo endpoint
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return false;
+}
+
 /**
  * Executa um teste RPA usando o RpaTestRunner.
  * 
@@ -78,21 +133,74 @@ async function runRpaTest(testFile) {
     await runner.init();
     
     try {
-      // Executa o teste (playback)
-      const result = await runner.playback(testData);
-      
+      const timeoutMsRaw = process.env.RPA_TEST_TIMEOUT_MS;
+      const timeoutMs = Number.isFinite(Number(timeoutMsRaw))
+        ? Math.max(10000, Math.floor(Number(timeoutMsRaw)))
+        : 120000;
+
+      // Executa o teste (playback) com timeout global por teste
+      let timeoutId = null;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          const err = new Error(`RPA test timeout após ${timeoutMs}ms`);
+          err.code = 'RPA_TEST_TIMEOUT';
+          reject(err);
+        }, timeoutMs);
+        // Evita impedir o processo de encerrar
+        if (timeoutId && timeoutId.unref) timeoutId.unref();
+      });
+
+      const result = await Promise.race([
+        runner.playback(testData),
+        timeoutPromise,
+      ]).finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
+
+      // Sempre gera relatório detalhado do runner (inclui details + steps + debug)
+      const detailedReport = runner.generateReport();
+      const detailedReportPath = path.join(
+        REPORTS_DIR,
+        `rpa-detail-${testName}-${Date.now()}.json`
+      );
+      fs.writeFileSync(detailedReportPath, JSON.stringify(detailedReport, null, 2), 'utf8');
+
       await runner.close();
-      
+
+      // Tenta extrair um resumo da falha (primeiro erro/step)
+      const firstFailedStep = Array.isArray(result.steps)
+        ? result.steps.find((s) => s && s.success === false)
+        : null;
+      const failedStepSummary = firstFailedStep
+        ? {
+            step: firstFailedStep.step,
+            action: firstFailedStep.action,
+            selector: firstFailedStep.selector,
+            diagnosticsKind: firstFailedStep.debug?.diagnostics?.kind || null,
+            selectorsTried: firstFailedStep.debug?.diagnostics?.selectorsTried || null,
+          }
+        : null;
+
       if (result.success) {
-        return { success: true, output: `Teste passou: ${result.steps.length} passos executados`, testName };
-      } else {
-        return { 
-          success: false, 
-          output: `Teste falhou: ${result.errors?.join('; ') || 'Erro desconhecido'}`,
-          error: result.message || 'Falha na execução',
-          testName 
+        return {
+          success: true,
+          output: `Teste passou: ${result.steps.length} passos executados`,
+          testName,
+          reportPath: detailedReportPath,
+          replayPath: result.replayPath || null,
         };
       }
+
+      const errorMessage = result.message || result.error || 'Falha na execução';
+      return {
+        success: false,
+        output: `Teste falhou: ${errorMessage}`,
+        error: errorMessage,
+        testName,
+        reportPath: detailedReportPath,
+        replayPath: result.replayPath || null,
+        failedStep: failedStepSummary,
+      };
     } catch (execError) {
       await runner.close();
       throw execError;
@@ -131,6 +239,9 @@ function generateReport(results) {
       name: r.testName,
       success: r.success,
       error: r.error || null,
+      reportPath: r.reportPath || null,
+      replayPath: r.replayPath || null,
+      failedStep: r.failedStep || null,
     })),
   };
 
@@ -159,6 +270,37 @@ function saveReport(report) {
  */
 async function main() {
   console.log('=== Executando Testes RPA ===\n');
+
+  if (process.env.RPA_SKIP_IF_FRONTEND_UNREACHABLE === 'true') {
+    const frontendUrl = resolveFrontendUrl();
+    const reachable = await isFrontendReachable(frontendUrl);
+    if (!reachable) {
+      console.log(`⚠ Frontend indisponível (${frontendUrl}); pulando testes RPA por configuração.`);
+      const report = generateReport([]);
+      saveReport(report);
+      return;
+    }
+  }
+
+  // Pré-seed: garante flows básicos para os testes RPA (best-effort)
+  try {
+    const { ensureRpaFlows } = require('../../tests/rpa/ensure-rpa-flows');
+    const seedResult = await ensureRpaFlows();
+    console.log(`[RPA Seed] Flows criados: ${seedResult.created}, já existentes: ${seedResult.skipped}`);
+  } catch (err) {
+    console.warn('[RPA Seed] Aviso: não foi possível garantir flows para RPA:', err.message);
+  }
+
+  if (process.env.RPA_SKIP_IF_API_UNREACHABLE === 'true') {
+    const apiUrl = resolveApiUrl();
+    const reachable = await isApiReachable(apiUrl);
+    if (!reachable) {
+      console.log(`⚠ API indisponível (${apiUrl}); pulando testes RPA por configuração.`);
+      const report = generateReport([]);
+      saveReport(report);
+      return;
+    }
+  }
 
   const testFiles = findRpaTestFiles();
   
@@ -212,4 +354,3 @@ if (require.main === module) {
 }
 
 module.exports = { findRpaTestFiles, runRpaTest, generateReport, saveReport };
-

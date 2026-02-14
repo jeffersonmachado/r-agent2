@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://r-agent2/contracts/ia/ai-output-envelope.schema.json",
+  "title": "AiOutputEnvelope",
+  "description": "Envelope padronizado e auditável para qualquer output de geração por IA (chatbot_flow, rpa_test, tenant).",
+  "meta": {
+    "contractVersion": "1.0.0"
+  },
+  "type": "object",
+  "required": [
+    "envelope_version",
+    "domain",
+    "created_at",
+    "provider",
+    "input",
+    "output",
+    "validation",
+    "audit"
+  ],
+  "properties": {
+    "envelope_version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["chatbot_flow", "rpa_test", "tenant"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provider": {
+      "type": "object",
+      "required": ["name", "model", "temperature"],
+      "properties": {
+        "name": { "type": ["string", "null"], "maxLength": 100 },
+        "model": { "type": ["string", "null"], "maxLength": 200 },
+        "temperature": { "type": ["number", "null"], "minimum": 0, "maximum": 2 }
+      },
+      "additionalProperties": false
+    },
+    "input": {
+      "type": "object",
+      "required": ["prompt_summary", "user_goal", "context"],
+      "properties": {
+        "prompt_summary": { "type": ["string", "null"], "maxLength": 4000 },
+        "user_goal": { "type": ["string", "null"], "maxLength": 4000 },
+        "context": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "description": "Output bruto do domínio (não confiável). Deve ser validado separadamente por contrato do domínio."
+    },
+    "validation": {
+      "type": "object",
+      "required": ["valid", "errors", "warnings", "qualityScore", "riskFlags"],
+      "properties": {
+        "valid": { "type": "boolean" },
+        "errors": { "type": "array", "items": { "type": "object" }, "default": [] },
+        "warnings": { "type": "array", "items": { "type": "object" }, "default": [] },
+        "qualityScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "riskFlags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "audit": {
+      "type": "object",
+      "required": ["request_id", "seed", "tenant_id", "user_id"],
+      "properties": {
+        "request_id": { "type": ["string", "null"], "maxLength": 200 },
+        "seed": { "type": ["string", "null"], "maxLength": 200 },
+        "tenant_id": { "type": ["string", "null"], "maxLength": 100 },
+        "user_id": { "type": ["string", "null"], "maxLength": 200 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
+

@@ -2,13 +2,14 @@
  * Teste para verificar se as conexões estão sendo criadas e renderizadas corretamente
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NodeEditor } from 'rete';
 import { ClassicPreset } from 'rete';
 import { AreaPlugin } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { ReactPlugin, Presets as ReactPresets } from 'rete-react-plugin';
 import { createRoot } from 'react-dom/client';
+import { act } from 'react';
 
 describe('Connection Rendering', () => {
   let editor;
@@ -17,7 +18,7 @@ describe('Connection Rendering', () => {
   let reactPlugin;
   let container;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Cria container DOM
     container = document.createElement('div');
     container.id = 'test-container';
@@ -34,7 +35,8 @@ describe('Connection Rendering', () => {
     reactPlugin = new ReactPlugin({ createRoot });
 
     // Configura plugins
-    editor.use(area);
+    await act(async () => {
+      editor.use(area);
     
     // Configura preset do ConnectionPlugin
     const connectionPreset = ConnectionPresets.classic.setup({ area });
@@ -46,8 +48,39 @@ describe('Connection Rendering', () => {
     reactPlugin.addPreset(reactPreset);
     
     // Usa plugins no area
-    area.use(connection);
-    area.use(reactPlugin);
+      area.use(connection);
+      area.use(reactPlugin);
+      await Promise.resolve();
+    });
+  });
+
+  afterEach(async () => {
+    // Importante: esses testes usam plugins que podem anexar listeners/raízes React no DOM.
+    // Sem cleanup, o ambiente de teste pode “poluir” testes seguintes (DOM vazio/instável).
+    await act(async () => {
+      try {
+        // algumas versões expõem destroy; outras não
+        reactPlugin?.destroy?.();
+      } catch {}
+      try {
+        connection?.destroy?.();
+      } catch {}
+      try {
+        area?.destroy?.();
+      } catch {}
+      try {
+        editor?.destroy?.();
+      } catch {}
+      await Promise.resolve();
+    });
+    try {
+      container?.remove();
+    } catch {}
+    container = null;
+    reactPlugin = null;
+    connection = null;
+    area = null;
+    editor = null;
   });
 
   it('deve criar nós com inputs e outputs', async () => {
@@ -59,8 +92,10 @@ describe('Connection Rendering', () => {
     const node2 = new ClassicPreset.Node('Node 2');
     node2.addInput('in', new ClassicPreset.Input(socket, 'Input'));
     
-    await editor.addNode(node1);
-    await editor.addNode(node2);
+    await act(async () => {
+      await editor.addNode(node1);
+      await editor.addNode(node2);
+    });
     
     const nodes = editor.getNodes();
     expect(nodes).toHaveLength(2);
@@ -77,11 +112,15 @@ describe('Connection Rendering', () => {
     const node2 = new ClassicPreset.Node('Node 2');
     node2.addInput('in', new ClassicPreset.Input(socket, 'Input'));
     
-    await editor.addNode(node1);
-    await editor.addNode(node2);
+    await act(async () => {
+      await editor.addNode(node1);
+      await editor.addNode(node2);
+    });
     
     const connectionObj = new ClassicPreset.Connection(node1, 'out', node2, 'in');
-    await editor.addConnection(connectionObj);
+    await act(async () => {
+      await editor.addConnection(connectionObj);
+    });
     
     const connections = editor.getConnections();
     expect(connections).toHaveLength(1);
@@ -117,11 +156,15 @@ describe('Connection Rendering', () => {
     const node2 = new ClassicPreset.Node('Node 2');
     node2.addInput('in', new ClassicPreset.Input(socket, 'Input'));
     
-    await editor.addNode(node1);
-    await editor.addNode(node2);
+    await act(async () => {
+      await editor.addNode(node1);
+      await editor.addNode(node2);
+    });
     
     const connectionObj = new ClassicPreset.Connection(node1, 'out', node2, 'in');
-    await editor.addConnection(connectionObj);
+    await act(async () => {
+      await editor.addConnection(connectionObj);
+    });
     
     // Aguarda renderização
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -164,5 +207,4 @@ describe('Connection Rendering', () => {
     expect(editor).toBeTruthy();
   });
 });
-
 

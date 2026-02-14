@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-02-14T21:34:31.179Z",
+  "status": "pass",
+  "decision": "GO",
+  "candidate": {
+    "branch": "feat/f10-ai-envelope-safe-mode",
+    "tag": "v2026.03.01-rc5-5-gf54823c",
+    "commit": "f54823c29bf9d5f2a2b2916b337fe41ab63141f4"
+  },
+  "scope": {
+    "frozen": true,
+    "notes": "Apenas correcoes criticas e blockers."
+  },
+  "owners": {
+    "engineering": "Engenharia de Plataforma",
+    "operations": "Operacao",
+    "decisionOwner": "Engenharia de Plataforma",
+    "approvers": [
+      "Engenharia de Plataforma",
+      "Operacao"
+    ]
+  },
+  "evidence": {
+    "goNoGo": {
+      "path": "qa/go-no-go-report.json",
+      "status": "pass",
+      "loaded": true
+    }
+  },
+  "reasons": []
+}

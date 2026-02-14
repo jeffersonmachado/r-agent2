@@ -2,13 +2,15 @@
 
 Este projeto suporta **PM2** (produção) e **Nodemon** (desenvolvimento) para gerenciar o servidor.
 
+> Nota (segurança / supply chain): o **PM2 não é instalado como dependência do projeto** para manter o `npm audit` zerado.\n+> Para usar os scripts `npm run pm2:*`, você precisa ter o `pm2` **instalado globalmente**.
+
 ## 📋 Instalação
 
 ```bash
 # Instala dependências
 npm install
 
-# Instala PM2 globalmente (opcional, mas recomendado)
+# Instala PM2 globalmente (necessário para `npm run pm2:*`)
 npm install -g pm2
 
 # Ou use o script de setup

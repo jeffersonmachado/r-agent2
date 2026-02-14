@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import logger from '../utils/logger';
 
 /**
@@ -197,26 +198,36 @@ export function useToast() {
     setToasts([]);
   };
 
-  const ToastContainer = () => (
-    <div 
-      className="fixed top-4 right-4 z-[3000] flex flex-col gap-2 pointer-events-none"
-      aria-live="assertive"
-    >
-      {toasts.map((toast) => (
-        <div 
-          key={toast.id} 
-          className="pointer-events-auto animate-slide-in-from-right"
-        >
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            duration={toast.duration}
-            onClose={() => removeToast(toast.id)}
-          />
-        </div>
-      ))}
-    </div>
-  );
+  const ToastContainer = () => {
+    const content = (
+      <div
+        className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
+        aria-live="assertive"
+      >
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className="pointer-events-auto animate-slide-in-from-right"
+          >
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              duration={toast.duration}
+              onClose={() => removeToast(toast.id)}
+            />
+          </div>
+        ))}
+      </div>
+    );
+
+    // ✅ Renderiza via portal para fora de containers com overflow/transform
+    // (evita toast “sumir” por clipping/stacking context).
+    if (typeof document !== 'undefined' && document.body) {
+      return createPortal(content, document.body);
+    }
+
+    return content;
+  };
 
   return { showToast, removeToast, clearAllToasts, ToastContainer };
 }

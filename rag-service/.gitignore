@@ -9,11 +9,6 @@ venv/
 ENV/
 .venv
 
-# Vector Store
-data/vector_store/
-*.index
-*.metadata.json
-
 # IDE
 .vscode/
 .idea/

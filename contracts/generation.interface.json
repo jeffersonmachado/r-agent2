@@ -60,6 +60,36 @@
           "description": "Modo de geração do teste RPA",
           "enum": ["infer", "record", "hybrid"],
           "default": "infer"
+        },
+        "includeQuestions": {
+          "type": "boolean",
+          "description": "Se true, inclui lista explícita de perguntas (FAQ) no contexto de geração do fluxo, para orientar respostas do bot",
+          "default": false
+        },
+        "questions": {
+          "type": "array",
+          "description": "Lista de perguntas (uma por item) a serem incluídas na geração do fluxo (apenas se includeQuestions = true)",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "default": [],
+          "uniqueItems": true,
+          "maxItems": 50
+        },
+        "maxFixAttempts": {
+          "type": "integer",
+          "description": "Número máximo de tentativas de correção automática quando a IA falha validações. Ajuda a equilibrar qualidade vs. tempo.",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "subflowMax": {
+          "type": "integer",
+          "description": "Máximo de subfluxos que a geração pode criar automaticamente (0 desativa).",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 2
         }
       },
       "additionalProperties": false

@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-02-14T21:34:31.293Z",
+  "candidate": {
+    "branch": "feat/f10-ai-envelope-safe-mode",
+    "commit": "f54823c29bf9d5f2a2b2916b337fe41ab63141f4",
+    "shortCommit": "f54823c",
+    "tag": null,
+    "dirty": true
+  },
+  "checks": {
+    "releaseGate": {
+      "path": "qa/release-gate-report.json",
+      "status": "pass"
+    },
+    "rollbackDrill": {
+      "path": "qa/rollback-drill-report.json",
+      "status": "pass"
+    },
+    "goNoGo": {
+      "path": "qa/go-no-go-report.json",
+      "decision": "GO"
+    },
+    "launchPlan": {
+      "path": "qa/launch-plan-status.json",
+      "overall": "ready"
+    },
+    "releaseWindow": {
+      "path": "qa/release-window-report.json",
+      "status": "pass"
+    }
+  },
+  "decision": "READY"
+}

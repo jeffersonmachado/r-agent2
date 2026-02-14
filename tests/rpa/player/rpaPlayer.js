@@ -12,7 +12,7 @@ const { ReplaySystem } = require('../replaySystem');
 const { getModeConfig } = require('../rpaConfig');
 const { ActionRecorder } = require('../actionRecorder');
 const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
-const { ensureAuthenticated } = require('../utils/authHelper');
+const { autoLoginBeforeSteps } = require('../utils/autoLoginFlow');
 const path = require('path');
 const fs = require('fs');
 
@@ -203,35 +203,10 @@ class RpaPlayer {
     await this.init();
 
     // Faz login automático antes de executar os steps
-    // Navega para a página inicial primeiro se necessário
-    const firstStep = this.seedData.steps?.[0];
-    if (firstStep && firstStep.type === 'navigate') {
-      const targetUrl = firstStep.url || firstStep.value;
-      if (targetUrl) {
-        try {
-          await this.executor.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          await this.executor.page.waitForTimeout(1000);
-        } catch (error) {
-          // Se falhar, tenta navegar para a URL base
-          const baseUrl = process.env.TEST_FRONTEND_URL || require('./rpaConfig').urls.frontend;
-          await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          await this.executor.page.waitForTimeout(1000);
-        }
-      } else {
-        // Se não há URL, navega para a URL base
-        const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
-        await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await this.executor.page.waitForTimeout(1000);
-      }
-    } else {
-      // Se não há step de navegação, navega para a URL base
-      const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
-      await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await this.executor.page.waitForTimeout(1000);
-    }
-
     // Garante autenticação
-    const authResult = await ensureAuthenticated(this.executor.page);
+    const authResult = await autoLoginBeforeSteps(this.executor.page, {
+      firstStep: this.seedData.steps?.[0],
+    });
     if (!authResult.success) {
       console.warn(`⚠️  Aviso: Não foi possível fazer login automático: ${authResult.error}`);
       console.warn('   O teste continuará, mas pode falhar se a página requer autenticação.');

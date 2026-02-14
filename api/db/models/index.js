@@ -22,6 +22,8 @@ const getDepartment = require('./Department');
 const getQuickReply = require('./QuickReply');
 const getWebhook = require('./Webhook');
 const getRagDocument = require('./RagDocument');
+const getRagDocumentFile = require('./RagDocumentFile');
+const getTenantExclusion = require('./TenantExclusion');
 const getQueue = require('./Queue');
 const getCloseReason = require('./CloseReason');
 const getTicketTag = require('./TicketTag');
@@ -32,6 +34,60 @@ const getChannelMessage = require('./ChannelMessage');
 const getOutboundQueueItem = require('./OutboundQueueItem');
 const getTicketEvent = require('./TicketEvent');
 const getQueueAssignmentState = require('./QueueAssignmentState');
+const getEventLedger = require('./EventLedger');
+const getExecutionJob = require('./ExecutionJob');
+const getSchedule = require('./Schedule');
+const getPublicAccessToken = require('./PublicAccessToken');
+const getFlowExecution = require('./FlowExecution');
+const getNodeExecution = require('./NodeExecution');
+const getOrder = require('./Order');
+const getDelivery = require('./Delivery');
+const getPhysicalQueue = require('./PhysicalQueue');
+const getPhysicalTicket = require('./PhysicalTicket');
+const getPhysicalTicketSequence = require('./PhysicalTicketSequence');
+const getPbxTenant = require('./PbxTenant');
+const getPbxExtension = require('./PbxExtension');
+const getPbxTrunk = require('./PbxTrunk');
+const getPbxRoute = require('./PbxRoute');
+const getPbxQueue = require('./PbxQueue');
+const getPbxQueueMember = require('./PbxQueueMember');
+const getPbxCallRule = require('./PbxCallRule');
+const getPbxConfigVersion = require('./PbxConfigVersion');
+const getPbxCarrier = require('./PbxCarrier');
+const getPbxRouteBase = require('./PbxRouteBase');
+const getPbxCategoryType = require('./PbxCategoryType');
+const getPbxCategory = require('./PbxCategory');
+const getPbxBlockRule = require('./PbxBlockRule');
+const getPbxGroup = require('./PbxGroup');
+const getPbxConferenceRoom = require('./PbxConferenceRoom');
+const getPbxHoliday = require('./PbxHoliday');
+const getPbxDid = require('./PbxDid');
+const getPbxFaxRoute = require('./PbxFaxRoute');
+const getPbxAudioAsset = require('./PbxAudioAsset');
+const getPbxRecording = require('./PbxRecording');
+const getPbxCdr = require('./PbxCdr');
+const getCcPauseReason = require('./CcPauseReason');
+const getCcContactReason = require('./CcContactReason');
+const getCcCampaign = require('./CcCampaign');
+const getCcCampaignListItem = require('./CcCampaignListItem');
+const getCcScheduledCallback = require('./CcScheduledCallback');
+const getCcClick2CallRequest = require('./CcClick2CallRequest');
+const getLegacyRchatbot = require('./LegacyRchatbot');
+const getLegacyRchatbotPattern = require('./LegacyRchatbotPattern');
+const getLegacyRchatbotResponse = require('./LegacyRchatbotResponse');
+const getLegacyRchatbotAction = require('./LegacyRchatbotAction');
+const getLegacyMonHost = require('./LegacyMonHost');
+const getLegacyMonService = require('./LegacyMonService');
+const getLegacyMonOs = require('./LegacyMonOs');
+const getLegacyMonApp = require('./LegacyMonApp');
+const getMarketingForm = require('./MarketingForm');
+const getMarketingLead = require('./MarketingLead');
+const getMarketingFormSubmission = require('./MarketingFormSubmission');
+const getMarketingScoringRule = require('./MarketingScoringRule');
+const getMarketingEmailCampaign = require('./MarketingEmailCampaign');
+const getMarketingEmailSend = require('./MarketingEmailSend');
+const getMarketingLink = require('./MarketingLink');
+const getMarketingLinkClick = require('./MarketingLinkClick');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -53,6 +109,8 @@ const Department = () => getDepartment();
 const QuickReply = () => getQuickReply();
 const Webhook = () => getWebhook();
 const RagDocument = () => getRagDocument();
+const RagDocumentFile = () => getRagDocumentFile();
+const TenantExclusion = () => getTenantExclusion();
 const Queue = () => getQueue();
 const CloseReason = () => getCloseReason();
 const TicketTag = () => getTicketTag();
@@ -63,6 +121,60 @@ const ChannelMessage = () => getChannelMessage();
 const OutboundQueueItem = () => getOutboundQueueItem();
 const TicketEvent = () => getTicketEvent();
 const QueueAssignmentState = () => getQueueAssignmentState();
+const EventLedger = () => getEventLedger();
+const ExecutionJob = () => getExecutionJob();
+const Schedule = () => getSchedule();
+const PublicAccessToken = () => getPublicAccessToken();
+const FlowExecution = () => getFlowExecution();
+const NodeExecution = () => getNodeExecution();
+const Order = () => getOrder();
+const Delivery = () => getDelivery();
+const PhysicalQueue = () => getPhysicalQueue();
+const PhysicalTicket = () => getPhysicalTicket();
+const PhysicalTicketSequence = () => getPhysicalTicketSequence();
+const PbxTenant = () => getPbxTenant();
+const PbxExtension = () => getPbxExtension();
+const PbxTrunk = () => getPbxTrunk();
+const PbxRoute = () => getPbxRoute();
+const PbxQueue = () => getPbxQueue();
+const PbxQueueMember = () => getPbxQueueMember();
+const PbxCallRule = () => getPbxCallRule();
+const PbxConfigVersion = () => getPbxConfigVersion();
+const PbxCarrier = () => getPbxCarrier();
+const PbxRouteBase = () => getPbxRouteBase();
+const PbxCategoryType = () => getPbxCategoryType();
+const PbxCategory = () => getPbxCategory();
+const PbxBlockRule = () => getPbxBlockRule();
+const PbxGroup = () => getPbxGroup();
+const PbxConferenceRoom = () => getPbxConferenceRoom();
+const PbxHoliday = () => getPbxHoliday();
+const PbxDid = () => getPbxDid();
+const PbxFaxRoute = () => getPbxFaxRoute();
+const PbxAudioAsset = () => getPbxAudioAsset();
+const PbxRecording = () => getPbxRecording();
+const PbxCdr = () => getPbxCdr();
+const CcPauseReason = () => getCcPauseReason();
+const CcContactReason = () => getCcContactReason();
+const CcCampaign = () => getCcCampaign();
+const CcCampaignListItem = () => getCcCampaignListItem();
+const CcScheduledCallback = () => getCcScheduledCallback();
+const CcClick2CallRequest = () => getCcClick2CallRequest();
+const LegacyRchatbot = () => getLegacyRchatbot();
+const LegacyRchatbotPattern = () => getLegacyRchatbotPattern();
+const LegacyRchatbotResponse = () => getLegacyRchatbotResponse();
+const LegacyRchatbotAction = () => getLegacyRchatbotAction();
+const LegacyMonHost = () => getLegacyMonHost();
+const LegacyMonService = () => getLegacyMonService();
+const LegacyMonOs = () => getLegacyMonOs();
+const LegacyMonApp = () => getLegacyMonApp();
+const MarketingForm = () => getMarketingForm();
+const MarketingLead = () => getMarketingLead();
+const MarketingFormSubmission = () => getMarketingFormSubmission();
+const MarketingScoringRule = () => getMarketingScoringRule();
+const MarketingEmailCampaign = () => getMarketingEmailCampaign();
+const MarketingEmailSend = () => getMarketingEmailSend();
+const MarketingLink = () => getMarketingLink();
+const MarketingLinkClick = () => getMarketingLinkClick();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -218,6 +330,8 @@ module.exports = {
   QuickReply,
   Webhook,
   RagDocument,
+  RagDocumentFile,
+  TenantExclusion,
   Queue,
   CloseReason,
   TicketTag,
@@ -228,6 +342,58 @@ module.exports = {
   OutboundQueueItem,
   TicketEvent,
   QueueAssignmentState,
+  EventLedger,
+  ExecutionJob,
+  Schedule,
+  PublicAccessToken,
+  FlowExecution,
+  NodeExecution,
+  Order,
+  Delivery,
+  PhysicalQueue,
+  PhysicalTicket,
+  PhysicalTicketSequence,
+  PbxTenant,
+  PbxExtension,
+  PbxTrunk,
+  PbxRoute,
+  PbxQueue,
+  PbxQueueMember,
+  PbxCallRule,
+  PbxConfigVersion,
+  PbxCarrier,
+  PbxRouteBase,
+  PbxCategoryType,
+  PbxCategory,
+  PbxBlockRule,
+  PbxGroup,
+  PbxConferenceRoom,
+  PbxHoliday,
+  PbxDid,
+  PbxFaxRoute,
+  PbxAudioAsset,
+  PbxRecording,
+  PbxCdr,
+  CcPauseReason,
+  CcContactReason,
+  CcCampaign,
+  CcCampaignListItem,
+  CcScheduledCallback,
+  CcClick2CallRequest,
+  LegacyRchatbot,
+  LegacyRchatbotPattern,
+  LegacyRchatbotResponse,
+  LegacyRchatbotAction,
+  LegacyMonHost,
+  LegacyMonService,
+  LegacyMonOs,
+  LegacyMonApp,
+  MarketingForm,
+  MarketingLead,
+  MarketingFormSubmission,
+  MarketingScoringRule,
+  MarketingEmailCampaign,
+  MarketingEmailSend,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -249,6 +415,8 @@ module.exports = {
   getQuickReply,
   getWebhook,
   getRagDocument,
+  getRagDocumentFile,
+  getTenantExclusion,
   getQueue,
   getCloseReason,
   getTicketTag,
@@ -259,4 +427,56 @@ module.exports = {
   getOutboundQueueItem,
   getTicketEvent,
   getQueueAssignmentState,
+  getEventLedger,
+  getExecutionJob,
+  getSchedule,
+  getPublicAccessToken,
+  getOrder,
+  getDelivery,
+  getPhysicalQueue,
+  getPhysicalTicket,
+  getPhysicalTicketSequence,
+  getPbxTenant,
+  getPbxExtension,
+  getPbxTrunk,
+  getPbxRoute,
+  getPbxQueue,
+  getPbxQueueMember,
+  getPbxCallRule,
+  getPbxConfigVersion,
+  getPbxCarrier,
+  getPbxRouteBase,
+  getPbxCategoryType,
+  getPbxCategory,
+  getPbxBlockRule,
+  getPbxGroup,
+  getPbxConferenceRoom,
+  getPbxHoliday,
+  getPbxDid,
+  getPbxFaxRoute,
+  getPbxAudioAsset,
+  getPbxRecording,
+  getPbxCdr,
+  getCcPauseReason,
+  getCcContactReason,
+  getCcCampaign,
+  getCcCampaignListItem,
+  getCcScheduledCallback,
+  getCcClick2CallRequest,
+  getLegacyRchatbot,
+  getLegacyRchatbotPattern,
+  getLegacyRchatbotResponse,
+  getLegacyRchatbotAction,
+  getLegacyMonHost,
+  getLegacyMonService,
+  getLegacyMonOs,
+  getLegacyMonApp,
+  getMarketingForm,
+  getMarketingLead,
+  getMarketingFormSubmission,
+  getMarketingScoringRule,
+  getMarketingEmailCampaign,
+  getMarketingEmailSend,
+  getMarketingLink,
+  getMarketingLinkClick,
 };

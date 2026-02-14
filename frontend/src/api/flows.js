@@ -21,18 +21,24 @@ export function listFlows() {
   });
 }
 
+export function listFlowsByEnvironment(environment) {
+  const qs = environment ? `?environment=${encodeURIComponent(String(environment))}` : '';
+  return fetchJson(`/flows${qs}`, { method: 'GET' });
+}
+
 /**
  * Busca um fluxo específico pelo id.
  *
  * @param {string} flowId
  * @returns {Promise<any>}
  */
-export function getFlow(flowId) {
+export function getFlow(flowId, options = {}) {
   if (!flowId) {
     return Promise.reject(new Error('getFlow: flowId é obrigatório'));
   }
   return fetchJson(`/flows/${encodeURIComponent(flowId)}`, {
     method: 'GET',
+    ...(options && typeof options === 'object' && options.headers ? { headers: options.headers } : {}),
   });
 }
 
@@ -42,7 +48,7 @@ export function getFlow(flowId) {
  * @param {any} flowData
  * @returns {Promise<any>}
  */
-export function createFlow(flowData) {
+export function createFlow(flowData, options = {}) {
   logger.info('Criando novo fluxo', { flowId: flowData?.id, flowName: flowData?.name });
   logger.debug('Dados do fluxo', flowData);
   
@@ -50,6 +56,7 @@ export function createFlow(flowData) {
     const result = fetchJson('/flows', {
       method: 'POST',
       body: JSON.stringify(flowData || {}),
+      ...(options && typeof options === 'object' && options.headers ? { headers: options.headers } : {}),
     });
     
     result.then(
@@ -75,13 +82,24 @@ export function createFlow(flowData) {
  * @param {any} flowData
  * @returns {Promise<any>}
  */
-export function updateFlow(flowId, flowData) {
+export function updateFlow(flowId, flowData, options = {}) {
   if (!flowId) {
     return Promise.reject(new Error('updateFlow: flowId é obrigatório'));
   }
   return fetchJson(`/flows/${encodeURIComponent(flowId)}`, {
     method: 'PUT',
     body: JSON.stringify(flowData || {}),
+    ...(options && typeof options === 'object' && options.headers ? { headers: options.headers } : {}),
+  });
+}
+
+export function updateFlowEnvironment(flowId, environment) {
+  if (!flowId) {
+    return Promise.reject(new Error('updateFlowEnvironment: flowId é obrigatório'));
+  }
+  return fetchJson(`/flows/${encodeURIComponent(flowId)}/environment`, {
+    method: 'PUT',
+    body: JSON.stringify({ environment }),
   });
 }
 
@@ -193,13 +211,14 @@ export function deleteRpaReplay(filename) {
  * @param {string} flowId
  * @returns {Promise<{ success: boolean, deletedId: string }>}
  */
-export function deleteFlow(flowId) {
+export function deleteFlow(flowId, options = {}) {
   if (!flowId) {
     return Promise.reject(new Error('deleteFlow: flowId é obrigatório'));
   }
   logger.info('Removendo fluxo', { flowId });
   return fetchJson(`/flows/${encodeURIComponent(flowId)}`, {
     method: 'DELETE',
+    ...(options && typeof options === 'object' && options.headers ? { headers: options.headers } : {}),
   }).then(
     (result) => {
       logger.info('Fluxo removido com sucesso', { flowId, result });
@@ -253,6 +272,7 @@ export function generateFlowFromDescription(description, options = {}) {
   });
 
   // Valida opções conforme contrato generation.interface.json
+  const includeQuestions = options.includeQuestions === true;
   const payload = {
     name: options.flowName || 'Fluxo Gerado',
     description: description.trim(),
@@ -262,24 +282,35 @@ export function generateFlowFromDescription(description, options = {}) {
     scrapingTargets: options.useWebScraping ? (options.scrapingTargets || []) : [],
     generateRpaTest: options.generateRpaTest || false,
     rpaMode: options.rpaMode || 'infer',
+    includeQuestions,
+    questions: includeQuestions ? (options.questions || []) : [],
+    // Ajustes de performance/arquitetura (opcionais; validados pelo contrato no backend)
+    maxFixAttempts: options.maxFixAttempts,
+    subflowMax: options.subflowMax,
     // Opções legadas (mantidas para compatibilidade)
     flowId: options.flowId,
     flowName: options.flowName,
     tenantId: options.tenantId,
   };
 
+  // Timeout configurável (default 120s)
+  const timeoutMs = Number.isFinite(Number(options.timeoutMs))
+    ? Math.max(30000, Math.min(600000, Number(options.timeoutMs)))
+    : 120000;
+
   return fetchJson('/flows/generate', {
     method: 'POST',
     body: JSON.stringify(payload),
-    // Timeout aumentado para 60 segundos pois a geração de fluxo pode demorar
-    // especialmente quando precisa chamar a IA
-    timeoutMs: 60000,
+    timeoutMs,
   }).then(
     (result) => {
+      // O endpoint /flows/generate retorna { success, flowDefinition, ... }
+      const flow = result?.flowDefinition || result;
       logger.info('Fluxo gerado com sucesso', { 
-        flowId: result?.id, 
-        flowName: result?.name,
-        nodeCount: result?.nodes?.length || 0 
+        flowId: flow?.id, 
+        flowName: flow?.name,
+        nodeCount: flow?.nodes?.length || 0,
+        ragUsed: result?.ragUsed || false,
       });
       return result;
     },
@@ -288,6 +319,45 @@ export function generateFlowFromDescription(description, options = {}) {
       throw error;
     }
   );
+}
+
+/**
+ * Pré-visualiza o prompt FINAL que será enviado ao provedor (incluindo RAG),
+ * sem executar a geração.
+ *
+ * Observação:
+ * - Endpoint é restrito a Super Admin no backend (pode expor conteúdo sensível).
+ *
+ * @param {string} description
+ * @param {Object} options
+ * @returns {Promise<{success: boolean, tenantId: string, objective: string, promptSummary: string, ragMeta: any, finalPrompt: string}>}
+ */
+export function previewFlowGenerationPrompt(description, options = {}) {
+  if (!description || typeof description !== 'string' || description.trim() === '') {
+    return Promise.reject(new Error('previewFlowGenerationPrompt: description é obrigatório'));
+  }
+
+  const includeQuestions = options.includeQuestions === true;
+  const payload = {
+    name: options.flowName || 'Fluxo Gerado',
+    description: description.trim(),
+    useRag: options.useRag || false,
+    ragSources: options.useRag ? (options.ragSources || []) : [],
+    useWebScraping: options.useWebScraping || false,
+    scrapingTargets: options.useWebScraping ? (options.scrapingTargets || []) : [],
+    includeQuestions,
+    questions: includeQuestions ? (options.questions || []) : [],
+    // Compat/legado
+    flowId: options.flowId,
+    flowName: options.flowName,
+    tenantId: options.tenantId,
+  };
+
+  return fetchJson('/flows/generate/prompt-preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    timeoutMs: 60000,
+  });
 }
 
 /**

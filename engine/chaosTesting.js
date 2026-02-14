@@ -282,14 +282,15 @@ async function runChaosSimulation(flow, initialState, registry, options) {
 
   if (recording) {
     recording.recordAction({
-    type: 'chaos-simulation',
-    step: 'simulate',
-    value: {
-      flowId: flow.id,
-      initialNodeId: initialState.currentNodeId,
-      options: options ? Object.keys(options) : [],
-    },
-  });
+      type: 'chaos-simulation',
+      step: 'simulate',
+      value: {
+        flowId: flow.id,
+        initialNodeId: initialState.currentNodeId,
+        options: options ? Object.keys(options) : [],
+      },
+    });
+  }
 
   const simulationStartTime = new Date().toISOString();
   const simulation = await runUntilHalt(flow, initialState, registry, {
@@ -359,5 +360,3 @@ module.exports = {
     shouldFail,
   },
 };
-
-

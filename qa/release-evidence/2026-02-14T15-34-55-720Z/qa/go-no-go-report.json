@@ -1,0 +1,71 @@
+{
+  "startedAt": "2026-02-14T15:29:03.359Z",
+  "finishedAt": "2026-02-14T15:34:55.530Z",
+  "status": "pass",
+  "decision": "GO",
+  "steps": [
+    {
+      "label": "release-gate",
+      "command": "node tools/system/release-gate.js",
+      "status": "pass"
+    },
+    {
+      "label": "rollback-drill",
+      "command": "node tools/system/rollback-drill.js",
+      "status": "skipped"
+    }
+  ],
+  "checks": {
+    "releaseGate": {
+      "path": "qa/release-gate-report.json",
+      "loaded": true,
+      "status": "pass"
+    },
+    "rollbackDrill": {
+      "path": "qa/rollback-drill-report.json",
+      "loaded": true,
+      "status": "pass"
+    },
+    "smoke": {
+      "path": "qa/smoke-evidence.json",
+      "loaded": true,
+      "status": "pass",
+      "pbx": {
+        "ok": true,
+        "click2callStatus": "originated",
+        "originated": true,
+        "cdrFound": false,
+        "acceptedWithoutCdr": true
+      },
+      "pillars": {
+        "chatpro": {
+          "ok": true,
+          "ticketId": "default-1771083213983-yg2pcvs"
+        },
+        "queue": {
+          "ok": true,
+          "queueId": "pq-1771083213461-82b1dcce4132",
+          "ticketId": "pt-1771083213521-9cf3639844da",
+          "doneCount": 1
+        },
+        "pbx": {
+          "ok": true,
+          "l03": {
+            "ok": true,
+            "click2callStatus": "originated",
+            "originated": true,
+            "cdrFound": false,
+            "acceptedWithoutCdr": true
+          },
+          "l04": {
+            "ok": true,
+            "executionId": "fx-1771083212443-34a4bfbf804e",
+            "nodesCount": 3
+          }
+        }
+      },
+      "reasons": []
+    }
+  },
+  "reasons": []
+}

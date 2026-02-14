@@ -9,6 +9,7 @@ import { runFlowValidation } from './validation/runFlowValidation';
 import { canCreateNode, canCreateConnection } from './validation/preventiveValidation';
 import { createNode } from './nodeFactory';
 import { DEFAULT_SOCKET_NAME, getNodeInputs, getNodeOutputs } from './nodeSchemas';
+import { createTranslateOnlyApplier, cleanupInlineNodeSize } from './arrange/translateOnlyApplier';
 import logger from '../utils/logger';
 
 /**
@@ -25,6 +26,50 @@ export async function createEditor(container, options = {}) {
 
   // ✅ Flag para desabilitar validações preventivas durante carregamento de fluxo
   let isLoadingFromJson = false;
+  
+  /**
+   * Estatísticas de posições do JSON de entrada.
+   * Usado para decidir se precisamos aplicar fallback de layout.
+   */
+  function getJsonPositionStats(nodesObj) {
+    const entries = nodesObj && typeof nodesObj === 'object' ? Object.entries(nodesObj) : [];
+    const total = entries.length;
+    let withValid = 0;
+    let zeros = 0;
+    const unique = new Set();
+    const counts = new Map();
+    for (const [, nodeJson] of entries) {
+      const pos = Array.isArray(nodeJson?.position) ? nodeJson.position : null;
+      if (!pos || pos.length < 2) continue;
+      const x = Number(pos[0]);
+      const y = Number(pos[1]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      withValid += 1;
+      if (x === 0 && y === 0) zeros += 1;
+      const key = `${Math.round(x)},${Math.round(y)}`;
+      unique.add(key);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    let maxDup = 0;
+    for (const c of counts.values()) maxDup = Math.max(maxDup, c);
+    return {
+      total,
+      withValid,
+      zeros,
+      uniqueCount: unique.size,
+      maxDup,
+    };
+  }
+  
+  function getGridPositionByIndex(index) {
+    // Mesma ideia do engineFlowToReteJson (distribuição em grade) para evitar sobreposição.
+    const cols = 5;
+    const dx = 250;
+    const dy = 160;
+    const x = (index % cols) * dx;
+    const y = Math.floor(index / cols) * dy;
+    return { x, y };
+  }
 
   // Verifica se o container tem dimensões
   const containerRect = container.getBoundingClientRect();
@@ -213,6 +258,7 @@ export async function createEditor(container, options = {}) {
         data: {
           type: node.data?.type || 'unknown',
           config: node.data?.config || {},
+          ...(node.data?.__engineId ? { __engineId: String(node.data.__engineId) } : {}),
         },
         position,
         ...(Object.keys(outputs).length > 0 && { outputs }),
@@ -294,6 +340,9 @@ export async function createEditor(container, options = {}) {
     try {
       // ✅ Desabilita validações preventivas durante carregamento
       isLoadingFromJson = true;
+
+      const jsonPositionStats = getJsonPositionStats(reteJson.nodes);
+      logger.debug('loadFromJson - estatísticas de posição do JSON', jsonPositionStats);
       
       // ✅ Limpa completamente o editor antes de carregar novo fluxo
       // Primeiro remove todas as conexões explicitamente
@@ -352,6 +401,9 @@ export async function createEditor(container, options = {}) {
 
       /** @type {Record<string, any>} */
       const createdNodesByJsonId = {};
+      /** @type {Array<any>} */
+      const createdNodesInOrder = [];
+      let gridIndex = 0;
 
       // 1) Cria todos os nós
       for (const [jsonId, nodeJson] of Object.entries(reteJson.nodes)) {
@@ -367,15 +419,37 @@ export async function createEditor(container, options = {}) {
         }
 
         const node = createNode(type, { config });
+        // ✅ Persiste o id do JSON no nó para mapeamento estável (ex.: validação/hightlight por nodeIds "1","2"...)
+        try {
+          if (!node.data) node.data = {};
+          node.data.__jsonId = String(jsonId);
+          // ✅ Preserva engineId quando o JSON veio do backend (engineFlowToReteJson)
+          if (nodeJson?.data?.__engineId != null) {
+            node.data.__engineId = String(nodeJson.data.__engineId);
+          }
+        } catch {
+          // best-effort
+        }
         
         await editor.addNode(node);
+        createdNodesInOrder.push(node);
 
         // Aplica posição se existir
         const position = Array.isArray(nodeJson.position)
           ? nodeJson.position
           : null;
-        if (position && position.length >= 2) {
-          await area.translate(node.id, { x: position[0], y: position[1] });
+        const hasValidPosition =
+          position &&
+          position.length >= 2 &&
+          Number.isFinite(Number(position[0])) &&
+          Number.isFinite(Number(position[1]));
+
+        if (hasValidPosition) {
+          await area.translate(node.id, { x: Number(position[0]), y: Number(position[1]) });
+        } else {
+          // ✅ Fallback determinístico para evitar nós sobrepostos quando posições não vierem no JSON.
+          const p = getGridPositionByIndex(gridIndex++);
+          await area.translate(node.id, p);
         }
 
         createdNodesByJsonId[String(jsonId)] = node;
@@ -424,6 +498,62 @@ export async function createEditor(container, options = {}) {
         }
       }
 
+      // ✅ Best-effort: garante que a área teve chance de processar as posições antes de decidir por auto-arranjo.
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('node');
+          area.update('connection');
+        } catch (updateErr) {
+          logger.debug('loadFromJson - falha best-effort ao atualizar área antes de layout', {
+            error: updateErr,
+          });
+        }
+      }
+
+      // ✅ Se o JSON veio com muitas posições ausentes/iguais, isso costuma gerar sobreposição.
+      // Estratégia:
+      // - Quando a maioria das posições está ausente, a grade acima já resolve e evitamos um auto-arrange "surpresa".
+      // - Quando há posições mas elas colapsaram (duplicatas), tentamos auto-arrange para separar.
+      const totalNodesToConsider = createdNodesInOrder.length;
+      const mostlyMissingPositions =
+        jsonPositionStats.total > 0 &&
+        jsonPositionStats.withValid < Math.ceil(jsonPositionStats.total * 0.6);
+      const looksCollapsed =
+        totalNodesToConsider > 1 &&
+        (jsonPositionStats.uniqueCount <= 1 || jsonPositionStats.maxDup >= 3);
+
+      const shouldAutoArrange =
+        !mostlyMissingPositions &&
+        looksCollapsed &&
+        arrange &&
+        typeof arrange.layout === 'function';
+
+      if (shouldAutoArrange) {
+        logger.info('loadFromJson - aplicando auto-arrange (posições colapsadas detectadas)', {
+          totalNodes: totalNodesToConsider,
+          jsonPositionStats,
+        });
+        try {
+          await arrange.layout({
+            applier: createTranslateOnlyApplier(),
+          });
+          // pequeno yield para permitir render/atualização de views
+          await new Promise((r) => setTimeout(r, 0));
+        } catch (layoutErr) {
+          logger.warn('loadFromJson - auto-arrange falhou (best-effort)', {
+            error: layoutErr,
+          });
+        }
+      }
+
+      // ✅ Segurança visual: garante que nenhum resize do plugin deixe width/height inline no nó
+      // (isso desalinhar sockets/textos).
+      try {
+        cleanupInlineNodeSize(area, editor.getNodes());
+      } catch {
+        // best-effort
+      }
+
       // Após carregar, roda validação e notifica mudança de fluxo
       logger.debug('loadFromJson - executando validação após carregar fluxo', {
         totalNodes: editor.getNodes().length,
@@ -441,6 +571,29 @@ export async function createEditor(container, options = {}) {
         invalidNodeIds: invalidNodes.map(n => n.id),
       });
       
+      // ✅ Evita "grupo" acidental após carregar (especialmente quando havia sobreposição).
+      // A seleção do AreaExtensions usa a flag `node.selected`; zeramos best-effort.
+      try {
+        const nodesToClear = editor.getNodes();
+        let cleared = 0;
+        nodesToClear.forEach((n) => {
+          if (n && n.selected) {
+            n.selected = false;
+            cleared += 1;
+          }
+        });
+        if (cleared > 0) {
+          logger.debug('loadFromJson - seleção limpa após carregar', { cleared });
+          if (area && typeof area.update === 'function') {
+            try {
+              area.update('node');
+            } catch {}
+          }
+        }
+      } catch (selErr) {
+        logger.debug('loadFromJson - falha ao limpar seleção (best-effort)', { error: selErr });
+      }
+
       // ✅ Atualiza números sequenciais dos nós após carregar
       updateNodeNumbers();
       
@@ -1197,6 +1350,21 @@ export async function createEditor(container, options = {}) {
       currentInputKeys.forEach(key => {
         if (!newInputKeys.includes(key)) {
           try {
+            // ✅ Remove conexões que apontam para esse input antes de removê-lo
+            // Isso evita conexões "órfãs" que podem quebrar plugins como o auto-arrange (ELK)
+            const connections = editor.getConnections();
+            connections.forEach((conn) => {
+              if (conn.target === nodeId && conn.targetInput === key) {
+                try {
+                  editor.removeConnection(conn.id);
+                } catch (err) {
+                  logger.warn('updateNodeIO - erro ao remover conexão de input removido', {
+                    connectionId: conn.id,
+                    error: err,
+                  });
+                }
+              }
+            });
             node.removeInput(key);
           } catch (err) {
             logger.warn('updateNodeIO - erro ao remover input', { nodeId, key, error: err });

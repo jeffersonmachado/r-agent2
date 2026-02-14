@@ -1,0 +1,81 @@
+{
+  "startedAt": "2026-02-14T19:02:37.124Z",
+  "finishedAt": "2026-02-14T19:02:37.629Z",
+  "durationMs": 506,
+  "status": "pass",
+  "config": {
+    "baseUrl": "http://localhost:13001",
+    "applyPbxRollback": false,
+    "reportPath": "qa/rollback-drill-report.json"
+  },
+  "auth": {
+    "ok": true,
+    "mode": "admin",
+    "tenantId": "system",
+    "evidence": {
+      "status": 200,
+      "durationMs": 138
+    },
+    "error": null
+  },
+  "checks": {
+    "preSelftest": {
+      "ok": true,
+      "status": 200,
+      "selftestStatus": "WARN",
+      "durationMs": 225
+    },
+    "orders": {
+      "ok": true,
+      "status": 200,
+      "durationMs": 26,
+      "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"createdCount\":0,\"confirmedCount\":0,\"preparingCount\":0,\"readyCount\":0,\"dispatchedCount\":0,\"deliveredCount\":0,\"cancelledCount\":0,\"avgOrderToReadySeconds\":null,\"avgOrderToDeliverSeconds\":null,\"slaOrderToReadyBreachedCount\":0,\"slaOrderToDeliverBreachedCount\":0,\"slaOrderToReadyMinutes\":25,\"slaOrderToDeliverMinutes\":60},\"byHour\":[]}"
+    },
+    "fastService": {
+      "ok": true,
+      "status": 200,
+      "durationMs": 21,
+      "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"doneCount\":0,\"abandonedCount\":0,\"waitingCount\":0,\"calledCount\":0,\"inServiceCount\":0,\"pausedCount\":0,\"activeCount\":0,\"avgWaitSeconds\":null,\"avgServiceSeconds\":null,\"avgSkipCount\":null,\"abandonmentRate\":0},\"byStation\":[],\"byQueue\":[],\"byHour\":[]}"
+    },
+    "pbx": {
+      "ok": true,
+      "status": "no_candidate",
+      "candidateVersion": null,
+      "candidateCreatedAt": null,
+      "applyExecuted": false,
+      "rollbackResponse": null,
+      "auditFound": null,
+      "versionsCount": 0
+    },
+    "pbxSmokeEvidence": {
+      "required": true,
+      "summaryPath": "qa/smoke-evidence.json",
+      "loaded": true,
+      "result": {
+        "l03": {
+          "status": "pass",
+          "evidenceOk": true,
+          "realCallAttempted": true,
+          "click2callStatus": "originated",
+          "originated": true,
+          "cdrFound": false,
+          "acceptedWithoutCdr": true
+        },
+        "l04": {
+          "status": "pass",
+          "evidenceOk": true,
+          "executionId": "fx-1771095423547-e348fe64e39d",
+          "nodesCount": 3
+        }
+      },
+      "error": null
+    },
+    "postSelftest": {
+      "ok": true,
+      "status": 200,
+      "selftestStatus": "WARN",
+      "durationMs": 84
+    }
+  },
+  "error": null
+}

@@ -74,6 +74,8 @@ const ROLE_PERMISSIONS = {
     // Relatórios
     { resource: 'reports', action: 'read' },
     { resource: 'reports', action: 'export' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     { resource: 'audit', action: 'export' },
@@ -146,6 +148,8 @@ const ROLE_PERMISSIONS = {
     // Relatórios
     { resource: 'reports', action: 'read' },
     { resource: 'reports', action: 'export' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -197,6 +201,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'flows', action: 'read' },
     // Relatórios
     { resource: 'reports', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -239,6 +245,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'flows', action: 'update' },
     // Relatórios
     { resource: 'reports', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -298,6 +306,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'config', action: 'read' },
     { resource: 'flows', action: 'read' },
     { resource: 'reports', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     { resource: 'audit', action: 'read' },
     { resource: 'audit', action: 'export' },
     { resource: 'quick_replies', action: 'read' },
@@ -313,6 +323,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'queues', action: 'read' },
     { resource: 'agents', action: 'read' },
     { resource: 'flows', action: 'read' },
+    // Analytics (KPIs/metrics operacionais)
+    { resource: 'analytics', action: 'read' },
     { resource: 'quick_replies', action: 'read' },
     { resource: 'departments', action: 'read' },
     { resource: 'rag', action: 'read' },
@@ -451,12 +463,68 @@ function listRoles() {
   return Object.keys(ROLE_PERMISSIONS);
 }
 
+function listPermissions() {
+  const perms = [];
+  const seen = new Set();
+  for (const list of Object.values(ROLE_PERMISSIONS)) {
+    for (const perm of list) {
+      if (!perm || !perm.resource || !perm.action) continue;
+      const key = `${perm.resource}:${perm.action}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      perms.push({ resource: perm.resource, action: perm.action });
+    }
+  }
+  perms.sort((a, b) => {
+    if (a.resource === b.resource) return a.action.localeCompare(b.action);
+    return a.resource.localeCompare(b.resource);
+  });
+  return perms;
+}
+
+function sanitizePermissions(raw = []) {
+  const out = [];
+  const seen = new Set();
+  if (!Array.isArray(raw)) return out;
+  for (const p of raw) {
+    if (!p || typeof p !== 'object') continue;
+    const resource = typeof p.resource === 'string' ? p.resource.trim() : '';
+    const action = typeof p.action === 'string' ? p.action.trim() : '';
+    if (!resource || !action) continue;
+    const key = `${resource}:${action}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ resource, action });
+  }
+  return out;
+}
+
+function createRole(roleName, permissions = []) {
+  const name = roleName ? String(roleName).trim().toLowerCase() : '';
+  if (!name) return { success: false, error: 'role inválido' };
+  if (ROLE_PERMISSIONS[name]) {
+    return { success: false, error: 'role já existe' };
+  }
+  const perms = sanitizePermissions(permissions);
+  ROLE_PERMISSIONS[name] = perms;
+  return { success: true, role: name, permissions: perms };
+}
+
+function getRoleDefinitions() {
+  return Object.entries(ROLE_PERMISSIONS).map(([role, permissions]) => ({
+    role,
+    permissions: Array.isArray(permissions) ? permissions : [],
+  }));
+}
+
 module.exports = {
   hasPermission,
   canAccessTicket,
   canModifyTicket,
   getRolePermissions,
   listRoles,
+  listPermissions,
+  createRole,
+  getRoleDefinitions,
   ROLE_PERMISSIONS,
 };
-

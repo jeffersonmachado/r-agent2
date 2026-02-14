@@ -27,7 +27,7 @@ const { orchestrateGeneration } = require('./generationOrchestrator');
 const { validateFlow } = require('../../engine/validator');
 // Funções saveFlowToFile e removeFlowFromFile removidas - dados agora estão no banco de dados PostgreSQL
 const { enforceRateLimit } = require('../../infra/rate-limit');
-const { createExecutionContext, updateStage, updateStatus, toProgressFormat } = require('./pipelineExecutionContext');
+const { ensureExecutionContext, requireStages, updateStage, updateStatus, tryApprove, toProgressFormat } = require('./pipelineExecutionContext');
 const { advancePipeline } = require('./pipelineOrchestrator');
 const { isSuperAdmin } = require('./superAdminService');
 
@@ -76,72 +76,112 @@ async function validateSchema(flow) {
  * @returns {Promise<{success: boolean, error?: string, reportPath?: string}>}
  */
 async function executeRpaTest(rpaTestPath) {
+  let runner = null;
+  let result = null;
+  let reportPath = null;
+
   try {
     logger.info('Executando teste RPA', { rpaTestPath });
 
+    // Em DEV, o server pode ficar vivo (nodemon) sem observar `tests/rpa/**`.
+    // Como o pipeline executa código em `tests/rpa`, garantimos que a execução
+    // sempre use a versão atual do runner/executor (evita cache antigo do require()).
+    try {
+      const runnerModulePath = require.resolve('../../tests/rpa/rpaTestRunner');
+      const actionExecutorPath = require.resolve('../../tests/rpa/actionExecutor');
+      // Limpa cache em ordem: executor primeiro ou ambos (seguro)
+      delete require.cache[actionExecutorPath];
+      delete require.cache[runnerModulePath];
+    } catch (e) {
+      // Se algo falhar aqui, não deve impedir a execução do RPA.
+    }
+
     // Executa o teste RPA usando o runner existente
     const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
-    const runner = new RpaTestRunner({
+    runner = new RpaTestRunner({
       headless: true,
     });
 
     await runner.init();
 
-    try {
-      // Carrega o teste
-      const testContent = fs.readFileSync(rpaTestPath, 'utf8');
-      const testData = JSON.parse(testContent);
+    // Carrega o teste
+    const testContent = fs.readFileSync(rpaTestPath, 'utf8');
+    const testData = JSON.parse(testContent);
 
-      // Executa o teste
-      // O playback aceita string (nome) ou objeto (dados completos)
-      const result = await runner.playback(testData, {});
+    // Executa o teste
+    // O playback aceita string (nome) ou objeto (dados completos)
+    result = await runner.playback(testData, {});
 
-      await runner.close();
+    // Sempre gera relatório (mesmo quando falha), para diagnóstico detalhado.
+    // O report inclui `details` com os steps e agora também `step.debug`.
+    const report = runner.generateReport();
+    reportPath = path.join(
+      __dirname,
+      '..',
+      '..',
+      'tests',
+      'rpa',
+      'reports',
+      `rpa-report-${Date.now()}.json`
+    );
 
-      if (result.success) {
-        // Gera relatório usando o método do runner
-        const report = runner.generateReport();
-        const reportPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'tests',
-          'rpa',
-          'reports',
-          `rpa-report-${Date.now()}.json`
-        );
-
-        // Garante que o diretório existe
-        const reportsDir = path.dirname(reportPath);
-        if (!fs.existsSync(reportsDir)) {
-          fs.mkdirSync(reportsDir, { recursive: true });
-        }
-
-        fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
-
-        return {
-          success: true,
-          reportPath,
-          replayPath: result.replayPath || null,
-          replayId: result.replayId || null,
-        };
-      } else {
-        return {
-          success: false,
-          error: result.message || result.error || 'Teste RPA falhou',
-          replayPath: result.replayPath || null,
-          replayId: result.replayId || null,
-        };
-      }
-    } catch (err) {
-      await runner.close();
-      throw err;
+    // Garante que o diretório existe
+    const reportsDir = path.dirname(reportPath);
+    if (!fs.existsSync(reportsDir)) {
+      fs.mkdirSync(reportsDir, { recursive: true });
     }
+
+    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
+
+    // Encerra o runner após gerar relatório
+    await runner.close();
+
+    if (result.success) {
+      return {
+        success: true,
+        reportPath,
+        replayPath: result.replayPath || null,
+        replayId: result.replayId || null,
+      };
+    }
+
+    // Mensagem de erro com resumo do step que falhou (se disponível)
+    const failedStep = Array.isArray(result.steps) ? result.steps.find((s) => s && s.success === false) : null;
+    const diagSummary = failedStep?.debug?.diagnostics
+      ? {
+          kind: failedStep.debug.diagnostics.kind,
+          selectorsTried: failedStep.debug.diagnostics.selectorsTried,
+        }
+      : null;
+
+    const derivedError =
+      result.message ||
+      result.error ||
+      failedStep?.error ||
+      (Array.isArray(result.errors) && result.errors.length ? result.errors[0] : null) ||
+      'Teste RPA falhou';
+
+    return {
+      success: false,
+      error: derivedError,
+      failedStep: failedStep
+        ? { step: failedStep.step, action: failedStep.action, selector: failedStep.selector, diagSummary }
+        : null,
+      reportPath,
+      replayPath: result.replayPath || null,
+      replayId: result.replayId || null,
+    };
   } catch (err) {
     logger.error('Erro ao executar teste RPA', err);
+    try {
+      if (runner) await runner.close();
+    } catch (e) {
+      // ignora
+    }
     return {
       success: false,
       error: err.message || 'Erro desconhecido ao executar teste RPA',
+      reportPath,
     };
   }
 }
@@ -211,9 +251,17 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
   const executionMode = payload.executionMode || 'dry-run';
   const isDryRun = executionMode === 'dry-run';
   const isBootstrap = payload.bootstrap === true;
+  const isTenantPipeline = payload?.tenantPipeline === true;
 
-  // Cria Execution Context
-  const execution = createExecutionContext(payload, options);
+  // Cria ou reaproveita Execution Context (execução unificada por executionId)
+  const execution = ensureExecutionContext(payload, options);
+  // Se o frontend sinalizar que essa execução faz parte do pipeline tenant, exige as etapas extras.
+  if (isTenantPipeline) {
+    requireStages(execution, ['faqGenerated', 'initialFlowGenerated']);
+    // Como virou "requerido", começa pendente até os endpoints concluírem.
+    if (execution.stages.faqGenerated !== true) execution.stages.faqGenerated = false;
+    if (execution.stages.initialFlowGenerated !== true) execution.stages.initialFlowGenerated = false;
+  }
 
   // Proteção reentrante: verifica se já existe uma execução em andamento
   // Usa executionId como chave única
@@ -372,7 +420,13 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         result.motivo = 'Rate limit excedido';
         result.rateLimitExceeded = true;
         result.retryAfter = retryAfter;
-        updateStatus(execution, 'failed');
+        updateStatus(execution, 'failed', {
+          currentStage: execution.currentStage || 'providerValidated',
+          stageStatus: 'error',
+          reason: { code: 'RATE_LIMIT_EXCEEDED', retryAfter },
+          message: `Rate limit excedido. Tente novamente em ${retryAfter} segundos.`,
+          source: 'generate-and-validate.rate-limit',
+        });
         return result;
       }
       // Se não for erro de rate limit, propaga
@@ -392,7 +446,13 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
       });
       result.errors.push(`Validação de governança falhou: ${governanceValidation.errors.join('; ')}`);
       result.motivo = 'Validação de governança falhou';
-      updateStatus(execution, 'failed');
+      updateStatus(execution, 'failed', {
+        currentStage: execution.currentStage || 'payloadValid',
+        stageStatus: 'error',
+        reason: { code: 'GOVERNANCE_FAILED' },
+        message: `Validação de governança falhou: ${governanceValidation.errors.join('; ')}`,
+        source: 'generate-and-validate.governance',
+      });
       return result;
     }
     logger.info(`[Pipeline][${execution.executionId}] Governança validada`);
@@ -400,15 +460,64 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
     // Se DRY-RUN, retorna aqui
     if (isDryRun) {
       logger.info(`[Pipeline][${execution.executionId}] Modo DRY-RUN: retornando validação sem executar`);
-      updateStatus(execution, 'approved');
-      progressCallback(toProgressFormat(execution));
+      // Em DRY-RUN, ainda emitimos um pipeline consistente para o frontend:
+      // - Marca etapas como "concluídas (simuladas)" para não aparecer "Aprovado" com etapas pendentes
+      // - Não persiste artefatos nem executa RPA de verdade
+      const nowIso = new Date().toISOString();
+      const mkCompleted = (message) => ({
+        status: 'completed',
+        progress: 100,
+        timestamp: nowIso,
+        message,
+      });
+
+      const shouldGenerateFlow = (payload.generate?.flow === true) || isBootstrap === true;
+      const shouldGenerateSeed = (payload.generate?.seed === true) || isBootstrap === true;
+      const shouldGenerateRpa = (payload.generate?.rpa === true) || isBootstrap === true || payload.generateRpaTest === true;
+      const useRag = payload.useRag !== false;
+
+      updateStage(execution, 'contractValid', true);
+      updateStage(execution, 'contextBuilt', true);
+      // Em dry-run, não construímos RAG de verdade; marcamos como concluído para consistência visual.
+      if (!useRag) {
+        updateStage(execution, 'ragContextBuilt', true);
+      } else {
+        updateStage(execution, 'ragContextBuilt', true);
+      }
+      // IA/fluxo: simulados
+      updateStage(execution, 'aiExecuted', true);
+      updateStage(execution, 'flowGenerated', true);
+      // Seed/RPA: simulados (sem criar arquivo/execução real)
+      if (shouldGenerateSeed) updateStage(execution, 'seedGenerated', true);
+      if (shouldGenerateRpa) {
+        updateStage(execution, 'rpaGenerated', true);
+        updateStage(execution, 'rpaExecuted', true);
+      }
+
+      // Não aprova automaticamente se houver etapas extras pendentes (modo tenant).
+      // `tryApprove` só aprova quando todas as etapas requeridas estiverem concluídas.
+      tryApprove(execution, { source: 'generate-and-validate.dry-run' });
+
+      progressCallback({
+        ...toProgressFormat(execution),
+        contractValid: mkCompleted('DRY-RUN: contrato validado (simulado)'),
+        contextBuilt: mkCompleted('DRY-RUN: contexto montado (simulado)'),
+        ragContextBuilt: mkCompleted(useRag ? 'DRY-RUN: contexto RAG (simulado)' : 'DRY-RUN: RAG desativado'),
+        aiExecuted: mkCompleted('DRY-RUN: IA simulada (nenhuma chamada executada)'),
+        flowGenerated: mkCompleted(shouldGenerateFlow ? 'DRY-RUN: fluxo simulado' : 'DRY-RUN: geração de fluxo não solicitada'),
+        seedGenerated: mkCompleted(shouldGenerateSeed ? 'DRY-RUN: seed simulado' : 'DRY-RUN: geração de seed não solicitada'),
+        rpaGenerated: mkCompleted(shouldGenerateRpa ? 'DRY-RUN: RPA simulado' : 'DRY-RUN: geração de RPA não solicitada'),
+        rpaExecuted: mkCompleted(shouldGenerateRpa ? 'DRY-RUN: execução RPA simulada' : 'DRY-RUN: execução RPA não solicitada'),
+        // Em tenantPipeline, "approved" só aparece quando faqGenerated + initialFlowGenerated concluírem.
+        ...(execution.status === 'approved' ? { approved: mkCompleted('DRY-RUN: aprovado (sem execução real)') } : {}),
+      });
       return {
         success: true,
         rpaPassed: null,
-        flowGenerated: false,
-        seedGenerated: false,
-        rpaGenerated: false,
-        rpaExecuted: false,
+        flowGenerated: shouldGenerateFlow,
+        seedGenerated: shouldGenerateSeed,
+        rpaGenerated: shouldGenerateRpa,
+        rpaExecuted: shouldGenerateRpa,
         dryRun: true,
         warnings: [],
         errors: [],
@@ -428,6 +537,25 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         result.errors.push(advanceResult.error);
         result.motivo = advanceResult.error;
         updateStatus(execution, 'failed');
+          // Propaga diagnóstico do RPA (quando a falha ocorreu após executar RPA),
+          // mesmo quando o erro vem do orchestrator (e não cai no catch abaixo).
+          try {
+            result.rpaGenerated = !!execution.stages?.rpaGenerated;
+            result.rpaExecuted = !!execution.stages?.rpaExecuted;
+            result.rpaPassed = execution.rpaPassed === true;
+
+            if (execution.rpaResult?.reportPath) {
+              result.reportLink = `/tests/rpa/reports/${path.basename(execution.rpaResult.reportPath)}`;
+            }
+            if (execution.rpaResult?.replayPath) {
+              result.replayLink = `/tests/rpa/replay/${path.basename(execution.rpaResult.replayPath)}`;
+            }
+            if (execution.rpaResult?.failedStep) {
+              result.rpaFailedStep = execution.rpaResult.failedStep;
+            }
+          } catch (e) {
+            // best-effort
+          }
         
         // Inclui artefatos gerados mesmo quando há erro no pipeline
         if (execution.generationResult) {
@@ -454,6 +582,24 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         
         break;
       }
+    }
+
+    // Se o pipeline absteve (evidência insuficiente), não trata como falha técnica.
+    if (execution.status === 'abstained') {
+      const abstention = execution.abstentionReason || null;
+      result.success = false;
+      result.abstained = true;
+      result.abstentionReason = abstention;
+      result.evidenceContext = execution.evidenceContext || null;
+      result.motivo =
+        abstention?.description
+          ? `Abstenção: ${abstention.description}`
+          : 'Abstenção: evidência insuficiente para continuar';
+
+      // Emite status final para UI
+      progressCallback(toProgressFormat(execution));
+
+      return result;
     }
 
     // Se chegou aqui, todas as etapas foram concluídas
@@ -538,8 +684,15 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
               flowName: execution.flow.name,
               error: validationError.message
             });
-            result.errors.push(`Gate de validação bloqueou fluxo gerado por IA: ${validationError.message}`);
-            result.motivo = 'Fluxo gerado por IA não passou na validação obrigatória do gate';
+            // SAFE-MODE (tenantPipeline): não aborta a execução — conclui com avisos para revisão humana.
+            // Mantém o tenant em pending_review/draft, mas permite persistir artefatos e anexar diagnósticos.
+            if (isTenantPipeline) {
+              result.warnings.push(`Gate de validação sinalizou problema no fluxo: ${validationError.message}`);
+              if (!result.motivo) result.motivo = 'Concluído com avisos (revisão humana necessária)';
+            } else {
+              result.errors.push(`Gate de validação bloqueou fluxo gerado por IA: ${validationError.message}`);
+              result.motivo = 'Fluxo gerado por IA não passou na validação obrigatória do gate';
+            }
             
             // Inclui artefatos gerados mesmo quando há erro
             if (execution.flow) {
@@ -554,14 +707,16 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
               if (genResult.dependencies) result.dependencies = genResult.dependencies;
             }
             
-            // Rollback em modo bootstrap
-            if (isBootstrap && artifacts.flowPath) {
-              logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após falha do gate de IA`);
-              // Dados agora estão no banco de dados PostgreSQL - rollback não necessário
+            // Em modo estrito, aborta. Em tenantPipeline, segue com avisos.
+            if (!isTenantPipeline) {
+              // Rollback em modo bootstrap
+              if (isBootstrap && artifacts.flowPath) {
+                logger.info(`[Pipeline][${execution.executionId}] Modo Bootstrap: Fazendo rollback após falha do gate de IA`);
+                // Dados agora estão no banco de dados PostgreSQL - rollback não necessário
+              }
+              updateStatus(execution, 'failed');
+              return result;
             }
-            
-            updateStatus(execution, 'failed');
-            return result;
           }
         }
 
@@ -599,8 +754,10 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
         }
       }
 
-      // Persiste artefatos (apenas se RPA passou ou não foi executado)
-      if (execution.rpaPassed !== false || !execution.rpaTestPath) {
+      // Persiste artefatos:
+      // - padrão: apenas se RPA passou ou não foi executado
+      // - tenantPipeline: persiste mesmo se RPA falhar (safe-mode), mantendo revisão humana obrigatória
+      if (isTenantPipeline || execution.rpaPassed !== false || !execution.rpaTestPath) {
         if (execution.flow) {
           if (!isBootstrap || execution.rpaPassed) {
             // Dados agora estão no banco de dados PostgreSQL - não precisa salvar em arquivo
@@ -626,6 +783,9 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
       result.rpaGenerated = execution.stages.rpaGenerated;
       result.rpaExecuted = execution.stages.rpaExecuted;
       result.rpaPassed = execution.rpaPassed || false;
+      if (execution.seed) {
+        result.seed = execution.seed;
+      }
 
       if (execution.rpaResult) {
         if (execution.rpaResult.reportPath) {
@@ -697,6 +857,21 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
     if (execution.seed) {
       result.seed = execution.seed;
       result.seedGenerated = true;
+    }
+
+    // Se houver resultado de RPA (mesmo falhando), expõe links para diagnóstico.
+    try {
+      if (execution.rpaResult?.reportPath) {
+        result.reportLink = `/tests/rpa/reports/${path.basename(execution.rpaResult.reportPath)}`;
+      }
+      if (execution.rpaResult?.replayPath) {
+        result.replayLink = `/tests/rpa/replay/${path.basename(execution.rpaResult.replayPath)}`;
+      }
+      if (execution.rpaResult?.failedStep) {
+        result.rpaFailedStep = execution.rpaResult.failedStep;
+      }
+    } catch (e) {
+      // best-effort
     }
     
     // Inclui todos os artefatos do generationResult se disponíveis

@@ -20,9 +20,12 @@
 
 const { validateFlowPlan } = require('../../api/utils/validateFlowPlan');
 const { validateRpaPlan } = require('../../api/utils/validateRpaPlan');
-const logger = require('../../api/utils/logger');
+// NOTE: este gate vive hoje na pasta engine/ai, mas não deve depender da API.
+// Para logs, usamos console (compatível com .debug/.info/.warn/.error).
+const logger = console;
 const { recordValidationFailure } = require('./aiTelemetry');
 const { recordAiGateFailure } = require('../qa/qaTelemetry');
+const { validateChatbotFlowSemantic } = require('./chatbotSemanticValidator');
 
 /**
  * Identifica o domínio do plano (chatbot ou rpa)
@@ -116,6 +119,9 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
 
   // 3. Valida conforme domínio
   let validationResult;
+  let qualityScore = 100;
+  let riskFlags = [];
+  let semanticWarnings = [];
   
   if (domain === 'rpa') {
     // Valida FORMA primeiro (schema, estrutura)
@@ -186,9 +192,39 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
         errors: [...(validationResult.errors || []), ...semanticErrors]
       };
     }
+
+    // Risk flags (não-bloqueantes) para auditoria
+    try {
+      const steps = Array.isArray(plan.steps) ? plan.steps : [];
+      const hasNavigate = steps.some(s => s && (s.action === 'navigate' || s.type === 'navigate'));
+      if (hasNavigate) riskFlags.push('NAVIGATION');
+      if (steps.length > 50) {
+        semanticWarnings.push({
+          type: 'MANY_STEPS_WARNING',
+          message: `Plano RPA contém muitos steps (${steps.length})`,
+          rule: 'RPA_STEPS_COUNT_WARNING',
+          details: { steps: steps.length },
+        });
+        qualityScore -= 10;
+      }
+    } catch {
+      // best-effort
+    }
     
   } else if (domain === 'chatbot') {
     validationResult = validateFlowPlan(plan);
+
+    // Hardening semântico adicional para IA (fallback global + bloqueios)
+    const semantic = validateChatbotFlowSemantic(plan, { allowApiNode: false });
+    if (!semantic.valid) {
+      validationResult = {
+        valid: false,
+        errors: [...(validationResult.errors || []), ...(semantic.errors || [])],
+      };
+    }
+    semanticWarnings = semantic.warnings || [];
+    qualityScore = typeof semantic.qualityScore === 'number' ? semantic.qualityScore : 100;
+    riskFlags = Array.isArray(semantic.riskFlags) ? semantic.riskFlags : [];
   } else {
     return {
       valid: false,
@@ -197,7 +233,9 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
         type: 'UNSUPPORTED_DOMAIN',
         message: `Domínio não suportado: ${domain}. Use "chatbot" ou "rpa"`
       }],
-      warnings: []
+      warnings: [],
+      qualityScore: 0,
+      riskFlags: ['UNSUPPORTED_DOMAIN']
     };
   }
 
@@ -206,7 +244,9 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
     valid: validationResult.valid || false,
     domain,
     errors: validationResult.errors || [],
-    warnings: strict ? [] : (validationResult.warnings || [])
+    warnings: strict ? [] : ([...(validationResult.warnings || []), ...(semanticWarnings || [])]),
+    qualityScore,
+    riskFlags,
   };
 
   if (!result.valid && result.errors.length > 0) {

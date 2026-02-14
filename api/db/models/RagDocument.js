@@ -65,6 +65,33 @@ function getRagDocumentModel() {
         allowNull: false,
         defaultValue: 0,
       },
+      // Estado de indexação (máquina de estados)
+      index_status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'pending',
+      },
+      index_error_code: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      index_error_message: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      last_index_attempt_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      inconsistent: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      inconsistent_reason: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
     }, {
       tableName: 'rag_documents',
       timestamps: true,
@@ -72,6 +99,8 @@ function getRagDocumentModel() {
       indexes: [
         { fields: ['tenant_key', 'status'], name: 'rag_documents_tenant_key_status_idx' },
         { fields: ['tenant_key', 'indexed'], name: 'rag_documents_tenant_key_indexed_idx' },
+        { fields: ['tenant_key', 'index_status'], name: 'rag_documents_tenant_key_index_status_idx' },
+        { fields: ['tenant_key', 'inconsistent'], name: 'rag_documents_tenant_key_inconsistent_idx' },
       ],
     });
   }

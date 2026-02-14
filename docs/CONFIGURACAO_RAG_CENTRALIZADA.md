@@ -40,8 +40,7 @@ O serviço RAG Python (`rag-service`) agora lê suas configurações do `config.
         "strategy": "sentence"
       },
       "vectorStore": {
-        "type": "faiss",
-        "path": "./data/vector_store"
+        "type": "postgres"
       },
       "llm": {
         "provider": "openai",
@@ -98,9 +97,8 @@ O `settings.py` tenta encontrar o `config.json` nos seguintes caminhos (em ordem
   - Opções: "fixed_size", "sentence", "paragraph", "semantic"
 
 ### Vector Store
-- `vectorStore.type`: Tipo de vector store (padrão: "faiss")
-  - Opções: "faiss", "chroma", "pinecone"
-- `vectorStore.path`: Caminho do vector store (padrão: "./data/vector_store")
+- `vectorStore.type`: Tipo de vector store (padrão: "postgres")
+  - Opções: "postgres"
 
 ### LLM
 - `llm.provider`: Provedor LLM (padrão: "openai")

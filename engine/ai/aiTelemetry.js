@@ -19,8 +19,10 @@ const path = require('path');
 const logger = require('../../api/utils/logger');
 
 // Diretório para logs de telemetria
-const TELEMETRY_DIR = path.join(__dirname, '../../../logs/ai-telemetry');
+// Usa cwd para ficar ancorado na raiz do repo (evita path relativo quebrado).
+const TELEMETRY_DIR = path.resolve(process.cwd(), 'logs', 'ai-telemetry');
 const TELEMETRY_FILE = path.join(TELEMETRY_DIR, 'failures.jsonl');
+const TELEMETRY_SUCCESS_FILE = path.join(TELEMETRY_DIR, 'success.jsonl');
 
 // Versão do RAG (fixa inicialmente)
 const RAG_VERSION = '1.0.0';
@@ -81,6 +83,75 @@ function recordValidationFailure({ domain, errors, promptUsed, plan = null }) {
   } catch (error) {
     // Não deve quebrar o fluxo se telemetria falhar
     logger.error('[aiTelemetry] Erro ao registrar telemetria', {
+      error: error.message,
+      stack: error.stack
+    });
+  }
+}
+
+/**
+ * API preferida (spec): logFailure(...)
+ * Mantém compatibilidade com recordValidationFailure().
+ *
+ * @param {Object} params
+ * @param {string} params.domain
+ * @param {string|null} [params.requestId]
+ * @param {string|null} [params.promptUsed]
+ * @param {string|null} [params.stage]
+ * @param {Array} [params.errors]
+ * @param {Object|null} [params.plan]
+ */
+function logFailure({ domain, requestId = null, promptUsed = null, stage = null, errors = [], plan = null }) {
+  try {
+    ensureTelemetryDir();
+    const entry = {
+      timestamp: new Date().toISOString(),
+      domain: domain || 'unknown',
+      requestId,
+      stage,
+      ragVersion: RAG_VERSION,
+      promptUsed: promptUsed || 'unknown',
+      errorCount: Array.isArray(errors) ? errors.length : 0,
+      errors: Array.isArray(errors) ? errors : [],
+    };
+    fs.appendFileSync(TELEMETRY_FILE, JSON.stringify(entry) + '\n', 'utf8');
+  } catch {
+    // best-effort
+  }
+
+  // Mantém log antigo também (para compatibilidade)
+  try {
+    recordValidationFailure({ domain, errors, promptUsed, plan });
+  } catch {
+    // best-effort
+  }
+}
+
+/**
+ * Registra sucesso (best-effort) para observabilidade.
+ *
+ * @param {Object} params
+ * @param {string} params.domain
+ * @param {string|null} [params.requestId]
+ * @param {string|null} [params.promptUsed]
+ * @param {number|null} [params.qualityScore]
+ * @param {string[]} [params.riskFlags]
+ */
+function logSuccess({ domain, requestId = null, promptUsed = null, qualityScore = null, riskFlags = [] }) {
+  try {
+    ensureTelemetryDir();
+    const entry = {
+      timestamp: new Date().toISOString(),
+      domain: domain || 'unknown',
+      requestId,
+      ragVersion: RAG_VERSION,
+      promptUsed: promptUsed || 'unknown',
+      qualityScore,
+      riskFlags: Array.isArray(riskFlags) ? riskFlags : [],
+    };
+    fs.appendFileSync(TELEMETRY_SUCCESS_FILE, JSON.stringify(entry) + '\n', 'utf8');
+  } catch (error) {
+    logger.error('[aiTelemetry] Erro ao registrar sucesso', {
       error: error.message,
       stack: error.stack
     });
@@ -157,6 +228,8 @@ function getFailureStats() {
 
 module.exports = {
   recordValidationFailure,
+  logFailure,
+  logSuccess,
   readFailures,
   getFailureStats,
   RAG_VERSION

@@ -1,6 +1,135 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PropertyField, TextField, TextAreaField, JsonField, SelectField, IntentListField, KeywordsField, OptionsField, RouterField, ScheduleRouterField, NumberField, BooleanField } from './components/PropertyField';
 import { getNodeSchema, getNodeProperties } from './editor/nodeSchemas';
+import { Input } from './styles/Input';
+import { getFlow } from './api/flows';
+import { getBasePath } from './utils';
+
+// Cache em memória para evitar refetch do nome do subfluxo ao re-selecionar nós.
+// key: flowId (string) -> { name: string|null, status: 'ok'|'not_found'|'forbidden'|'unauthorized'|'error' }
+const subflowNameCache = new Map();
+
+function getTenantIdFromQuery() {
+  try {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search || '');
+    const tenantId = params.get('tenantId');
+    return tenantId && String(tenantId).trim() ? String(tenantId).trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildSubflowEditorHref(flowId) {
+  const basePath = getBasePath();
+  const params = new URLSearchParams();
+  params.set('flowId', String(flowId));
+  const tenantId = getTenantIdFromQuery();
+  if (tenantId) params.set('tenantId', tenantId);
+  return `${basePath || ''}/editor?${params.toString()}`;
+}
+
+function SubflowFlowIdField({ value }) {
+  const flowId = typeof value === 'string' ? value : (value == null ? '' : String(value));
+  const trimmedId = flowId.trim();
+
+  const [resolvedName, setResolvedName] = useState(null);
+  const [status, setStatus] = useState(null); // null | 'loading' | cache status
+
+  const debounceRef = useRef(null);
+  const requestSeqRef = useRef(0);
+
+  useEffect(() => {
+    // Limpa timers pendentes ao trocar de id
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    if (!trimmedId) {
+      setResolvedName(null);
+      setStatus(null);
+      return;
+    }
+
+    // Cache hit
+    const cached = subflowNameCache.get(trimmedId);
+    if (cached) {
+      setResolvedName(cached.name || null);
+      setStatus(cached.status);
+      return;
+    }
+
+    // Debounce: evita request a cada tecla
+    setStatus('loading');
+    const seq = (requestSeqRef.current += 1);
+    debounceRef.current = setTimeout(() => {
+      const tenantId = getTenantIdFromQuery();
+      const options = tenantId ? { headers: { 'X-Tenant-Id': tenantId } } : undefined;
+
+      Promise.resolve()
+        .then(() => getFlow(trimmedId, options))
+        .then((flow) => {
+          if (requestSeqRef.current !== seq) return;
+          const name = flow?.name ? String(flow.name) : null;
+          subflowNameCache.set(trimmedId, { name, status: 'ok' });
+          setResolvedName(name);
+          setStatus('ok');
+        })
+        .catch((err) => {
+          if (requestSeqRef.current !== seq) return;
+          const httpStatus = err && typeof err === 'object' ? err.status : null;
+          const nextStatus =
+            httpStatus === 404 ? 'not_found'
+              : httpStatus === 403 ? 'forbidden'
+                : httpStatus === 401 ? 'unauthorized'
+                  : 'error';
+          subflowNameCache.set(trimmedId, { name: null, status: nextStatus });
+          setResolvedName(null);
+          setStatus(nextStatus);
+        });
+    }, 450);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
+  }, [trimmedId]);
+
+  const statusLine = (() => {
+    if (!trimmedId) return null;
+    if (status === 'loading') return 'Carregando nome do fluxo...';
+    if (status === 'not_found') return 'Fluxo não encontrado.';
+    if (status === 'forbidden') return 'Sem acesso a este fluxo.';
+    if (status === 'unauthorized') return 'Não autenticado.';
+    if (status === 'error') return 'Falha ao buscar o nome do fluxo.';
+    if (status === 'ok') return null;
+    return null;
+  })();
+
+  if (!trimmedId) return null;
+
+  if (resolvedName) {
+    return (
+      <div className="text-[12px] text-text-secondary">
+        <span className="text-text-tertiary">Nome:</span>{' '}
+        <span className="text-text-primary">{resolvedName}</span>
+      </div>
+    );
+  }
+
+  if (statusLine) {
+    return <div className="text-[11px] text-text-tertiary">{statusLine}</div>;
+  }
+
+  if (status === 'ok') {
+    return <div className="text-[11px] text-text-tertiary italic">(Fluxo sem nome)</div>;
+  }
+
+  return null;
+}
 
 /**
  * Painel lateral de propriedades do nó selecionado - estilo moderno
@@ -28,6 +157,45 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
   }
 
   const { id, type, config = {}, validationErrors = [] } = selectedNode;
+
+  const normalizeSeverity = (err) => {
+    const sev = (err && typeof err === 'object' && err.severity) ? String(err.severity) : '';
+    if (sev === 'warning' || sev === 'info' || sev === 'error') return sev;
+    // default seguro: se não informou, trate como erro
+    return 'error';
+  };
+
+  const validationCounts = validationErrors.reduce(
+    (acc, err) => {
+      const sev = normalizeSeverity(err);
+      acc.total += 1;
+      acc[sev] += 1;
+      return acc;
+    },
+    { total: 0, error: 0, warning: 0, info: 0 },
+  );
+
+  const validationStyle =
+    validationCounts.error > 0
+      ? {
+          container: 'border-status-error/60',
+          title: 'text-status-error',
+          badge: 'bg-status-error/10 text-status-error',
+          code: 'text-status-error',
+        }
+      : validationCounts.warning > 0
+        ? {
+            container: 'border-status-warning/60',
+            title: 'text-status-warning',
+            badge: 'bg-status-warning/10 text-status-warning',
+            code: 'text-status-warning',
+          }
+        : {
+            container: 'border-status-info/60',
+            title: 'text-status-info',
+            badge: 'bg-status-info/10 text-status-info',
+            code: 'text-status-info',
+          };
 
   // Obtém schema do nó do schema centralizado
   const nodeSchema = getNodeSchema(type);
@@ -130,19 +298,26 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
 
       {/* Erros de validação do nó selecionado */}
       {validationErrors.length > 0 && (
-        <div className="p-3.5 rounded-lg bg-bg-tertiary/60 border border-status-error/60 space-y-2">
+        <div className={`p-3.5 rounded-lg bg-bg-tertiary/60 border ${validationStyle.container} space-y-2`}>
           <div className="flex items-center justify-between">
-            <div className="text-[10px] text-status-error mb-1 uppercase tracking-wider font-semibold">
-              Problemas de validação
+            <div className={`text-[10px] mb-1 uppercase tracking-wider font-semibold ${validationStyle.title}`}>
+              {validationCounts.error > 0 ? 'Erros de validação' : validationCounts.warning > 0 ? 'Avisos de validação' : 'Informações de validação'}
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-status-error/10 text-status-error font-mono">
-              {validationErrors.length}
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${validationStyle.badge}`}>
+              {validationCounts.total}
             </span>
           </div>
           <ul className="space-y-1.5 m-0 p-0 list-none text-[11px] text-text-secondary">
             {validationErrors.map((err, idx) => {
               // ✅ Garante que o erro está no formato correto
               const errorCode = (typeof err === 'object' && err.code) ? err.code : 'VALIDATION_ERROR';
+              const sev = normalizeSeverity(err);
+              const codeClass =
+                sev === 'error'
+                  ? 'text-status-error'
+                  : sev === 'warning'
+                    ? 'text-status-warning'
+                    : 'text-status-info';
               // ✅ Frontend decide: usa messageUi (amigável) se disponível, senão usa message (técnica)
               const errorMessage = (typeof err === 'object' && err.messageUi) 
                 ? err.messageUi 
@@ -152,7 +327,7 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
               
               return (
                 <li key={`${errorCode}-${idx}`} className="flex flex-col">
-                  <span className="font-mono text-status-error font-semibold">
+                  <span className={`font-mono font-semibold ${codeClass}`}>
                     [{errorCode}]
                   </span>
                   <span className="leading-snug">{errorMessage}</span>
@@ -192,6 +367,57 @@ export function SidebarProperties({ selectedNode, onChangeConfig, availableNodes
         <div className="space-y-4">
           {properties.map((prop) => {
             const value = config[prop.key] ?? prop.defaultValue ?? '';
+
+            // Custom UI: subflow.flowId deve ser link + mostrar nome do flow abaixo.
+            if (type === 'subflow' && prop.key === 'flowId') {
+              return (
+                <PropertyField
+                  key={prop.key}
+                  label={prop.label}
+                  description={prop.description}
+                  required={prop.required}
+                >
+                  <div className="space-y-2">
+                    <Input
+                      type="text"
+                      value={typeof value === 'string' ? value : (value == null ? '' : String(value))}
+                      onChange={(e) => updateConfigField(prop.key, e.target.value)}
+                      placeholder={prop.placeholder}
+                      className="font-mono"
+                    />
+
+                    {String(value || '').trim() ? (
+                      <div className="text-[12px] text-text-secondary space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-text-tertiary">Abrir:</span>
+                          <a
+                            href={buildSubflowEditorHref(String(value).trim())}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-accent-primary hover:underline break-all"
+                            title="Abrir subfluxo em nova aba"
+                          >
+                            {String(value).trim()}
+                          </a>
+                        </div>
+                        <SubflowFlowIdField
+                          label={prop.label}
+                          description={prop.description}
+                          value={value}
+                          onChange={(next) => updateConfigField(prop.key, next)}
+                          placeholder={prop.placeholder}
+                          required={prop.required}
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-text-tertiary italic">
+                        Preencha o ID para habilitar o link do subfluxo.
+                      </div>
+                    )}
+                  </div>
+                </PropertyField>
+              );
+            }
             
             if (prop.type === 'text') {
               return (

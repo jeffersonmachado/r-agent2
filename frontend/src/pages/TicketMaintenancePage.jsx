@@ -6,6 +6,8 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
 import { useRouter } from '../hooks/useRouter';
+import { usePhoneMasking } from '../hooks/usePhoneMasking';
+import { MaskedPhone } from '../components/MaskedPhone';
 import logger from '../utils/logger';
 
 /**
@@ -38,6 +40,7 @@ export function TicketMaintenancePage() {
   const [metrics, setMetrics] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [queues, setQueues] = useState([]);
+  const { enabled: phoneMaskingEnabled } = usePhoneMasking();
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [pagination, setPagination] = useState({
@@ -66,6 +69,16 @@ export function TicketMaintenancePage() {
 
   // Carrega métricas do sistema
   const loadMetrics = useCallback(async () => {
+    // Importante para automações (RPA) e UX:
+    // a seção de métricas (incluindo o botão "Gerenciar Filas") só renderiza quando `metrics` não é null.
+    // Se o backend estiver lento, deixamos um placeholder imediatamente para a UI não "sumir".
+    setMetrics((prev) => prev ?? {
+      totalTickets: 0,
+      ticketsByStatus: { waiting: 0, in_progress: 0, closed: 0 },
+      ticketsByQueue: {},
+      oldClosedTickets: { olderThan7Days: 0, olderThan30Days: 0 },
+      memoryUsage: { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 },
+    });
     try {
       const data = await getQueueMetrics();
       logger.info('Métricas carregadas', { 
@@ -423,6 +436,7 @@ export function TicketMaintenancePage() {
                       });
                     }
                   }}
+                  data-testid="queue-manager-toggle"
                   variant="secondary"
                   style={{ fontSize: '0.9em', padding: '6px 12px' }}
                 >
@@ -716,7 +730,7 @@ export function TicketMaintenancePage() {
                         {getStatusLabel(ticket.status)}
                       </span>
                     </td>
-                    <td>{formatPhoneNumber(ticket.phoneNumber)}</td>
+                    <td><MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} /></td>
                     <td className="message-cell">
                       {ticket.lastUserMessage ? (
                         <span title={ticket.lastUserMessage}>
@@ -790,4 +804,3 @@ export function TicketMaintenancePage() {
     </div>
   );
 }
-

@@ -4,8 +4,15 @@
   "description": "Contrato para criação e atualização de tenants em arquitetura SaaS multi-tenant",
   "version": "1.0.0",
   "type": "object",
-  "required": ["name", "site", "ramo_atividade", "objetivo"],
+  "required": ["tenant_key", "name", "site", "ramo_atividade", "objetivo", "status", "plan", "limits"],
   "properties": {
+    "tenant_key": {
+      "type": "string",
+      "description": "Slug/identificador único do tenant (multi-tenant). Deve ser seguro e URL-friendly.",
+      "minLength": 3,
+      "maxLength": 50,
+      "pattern": "^[a-z0-9][a-z0-9-]{2,49}$"
+    },
     "name": {
       "type": "string",
       "description": "Nome do tenant/cliente",
@@ -30,10 +37,50 @@
       "minLength": 10,
       "maxLength": 500
     },
-    "active": {
-      "type": "boolean",
-      "description": "Se o tenant está ativo",
-      "default": true
+    "status": {
+      "type": "string",
+      "description": "Status do tenant (safe-mode: pending_review para nascimentos por IA).",
+      "enum": ["pending_review", "active", "suspended"]
+    },
+    "plan": {
+      "type": "string",
+      "description": "Plano do tenant.",
+      "enum": ["free", "trial", "pro", "enterprise"]
+    },
+    "limits": {
+      "type": "object",
+      "description": "Limites/quotas do tenant (rate limits, tokens, execuções, etc).",
+      "default": {},
+      "additionalProperties": false,
+      "properties": {
+        "usuarios": { "type": "integer" },
+        "agentes_ia": { "type": "integer" },
+        "execucoes_rpa": { "type": "integer" },
+        "tokens_ia": { "type": "integer" },
+        "documentos_rag": { "type": "integer" },
+        "storage_mb": { "type": "integer" }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Configurações gerais do tenant (NÃO incluir segredos).",
+      "default": {},
+      "additionalProperties": false,
+      "properties": {
+        "externalIntegrationsEnabled": { "type": "boolean", "default": false },
+        "webScrapingEnabled": { "type": "boolean", "default": false }
+      }
+    },
+    "branding": {
+      "type": "object",
+      "description": "Branding do tenant.",
+      "default": {},
+      "additionalProperties": false,
+      "properties": {
+        "logoUrl": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "primaryColor": { "type": "string", "pattern": "^#?[0-9a-fA-F]{6}$" },
+        "secondaryColor": { "type": "string", "pattern": "^#?[0-9a-fA-F]{6}$" }
+      }
     }
   },
   "additionalProperties": false

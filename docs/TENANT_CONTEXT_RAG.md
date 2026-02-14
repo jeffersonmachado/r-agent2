@@ -147,7 +147,7 @@ O documento indexado possui os seguintes metadados:
 
 O site é indexado **apenas para o tenant específico**, garantindo isolamento completo:
 
-- Cada tenant tem seu próprio índice vetorial FAISS
+- Cada tenant tem seus próprios chunks/embeddings no Postgres (pgvector), isolados por `tenant_key`
 - Documentos são filtrados por `tenantId` antes da busca
 - Nenhum embedding, chunk ou resposta utiliza dados de outro tenant
 
@@ -156,7 +156,7 @@ O site é indexado **apenas para o tenant específico**, garantindo isolamento c
 ### 1. **Isolamento de Dados**
 
 - **Tenants**: Cada tenant possui seus próprios dados (agentes, fluxos, documentos)
-- **Vector Store**: Cada tenant possui seu próprio índice FAISS (`tenant-abc.index`, `tenant-abc.metadata.json`)
+- **Vector Store**: Chunks/embeddings no Postgres (pgvector), isolados por `tenant_key`
 - **Tenant Context**: Cada tenant possui seu próprio contexto cognitivo
 - **Documentos RAG**: Todos os documentos possuem `tenantId` e são filtrados antes da busca
 

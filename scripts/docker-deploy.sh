@@ -167,6 +167,10 @@ while [[ $# -gt 0 ]]; do
             BUILD_SERVICE="api"
             shift
             ;;
+        --rag-only)
+            BUILD_SERVICE="rag-service"
+            shift
+            ;;
         --host)
             REMOTE_HOST="$2"
             shift 2
@@ -348,6 +352,7 @@ EXCLUDE_LIST=(
 # Conjuntos de paths a sincronizar (mínimo para rebuild com docker-compose.prod.yml)
 SYNC_PATHS=(
     "docker-compose.prod.yml"
+    ".dockerignore"
     "package.json"
     "package-lock.json"
     "env.example"
@@ -431,42 +436,119 @@ else
 fi
 echo ""
 
-# Garante que ENCRYPTION_KEY exista no .env remoto (necessário para salvar credenciais criptografadas)
-section "Garantindo ENCRYPTION_KEY no .env"
-info "Verificando se ENCRYPTION_KEY está definida no .env do servidor..."
-REMOTE_ENCRYPTION_SCRIPT=$(cat <<EOF
+section "Validações Obrigatórias (env + disco)"
+info "Validando variáveis obrigatórias no .env e espaço em disco no servidor..."
+REMOTE_PREFLIGHT_SCRIPT="REMOTE_DIR=\"${REMOTE_DIR}\""$'\n'"$(cat <<'EOF'
 set -e
+
 cd "${REMOTE_DIR}"
+
+# Checagem de disco: aborta se a partição do Docker tiver menos de 5GB livres.
+# Preferimos o Docker Root Dir real (ex.: /var/lib/docker). Se não der para ler via daemon,
+# usamos /var/lib/docker como fallback conservador.
+docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)"
+if [ -z "${docker_root}" ]; then
+  docker_root="/var/lib/docker"
+fi
+
+if [ ! -d "${docker_root}" ]; then
+  echo "ERRO: Diretório do Docker não encontrado: ${docker_root}"
+  exit 1
+fi
+
+avail_kb="$(df -Pk "${docker_root}" 2>/dev/null | awk 'NR==2{print $4}')"
+min_kb=$((5 * 1024 * 1024))
+if [ -z "${avail_kb}" ] || [ "${avail_kb}" -lt "${min_kb}" ]; then
+  echo "ERRO: Espaço insuficiente na partição do Docker (${docker_root}). Necessário >= 5GB livres."
+  df -h "${docker_root}" || true
+  exit 1
+fi
+
+# Carrega .env (falha cedo)
 if [ ! -f .env ]; then
-  echo ".env não encontrado"
+  echo "ERRO: .env não encontrado em ${REMOTE_DIR}"
   exit 1
 fi
 
-current="\$(grep -E '^ENCRYPTION_KEY=' .env | tail -n 1 | cut -d= -f2- | tr -d ' \r\n' || true)"
-if [ -n "\$current" ]; then
-  echo "ENCRYPTION_KEY já definida"
-  exit 0
+# Lê valores do .env sem "source" (mais resiliente a linhas inválidas)
+get_env_val() {
+  local key="$1"
+  # pega a ÚLTIMA ocorrência (permite override no final do arquivo)
+  local line
+  line="$(grep -E "^${key}=" .env | tail -n 1 || true)"
+  if [ -z "$line" ]; then
+    return 0
+  fi
+  printf '%s' "${line#*=}" | tr -d '\r\n'
+}
+
+# Compatibilidade: se o servidor ainda usa PGUSER/PGPASSWORD/PGDATABASE,
+# preenche POSTGRES_* automaticamente (sem expor valores em stdout).
+upsert_env_key() {
+  local key="$1"
+  local val="$2"
+  if [ -z "$val" ]; then
+    return 0
+  fi
+
+  if grep -qE "^${key}=" .env; then
+    esc="$(printf '%s' "$val" | sed -e 's/[\\/&|]/\\&/g')"
+    sed -i "s|^${key}=.*|${key}=${esc}|" .env
+  else
+    printf "\n%s=%s\n" "$key" "$val" >> .env
+  fi
+}
+
+# Descobre credenciais do Postgres (ordem: POSTGRES_* -> PG* -> defaults do stack)
+POSTGRES_USER="$(get_env_val POSTGRES_USER)"
+POSTGRES_PASSWORD="$(get_env_val POSTGRES_PASSWORD)"
+POSTGRES_DB="$(get_env_val POSTGRES_DB)"
+
+PGUSER_VAL="$(get_env_val PGUSER)"
+PGPASSWORD_VAL="$(get_env_val PGPASSWORD)"
+PGDATABASE_VAL="$(get_env_val PGDATABASE)"
+
+if [ -z "${POSTGRES_USER}" ] && [ -n "${PGUSER_VAL}" ]; then
+  POSTGRES_USER="${PGUSER_VAL}"
+fi
+if [ -z "${POSTGRES_PASSWORD}" ] && [ -n "${PGPASSWORD_VAL}" ]; then
+  POSTGRES_PASSWORD="${PGPASSWORD_VAL}"
+fi
+if [ -z "${POSTGRES_DB}" ] && [ -n "${PGDATABASE_VAL}" ]; then
+  POSTGRES_DB="${PGDATABASE_VAL}"
 fi
 
-# Gera uma chave forte (32 bytes em base64) via Docker (não depende de openssl/node instalados no host)
-key="\$(docker run --rm node:22-alpine node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")"
-if [ -z "\$key" ]; then
-  echo "Falha ao gerar ENCRYPTION_KEY"
+# Último fallback: defaults do stack (compatível com o comportamento anterior)
+if [ -z "${POSTGRES_USER}" ]; then POSTGRES_USER="postgres"; fi
+if [ -z "${POSTGRES_PASSWORD}" ]; then POSTGRES_PASSWORD="postgres"; fi
+if [ -z "${POSTGRES_DB}" ]; then POSTGRES_DB="r_agent2"; fi
+
+upsert_env_key "POSTGRES_USER" "${POSTGRES_USER}"
+upsert_env_key "POSTGRES_PASSWORD" "${POSTGRES_PASSWORD}"
+upsert_env_key "POSTGRES_DB" "${POSTGRES_DB}"
+
+# Carrega apenas o necessário do .env (ENCRYPTION_KEY precisa vir do arquivo)
+set -a
+. ./.env
+set +a
+
+missing=0
+for k in POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD ENCRYPTION_KEY; do
+  v="$(eval "printf '%s' \"\${$k-}\"" | tr -d '\r\n')"
+  if [ -z "$v" ]; then
+    echo "ERRO: Variável obrigatória vazia ou ausente no .env: $k"
+    missing=1
+  fi
+done
+
+if [ "$missing" -ne 0 ]; then
   exit 1
 fi
 
-if grep -qE '^ENCRYPTION_KEY=' .env; then
-  # Escapa chars especiais para uso no sed
-  esc="\$(printf '%s' "\$key" | sed -e 's/[\\\/&|]/\\&/g')"
-  sed -i "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=\$esc|" .env
-else
-  printf "\nENCRYPTION_KEY=%s\n" "\$key" >> .env
-fi
-
-echo "ENCRYPTION_KEY gerada e salva em .env"
+echo "OK: validações de env e disco passaram."
 EOF
-)
-run_ssh_script "$REMOTE_ENCRYPTION_SCRIPT" "Garantindo ENCRYPTION_KEY no .env (sem expor o valor)"
+)"
+run_ssh_script "$REMOTE_PREFLIGHT_SCRIPT" "Validando env obrigatório e disco livre (>= 5GB)"
 echo ""
 
 # Pull de imagens base se solicitado
@@ -710,9 +792,9 @@ else
     GET_PROJECT_NAME_CMD="cd ${REMOTE_DIR} && basename \$(pwd) | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]-'"
     PROJECT_NAME=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$GET_PROJECT_NAME_CMD" 2>&1 | grep -vE "(Warning|Permanently)" | head -1 | tr -d '\r\n' || echo "r-agent2")
     
-    # Baseado nos volumes definidos no docker-compose.prod.yml: redis-data, rag-vector-store, api-data
+    # Baseado nos volumes definidos no docker-compose.prod.yml: r-agent2-redis-data, r-agent2-rag-vector-store, r-agent2-api-data, r-agent2-postgres-data
     VOLUME_PREFIX="${PROJECT_NAME}"
-    VOLUMES_TO_CREATE=("${VOLUME_PREFIX}_redis-data" "${VOLUME_PREFIX}_rag-vector-store" "${VOLUME_PREFIX}_api-data")
+    VOLUMES_TO_CREATE=("${VOLUME_PREFIX}_r-agent2-redis-data" "${VOLUME_PREFIX}_r-agent2-rag-vector-store" "${VOLUME_PREFIX}_r-agent2-api-data" "${VOLUME_PREFIX}_r-agent2-postgres-data")
     
     info "Verificando/criando volumes com prefixo '${VOLUME_PREFIX}':"
     for vol in "${VOLUMES_TO_CREATE[@]}"; do
@@ -788,6 +870,9 @@ else
         echo ""
         info "Saída completa do comando:"
         cat "$TEMP_UP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
+        echo ""
+        info "Logs do Postgres (r-agent2-postgres-prod) para diagnóstico:"
+        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker logs r-agent2-postgres-prod" 2>&1 | grep -vE "(Warning|Permanently)" || true
         echo ""
         info "Verificando erros específicos..."
         ERROR_OUTPUT=$(cat "$TEMP_UP_OUTPUT" | grep -iE "(error|failed|cannot|unable|missing)" || true)
@@ -978,7 +1063,7 @@ else
 
     # Verifica RAG Service
     info "Verificando RAG Service..."
-    HEALTH_RAG_CMD="curl -f -s -o /dev/null -w '%{http_code}' http://localhost:8002/rag/health"
+        HEALTH_RAG_CMD="curl -f -s -o /dev/null -w '%{http_code}' http://localhost:8002/health"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando saúde do RAG Service"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$HEALTH_RAG_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $HEALTH_RAG_CMD"

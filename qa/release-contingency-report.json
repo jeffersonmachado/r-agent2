@@ -1,0 +1,54 @@
+{
+  "startedAt": "2026-02-14T15:36:14.254Z",
+  "finishedAt": "2026-02-14T15:41:12.320Z",
+  "status": "pass",
+  "dryRun": false,
+  "config": {
+    "runBackup": false,
+    "runGoNoGo": true,
+    "releaseGateMode": "default"
+  },
+  "steps": [
+    {
+      "label": "postgres-backup",
+      "command": "bash scripts/backup-postgres.sh",
+      "status": "skipped",
+      "startedAt": "2026-02-14T15:36:14.254Z",
+      "finishedAt": "2026-02-14T15:36:14.254Z",
+      "error": null,
+      "reason": "RELEASE_CONTINGENCY_RUN_BACKUP=0"
+    },
+    {
+      "label": "release-gate",
+      "command": "node tools/system/release-gate.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T15:36:14.254Z",
+      "finishedAt": "2026-02-14T15:41:12.179Z",
+      "error": null
+    },
+    {
+      "label": "go-no-go",
+      "command": "node tools/system/go-no-go.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T15:41:12.179Z",
+      "finishedAt": "2026-02-14T15:41:12.258Z",
+      "error": null
+    },
+    {
+      "label": "launch-plan-status",
+      "command": "node tools/system/launch-plan-status.js",
+      "status": "pass",
+      "startedAt": "2026-02-14T15:41:12.258Z",
+      "finishedAt": "2026-02-14T15:41:12.319Z",
+      "error": null
+    }
+  ],
+  "artifacts": {
+    "releaseGate": "qa/release-gate-report.json",
+    "goNoGo": "qa/go-no-go-report.json",
+    "launchPlanStatus": "qa/launch-plan-status.json",
+    "launchPlanStatusMd": "qa/launch-plan-status.md",
+    "report": "qa/release-contingency-report.json"
+  },
+  "error": null
+}

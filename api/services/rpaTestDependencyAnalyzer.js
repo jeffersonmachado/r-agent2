@@ -337,16 +337,33 @@ async function resolveDependencies(dependencies, tenantId = 'demo-tenant') {
         continue;
       }
 
-      // Executa seed via RPA (não implementado aqui, apenas simula)
-      // Em produção, isso chamaria o RpaTestRunner para executar o seed
+      // Executa seed via RPA (best-effort). Pode ser desabilitado por env.
       logger.info('Executando seed RPA', { seedName, target: seedInfo.target });
-      
-      // TODO: Integrar com RpaTestRunner para executar seeds
-      // const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
-      // const runner = new RpaTestRunner({ headless: true });
-      // await runner.init();
-      // await runner.playback(seedName);
-      // await runner.close();
+
+      if (process.env.RPA_DEPENDENCY_EXECUTION === 'false') {
+        logger.warn('Execução de seed RPA desabilitada por env (RPA_DEPENDENCY_EXECUTION=false)', { seedName });
+      } else {
+        try {
+          // Implementação real via Runner (runtime)
+          // eslint-disable-next-line global-require
+          const { RpaTestRunner } = require('../../rpa/rpaTestRunner');
+          const runner = new RpaTestRunner({
+            headless: true,
+            devtools: false,
+            enableReplay: false,
+            screenshotOnFailure: false,
+          });
+          await runner.init();
+          const result = await runner.playback(seedName);
+          await runner.close();
+
+          if (!result || result.success === false) {
+            throw new Error(result?.message || 'Seed RPA executado com falha');
+          }
+        } catch (err) {
+          logger.warn('Falha ao executar seed RPA (ignorado)', { seedName, error: err.message });
+        }
+      }
 
       resolution.executedSeeds.push({
         seedName,
@@ -379,4 +396,3 @@ module.exports = {
   analyzeFlowDependencies,
   resolveDependencies,
 };
-

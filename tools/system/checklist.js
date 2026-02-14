@@ -163,6 +163,62 @@ function checkQAScripts() {
       description: 'Script oficial de validação do sistema'
     },
     {
+      name: 'system:release-gate',
+      description: 'Gate oficial de release'
+    },
+    {
+      name: 'system:rollback-drill',
+      description: 'Drill oficial de rollback'
+    },
+    {
+      name: 'system:go-no-go',
+      description: 'Decisão consolidada de go/no-go'
+    },
+    {
+      name: 'system:release-decision',
+      description: 'Formalização da decisão de release com owners/on-call'
+    },
+    {
+      name: 'system:launch-plan-status',
+      description: 'Status consolidado de marcos D-7/D-1/D0'
+    },
+    {
+      name: 'system:release-manifest',
+      description: 'Manifesto do release candidate (branch/commit/checks)'
+    },
+    {
+      name: 'system:release-evidence-pack',
+      description: 'Empacotamento das evidências de release'
+    },
+    {
+      name: 'system:release-evidence-verify',
+      description: 'Verificação de integridade SHA256 do pacote de evidências'
+    },
+    {
+      name: 'system:release-evidence-prune',
+      description: 'Limpeza de snapshots antigos de evidências de release'
+    },
+    {
+      name: 'system:release-clean-check',
+      description: 'Checagem de alterações pendentes fora de artefatos QA'
+    },
+    {
+      name: 'system:release-summary',
+      description: 'Resumo executivo de release para handoff'
+    },
+    {
+      name: 'system:release-window',
+      description: 'Execução padronizada da janela de release'
+    },
+    {
+      name: 'system:release-d0',
+      description: 'Execução padronizada do dia D0 (deploy + validação pós-release)'
+    },
+    {
+      name: 'system:release-contingency',
+      description: 'Fluxo de contingência (backup + gate mínimo pós-rollback)'
+    },
+    {
       name: 'test:rpa',
       description: 'Script de testes RPA'
     }
@@ -180,6 +236,76 @@ function checkQAScripts() {
   }
 
   return allFound;
+}
+
+function checkLaunchEvidence() {
+  logSection('🚀 LANÇAMENTO - Evidências');
+
+  const requireEvidence = String(process.env.CHECKLIST_REQUIRE_LAUNCH_EVIDENCE || '0') === '1';
+  const releaseGatePath = path.join(ROOT_DIR, 'qa', 'release-gate-report.json');
+  const rollbackPath = path.join(ROOT_DIR, 'qa', 'rollback-drill-report.json');
+  const goNoGoPath = path.join(ROOT_DIR, 'qa', 'go-no-go-report.json');
+  const releaseDecisionPath = path.join(ROOT_DIR, 'qa', 'release-decision.json');
+  const smokePath = path.join(ROOT_DIR, 'qa', 'smoke-evidence.json');
+  const releaseWindowPath = path.join(ROOT_DIR, 'qa', 'release-window-report.json');
+  const releaseManifestPath = path.join(ROOT_DIR, 'qa', 'release-manifest.json');
+  const releaseSummaryPath = path.join(ROOT_DIR, 'qa', 'release-summary.md');
+
+  const evidenceFiles = [
+    { name: 'Release gate report', path: releaseGatePath },
+    { name: 'Rollback drill report', path: rollbackPath },
+    { name: 'Go/No-Go report', path: goNoGoPath },
+    { name: 'Release decision record', path: releaseDecisionPath },
+    { name: 'Release window report', path: releaseWindowPath },
+    { name: 'Release manifest', path: releaseManifestPath },
+    { name: 'Release summary', path: releaseSummaryPath },
+    { name: 'Smoke evidence summary', path: smokePath },
+  ];
+
+  let ok = true;
+
+  for (const file of evidenceFiles) {
+    if (!fs.existsSync(file.path)) {
+      if (requireEvidence) {
+        logError(`${file.name} não encontrado: ${file.path}`);
+        ok = false;
+      } else {
+        logWarning(`${file.name} ausente (modo informativo): ${file.path}`);
+      }
+      continue;
+    }
+    logSuccess(`${file.name} encontrado`);
+  }
+
+  if (!fs.existsSync(smokePath)) {
+    return requireEvidence ? false : true;
+  }
+
+  try {
+    const smoke = JSON.parse(fs.readFileSync(smokePath, 'utf8'));
+    const smokes = smoke && smoke.smokes ? smoke.smokes : {};
+    const keys = ['l01', 'l02', 'l03', 'l04', 'l05'];
+    for (const key of keys) {
+      const status = smokes[key] && smokes[key].status;
+      if (status === 'pass') {
+        logSuccess(`Smoke ${key.toUpperCase()} em pass`);
+      } else if (requireEvidence) {
+        logError(`Smoke ${key.toUpperCase()} não está em pass`);
+        ok = false;
+      } else {
+        logWarning(`Smoke ${key.toUpperCase()} sem pass (modo informativo)`);
+      }
+    }
+  } catch (err) {
+    if (requireEvidence) {
+      logError(`Falha ao ler smoke-evidence.json: ${err.message || err}`);
+      ok = false;
+    } else {
+      logWarning(`Falha ao ler smoke-evidence.json (modo informativo): ${err.message || err}`);
+    }
+  }
+
+  return ok;
 }
 
 /**
@@ -238,7 +364,8 @@ function main() {
     structure: checkStructure(),
     governance: checkGovernance(),
     qaScripts: checkQAScripts(),
-    security: checkSecurity()
+    security: checkSecurity(),
+    launchEvidence: checkLaunchEvidence()
   };
 
   log('');
@@ -258,8 +385,9 @@ function main() {
     log('Resumo:');
     log(`  Estrutura: ${results.structure ? '✓' : '✗'}`);
     log(`  Governança: ${results.governance ? '✓' : '✗'}`);
-    log(`  Scripts QA: ${results.qaScripts ? '✓' : '✗'}`);
+    log(`  QA Scripts: ${results.qaScripts ? '✓' : '✗'}`);
     log(`  Segurança: ${results.security ? '✓' : '✗'}`);
+    log(`  Evidência de lançamento: ${results.launchEvidence ? '✓' : '✗'}`);
     log('');
     log('Corrija as falhas acima e execute novamente.');
     log('');
@@ -271,5 +399,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { checkStructure, checkGovernance, checkQAScripts, checkSecurity };
-
+module.exports = { checkStructure, checkGovernance, checkQAScripts, checkSecurity, checkLaunchEvidence };

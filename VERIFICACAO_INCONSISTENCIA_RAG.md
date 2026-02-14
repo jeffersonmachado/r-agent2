@@ -127,7 +127,7 @@
     │  /rag/health│
     └──────┬──────┘
            │
-           └─→ Vector Store (FAISS)
+           └─→ Vector Store (Postgres/pgvector)
            │
            └─→ Retorna stats
            │
@@ -181,7 +181,7 @@
 ```json
 {
   "status": "healthy",
-  "vectorStore": "faiss",
+  "vectorStore": "postgres",
   "embeddingModel": "sentence-transformers/all-MiniLM-L6-v2",
   "indexedDocuments": 33,
   "indexedChunks": 54,
@@ -194,7 +194,7 @@
 ```json
 {
   "status": "healthy",
-  "vectorStore": "faiss",
+  "vectorStore": "postgres",
   "embeddingModel": "sentence-transformers/all-MiniLM-L6-v2",
   "indexedDocuments": 33,
   "indexedChunks": 54,

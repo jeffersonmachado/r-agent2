@@ -14,7 +14,7 @@ import { FlowTemplateSelector } from '../components/FlowTemplateSelector';
 import { FlowGeneratorDialog } from '../components/FlowGeneratorDialog';
 import { SaveAsTemplateDialog } from '../components/SaveAsTemplateDialog';
 import { Button } from '../styles/Button';
-import { createFlow, saveTemplate } from '../api/flows';
+import { createFlow, saveTemplate, updateFlowEnvironment } from '../api/flows';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
@@ -31,12 +31,34 @@ import { FallbackEventsViewer } from '../components/FallbackEventsViewer';
 import { getNodeSchema } from '../editor/nodeSchemas';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { shouldLockCanvas as shouldLockCanvasUtil } from '../utils/aiGenerationLock';
+import { FlowCurrentDisplay } from '../components/FlowCurrentDisplay';
+import { createTranslateOnlyApplier, cleanupInlineNodeSize } from '../editor/arrange/translateOnlyApplier';
+
+function summarizeValidationBySeverity(validationWarnings) {
+  const errors = Array.isArray(validationWarnings?.errors) ? validationWarnings.errors : [];
+  const counts = { error: 0, warning: 0, info: 0, other: 0, total: errors.length };
+  for (const e of errors) {
+    const sev = String(e?.severity || 'warning').toLowerCase();
+    if (sev === 'error') counts.error += 1;
+    else if (sev === 'warning') counts.warning += 1;
+    else if (sev === 'info') counts.info += 1;
+    else counts.other += 1;
+  }
+  return counts;
+}
+
+function hasBlockingValidationErrors(validationWarnings) {
+  const errors = Array.isArray(validationWarnings?.errors) ? validationWarnings.errors : [];
+  return errors.some((e) => String(e?.severity || 'warning').toLowerCase() === 'error');
+}
 
 export function FlowEditorPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, agent } = useAuth();
   const { navigate } = useRouter();
   const { themeName } = useTheme();
   const isMobile = useIsMobile();
+  const [flowEnvironment, setFlowEnvironment] = useState('dev');
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -73,6 +95,7 @@ export function FlowEditorPage() {
     error,
     setSelectedNode,
     setValidation,
+    setCurrentFlowKind,
     validateCurrentFlow,
     saveFlow,
     simulateCurrentFlow,
@@ -81,8 +104,31 @@ export function FlowEditorPage() {
     clearCurrentFlow,
   } = useEditor();
 
+  // Se a página foi aberta com ?flowId=..., carrega automaticamente o fluxo
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const flowId = params.get('flowId');
+      if (flowId) {
+        loadFlow(flowId).catch(() => {});
+      }
+    } catch {}
+  }, [loadFlow]);
+
+  useEffect(() => {
+    const env = currentFlow?.metadata?.environment;
+    if (env && ['dev', 'stage', 'prod'].includes(String(env))) {
+      setFlowEnvironment(String(env));
+    } else if (currentFlow?.id) {
+      setFlowEnvironment('dev');
+    }
+  }, [currentFlow?.id, currentFlow?.metadata?.environment]);
+
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  // ✅ Se o auto-layout (rete-auto-arrange-plugin) falhar, desabilitamos ele nesta sessão
+  // para evitar repetir erros no console e cair direto no fallback de grade.
+  const arrangeDisabledRef = useRef(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showFlowGenerator, setShowFlowGenerator] = useState(false);
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false);
@@ -92,6 +138,8 @@ export function FlowEditorPage() {
   const [testFlowDefinition, setTestFlowDefinition] = useState(null);
   const [testChatSize, setTestChatSize] = useState(null);
   const [testKey, setTestKey] = useState(0);
+  const [showGeneratedFlowModal, setShowGeneratedFlowModal] = useState(false);
+  const [generatedFlowModalData, setGeneratedFlowModalData] = useState(null);
   const [flowListRefreshTrigger, setFlowListRefreshTrigger] = useState(0);
   const [templateListRefreshTrigger, setTemplateListRefreshTrigger] = useState(0);
   const { showToast, ToastContainer } = useToast();
@@ -245,18 +293,44 @@ export function FlowEditorPage() {
   };
 
   const [displayedFlow, setDisplayedFlow] = useState(null);
+  const [canvasLocked, setCanvasLocked] = useState(false);
+  const [canvasLockReason, setCanvasLockReason] = useState(null);
+  const [draftFlow, setDraftFlow] = useState(null);
+  const [draftMeta, setDraftMeta] = useState(null);
+
+  const shouldLockCanvas = useCallback((aiGeneration) => {
+    return shouldLockCanvasUtil(aiGeneration);
+  }, []);
 
   useEffect(() => {
     if (currentFlow && currentFlow.id) {
       setDisplayedFlow(currentFlow);
+    } else if (draftFlow && draftFlow.id) {
+      setDisplayedFlow(draftFlow);
     } else {
       setDisplayedFlow(null);
     }
-  }, [currentFlow]);
+  }, [currentFlow, draftFlow]);
+
+  const handleFlowKindChange = useCallback((nextKind) => {
+    const normalized = String(nextKind || 'chat').trim().toLowerCase() === 'voice' ? 'voice' : 'chat';
+    if (currentFlow && currentFlow.id) {
+      setCurrentFlowKind(normalized);
+    }
+    if (draftFlow && draftFlow.id) {
+      setDraftFlow((prev) => (prev && typeof prev === 'object' ? { ...prev, kind: normalized } : prev));
+    }
+  }, [currentFlow, draftFlow, setCurrentFlowKind]);
 
   // ✅ Expande automaticamente o painel de validação quando há erros
   useEffect(() => {
     if (validation && !validation.valid && validation.uiErrors && validation.uiErrors.length > 0) {
+      const hasBlockingErrors = hasBlockingValidationErrors({ errors: validation.uiErrors });
+      if (!hasBlockingErrors) {
+        // Warnings/info não forçam o painel a abrir automaticamente
+        return;
+      }
+
       logger.info('Painel de validação expandido automaticamente devido a erros', {
         errorCount: validation.uiErrors.length,
         hasGlobalErrors: validation.uiErrors.some(e => !e.nodeIds || e.nodeIds.length === 0),
@@ -265,8 +339,35 @@ export function FlowEditorPage() {
     }
   }, [validation]);
 
+  // ✅ Ponte: sempre aplica o estado de validação no canvas quando possível
+  // Isso evita o comportamento “painel mostra erros, mas nós só ficam vermelhos após clicar em Validar”.
+  useEffect(() => {
+    if (!validation) return;
+
+    const editor = editorRef.current?.editor?.current;
+    const area = editorRef.current?.area;
+    if (!editor || !area) return;
+
+    // ✅ "valid" pode vir true mesmo com warnings/info.
+    // Portanto, aplicamos SEMPRE `uiErrors` (ou `errors`) para que warnings
+    // também apareçam no canvas/nós e no painel.
+    const uiErrors = (validation.uiErrors || validation.errors || []);
+
+    (async () => {
+      const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+      applyBackendValidationErrors(editor, area, uiErrors);
+    })().catch((err) => {
+      logger.warn('Falha ao aplicar erros de validação no canvas (best-effort)', { error: err });
+    });
+  }, [validation, displayedFlow]);
+
   const handleFlowSelected = async (flow) => {
     if (flow && flow.id) {
+      // Ao trocar de fluxo manualmente, não mantemos lock de geração anterior
+      setCanvasLocked(false);
+      setCanvasLockReason(null);
+      setDraftFlow(null);
+      setDraftMeta(null);
       await loadFlow(flow.id);
       
       // ✅ Executa validação do backend após carregar fluxo salvo
@@ -282,7 +383,7 @@ export function FlowEditorPage() {
             
             // ✅ Validação local de fallback (antes de chamar backend) - mesma lógica do handleValidate
             const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
-            const localValidation = validateFlowLocal(reteJson);
+            const localValidation = validateFlowLocal(reteJson, { kind: flow?.kind || 'chat' });
             
             // Se validação local falhou, mostra erros e não chama backend
             if (!localValidation.valid && localValidation.errors.length > 0) {
@@ -333,8 +434,8 @@ export function FlowEditorPage() {
             // O validateCurrentFlow já atualiza o estado validation internamente
             const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
             if (validationResult) {
-              // Aplica erros aos nós do editor
-              applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+              // Aplica erros/warnings aos nós do editor (mesmo se valid === true pode haver warnings/info)
+              applyBackendValidationErrors(editor, area, validationResult.errors || []);
               
               logger.info('Validação do backend concluída após carregar fluxo', {
                 valid: validationResult.valid,
@@ -365,17 +466,157 @@ export function FlowEditorPage() {
     }
   };
 
-  const handleFlowGenerated = async (flow) => {
+  const handleFlowGenerated = async (flow, meta = null) => {
     logger.info('Fluxo gerado', { flowId: flow?.id, flowName: flow?.name });
     setShowFlowGenerator(false);
     
     // Limpa o estado antes de criar o novo fluxo
     clearCurrentFlow();
-    
+
+    // ✅ Feedback imediato quando a geração caiu no fallback (fluxo simplificado)
     try {
+      const aiGen = flow?.metadata?.aiGeneration || null;
+      const usedFallback =
+        aiGen && typeof aiGen.usedFallback === 'boolean' ? aiGen.usedFallback : false;
+      if (usedFallback) {
+        const reason = typeof aiGen.fallbackReason === 'string' ? aiGen.fallbackReason : null;
+        const msg = typeof aiGen.fallbackUserMessage === 'string'
+          ? aiGen.fallbackUserMessage
+          : 'Fluxo gerado via fallback (versão simplificada). Revise antes de salvar.';
+        showToast(reason ? `${msg} (${reason})` : msg, 'warning', 5500);
+      }
+    } catch {
+      // best-effort
+    }
+    
+    const generationWarnings =
+      meta?.validationWarnings ||
+      meta?.generationResult?.validationWarnings ||
+      null;
+
+    const hasGenerationWarnings =
+      !!generationWarnings &&
+      generationWarnings.valid === false &&
+      Array.isArray(generationWarnings.errors) &&
+      generationWarnings.errors.length > 0;
+
+    // ✅ Mostra warning imediatamente (sem bloquear) para feedback rápido,
+    // antes mesmo de persistir no backend.
+    if (hasGenerationWarnings) {
+      const counts = summarizeValidationBySeverity(generationWarnings);
+      showToast(
+        `Fluxo gerado com avisos de validação (erros: ${counts.error}, warnings: ${counts.warning}, info: ${counts.info}). Verifique o painel de validação.`,
+        counts.error > 0 ? 'warning' : 'info',
+        counts.error > 0 ? 5000 : 3500
+      );
+
+      // Prepara o painel de validação para abrir assim que o fluxo carregar
+      setValidation({
+        valid: false,
+        errors: generationWarnings.errors,
+        uiErrors: generationWarnings.errors,
+      });
+      if (counts.error > 0) setValidationCollapsed(false);
+    }
+
+    try {
+      // Se já há erros de validação retornados pela geração, NÃO tenta persistir automaticamente.
+      // Em vez disso, carrega como rascunho no canvas (bloqueado) para revisão.
+      if (hasGenerationWarnings) {
+        const editor = editorRef.current;
+        if (!editor || !editor.loadFromJson) {
+          showToast('Editor não está pronto para carregar o fluxo gerado', 'warning', 2500);
+          return;
+        }
+
+        try {
+          const reteJson = engineFlowToReteJson(flow);
+          await editor.loadFromJson(reteJson);
+          setSelectedNode(null);
+
+          // Mantém info do rascunho para exibição e para salvar depois com id/nome corretos
+          setDraftFlow(flow);
+          setDraftMeta({
+            id: flow?.id,
+            name: flow?.name,
+            tenantId: flow?.tenantId || agent?.tenantId || 'demo-tenant',
+          });
+
+          // ✅ Revalida localmente o JSON que foi carregado no canvas para obter nodeIds alinhados
+          // (especialmente importante para ORPHAN_NODE / múltiplas entradas)
+          let uiErrorsToApply = Array.isArray(generationWarnings.errors) ? generationWarnings.errors : [];
+          try {
+            const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
+            const localValidation = validateFlowLocal(reteJson, { kind: flow?.kind || 'chat' });
+            const formattedLocalErrors = (localValidation?.errors || []).map((err) => ({
+              code: err.code,
+              message: err.message,
+              messageUi: err.messageUi || err.message,
+              severity: err.severity || 'error',
+              nodeIds: err.nodeIds || [],
+              details: err.details || {},
+            }));
+
+            if (formattedLocalErrors.length > 0) {
+              uiErrorsToApply = formattedLocalErrors;
+              setValidation({
+                valid: false,
+                errors: formattedLocalErrors,
+                uiErrors: formattedLocalErrors,
+              });
+              if (hasBlockingValidationErrors({ errors: formattedLocalErrors })) {
+                setValidationCollapsed(false);
+              }
+            }
+          } catch (localErr) {
+            logger.warn('Falha ao rodar validação local pós-loadFromJson (best-effort)', { error: localErr });
+          }
+
+          // Aplica erros no canvas (com nodeIds) quando disponíveis
+          const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+          applyBackendValidationErrors(editor.editor?.current, editor.area, uiErrorsToApply);
+
+          // Ao finalizar a geração, o editor NÃO pode ficar em read-only.
+          // Mostramos avisos/erros no painel de validação, mas permitimos edição imediata.
+          setCanvasLocked(false);
+          setCanvasLockReason(null);
+          showToast('Fluxo gerado com avisos. Revise o painel de validação.', 'warning', 3500);
+
+          // Modal pós-aplicação: mostra o que foi gerado (rascunho carregado no canvas)
+          setGeneratedFlowModalData({
+            mode: 'draft',
+            flow,
+            validationWarnings: generationWarnings,
+          });
+          setShowGeneratedFlowModal(true);
+          return;
+        } catch (loadErr) {
+          logger.error('Erro ao carregar fluxo gerado como rascunho', loadErr);
+          showToast('Erro ao carregar o fluxo gerado no canvas', 'error', 4000);
+          return;
+        }
+      }
+
+      // Se a geração retornou subfluxos, devemos persistir ANTES do fluxo principal
+      // para garantir que nós `subflow` consigam resolver os flowIds referenciados.
+      const generationResult = meta?.generationResult || null;
+      const subflowsToSave = Array.isArray(generationResult?.subflows)
+        ? generationResult.subflows
+        : null;
+
+      if (Array.isArray(subflowsToSave) && subflowsToSave.length > 0) {
+        for (const sf of subflowsToSave) {
+          if (!sf || typeof sf !== 'object') continue;
+          // eslint-disable-next-line no-await-in-loop
+          await createFlow(sf);
+        }
+      }
+
       const savedFlow = await createFlow(flow);
       logger.info('Fluxo gerado salvo no backend', { savedFlowId: savedFlow?.id });
       setFlowListRefreshTrigger(prev => prev + 1);
+      setDraftFlow(null);
+      setDraftMeta(null);
       
       // Só tenta carregar o fluxo se ele foi criado com sucesso
       if (savedFlow && savedFlow.id) {
@@ -385,18 +626,34 @@ export function FlowEditorPage() {
                                       savedFlow.validationWarnings.errors.length > 0;
         
         if (hasValidationWarnings) {
-          const errorCount = savedFlow.validationWarnings.errors.length;
-          showToast(
-            `Fluxo gerado com sucesso, mas possui ${errorCount} erro${errorCount > 1 ? 's' : ''} de validação. Verifique o painel de validação.`,
-            'warning',
-            5000
-          );
+          const counts = summarizeValidationBySeverity(savedFlow.validationWarnings);
+          // Evita toast duplicado quando já avisamos na etapa /flows/generate
+          if (!hasGenerationWarnings) {
+            showToast(
+              `Fluxo gerado com avisos de validação (erros: ${counts.error}, warnings: ${counts.warning}, info: ${counts.info}). Verifique o painel de validação.`,
+              counts.error > 0 ? 'warning' : 'info',
+              counts.error > 0 ? 5000 : 3500
+            );
+          }
         } else {
           showToast('Fluxo gerado com sucesso', 'success', 2000);
         }
         
         await loadFlow(savedFlow.id);
         logger.info('Fluxo gerado carregado no editor com sucesso');
+
+        // Modal pós-aplicação: mostra o que foi gerado e aplicado
+        setGeneratedFlowModalData({
+          mode: 'saved',
+          flow: savedFlow,
+          validationWarnings: savedFlow?.validationWarnings || generationWarnings || null,
+        });
+        setShowGeneratedFlowModal(true);
+
+        // Ao finalizar a geração, o editor NÃO pode ficar em read-only.
+        // Mesmo quando houve retries/fallback/correções automáticas, o usuário deve poder editar.
+        setCanvasLocked(false);
+        setCanvasLockReason(null);
         
         // Aplica erros de validação se houver avisos na resposta
         setTimeout(async () => {
@@ -413,7 +670,9 @@ export function FlowEditorPage() {
                   errors: savedFlow.validationWarnings.errors,
                   uiErrors: savedFlow.validationWarnings.errors,
                 });
-                setValidationCollapsed(false);
+                if (hasBlockingValidationErrors(savedFlow.validationWarnings)) {
+                  setValidationCollapsed(false);
+                }
                 
                 logger.info('Erros de validação aplicados após gerar fluxo', {
                   errorCount: savedFlow.validationWarnings.errors.length,
@@ -424,10 +683,12 @@ export function FlowEditorPage() {
                 
                 const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
                 if (validationResult) {
-                  applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+                  applyBackendValidationErrors(editor, area, validationResult.errors || []);
                   
                   if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
-                    setValidationCollapsed(false);
+                    if (hasBlockingValidationErrors({ errors: validationResult.errors })) {
+                      setValidationCollapsed(false);
+                    }
                   }
                 }
               }
@@ -438,6 +699,73 @@ export function FlowEditorPage() {
         }, 500);
       }
     } catch (err) {
+      // Se o backend recusou salvar (ex.: validação obrigatória), carrega como rascunho para revisão.
+      const isBadRequest = err && typeof err === 'object' && err.status === 400;
+      const msg = String(err?.body?.message || err?.message || '');
+      const looksLikeValidation =
+        msg.includes('não passou na validação obrigatória') ||
+        msg.includes('Plano gerado por IA é inválido') ||
+        msg.includes('ROUTER_RULE_MISSING_CONDITION') ||
+        msg.includes('NODE_DISCONNECTED');
+
+      if (isBadRequest && looksLikeValidation) {
+        logger.warn('Backend recusou salvar fluxo gerado; carregando como rascunho para revisão', {
+          status: err.status,
+          message: msg.slice(0, 500),
+        });
+
+        const editor = editorRef.current;
+        if (editor && editor.loadFromJson) {
+          try {
+            const reteJson = engineFlowToReteJson(flow);
+            await editor.loadFromJson(reteJson);
+            setSelectedNode(null);
+
+            setDraftFlow(flow);
+            setDraftMeta({
+              id: flow?.id,
+              name: flow?.name,
+              tenantId: flow?.tenantId || agent?.tenantId || 'demo-tenant',
+            });
+
+            // Best-effort: se não temos lista estruturada de erros, valida no backend e aplica
+            try {
+              const validationResult = await validateCurrentFlow(reteJson);
+              const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+              if (validationResult) {
+                applyBackendValidationErrors(
+                  editor.editor?.current,
+                  editor.area,
+                  validationResult.errors || []
+                );
+                if (!validationResult.valid && Array.isArray(validationResult.errors) && validationResult.errors.length > 0) {
+                  setValidationCollapsed(false);
+                }
+              }
+            } catch (vErr) {
+              logger.debug('Falha best-effort ao validar rascunho após 400', { error: vErr });
+            }
+
+            // Ao finalizar a geração, o editor NÃO pode ficar em read-only.
+            // Carrega como rascunho editável e orienta o usuário a revisar/ajustar.
+            setCanvasLocked(false);
+            setCanvasLockReason(null);
+            showToast('Fluxo carregado como rascunho (não foi salvo). Revise e clique em Salvar.', 'warning', 5000);
+
+            // Modal pós-aplicação: mostra o que foi carregado como rascunho
+            setGeneratedFlowModalData({
+              mode: 'draft',
+              flow,
+              validationWarnings: null,
+            });
+            setShowGeneratedFlowModal(true);
+            return;
+          } catch (loadErr) {
+            logger.error('Erro ao carregar rascunho após 400', loadErr);
+          }
+        }
+      }
+
       logger.error('Erro ao salvar fluxo gerado', err);
       showToast(`Erro ao salvar fluxo gerado: ${err.message || 'Erro desconhecido'}`, 'error', 5000);
     }
@@ -446,6 +774,10 @@ export function FlowEditorPage() {
   const handleTemplateSelected = async (flow) => {
     logger.info('Template selecionado', { templateId: flow?.id, templateName: flow?.name });
     setShowTemplateSelector(false);
+    setCanvasLocked(false);
+    setCanvasLockReason(null);
+    setDraftFlow(null);
+    setDraftMeta(null);
     
     // Limpa o estado antes de criar o novo fluxo
     clearCurrentFlow();
@@ -463,11 +795,11 @@ export function FlowEditorPage() {
                                       savedFlow.validationWarnings.errors.length > 0;
         
         if (hasValidationWarnings) {
-          const errorCount = savedFlow.validationWarnings.errors.length;
+          const counts = summarizeValidationBySeverity(savedFlow.validationWarnings);
           showToast(
-            `Fluxo criado com sucesso, mas possui ${errorCount} erro${errorCount > 1 ? 's' : ''} de validação. Verifique o painel de validação.`,
-            'warning',
-            5000
+            `Fluxo criado com avisos de validação (erros: ${counts.error}, warnings: ${counts.warning}, info: ${counts.info}). Verifique o painel de validação.`,
+            counts.error > 0 ? 'warning' : 'info',
+            counts.error > 0 ? 5000 : 3500
           );
         } else {
           showToast('Fluxo criado com sucesso', 'success', 2000);
@@ -515,7 +847,7 @@ export function FlowEditorPage() {
                 // ✅ Aplica erros do backend (limpa se válido, aplica se inválido)
                 const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
                 if (validationResult) {
-                  applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+                  applyBackendValidationErrors(editor, area, validationResult.errors || []);
                   
                   // ✅ Expande painel de validação se houver erros
                   if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
@@ -687,8 +1019,12 @@ export function FlowEditorPage() {
     }
     try {
       const reteJson = await editor.toJSON();
-      const saved = await saveFlow(reteJson);
+      const saved = await saveFlow(reteJson, draftMeta || undefined);
     if (saved) {
+      setDraftFlow(null);
+      setDraftMeta(null);
+      setCanvasLocked(false);
+      setCanvasLockReason(null);
       setFlowListRefreshTrigger(prev => prev + 1);
       showToast('Fluxo salvo com sucesso', 'success');
     } else {
@@ -747,7 +1083,7 @@ export function FlowEditorPage() {
       
       // ✅ Validação local de fallback (antes de chamar backend)
       const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
-      const localValidation = validateFlowLocal(reteJson);
+      const localValidation = validateFlowLocal(reteJson, { kind: currentFlow?.kind || 'chat' });
       
       // Se validação local falhou, mostra erros e não chama backend
       if (!localValidation.valid && localValidation.errors.length > 0) {
@@ -816,7 +1152,7 @@ export function FlowEditorPage() {
       // Se inválido, passa os erros recebidos do servidor
       if (validationResult) {
         const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
-        applyBackendValidationErrors(editor, area, validationResult.valid ? [] : (validationResult.errors || []));
+        applyBackendValidationErrors(editor, area, validationResult.errors || []);
         
         logger.info('Validação do backend concluída', {
           valid: validationResult.valid,
@@ -879,6 +1215,21 @@ export function FlowEditorPage() {
     }
   };
 
+  const handleEnvironmentChange = async (nextEnv) => {
+    if (!currentFlow?.id) return;
+    const env = String(nextEnv || '').trim();
+    if (!['dev', 'stage', 'prod'].includes(env)) return;
+    try {
+      await updateFlowEnvironment(currentFlow.id, env);
+      setFlowEnvironment(env);
+      await loadFlow(currentFlow.id);
+      showToast(`Ambiente atualizado para "${env}"`, 'success');
+    } catch (err) {
+      logger.error('Erro ao atualizar environment do flow', err);
+      showToast('Erro ao atualizar ambiente do fluxo', 'error');
+    }
+  };
+
   const handleDeleteClick = () => {
     if (!currentFlow || !currentFlow.id) return;
     setShowDeleteConfirm(true);
@@ -909,6 +1260,7 @@ export function FlowEditorPage() {
       const arrange = editorRef.current?.arrange;
       const area = editorRef.current?.area;
       const editor = editorRef.current?.editor?.current;
+      const updateNodeIO = editorRef.current?.updateNodeIO;
       
       if (!arrange || !area || !editor) {
         showToast('Editor não está pronto', 'warning', 2000);
@@ -922,19 +1274,299 @@ export function FlowEditorPage() {
       }
       
       showToast('Organizando nós...', 'info', 1000);
-      await new Promise(resolve => {
-        requestAnimationFrame(async () => {
+      // ✅ Importante: garantir que a área esteja "atualizada" antes do auto-arrange.
+      // Em alguns cenários (render React/medição de nós), o layout pode rodar cedo demais e manter sobreposições.
+      const safeAreaUpdate = async () => {
+        try {
+          if (area && typeof area.update === 'function') {
+            area.update('node');
+            area.update('connection');
+          }
+        } catch (err) {
+          logger.debug('Falha best-effort ao atualizar área antes/depois do layout', {
+            error: err?.message || String(err),
+          });
+        }
+      };
+
+      // ✅ Normaliza UI imediatamente: remove width/height inline que podem estar quebrando o layout interno
+      // (texto/sockets desalinhados). Fazemos isso antes e depois do arrange para garantir.
+      cleanupInlineNodeSize(area, nodes);
+
+      const waitFrames = async (count = 1) => {
+        for (let i = 0; i < count; i += 1) {
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => requestAnimationFrame(() => r()));
+        }
+      };
+
+      const measureNodeDimensions = () => {
+        let withSize = 0;
+        let maxW = 0;
+        let maxH = 0;
+        nodes.forEach((n) => {
           try {
-            await arrange.layout();
-            resolve();
-          } catch (err) {
-            logger.warn('Erro ao calcular layout', { error: err?.message || String(err) });
-            resolve();
+            const nodeId = n?.id;
+            const view = area?.nodeViews?.get?.(nodeId);
+            const wrapper = view?.element;
+            if (!wrapper || !(wrapper instanceof HTMLElement)) return;
+
+            const el =
+              wrapper.querySelector('.flow-node') ||
+              wrapper.querySelector('*:not(span):not([fragment])') ||
+              wrapper.firstElementChild ||
+              wrapper;
+            if (!(el instanceof HTMLElement)) return;
+
+            const rect = el.getBoundingClientRect();
+            const w = Number(rect?.width);
+            const h = Number(rect?.height);
+            const width = Number.isFinite(w) && w > 10 ? w : Number(wrapper.clientWidth || 0);
+            const height = Number.isFinite(h) && h > 10 ? h : Number(wrapper.clientHeight || 0);
+
+            if (Number.isFinite(width) && width > 10) {
+              n.width = Math.round(width);
+              maxW = Math.max(maxW, n.width);
+            }
+            if (Number.isFinite(height) && height > 10) {
+              n.height = Math.round(height);
+              maxH = Math.max(maxH, n.height);
+            }
+            if ((n.width || 0) > 10 && (n.height || 0) > 10) withSize += 1;
+          } catch {
+            // best-effort
           }
         });
+        return { withSize, maxW, maxH };
+      };
+
+      const hasOverlaps = () => {
+        try {
+          const rects = nodes
+            .map((n) => {
+              const view = area?.nodeViews?.get?.(n.id);
+              const pos = view?.position;
+              const x = Number(pos?.x);
+              const y = Number(pos?.y);
+              const w = Number(n?.width || 0);
+              const h = Number(n?.height || 0);
+              if (!Number.isFinite(x) || !Number.isFinite(y) || w <= 10 || h <= 10) return null;
+              return { id: n.id, x, y, w, h };
+            })
+            .filter(Boolean);
+
+          const margin = 12;
+          for (let i = 0; i < rects.length; i += 1) {
+            for (let j = i + 1; j < rects.length; j += 1) {
+              const a = rects[i];
+              const b = rects[j];
+              const overlapX = a.x < b.x + b.w - margin && a.x + a.w - margin > b.x;
+              const overlapY = a.y < b.y + b.h - margin && a.y + a.h - margin > b.y;
+              if (overlapX && overlapY) return true;
+            }
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      };
+
+      const runLayoutOnce = async () => {
+        let ok = true;
+        await new Promise(resolve => {
+          requestAnimationFrame(async () => {
+            try {
+              // Aguarda 2 frames para maximizar chance de views/medição estarem prontas
+              await new Promise((r) => requestAnimationFrame(() => r()));
+              await safeAreaUpdate();
+              // ✅ Usa applier translate-only para evitar resize (que aplica width/height inline no nó)
+              await arrange.layout({
+                nodes,
+                connections: arrangeConnections,
+                applier: createTranslateOnlyApplier(),
+                options: {
+                  // Aumenta espaçamento para reduzir sobreposição entre nós altos (ex.: options)
+                  'elk.spacing.nodeNode': '80',
+                  'elk.layered.spacing.nodeNodeBetweenLayers': '140',
+                  'elk.spacing.edgeNode': '40',
+                },
+              });
+              await safeAreaUpdate();
+              resolve();
+            } catch (err) {
+              ok = false;
+              logger.warn('Erro ao calcular layout', { error: err?.message || String(err) });
+              resolve();
+            }
+          });
+        });
+        return ok;
+      };
+
+      let layoutOk = true;
+      let appliedFallback = false;
+
+      // ✅ Antes de auto-arrange, sincroniza inputs/outputs dinâmicos e remove conexões órfãs.
+      // Isso evita crashes do ELK quando existe conexão apontando para porta inexistente.
+      try {
+        if (typeof updateNodeIO === 'function') {
+          nodes.forEach((n) => {
+            try {
+              updateNodeIO(String(n.id));
+            } catch {
+              // best-effort
+            }
+          });
+          await safeAreaUpdate();
+          // Após uma "normalização" do grafo, tentamos o auto-layout novamente mesmo que tenha falhado antes
+          arrangeDisabledRef.current = false;
+        }
+      } catch (err) {
+        logger.debug('Organizar - falha best-effort ao sincronizar IO dinâmico', {
+          error: err?.message || String(err),
+        });
+      }
+
+      // ✅ O rete-auto-arrange-plugin usa `node.width`/`node.height` diretamente.
+      // Nossos nós nem sempre têm essas dimensões preenchidas, então medimos via DOM e atribuímos
+      // antes de chamar o ELK, evitando NaN/undefined e crashes internos.
+      try {
+        // Espera render/DOM assentar e mede algumas vezes se necessário (evita precisar “2 cliques”)
+        await safeAreaUpdate();
+        await waitFrames(2);
+        let stats = measureNodeDimensions();
+        // Se ainda estiver com poucas dimensões válidas, tenta mais um pouco
+        if (stats.withSize < Math.ceil(nodes.length * 0.6)) {
+          await new Promise((r) => setTimeout(r, 60));
+          await waitFrames(2);
+          stats = measureNodeDimensions();
+        }
+      } catch (err) {
+        logger.debug('Organizar - falha best-effort ao medir dimensões dos nós', {
+          error: err?.message || String(err),
+        });
+      }
+
+      // ✅ Filtra conexões para o auto-arrange:
+      // O plugin usa `connection.sourceOutput`/`connection.targetInput` para mapear ports.
+      // Se algum desses campos estiver ausente, ele aponta edge para o id do nó (não-port),
+      // o que pode quebrar o ELK. Então passamos apenas conexões com ports válidos.
+      const nodesById = new Map(nodes.map((n) => [String(n.id), n]));
+      const allConnections =
+        typeof editor.getConnections === 'function' ? editor.getConnections() : [];
+
+      const arrangeConnections = (allConnections || []).filter((c) => {
+        if (!c) return false;
+        const sourceId = String(c.source || '');
+        const targetId = String(c.target || '');
+        const sourceKey = typeof c.sourceOutput === 'string' ? c.sourceOutput : null;
+        const targetKey = typeof c.targetInput === 'string' ? c.targetInput : null;
+        if (!sourceId || !targetId || !sourceKey || !targetKey) return false;
+
+        const sourceNode = nodesById.get(sourceId);
+        const targetNode = nodesById.get(targetId);
+        if (!sourceNode || !targetNode) return false;
+
+        const hasSourcePort = !!sourceNode.outputs?.[sourceKey];
+        const hasTargetPort = !!targetNode.inputs?.[targetKey];
+        return hasSourcePort && hasTargetPort;
       });
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Se o auto-layout já falhou antes nesta sessão, não tenta de novo (evita spam de erro do plugin)
+      if (arrangeDisabledRef.current) {
+        layoutOk = false;
+      } else {
+        // 1) Primeira passada de layout
+        layoutOk = (await runLayoutOnce()) && layoutOk;
+        // Pequeno delay para permitir atualização das views/DOM
+        await new Promise(resolve => setTimeout(resolve, 80));
+        // 2) Segunda passada (corrige casos em que a primeira rodou antes do DOM medir os nós)
+        layoutOk = (await runLayoutOnce()) && layoutOk;
+        await new Promise(resolve => setTimeout(resolve, 80));
+
+        // Se o layout “ok” ainda deixou sobreposição, tenta mais uma passada automaticamente
+        if (layoutOk) {
+          try {
+            await safeAreaUpdate();
+            await waitFrames(1);
+            // garante medidas atualizadas após a primeira organização
+            measureNodeDimensions();
+            if (hasOverlaps()) {
+              layoutOk = (await runLayoutOnce()) && layoutOk;
+              await new Promise(resolve => setTimeout(resolve, 80));
+            }
+          } catch {
+            // best-effort
+          }
+        }
+
+        if (!layoutOk) {
+          // Desabilita para os próximos cliques nesta sessão
+          arrangeDisabledRef.current = true;
+        }
+      }
+
+      // ✅ Fallback: se o auto-arrange falhar (como no erro "reading 'he'") OU se as posições parecerem colapsadas,
+      // aplica um espalhamento em grade para eliminar sobreposição (best-effort).
+      try {
+        if (!layoutOk) {
+          logger.warn('Organizar - auto-arrange falhou; aplicando fallback em grade', {
+            reason: 'layout_failed',
+          });
+        }
+
+        const viewPositions = nodes
+          .map((n) => {
+            const view = area?.nodeViews?.get?.(n.id);
+            const p = view?.position;
+            const x = Number(p?.x);
+            const y = Number(p?.y);
+            return Number.isFinite(x) && Number.isFinite(y) ? { id: n.id, x, y } : null;
+          })
+          .filter(Boolean);
+
+        const counts = new Map();
+        for (const p of viewPositions) {
+          const key = `${Math.round(p.x)},${Math.round(p.y)}`;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+        let maxDup = 0;
+        for (const c of counts.values()) maxDup = Math.max(maxDup, c);
+        const uniqueCount = counts.size;
+        const looksCollapsed = viewPositions.length > 1 && (uniqueCount <= 1 || maxDup >= 3);
+
+        const shouldApplyGrid = !layoutOk || looksCollapsed;
+
+        if (shouldApplyGrid && typeof area?.translate === 'function') {
+          logger.info('Organizar - fallback de grade aplicado', {
+            trigger: !layoutOk ? 'layout_failed' : 'positions_collapsed',
+            uniqueCount,
+            maxDup,
+            total: viewPositions.length,
+          });
+          // Espaçamento baseado no maior nó medido (evita grid sobrepor em nós altos/largos)
+          const { maxW, maxH } = measureNodeDimensions();
+          const cols = 5;
+          const dx = Math.max(320, (maxW || 0) + 120);
+          const dy = Math.max(220, (maxH || 0) + 120);
+          for (let i = 0; i < nodes.length; i += 1) {
+            const x = (i % cols) * dx;
+            const y = Math.floor(i / cols) * dy;
+            // eslint-disable-next-line no-await-in-loop
+            await area.translate(nodes[i].id, { x, y });
+          }
+          await safeAreaUpdate();
+          appliedFallback = true;
+        }
+      } catch (err) {
+        logger.debug('Organizar - fallback de grade falhou (best-effort)', {
+          error: err?.message || String(err),
+        });
+      }
+
+      // ✅ Garante que nunca deixaremos width/height inline após organizar (layout bonito e sockets alinhados)
+      cleanupInlineNodeSize(area, nodes);
+      await safeAreaUpdate();
       
       if (nodes.length > 0) {
         try {
@@ -944,7 +1576,13 @@ export function FlowEditorPage() {
         }
       }
       
-      showToast('Nós organizados automaticamente', 'success', 2000);
+      if (layoutOk) {
+        showToast('Nós organizados automaticamente', 'success', 2000);
+      } else if (appliedFallback) {
+        showToast('Auto-layout falhou; nós espalhados em grade para evitar sobreposição', 'warning', 3500);
+      } else {
+        showToast('Não foi possível organizar automaticamente', 'error', 3000);
+      }
     } catch (err) {
       logger.error('Erro ao organizar nós', { error: err });
       showToast('Erro ao organizar nós. Tente novamente.', 'error', 3000);
@@ -1212,6 +1850,8 @@ export function FlowEditorPage() {
         try {
           await editor.loadFromJson(reteJson);
           showToast('Fluxo importado com sucesso', 'success', 2000);
+          setCanvasLocked(false);
+          setCanvasLockReason(null);
           
           // Limpa o fluxo atual do estado para permitir trabalhar com o importado
           clearCurrentFlow();
@@ -1229,7 +1869,7 @@ export function FlowEditorPage() {
                   applyBackendValidationErrors(
                     editor.editor?.current,
                     editor.area,
-                    validationResult.valid ? [] : (validationResult.errors || [])
+                    validationResult.errors || []
                   );
                   
                   // ✅ Expande painel de validação se houver erros
@@ -1332,6 +1972,19 @@ export function FlowEditorPage() {
           currentFlowId={currentFlow?.id}
           refreshTrigger={flowListRefreshTrigger}
         />
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-text-secondary">Env</span>
+          <select
+            value={flowEnvironment}
+            disabled={!currentFlow?.id}
+            onChange={(e) => handleEnvironmentChange(e.target.value)}
+            className="px-2 py-1 rounded border border-border-default bg-bg-elevated text-text-primary"
+          >
+            <option value="dev">dev</option>
+            <option value="stage">stage</option>
+            <option value="prod">prod</option>
+          </select>
+        </div>
         <button className="btn-base" onClick={() => setShowFlowGenerator(true)} title="Gerar fluxo com IA">
           <span className="icon icon-ai"></span>
           <span>Gerar com IA</span>
@@ -1378,9 +2031,12 @@ export function FlowEditorPage() {
       {loading && <div className="loading-indicator">Carregando...</div>}
 
       {/* Barra "Fluxo atual" - EXATAMENTE como no modelo */}
-      <div className="flow-current-display">
-        Fluxo atual: <strong className="ml-1">{displayedFlow ? (displayedFlow.name || displayedFlow.id) : 'não carregado'}</strong>
-      </div>
+      <FlowCurrentDisplay
+        displayedFlow={displayedFlow}
+        onRegenerate={() => setShowFlowGenerator(true)}
+        kind={displayedFlow?.kind || currentFlow?.kind || 'chat'}
+        onKindChange={handleFlowKindChange}
+      />
 
       {/* MAIN - EXATAMENTE como no modelo */}
       <div className="flex min-h-0">
@@ -1404,11 +2060,11 @@ export function FlowEditorPage() {
 
           {!paletteCollapsed ? (
             <div className="flex-1 p-2 text-sm space-y-2 overflow-y-auto">
-                <NodePalette />
+                <NodePalette flowKind={displayedFlow?.kind || currentFlow?.kind || 'chat'} />
             </div>
           ) : (
             <div className="flex-1 p-2 flex flex-col items-center gap-2 overflow-y-auto">
-              <NodePaletteCollapsed />
+              <NodePaletteCollapsed flowKind={displayedFlow?.kind || currentFlow?.kind || 'chat'} />
             </div>
           )}
         </div>
@@ -1423,7 +2079,7 @@ export function FlowEditorPage() {
         {/* CANVAS - EXATAMENTE como no modelo */}
         <div className="flex-1 relative overflow-hidden canvas-container">
           <div className="absolute inset-0 canvas-grid pointer-events-none"></div>
-          <div className="relative h-full">
+          <div className={`relative h-full ${canvasLocked ? 'pointer-events-none select-none' : ''}`}>
               <FlowEditor
               ref={editorRef}
                 onFlowChanged={handleFlowChanged}
@@ -1431,6 +2087,42 @@ export function FlowEditorPage() {
                 showToast={showToast}
               />
           </div>
+
+          {canvasLocked && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center p-6 bg-bg-primary/70 backdrop-blur-sm">
+              <div className="w-full max-w-xl rounded-xl border border-border-default bg-bg-elevated p-5 shadow-lg">
+                <div className="text-lg font-semibold text-text-primary">
+                  Revisão necessária
+                </div>
+                <div className="mt-2 text-sm text-text-secondary">
+                  {canvasLockReason || 'Este fluxo foi gerado em modo que exige revisão antes de editar.'}
+                </div>
+                <div className="mt-2 text-xs text-text-tertiary">
+                  Você pode desbloquear para ajustar manualmente, ou tentar gerar novamente com uma descrição mais específica.
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowFlowGenerator(true);
+                    }}
+                  >
+                    Gerar novamente
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setCanvasLocked(false);
+                      setCanvasLockReason(null);
+                    }}
+                  >
+                    Desbloquear para editar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* DIVIDER DIREITA - EXATAMENTE como no modelo */}
@@ -1539,6 +2231,26 @@ export function FlowEditorPage() {
                 <div className={`flex flex-col ${validationCollapsed ? 'section-collapsed' : 'section-expanded'} section-container`}>
                   <div className="section-header">
                     <span className="section-header-title">Validação</span>
+                    {(() => {
+                      const counts = summarizeValidationBySeverity({ errors: validation?.uiErrors || [] });
+                      if (!counts.total) return null;
+                      const label = `Erros: ${counts.error} · Warnings: ${counts.warning} · Info: ${counts.info}`;
+                      // Mostra sempre quando existe resultado, mesmo colapsado
+                      return (
+                        <span
+                          className={`text-[11px] px-2 py-0.5 rounded border ${
+                            counts.error > 0
+                              ? 'text-status-error border-status-error/30 bg-status-error/10'
+                              : counts.warning > 0
+                                ? 'text-status-warning border-status-warning/30 bg-status-warning/10'
+                                : 'text-status-info border-status-info/30 bg-status-info/10'
+                          }`}
+                          title={label}
+                        >
+                          {counts.error > 0 ? `${counts.error} erro(s)` : counts.warning > 0 ? `${counts.warning} warning(s)` : `${counts.info} info`}
+                        </span>
+                      );
+                    })()}
                     <button
                       className={`collapse-btn-vertical ${validationCollapsed ? 'collapsed' : ''}`}
                       onClick={() => setValidationCollapsed(!validationCollapsed)}
@@ -1573,35 +2285,59 @@ export function FlowEditorPage() {
                           {validation.uiErrors && validation.uiErrors.length > 0 && (
                             <div className="text-xs space-y-2">
                               {(() => {
-                                const errorsByNode = new Map();
+                                const issuesByNode = new Map();
                                 validation.uiErrors.forEach((err) => {
                                   if (err.nodeIds && err.nodeIds.length > 0) {
                                     err.nodeIds.forEach((nodeId) => {
-                                      if (!errorsByNode.has(nodeId)) {
-                                        errorsByNode.set(nodeId, []);
+                                      if (!issuesByNode.has(nodeId)) {
+                                        issuesByNode.set(nodeId, []);
                                       }
-                                      errorsByNode.get(nodeId).push(err);
+                                      issuesByNode.get(nodeId).push(err);
                                     });
                                   } else {
-                                    if (!errorsByNode.has('_global')) {
-                                      errorsByNode.set('_global', []);
+                                    if (!issuesByNode.has('_global')) {
+                                      issuesByNode.set('_global', []);
                                     }
-                                    errorsByNode.get('_global').push(err);
+                                    issuesByNode.get('_global').push(err);
                                   }
                                 });
 
-                                return Array.from(errorsByNode.entries()).map(([nodeId, errors]) => (
+                                const normalizeSeverity = (e) => {
+                                  const sev = String(e?.severity || '').toLowerCase();
+                                  if (sev === 'warning') return 'warning';
+                                  if (sev === 'info') return 'info';
+                                  return 'error';
+                                };
+
+                                const severityMeta = (sev) => {
+                                  if (sev === 'warning') {
+                                    return { label: 'WARNING', className: 'text-status-warning border-status-warning/30 bg-status-warning/10' };
+                                  }
+                                  if (sev === 'info') {
+                                    return { label: 'INFO', className: 'text-status-info border-status-info/30 bg-status-info/10' };
+                                  }
+                                  return { label: 'ERRO', className: 'text-status-error border-status-error/30 bg-status-error/10' };
+                                };
+
+                                return Array.from(issuesByNode.entries()).map(([nodeId, issues]) => (
                                   <div key={nodeId} className="mb-3">
                                     <div className="font-semibold mb-1">
-                                      {nodeId !== '_global' ? `Nó: ${nodeId}` : 'Erros Gerais'}
+                                      {nodeId !== '_global' ? `Nó: ${nodeId}` : 'Mensagens gerais'}
                                     </div>
                                     <ul className="list-disc list-inside space-y-1">
-                                      {errors.map((err, idx) => (
-                                        <li key={`${err.code}-${idx}`}>
-                                          <span className="text-gray-600 dark:text-gray-400">[{err.code}]</span>
-                                          <span> {err.messageUi || err.message}</span>
-                                        </li>
-                                      ))}
+                                      {issues.map((err, idx) => {
+                                        const sev = normalizeSeverity(err);
+                                        const meta = severityMeta(sev);
+                                        return (
+                                          <li key={`${err.code}-${idx}`}>
+                                            <span className={`inline-flex items-center px-1.5 py-0.5 mr-2 rounded border text-[10px] font-mono ${meta.className}`}>
+                                              {meta.label}
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400">[{err.code}]</span>
+                                            <span> {err.messageUi || err.message}</span>
+                                          </li>
+                                        );
+                                      })}
                                     </ul>
                                   </div>
                                 ));
@@ -1745,6 +2481,72 @@ export function FlowEditorPage() {
             />
           </div>
         )}
+      </Dialog>
+
+      <Dialog
+        isOpen={showGeneratedFlowModal}
+        onClose={() => {
+          setShowGeneratedFlowModal(false);
+          setGeneratedFlowModalData(null);
+        }}
+        title="Fluxo gerado (preview)"
+        size="xl"
+        draggable={true}
+        resizable={true}
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-text-secondary">
+            Este é o fluxo que acabou de ser gerado e aplicado no editor.
+          </div>
+
+          <div className="p-3 rounded-md border border-border-default bg-bg-tertiary space-y-1 text-sm">
+            <div><strong>Modo:</strong> {generatedFlowModalData?.mode === 'saved' ? 'salvo e carregado' : 'rascunho (não salvo)'} </div>
+            <div><strong>Nome:</strong> {generatedFlowModalData?.flow?.name || '—'}</div>
+            <div><strong>ID:</strong> {generatedFlowModalData?.flow?.id || '—'}</div>
+            <div><strong>Nós:</strong> {generatedFlowModalData?.flow?.nodes?.length || 0}</div>
+          </div>
+
+          {generatedFlowModalData?.validationWarnings && generatedFlowModalData.validationWarnings.valid === false && (
+            <div className="p-3 rounded-md bg-status-warning/10 border border-status-warning/20 text-status-warning text-sm">
+              <strong>Avisos de validação:</strong> {(generatedFlowModalData.validationWarnings.errors || []).length} item(ns).
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={async () => {
+                try {
+                  const txt = JSON.stringify(generatedFlowModalData?.flow || {}, null, 2);
+                  if (navigator?.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(txt);
+                    showToast('JSON copiado para o clipboard', 'success', 2000);
+                  } else {
+                    showToast('Clipboard indisponível', 'warning', 2500);
+                  }
+                } catch {
+                  showToast('Falha ao copiar JSON', 'error', 2500);
+                }
+              }}
+              disabled={!generatedFlowModalData?.flow}
+            >
+              Copiar JSON
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setShowGeneratedFlowModal(false);
+                setGeneratedFlowModalData(null);
+              }}
+            >
+              Fechar
+            </Button>
+          </div>
+
+          <pre className="text-xs font-mono whitespace-pre-wrap max-h-[55vh] overflow-y-auto p-3 rounded bg-bg-primary border border-border-default">
+            {JSON.stringify(generatedFlowModalData?.flow || {}, null, 2)}
+          </pre>
+        </div>
       </Dialog>
 
       <ToastContainer />

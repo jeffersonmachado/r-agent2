@@ -97,7 +97,9 @@ function buildRpaTestGenerationPrompt(flow, dependencies) {
     'O teste DEVE inferir um caminho válido através do fluxo',
     'O teste NUNCA executa ações reais, apenas gera o script',
     `URLs de navegação DEVE usar a URL base: ${frontendUrl} (NUNCA use domínios fictícios como "rpa.local")`,
-    'NUNCA invente seletores que não existem - use apenas seletores CSS genéricos ou validações lógicas'
+    'NUNCA invente seletores que não existem - use apenas seletores CSS genéricos ou validações lógicas',
+    'NUNCA gere asserts negativos (exists: false) com seletores genéricos como "input", "textarea", "[contenteditable=\'true\']", ou listas como "input, textarea, [contenteditable=\'true\']" — isso é frágil e invalida o teste',
+    'Se precisar validar ausência de algo, use um seletor específico do componente/fluxo, ou valide a página via action.page (url/title/landmarks) em vez de negar seletores genéricos'
   ];
   rules.forEach((rule, index) => {
     prompt += `${index + 1}. ${rule}\n`;
@@ -372,6 +374,34 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
     tenantId
   });
 
+  // Recording best-effort: não pode quebrar geração do teste
+  let recording = null;
+  let recordingId = null;
+  try {
+    const shouldRecord = process.env.ENABLE_RPA_TEST_RECORDING !== 'false';
+    if (shouldRecord) {
+      recording = new RecordingSystem({
+        storagePath: path.join(process.cwd(), 'recordings', 'rpa-test'),
+        tenantId,
+        context: 'rpa-test',
+        enableTimestamps: true,
+      });
+      recordingId = `${tenantId}-rpa-test-${flow?.id || 'unknown'}-${Date.now()}`;
+      recording.start(recordingId, {
+        name: `Geração de Teste RPA - ${flow?.name || flow?.id || 'Fluxo'}`,
+        description: 'Geração de teste RPA a partir de fluxo',
+        tenantId,
+        flowId: flow?.id,
+        testId,
+        source: 'automatic',
+      });
+    }
+  } catch (err) {
+    logger.warn('[RpaTestGenerator] Recording desabilitado (best-effort)', { error: err.message });
+    recording = null;
+    recordingId = null;
+  }
+
   try {
     // Constrói o prompt para a IA
     const prompt = buildRpaTestGenerationPrompt(flow, dependencies);
@@ -379,7 +409,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
     logger.debug('Prompt construído para IA', { promptLength: prompt.length });
     
     // Chama a IA para gerar o teste
-    recording.recordGeneration('rpa-test', {
+    recording?.recordGeneration?.('rpa-test', {
       flowId: flow.id,
       dependencies: dependencies,
     }, {
@@ -469,12 +499,104 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
         step: assert.step + offset
       }));
     }
+
+    // ------------------------------------------------------------
+    // GARANTIA: Fluxos de chatbot devem ser validados no "Chat de Teste"
+    // ------------------------------------------------------------
+    // Após o login automático do runner, navegar para "/" normalmente cai no Dashboard,
+    // o que invalida asserts de saudação/mensagens do fluxo (ex: "Olá! Como posso ajudar?").
+    //
+    // Para testes gerados a partir de flow, forçamos a navegação para /chat?flowId=...
+    // imediatamente após os passos de dependências (se existirem).
+    try {
+      const frontendUrl = process.env.TEST_FRONTEND_URL ||
+                          process.env.FRONTEND_URL ||
+                          config.get('tests.rpa.frontendUrl') ||
+                          config.get('frontend.url') ||
+                          'http://localhost:5173';
+      const baseUrl = String(frontendUrl).replace(/\/$/, '');
+      const chatUrl = `${baseUrl}/chat?flowId=${encodeURIComponent(String(flow.id))}`;
+
+      const insertAt = dependencySteps.length; // depois das dependências
+      const firstPostDepStep = rpaTest.steps?.[insertAt];
+
+      if (firstPostDepStep && (firstPostDepStep.type === 'navigate' || firstPostDepStep.action === 'navigate')) {
+        // Se já existe um navigate, só garante que a URL aponta para o Chat de Teste
+        firstPostDepStep.url = chatUrl;
+        if (firstPostDepStep.value && !firstPostDepStep.url) {
+          firstPostDepStep.value = chatUrl;
+        }
+        if (!firstPostDepStep.description) {
+          firstPostDepStep.description = 'Abrir Chat de Teste para validar o fluxo';
+        }
+      } else {
+        // Caso não exista navigate, insere um bloco mínimo (navigate + wait)
+        rpaTest.steps.splice(insertAt, 0,
+          {
+            type: 'navigate',
+            url: chatUrl,
+            description: 'Abrir Chat de Teste para validar o fluxo',
+            critical: true,
+          },
+          {
+            type: 'wait',
+            selector: 'body',
+            description: 'Aguardar carregamento do Chat de Teste',
+          },
+        );
+
+        // Ajusta asserts (pois inserimos 2 steps no meio)
+        rpaTest.asserts = (rpaTest.asserts || []).map((assert) => ({
+          ...assert,
+          step: assert.step >= (insertAt + 1) ? assert.step + 2 : assert.step,
+        }));
+      }
+    } catch (e) {
+      // Best-effort: não deve quebrar geração
+      logger.warn('Não foi possível forçar navegação para /chat (best-effort)', { error: e.message });
+    }
     
     // Normaliza URLs nos steps e asserts
     normalizeRpaTestUrls(rpaTest);
     
     // Corrige seletores inválidos automaticamente
     fixInvalidSelectors(rpaTest);
+
+    // Hardening: remove asserts negativos com seletores genéricos (frágeis)
+    // Ex.: "input, textarea, [contenteditable='true']" com exists=false.
+    try {
+      const isGenericSelector = (sel) => {
+        const s = String(sel || '').trim();
+        if (!s) return false;
+        // Normaliza aspas para facilitar matching
+        const norm = s.replace(/"/g, "'").replace(/\s+/g, ' ');
+        // Casos mais comuns (muito amplos)
+        if (norm === 'input' || norm === 'textarea' || norm === "[contenteditable='true']") return true;
+        if (norm.startsWith('input,') || norm.startsWith('textarea,') || norm.includes('input, textarea')) return true;
+        if (norm.includes("[contenteditable='true']") && (norm.includes('input') || norm.includes('textarea'))) return true;
+        return false;
+      };
+
+      const removed = [];
+      rpaTest.asserts = (Array.isArray(rpaTest.asserts) ? rpaTest.asserts : []).filter((a) => {
+        if (!a || typeof a !== 'object') return false;
+        if (a.exists === false && isGenericSelector(a.selector)) {
+          removed.push({ selector: a.selector, type: a.type, step: a.step });
+          return false;
+        }
+        return true;
+      });
+
+      if (removed.length > 0) {
+        logger.warn('Removendo asserts negativos com seletor genérico (hardening)', {
+          removedCount: removed.length,
+          removed: removed.slice(0, 10),
+          testId: rpaTest.id,
+        });
+      }
+    } catch (e) {
+      logger.warn('Falha ao aplicar hardening de asserts (best-effort)', { error: e.message });
+    }
     
     // Garante que há pelo menos um assert
     if (rpaTest.asserts.length === 0) {
@@ -561,7 +683,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
       rpaTest.validationWarnings.local = localValidation;
     }
     
-    recording.recordAction({
+    recording?.recordAction?.({
       type: 'rpa-test-generated',
       step: 'test-generated',
       value: {
@@ -570,8 +692,8 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
         assertsCount: rpaTest.asserts.length,
       },
     });
-    recording.stop();
-    recording.save(recordingId);
+    recording?.stop?.();
+    if (recordingId) recording?.save?.(recordingId);
 
     logger.info('Teste RPA gerado pela IA com sucesso', { 
       testId: rpaTest.id,
@@ -586,12 +708,12 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
       error: err.message,
       stack: err.stack 
     });
-    recording.recordCustom('error', {
+    recording?.recordCustom?.('error', {
       step: 'generation-error',
       value: { error: err.message },
     });
-    recording.stop();
-    recording.save(`${recordingId}-error`);
+    recording?.stop?.();
+    if (recordingId) recording?.save?.(`${recordingId}-error`);
     throw err;
   }
 }
@@ -641,7 +763,7 @@ function buildDependencySteps(dependencies, flow) {
       for (const deptInfo of seedInfos) {
         steps.push({
           type: 'navigate',
-          url: `${frontendUrl}/admin/departments`,
+          url: `${frontendUrl}/departments`,
           description: `Navegar para página de departamentos para criar: ${deptInfo.target || 'departamento'}`,
           critical: true
         });
@@ -652,25 +774,25 @@ function buildDependencySteps(dependencies, flow) {
         });
         steps.push({
           type: 'click',
-          selector: 'button:has-text("Novo"), button:has-text("Criar"), button:has-text("Adicionar")',
+          selector: 'button:has-text("Novo Departamento"), button:has-text("➕ Novo Departamento")',
           description: 'Clicar em botão para criar novo departamento',
           critical: true
         });
         steps.push({
           type: 'wait',
-          selector: 'input[name="name"], input[placeholder*="nome" i], input[placeholder*="name" i]',
+          selector: 'input[placeholder*="Suporte" i], input[placeholder^="Ex:" i]',
           description: 'Aguardar formulário de criação aparecer'
         });
         steps.push({
           type: 'fill',
-          selector: 'input[name="name"], input[placeholder*="nome" i], input[placeholder*="name" i]',
+          selector: 'input[placeholder*="Suporte" i], input[placeholder^="Ex:" i]',
           value: deptInfo.target || 'Departamento de Teste',
           description: `Preencher nome do departamento: ${deptInfo.target || 'Departamento de Teste'}`,
           critical: true
         });
         steps.push({
           type: 'click',
-          selector: 'button[type="submit"]:has-text("Salvar"), button:has-text("Criar"), button:has-text("Confirmar")',
+          selector: 'button:has-text("Criar"), button[type="submit"]:has-text("Criar"), button:has-text("Atualizar")',
           description: 'Salvar departamento',
           critical: true
         });
@@ -685,7 +807,7 @@ function buildDependencySteps(dependencies, flow) {
       for (const queueInfo of seedInfos) {
         steps.push({
           type: 'navigate',
-          url: `${frontendUrl}/admin/queues`,
+          url: `${frontendUrl}/maintenance`,
           description: `Navegar para página de filas para criar: ${queueInfo.target || 'fila'}`,
           critical: true
         });
@@ -696,26 +818,26 @@ function buildDependencySteps(dependencies, flow) {
         });
         steps.push({
           type: 'click',
-          selector: 'button:has-text("Nova"), button:has-text("Criar"), button:has-text("Adicionar")',
-          description: 'Clicar em botão para criar nova fila',
+          selector: '[data-testid="queue-manager-toggle"], button:has-text("Gerenciar Filas"), button:has-text("⚙️ Gerenciar Filas")',
+          description: 'Abrir gerenciador de filas',
           critical: true
         });
         steps.push({
           type: 'wait',
-          selector: 'input[name="name"], input[placeholder*="nome" i], input[placeholder*="name" i]',
-          description: 'Aguardar formulário de criação aparecer'
+          selector: 'input.queue-manager-input, input[placeholder*="Nome da fila" i]',
+          description: 'Aguardar campo de criação de fila aparecer'
         });
         steps.push({
           type: 'fill',
-          selector: 'input[name="name"], input[placeholder*="nome" i], input[placeholder*="name" i]',
+          selector: 'input.queue-manager-input, input[placeholder*="Nome da fila" i]',
           value: queueInfo.target || 'Fila de Teste',
           description: `Preencher nome da fila: ${queueInfo.target || 'Fila de Teste'}`,
           critical: true
         });
         steps.push({
           type: 'click',
-          selector: 'button[type="submit"]:has-text("Salvar"), button:has-text("Criar"), button:has-text("Confirmar")',
-          description: 'Salvar fila',
+          selector: 'button:has-text("➕ Criar"), button:has-text("Criar")',
+          description: 'Criar fila',
           critical: true
         });
         steps.push({
@@ -729,7 +851,7 @@ function buildDependencySteps(dependencies, flow) {
       for (const agentInfo of seedInfos) {
         steps.push({
           type: 'navigate',
-          url: `${frontendUrl}/admin/agents`,
+          url: `${frontendUrl}/agents`,
           description: `Navegar para página de agentes para criar: ${agentInfo.target || 'agente'}`,
           critical: true
         });
@@ -740,25 +862,46 @@ function buildDependencySteps(dependencies, flow) {
         });
         steps.push({
           type: 'click',
-          selector: 'button:has-text("Novo"), button:has-text("Criar"), button:has-text("Adicionar")',
+          selector: 'button:has-text("Novo Agente"), button:has-text("➕ Novo Agente")',
           description: 'Clicar em botão para criar novo agente',
           critical: true
         });
         steps.push({
           type: 'wait',
-          selector: 'input[name="name"], input[placeholder*="nome" i], input[placeholder*="name" i]',
-          description: 'Aguardar formulário de criação aparecer'
+          selector: 'form >> input[type="email"]',
+          description: 'Aguardar formulário de criação de agente aparecer'
         });
         steps.push({
           type: 'fill',
-          selector: 'input[name="name"], input[placeholder*="nome" i], input[placeholder*="name" i]',
+          selector: 'form >> input[type="text"] >> nth=0',
+          value: 'agente_teste',
+          description: 'Preencher username do agente',
+          critical: true
+        });
+        steps.push({
+          type: 'fill',
+          selector: 'form >> input[type="email"]',
+          value: 'agente_teste@example.com',
+          description: 'Preencher email do agente',
+          critical: true
+        });
+        steps.push({
+          type: 'fill',
+          selector: 'form >> input[type="text"] >> nth=1',
           value: agentInfo.target || 'Agente de Teste',
           description: `Preencher nome do agente: ${agentInfo.target || 'Agente de Teste'}`,
           critical: true
         });
         steps.push({
+          type: 'fill',
+          selector: 'form >> input[type="password"]',
+          value: 'admin123',
+          description: 'Preencher senha do agente',
+          critical: true
+        });
+        steps.push({
           type: 'click',
-          selector: 'button[type="submit"]:has-text("Salvar"), button:has-text("Criar"), button:has-text("Confirmar")',
+          selector: 'form button[type="submit"]:has-text("Criar"), form button[type="submit"]',
           description: 'Salvar agente',
           critical: true
         });

@@ -4,6 +4,8 @@
   "type": "object",
   "required": ["version", "type", "context", "steps", "assertions"],
   "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
     "version": {
       "type": "string",
       "enum": ["1.0"]
@@ -12,13 +14,24 @@
       "type": "string",
       "enum": ["rpa_test_plan"]
     },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "generatedBy": { "type": "string" },
+        "status": { "type": "string" },
+        "requiresReview": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
     "context": {
       "type": "object",
       "required": ["application", "mode"],
       "properties": {
         "application": { "type": "string" },
         "mode": { "type": "string", "enum": ["test-only"] }
-      }
+      },
+      "additionalProperties": false
     },
     "steps": {
       "type": "array",

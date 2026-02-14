@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
+const { logAction } = require('./auditService');
 
 /**
  * @typedef {Object} PipelineResult
@@ -55,9 +56,26 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     saveRecording = true,
   } = options;
 
+  const tenantId = flow?.tenantId || null;
+  const flowId = flow?.id || null;
+  const flowName = flow?.name || null;
+  if (!tenantId || !flowId) {
+    return {
+      success: false,
+      flow,
+      dependencyResolution: null,
+      executedSeeds: [],
+      recording: null,
+      snapshot: null,
+      errors: ['tenantId e flowId são obrigatórios para executar o pipeline RPA'],
+      warnings: [],
+    };
+  }
+
   // Inicializa replay
   const replay = new ReplaySystem({
     storagePath: path.join(process.cwd(), 'replays', 'rpa-pipeline'),
+    tenantId,
     context: 'rpa-pipeline',
     enableScreenshots: false,
   });
@@ -65,12 +83,14 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   // Inicializa gravação
   const recordingSystem = new RecordingSystem({
     storagePath: path.join(process.cwd(), 'recordings', 'rpa-pipeline'),
+    tenantId,
     context: 'rpa-pipeline',
     enableTimestamps: false,
   });
 
-  const replayId = `rpa-pipeline-${flow.id}-${Date.now()}`;
-  const recordingId = `rpa-pipeline-${flow.id}-${Date.now()}`;
+  const prefix = tenantId ? `${tenantId}-` : '';
+  const replayId = `${prefix}rpa-pipeline-${flow.id}-${Date.now()}`;
+  const recordingId = `${prefix}rpa-pipeline-${flow.id}-${Date.now()}`;
   
   replay.start(replayId, {
     flowId: flow.id,
@@ -90,8 +110,8 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   });
 
   logger.info('[RpaFlowPipeline] Iniciando pipeline RPA para fluxo', {
-    flowId: flow.id,
-    flowName: flow.name,
+    flowId,
+    flowName,
     autoExecuteSeeds,
     saveRecording,
     replayId,
@@ -109,7 +129,29 @@ async function executeRpaFlowPipeline(flow, options = {}) {
   };
 
   try {
-    const tenantId = flow.tenantId; // Tenant deve ser fornecido no flow
+    logAction({
+      agentId: null,
+      username: null,
+      tenantId,
+      action: 'rpa_pipeline_started',
+      resource: 'rpa_pipeline',
+      resourceId: flowId,
+      details: {
+        flowId,
+        flowName,
+        replayId,
+        recordingId,
+        autoExecuteSeeds,
+        saveRecording,
+      },
+      ipAddress: 'internal',
+      userAgent: 'internal',
+    });
+  } catch (_) {}
+
+  try {
+    // Tenant deve ser fornecido no flow; aqui usamos o tenantId já resolvido acima.
+    const tenantId = flow.tenantId;
 
     // PASSO 1: Análise de dependências
     logger.info('[RpaFlowPipeline] Passo 1: Analisando dependências...');
@@ -151,7 +193,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
         replay.recordEvent('seeds_execution_started', {
           seedsCount: dependencyResolution.requiredSeeds.length,
         });
-        recording.recordAction({
+        recordingSystem.recordAction({
           type: 'seed-execution',
           step: 'execute-seeds',
           value: { seedsCount: dependencyResolution.requiredSeeds.length },
@@ -211,12 +253,21 @@ async function executeRpaFlowPipeline(flow, options = {}) {
       logger.error('[RpaFlowPipeline] Erros críticos encontrados, abortando pipeline', {
         errors: result.errors,
       });
+      replay.recordEvent('pipeline_aborted', { errors: result.errors.slice(0, 20) });
+      replay.stop();
+      result.replayPath = replay.save(`${replayId}-aborted`);
+      recordingSystem.recordCustom('error', {
+        step: 'pipeline-aborted',
+        value: { errors: result.errors.slice(0, 20) },
+      });
+      recordingSystem.stop();
+      result.recordingPath = recordingSystem.save(`${recordingId}-aborted`);
       return result;
     }
 
     // PASSO 4: Conversão Fluxo → Gravação RPA
     logger.info('[RpaFlowPipeline] Passo 4: Convertendo fluxo para gravação RPA...');
-    recording.recordAction({
+    recordingSystem.recordAction({
       type: 'flow-conversion',
       step: 'convert-flow',
       value: { flowId: flow.id },
@@ -238,7 +289,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
 
     // PASSO 5: Preview dos passos (já está no recording)
     logger.info('[RpaFlowPipeline] Passo 5: Preview dos passos gerado', {
-      stepsCount: recording.steps.length,
+      stepsCount: rpaRecording.steps.length,
     });
 
     // PASSO 6: Salvamento da gravação
@@ -332,6 +383,32 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     });
     result.errors.push(error.message);
   }
+
+  try {
+    logAction({
+      agentId: null,
+      username: null,
+      tenantId,
+      action: 'rpa_pipeline_finished',
+      resource: 'rpa_pipeline',
+      resourceId: flowId,
+      details: {
+        flowId,
+        flowName,
+        replayId,
+        recordingId,
+        success: result.success === true,
+        errors: result.errors ? result.errors.slice(0, 20) : [],
+        warnings: result.warnings ? result.warnings.slice(0, 20) : [],
+        executedSeedsCount: Array.isArray(result.executedSeeds) ? result.executedSeeds.length : 0,
+        recordingIdFinal: result.recording?.id || null,
+        replayPath: result.replayPath || null,
+        recordingPath: result.recordingPath || null,
+      },
+      ipAddress: 'internal',
+      userAgent: 'internal',
+    });
+  } catch (_) {}
 
   return result;
 }
@@ -476,4 +553,3 @@ module.exports = {
   executeRpaFlowPipeline,
   previewRpaFlowPipeline,
 };
-

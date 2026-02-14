@@ -73,7 +73,9 @@ ecosystem.config.js
 .pm2/
 
 # Scripts de desenvolvimento
-scripts/
+scripts/*.md
+scripts/*.txt
+scripts/*.json
 tools/
 
 # Testes
@@ -86,6 +88,10 @@ __tests__/
 # Re-inclui apenas o subset usado pelo backend (evita mandar todos os testes).
 !tests/rpa/
 !tests/rpa/**
+
+# Helper usado pelo runtime RPA legado
+!tests/helpers/
+!tests/helpers/errorClassifier.js
 
 # Outros
 .editorconfig

@@ -12,7 +12,7 @@ const config = require('./rpaConfig');
 const path = require('path');
 const fs = require('fs');
 const { normalizeRpaTestUrls } = require('./utils/urlNormalizer');
-const { ensureAuthenticated } = require('./utils/authHelper');
+const { autoLoginBeforeSteps } = require('./utils/autoLoginFlow');
 
 class RpaTestRunner {
   constructor(options = {}) {
@@ -110,6 +110,7 @@ class RpaTestRunner {
       screenshots: [],
       startTime: new Date().toISOString(),
       replayId: null,
+      tracePath: null,
     };
 
     // Inicia sistema de replay
@@ -123,37 +124,20 @@ class RpaTestRunner {
         await this.init();
       }
 
-      // Faz login automático antes de executar os steps
-      // Navega para a página inicial primeiro se necessário
-      if (this.executor?.page) {
-        const firstStep = recordingData.steps?.[0];
-        if (firstStep && firstStep.type === 'navigate') {
-          const targetUrl = firstStep.url || firstStep.value;
-          if (targetUrl) {
-            try {
-              await this.executor.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-              await this.executor.page.waitForTimeout(1000);
-            } catch (error) {
-              // Se falhar, tenta navegar para a URL base
-              const baseUrl = process.env.TEST_FRONTEND_URL || config.urls.frontend;
-              await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-              await this.executor.page.waitForTimeout(1000);
-            }
-          } else {
-            // Se não há URL, navega para a URL base
-            const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
-            await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await this.executor.page.waitForTimeout(1000);
-          }
-        } else {
-          // Se não há step de navegação, navega para a URL base
-          const baseUrl = process.env.TEST_FRONTEND_URL || 'http://localhost:5173';
-          await this.executor.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          await this.executor.page.waitForTimeout(1000);
+      // Tracing (opcional) - inicia no começo da execução do seed
+      try {
+        if (this.executor?.startTracing) {
+          await this.executor.startTracing();
         }
+      } catch (_) {}
 
-        // Garante autenticação
-        const authResult = await ensureAuthenticated(this.executor.page);
+      // Faz login automático antes de executar os steps
+      if (this.executor?.page) {
+        const authResult = await autoLoginBeforeSteps(this.executor.page, {
+          firstStep: recordingData.steps?.[0],
+          // Mantém compatibilidade com o config atual do runner
+          frontendBaseUrl: process.env.TEST_FRONTEND_URL || config.urls?.frontend,
+        });
         if (!authResult.success) {
           console.warn(`⚠️  Aviso: Não foi possível fazer login automático: ${authResult.error}`);
           console.warn('   O teste continuará, mas pode falhar se a página requer autenticação.');
@@ -195,6 +179,7 @@ class RpaTestRunner {
           error: stepResult.error || null,
           timestamp: stepStartTime,
           duration: new Date(stepEndTime) - new Date(stepStartTime),
+          debug: stepResult.debug || null,
         });
 
         if (!stepResult.success) {
@@ -239,6 +224,13 @@ class RpaTestRunner {
         results.replayPath = replayPath;
       }
 
+      // Para tracing (opcional)
+      try {
+        if (this.executor?.stopTracing) {
+          results.tracePath = await this.executor.stopTracing(`rpa-trace-${recordingData.id}-${Date.now()}`);
+        }
+      } catch (_) {}
+
       results.endTime = new Date().toISOString();
       results.duration = new Date(results.endTime) - new Date(results.startTime);
 
@@ -247,6 +239,57 @@ class RpaTestRunner {
       if (pageErrors.length > 0) {
         results.pageErrors = pageErrors;
       }
+
+      // Adiciona evidências adicionais (não-bloqueantes): console + debug logs + httpErrors
+      try {
+        const consoleLogs = this.executor.getConsoleLogs?.() || [];
+        if (consoleLogs.length > 0) results.consoleLogs = consoleLogs;
+      } catch (_) {}
+
+      try {
+        const debugLogs = this.executor.getDebugLogs?.() || [];
+        if (debugLogs.length > 0) results.debugLogs = debugLogs;
+      } catch (_) {}
+
+      try {
+        const httpErrors = this.executor.getHttpErrors?.() || [];
+        if (httpErrors.length > 0) results.httpErrors = httpErrors;
+      } catch (_) {}
+
+      // Gate forte: falha em pageerror e console.error (mesmo se asserts passaram).
+      // Motivo: evita falsos positivos onde a UI "parece ok", mas há erro em runtime.
+      try {
+        const pageErrorsList = Array.isArray(results.pageErrors) ? results.pageErrors : [];
+        const hasPageError = pageErrorsList.some((e) => e && e.type === 'page_error');
+
+        const consoleLogsList = Array.isArray(results.consoleLogs) ? results.consoleLogs : [];
+        const ignoreConsoleErrors = process.env.RPA_IGNORE_API_CONSOLE_ERRORS === 'true';
+        const ignoredPatterns = ignoreConsoleErrors
+          ? [
+            /failed to fetch/i,
+            /api não acessível/i,
+            /err_connection_refused/i,
+          ]
+          : [];
+        const consoleErrors = consoleLogsList.filter((e) => e && String(e.level || '').toLowerCase() === 'error');
+        const relevantConsoleErrors = consoleErrors.filter((e) => {
+          const text = String(e.text || '');
+          return !ignoredPatterns.some((pattern) => pattern.test(text));
+        });
+        const hasConsoleError = relevantConsoleErrors.length > 0;
+
+        if (hasPageError || hasConsoleError) {
+          results.success = false;
+          results.errors.push({
+            step: 'postcheck',
+            action: 'browser_runtime_gate',
+            error: [
+              hasPageError ? 'Detectado pageerror no browser' : null,
+              hasConsoleError ? 'Detectado console.error no browser' : null,
+            ].filter(Boolean).join(' | '),
+          });
+        }
+      } catch (_) {}
 
       // Adiciona screenshots
       const screenshots = this.executor.getScreenshots();
@@ -265,6 +308,13 @@ class RpaTestRunner {
         results.replayId = this.replaySystem.replayData.id;
         results.replayPath = replayPath;
       }
+
+      // Para tracing (opcional) mesmo em erro fatal
+      try {
+        if (this.executor?.stopTracing) {
+          results.tracePath = await this.executor.stopTracing(`rpa-trace-${recordingData.id}-fatal-${Date.now()}`);
+        }
+      } catch (_) {}
       
       results.success = false;
       results.errors.push({

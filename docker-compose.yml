@@ -36,16 +36,60 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       # OpenAI API Key (server default, opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # -------------------------------------------------------------------
+      # PBX v1 (Asterisk Realtime/ODBC + AMI)
+      # -------------------------------------------------------------------
+      AMI_HOST: ${AMI_HOST:-asterisk}
+      AMI_PORT: ${AMI_PORT:-5038}
+      AMI_USERNAME: ${AMI_USERNAME:-ragent2}
+      AMI_SECRET: ${AMI_SECRET:-ragent2}
+      AMI_ORIGINATE_ENABLED: ${AMI_ORIGINATE_ENABLED:-false}
+      PBX_MEDIA_DIR: ${PBX_MEDIA_DIR:-/app/api/data/pbx-media}
+      PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
+      PBX_RECORDING_ENABLED: ${PBX_RECORDING_ENABLED:-false}
+      PBX_MIXMONITOR_DIR: ${PBX_MIXMONITOR_DIR:-/var/spool/asterisk/monitor/pbx}
     ports:
       - "${API_PORT:-3001}:3001"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       rag-service:
         condition: service_started
+      asterisk:
+        condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - pbx-media:/app/api/data/pbx-media
+      - pbx-recordings:/app/api/data/pbx-recordings
+
+  asterisk:
+    build:
+      context: ./pbx/asterisk
+      dockerfile: ./Dockerfile
+    image: r-agent2-asterisk:latest
+    container_name: chatbot-asterisk
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
+      - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
+      - pbx-media:/var/lib/asterisk/sounds/pbx
+      - pbx-recordings:/var/spool/asterisk/monitor/pbx
+    command: sh -c "asterisk -f -vvvvv -d"
+    ports:
+      - "${AMI_PORT:-5038}:5038"
+      - "${SIP_UDP_PORT:-5060}:5060/udp"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "asterisk -rx 'core show version' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   frontend:
     build:
@@ -76,14 +120,17 @@ services:
       PORT: 8000
       DEBUG: ${RAG_DEBUG:-false}
       EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-384}
       CHUNK_SIZE: ${RAG_CHUNK_SIZE:-500}
       CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-50}
       CHUNK_STRATEGY: ${RAG_CHUNK_STRATEGY:-sentence}
-      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-faiss}
+      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-postgres}
       VECTOR_STORE_PATH: /app/data/vector_store
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Usa o mesmo Postgres da API (fonte única)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
     ports:
       - "${RAG_PORT:-8001}:8001"
     volumes:
@@ -91,7 +138,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: chatbot-postgres
     environment:
       POSTGRES_USER: ${PGUSER:-results_app}
@@ -132,5 +179,7 @@ volumes:
   rag-vector-store:
   redis-data:
   postgres-data:
+  pbx-media:
+  pbx-recordings:
 
 

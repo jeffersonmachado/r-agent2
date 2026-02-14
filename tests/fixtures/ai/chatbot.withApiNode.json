@@ -1,0 +1,24 @@
+{
+  "tenantId": "tenant-demo",
+  "id": "flow-api",
+  "name": "Fluxo Com API",
+  "version": 1,
+  "metadata": {
+    "generatedBy": "ai",
+    "generated": true,
+    "status": "draft",
+    "requiresReview": true
+  },
+  "nodes": [
+    { "id": "start_1", "type": "start", "config": {}, "next": "api_1" },
+    {
+      "id": "api_1",
+      "type": "api",
+      "config": { "url": "https://example.com", "method": "GET" },
+      "next": "fallback_1"
+    },
+    { "id": "fallback_1", "type": "fallback", "config": { "maxAttempts": 3, "escalationMode": "ticket" }, "next": "end_1" },
+    { "id": "end_1", "type": "end", "config": {} }
+  ]
+}
+

@@ -154,6 +154,19 @@ export function reindexAllNotIndexed(tenantId = null, includeInconsistent = fals
 }
 
 /**
+ * Reindex completo do tenant (zera rag_chunks e reprocessa tudo).
+ *
+ * Endpoint: POST /rag/reindex-all?tenantId=...
+ */
+export function reindexAllTenant(tenantId) {
+  if (!tenantId) {
+    return Promise.reject(new Error('reindexAllTenant: tenantId é obrigatório'));
+  }
+  const params = new URLSearchParams({ tenantId: String(tenantId) });
+  return fetchJson(`/rag/reindex-all?${params.toString()}`, { method: 'POST' });
+}
+
+/**
  * Obtém estatísticas de documentos.
  * 
  * @param {string} [tenantId] - ID do tenant
@@ -168,6 +181,40 @@ export function getDocumentsStats(tenantId = null) {
 
   return fetchJson(url, {
     method: 'GET',
+  });
+}
+
+/**
+ * Health do RAG (Node): compara BD vs vector store.
+ *
+ * @param {string|null} tenantId
+ * @param {{ autoRepair?: boolean }} [options]
+ * @returns {Promise<any>}
+ */
+export function getRagHealth(tenantId = null, options = {}) {
+  const params = new URLSearchParams();
+  if (tenantId) params.append('tenantId', tenantId);
+  const query = params.toString();
+  const url = `/rag/health${query ? `?${query}` : ''}`;
+  return fetchJson(url, { method: 'GET' });
+}
+
+/**
+ * Limpa documentos órfãos do vector store (vector_ahead).
+ * Se `documentIds` não for fornecido, o backend detecta automaticamente (vectorIds - dbIds).
+ *
+ * @param {string|null} tenantId
+ * @param {{ documentIds?: string[] }} [options]
+ * @returns {Promise<any>}
+ */
+export function cleanOrphanedVectorDocuments(tenantId = null, options = {}) {
+  const body = {};
+  if (tenantId) body.tenantId = tenantId; // compatibilidade futura; o backend usa auth tenant
+  if (Array.isArray(options.documentIds) && options.documentIds.length > 0) body.documentIds = options.documentIds;
+  return fetchJson('/rag/documents/clean-orphans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 }
 
@@ -369,90 +416,42 @@ export async function uploadDocument(file, options = {}) {
     return Promise.reject(new Error('uploadDocument: file é obrigatório'));
   }
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = async (e) => {
-      try {
-        const content = e.target.result;
-        const fileName = file.name;
-        const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
-        
-        // Extrai título do nome do arquivo (sem extensão)
-        const title = fileName.replace(/\.[^/.]+$/, '');
-        
-        // Processa conteúdo baseado no tipo de arquivo
-        let documentContent = content;
-        
-        // PRIORIDADE: Se o conteúdo extraído já foi fornecido nos metadados (OCR, PDF, texto extraído), usa ele
-        if (options.metadata?.extractedContent) {
-          documentContent = options.metadata.extractedContent;
-          logger.debug('Usando conteúdo extraído fornecido nos metadados', {
-            fileName,
-            contentLength: documentContent.length,
-          });
-        } else if (file.type.startsWith('image/')) {
-          // Para imagens sem OCR pré-processado, usa placeholder informativo
-          documentContent = `[Imagem: ${fileName}]\n\nEsta imagem foi enviada para indexação no RAG. Se necessário, use OCR para extrair texto da imagem.`;
-        } else if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv'].includes(fileExtension)) {
-          // Se for texto, usa diretamente
-          documentContent = content;
-        } else if (fileExtension === 'pdf') {
-          // Para PDF sem extração prévia, usa placeholder
-          // Nota: O conteúdo deve ser extraído antes de chamar uploadDocument
-          documentContent = `[PDF: ${fileName}]\n\nConteúdo do PDF não foi extraído. Use processFile() antes de chamar uploadDocument() para extrair o texto.`;
-        } else {
-          // Para outros tipos, tenta usar como texto ou usa placeholder
-          try {
-            documentContent = content;
-          } catch {
-            documentContent = `[Arquivo: ${fileName} - Tipo: ${file.type}]\n\nConteúdo não foi extraído. Use processFile() antes de chamar uploadDocument() para extrair o conteúdo.`;
-          }
-        }
-        
-        const documentData = {
-          title: title,
-          content: documentContent,
-          tenantId: options.tenantId || null, // Passa tenantId se fornecido
-          metadata: {
-            source: 'upload',
-            category: options.category || null,
-            tags: options.tags || [],
-            fileName: fileName,
-            fileType: file.type,
-            fileSize: file.size,
-            ...options.metadata,
-          },
-          autoIndex: options.autoIndex !== false,
-        };
-        
-        logger.debug('Criando documento via uploadDocument', {
-          fileName,
-          title,
-          contentLength: documentContent.length,
-          tenantId: documentData.tenantId,
-          autoIndex: documentData.autoIndex,
-        });
-        
-        const result = await createDocument(documentData);
-        resolve(result);
-      } catch (error) {
-        logger.error('Erro ao processar arquivo', error);
-        reject(error);
-      }
-    };
-    
-    reader.onerror = () => {
-      reject(new Error('Erro ao ler arquivo'));
-    };
-    
-    // Lê como texto para arquivos de texto, ou como data URL para outros
-    if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv'].includes(file.name.split('.').pop()?.toLowerCase() || '')) {
-      reader.readAsText(file);
-    } else {
-      // Para imagens e outros tipos, lê como data URL
-      reader.readAsDataURL(file);
-    }
+  const fileName = file.name;
+  const formData = new FormData();
+  formData.append('file', file, fileName);
+  if (options.executionId) formData.append('executionId', String(options.executionId));
+  // tenantId (request context): legado/compatibilidade. Idealmente, o tenant vem do header X-Tenant-Id.
+  if (options.tenantId) formData.append('tenantId', String(options.tenantId));
+  // persistTenantId: permite persistir no tenant alvo (ex.: tenant recém-criado) mantendo o contexto do caller.
+  if (options.persistTenantId) formData.append('persistTenantId', String(options.persistTenantId));
+  if (options.dryRun === true) formData.append('dryRun', 'true');
+  if (options.category) formData.append('category', String(options.category));
+  if (Array.isArray(options.tags)) formData.append('tags', JSON.stringify(options.tags));
+  if (options.autoIndex === false) formData.append('autoIndex', 'false');
+  // Permite metadados extras (ex.: origem da tela) e extractedContent (best-effort)
+  if (options.metadata && typeof options.metadata === 'object') {
+    formData.append('metadata', JSON.stringify(options.metadata));
+  }
+  // Fonte padrão para uploads de arquivo
+  formData.append('source', 'file');
+
+  logger.debug('Upload multipart para RAG', {
+    fileName,
+    fileType: file.type,
+    fileSize: file.size,
+    tenantId: options.tenantId || null,
+    persistTenantId: options.persistTenantId || null,
+    dryRun: options.dryRun === true,
+    category: options.category || null,
+    autoIndex: options.autoIndex !== false,
+  });
+
+  // Upload + extração server-side pode levar mais que 15s em PDFs grandes
+  return fetchJson('/rag/documents/upload', {
+    method: 'POST',
+    body: formData,
+    timeoutMs: 45000,
+    ...(options.headers && typeof options.headers === 'object' ? { headers: options.headers } : {}),
   });
 }
 

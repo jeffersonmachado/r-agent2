@@ -1,0 +1,34 @@
+{
+  "tenantId": "test-tenant-synonym",
+  "synonyms": {
+    "preço": [
+      "valor",
+      "custo",
+      "quanto custa"
+    ]
+  },
+  "queryPatterns": {
+    "successful": [],
+    "failed": []
+  },
+  "promptVariations": [],
+  "metrics": {
+    "totalQueries": 0,
+    "successfulQueries": 0,
+    "failedQueries": 0,
+    "avgConfidence": 0.0,
+    "lastUpdated": null
+  },
+  "config": {
+    "minScore": 0.45,
+    "topK": 6,
+    "chunkOverlap": 75
+  },
+  "learningCycles": {
+    "total": 0,
+    "lastCycle": null,
+    "cycles": []
+  },
+  "createdAt": "2026-02-07T13:05:16.934748",
+  "updatedAt": "2026-02-07T14:28:17.203273"
+}

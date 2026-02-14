@@ -10,6 +10,18 @@ const config = require('../utils/config');
 
 let sequelize = null;
 
+function shouldEnableSequelizeLogging() {
+  const raw = process.env.SEQUELIZE_LOGGING;
+  if (raw !== undefined) {
+    const v = String(raw).trim().toLowerCase();
+    if (['0', 'false', 'off', 'no'].includes(v)) return false;
+    if (['1', 'true', 'on', 'yes'].includes(v)) return true;
+  }
+
+  // Padrão: log de SQL apenas em development
+  return process.env.NODE_ENV === 'development';
+}
+
 /**
  * Obtém configuração do banco de dados
  * Usa config.js como fonte principal, com fallback para env vars
@@ -64,7 +76,7 @@ function createSequelize() {
 
   const sequelizeInstance = new Sequelize(dbConfig.url, {
     dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' 
+    logging: shouldEnableSequelizeLogging()
       ? (msg) => logger.debug(`[Sequelize] ${msg}`)
       : false,
     define: defaultModelOptions, // Padrão global para todos os models

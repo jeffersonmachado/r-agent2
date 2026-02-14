@@ -10,25 +10,107 @@
 const { getOrCreateRpaToken } = require('./rpaTokenManager');
 
 /**
+ * Aguarda a UI sair do estado de login (campos de login sumirem).
+ * Útil para validar que autenticação via token/UI realmente "pegou" no frontend.
+ *
+ * @param {Object} page - Página do Playwright
+ * @param {Object} options
+ * @param {number} options.timeout - Timeout em ms
+ * @returns {Promise<boolean>}
+ */
+async function waitForNotLoginPage(page, options = {}) {
+  const timeout = options.timeout || 10000;
+  const start = Date.now();
+
+  // Loop simples (sem depender de APIs internas do app)
+  while (Date.now() - start < timeout) {
+    const isLogin = await isLoginPage(page);
+    if (!isLogin) return true;
+    await page.waitForTimeout(250);
+  }
+
+  return false;
+}
+
+/**
+ * Se o modal de seleção de tenant estiver aberto (super-admin), seleciona e acessa.
+ * No frontend atual, "system" costuma vir pré-selecionado.
+ *
+ * @param {Object} page - Página do Playwright
+ * @param {Object} options
+ * @param {number} options.timeout - Timeout em ms
+ * @param {string} options.tenantId - Tenant preferido (default: system)
+ * @returns {Promise<{handled: boolean, error?: string}>}
+ */
+async function handleTenantSelectorModalIfPresent(page, options = {}) {
+  const timeout = options.timeout || 10000;
+  const tenantId = options.tenantId || process.env.TEST_TENANT_ID || process.env.RPA_TENANT_ID || 'system';
+
+  try {
+    // Detecta pelo título do modal e/ou botão "Acessar"
+    const modalTitle = page.locator('text=Selecione o Tenant');
+    const accessButton = page.locator('button:has-text("Acessar")');
+
+    const modalVisible = await modalTitle.isVisible({ timeout: 1500 }).catch(() => false);
+    const accessVisible = await accessButton.isVisible({ timeout: 1500 }).catch(() => false);
+
+    if (!modalVisible && !accessVisible) {
+      return { handled: false };
+    }
+
+    // Aguarda carregar lista, tenta selecionar tenant desejado (se existir)
+    const tenantButtonCandidates = [
+      `button:has-text("${tenantId}")`,
+      `button:has-text("${tenantId.toUpperCase()}")`,
+      'button:has-text("System")',
+      'button:has-text("system")',
+    ];
+
+    for (const selector of tenantButtonCandidates) {
+      const btn = page.locator(selector).first();
+      const visible = await btn.isVisible({ timeout: 800 }).catch(() => false);
+      if (visible) {
+        await btn.click().catch(() => null);
+        break;
+      }
+    }
+
+    // Clica "Acessar" (o modal pode pré-selecionar system automaticamente)
+    await accessButton.click({ timeout }).catch(() => null);
+
+    // Aguarda o modal fechar
+    await modalTitle.waitFor({ state: 'detached', timeout }).catch(() => null);
+    return { handled: true };
+  } catch (error) {
+    return { handled: false, error: error.message };
+  }
+}
+
+/**
  * Faz login automático na página atual.
  * 
  * @param {Object} page - Página do Playwright
  * @param {Object} options - Opções de login
- * @param {string} options.email - Email para login (padrão: variável de ambiente)
+ * @param {string} options.username - Username para login (padrão: variável de ambiente)
+ * @param {string} options.email - Email para login (compatibilidade, fallback)
  * @param {string} options.password - Senha para login (padrão: variável de ambiente)
  * @param {number} options.timeout - Timeout em ms (padrão: 10000)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function performLogin(page, options = {}) {
-  const email = options.email || 
-                process.env.TEST_USER_EMAIL || 
-                process.env.TEST_ADMIN_EMAIL || 
-                'admin@example.com';
+  // O frontend atual usa username/senha (não email).
+  const username = options.username ||
+                   process.env.TEST_USERNAME ||
+                   process.env.TEST_ADMIN_USERNAME ||
+                   process.env.TEST_USER_USERNAME ||
+                   // Defaults alinhados com docs e seed do projeto
+                   'systemadmin';
   
   const password = options.password || 
                    process.env.TEST_USER_PASSWORD || 
                    process.env.TEST_ADMIN_PASSWORD || 
-                   'admin123';
+                   // Defaults alinhados com docs e seed do projeto
+                   'Admin123!';
   
   const timeout = options.timeout || 10000;
 
@@ -36,14 +118,15 @@ async function performLogin(page, options = {}) {
     // Aguarda página carregar
     await page.waitForLoadState('domcontentloaded', { timeout });
 
-    // Seletores para campo de email
-    const emailSelectors = [
-      'input[type="email"]',
-      'input[name="email"]',
-      'input[placeholder*="email" i]',
-      'input[id*="email" i]',
-      'input[data-testid*="email" i]',
-      'input:first-of-type'
+    // Seletores para campo de username
+    const usernameSelectors = [
+      'input[name="username"]',
+      'input[id*="username" i]',
+      'input[placeholder*="username" i]',
+      'input[placeholder*="usuário" i]',
+      'input[autocomplete="username"]',
+      // Fallback conservador (primeiro input não-password)
+      'input:not([type="password"])',
     ];
 
     // Seletores para campo de senha
@@ -54,7 +137,6 @@ async function performLogin(page, options = {}) {
       'input[placeholder*="password" i]',
       'input[id*="password" i]',
       'input[data-testid*="password" i]',
-      'input:last-of-type'
     ];
 
     // Seletores para botão de login
@@ -70,14 +152,14 @@ async function performLogin(page, options = {}) {
       'button[data-testid*="submit" i]'
     ];
 
-    // Tenta preencher email
-    let emailFilled = false;
-    for (const selector of emailSelectors) {
+    // Tenta preencher username
+    let usernameFilled = false;
+    for (const selector of usernameSelectors) {
       try {
         const element = await page.$(selector);
         if (element) {
-          await element.fill(email);
-          emailFilled = true;
+          await element.fill(username);
+          usernameFilled = true;
           break;
         }
       } catch (e) {
@@ -85,10 +167,10 @@ async function performLogin(page, options = {}) {
       }
     }
 
-    if (!emailFilled) {
+    if (!usernameFilled) {
       return {
         success: false,
-        error: 'Não foi possível encontrar o campo de email'
+        error: 'Não foi possível encontrar o campo de username'
       };
     }
 
@@ -142,22 +224,22 @@ async function performLogin(page, options = {}) {
       };
     }
 
-    // Aguarda redirecionamento ou mudança na página
-    await page.waitForTimeout(2000);
+    // Aguarda redirecionamento/atualização de UI (o app pode não mudar a URL imediatamente)
+    await page.waitForTimeout(1500);
 
-    // Verifica se ainda está na página de login (pode indicar erro)
-    const currentUrl = page.url();
-    if (currentUrl.includes('/login')) {
-      // Aguarda mais um pouco para ver se redireciona
-      await page.waitForTimeout(2000);
-      
-      // Se ainda estiver em login, pode ter falhado
-      if (page.url().includes('/login')) {
-        return {
-          success: false,
-          error: 'Login pode ter falhado - ainda está na página de login'
-        };
-      }
+    // Se for super-admin, pode abrir modal de seleção de tenant.
+    const modalHandled = await handleTenantSelectorModalIfPresent(page, { timeout, tenantId: options.tenantId });
+    if (modalHandled.error) {
+      // Não falha por isso; só registra via retorno se ainda ficar travado
+    }
+
+    // Valida que saiu do estado de login
+    const notLogin = await waitForNotLoginPage(page, { timeout });
+    if (!notLogin) {
+      return {
+        success: false,
+        error: 'Login pode ter falhado - UI ainda aparenta estar no estado de login',
+      };
     }
 
     return { success: true };
@@ -183,13 +265,34 @@ async function isLoginPage(page) {
     }
 
     // Verifica se há campos de login na página
-    const emailField = await page.$('input[type="email"], input[name="email"]').catch(() => null);
+    const userField = await page.$('input[name="username"], input[placeholder*="username" i], input[placeholder*="usuário" i]').catch(() => null);
     const passwordField = await page.$('input[type="password"], input[name="password"]').catch(() => null);
     
-    return !!(emailField && passwordField);
+    return !!(userField && passwordField);
   } catch (error) {
     return false;
   }
+}
+
+/**
+ * Aguarda até que a UI esteja claramente em "login" (inputs visíveis) ou até timeout.
+ * Isso evita condição de corrida quando a rota protegida (ex: /maintenance) renderiza
+ * o componente de Login sem mudar a URL imediatamente.
+ *
+ * @param {Object} page
+ * @param {Object} options
+ * @param {number} options.timeout
+ * @returns {Promise<boolean>}
+ */
+async function waitForLoginPage(page, options = {}) {
+  const timeout = options.timeout || 4000;
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const isLogin = await isLoginPage(page);
+    if (isLogin) return true;
+    await page.waitForTimeout(200);
+  }
+  return false;
 }
 
 /**
@@ -204,13 +307,19 @@ async function performRpaLogin(page, options = {}) {
   // Prioridade: options.apiBaseUrl > TEST_API_URL > API_BASE_URL > rpa.config.json > config.json > fallback
   const rpaConfig = require('../rpaConfig');
   const mainConfig = require('../../../api/utils/config');
-  const apiBaseUrl = options.apiBaseUrl || 
-                     process.env.TEST_API_URL || 
-                     process.env.API_BASE_URL || 
-                     rpaConfig.urls.api ||
-                     mainConfig.get('tests.rpa.apiUrl') ||
-                     mainConfig.get('api.baseUrl') ||
-                     'http://localhost:3000';
+  const apiPort = Number(mainConfig.get('api.port', 3001));
+  const primaryApiBaseUrl = options.apiBaseUrl || 
+                            process.env.TEST_API_URL || 
+                            process.env.API_BASE_URL || 
+                            rpaConfig.urls.api ||
+                            mainConfig.get('tests.rpa.apiUrl') ||
+                            mainConfig.get('api.baseUrl') ||
+                            `http://localhost:${apiPort}`;
+
+  const tenantId = options.tenantId ||
+                   process.env.TEST_TENANT_ID ||
+                   process.env.RPA_TENANT_ID ||
+                   'system';
 
   try {
     // Obtém token RPA
@@ -223,44 +332,126 @@ async function performRpaLogin(page, options = {}) {
       };
     }
 
-    // Faz login via API
-    const loginUrl = `${apiBaseUrl}/auth/rpa/login`;
-    const response = await page.request.post(loginUrl, {
-      data: {
-        token: rpaToken,
-      },
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const normalizeBaseUrl = (url) => {
+      if (!url || typeof url !== 'string') return null;
+      return url.endsWith('/') ? url.slice(0, -1) : url;
+    };
+
+    // Fallback inteligente de URL da API:
+    // Em alguns ambientes a API roda em 3000, em outros em 3001.
+    // Tentamos a URL configurada primeiro e depois portas comuns.
+    const candidateBaseUrls = [
+      primaryApiBaseUrl,
+      `http://localhost:${apiPort}`,
+      'http://localhost:3001',
+      'http://localhost:3000',
+    ]
+      .map(normalizeBaseUrl)
+      .filter(Boolean);
+
+    // Remove duplicados preservando ordem
+    const seen = new Set();
+    const uniqueCandidates = candidateBaseUrls.filter((u) => {
+      if (seen.has(u)) return false;
+      seen.add(u);
+      return true;
     });
 
-    if (!response.ok()) {
-      const errorText = await response.text().catch(() => 'Erro desconhecido');
-      return {
-        success: false,
-        error: `Login RPA falhou: ${response.status()} - ${errorText}`
-      };
+    let lastError = null;
+    let lastStatus = null;
+    let lastBaseUrl = null;
+    let result = null;
+
+    for (const baseUrl of uniqueCandidates) {
+      lastBaseUrl = baseUrl;
+      try {
+        // Faz login via API
+        const loginUrl = `${baseUrl}/auth/rpa/login`;
+        const response = await page.request.post(loginUrl, {
+          data: {
+            token: rpaToken,
+            tenantId,
+          },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok()) {
+          lastStatus = response.status();
+          const errorText = await response.text().catch(() => 'Erro desconhecido');
+          lastError = `Login RPA falhou em ${baseUrl}: ${response.status()} - ${errorText}`;
+          continue;
+        }
+
+        const parsed = await response.json().catch(() => null);
+        // Só considera sucesso se vier um token válido
+        if (parsed && parsed.token) {
+          result = parsed;
+          break;
+        }
+
+        // Resposta 200 mas sem token => trata como inválida e tenta próxima baseUrl
+        lastStatus = response.status();
+        lastError = `Login RPA inválido em ${baseUrl}: resposta sem token`;
+        continue;
+      } catch (err) {
+        lastError = `Erro ao fazer login RPA em ${baseUrl}: ${err.message}`;
+        continue;
+      }
     }
 
-    const result = await response.json();
+    if (!result || !result.token) {
+      return {
+        success: false,
+        error: lastError || `Login RPA falhou (apiBaseUrl=${lastBaseUrl || primaryApiBaseUrl}, status=${lastStatus || 'n/a'})`,
+      };
+    }
     
-    if (!result.token) {
-      return {
-        success: false,
-        error: 'Token de sessão não recebido'
-      };
-    }
-
     // Armazena token no localStorage da página (chave usada pelo frontend)
-    await page.evaluate((token) => {
+    await page.evaluate(({ token, agent }) => {
       localStorage.setItem('auth_token', token);
+      // Ajuda o frontend a ter contexto imediato (sem depender apenas de /auth/me)
+      if (agent) {
+        try {
+          localStorage.setItem('auth_agent', JSON.stringify(agent));
+        } catch (e) {
+          // ignora
+        }
+      }
       // Dispara evento de autenticação se necessário
-      window.dispatchEvent(new CustomEvent('rpa-authenticated', { detail: { token } }));
-    }, result.token);
+      window.dispatchEvent(new CustomEvent('rpa-authenticated', { detail: { token, agent } }));
+    }, { token: result.token, agent: result.agent || null });
 
     // Recarrega a página para aplicar autenticação
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1000);
+
+    // Garante que o frontend realmente saiu do estado de login
+    let notLogin = await waitForNotLoginPage(page, { timeout: options.timeout || 10000 });
+    if (!notLogin) {
+      // Fallback: força navegação para uma rota autenticada e revalida
+      const rpaConfig = require('../rpaConfig');
+      const frontendBaseUrl = options.frontendBaseUrl ||
+        process.env.TEST_FRONTEND_URL ||
+        rpaConfig.urls.frontend ||
+        'http://localhost:5173';
+
+      try {
+        await page.goto(`${frontendBaseUrl}/support`, { waitUntil: 'domcontentloaded', timeout: options.timeout || 30000 });
+        await page.waitForTimeout(500);
+      } catch (e) {
+        // ignora, vai tentar validar mesmo assim
+      }
+
+      notLogin = await waitForNotLoginPage(page, { timeout: options.timeout || 10000 });
+      if (!notLogin) {
+        return { success: false, error: 'Token RPA aplicado, mas UI ainda aparenta estar no estado de login (mesmo após navegar para /support)' };
+      }
+    }
+
+    // Se por algum motivo abrir o modal de tenant (ex.: super-admin), resolve.
+    await handleTenantSelectorModalIfPresent(page, { timeout: options.timeout || 10000, tenantId }).catch(() => null);
 
     return { success: true };
   } catch (error) {
@@ -281,8 +472,18 @@ async function performRpaLogin(page, options = {}) {
  */
 async function ensureAuthenticated(page, options = {}) {
   try {
-    // Verifica se já está autenticado (não está na página de login)
-    const isLogin = await isLoginPage(page);
+    // Verifica se já está autenticado (não está na página de login).
+    // Atenção: em rotas protegidas (ex.: /maintenance), o app pode renderizar Login
+    // mantendo a URL original; e às vezes os inputs demoram a aparecer.
+    let isLogin = await isLoginPage(page);
+    if (!isLogin) {
+      // Dá uma pequena janela para o React renderizar os inputs de login, se for o caso.
+      // Se aparecer, tratamos como login e seguimos com autenticação.
+      const loginSoon = await waitForLoginPage(page, { timeout: options.loginDetectTimeout || 4000 });
+      if (loginSoon) {
+        isLogin = true;
+      }
+    }
     
     if (!isLogin) {
       return { success: true, loggedIn: true };
@@ -292,6 +493,20 @@ async function ensureAuthenticated(page, options = {}) {
     const rpaLoginResult = await performRpaLogin(page, options);
     
     if (rpaLoginResult.success) {
+      // O app pode não redirecionar automaticamente de /login quando já está autenticado.
+      // Então, após autenticar, força navegação para uma rota autenticada.
+      if (page.url().includes('/login')) {
+        const rpaConfig = require('../rpaConfig');
+        const frontendBaseUrl = options.frontendBaseUrl ||
+          process.env.TEST_FRONTEND_URL ||
+          rpaConfig.urls.frontend ||
+          'http://localhost:5173';
+        await page.goto(`${frontendBaseUrl}/support`, { waitUntil: 'domcontentloaded', timeout: options.timeout || 30000 });
+        await page.waitForTimeout(500);
+      }
+
+      // Se modal de tenant aparecer por algum motivo, resolve
+      await handleTenantSelectorModalIfPresent(page, { timeout: options.timeout || 10000, tenantId: options.tenantId }).catch(() => null);
       return { success: true, loggedIn: true };
     }
 
@@ -302,6 +517,18 @@ async function ensureAuthenticated(page, options = {}) {
     const uiLoginResult = await performLogin(page, options);
     
     if (uiLoginResult.success) {
+      if (page.url().includes('/login')) {
+        const rpaConfig = require('../rpaConfig');
+        const frontendBaseUrl = options.frontendBaseUrl ||
+          process.env.TEST_FRONTEND_URL ||
+          rpaConfig.urls.frontend ||
+          'http://localhost:5173';
+        await page.goto(`${frontendBaseUrl}/support`, { waitUntil: 'domcontentloaded', timeout: options.timeout || 30000 });
+        await page.waitForTimeout(500);
+      }
+
+      // Se modal de tenant aparecer, resolve
+      await handleTenantSelectorModalIfPresent(page, { timeout: options.timeout || 10000, tenantId: options.tenantId }).catch(() => null);
       return { success: true, loggedIn: true };
     } else {
       return {
@@ -323,6 +550,7 @@ module.exports = {
   performLogin,
   performRpaLogin,
   isLoginPage,
+  waitForLoginPage,
   ensureAuthenticated,
 };
 

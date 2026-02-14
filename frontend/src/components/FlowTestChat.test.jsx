@@ -119,16 +119,16 @@ describe('FlowTestChat - Upload de Arquivos', () => {
 
   describe('Seleção de Arquivos', () => {
     it('deve renderizar botão de anexo', () => {
-      render(<FlowTestChat flow={mockFlow} />);
+      const { getByTitle } = render(<FlowTestChat flow={mockFlow} />);
 
-      const attachButton = screen.getByTitle(/anexar arquivo/i);
+      const attachButton = getByTitle(/anexar arquivo/i);
       expect(attachButton).toBeDefined();
     });
 
     it('deve abrir seletor de arquivo ao clicar no botão de anexo', () => {
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container } = render(<FlowTestChat flow={mockFlow} />);
 
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
 
       expect(fileInput).toBeDefined();
       expect(fileInput).toHaveAttribute('accept', expect.stringContaining('image/*'));
@@ -138,9 +138,9 @@ describe('FlowTestChat - Upload de Arquivos', () => {
       const { validateFile } = await import('../utils/fileProcessor');
       validateFile.mockReturnValue(true);
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container } = render(<FlowTestChat flow={mockFlow} />);
 
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
       fireEvent.change(fileInput, {
@@ -165,9 +165,9 @@ describe('FlowTestChat - Upload de Arquivos', () => {
         file: new File(['content'], 'test.txt'),
       });
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container } = render(<FlowTestChat flow={mockFlow} />);
 
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
       fireEvent.change(fileInput, {
@@ -188,9 +188,9 @@ describe('FlowTestChat - Upload de Arquivos', () => {
         file: new File(['content'], 'test.txt'),
       });
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container, getByText } = render(<FlowTestChat flow={mockFlow} />);
 
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
       fireEvent.change(fileInput, {
@@ -198,7 +198,7 @@ describe('FlowTestChat - Upload de Arquivos', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/test\.txt/i)).toBeDefined();
+        expect(getByText(/test\.txt/i)).toBeDefined();
       });
     });
 
@@ -206,9 +206,9 @@ describe('FlowTestChat - Upload de Arquivos', () => {
       const { validateFile } = await import('../utils/fileProcessor');
       validateFile.mockReturnValue(true);
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container } = render(<FlowTestChat flow={mockFlow} />);
 
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
       const files = Array.from({ length: 6 }, (_, i) =>
         new File(['content'], `test${i}.txt`, { type: 'text/plain' })
       );
@@ -240,9 +240,9 @@ describe('FlowTestChat - Upload de Arquivos', () => {
         file: new File(['content'], 'test.txt'),
       });
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container, getByText } = render(<FlowTestChat flow={mockFlow} />);
 
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
       fireEvent.change(fileInput, {
@@ -255,11 +255,11 @@ describe('FlowTestChat - Upload de Arquivos', () => {
 
       // Aguarda processamento
       await waitFor(() => {
-        const sendButton = screen.getByText(/enviar/i);
+        const sendButton = getByText(/enviar/i);
         expect(sendButton).not.toBeDisabled();
       });
 
-      const sendButton = screen.getByText(/enviar/i);
+      const sendButton = getByText(/enviar/i);
       fireEvent.click(sendButton);
 
       await waitFor(() => {
@@ -285,12 +285,12 @@ describe('FlowTestChat - Upload de Arquivos', () => {
         file: new File(['content'], 'test.txt'),
       });
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container, getByPlaceholderText, getByText } = render(<FlowTestChat flow={mockFlow} />);
 
-      const textInput = screen.getByPlaceholderText(/digite sua mensagem/i);
+      const textInput = getByPlaceholderText(/digite sua mensagem/i);
       fireEvent.change(textInput, { target: { value: 'Mensagem de teste' } });
 
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
       fireEvent.change(fileInput, {
@@ -301,7 +301,7 @@ describe('FlowTestChat - Upload de Arquivos', () => {
         expect(processFile).toHaveBeenCalled();
       });
 
-      const sendButton = screen.getByText(/enviar/i);
+      const sendButton = getByText(/enviar/i);
       fireEvent.click(sendButton);
 
       await waitFor(() => {
@@ -333,10 +333,10 @@ describe('FlowTestChat - Upload de Arquivos', () => {
 
       useFlowRunner.mockReturnValue(mockWithFiles);
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { container, getByText } = render(<FlowTestChat flow={mockFlow} />);
 
       // Simula mensagem com arquivo
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = container.querySelector('input[type="file"]');
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
       fireEvent.change(fileInput, {
@@ -344,7 +344,7 @@ describe('FlowTestChat - Upload de Arquivos', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/test\.txt/i)).toBeDefined();
+        expect(getByText(/test\.txt/i)).toBeDefined();
       });
     });
   });
@@ -359,9 +359,9 @@ describe('FlowTestChat - Upload de Arquivos', () => {
         file: new File(['content'], 'test.txt'),
       });
 
-      render(<FlowTestChat flow={mockFlow} />);
+      const { getByPlaceholderText } = render(<FlowTestChat flow={mockFlow} />);
 
-      const inputArea = screen.getByPlaceholderText(/digite sua mensagem/i).closest('form').parentElement;
+      const inputArea = getByPlaceholderText(/digite sua mensagem/i).closest('form').parentElement;
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
       fireEvent.dragOver(inputArea, {

@@ -130,6 +130,31 @@ export async function validateProviderToken(provider, apiKey) {
 }
 
 /**
+ * Valida automaticamente as credenciais de IA já salvas (criptografadas) para um tenant.
+ * Não expõe a API key no frontend: o backend usa a key armazenada.
+ *
+ * @param {{ tenantId?: string|null, provider?: string|null }} params
+ * @returns {Promise<{success: boolean, valid: boolean, provider?: string|null, error?: string|null}>}
+ */
+export async function validateTenantAiCredentials({ tenantId = null, provider = null } = {}) {
+  try {
+    const endpoint = tenantId
+      ? `/tenants/${encodeURIComponent(tenantId)}/ai-credentials/test`
+      : '/tenants/current/ai-credentials/test';
+
+    return await fetchJson(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...(provider ? { provider } : {}),
+      }),
+    });
+  } catch (error) {
+    logger.error('Erro ao validar credenciais de IA do tenant', error);
+    throw error;
+  }
+}
+
+/**
  * Valida a conexão do Redis.
  * 
  * @param {string} redisUrl - URL do Redis a ser testada

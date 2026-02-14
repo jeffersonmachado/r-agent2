@@ -8,52 +8,60 @@
 
 const { generateAiResponse } = require('./aiProviderService');
 const { validateFlow } = require('../../engine/validator');
-const { NODE_SCHEMAS } = require('../../frontend/src/editor/nodeSchemas');
+const fs = require('fs');
+const path = require('path');
 
-// Logger simples para o backend
-const logger = {
-  debug: (msg, data) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[DEBUG] ${msg}`, data || '');
-    }
-  },
-  info: (msg, data) => {
-    console.log(`[INFO] ${msg}`, data || '');
-  },
-  warn: (msg, data) => {
-    console.warn(`[WARN] ${msg}`, data || '');
-  },
-  error: (msg, error) => {
-    const errorData = error instanceof Error 
-      ? { message: error.message, stack: error.stack }
-      : error;
-    console.error(`[ERROR] ${msg}`, errorData || '');
-  },
-};
+const logger = require('../utils/logger');
+
+// Fonte da verdade (backend) para tipos/configs permitidos
+const CHATBOT_NODE_TYPES_PATH = path.join(__dirname, '..', 'data', 'rag', 'chatbot', 'nodes', 'node.types.json');
+
+let _cachedNodeTypes = null;
+function loadChatbotNodeTypes() {
+  if (_cachedNodeTypes) return _cachedNodeTypes;
+  try {
+    const raw = fs.readFileSync(CHATBOT_NODE_TYPES_PATH, 'utf8');
+    _cachedNodeTypes = JSON.parse(raw);
+    return _cachedNodeTypes;
+  } catch (err) {
+    logger.error('[flowGenerator] Falha ao carregar node.types.json (fallback mínimo)', {
+      error: err.message,
+      path: CHATBOT_NODE_TYPES_PATH,
+    });
+    _cachedNodeTypes = { nodeTypes: { core: {}, system: {} } };
+    return _cachedNodeTypes;
+  }
+}
 
 /**
  * Gera um prompt estruturado para a IA gerar um fluxo válido
  */
 function buildGenerationPrompt(userDescription, tenantId) {
-  // Lista de tipos de nós disponíveis
-  const availableNodeTypes = Object.keys(NODE_SCHEMAS).filter(type => 
-    type !== 'fallback' // Fallback é opcional, não obrigatório
-  );
+  const nodeTypesJson = loadChatbotNodeTypes();
+  const core = nodeTypesJson?.nodeTypes?.core || {};
+  const system = nodeTypesJson?.nodeTypes?.system || {};
 
-  // Extrai informações sobre propriedades de cada nó
-  const nodeInfo = availableNodeTypes.map(type => {
-    const schema = NODE_SCHEMAS[type];
-    const props = (schema.properties || []).map(p => ({
-      key: p.key,
-      type: p.type,
-      required: p.required || false,
-      description: p.description || '',
-    }));
+  // Lista de tipos de nós disponíveis (fonte backend; evita dependência do frontend)
+  const availableNodeTypes = Array.from(new Set([
+    ...Object.keys(core),
+    ...Object.keys(system),
+  ])).filter((type) => type !== 'fallback'); // Fallback é opcional
+
+  // Extrai informações sobre config de cada nó (suficiente para instruir a IA)
+  const nodeInfo = availableNodeTypes.map((type) => {
+    const def = core[type] || system[type] || {};
+    const config = def.config || {};
     return {
       type,
-      label: schema.label,
-      description: schema.description,
-      properties: props,
+      description: def.description || '',
+      configSchema: config,
+      constraints: {
+        required: def.required === true,
+        maxPerFlow: Object.prototype.hasOwnProperty.call(def, 'maxPerFlow') ? def.maxPerFlow : null,
+        minPerFlow: Object.prototype.hasOwnProperty.call(def, 'minPerFlow') ? def.minPerFlow : null,
+        hasInputs: Object.prototype.hasOwnProperty.call(def, 'hasInputs') ? def.hasInputs : null,
+        hasOutputs: Object.prototype.hasOwnProperty.call(def, 'hasOutputs') ? def.hasOutputs : null,
+      },
     };
   });
 
@@ -79,7 +87,7 @@ A partir da descrição em linguagem natural fornecida pelo usuário, gerar um f
 
 ---
 
-Informações dos Nós Disponíveis:
+Informações dos Nós Disponíveis (backend source-of-truth):
 
 ${JSON.stringify(nodeInfo, null, 2)}
 

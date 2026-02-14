@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./utils/config');
 const { validateFlow, addUiMessage } = require('../engine/validator');
+const { validateVoiceFlow } = require('./utils/voiceFlowValidator');
 const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
 const { verifyWebhook } = require('./services/whatsappService');
@@ -20,6 +21,7 @@ const { processWhatsAppMessage } = require('./services/messageProcessor');
 const outboundQueueService = require('./services/outboundQueueService');
 const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
 const logger = require('./utils/logger');
+const { buildApiError, sendApiError } = require('./utils/apiError');
 const {
   login: authLogin,
   logout: authLogout,
@@ -68,8 +70,15 @@ const {
 } = require('./services/onboardingService');
 const { requireAuth, requirePermission } = require('./middleware/auth');
 const { tenantRateLimitMiddleware } = require('./middleware/tenantRateLimit');
-const { canAccessTicket, canModifyTicket } = require('./services/rbacService');
 const {
+  canAccessTicket,
+  canModifyTicket,
+  listPermissions,
+  createRole,
+  getRoleDefinitions,
+} = require('./services/rbacService');
+const {
+  createTicket,
   listQueue,
   listQueues,
   createQueue,
@@ -83,6 +92,8 @@ const {
   startAutoCleanup,
   getMetrics,
   addAgentMessage,
+  addTicketNote,
+  transferTicket,
   updateOutboundMessageMeta,
   markMessagesAsRead,
   getTicketMessages,
@@ -103,7 +114,7 @@ const { validateGenerationContract } = require('./utils/contractValidator');
 const { orchestrateGeneration } = require('./services/generationOrchestrator');
 const { registerGeneration, generateAuditReport } = require('./services/auditService');
 const { generateAndValidate } = require('./services/generate-and-validate');
-const { clearLimitersCache, clearRedisRateLimitKeys } = require('../infra/rate-limit');
+const { checkRateLimit, clearLimitersCache, clearRedisRateLimitKeys } = require('../infra/rate-limit');
 const { executeRpaFlowPipeline, previewRpaFlowPipeline } = require('./services/rpaFlowPipelineService');
 const { generateChatbotFlow } = require('../engine/ai/generateChatbotFlow');
 const { generateRpaTest } = require('../engine/ai/generateRpaTest');
@@ -137,6 +148,18 @@ const {
   getTrendMetrics,
   getAllMetrics,
 } = require('./services/analyticsService');
+const {
+  getSupervisorMetrics,
+  getSupervisorAgentStatus,
+  getSupervisorQueueStatus,
+} = require('./services/supervisorService');
+const {
+  setupMfa,
+  verifyMfa,
+  disableMfa,
+  consumeRecoveryCode,
+} = require('./services/mfaService');
+const crypto = require('crypto');
 const {
   exportTicketsCSV,
   exportMetricsCSV,
@@ -208,6 +231,7 @@ const {
   getDocumentsStats,
 } = require('./services/ragDocumentsService');
 const ragService = require('./services/ragService');
+const { buildDiverseRagContext } = require('./services/ragContextBuilder');
 const { parseMultipartFormData } = require('./utils/multipartParser');
 const {
   scrapeUrl,
@@ -805,8 +829,10 @@ function setCorsHeaders(res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id, X-Request-Id');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
+  // Permite que o browser leia o traceId
+  res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
   
   // Security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -972,6 +998,12 @@ function ensureFlowHasMeta(rawFlow, tenantId = null) {
     flow.version = 999999;
   }
 
+  // kind (generalista): default chat; voice habilita runtime/validação específicos
+  const rawKind = (flow.kind && typeof flow.kind === 'string' ? flow.kind : null)
+    || (flow.metadata && typeof flow.metadata === 'object' && typeof flow.metadata.kind === 'string' ? flow.metadata.kind : null);
+  const kind = String(rawKind || 'chat').trim().toLowerCase();
+  flow.kind = (kind === 'voice') ? 'voice' : 'chat';
+
   return flow;
 }
 
@@ -998,6 +1030,13 @@ function hasJsonContentType(req) {
  */
 async function requestHandler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
+  // Garante traceId em TODA requisição
+  try {
+    const { requestIdMiddleware } = require('./middleware/requestId');
+    requestIdMiddleware(req, res);
+  } catch {
+    // ignora (não deve bloquear request)
+  }
 
   // Handle CORS preflight requests
   if (method === 'OPTIONS') {
@@ -1159,6 +1198,33 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // Alias curto para readiness (útil para monitor externo)
+  if (method === 'GET' && pathname === '/ready') {
+    // Reutiliza a lógica existente chamando a rota interna
+    req.url = '/health/ready';
+    return requestHandler(req, res);
+  }
+
+  // Selftest read-only: checa DB + Redis + RAG (sem efeitos colaterais)
+  // - 200 em PASS/WARN, 503 em FAIL
+  // - Retorna payload estruturado para monitoramento
+  if (method === 'GET' && (pathname === '/health/selftest' || pathname === '/selftest')) {
+    try {
+      const { runSelftest } = require('./services/selftestService');
+      const result = await runSelftest();
+      const httpStatus = result.status === 'FAIL' ? 503 : 200;
+      sendJson(res, httpStatus, result);
+    } catch (err) {
+      logger.error('[Selftest] Erro ao executar selftest:', err);
+      sendJson(res, 503, {
+        status: 'FAIL',
+        error: err.message || 'selftest_failed',
+        meta: { timestamp: new Date().toISOString() },
+      });
+    }
+    return;
+  }
+
   // Versão / ambiente
   if (method === 'GET' && pathname === '/version') {
     sendJson(res, 200, {
@@ -1168,11 +1234,472 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // -----------------------------------------------------------------------
+  // Marketing v1 (Storefront token) - tracker + landing pages/forms
+  // -----------------------------------------------------------------------
+  // GET /mkt/track.js?token=...
+  if (method === 'GET' && pathname === '/mkt/track.js') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token (storefront)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, { error: 'rate_limit_exceeded', retryAfter: rl.retryAfter || 60 });
+        return;
+      }
+
+      const js = `
+(function(){
+  var endpoint = "/mkt/e?token=${String(token).replace(/"/g, '\\"')}";
+  function send(evt){
+    try{
+      evt = evt || {};
+      evt.ts = evt.ts || Date.now();
+      var payload = JSON.stringify(evt);
+      if (navigator.sendBeacon) {
+        var blob = new Blob([payload], {type: "application/json"});
+        navigator.sendBeacon(endpoint, blob);
+        return;
+      }
+      fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: payload, keepalive:true}).catch(function(){});
+    }catch(e){}
+  }
+  // Pageview automático
+  send({ type: "pageview", url: location.href, referrer: document.referrer || null, title: document.title || null });
+  // API pública mínima
+  window.mktIdentify = function(data){ send(Object.assign({ type: "identify" }, data || {})); };
+  window.mktEvent = function(name, props){ send({ type: "event", name: String(name||""), props: props||{} }); };
+})();`;
+
+      setCorsHeaders(res);
+      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(js);
+    } catch (err) {
+      logger.error('[Marketing] Erro em GET /mkt/track.js', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao gerar tracker' });
+    }
+    return;
+  }
+
+  // POST /mkt/e?token=...  { type, ... }
+  if (method === 'POST' && pathname === '/mkt/e') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, { error: 'rate_limit_exceeded', retryAfter: rl.retryAfter || 60 });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const evtType = body && body.type ? String(body.type).trim().toLowerCase() : 'event';
+      const tenantId = resolved.tenantId;
+      const externalId = body && (body.externalId || body.external_id) ? String(body.externalId || body.external_id).trim() : null;
+      const email = body && body.email ? String(body.email).trim() : null;
+      const phone = body && body.phone ? String(body.phone).trim() : null;
+      const name = body && body.name ? String(body.name).trim() : null;
+
+      const marketing = require('./services/marketing/marketingService');
+      const leadRes = (email || phone || externalId)
+        ? await marketing.upsertLead({ tenantId, email, phone, externalId, name, attributesPatch: body && body.props ? body.props : null })
+        : null;
+      const lead = leadRes && leadRes.ok ? leadRes.lead : null;
+
+      const mapped =
+        evtType === 'pageview' ? 'MarketingPageView'
+        : evtType === 'identify' ? 'MarketingIdentify'
+        : evtType === 'form_submit' ? 'MarketingFormSubmitted'
+        : 'MarketingCustomEvent';
+
+      await marketing.recordMarketingEvent({
+        tenantId,
+        eventType: mapped,
+        correlationId: body && body.idempotencyKey ? String(body.idempotencyKey) : null,
+        lead,
+        payload: {
+          ...(body && typeof body === 'object' ? body : {}),
+          publicTokenId: resolved.tokenId,
+        },
+      });
+      if (lead && lead.id) {
+        await marketing.applyScoring({ tenantId, leadId: lead.id, eventType: mapped, payload: body || {} }).catch(() => null);
+      }
+
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      logger.error('[Marketing] Erro em POST /mkt/e', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao registrar evento' });
+    }
+    return;
+  }
+
+  // GET /mkt/l/:code - Redirect rastreável
+  if (method === 'GET' && pathname.startsWith('/mkt/l/')) {
+    try {
+      const code = decodeURIComponent(pathname.slice('/mkt/l/'.length)).trim();
+      if (!code) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      const service = require('./services/marketing/marketingLinkService');
+      const link = await service.getLinkByCode(code);
+      if (!link || link.status !== 'active') {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const trackedUrl = service.buildTrackedUrl(link, urlObj.searchParams.toString());
+
+      await service.recordClick({
+        link,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+        referrer: req.headers['referer'] || req.headers['referrer'] || null,
+      }).catch(() => {});
+
+      res.writeHead(302, { Location: trackedUrl });
+      res.end();
+    } catch (err) {
+      logger.error('[Marketing] Erro em GET /mkt/l/:code', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao redirecionar' });
+    }
+    return;
+  }
+
+  // GET /mkt/click?code=... - Pixel de click (sem redirect)
+  if ((method === 'GET' || method === 'POST') && pathname === '/mkt/click') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const code = urlObj.searchParams.get('code');
+      if (!code) {
+        sendJson(res, 400, { error: 'bad_request', message: 'code é obrigatório' });
+        return;
+      }
+      const service = require('./services/marketing/marketingLinkService');
+      const link = await service.getLinkByCode(code);
+      if (!link || link.status !== 'active') {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      await service.recordClick({
+        link,
+        ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+        referrer: req.headers['referer'] || req.headers['referrer'] || null,
+      }).catch(() => {});
+
+      res.writeHead(204);
+      res.end();
+    } catch (err) {
+      logger.error('[Marketing] Erro em /mkt/click', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao registrar click' });
+    }
+    return;
+  }
+
+  // GET /lp/:slug?token=...  - Landing page simples para um form
+  if (method === 'GET' && pathname.startsWith('/lp/')) {
+    try {
+      const slug = decodeURIComponent(pathname.slice('/lp/'.length)).trim();
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const marketing = require('./services/marketing/marketingService');
+      const form = await marketing.getFormBySlug({ tenantId: resolved.tenantId, slug });
+      if (!form || form.status !== 'active') {
+        sendJson(res, 404, { error: 'not_found', message: 'Landing page não encontrada' });
+        return;
+      }
+
+      const fields = Array.isArray(form.fields) ? form.fields : (Array.isArray(form.fields?.items) ? form.fields.items : []);
+      const fieldsHtml = fields.map((f) => {
+        const name = String(f.name || '').trim();
+        if (!name) return '';
+        const label = String(f.label || name);
+        const type = String(f.type || 'text');
+        const required = f.required === true ? 'required' : '';
+        return `<label style="display:block;margin:8px 0 4px;">${label}</label><input ${required} style="width:100%;padding:10px" name="${name}" type="${type}"/>`;
+      }).join('\n');
+
+      const html = form.landing_html && String(form.landing_html).trim()
+        ? String(form.landing_html)
+        : `<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${String(form.name || 'Form')}</title></head>
+<body style="font-family:system-ui,Arial;margin:24px;max-width:720px">
+  <h1>${String(form.name || '')}</h1>
+  <form id="mktForm">
+    ${fieldsHtml || '<label>Email</label><input name="email" type="email" required style="width:100%;padding:10px"/>'}
+    <div style="margin-top:12px"><button type="submit" style="padding:10px 14px">Enviar</button></div>
+  </form>
+  <div id="mktMsg" style="margin-top:12px"></div>
+  <script src="/mkt/track.js?token=${encodeURIComponent(String(token))}"></script>
+  <script>
+    (function(){
+      var form = document.getElementById("mktForm");
+      var msg = document.getElementById("mktMsg");
+      form.addEventListener("submit", function(e){
+        e.preventDefault();
+        var data = {};
+        new FormData(form).forEach(function(v,k){ data[k]=v; });
+        fetch("/lp/${encodeURIComponent(slug)}/submit?token=${encodeURIComponent(String(token))}", {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ data: data, submissionId: "sub-"+Date.now()+"-"+Math.random().toString(36).slice(2,9) })
+        }).then(function(r){ return r.json(); }).then(function(out){
+          if(out && out.ok){ msg.textContent = "Enviado! Obrigado."; if(window.mktEvent) window.mktEvent("form_submitted",{slug:"${encodeURIComponent(slug)}"}); }
+          else { msg.textContent = (out && out.message) ? out.message : "Falha ao enviar"; }
+        }).catch(function(){ msg.textContent = "Falha ao enviar"; });
+      });
+    })();
+  </script>
+</body></html>`;
+
+      setCorsHeaders(res);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(html);
+    } catch (err) {
+      logger.error('[Marketing] Erro em GET /lp/:slug', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao carregar landing page' });
+    }
+    return;
+  }
+
+  // POST /lp/:slug/submit?token=...
+  if (method === 'POST' && pathname.startsWith('/lp/') && pathname.endsWith('/submit')) {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const slug = decodeURIComponent(pathname.slice('/lp/'.length).replace(/\/submit$/, '')).trim();
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, { error: 'rate_limit_exceeded', retryAfter: rl.retryAfter || 60 });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const submissionId = body && body.submissionId ? String(body.submissionId).trim() : null;
+      const data = body && body.data ? body.data : {};
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.submitForm({
+        tenantId: resolved.tenantId,
+        slug,
+        submissionId,
+        data,
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+      });
+      if (!out.ok) {
+        const map = { form_not_found: 'Form não encontrado', slug_required: 'Slug inválido' };
+        sendJson(res, 400, { ok: false, error: out.error, message: map[out.error] || 'Falha ao enviar' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, leadId: out.lead?.id || null, submissionId: out.submission?.id || null });
+    } catch (err) {
+      logger.error('[Marketing] Erro em POST /lp/:slug/submit', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao enviar formulário' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Provisionamento público (telefones)
+  // -----------------------------------------------------------------------
+  // GET /provision/:tenantKey/:vendor/:mac
+  // GET /provision/:tenantKey/:token/:vendor/:mac  (se PROVISIONING_PUBLIC_TOKEN estiver definido)
+  if (method === 'GET' && pathname.startsWith('/provision/')) {
+    try {
+      const parts = pathname.split('/').filter(Boolean); // ["provision", ...]
+      // Accept:
+      // - /provision/<tenant>/<vendor>/<mac>
+      // - /provision/<tenant>/<token>/<vendor>/<mac>
+      if (parts.length !== 4 && parts.length !== 5) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      const provisioningToken = (process.env.PROVISIONING_PUBLIC_TOKEN || '').trim();
+      const tenantKey = String(parts[1] || '').trim();
+
+      let token = null;
+      let vendor = null;
+      let mac = null;
+      if (parts.length === 4) {
+        [vendor, mac] = [parts[2], parts[3]];
+      } else {
+        [token, vendor, mac] = [parts[2], parts[3], parts[4]];
+      }
+
+      if (!tenantKey) {
+        sendJson(res, 400, { error: 'bad_request', code: 'tenant_required', message: 'tenantKey é obrigatório' });
+        return;
+      }
+
+      // Token: aceita token global (env) e/ou token por tenant (PBX settings)
+      let tenantProvisioningToken = null;
+      try {
+        // eslint-disable-next-line global-require
+        const { getProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+        const t = await getProvisioningToken({ tenantKey, includeToken: true });
+        if (t && t.ok && t.token) tenantProvisioningToken = String(t.token);
+      } catch (_) {}
+
+      const tokenRequired = !!provisioningToken || !!tenantProvisioningToken;
+      if (tokenRequired) {
+        // sem token na URL
+        if (!token) {
+          sendJson(res, 403, { error: 'forbidden', code: 'provisioning_token_required' });
+          return;
+        }
+        const ok = (provisioningToken && token === provisioningToken) || (tenantProvisioningToken && token === tenantProvisioningToken);
+        if (!ok) {
+          sendJson(res, 403, { error: 'forbidden', code: 'invalid_provisioning_token' });
+          return;
+        }
+      }
+
+      // Deriva host para uso nas configs (SIPDOMAIN/registrar)
+      // - Preferir override explícito (on-prem às vezes expõe API em host/porta diferente do SIP)
+      // - Remover porta do Host header quando presente
+      const hostHeader = String(req.headers?.host || '').trim();
+      const hostNoPort = hostHeader.includes(':') ? hostHeader.split(':')[0] : hostHeader;
+      const serverHost = (process.env.PROVISIONING_SIP_HOST || '').trim() || hostNoPort || 'localhost';
+
+      // eslint-disable-next-line global-require
+      const { generateProvisioning } = require('./services/pbx/pbxProvisioningService');
+      const out = await generateProvisioning({ tenantKey, vendor, mac, serverHost });
+
+      // Auditoria best-effort (acesso público)
+      try {
+        logAction({
+          agentId: 'public',
+          username: 'public',
+          tenantId: tenantKey,
+          action: 'pbx.provisioning.fetch',
+          resource: 'pbx_provisioning',
+          resourceId: `${String(vendor || '')}:${String(mac || '')}`,
+          details: { vendor: String(vendor || ''), mac: String(mac || ''), serverHost },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      setCorsHeaders(res);
+      res.writeHead(200, {
+        'Content-Type': out.contentType || 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(out.body || '');
+    } catch (err) {
+      const code = err.code || 'provisioning_error';
+      const httpStatus = ['invalid_mac', 'invalid_provisioning_vendor', 'invalid_provisioning_template'].includes(code) ? 400
+        : code === 'extension_not_found_for_mac' ? 404
+          : 500;
+      logger.error('[Provisioning] Erro em GET /provision', err);
+      sendJson(res, httpStatus, { error: 'provisioning_error', code, message: err.message || 'Erro ao gerar provisionamento' });
+    }
+    return;
+  }
+
   // GET /system/status - Dashboard de status de todos os serviços
   if (method === 'GET' && pathname === '/system/status') {
     try {
       const { checkServicesStatus } = require('./services/systemStatusService');
       const status = await checkServicesStatus();
+
+      // Se o client informar executionId via header, emitimos progresso via WS (pipeline.status).
+      // IMPORTANTE: como /system/status é rota pública (dashboard), só emitimos quando houver auth válido.
+      try {
+        const executionIdHeader =
+          (req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const executionId =
+          (typeof executionIdHeader === 'string' && executionIdHeader.trim()) ? executionIdHeader.trim() : null;
+        const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
+        if (isValidExecutionId) {
+          const authResult = requireAuth(req);
+          if (authResult.valid && authResult.agent?.tenantId) {
+            const tenantId = String(authResult.agent.tenantId);
+            const ragService = status?.services?.ragService || null;
+            if (ragService && ragService.status === 'healthy') {
+              const { emitEvent } = require('./services/websocketService');
+              emitEvent('pipeline.status', {
+                executionId,
+                status: 'running',
+                stages: { ragValidated: true },
+                metadata: { message: 'Serviço RAG validado', source: '/system/status' },
+              }, { tenantId });
+            }
+          }
+        }
+      } catch (_) {
+        // best-effort: não bloquear /system/status por WS
+      }
+
       sendJson(res, 200, status);
     } catch (err) {
       logger.error('Erro ao verificar status dos serviços:', err);
@@ -1201,13 +1728,2030 @@ async function requestHandler(req, res) {
   }
 
   // -----------------------------------------------------------------------
+  // PBX Legacy (Ripabx / r-pbx) - Somente para conversor / diagnóstico
+  // BIG-BANG: o PBX v1 usa /api/pbx/*; legado foi movido para /api/pbx-legacy/*
+  // -----------------------------------------------------------------------
+
+  // GET /api/pbx-legacy/health
+  if (method === 'GET' && pathname === '/api/pbx-legacy/health') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const pbxLegacy = require('./services/pbxLegacy');
+      const health = await pbxLegacy.getPbxHealth();
+      sendJson(res, 200, health);
+    } catch (err) {
+      logger.error('[PBX] Erro em /api/pbx-legacy/health', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_health_error',
+        message: err.message || 'Erro ao verificar saúde do PBX legado',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx-legacy/inventory
+  if (method === 'GET' && pathname === '/api/pbx-legacy/inventory') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const pbxLegacy = require('./services/pbxLegacy');
+      const inventory = await pbxLegacy.getLegacyInventory();
+      sendJson(res, 200, inventory);
+    } catch (err) {
+      logger.error('[PBX] Erro em /api/pbx-legacy/inventory', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_inventory_error',
+        message: err.message || 'Erro ao obter inventário do PBX legado',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx-legacy/ramais
+  if (method === 'GET' && pathname === '/api/pbx-legacy/ramais') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!requireTenant(req, res)) return;
+
+    try {
+      const pbxLegacy = require('./services/pbxLegacy');
+      const ramais = pbxLegacy.listRamais();
+      sendJson(res, 200, { items: ramais });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx-legacy/ramais', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_ramais_list_error',
+        message: err.message || 'Erro ao listar ramais',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx-legacy/ramais (upsert)
+  if (method === 'POST' && pathname === '/api/pbx-legacy/ramais') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!requireTenant(req, res)) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxLegacy = require('./services/pbxLegacy');
+      const saved = pbxLegacy.upsertRamal(body);
+      sendJson(res, 200, { ok: true, item: saved });
+    } catch (err) {
+      const code = err.code || 'pbx_ramais_upsert_error';
+      const httpStatus = code === 'ramal_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx-legacy/ramais', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar ramal',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // PBX v1 (Postgres-first + Asterisk Realtime)
+  // -----------------------------------------------------------------------
+
+  // GET /api/pbx/extensions
+  if (method === 'GET' && pathname === '/api/pbx/extensions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxExtensions = require('./services/pbx/pbxExtensionsService');
+      const items = await pbxExtensions.listExtensions({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/extensions', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_extensions_list_error',
+        message: err.message || 'Erro ao listar ramais',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/extensions (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/extensions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxExtensions = require('./services/pbx/pbxExtensionsService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxExtensions.upsertExtension({ tenantKey, payload: body, actorUserId });
+      try {
+        logAction({
+          agentId: req.user?.id || null,
+          username: req.user?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.extensions.upsert',
+          resource: 'pbx_extension',
+          resourceId: item?.id || null,
+          details: {
+            extension: item?.extension || null,
+            provisioning: item?.endpointOptions?.provisioning?.enabled ? true : false,
+            vendor: item?.endpointOptions?.provisioning?.vendor || null,
+            model: item?.endpointOptions?.provisioning?.model || null,
+            firmware: item?.endpointOptions?.provisioning?.firmware || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_extensions_upsert_error';
+      const httpStatus = ['extension_required', 'invalid_mac', 'invalid_provisioning_vendor', 'invalid_provisioning_settings_key', 'provisioning_mac_required', 'mac_already_assigned', 'weak_extension_password', 'provisioning_extension_inactive'].includes(code)
+        ? 400
+        : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/extensions', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar ramal',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/extensions/bulk - upsert em lote (provisioning/parque)
+  if (method === 'POST' && pathname === '/api/pbx/extensions/bulk') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const items = body && Array.isArray(body.items) ? body.items : null;
+      if (!items || items.length === 0) {
+        badRequest(res, 'Campo "items" (array) é obrigatório');
+        return;
+      }
+      if (items.length > 500) {
+        badRequest(res, 'Máximo de 500 itens por lote');
+        return;
+      }
+
+      const pbxExtensions = require('./services/pbx/pbxExtensionsService');
+      const actorUserId = req.user?.id || null;
+      const results = [];
+      for (const payload of items) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const item = await pbxExtensions.upsertExtension({ tenantKey, payload, actorUserId });
+          results.push({ ok: true, item });
+        } catch (err) {
+          results.push({
+            ok: false,
+            code: err?.code || 'pbx_extensions_bulk_item_error',
+            message: err?.message || 'Erro ao salvar item',
+            details: err?.details || null,
+            payloadHint: payload && typeof payload === 'object' ? { extension: payload.extension || payload.ramal || null } : null,
+          });
+        }
+      }
+
+      const okCount = results.filter((r) => r.ok).length;
+      try {
+        logAction({
+          agentId: req.user?.id || null,
+          username: req.user?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.extensions.bulk',
+          resource: 'pbx_extension',
+          resourceId: null,
+          details: {
+            total: results.length,
+            okCount,
+            errorCount: results.length - okCount,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, okCount, errorCount: results.length - okCount, results });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/extensions/bulk', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_extensions_bulk_error',
+        message: err.message || 'Erro ao processar lote de ramais',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/provisioning-token - retorna token (mascarado) por tenant
+  if (method === 'GET' && pathname === '/api/pbx/provisioning-token') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const { getProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+      const result = await getProvisioningToken({ tenantKey, includeToken: false });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant PBX não encontrado' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/provisioning-token', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter token de provisioning' });
+    }
+    return;
+  }
+
+  // POST /api/pbx/provisioning-token/rotate - rotaciona token por tenant
+  if (method === 'POST' && pathname === '/api/pbx/provisioning-token/rotate') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const expiresInSecRaw = urlObj.searchParams.get('expiresInSec');
+      const expiresInSec = expiresInSecRaw != null ? Number(expiresInSecRaw) : null;
+
+      const { rotateProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+      const result = await rotateProvisioningToken({ tenantKey, actorUserId: req.agent?.id || null, expiresInSec });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant PBX não encontrado' });
+        return;
+      }
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.provisioning_token.rotate',
+          resource: 'pbx_provisioning_token',
+          resourceId: tenantKey,
+          details: { expiresInSec: expiresInSec != null ? expiresInSec : null, expiresAt: result.expiresAt || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+      // Retorna token em texto claro (operação administrativa)
+      sendJson(res, 200, { ok: true, token: result.token });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/provisioning-token/rotate', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao rotacionar token de provisioning' });
+    }
+    return;
+  }
+
+  // POST /api/pbx/provisioning-token/revoke - revoga token por tenant
+  if (method === 'POST' && pathname === '/api/pbx/provisioning-token/revoke') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const { revokeProvisioningToken } = require('./services/pbx/pbxProvisioningTokenService');
+      const result = await revokeProvisioningToken({ tenantKey, actorUserId: req.agent?.id || null });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant PBX não encontrado' });
+        return;
+      }
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.provisioning_token.revoke',
+          resource: 'pbx_provisioning_token',
+          resourceId: tenantKey,
+          details: {},
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/provisioning-token/revoke', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao revogar token de provisioning' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/audit?hours=...&limit=... - visão de auditoria PBX
+  if (method === 'GET' && pathname === '/api/pbx/audit') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const rawHours = Number(urlObj.searchParams.get('hours') || 72);
+      const rawLimit = Number(urlObj.searchParams.get('limit') || 300);
+      const hours = Number.isFinite(rawHours) ? Math.max(1, Math.min(24 * 30, Math.floor(rawHours))) : 72;
+      const limit = Number.isFinite(rawLimit) ? Math.max(10, Math.min(1000, Math.floor(rawLimit))) : 300;
+      const startDate = new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString();
+
+      const result = await queryLogs({
+        tenantId: tenantKey,
+        startDate,
+        limit,
+        offset: 0,
+      });
+      const pbxItems = (result?.items || []).filter((item) => String(item?.action || '').startsWith('pbx.'));
+      const byAction = {};
+      for (const item of pbxItems) {
+        const action = String(item?.action || 'unknown');
+        byAction[action] = (byAction[action] || 0) + 1;
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        hours,
+        total: pbxItems.length,
+        byAction,
+        items: pbxItems,
+      });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/audit', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao consultar auditoria PBX' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/trunks
+  if (method === 'GET' && pathname === '/api/pbx/trunks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxTrunks = require('./services/pbx/pbxTrunksService');
+      const items = await pbxTrunks.listTrunks({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/trunks', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_trunks_list_error',
+        message: err.message || 'Erro ao listar troncos',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/trunks (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/trunks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxTrunks = require('./services/pbx/pbxTrunksService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxTrunks.upsertTrunk({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_trunks_upsert_error';
+      const httpStatus = code === 'trunk_name_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/trunks', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar tronco',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/routes
+  if (method === 'GET' && pathname === '/api/pbx/routes') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxRoutes = require('./services/pbx/pbxRoutesService');
+      const direction = url.searchParams.get('direction');
+      const items = await pbxRoutes.listRoutes({ tenantKey, direction: direction || null });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/routes', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_routes_list_error',
+        message: err.message || 'Erro ao listar rotas',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/routes (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/routes') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxRoutes = require('./services/pbx/pbxRoutesService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxRoutes.upsertRoute({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_routes_upsert_error';
+      const httpStatus = ['route_direction_invalid', 'route_name_required'].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/routes', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar rota',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/dids
+  if (method === 'GET' && pathname === '/api/pbx/dids') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const pbxDids = require('./services/pbx/pbxDidsService');
+      const items = await pbxDids.listDids({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/dids', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dids_list_error',
+        message: err.message || 'Erro ao listar DIDs',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dids (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/dids') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const pbxDids = require('./services/pbx/pbxDidsService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxDids.upsertDid({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_dids_upsert_error';
+      const httpStatus = code === 'did_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/dids', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar DID',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/call-rules?type=...
+  if (method === 'GET' && pathname === '/api/pbx/call-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const type = urlObj.searchParams.get('type');
+      const pbxRules = require('./services/pbx/pbxCallRulesService');
+      const items = await pbxRules.listCallRules({ tenantKey, type });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/call-rules', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_call_rules_list_error',
+        message: err.message || 'Erro ao listar regras',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/call-rules (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/call-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const pbxRules = require('./services/pbx/pbxCallRulesService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxRules.upsertCallRule({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_call_rules_upsert_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/call-rules', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar regra',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/queues
+  if (method === 'GET' && pathname === '/api/pbx/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxQueues = require('./services/pbx/pbxQueuesService');
+      const items = await pbxQueues.listQueues({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/queues', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queues_list_error',
+        message: err.message || 'Erro ao listar filas',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/queues/metrics
+  if (method === 'GET' && pathname === '/api/pbx/queues/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const pbxQueues = require('./services/pbx/pbxQueuesService');
+      const items = await pbxQueues.getQueueOperationalMetrics({ tenantKey });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/queues/metrics', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queues_metrics_error',
+        message: err.message || 'Erro ao consultar métricas de fila PBX',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/queues (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxQueues = require('./services/pbx/pbxQueuesService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxQueues.upsertQueue({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_queues_upsert_error';
+      const httpStatus = code === 'queue_name_required' ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/queues', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar fila',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dialplan/preview
+  if (method === 'POST' && pathname === '/api/pbx/dialplan/preview') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxDialplan = require('./services/pbx/pbxDialplanService');
+      const rows = await pbxDialplan.buildTenantDialplanRows({ tenantKey });
+      sendJson(res, 200, { ok: true, tenantKey, count: rows.length, rows });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/dialplan/preview', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dialplan_preview_error',
+        message: err.message || 'Erro ao gerar preview do dialplan',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dialplan/apply
+  if (method === 'POST' && pathname === '/api/pbx/dialplan/apply') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxDialplan = require('./services/pbx/pbxDialplanService');
+      const rows = await pbxDialplan.buildTenantDialplanRows({ tenantKey });
+      const result = await pbxDialplan.applyTenantDialplanRows({ tenantKey, rows });
+      const signature = pbxDialplan.computeDialplanSignature(rows);
+      // Registra versão aplicada (best-effort)
+      try {
+        const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+        const actorUserId = req.agent?.id || req.agent?.username || null;
+        await pbxVersions.createVersion({
+          tenantKey,
+          status: 'applied',
+          createdByUserId: actorUserId,
+          summary: {
+            appliedAt: new Date().toISOString(),
+            dialplan: {
+              count: rows.length,
+              signature: signature || null,
+              rows,
+            },
+          },
+        });
+        const { logAction } = require('./services/auditService');
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.dialplan.publish',
+          resource: 'pbx_dialplan',
+          resourceId: signature || null,
+          details: { count: rows.length, signature: signature || null },
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, tenantKey, count: result.count, signature });
+    } catch (err) {
+      // best-effort: registra falha como versão
+      try {
+        const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+        const actorUserId = req.agent?.id || req.agent?.username || null;
+        await pbxVersions.createVersion({
+          tenantKey,
+          status: 'failed',
+          createdByUserId: actorUserId,
+          summary: {
+            failedAt: new Date().toISOString(),
+            error: err && err.message ? String(err.message) : 'apply_failed',
+          },
+        });
+      } catch (_) {}
+
+      logger.error('[PBX] Erro em POST /api/pbx/dialplan/apply', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dialplan_apply_error',
+        message: err.message || 'Erro ao aplicar dialplan',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/config-versions?limit=...
+  if (method === 'GET' && pathname === '/api/pbx/config-versions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit') || '20';
+      const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+      const items = await pbxVersions.listVersions({ tenantKey, limit });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/config-versions', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_config_versions_list_error',
+        message: err.message || 'Erro ao listar versões PBX',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/dialplan/rollback?version=...
+  if (method === 'POST' && pathname === '/api/pbx/dialplan/rollback') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const version = Number(urlObj.searchParams.get('version'));
+      if (!Number.isFinite(version) || version <= 0) {
+        badRequest(res, 'version obrigatório');
+        return;
+      }
+      const pbxVersions = require('./services/pbx/pbxConfigVersionsService');
+      const pbxDialplan = require('./services/pbx/pbxDialplanService');
+      const target = await pbxVersions.getVersionByNumber({ tenantKey, version });
+      const rows = Array.isArray(target?.summary?.dialplan?.rows) ? target.summary.dialplan.rows : null;
+      if (!target || !rows || rows.length === 0) {
+        sendJson(res, 404, { error: 'not_found', message: 'versão sem snapshot de dialplan' });
+        return;
+      }
+
+      const result = await pbxDialplan.applyTenantDialplanRows({ tenantKey, rows });
+      const signature = pbxDialplan.computeDialplanSignature(rows);
+      const actorUserId = req.agent?.id || req.agent?.username || null;
+      await pbxVersions.createVersion({
+        tenantKey,
+        status: 'applied',
+        createdByUserId: actorUserId,
+        summary: {
+          rollbackAt: new Date().toISOString(),
+          rolledBackFromVersion: Number(version),
+          dialplan: {
+            count: rows.length,
+            signature,
+            rows,
+          },
+        },
+      });
+      try {
+        const { logAction } = require('./services/auditService');
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.dialplan.rollback',
+          resource: 'pbx_dialplan',
+          resourceId: String(version),
+          details: { version: Number(version), count: rows.length, signature },
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, tenantKey, version, count: result.count, signature });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/dialplan/rollback', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_dialplan_rollback_error',
+        message: err.message || 'Erro ao fazer rollback do dialplan',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/reload (best-effort: core reload + pjsip via AMI)
+  if (method === 'POST' && pathname === '/api/pbx/reload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ami = require('./services/asterisk/amiClient');
+      const core = await ami.command('core reload');
+      const pjsip = await ami.command('pjsip reload');
+      const odbc = await ami.command('module reload res_odbc.so res_config_odbc.so');
+      sendJson(res, 200, { ok: true, tenantKey, core: !!core.ok, pjsip: !!pjsip.ok, odbc: !!odbc.ok });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/reload', err);
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'pbx_reload_error',
+        message: err.message || 'Erro ao recarregar Asterisk',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/queue-members?queueId=...
+  if (method === 'GET' && pathname === '/api/pbx/queue-members') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const queueId = urlObj.searchParams.get('queueId');
+      if (!queueId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'queueId obrigatório' });
+        return;
+      }
+      const pbxQueueMembers = require('./services/pbx/pbxQueueMembersService');
+      const items = await pbxQueueMembers.listQueueMembers({ tenantKey, queueId: String(queueId) });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/queue-members', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queue_members_list_error',
+        message: err.message || 'Erro ao listar membros da fila',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/queue-members (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/queue-members') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const pbxQueueMembers = require('./services/pbx/pbxQueueMembersService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxQueueMembers.upsertQueueMember({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_queue_members_upsert_error';
+      const httpStatus = [
+        'queue_id_required',
+        'member_type_invalid',
+        'member_ref_required',
+        'queue_not_found',
+      ].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/queue-members', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar membro da fila',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // DELETE /api/pbx/queue-members?id=...
+  if (method === 'DELETE' && pathname === '/api/pbx/queue-members') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const id = urlObj.searchParams.get('id');
+      if (!id) {
+        sendJson(res, 400, { error: 'bad_request', message: 'id obrigatório' });
+        return;
+      }
+      const pbxQueueMembers = require('./services/pbx/pbxQueueMembersService');
+      const actorUserId = req.user?.id || null;
+      const result = await pbxQueueMembers.deleteQueueMember({ tenantKey, id: String(id), actorUserId });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[PBX] Erro em DELETE /api/pbx/queue-members', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_queue_members_delete_error',
+        message: err.message || 'Erro ao remover membro da fila',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Contact Center (CC) - v1
+  // -----------------------------------------------------------------------
+  // GET /api/cc/pause-reasons
+  if (method === 'GET' && pathname === '/api/cc/pause-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const items = await ccReasons.listPauseReasons({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/pause-reasons', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar motivos de pausa' });
+    }
+    return;
+  }
+
+  // POST /api/cc/pause-reasons (upsert)
+  if (method === 'POST' && pathname === '/api/cc/pause-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccReasons.upsertPauseReason({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_pause_reason_upsert_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar motivo de pausa',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/contact-reasons
+  if (method === 'GET' && pathname === '/api/cc/contact-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const items = await ccReasons.listContactReasons({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/contact-reasons', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar motivos de contato' });
+    }
+    return;
+  }
+
+  // POST /api/cc/contact-reasons (upsert)
+  if (method === 'POST' && pathname === '/api/cc/contact-reasons') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccReasons = require('./services/cc/ccReasonsService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccReasons.upsertContactReason({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_contact_reason_upsert_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar motivo de contato',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/campaigns
+  if (method === 'GET' && pathname === '/api/cc/campaigns') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const items = await ccCampaigns.listCampaigns({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/campaigns', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar campanhas' });
+    }
+    return;
+  }
+
+  // POST /api/cc/campaigns (upsert)
+  if (method === 'POST' && pathname === '/api/cc/campaigns') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccCampaigns.upsertCampaign({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_campaign_upsert_error';
+      const httpStatus = code === 'campaign_name_required' ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar campanha',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/campaigns/list?campaignId=...
+  if (method === 'GET' && pathname === '/api/cc/campaigns/list') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const campaignId = urlObj.searchParams.get('campaignId');
+      if (!campaignId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'campaignId obrigatório' });
+        return;
+      }
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const items = await ccCampaigns.listCampaignList({ tenantKey, campaignId: String(campaignId) });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/campaigns/list', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar lista de campanha' });
+    }
+    return;
+  }
+
+  // POST /api/cc/campaigns/list (add items)
+  if (method === 'POST' && pathname === '/api/cc/campaigns/list') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const campaignId = body?.campaignId ? String(body.campaignId) : null;
+      if (!campaignId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'campaignId obrigatório' });
+        return;
+      }
+      const ccCampaigns = require('./services/cc/ccCampaignsService');
+      const added = await ccCampaigns.addCampaignListItems({ tenantKey, campaignId, items: body?.items || [] });
+      sendJson(res, 200, { ok: true, addedCount: added.length, added });
+    } catch (err) {
+      logger.error('[CC] Erro em POST /api/cc/campaigns/list', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao adicionar itens na campanha' });
+    }
+    return;
+  }
+
+  // GET /api/cc/scheduled-callbacks
+  if (method === 'GET' && pathname === '/api/cc/scheduled-callbacks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const ccSched = require('./services/cc/ccScheduledCallbacksService');
+      const items = await ccSched.listScheduledCallbacks({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/scheduled-callbacks', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar agendados' });
+    }
+    return;
+  }
+
+  // POST /api/cc/scheduled-callbacks (upsert)
+  if (method === 'POST' && pathname === '/api/cc/scheduled-callbacks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccSched = require('./services/cc/ccScheduledCallbacksService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccSched.upsertScheduledCallback({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_scheduled_upsert_error';
+      const httpStatus = ['scheduled_at_invalid', 'scheduled_phone_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar agendado',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/cc/click2call
+  if (method === 'GET' && pathname === '/api/cc/click2call') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit') || '100';
+      const ccC2C = require('./services/cc/ccClick2CallService');
+      const items = await ccC2C.listClick2CallRequests({ tenantKey, limit });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[CC] Erro em GET /api/cc/click2call', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar click2call' });
+    }
+    return;
+  }
+
+  // POST /api/cc/click2call
+  if (method === 'POST' && pathname === '/api/cc/click2call') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const ccC2C = require('./services/cc/ccClick2CallService');
+      const actorUserId = req.user?.id || null;
+      const item = await ccC2C.createClick2CallRequest({ tenantKey, payload: body, actorUserId });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'cc_click2call_create_error';
+      const httpStatus = String(code).endsWith('_required') ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao criar click2call',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // PBX - Mídia (áudios) / Gravações
+  // -----------------------------------------------------------------------
+  // GET /api/pbx/audio-assets?kind=...
+  if (method === 'GET' && pathname === '/api/pbx/audio-assets') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const kind = urlObj.searchParams.get('kind');
+      const pbxMedia = require('./services/pbx/pbxMediaService');
+      const items = await pbxMedia.listAudioAssets({ tenantKey, kind });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/audio-assets', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_audio_assets_list_error',
+        message: err.message || 'Erro ao listar áudios',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/audio-assets/upload (multipart)
+  if (method === 'POST' && pathname === '/api/pbx/audio-assets/upload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const { fields, files } = await parseMultipartFormData(req);
+      const kind = fields.kind || fields.dir || null; // legado usa ?dir=espera|sons
+      const file = Array.isArray(files) ? files.find(f => f.fieldname === 'file') || files[0] : null;
+      if (!file) {
+        badRequest(res, 'Arquivo obrigatório (field "file")');
+        return;
+      }
+      // Limite: 25MB
+      if (file.size > 25 * 1024 * 1024) {
+        sendJson(res, 413, { error: 'payload_too_large', message: 'Arquivo maior que 25MB' });
+        return;
+      }
+      const pbxMedia = require('./services/pbx/pbxMediaService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxMedia.createAudioAssetFromUpload({
+        tenantKey,
+        kind,
+        filename: file.filename,
+        mimeType: file.mimeType,
+        buffer: file.buffer,
+        actorUserId,
+      });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_audio_upload_error';
+      const httpStatus = ['audio_kind_required', 'audio_file_required'].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/audio-assets/upload', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao fazer upload de áudio',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/pbx/audio-assets/file?id=... (download)
+  if (method === 'GET' && pathname === '/api/pbx/audio-assets/file') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const id = urlObj.searchParams.get('id');
+      if (!id) {
+        badRequest(res, 'id obrigatório');
+        return;
+      }
+      const { PbxAudioAsset } = require('./db/models');
+      const row = await PbxAudioAsset().findOne({ where: { id: String(id), tenantKey } });
+      if (!row) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      const pbxMedia = require('./services/pbx/pbxMediaService');
+      const filePath = pbxMedia.resolveAudioFilePath(row.toJSON());
+      if (!filePath) {
+        sendJson(res, 404, { error: 'file_not_found' });
+        return;
+      }
+      // eslint-disable-next-line global-require
+      const fs = require('fs');
+      // eslint-disable-next-line global-require
+      const p = require('path');
+      const buf = fs.readFileSync(filePath);
+      res.writeHead(200, {
+        'Content-Type': 'audio/wav',
+        'Content-Disposition': `attachment; filename="${p.basename(filePath)}"`,
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/audio-assets/file', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao baixar áudio' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/recordings?limit=...
+  if (method === 'GET' && pathname === '/api/pbx/recordings') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit') || '200';
+      const pbxRec = require('./services/pbx/pbxRecordingsService');
+      const items = await pbxRec.listRecordings({ tenantKey, limit });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/recordings', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar gravações' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/recordings/policy
+  if (method === 'GET' && pathname === '/api/pbx/recordings/policy') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const policyService = require('./services/pbx/pbxRecordingPolicyService');
+      const out = await policyService.getRecordingPolicy({ tenantKey });
+      if (!out.ok) {
+        sendJson(res, 500, { error: 'internal_error', message: out.error || 'Erro ao obter política' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, policy: out.policy });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/recordings/policy', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter política de gravação' });
+    }
+    return;
+  }
+
+  // POST /api/pbx/recordings/policy
+  if (method === 'POST' && pathname === '/api/pbx/recordings/policy') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const body = await parseJsonBody(req);
+      const policyService = require('./services/pbx/pbxRecordingPolicyService');
+      const out = await policyService.setRecordingPolicy({ tenantKey, policy: body || {} });
+      if (!out.ok) {
+        sendJson(res, 500, { error: 'internal_error', message: out.error || 'Erro ao salvar política' });
+        return;
+      }
+      try {
+        const { logAction } = require('./services/auditService');
+        const actorUserId = req.agent?.id || req.agent?.username || null;
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.recordings.policy.update',
+          resource: 'pbx_recording_policy',
+          resourceId: tenantKey,
+          details: out.policy,
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, policy: out.policy });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/recordings/policy', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar política de gravação' });
+    }
+    return;
+  }
+
+  // POST /api/pbx/recordings/scan
+  if (method === 'POST' && pathname === '/api/pbx/recordings/scan') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const pbxRec = require('./services/pbx/pbxRecordingsService');
+      const result = await pbxRec.scanAndUpsertRecordings({ tenantKey });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[PBX] Erro em POST /api/pbx/recordings/scan', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao varrer gravações' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/recordings/file?id=...
+  if (method === 'GET' && pathname === '/api/pbx/recordings/file') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const id = urlObj.searchParams.get('id');
+      if (!id) {
+        badRequest(res, 'id obrigatório');
+        return;
+      }
+      const pbxRec = require('./services/pbx/pbxRecordingsService');
+      const filePath = await pbxRec.getRecordingFilePath({ tenantKey, id: String(id) });
+      if (!filePath) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+      try {
+        const { logAction } = require('./services/auditService');
+        const actorUserId = req.agent?.id || req.agent?.username || null;
+        logAction({
+          agentId: actorUserId,
+          tenantId: tenantKey,
+          action: 'pbx.recordings.download',
+          resource: 'pbx_recording',
+          resourceId: String(id),
+          details: { id: String(id) },
+        });
+      } catch (_) {}
+      // eslint-disable-next-line global-require
+      const fs = require('fs');
+      // eslint-disable-next-line global-require
+      const p = require('path');
+      const buf = fs.readFileSync(filePath);
+      res.writeHead(200, {
+        'Content-Type': 'audio/wav',
+        'Content-Disposition': `attachment; filename="${p.basename(filePath)}"`,
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/recordings/file', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao baixar gravação' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/cdr?limit=...&from=...&to=...&src=...&dst=...&uniqueid=...
+  if (method === 'GET' && pathname === '/api/pbx/cdr') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const pbxCdr = require('./services/pbx/pbxCdrService');
+      const items = await pbxCdr.listCdr({
+        tenantKey,
+        filters: {
+          limit: urlObj.searchParams.get('limit') || null,
+          from: urlObj.searchParams.get('from') || null,
+          to: urlObj.searchParams.get('to') || null,
+          src: urlObj.searchParams.get('src') || null,
+          dst: urlObj.searchParams.get('dst') || null,
+          uniqueid: urlObj.searchParams.get('uniqueid') || null,
+        },
+      });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/cdr', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar CDR' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
   // Rate Limiting por Tenant
   // -----------------------------------------------------------------------
   // Aplica rate limiting por tenant em todas as rotas (exceto rotas públicas acima)
   // Rotas públicas: /health, /version, /system/status, /system/websocket, OPTIONS
   // Rotas de autenticação não exigem tenant_id (login, reset, convites)
   // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
-  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket'];
+  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket', '/storefront', '/physical', '/public', '/public-tokens/resolve', '/click2call', '/provision', '/config'];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
   // Webhooks de provedores (inbound) não podem ser bloqueados por falta de tenant no início:
   // tenant é resolvido por channel_accounts e, se não resolver, deve retornar 200 OK com log warn.
@@ -1679,18 +4223,79 @@ async function requestHandler(req, res) {
     }
 
     if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
+      try {
+        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+          ? String(req.headers['x-request-id']).trim()
+          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'INVALID_CONTENT_TYPE', message: 'Content-Type deve ser application/json' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INVALID_CONTENT_TYPE'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: null, context: {} },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 400, { envelope, error: { code: 'INVALID_CONTENT_TYPE', message: 'Content-Type deve ser application/json' } });
+      } catch (_) {
+        badRequest(res, 'Content-Type deve ser application/json');
+      }
       return;
     }
 
     try {
       const body = await parseJsonBody(req);
-      const { description } = body;
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const execIdForWs = requireExecutionId(body, res, badRequest);
+      if (!execIdForWs) return;
+      const { description, create = false } = body;
+
+      const tenantIdForWs = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : 'system';
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForWs });
+
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'tenants-generate-by-ai',
+        status: 'running',
+        message: 'Gerando tenant por IA...',
+        meta: { create: !!create },
+      });
 
       if (!description || typeof description !== 'string' || description.trim().length === 0) {
-        badRequest(res, 'Descrição é obrigatória');
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'tenants-generate-by-ai',
+          status: 'error',
+          message: 'Descrição é obrigatória',
+          meta: { code: 'INVALID_INPUT' },
+        });
+        const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+          ? String(req.headers['x-request-id']).trim()
+          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'INVALID_INPUT', message: 'Descrição é obrigatória' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INVALID_INPUT'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: null, context: {} },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 400, { envelope, error: { code: 'INVALID_INPUT', message: 'Descrição é obrigatória' } });
         return;
       }
+
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
       // Usa tenant 'system' para geração por IA
       const systemTenantId = 'system';
@@ -1720,8 +4325,46 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       logger.info('[Tenants] Gerando tenant por IA', { description: description.substring(0, 100) });
 
-      const aiResult = await generateAiResponse(prompt, systemTenantId, {});
-      const aiText = aiResult.text || '';
+      let aiText = '';
+      try {
+        const aiResult = await generateAiResponse(prompt, systemTenantId, {});
+        aiText = aiResult.text || '';
+      } catch (providerErr) {
+        try {
+          emitPipelineStage(pipelineWs, execIdForWs, {
+            stage: 'tenants-generate-by-ai',
+            status: 'error',
+            message: providerErr?.message || 'Falha ao chamar provider de IA',
+            meta: { code: 'AI_PROVIDER_ERROR' },
+          });
+        } catch (_) {}
+        // Sempre retorna envelope + erro (mesmo sem provider configurado)
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'AI_PROVIDER_ERROR', message: providerErr.message || 'Falha ao chamar provider de IA' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['AI_PROVIDER_ERROR'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: description, context: { tenantId: 'system' } },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+          rawModelOutput: null,
+        }));
+
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          appendGeneration({ envelope, valid: false, domain: 'tenant', requestId });
+        } catch (_) {}
+        try {
+          const { logFailure } = require('../engine/ai/aiTelemetry');
+          logFailure({ domain: 'tenant', requestId, promptUsed: 'tenants.generate-by-ai', stage: 'AI_PROVIDER_ERROR', errors: [{ message: providerErr.message }] });
+        } catch (_) {}
+
+        sendJson(res, 500, { envelope, error: { code: 'AI_PROVIDER_ERROR', message: providerErr.message || 'Falha ao chamar provider de IA' } });
+        return;
+      }
 
       // Tenta extrair JSON da resposta da IA
       let tenantData;
@@ -1734,23 +4377,57 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           throw new Error('JSON não encontrado na resposta');
         }
       } catch (parseError) {
+        try {
+          emitPipelineStage(pipelineWs, execIdForWs, {
+            stage: 'tenants-generate-by-ai',
+            status: 'error',
+            message: 'A IA não retornou um JSON válido. Tente novamente com uma descrição mais detalhada.',
+            meta: { code: 'AI_OUTPUT_PARSE_ERROR' },
+          });
+        } catch (_) {}
         logger.error('[Tenants] Erro ao parsear resposta da IA', { 
           aiText, 
           error: parseError.message 
         });
-        sendJson(res, 500, { 
-          error: 'Erro ao processar resposta da IA',
-          details: 'A IA não retornou um JSON válido. Tente novamente com uma descrição mais detalhada.'
-        });
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'AI_OUTPUT_PARSE_ERROR', message: parseError.message || 'Falha ao parsear JSON do modelo' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['AI_OUTPUT_PARSE_ERROR'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: description, context: { tenantId: 'system', raw_model_output: aiText } },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+          rawModelOutput: aiText,
+        }));
+        sendJson(res, 500, { envelope, error: { code: 'AI_OUTPUT_PARSE_ERROR', message: 'A IA não retornou um JSON válido. Tente novamente com uma descrição mais detalhada.' } });
         return;
       }
 
       // Valida dados gerados
       if (!tenantData.name || !tenantData.ramo_atividade || !tenantData.objetivo) {
-        sendJson(res, 500, { 
-          error: 'Dados incompletos',
-          details: 'A IA não gerou todos os campos necessários. Tente novamente.'
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'tenants-generate-by-ai',
+          status: 'error',
+          message: 'A IA não gerou todos os campos necessários. Tente novamente.',
+          meta: { code: 'AI_OUTPUT_INCOMPLETE' },
         });
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', {}, {
+          valid: false,
+          errors: [{ type: 'AI_OUTPUT_INCOMPLETE', message: 'A IA não gerou todos os campos necessários' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['AI_OUTPUT_INCOMPLETE'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'tenants.generate-by-ai', user_goal: description, context: { tenantId: 'system', raw_model_output: aiText } },
+          audit: { request_id: requestId, seed: null, tenant_id: 'system', user_id: req.agent?.id || req.agent?.username || null },
+          rawModelOutput: aiText,
+        }));
+        sendJson(res, 500, { envelope, error: { code: 'AI_OUTPUT_INCOMPLETE', message: 'A IA não gerou todos os campos necessários. Tente novamente.' } });
         return;
       }
 
@@ -1759,23 +4436,237 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         tenantData.site = 'https://exemplo.com';
       }
 
-      // Valida entrada usando schema
-      const { validateInput, schemas } = require('./utils/inputValidator');
-      try {
-        validateInput(tenantData, schemas.createTenant);
-      } catch (validationError) {
-        badRequest(res, `Dados gerados inválidos: ${validationError.message}`);
+      // ----------------------------
+      // Safe-mode + contrato + semântica (obrigatório)
+      // ----------------------------
+      const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+      const fs = require('fs');
+      const path = require('path');
+      const contractsDir = path.join(__dirname, '..', 'contracts');
+      const tenantContractPath = path.join(contractsDir, 'tenant.contract.json');
+      const tenantContract = JSON.parse(fs.readFileSync(tenantContractPath, 'utf8'));
+      const { slugifyTenantKey, createTenantAiDraft } = require('./services/tenantAiDraft');
+
+      async function ensureUniqueTenantKey(baseKey) {
+        const { getSequelize } = require('./db/sequelize');
+        const sequelize = getSequelize();
+        if (!sequelize) return baseKey;
+        const { Tenant } = require('./db/models');
+        const TenantModel = Tenant();
+        let key = baseKey;
+        for (let i = 0; i < 10; i += 1) {
+          // eslint-disable-next-line no-await-in-loop
+          const existing = await TenantModel.findOne({ where: { tenant_key: key } });
+          if (!existing) return key;
+          key = `${baseKey}-${Math.random().toString(36).slice(2, 6)}`.slice(0, 50);
+        }
+        return null;
+      }
+
+      const baseTenantKey = slugifyTenantKey(tenantData.name);
+      const uniqueTenantKey = await ensureUniqueTenantKey(baseTenantKey);
+      if (!uniqueTenantKey) {
+        sendJson(res, 409, { error: 'tenant_key_conflict', message: 'Não foi possível gerar tenant_key único' });
+        return;
+      }
+
+      const draftRes = createTenantAiDraft(tenantData, {
+        tenantContractPath: 'contracts/tenant.contract.json',
+        tenant_key: uniqueTenantKey,
+      });
+
+      const tenantDraft = draftRes.tenantDraft;
+
+      const aiMeta = {
+        provider: { name: null, model: null, temperature: null },
+        input: {
+          prompt_summary: 'tenants.generate-by-ai',
+          user_goal: description,
+          context: { tenantId: 'system' },
+        },
+        audit: {
+          request_id: requestId,
+          seed: null,
+          tenant_id: 'system',
+          user_id: req.agent?.id || req.agent?.username || null,
+        },
+        rawModelOutput: aiText,
+      };
+
+      const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('tenant', tenantDraft, {
+        valid: draftRes.valid === true,
+        errors: draftRes.errors || [],
+        warnings: draftRes.warnings || [],
+        qualityScore: draftRes.qualityScore ?? (draftRes.valid ? 100 : 0),
+        riskFlags: draftRes.riskFlags || [],
+      }, aiMeta));
+
+      if (!draftRes.valid) {
+        // Persistência/auditoria best-effort (falha)
+        try {
+          const { appendGeneration } = require('../qa/aiGenerationStore');
+          appendGeneration({
+            envelope,
+            valid: false,
+            domain: 'tenant',
+            requestId,
+          });
+        } catch (e) {
+          // best-effort
+        }
+        try {
+          const { logFailure } = require('../engine/ai/aiTelemetry');
+          logFailure({
+            domain: 'tenant',
+            requestId,
+            promptUsed: 'tenants.generate-by-ai',
+            stage: 'TENANT_DRAFT_INVALID',
+            errors: draftRes.errors || [],
+          });
+        } catch (_) {}
+
+        // Auditoria (DB) best-effort
+        try {
+          await registerGeneration({
+            tenantId: 'system',
+            payload: { description, createRequested: !!create },
+            context: { sources: [] },
+            artifacts: { tenantKey: tenantDraft?.tenant_key || null },
+            contract: { version: tenantContract?.version || '1.0.0', hash: null },
+            envelope,
+            error: { type: 'TENANT_DRAFT_INVALID', errors: draftRes.errors || [] },
+          });
+        } catch (_) {}
+
+        sendJson(res, 400, { envelope, error: { code: 'tenant_ai_validation_failed', message: 'Tenant gerado não passou por contrato/semântica/safe-mode', details: draftRes.errors } });
         return;
       }
 
       logger.info('[Tenants] Tenant gerado por IA com sucesso', { 
-        name: tenantData.name,
-        site: tenantData.site 
+        name: tenantDraft.name,
+        site: tenantDraft.site,
+        tenant_key: tenantDraft.tenant_key,
+        createRequested: !!create,
       });
 
-      sendJson(res, 200, { 
-        tenant: tenantData,
-        generated: true
+      // Persistência/auditoria best-effort do envelope completo
+      let aiAuditId = null;
+      try {
+        const { appendGeneration } = require('../qa/aiGenerationStore');
+        aiAuditId = appendGeneration({ envelope, valid: true, domain: 'tenant', requestId });
+      } catch (e) {
+        // best-effort
+      }
+
+      try {
+        const { logSuccess } = require('../engine/ai/aiTelemetry');
+        logSuccess({
+          domain: 'tenant',
+          requestId,
+          promptUsed: 'tenants.generate-by-ai',
+          qualityScore: envelope?.validation?.qualityScore ?? null,
+          riskFlags: envelope?.validation?.riskFlags || [],
+        });
+      } catch (_) {}
+
+      // Auditoria (DB) best-effort
+      let auditGenerationId = null;
+      try {
+        auditGenerationId = await registerGeneration({
+          tenantId: 'system',
+          payload: { description, createRequested: !!create },
+          context: { sources: [] },
+          artifacts: { tenantKey: tenantDraft?.tenant_key || null },
+          contract: { version: tenantContract?.version || '1.0.0', hash: null },
+          envelope,
+        });
+      } catch (_) {
+        // best-effort
+      }
+
+      // Se solicitado, cria o tenant em etapas (base -> context). NUNCA ativa automaticamente.
+      let createdTenant = null;
+      let reusedExistingTenant = null;
+      if (create === true) {
+        const { createTenant } = require('./services/tenantService');
+        const createResult = await createTenant({
+          tenant_key: tenantDraft.tenant_key,
+          name: tenantDraft.name,
+          site: tenantDraft.site,
+          ramo_atividade: tenantDraft.ramo_atividade,
+          objetivo: tenantDraft.objetivo,
+          plan: tenantDraft.plan,
+          status: tenantDraft.status,
+          limits: tenantDraft.limits,
+          settings: tenantDraft.settings,
+          branding: tenantDraft.branding,
+          _aiSafeMode: true,
+        });
+        if (!createResult.success) {
+          // Idempotência: se o site já existe, reaproveita o tenant existente ao invés de falhar.
+          if (String(createResult.error || '').toLowerCase().includes('já existe um tenant com este site')) {
+            try {
+              const { findTenantBySite } = require('./services/tenantService');
+              reusedExistingTenant = await findTenantBySite(tenantDraft.site);
+            } catch (_) {
+              reusedExistingTenant = null;
+            }
+            if (reusedExistingTenant) {
+              // Regra: só reaproveita se ainda for draft (pending_review). Caso contrário, é conflito.
+              if (reusedExistingTenant.status !== 'pending_review') {
+                sendJson(res, 409, {
+                  error: 'tenant_site_conflict',
+                  message: 'Já existe um tenant com este site e ele não está em modo draft (pending_review).',
+                  tenantDraft,
+                  envelope,
+                  auditId: aiAuditId,
+                  existingTenant: reusedExistingTenant,
+                });
+                return;
+              }
+              sendJson(res, 200, {
+                generated: true,
+                auditId: aiAuditId,
+                auditGenerationId,
+                envelope,
+                tenantDraft,
+                tenant: tenantDraft, // compatibilidade
+                created: false,
+                createdTenant: null,
+                reusedExisting: true,
+                existingTenant: reusedExistingTenant,
+              });
+              return;
+            }
+          }
+          sendJson(res, 500, {
+            error: 'tenant_create_failed',
+            message: createResult.error || 'Erro ao criar tenant (safe-mode)',
+            tenantDraft,
+            envelope,
+            auditId: aiAuditId,
+          });
+          return;
+        }
+        createdTenant = createResult.tenant;
+      }
+
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'tenants-generate-by-ai',
+        status: 'success',
+        message: createdTenant ? 'Tenant gerado por IA (e criado).' : 'Tenant gerado por IA.',
+        meta: { created: !!createdTenant, tenantId: createdTenant?.id || null },
+      });
+
+      sendJson(res, 200, {
+        generated: true,
+        auditId: aiAuditId,
+        auditGenerationId,
+        envelope,
+        tenantDraft,
+        tenant: tenantDraft, // compatibilidade
+        created: !!createdTenant,
+        createdTenant,
       });
     } catch (err) {
       logger.error('[Tenants] Erro ao gerar tenant por IA:', err);
@@ -1806,175 +4697,1763 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { prompt, name, tenantId, urls } = body;
+      const { name, tenantId, urls, fileNames, mode, executionId, contextMode, chunks } = body;
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const execIdForWs = requireExecutionId({ executionId }, res, badRequest);
+      if (!execIdForWs) return;
 
-      if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-        badRequest(res, 'Prompt é obrigatório');
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      // Importante: para super-admin, permite operar em um tenant alvo via body.tenantId
+      // (ex.: UI troca tenant no frontend sem emitir novo token; o token ainda é do "system")
+      const requestedTenantId = tenantId ? String(tenantId).trim() : null;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      const tenantIdForAI = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
+      if (!tenantIdForAI) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
         return;
       }
 
-      const isSuperAdminUser = isSuperAdmin(req.agent);
-      const tenantIdForAI = (req.agent?.tenantId && String(req.agent.tenantId).trim())
-        ? String(req.agent.tenantId).trim()
-        : (isSuperAdminUser && tenantId ? String(tenantId).trim() : null);
-      if (!tenantIdForAI) {
-        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForAI });
+
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'suggest-description',
+        status: 'running',
+        message: 'Sugerindo descrição com IA...',
+        meta: { mode: mode === 'technical' ? 'technical' : 'institutional' },
+      });
+
+      // Pipeline (backend-only): etapa explícita para o card "Sugerir descrição"
+      let pipelineExecution = null;
+      if (execIdForWs) {
+        try {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          pipelineExecution = ensureExecutionContext({ executionId: execIdForWs }, { tenantId: tenantIdForAI });
+          requireStages(pipelineExecution, ['descriptionSuggested']);
+          pipelineExecution.stages.descriptionSuggested = false;
+          updateStatus(pipelineExecution, 'running', {
+            currentStage: 'descriptionSuggested',
+            stageStatus: 'in_progress',
+            message: 'Sugerindo descrição com IA...',
+            source: '/system/suggest-description',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
+      // Gate 1: provider válido (falha terminal centralizada no backend)
+      try {
+        const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
+        const { getAiProviderForTenant } = require('../engine/aiProviderManager');
+        await ensureTenantAiConfigLoaded(tenantIdForAI);
+        const provider = getAiProviderForTenant(tenantIdForAI);
+        if (!provider) {
+          throw new Error(`Nenhum provider de IA configurado para tenant: ${tenantIdForAI}`);
+        }
+      } catch (provErr) {
+        const { createExecutionContext } = require('./services/pipelineExecutionContext');
+        const { failGeneration } = require('./services/failGeneration');
+        const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+        const execution = createExecutionContext({ executionId: execIdForWs || undefined }, { tenantId: tenantIdForAI });
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.INVALID_PROVIDER,
+            error: provErr,
+            extra: { tenantId: tenantIdForAI, endpoint: '/system/suggest-description' },
+          });
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_NOT_AVAILABLE',
+          message: provErr?.message || 'Provider de IA não disponível',
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: tenantIdForAI, executionId: execIdForWs },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      // Gate 2: RAG disponível (falha terminal centralizada no backend)
+      try {
+        const { isRagAvailable } = require('./services/ragService');
+        const ok = await isRagAvailable(tenantIdForAI);
+        if (!ok) throw new Error('Serviço RAG não disponível');
+      } catch (ragErr) {
+        const { createExecutionContext } = require('./services/pipelineExecutionContext');
+        const { failGeneration } = require('./services/failGeneration');
+        const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+        const execution = createExecutionContext({ executionId: execIdForWs || undefined }, { tenantId: tenantIdForAI });
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.RAG_UNAVAILABLE,
+            error: ragErr,
+            extra: { tenantId: tenantIdForAI, endpoint: '/system/suggest-description' },
+          });
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'RAG_NOT_AVAILABLE',
+          message: ragErr?.message || 'Serviço RAG não disponível',
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: tenantIdForAI, executionId: execIdForWs },
+          req,
+        }), setCorsHeaders);
         return;
       }
       
       logger.info('[System] Sugerindo descrição por IA', { 
         name: name || 'N/A',
         tenantId: tenantIdForAI,
-        hasUrls: Array.isArray(urls) && urls.length > 0
+        mode: mode === 'technical' ? 'technical' : 'institutional',
+        hasUrls: Array.isArray(urls) && urls.length > 0,
+        filesCount: Array.isArray(fileNames) ? fileNames.length : 0,
       });
 
-      // Primeiro, consulta RAG para obter conteúdo indexado sobre o tenant/sistema
-      let ragContext = '';
+      const debugRequested = body && body.debug === true;
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10)
+        : [];
+
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      // Só retorna 422 se realmente não houver qualquer fonte (site nem urls nem arquivos).
+      let tenantSite = '';
       try {
-        // Constrói query mais específica baseada no nome e URLs
-        let ragQuery = '';
-        if (name && Array.isArray(urls) && urls.length > 0) {
-          // Se tem nome e URLs, busca por conteúdo relacionado ao nome e às URLs
-          const urlDomains = urls.map(url => {
-            try {
-              const urlObj = new URL(url);
-              return urlObj.hostname.replace('www.', '');
-            } catch {
-              return url;
-            }
-          }).filter(Boolean);
-          ragQuery = `${name} ${urlDomains.join(' ')} informações sobre serviços produtos`;
-        } else if (name) {
-          // Se tem apenas nome, busca por informações sobre o nome
-          ragQuery = `Informações sobre ${name} serviços produtos empresa negócio`;
-        } else if (Array.isArray(urls) && urls.length > 0) {
-          // Se tem apenas URLs, busca por conteúdo das URLs
-          const urlDomains = urls.map(url => {
-            try {
-              const urlObj = new URL(url);
-              return urlObj.hostname.replace('www.', '');
-            } catch {
-              return url;
-            }
-          }).filter(Boolean);
-          ragQuery = `${urlDomains.join(' ')} informações conteúdo site`;
-        } else {
-          ragQuery = 'Informações sobre o sistema ou tenant';
-        }
-        
-        logger.debug('[System] Consultando RAG para obter contexto', { 
-          query: ragQuery, 
-          tenantId: tenantIdForAI,
-          name,
-          urlsCount: Array.isArray(urls) ? urls.length : 0
+        const { getTenant } = require('./services/tenantService');
+        const tenant = await getTenant(tenantIdForAI);
+        tenantSite = tenant?.site ? String(tenant.site).trim() : '';
+      } catch (err) {
+        logger.debug('[SuggestDescription] Falha ao obter tenant para checar fontes', { tenantId: tenantIdForAI, error: err.message });
+      }
+
+      const hasAnySource = safeUrls.length > 0 || safeFiles.length > 0 || safeChunks.length > 0 || !!tenantSite;
+      if (!hasAnySource) {
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'suggest-description',
+          status: 'error',
+          message: 'Nenhum contexto indexado disponível para sugerir descrição',
+          meta: { code: 'NO_INDEXED_CONTEXT' },
         });
-        
-        const ragResult = await ragService.queryRag(ragQuery, tenantIdForAI, {}, {
-          topK: 10, // Aumenta para pegar mais contexto
-          minScore: 0.25, // Score ainda mais baixo para pegar mais contexto
-          maxTokens: 3000, // Mais tokens para ter mais informações
-        });
-        
-        if (ragResult.success) {
-          // Prioriza sources se disponíveis, senão usa response
-          if (ragResult.sources && ragResult.sources.length > 0) {
-            // Extrai conteúdo relevante dos chunks retornados
-            // Sources podem ter: content, text, chunk, excerpt, ou similar
-            const relevantChunks = ragResult.sources
-              .filter(s => {
-                const score = s.score || s.relevance_score || s.similarity || 0;
-                return score >= 0.25; // Score mais baixo para pegar mais contexto
-              })
-              .slice(0, 8) // Aumenta para 8 chunks mais relevantes
-              .map(s => {
-                // O campo correto é 'excerpt' conforme o modelo Source do Python
-                // Mas também tenta outros campos para compatibilidade
-                const content = s.excerpt || s.content || s.text || s.chunk || s.snippet || '';
-                return content;
-              })
-              .filter(c => c && c.trim() && c.length > 20); // Filtra conteúdos muito curtos
-            
-            if (relevantChunks.length > 0) {
-              ragContext = `\n\nCONTEXTO EXTRAÍDO DOS ARQUIVOS INDEXADOS:\n${relevantChunks.join('\n\n---\n\n')}\n\n`;
-              logger.info('[System] Contexto RAG obtido com sucesso', { 
-                chunksCount: relevantChunks.length,
-                totalLength: ragContext.length,
-                sourcesCount: ragResult.sources.length,
-                avgChunkLength: Math.round(relevantChunks.reduce((sum, c) => sum + c.length, 0) / relevantChunks.length)
-              });
-            } else {
-              logger.debug('[System] RAG retornou sources mas sem conteúdo extraível suficiente', { 
-                sourcesCount: ragResult.sources.length,
-                sampleSource: ragResult.sources[0] ? Object.keys(ragResult.sources[0]) : [],
-                sampleContent: ragResult.sources[0] ? (ragResult.sources[0].content || ragResult.sources[0].text || '').substring(0, 100) : ''
-              });
-            }
-          }
-          
-          // Se não conseguiu extrair contexto dos sources mas há uma resposta gerada, usa ela
-          if (!ragContext && ragResult.response && ragResult.response.trim()) {
-            ragContext = `\n\nINFORMAÇÕES EXTRAÍDAS DOS ARQUIVOS INDEXADOS:\n${ragResult.response}\n\n`;
-            logger.info('[System] Usando resposta RAG como contexto (sources não disponíveis)', { 
-              responseLength: ragResult.response.length 
-            });
-          }
-        } else {
-          logger.debug('[System] RAG não retornou resultados ou está vazio', { 
-            success: ragResult.success,
-            sourcesCount: ragResult.sources?.length || 0,
-            hasResponse: !!ragResult.response,
-            error: ragResult.error
+        // Encerra pipeline automaticamente (falha lógica)
+        try {
+          const { createExecutionContext } = require('./services/pipelineExecutionContext');
+          const { failGeneration } = require('./services/failGeneration');
+          const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+          const execution = createExecutionContext({ executionId: execIdForWs }, { tenantId: tenantIdForAI });
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.SUGGEST_DESCRIPTION_FAILED,
+            error: new Error('NO_INDEXED_CONTEXT'),
+            extra: { tenantId: tenantIdForAI, stage: 'descriptionSuggested', endpoint: '/system/suggest-description' },
           });
-        }
-      } catch (ragError) {
-        logger.warn('[System] Erro ao consultar RAG (continuando sem contexto)', { 
-          error: ragError.message 
-        });
-        // Continua sem contexto RAG se houver erro
-      }
-
-      // Monta prompt final com contexto RAG se disponível
-      let finalPrompt = prompt;
-      
-      if (ragContext) {
-        // Se há contexto RAG, usa ele como fonte principal
-        finalPrompt = `${prompt}\n\n${ragContext}\n\nIMPORTANTE: Use APENAS as informações do contexto extraído dos arquivos indexados acima. Não invente informações que não estejam no contexto. Se o contexto não contiver informações suficientes, seja cauteloso e mencione apenas o que está disponível.`;
-      } else if (Array.isArray(urls) && urls.length > 0) {
-        // Se não há RAG mas há URLs, menciona as URLs (mas não acessa diretamente)
-        finalPrompt = `${prompt}\n\nURLs do site para referência: ${urls.join(', ')}\n\nIMPORTANTE: Use apenas informações que foram indexadas dos arquivos enviados ou do web scraping desses sites. Não invente informações.`;
-      } else {
-        // Sem RAG nem URLs, instrui a ser muito cauteloso
-        finalPrompt = `${prompt}\n\nIMPORTANTE: Não há conteúdo indexado disponível. Seja muito cauteloso e não invente informações específicas. Use apenas inferências genéricas baseadas no nome.`;
-      }
-
-      const aiResult = await generateAiResponse(finalPrompt, tenantIdForAI, {});
-      const suggestedDescription = aiResult.text || '';
-
-      if (!suggestedDescription.trim()) {
-        sendJson(res, 500, { 
-          error: 'Erro ao processar resposta da IA',
-          details: 'A IA não retornou uma descrição sugerida.'
-        });
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'NO_INDEXED_CONTEXT',
+          message: 'Nenhum contexto indexado disponível para sugerir descrição',
+          httpStatus: 422,
+          retryable: false,
+          details: {
+            tenantId: tenantIdForAI,
+            urls: safeUrls,
+            fileNames: safeFiles,
+            indexedChunks: 0,
+          },
+          req,
+        }), setCorsHeaders);
         return;
       }
 
-      logger.info('[System] Descrição sugerida com sucesso', { 
-        length: suggestedDescription.length 
+      const { suggestDescription } = require('./services/suggestDescriptionService');
+      const { payload, warnings } = await suggestDescription({
+        tenantId: tenantIdForAI,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        chunks: safeChunks,
+        executionId: execIdForWs,
+        contextMode: (contextMode && String(contextMode).trim()) ? String(contextMode).trim() : 'auto',
+        mode: mode === 'technical' ? 'technical' : 'institutional',
+        debug: debugRequested,
       });
 
-      sendJson(res, 200, { 
-        suggestion: suggestedDescription.trim()
+      // Pipeline (backend-only): conclui etapa
+      if (pipelineExecution) {
+        try {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'descriptionSuggested', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'descriptionSuggested',
+            stageStatus: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'completed',
+            message: 'Descrição sugerida.',
+            source: '/system/suggest-description',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
+      if (!payload?.suggestion || !String(payload.suggestion).trim()) {
+        emitPipelineStage(pipelineWs, execIdForWs, {
+          stage: 'suggest-description',
+          status: 'error',
+          message: 'Não foi possível gerar uma descrição sugerida',
+          meta: { code: 'DESCRIPTION_FAILED' },
+        });
+        sendApiError(res, buildApiError({
+          code: 'DESCRIPTION_FAILED',
+          message: 'Não foi possível gerar uma descrição sugerida',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: tenantIdForAI },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      emitPipelineStage(pipelineWs, execIdForWs, {
+        stage: 'suggest-description',
+        status: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'success',
+        message: Array.isArray(warnings) && warnings.length > 0 ? 'Descrição sugerida (com avisos).' : 'Descrição sugerida.',
+        meta: { warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
       });
+
+      logger.info('[System] Descrição sugerida com sucesso', { 
+        length: String(payload.suggestion || '').length,
+        mode: payload.mode,
+        confidence: payload.confidence,
+      });
+
+      // ============================================================
+      // 🔗 Camada final: RAG → FAQ → Respostas → Intents → Fluxo visual
+      // - Executa apenas quando solicitado e quando há executionId
+      // - Dry-run: não persiste; apenas retorna no payload
+      // ============================================================
+      let initialFlow = null;
+      let intents = null;
+      let questions = null;
+      let answers = null;
+      let extractedEntities = null;
+      let excludedItemsCount = 0;
+      const wantsInitialFlow = body && body.generateInitialFlow === true;
+      const isDryRun = body && body.dryRun === true;
+      const execId = execIdForWs;
+
+      if (wantsInitialFlow && execId) {
+        try {
+          const faqService = require('./services/faq.service');
+          const businessEntitiesService = require('./services/business-entities.service');
+          const answersService = require('./services/answers.service');
+          const intentsService = require('./services/intents.service');
+          const flowAdapter = require('./services/flow.adapter');
+
+          const executionContext = {
+            executionId: execId,
+            exclusions: [],
+            excludedItemsCount: 0,
+          };
+
+          // Etapa obrigatória: Business Entity Extraction (salva em Redis: entities:{tenantId}:{executionId})
+          try {
+            const be = await businessEntitiesService.extractBusinessEntities({
+              tenantId: tenantIdForAI,
+              executionId: execId,
+              dryRun: isDryRun,
+            });
+            extractedEntities = be?.entities || null;
+          } catch (beErr) {
+            logger.warn('[System] Falha ao extrair entidades de negócio (best-effort)', {
+              tenantId: tenantIdForAI,
+              executionId: execId,
+              error: beErr?.message || String(beErr),
+            });
+            extractedEntities = null;
+          }
+
+          const faq = await faqService.generateFAQ({ tenantId: tenantIdForAI, executionId: execId, dryRun: isDryRun });
+          questions = faq.questions;
+          const ragContext = faq.ragContext || '';
+          executionContext.exclusions = Array.isArray(faq?.meta?.exclusions) ? faq.meta.exclusions : [];
+
+          // Métrica pós-FAQ (best-effort): coverage = perguntasGeradas / (services + plans + prices + schedules)
+          try {
+            const { getEphemeralContextClient } = require('../infra/redis/ephemeralContextClient');
+            const redis = getEphemeralContextClient();
+            if (redis && redis.status === 'ready') {
+              const countArr = (v) => (Array.isArray(v) ? v.length : 0);
+              const denom = countArr(extractedEntities?.services)
+                + countArr(extractedEntities?.plans)
+                + countArr(extractedEntities?.prices)
+                + countArr(extractedEntities?.schedules);
+              const qn = Array.isArray(questions) ? questions.length : 0;
+              const cov = denom > 0 ? (qn / denom) : 0;
+              const envTtl = Number(process.env.EPHEMERAL_RAG_TTL_SECONDS);
+              const ttlSeconds = Number.isFinite(envTtl) && envTtl > 0 ? envTtl : 1800;
+              const key = `rag_metrics:${tenantIdForAI}:${execId}`;
+              await redis.set(key, JSON.stringify({
+                tenantId: tenantIdForAI,
+                executionId: execId,
+                coverage: cov,
+                questionsGenerated: qn,
+                denominator: denom,
+                entityCounts: {
+                  services: countArr(extractedEntities?.services),
+                  plans: countArr(extractedEntities?.plans),
+                  prices: countArr(extractedEntities?.prices),
+                  schedules: countArr(extractedEntities?.schedules),
+                },
+                updatedAt: new Date().toISOString(),
+              }), 'EX', ttlSeconds);
+            }
+          } catch (mErr) {
+            logger.debug('[System] Falha ao salvar rag_metrics (best-effort)', {
+              tenantId: tenantIdForAI,
+              executionId: execId,
+              error: mErr?.message || String(mErr),
+            });
+          }
+
+          answers = await answersService.generateAnswers(tenantIdForAI, questions, ragContext, executionContext);
+          intents = await intentsService.buildIntents(tenantIdForAI, questions, answers, executionContext);
+          initialFlow = flowAdapter.buildInitialFlowFromIntents(intents, {
+            tenantId: tenantIdForAI,
+            flowId: `initial-${tenantIdForAI}-${execId}`.slice(0, 180),
+            name: 'Fluxo inicial (auto)',
+          });
+
+          excludedItemsCount = Number(executionContext.excludedItemsCount) || 0;
+          // Anexa métrica no flow para rastreio (best-effort)
+          try {
+            if (initialFlow && typeof initialFlow === 'object') {
+              initialFlow.metadata = {
+                ...(initialFlow.metadata || {}),
+                excludedItemsCount,
+              };
+            }
+          } catch {
+            // noop
+          }
+
+          // Se for modo real e o caller solicitar persistência, persiste no banco via cache de flows
+          if (!isDryRun && body.persistFlow === true) {
+            try {
+              // Gate obrigatório (mesmo comportamento do POST /flows para IA)
+              const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+              validateGeneratedPlanOrThrow(initialFlow, 'chatbot');
+
+              flows.set(initialFlow.id, initialFlow);
+              persistFlowBestEffort(initialFlow);
+            } catch (persistErr) {
+              logger.warn('[System] Falha ao persistir fluxo inicial (best-effort)', {
+                flowId: initialFlow?.id,
+                error: persistErr?.message || String(persistErr),
+              });
+            }
+          }
+        } catch (flowErr) {
+          logger.warn('[System] Falha ao gerar fluxo inicial (best-effort)', {
+            tenantId: tenantIdForAI,
+            executionId: execId,
+            error: flowErr?.message || String(flowErr),
+          });
+          initialFlow = null;
+        }
+      }
+
+      const enriched = {
+        ok: true,
+        data: payload,
+        warnings: warnings || [],
+        ...payload,
+        ...(extractedEntities ? { entities: extractedEntities } : {}),
+        ...(initialFlow ? { initialFlow } : {}),
+        ...(Array.isArray(intents) ? { intents } : {}),
+        ...(Array.isArray(questions) ? { questions } : {}),
+        ...(Array.isArray(answers) ? { answers } : {}),
+        ...(wantsInitialFlow && execId ? { excludedItemsCount } : {}),
+      };
+
+      sendJson(res, 200, enriched);
     } catch (err) {
       logger.error('[System] Erro ao sugerir descrição:', err);
+      const { failGeneration } = require('./services/failGeneration');
+      const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+      try {
+        const { createExecutionContext } = require('./services/pipelineExecutionContext');
+        const tenantIdForWs = req.agent?.tenantId || req.tenantId || null;
+        const execution = createExecutionContext({ executionId: execIdForWs || undefined }, { tenantId: tenantIdForWs });
+        await failGeneration({
+          execution,
+          reason: GenerationFailureReasons.SUGGEST_DESCRIPTION_FAILED,
+          error: err,
+          extra: { endpoint: '/system/suggest-description' },
+        });
+      } catch (_) {}
       if (err instanceof SyntaxError) {
-        badRequest(res, 'JSON inválido no corpo da requisição');
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
       } else {
-        sendJson(res, 500, { 
-          error: 'internal_error',
-          message: err.message || 'Erro ao sugerir descrição por IA'
+        const rawMessage = String(err?.message || '');
+        const rawCode = String(err?.code || err?.error?.code || '');
+        const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+        if (isQuota) {
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage || 'Rate limit excedido no provider de IA',
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        sendApiError(res, buildApiError({
+          code: 'DESCRIPTION_FAILED',
+          message: err.message || 'Erro ao sugerir descrição por IA',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
+      }
+    }
+    return;
+  }
+
+  // POST /system/pipeline/validate-prereqs - Valida pré-requisitos do pipeline (backend-only)
+  // - Provider de IA disponível
+  // - Serviço RAG disponível (opcional)
+  // Emite `pipeline.status` via pipelineExecutionContext para alimentar o PipelineMachine.
+  if (method === 'POST' && pathname === '/system/pipeline/validate-prereqs') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    let execution = null;
+    try {
+      const body = await parseJsonBody(req);
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) return;
+      const useRag = body?.useRag !== false;
+
+      const tenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim()) ? String(req.agent.tenantId).trim() : null;
+      if (!tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId });
+
+      const { ensureExecutionContext, requireStages, updateStatus, updateStage } = require('./services/pipelineExecutionContext');
+      const { failGeneration } = require('./services/failGeneration');
+      const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+
+      execution = ensureExecutionContext({ executionId }, { tenantId });
+      requireStages(execution, ['providerValidated', 'ragValidated']);
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'validate-prereqs',
+        status: 'running',
+        message: 'Validando pré-requisitos do pipeline...',
+        meta: { useRag: !!useRag },
+      });
+
+      // Provider
+      updateStatus(execution, 'running', {
+        currentStage: 'providerValidated',
+        stageStatus: 'in_progress',
+        message: 'Validando provider de IA...',
+        source: '/system/pipeline/validate-prereqs',
+      });
+      try {
+        const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
+        const { getAiProviderForTenant } = require('../engine/aiProviderManager');
+        await ensureTenantAiConfigLoaded(tenantId);
+        const provider = getAiProviderForTenant(tenantId);
+        if (!provider) throw new Error(`Nenhum provider de IA configurado para tenant: ${tenantId}`);
+      } catch (provErr) {
+        emitPipelineStage(pipelineWs, executionId, {
+          stage: 'validate-prereqs',
+          status: 'error',
+          message: provErr?.message || 'Provider de IA não disponível',
+          meta: { code: 'PROVIDER_NOT_AVAILABLE' },
+        });
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.INVALID_PROVIDER,
+            error: provErr,
+            extra: { tenantId, endpoint: '/system/pipeline/validate-prereqs' },
+          });
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_NOT_AVAILABLE',
+          message: provErr?.message || 'Provider de IA não disponível',
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId, executionId },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+      updateStage(execution, 'providerValidated', true);
+
+      // RAG
+      if (useRag) {
+        updateStatus(execution, 'running', {
+          currentStage: 'ragValidated',
+          stageStatus: 'in_progress',
+          message: 'Validando serviço RAG...',
+          source: '/system/pipeline/validate-prereqs',
+        });
+        try {
+          const { isRagAvailable } = require('./services/ragService');
+          const ok = await isRagAvailable(tenantId);
+          if (!ok) throw new Error('Serviço RAG não disponível');
+        } catch (ragErr) {
+          emitPipelineStage(pipelineWs, executionId, {
+            stage: 'validate-prereqs',
+            status: 'error',
+            message: ragErr?.message || 'Serviço RAG não disponível',
+            meta: { code: 'RAG_NOT_AVAILABLE' },
+          });
+          try {
+            await failGeneration({
+              execution,
+              reason: GenerationFailureReasons.RAG_UNAVAILABLE,
+              error: ragErr,
+              extra: { tenantId, endpoint: '/system/pipeline/validate-prereqs' },
+            });
+          } catch (_) {}
+          sendApiError(res, buildApiError({
+            code: 'RAG_NOT_AVAILABLE',
+            message: ragErr?.message || 'Serviço RAG não disponível',
+            httpStatus: 424,
+            retryable: false,
+            details: { tenantId, executionId },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+      }
+      updateStage(execution, 'ragValidated', true);
+
+      updateStatus(execution, execution.status, {
+        currentStage: 'ragValidated',
+        stageStatus: 'completed',
+        message: 'Pré-requisitos validados.',
+        source: '/system/pipeline/validate-prereqs',
+      });
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'validate-prereqs',
+        status: 'success',
+        message: 'Pré-requisitos validados.',
+        meta: { providerValidated: true, ragValidated: true, useRag: !!useRag },
+      });
+
+      sendJson(res, 200, { ok: true, executionId, providerValidated: true, ragValidated: true });
+    } catch (err) {
+      logger.error('[System] Erro ao validar pré-requisitos do pipeline:', err);
+      try {
+        if (execution) {
+          const { failGeneration } = require('./services/failGeneration');
+          const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.UNKNOWN,
+            error: err,
+            extra: { endpoint: '/system/pipeline/validate-prereqs' },
+          });
+        }
+      } catch (_) {}
+      sendApiError(res, buildApiError({
+        code: 'PIPELINE_PREREQS_FAILED',
+        message: err?.message || 'Falha ao validar pré-requisitos do pipeline',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
+  // Rota /system/pipeline/fail removida:
+  // - O frontend não aborta mais o pipeline via REST.
+  // - Qualquer falha lógica deve emitir `generation.stage` (error) e encerrar automaticamente.
+
+  // POST /system/generate-faq - Gera FAQ agrupado (clusters) + coverage
+  if (method === 'POST' && pathname === '/system/generate-faq') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    let pipelineExecution = null;
+    let execIdForPipeline = null;
+    let tenantIdForPipeline = null;
+    try {
+      const body = await parseJsonBody(req);
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      execIdForPipeline = requireExecutionId(body, res, badRequest);
+      if (!execIdForPipeline) return;
+      const {
+        name,
+        description,
+        tenantId,
+        urls,
+        fileNames,
+        pipelineStage,
+        executionId, // mantido para compatibilidade, mas obrigatório
+        contextMode,
+        chunks,
+        rules,
+        dryRun,
+      } = body || {};
+      const stageKey = (pipelineStage && String(pipelineStage).trim() === 'questionsGenerated')
+        ? 'questionsGenerated'
+        : 'faqGenerated';
+
+      // Pipeline (opção A): esta chamada faz parte do pipeline tenant quando há executionId.
+      // Ela pode disparar chamadas de IA e deve "segurar" o approved até finalizar.
+      // executionId já validado como obrigatório acima
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const requestedTenantId = tenantId ? String(tenantId).trim() : null;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      const tenantIdForAI = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
+      tenantIdForPipeline = tenantIdForAI;
+      if (!tenantIdForAI) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForAI });
+
+      emitPipelineStage(pipelineWs, execIdForPipeline, {
+        stage: 'generate-faq',
+        status: 'running',
+        message: stageKey === 'questionsGenerated'
+          ? 'Gerando perguntas automaticamente...'
+          : 'Gerando FAQ...',
+        meta: { pipelineStage: stageKey },
+      });
+
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10)
+        : [];
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      logger.info('[System] Gerando FAQ', {
+        tenantId: tenantIdForAI,
+        hasExecutionId: !!(executionId && String(executionId).trim()),
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        urls: safeUrls.length,
+        fileNames: safeFiles.length,
+        inlineChunks: safeChunks.length,
+      });
+
+      // Pipeline status: marca etapa FAQ como requerida e em progresso (best-effort).
+      try {
+        if (execIdForPipeline) {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          pipelineExecution = ensureExecutionContext({ executionId: execIdForPipeline }, { tenantId: tenantIdForAI });
+          requireStages(pipelineExecution, [stageKey]);
+          // torna etapa pendente (requerida)
+          pipelineExecution.stages[stageKey] = false;
+          updateStatus(pipelineExecution, 'running', {
+            currentStage: stageKey,
+            stageStatus: 'in_progress',
+            message: stageKey === 'questionsGenerated'
+              ? 'Gerando perguntas automaticamente (contexto do tenant)...'
+              : 'Gerando FAQ (pipeline tenant)...',
+            source: '/system/generate-faq',
+          });
+        }
+      } catch (e) {
+        // best-effort: não falha a request
+      }
+
+      const { generateFaq } = require('./services/faqGeneratorService');
+      const result = await generateFaq({
+        tenantId: tenantIdForAI,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        description: (description && String(description).trim()) ? String(description).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        chunks: safeChunks,
+        executionId: execIdForPipeline,
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        rules: (rules && typeof rules === 'object') ? rules : null,
+        dryRun: dryRun === true,
+      });
+
+      // Se esta chamada era para gerar PERGUNTAS (pipelineStage=questionsGenerated),
+      // exige pelo menos 1 pergunta. Caso contrário, marca como failed e não avança.
+      try {
+        if (pipelineExecution && stageKey === 'questionsGenerated') {
+          const isValidQuestionBasic = (q) => {
+            if (typeof q !== 'string') return false;
+            const s = q.trim();
+            if (!s) return false;
+            if (s.length < 8) return false;
+            if (s.length > 220) return false;
+            // Evita lixo técnico/arquivos/URLs
+            if (/https?:\/\/\S+/i.test(s)) return false;
+            if (/\b[\w.-]{3,}\.(pdf|jpe?g|png|gif|webp|bmp|tiff|svg|docx?|xlsx?|pptx?|csv|txt|zip|rar|7z)\b/i.test(s)) return false;
+            if (/\[imagem:.*?\]/i.test(s)) return false;
+            if (/texto extra[ií]do.*ocr/i.test(s)) return false;
+            return true;
+          };
+
+          const flat = Array.isArray(result?.flatQuestions) ? result.flatQuestions : null;
+          const grouped = Array.isArray(result?.faq) ? result.faq : null;
+          const flattened = Array.isArray(grouped)
+            ? grouped.flatMap(g => Array.isArray(g?.questions) ? g.questions : [])
+            : [];
+          const candidates = Array.isArray(flat) ? flat : flattened;
+          const validCount = (Array.isArray(candidates) ? candidates : []).filter(isValidQuestionBasic).length;
+          if (!validCount || validCount <= 0) {
+            try {
+              const { createPipelineWs } = require('./ws/pipelineEmitter');
+              const { emitPipelineStage } = require('./ws/emitPipelineStage');
+              emitPipelineStage(createPipelineWs({ tenantId: tenantIdForAI }), execIdForPipeline, {
+                stage: 'generate-faq',
+                status: 'error',
+                message: 'Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.',
+                meta: { code: 'QUESTIONS_GENERATION_FAILED' },
+              });
+            } catch (_) {}
+            const { updateStatus } = require('./services/pipelineExecutionContext');
+            try {
+              const { updateStage } = require('./services/pipelineExecutionContext');
+              updateStage(pipelineExecution, 'questionsGenerated', false);
+            } catch (_) {
+              // best-effort
+            }
+            updateStatus(pipelineExecution, 'failed', {
+              currentStage: 'questionsGenerated',
+              stageStatus: 'error',
+              reason: { code: 'QUESTIONS_GENERATION_FAILED' },
+              message: 'Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.',
+              source: '/system/generate-faq',
+            });
+
+            sendApiError(res, buildApiError({
+              code: 'QUESTIONS_GENERATION_FAILED',
+              message: 'Não foi possível gerar perguntas automaticamente. Adicione ao menos 1 pergunta.',
+              httpStatus: 422,
+              retryable: false,
+              details: { tenantId: tenantIdForAI, executionId: execIdForPipeline },
+              req,
+            }), setCorsHeaders);
+            return;
+          }
+        }
+      } catch (e) {
+        // best-effort: se falhar a verificação, segue o fluxo original
+      }
+
+      // Pipeline status: conclui etapa FAQ e tenta aprovar (best-effort).
+      try {
+        if (pipelineExecution && execIdForPipeline) {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, stageKey, true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: stageKey,
+            stageStatus: 'completed',
+            message: stageKey === 'questionsGenerated' ? 'Perguntas geradas.' : 'FAQ gerado.',
+            source: '/system/generate-faq',
+          });
+        }
+      } catch (e) {
+        // best-effort
+      }
+
+      emitPipelineStage(pipelineWs, execIdForPipeline, {
+        stage: 'generate-faq',
+        status: 'success',
+        message: stageKey === 'questionsGenerated' ? 'Perguntas geradas.' : 'FAQ gerado.',
+        meta: { pipelineStage: stageKey },
+      });
+
+      sendJson(res, 200, { ok: true, data: result, ...result });
+    } catch (err) {
+      logger.error('[System] Erro ao gerar FAQ:', err);
+      // Pipeline status:
+      // - Qualquer falha lógica/técnica encerra o pipeline automaticamente.
+      try {
+        if (pipelineExecution && execIdForPipeline) {
+          const { updateStatus } = require('./services/pipelineExecutionContext');
+          updateStatus(pipelineExecution, 'failed', {
+            currentStage: stageKey,
+            stageStatus: 'error',
+            reason: { code: 'FAQ_FAILED' },
+            message: (String(err?.message || err) || 'Falha ao gerar FAQ').slice(0, 300),
+            source: '/system/generate-faq',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+      try {
+        const { createPipelineWs } = require('./ws/pipelineEmitter');
+        const { emitPipelineStage } = require('./ws/emitPipelineStage');
+        if (tenantIdForPipeline && execIdForPipeline) {
+          emitPipelineStage(createPipelineWs({ tenantId: tenantIdForPipeline }), execIdForPipeline, {
+            stage: 'generate-faq',
+            status: 'error',
+            message: (String(err?.message || err) || 'Falha ao gerar FAQ').slice(0, 300),
+            meta: { code: 'FAQ_FAILED' },
+          });
+        }
+      } catch (_) {}
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+      } else {
+        const rawMessage = String(err?.message || '');
+        const rawCode = String(err?.code || err?.error?.code || '');
+        const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+        if (isQuota) {
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage || 'Rate limit excedido no provider de IA',
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: req.tenantId || req.agent?.tenantId || null, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        sendApiError(res, buildApiError({
+          code: 'FAQ_FAILED',
+          message: err.message || 'Erro ao gerar FAQ',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
+      }
+    }
+    return;
+  }
+
+  // POST /system/generate-faq-answers - Gera respostas para um conjunto de perguntas (FAQ)
+  if (method === 'POST' && pathname === '/system/generate-faq-answers') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
+      const {
+        questions,
+        name,
+        urls,
+        fileNames,
+        executionId,
+        contextMode,
+        chunks,
+        dryRun,
+      } = body || {};
+
+      // executionId é opcional, mas se vier deve ser válido (hardening)
+      if (executionId) {
+        const { isValidExecutionId } = require('./middleware/requireExecutionId');
+        const raw = String(executionId).trim();
+        if (!isValidExecutionId(raw)) {
+          badRequest(res, 'executionId inválido');
+          return;
+        }
+      }
+
+      const isValidQuestionBasic = (q) => {
+        if (typeof q !== 'string') return false;
+        const s = q.trim();
+        if (!s) return false;
+        if (s.length < 8) return false;
+        if (s.length > 220) return false;
+        // Evita lixo técnico/arquivos/URLs
+        if (/https?:\/\/\S+/i.test(s)) return false;
+        if (/\b[\w.-]{3,}\.(pdf|jpe?g|png|gif|webp|bmp|tiff|svg|docx?|xlsx?|pptx?|csv|txt|zip|rar|7z)\b/i.test(s)) return false;
+        if (/\[imagem:.*?\]/i.test(s)) return false;
+        if (/texto extra[ií]do.*ocr/i.test(s)) return false;
+        return true;
+      };
+
+      const qs = Array.isArray(questions)
+        ? questions
+            .filter((q) => typeof q === 'string')
+            .map((q) => String(q).trim().slice(0, 220))
+            .filter(isValidQuestionBasic)
+            .slice(0, 50)
+        : [];
+
+      if (qs.length === 0) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'questions é obrigatório (array com pelo menos 1 pergunta válida)',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter((u) => typeof u === 'string' && u.trim()).map((u) => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim()).slice(0, 10)
+        : [];
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter((c) => c && typeof c === 'object')
+            .map((c) => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter((c) => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      const { generateFaqAnswers } = require('./services/faqAnswersService');
+      const result = await generateFaqAnswers({
+        tenantId,
+        questions: qs,
+        executionId: executionId ? String(executionId).trim() : null,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        chunks: safeChunks,
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        dryRun: dryRun === true,
+      });
+
+      sendJson(res, 200, { ok: true, data: result, ...result });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      const rawMessage = String(err?.message || '');
+      const rawCode = String(err?.code || err?.error?.code || '');
+      const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+      const isQuota =
+        rawCode === 'insufficient_quota' ||
+        /exceeded your current quota/i.test(rawMessage);
+      const isRateLimit =
+        (rawStatus === 429 && !isQuota) ||
+        rawCode === 'rate_limit_exceeded' ||
+        /rate limit/i.test(rawMessage);
+
+      if (isQuota) {
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_QUOTA_EXCEEDED',
+          message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+          httpStatus: 402,
+          retryable: false,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      if (isRateLimit) {
+        const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+        sendApiError(res, buildApiError({
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: rawMessage || 'Rate limit excedido no provider de IA',
+          httpStatus: 429,
+          retryable: true,
+          details: { tenantId: req.tenantId || req.agent?.tenantId || null, retryAfter },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      sendApiError(res, buildApiError({
+        code: 'FAQ_ANSWERS_FAILED',
+        message: rawMessage || 'Erro ao gerar respostas do FAQ',
+        httpStatus: 500,
+        retryable: true,
+        details: { tenantId: req.tenantId || req.agent?.tenantId || null },
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
+  // POST /system/generate-initial-flow - RAG(ctx Redis) → FAQ → respostas → intents → FlowDefinition
+  if (method === 'POST' && pathname === '/system/generate-initial-flow') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    let pipelineExecution = null;
+    let execId = '';
+    let tenantIdForPipeline = null;
+    try {
+      const body = await parseJsonBody(req);
+      const {
+        tenantId,           // tenant que contém o contexto (ctx:{tenantId}:{executionId}) e também o tenant do provider IA
+        executionId,        // obrigatório
+        targetTenantId,     // onde persistir o flow (modo real)
+        chunks,             // opcional (dry-run inline)
+        questions,          // opcional: perguntas adicionais (ex.: step questionsGenerated do frontend)
+        dryRun,
+        persistFlow,
+      } = body || {};
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const requestedTenantId = tenantId ? String(tenantId).trim() : null;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      const tenantIdForAI = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
+      tenantIdForPipeline = tenantIdForAI;
+      if (!tenantIdForAI) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      execId = requireExecutionId({ executionId }, res, badRequest) || '';
+      if (!execId) return;
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdForAI });
+
+      emitPipelineStage(pipelineWs, execId, {
+        stage: 'generate-initial-flow',
+        status: 'running',
+        message: 'Gerando fluxo inicial...',
+        meta: { dryRun: dryRun === true, persistFlow: persistFlow === true },
+      });
+
+      // Pipeline status (opção A): esta chamada dispara intents.service/OpenAI.
+      // Ela deve ser uma etapa explícita e bloquear o approved até terminar.
+      try {
+        const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+        pipelineExecution = ensureExecutionContext({ executionId: execId }, { tenantId: tenantIdForAI });
+        requireStages(pipelineExecution, ['initialFlowGenerated', 'faqGenerated']);
+        pipelineExecution.stages.initialFlowGenerated = false;
+        // Como este endpoint também gera FAQ internamente, FAQ deve estar pendente até terminar.
+        if (pipelineExecution.stages.faqGenerated !== true) pipelineExecution.stages.faqGenerated = false;
+        updateStatus(pipelineExecution, 'running', {
+          currentStage: 'initialFlowGenerated',
+          stageStatus: 'in_progress',
+          message: 'Gerando fluxo inicial (intents + respostas)...',
+          source: '/system/generate-initial-flow',
+        });
+      } catch {
+        // best-effort
+      }
+
+      const isDry = dryRun === true;
+      const wantsPersist = persistFlow === true && !isDry;
+
+      // onde salvar (apenas super-admin pode escolher)
+      const requestedTarget = targetTenantId ? String(targetTenantId).trim() : null;
+      const tenantIdTarget = (isSuperAdminUser && requestedTarget) ? requestedTarget : tenantIdForAI;
+
+      const faqService = require('./services/faq.service');
+      const businessEntitiesService = require('./services/business-entities.service');
+      const answersService = require('./services/answers.service');
+      const intentsService = require('./services/intents.service');
+      const flowAdapter = require('./services/flow.adapter');
+
+      const executionContext = {
+        executionId: execId,
+        exclusions: [],
+        excludedItemsCount: 0,
+      };
+
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      // Etapa obrigatória: Business Entity Extraction (salva em Redis: entities:{tenantId}:{executionId})
+      let extractedEntities = null;
+      try {
+        const be = await businessEntitiesService.extractBusinessEntities({
+          tenantId: tenantIdForAI,
+          executionId: execId,
+          dryRun: isDry,
+        });
+        extractedEntities = be?.entities || null;
+      } catch (beErr) {
+        logger.warn('[System] Falha ao extrair entidades de negócio (best-effort)', {
+          tenantId: tenantIdForAI,
+          executionId: execId,
+          error: beErr?.message || String(beErr),
+        });
+        extractedEntities = null;
+      }
+
+      const faq = await faqService.generateFAQ({
+        tenantId: tenantIdForAI,
+        executionId: execId,
+        chunks: safeChunks.length > 0 ? safeChunks : null,
+        dryRun: isDry,
+      });
+      // Pipeline status: FAQ interno concluído (best-effort).
+      try {
+        if (pipelineExecution) {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'faqGenerated', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'faqGenerated',
+            stageStatus: 'completed',
+            message: 'FAQ (interno) gerado.',
+            source: '/system/generate-initial-flow',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+      const normalizeQuestionKey = (q) => {
+        const s = String(q || '').replace(/\s+/g, ' ').trim();
+        if (!s) return '';
+        return s
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+      const mergeQuestions = (base, extra) => {
+        const out = [];
+        const seen = new Set();
+        const push = (q) => {
+          const s = String(q || '').replace(/\s+/g, ' ').trim();
+          if (!s) return;
+          if (s.length < 6) return;
+          const k = normalizeQuestionKey(s);
+          if (!k) return;
+          if (seen.has(k)) return;
+          seen.add(k);
+          out.push(s);
+        };
+        (Array.isArray(base) ? base : []).forEach(push);
+        (Array.isArray(extra) ? extra : []).forEach(push);
+        return out.slice(0, 200);
+      };
+
+      const faqQuestions = Array.isArray(faq.questions) ? faq.questions : [];
+      const extraQuestions = Array.isArray(questions) ? questions : [];
+      const mergedQuestions = mergeQuestions(faqQuestions, extraQuestions);
+      const ragContext = faq.ragContext || '';
+      executionContext.exclusions = Array.isArray(faq?.meta?.exclusions) ? faq.meta.exclusions : [];
+
+      // Métrica pós-FAQ (best-effort): coverage = perguntasGeradas / (services + plans + prices + schedules)
+      try {
+        const { getEphemeralContextClient } = require('../infra/redis/ephemeralContextClient');
+        const redis = getEphemeralContextClient();
+        if (redis && redis.status === 'ready') {
+          const countArr = (v) => (Array.isArray(v) ? v.length : 0);
+          const denom = countArr(extractedEntities?.services)
+            + countArr(extractedEntities?.plans)
+            + countArr(extractedEntities?.prices)
+            + countArr(extractedEntities?.schedules);
+          const qn = Array.isArray(questions) ? questions.length : 0;
+          const cov = denom > 0 ? (qn / denom) : 0;
+          const envTtl = Number(process.env.EPHEMERAL_RAG_TTL_SECONDS);
+          const ttlSeconds = Number.isFinite(envTtl) && envTtl > 0 ? envTtl : 1800;
+          const key = `rag_metrics:${tenantIdForAI}:${execId}`;
+          await redis.set(key, JSON.stringify({
+            tenantId: tenantIdForAI,
+            executionId: execId,
+            coverage: cov,
+            questionsGenerated: qn,
+            denominator: denom,
+            entityCounts: {
+              services: countArr(extractedEntities?.services),
+              plans: countArr(extractedEntities?.plans),
+              prices: countArr(extractedEntities?.prices),
+              schedules: countArr(extractedEntities?.schedules),
+            },
+            updatedAt: new Date().toISOString(),
+          }), 'EX', ttlSeconds);
+        }
+      } catch (mErr) {
+        logger.debug('[System] Falha ao salvar rag_metrics (best-effort)', {
+          tenantId: tenantIdForAI,
+          executionId: execId,
+          error: mErr?.message || String(mErr),
         });
       }
+
+      const answers = await answersService.generateAnswers(tenantIdForAI, mergedQuestions, ragContext, executionContext);
+      const intents = await intentsService.buildIntents(tenantIdForAI, mergedQuestions, answers, executionContext);
+
+      const initialFlow = flowAdapter.buildInitialFlowFromIntents(intents, {
+        tenantId: tenantIdTarget,
+        flowId: `initial-${tenantIdTarget}-${execId}`.slice(0, 180),
+        name: 'Fluxo inicial (auto)',
+      });
+
+      // Anexa métrica final no flow para rastreio (best-effort)
+      try {
+        if (initialFlow && typeof initialFlow === 'object') {
+          initialFlow.metadata = {
+            ...(initialFlow.metadata || {}),
+            excludedItemsCount: Number(executionContext.excludedItemsCount) || 0,
+          };
+        }
+      } catch {
+        // noop
+      }
+
+      if (wantsPersist) {
+        try {
+          const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
+          validateGeneratedPlanOrThrow(initialFlow, 'chatbot');
+          flows.set(initialFlow.id, initialFlow);
+          persistFlowBestEffort(initialFlow);
+
+          // Rastreabilidade: registra no tenant recém-criado o executionId/flowId gerados
+          try {
+            const tenantService = require('./services/tenantService');
+            await tenantService.updateTenant(tenantIdTarget, {
+              settings: {
+                initialFlowExecutionId: execId,
+                initialFlowId: initialFlow.id,
+                initialFlowGeneratedAt: new Date().toISOString(),
+              },
+            });
+          } catch (tenantUpdateErr) {
+            logger.warn('[System] Falha ao registrar rastreabilidade do fluxo no tenant (best-effort)', {
+              tenantIdTarget,
+              flowId: initialFlow?.id,
+              error: tenantUpdateErr?.message || String(tenantUpdateErr),
+            });
+          }
+        } catch (persistErr) {
+          logger.warn('[System] Falha ao persistir fluxo inicial (best-effort)', {
+            flowId: initialFlow?.id,
+            error: persistErr?.message || String(persistErr),
+          });
+        }
+      }
+
+      // Pipeline status: conclui etapa do fluxo inicial e tenta aprovar (best-effort).
+      try {
+        if (pipelineExecution) {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'initialFlowGenerated', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'initialFlowGenerated',
+            stageStatus: 'completed',
+            message: 'Fluxo inicial gerado.',
+            source: '/system/generate-initial-flow',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+
+      emitPipelineStage(pipelineWs, execId, {
+        stage: 'generate-initial-flow',
+        status: 'success',
+        message: 'Fluxo inicial gerado.',
+        meta: { persisted: wantsPersist, tenantId: tenantIdTarget },
+      });
+
+      sendJson(res, 200, {
+        ok: true,
+        data: { initialFlow, intents, questions: mergedQuestions, answers, entities: extractedEntities, excludedItemsCount: Number(executionContext.excludedItemsCount) || 0 },
+        initialFlow,
+        intents,
+        questions: mergedQuestions,
+        answers,
+        entities: extractedEntities,
+        executionId: execId,
+        persisted: wantsPersist,
+        excludedItemsCount: Number(executionContext.excludedItemsCount) || 0,
+      });
+    } catch (err) {
+      logger.error('[System] Erro ao gerar fluxo inicial:', err);
+      // Qualquer falha encerra o pipeline automaticamente (sem best-effort).
+      try {
+        if (pipelineExecution) {
+          const { updateStatus } = require('./services/pipelineExecutionContext');
+          updateStatus(pipelineExecution, 'failed', {
+            currentStage: 'initialFlowGenerated',
+            stageStatus: 'error',
+            reason: { code: 'INITIAL_FLOW_FAILED' },
+            message: (String(err?.message || err) || 'Falha ao gerar fluxo inicial').slice(0, 300),
+            source: '/system/generate-initial-flow',
+          });
+        } else if (execId && tenantIdForPipeline) {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          const ex = ensureExecutionContext({ executionId: execId }, { tenantId: tenantIdForPipeline });
+          requireStages(ex, ['initialFlowGenerated']);
+          updateStatus(ex, 'failed', {
+            currentStage: 'initialFlowGenerated',
+            stageStatus: 'error',
+            reason: { code: 'INITIAL_FLOW_FAILED' },
+            message: (String(err?.message || err) || 'Falha ao gerar fluxo inicial').slice(0, 300),
+            source: '/system/generate-initial-flow',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+      try {
+        if (execId && tenantIdForPipeline) {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          emitPipelineStage(createPipelineWs({ tenantId: tenantIdForPipeline }), execId, {
+            stage: 'generate-initial-flow',
+            status: 'error',
+            message: (String(err?.message || err) || 'Falha ao gerar fluxo inicial').slice(0, 300),
+            meta: { code: 'INITIAL_FLOW_FAILED' },
+          });
+        }
+      } catch (_) {}
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+      } else {
+        const rawMessage = String(err?.message || '');
+        const rawCode = String(err?.code || err?.error?.code || '');
+        const rawStatus = Number(err?.status || err?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+        if (isQuota) {
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage || 'Cota do provider de IA excedida (insufficient_quota)',
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: req.agent?.tenantId || null, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(err?.retryAfter || err?.headers?.['retry-after'] || 60);
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage || 'Rate limit excedido no provider de IA',
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: req.agent?.tenantId || null, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        sendApiError(res, buildApiError({
+          code: 'INITIAL_FLOW_FAILED',
+          message: err.message || 'Erro ao gerar fluxo inicial',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
+      }
+    }
+    return;
+  }
+
+  // POST /system/generate-initial-graph - Gera grafo inicial (Rete) baseado em FAQ + intents + respostas
+  if (method === 'POST' && pathname === '/system/generate-initial-graph') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const {
+        name,
+        description,
+        tenantId,
+        targetTenantId,
+        urls,
+        fileNames,
+        executionId,
+        contextMode,
+        chunks,
+        rules,
+        dryRun,
+      } = body || {};
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      if (!agentTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId do agente é obrigatório' });
+        return;
+      }
+
+      // tenantIdForAI: sempre o tenant do agente (provider configurado)
+      // tenantIdTarget: onde persistir (super-admin pode escolher)
+      const requestedTarget = (targetTenantId || tenantId) ? String(targetTenantId || tenantId).trim() : null;
+      const tenantIdTargetFinal = (isSuperAdminUser && requestedTarget) ? requestedTarget : agentTenantId;
+
+      const safeUrls = Array.isArray(urls)
+        ? urls.filter(u => typeof u === 'string' && u.trim()).map(u => u.trim()).slice(0, 5)
+        : [];
+      const safeFiles = Array.isArray(fileNames)
+        ? fileNames.filter(f => typeof f === 'string' && f.trim()).map(f => f.trim()).slice(0, 10)
+        : [];
+      const safeChunks = Array.isArray(chunks)
+        ? chunks
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              sourceType: (c.sourceType === 'web_scraping' || c.sourceType === 'uploaded_file') ? c.sourceType : 'unknown',
+              sourceId: (c.sourceId && String(c.sourceId).trim()) ? String(c.sourceId).trim().slice(0, 240) : null,
+              text: (c.text && String(c.text).trim()) ? String(c.text).trim().slice(0, 5000) : '',
+              excerpt: (c.excerpt && String(c.excerpt).trim()) ? String(c.excerpt).trim().slice(0, 5000) : '',
+            }))
+            .filter(c => c.text && c.text.length >= 20)
+            .slice(0, 30)
+        : [];
+
+      logger.info('[System] Gerando grafo inicial (Rete)', {
+        tenantIdForAI: agentTenantId,
+        tenantIdTarget: tenantIdTargetFinal,
+        dryRun: dryRun === true,
+        hasExecutionId: !!(executionId && String(executionId).trim()),
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        urls: safeUrls.length,
+        fileNames: safeFiles.length,
+        inlineChunks: safeChunks.length,
+      });
+
+      const { generateInitialGraph } = require('./services/initialGraphService');
+      const result = await generateInitialGraph({
+        tenantIdForAI: agentTenantId,
+        tenantIdTarget: tenantIdTargetFinal,
+        name: (name && String(name).trim()) ? String(name).trim() : null,
+        description: (description && String(description).trim()) ? String(description).trim() : null,
+        urls: safeUrls,
+        fileNames: safeFiles,
+        chunks: safeChunks,
+        executionId: (executionId && String(executionId).trim()) ? String(executionId).trim() : null,
+        contextMode: (contextMode === 'ephemeral' || contextMode === 'persisted') ? contextMode : 'auto',
+        rules: (rules && typeof rules === 'object') ? rules : null,
+        dryRun: dryRun === true,
+      });
+
+      sendJson(res, 200, { ok: true, data: result, ...result });
+    } catch (err) {
+      logger.error('[System] Erro ao gerar grafo inicial (Rete):', err);
+      if (err instanceof SyntaxError) {
+        sendApiError(res, buildApiError({
+          code: 'BAD_REQUEST',
+          message: 'JSON inválido no corpo da requisição',
+          httpStatus: 400,
+          retryable: false,
+          details: null,
+          req,
+        }), setCorsHeaders);
+      } else {
+        sendApiError(res, buildApiError({
+          code: 'INITIAL_GRAPH_FAILED',
+          message: err.message || 'Erro ao gerar grafo inicial',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
+      }
+    }
+    return;
+  }
+
+  // POST /rag/ephemeral/context - Armazena contexto efêmero (Redis+TTL) para dry-run
+  if (method === 'POST' && pathname === '/rag/ephemeral/context') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'rag', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    let executionIdForWs = null;
+    let pipelineWsForStage = null;
+    try {
+      const body = await parseJsonBody(req);
+      const tenantIdFromBody = body?.tenantId ? String(body.tenantId).trim() : null;
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) return;
+      executionIdForWs = executionId;
+      const chunks = Array.isArray(body?.chunks) ? body.chunks : [];
+      const ttlSeconds = body?.ttlSeconds;
+      const replace = body?.replace === true;
+
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const requestedTenantId = tenantIdFromBody;
+      const agentTenantId = (req.agent?.tenantId && String(req.agent.tenantId).trim())
+        ? String(req.agent.tenantId).trim()
+        : null;
+      const tenantIdFinal = (isSuperAdminUser && requestedTenantId) ? requestedTenantId : agentTenantId;
+      if (!tenantIdFinal) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      const pipelineWs = createPipelineWs({ tenantId: tenantIdFinal });
+      pipelineWsForStage = pipelineWs;
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'rag-ephemeral-context',
+        status: 'running',
+        message: 'Armazenando contexto efêmero (dry-run)...',
+        meta: { chunks: Array.isArray(chunks) ? chunks.length : 0, replace: !!replace },
+      });
+
+      const { upsertEphemeralContext } = require('./services/ephemeralRagContextService');
+      const result = await upsertEphemeralContext({
+        tenantId: tenantIdFinal,
+        executionId,
+        chunks,
+        ttlSeconds,
+        replace,
+      });
+
+      // ---------------------------------------------------------------
+      // Pipeline WS como fonte de verdade:
+      // No modo dry-run do tenant, o "processamento de arquivos" acontece no frontend
+      // (extração local) e NÃO cria documentos/indexação no RAG.
+      //
+      // Isso gerava um gap: o usuário via toast "arquivo processado", mas o pipeline WS
+      // mantinha `filesInferred=false` porque o backend nunca era informado.
+      //
+      // Quando o frontend chega aqui, significa que terminou de preparar o contexto
+      // (arquivos extraídos + possivelmente scraping) para a execução.
+      // Então marcamos `filesInferred` como concluído via WS para evitar pipeline "travado".
+      // ---------------------------------------------------------------
+      try {
+        const {
+          ensureExecutionContext,
+          updateStatus,
+          updateStage,
+        } = require('./services/pipelineExecutionContext');
+
+        const execution = ensureExecutionContext({ executionId }, { tenantId: tenantIdFinal });
+
+        // Não forçamos "in_progress" aqui porque o processamento aconteceu no cliente.
+        // Apenas registramos conclusão para o pipeline visível.
+        updateStatus(execution, execution.status || 'running', {
+          stage: 'filesInferred',
+          stageStatus: 'completed',
+          message: 'Arquivos processados (dry-run: não indexados no RAG).',
+          source: '/rag/ephemeral/context',
+          timestamp: new Date().toISOString(),
+        });
+        updateStage(execution, 'filesInferred', true);
+      } catch (e) {
+        logger.debug('[EphemeralContext] Falha ao marcar filesInferred via pipeline (best-effort)', {
+          executionId,
+          tenantId: tenantIdFinal,
+          error: e?.message || String(e),
+        });
+      }
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'rag-ephemeral-context',
+        status: 'success',
+        message: 'Contexto efêmero armazenado.',
+        meta: { chunks: Array.isArray(chunks) ? chunks.length : 0 },
+      });
+
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[EphemeralContext] Erro ao armazenar contexto efêmero', err);
+      try {
+        const { emitPipelineStage } = require('./ws/emitPipelineStage');
+        if (pipelineWsForStage && executionIdForWs) {
+          emitPipelineStage(pipelineWsForStage, executionIdForWs, {
+            stage: 'rag-ephemeral-context',
+            status: 'error',
+            message: err?.message || 'Erro ao armazenar contexto efêmero',
+            meta: { code: 'EPHEMERAL_CONTEXT_FAILED' },
+          });
+        }
+      } catch (_) {
+        // best-effort
+      }
+      sendApiError(res, buildApiError({
+        code: 'EPHEMERAL_CONTEXT_FAILED',
+        message: err.message || 'Erro ao armazenar contexto efêmero',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -2155,7 +6634,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const { getAiProviderForTenant } = require('../engine/aiProviderManager');
-      const { getAIConfig, getDecryptedAPIKey } = require('./services/tenantAIService');
+      const { getAIConfig } = require('./services/tenantAIService');
+      const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
       
       // Busca configuração de IA do tenant no banco de dados
       const tenantAiConfig = await getAIConfig(tenantId);
@@ -2176,113 +6656,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       
-      // Obtém o provider específico do tenant
+      // Garante que a config do tenant esteja carregada no runtime (memória),
+      // para evitar "falso positivo" de status quando a execução real não encontra provider.
+      await ensureTenantAiConfigLoaded(tenantId);
+
+      // Obtém o provider específico do tenant (mesma lógica usada na execução real)
       const provider = getAiProviderForTenant(tenantId);
       
       // Verifica se o provider é válido
-      const hasValidProvider = provider !== null && 
-                              typeof provider === 'object' && 
-                              typeof provider.generate === 'function';
-      
-      // Se o provider não estiver registrado, testa o token do provider configurado
-      let finalIsValid = hasValidProvider;
-      
-      if (!hasValidProvider && tenantAiConfig.primary) {
-        const primaryProvider = tenantAiConfig.primary;
-        // Busca API key do banco de dados (criptografada)
-        const apiKey = await getDecryptedAPIKey(tenantId, primaryProvider);
-        
-        if (apiKey && apiKey.trim()) {
-          logger.debug('Provider não registrado, testando token do provider configurado', {
-            tenantId,
-            primaryProvider,
-            hasApiKey: !!apiKey,
-          });
-          
-          // Testa o token do provider primário configurado
-          try {
-            if (primaryProvider === 'openai') {
-              const response = await fetch('https://api.openai.com/v1/models', {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${apiKey.trim()}`,
-                },
-                signal: AbortSignal.timeout(10000),
-              });
-              
-              if (response.ok) {
-                const data = await response.json().catch(() => null);
-                finalIsValid = !!(data && Array.isArray(data.data));
-                logger.info('Token OpenAI testado com sucesso', {
-                  tenantId,
-                  isValid: finalIsValid,
-                  hasData: !!data,
-                  isArray: Array.isArray(data?.data),
-                });
-              } else {
-                const errorData = await response.json().catch(() => ({}));
-                logger.warn('Token OpenAI inválido', {
-                  tenantId,
-                  status: response.status,
-                  error: errorData.error?.message || response.statusText,
-                });
-                finalIsValid = false;
-              }
-            } else if (primaryProvider === 'anthropic') {
-              const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                  'x-api-key': apiKey.trim(),
-                  'anthropic-version': '2023-06-01',
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  model: 'claude-3-haiku-20240307',
-                  max_tokens: 10,
-                  messages: [{ role: 'user', content: 'test' }],
-                }),
-                signal: AbortSignal.timeout(10000),
-              });
-              
-              if (response.ok) {
-                const data = await response.json().catch(() => null);
-                finalIsValid = !!(data && data.content);
-                logger.info('Token Anthropic testado com sucesso', {
-                  tenantId,
-                  isValid: finalIsValid,
-                  hasData: !!data,
-                  hasContent: !!data?.content,
-                });
-              } else {
-                const errorData = await response.json().catch(() => ({}));
-                logger.warn('Token Anthropic inválido', {
-                  tenantId,
-                  status: response.status,
-                  error: errorData.error?.message || response.statusText,
-                });
-                finalIsValid = false;
-              }
-            }
-          } catch (err) {
-            logger.warn('Erro ao testar token do provider', {
-              tenantId,
-              provider: primaryProvider,
-              error: err.message,
-            });
-            finalIsValid = false;
-          }
-        } else {
-          logger.warn('API key não encontrada para o provider configurado', {
-            tenantId,
-            primaryProvider,
-          });
-          finalIsValid = false;
-        }
-      }
+      const finalIsValid = provider !== null &&
+                           typeof provider === 'object' &&
+                           typeof provider.generate === 'function';
       
       logger.debug('Verificando provider de IA para tenant', {
         tenantId,
-        hasValidProvider,
         finalIsValid,
         primaryProvider: tenantAiConfig?.primary,
       });
@@ -2299,8 +6686,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       logger.info('Status final de provider de IA do tenant', {
         tenantId,
         hasValidProvider: finalIsValid,
-        providerRegistrado: hasValidProvider,
-        providerTestado: !hasValidProvider && tenantAiConfig?.primary,
+        providerRegistrado: finalIsValid,
       });
       
       const responseData = { 
@@ -2774,6 +7160,155 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /super-admin/bootstrap/one-click - bootstrap idempotente (tenant + admin + tokens + filas)
+  if (method === 'POST' && pathname === '/super-admin/bootstrap/one-click') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode executar bootstrap' });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      // Gate de segurança: rate limit por super-admin (produção)
+      try {
+        const rl = await checkRateLimit({
+          userId: `superAdmin:${req.agent?.id || req.agent?.username || 'unknown'}`,
+          operationType: 'BOOTSTRAP',
+        });
+        if (!rl.allowed) {
+          res.setHeader('Retry-After', rl.retryAfter || 60);
+          sendJson(res, 429, {
+            error: 'rate_limit_exceeded',
+            message: `Limite de bootstrap excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+            retryAfter: rl.retryAfter || 60,
+          });
+          return;
+        }
+      } catch (_) {
+        // best-effort: se rate limit falhar, não bloqueia por enquanto
+      }
+
+      const body = await parseJsonBody(req);
+      const {
+        tenantKey,
+        tenantName,
+        site,
+        ramoAtividade,
+        objetivo,
+        plan,
+        segment,
+        suites,
+        locationId,
+        locationIds,
+        adminEmail,
+        adminPassword,
+        adminUsername,
+        createTokens,
+        tokenKinds,
+        createTemplates,
+        createPhysicalQueue,
+        confirm,
+      } = body || {};
+
+      // Gate opcional (fail-closed quando habilitado via env)
+      if (process.env.BOOTSTRAP_CONFIRM_REQUIRED === 'true') {
+        if (String(confirm || '') !== 'I_UNDERSTAND') {
+          sendJson(res, 400, {
+            error: 'bad_request',
+            message: 'Confirmação obrigatória. Envie { confirm: \"I_UNDERSTAND\" } para executar bootstrap.',
+          });
+          return;
+        }
+      }
+
+      const { bootstrapTenantOneClick } = require('./services/oneClickBootstrapService');
+      const result = await bootstrapTenantOneClick({
+        tenantKey,
+        tenantName,
+        site,
+        ramoAtividade,
+        objetivo,
+        plan,
+        segment,
+        suites: Array.isArray(suites) ? suites : null,
+        locationId,
+        locationIds: Array.isArray(locationIds) ? locationIds : null,
+        adminEmail,
+        adminPassword,
+        adminUsername,
+        createTokens: createTokens !== false,
+        tokenKinds: Array.isArray(tokenKinds) ? tokenKinds : null,
+        createTemplates: createTemplates !== false,
+        createPhysicalQueue: createPhysicalQueue === undefined ? null : createPhysicalQueue !== false,
+      });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        tenantId: req.tenantId,
+        action: 'super_admin_bootstrap_one_click',
+        resource: 'tenant',
+        resourceId: tenantKey || null,
+        details: { ok: result.ok, warnings: result.warnings || [] },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('[SuperAdmin] Erro no bootstrap one-click:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar bootstrap one-click' });
+      }
+    }
+    return;
+  }
+
+  // GET /super-admin/ai-generations - Lista gerações por IA (audit store JSONL)
+  if (method === 'GET' && pathname === '/super-admin/ai-generations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar esta área' });
+      return;
+    }
+    try {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const domain = url.searchParams.get('domain');
+      const validParam = url.searchParams.get('valid');
+      const valid = validParam === null ? undefined : (validParam === 'true');
+      const startDate = url.searchParams.get('startDate') || null;
+      const endDate = url.searchParams.get('endDate') || null;
+      const limit = url.searchParams.get('limit') || '200';
+
+      const { listAiGenerations } = require('../qa/aiGenerationStore');
+      const result = listAiGenerations({
+        ...(domain ? { domain } : {}),
+        ...(valid !== undefined ? { valid } : {}),
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+        limit,
+      });
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao listar gerações por IA (Super Admin):', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
   // GET /super-admin/tenants/:id/metrics - Obtém métricas detalhadas de um tenant
   if (method === 'GET' && pathname.includes('/metrics') && pathname.startsWith('/super-admin/tenants/')) {
     const authResult = requireAuth(req);
@@ -2991,8 +7526,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     // Apenas owner ou admin podem iniciar onboarding
-    if (req.agent.role !== 'owner' && req.agent.role !== 'admin') {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner ou admin podem iniciar onboarding' });
+    if (req.agent.role !== 'owner' && req.agent.role !== 'admin' && req.agent.role !== 'super_admin') {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner, admin ou super_admin podem iniciar onboarding' });
       return;
     }
 
@@ -3137,6 +7672,206 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     sendJson(res, 200, result);
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Solutions (curadoria por segmento, sem marketplace)
+  // -----------------------------------------------------------------------
+  // GET /api/solutions/packs - lista packs/segmentos disponíveis
+  if (method === 'GET' && pathname === '/api/solutions/packs') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const solutions = require('./services/solutions/solutionsTemplateService');
+      const items = solutions.listSolutionPacks();
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[Solutions] Erro ao listar packs', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar packs' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Node Marketplace (catalogo interno)
+  // -----------------------------------------------------------------------
+  // GET /api/node-marketplace/catalog
+  if (method === 'GET' && pathname === '/api/node-marketplace/catalog') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const service = require('./services/nodeMarketplaceService');
+      const items = service.listNodeCatalog({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao listar catálogo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar catálogo' });
+    }
+    return;
+  }
+
+  // GET /api/node-marketplace/published
+  if (method === 'GET' && pathname === '/api/node-marketplace/published') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const service = require('./services/nodeMarketplaceService');
+      const items = service.listPublishedNodes({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao listar publicados:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar publicados' });
+    }
+    return;
+  }
+
+  // GET /api/node-marketplace/sdk/schema
+  if (method === 'GET' && pathname === '/api/node-marketplace/sdk/schema') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const service = require('./services/nodeMarketplaceService');
+      const schema = service.getNodeSchema();
+      sendJson(res, 200, { ok: true, schema });
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao obter schema SDK:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter schema SDK' });
+    }
+    return;
+  }
+
+  // POST /api/node-marketplace/publish
+  if (method === 'POST' && pathname === '/api/node-marketplace/publish') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const node = body && body.node ? body.node : body;
+      const service = require('./services/nodeMarketplaceService');
+      const out = service.publishNode({
+        tenantId: req.tenantId,
+        node,
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'publish_failed' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao publicar node:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao publicar node' });
+    }
+    return;
+  }
+
+  // DELETE /api/node-marketplace/publish/:id
+  if (method === 'DELETE' && pathname.match(/^\/api\/node-marketplace\/publish\/[^\/]+$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const nodeId = pathname.split('/').pop();
+      const service = require('./services/nodeMarketplaceService');
+      const out = service.revokeNode({ tenantId: req.tenantId, nodeId });
+      if (!out.ok) {
+        sendJson(res, 404, { ok: false, error: out.error || 'not_found' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[NodeMarketplace] Erro ao revogar node:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao revogar node' });
+    }
+    return;
+  }
+
+  // POST /api/solutions/packs/install { segment }
+  if (method === 'POST' && pathname === '/api/solutions/packs/install') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const segment = body && body.segment ? String(body.segment).trim() : '';
+      if (!segment) {
+        badRequest(res, 'segment é obrigatório');
+        return;
+      }
+      const solutions = require('./services/solutions/solutionsTemplateService');
+      const result = await solutions.installSolutionPack({ tenantId: req.tenantId, segment });
+      if (!result.success) {
+        sendJson(res, 400, { ok: false, error: result.error || 'install_failed' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[Solutions] Erro ao instalar pack', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao instalar pack' });
+    }
     return;
   }
 
@@ -3536,6 +8271,165 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /auth/mfa/setup - Inicia setup MFA
+  if (method === 'POST' && pathname === '/auth/mfa/setup') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const issuer = body && body.issuer ? String(body.issuer).trim() : null;
+      const label = body && body.label ? String(body.label).trim() : null;
+
+      const result = await setupMfa({
+        agentId: req.agent.id,
+        issuer,
+        label,
+      });
+
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_setup_failed' });
+        return;
+      }
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao iniciar MFA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/mfa/verify - Confirma MFA
+  if (method === 'POST' && pathname === '/auth/mfa/verify') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const token = body && body.token ? String(body.token).trim() : '';
+      if (!token) {
+        badRequest(res, 'token é obrigatório');
+        return;
+      }
+
+      const result = await verifyMfa({ agentId: req.agent.id, token });
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_verify_failed' });
+        return;
+      }
+
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao confirmar MFA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/mfa/disable - Desativa MFA
+  if (method === 'POST' && pathname === '/auth/mfa/disable') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const token = body && body.token ? String(body.token).trim() : null;
+      const recoveryCode = body && body.recoveryCode ? String(body.recoveryCode).trim() : null;
+      if (!token && !recoveryCode) {
+        badRequest(res, 'token ou recoveryCode é obrigatório');
+        return;
+      }
+
+      const result = await disableMfa({ agentId: req.agent.id, token, recoveryCode });
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_disable_failed' });
+        return;
+      }
+
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao desativar MFA:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // POST /auth/mfa/recovery - Consome recovery code
+  if (method === 'POST' && pathname === '/auth/mfa/recovery') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const code = body && body.code ? String(body.code).trim() : '';
+      if (!code) {
+        badRequest(res, 'code é obrigatório');
+        return;
+      }
+
+      const result = await consumeRecoveryCode({ agentId: req.agent.id, code });
+      if (!result.ok) {
+        sendJson(res, 400, { error: result.error || 'mfa_recovery_failed' });
+        return;
+      }
+
+      sendJson(res, 200, { ok: true, remaining: result.remaining });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao consumir recovery code:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
   // GET /audit/logs - Consulta logs de auditoria
   if (method === 'GET' && pathname === '/audit/logs') {
     const authResult = requireAuth(req);
@@ -3596,6 +8490,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // GET /flows
   if (method === 'GET' && pathname === '/flows') {
     const authResult = requireAuth(req);
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const envFilter = urlObj.searchParams.get('environment');
     if (STRICT_TENANT_MODE) {
       if (!authResult.valid) {
         sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
@@ -3604,14 +8500,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const tenantId = requireTenant(req, res);
       if (!tenantId) return;
       const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === tenantId);
-      sendJson(res, 200, tenantFlows);
+      const filtered = envFilter
+        ? tenantFlows.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
+        : tenantFlows;
+      sendJson(res, 200, filtered);
     } else {
       // DEV/compatibilidade: se autenticado, filtra por tenant do agente; caso contrário, retorna todos
       if (authResult.valid && req.tenantId) {
         const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === req.tenantId);
-        sendJson(res, 200, tenantFlows);
+        const filtered = envFilter
+          ? tenantFlows.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
+          : tenantFlows;
+        sendJson(res, 200, filtered);
       } else {
-        sendJson(res, 200, Array.from(flows.values()));
+        const all = Array.from(flows.values());
+        const filtered = envFilter
+          ? all.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
+          : all;
+        sendJson(res, 200, filtered);
       }
     }
     return;
@@ -3621,7 +8527,29 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // IMPORTANTE: Verificar se não é um endpoint especial (validate, simulate) antes de processar
   if (method === 'GET' && pathname.startsWith('/flows/') && pathname !== '/flows/validate' && pathname !== '/flows/simulate') {
     const id = decodeURIComponent(pathname.slice('/flows/'.length));
-    const flow = flows.get(id);
+    let flow = flows.get(id);
+    // Fallback DB: se não estiver no cache em memória, tenta buscar no PostgreSQL.
+    if (!flow) {
+      try {
+        const { getSequelize } = require('./db/sequelize');
+        const sequelize = getSequelize();
+        if (sequelize) {
+          const { Flow } = require('./db/models');
+          const FlowModel = Flow();
+          const row = await FlowModel.findByPk(id);
+          if (row) {
+            const data = row.data && typeof row.data === 'object' ? row.data : {};
+            const flowObj = { ...data, id: row.id };
+            if (row.tenant_key && !flowObj.tenantId) flowObj.tenantId = row.tenant_key;
+            if (row.name && !flowObj.name) flowObj.name = row.name;
+            flows.set(row.id, flowObj);
+            flow = flowObj;
+          }
+        }
+      } catch (e) {
+        // best-effort: se falhar, mantém comportamento anterior (404)
+      }
+    }
     if (!flow) {
       sendJson(res, 404, { error: 'flow_not_found' });
       return;
@@ -3696,10 +8624,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      const flowKind = String(flow.kind || 'chat').trim().toLowerCase();
+
       // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
       // Fluxos gerados por IA DEVEM passar pelo gate antes de serem salvos
       const isAiGenerated = flow.metadata?.generatedBy === 'ai' || flow.metadata?.generated === true;
-      if (isAiGenerated) {
+      if (isAiGenerated && flowKind !== 'voice') {
+        // Safe-mode obrigatório: todo fluxo de IA nasce como draft e exige revisão humana.
+        flow.metadata = {
+          ...(flow.metadata && typeof flow.metadata === 'object' ? flow.metadata : {}),
+          generatedBy: 'ai',
+          generated: true,
+          status: 'draft',
+          requiresReview: true,
+        };
         const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
         try {
           validateGeneratedPlanOrThrow(flow, 'chatbot');
@@ -3722,7 +8660,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // ✅ NOTA: A validação é executada mas não bloqueia a criação do fluxo
       // O fluxo pode ser criado mesmo com erros de validação para permitir que o usuário corrija depois
       // EXCEÇÃO: Fluxos gerados por IA já foram validados pelo gate acima
-      const validationResult = validateFlow(flow);
+      const validationResult = flowKind === 'voice' ? validateVoiceFlow(flow) : validateFlow(flow);
       const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
 
       // Verifica se já existe um fluxo com o mesmo id
@@ -3772,6 +8710,61 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         logger.error('Erro ao criar fluxo', err);
         sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisição' });
       }
+    }
+    return;
+  }
+
+  // PUT /flows/:id/environment
+  if (method === 'PUT' && pathname.startsWith('/flows/') && pathname.endsWith('/environment')) {
+    const id = decodeURIComponent(pathname.slice('/flows/'.length).replace(/\/environment$/, ''));
+    if (!id) {
+      badRequest(res, 'ID do fluxo é obrigatório');
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const env = body && body.environment ? String(body.environment).trim() : '';
+      if (!env || !['dev', 'stage', 'prod'].includes(env)) {
+        badRequest(res, 'Campo "environment" inválido. Use: dev|stage|prod');
+        return;
+      }
+
+      const existingFlow = flows.get(id);
+      if (!existingFlow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${id}" não encontrado` });
+        return;
+      }
+
+      const authResult = requireAuth(req);
+      if (STRICT_TENANT_MODE) {
+        if (!authResult.valid) {
+          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+          return;
+        }
+        const tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+        if (existingFlow.tenantId !== tenantId) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+          return;
+        }
+      } else if (authResult.valid && req.tenantId && existingFlow.tenantId !== req.tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
+        return;
+      }
+
+      const next = { ...existingFlow };
+      next.metadata = next.metadata && typeof next.metadata === 'object' ? { ...next.metadata } : {};
+      next.metadata.environment = env;
+      flows.set(id, next);
+      persistFlowBestEffort(next);
+      sendJson(res, 200, { ok: true, flow: next });
+    } catch (err) {
+      logger.error('[Flows] Erro ao atualizar environment', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar environment' });
     }
     return;
   }
@@ -3841,6 +8834,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         id, // Garante que o ID não seja alterado
       };
 
+      const mergedKind = (merged && typeof merged === 'object' && typeof merged.kind === 'string')
+        ? String(merged.kind).trim().toLowerCase()
+        : (existingFlow && typeof existingFlow.kind === 'string' ? String(existingFlow.kind).trim().toLowerCase() : 'chat');
+
       // Validação estrutural básica
       const structureValidation = validateFlowStructure(merged);
       if (!structureValidation.valid) {
@@ -3851,7 +8848,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       // 🚫 Gate de validação OBRIGATÓRIA para fluxos gerados por IA
       // Se o fluxo foi gerado por IA, deve passar pelo gate antes de ser atualizado
       const isAiGenerated = merged.metadata?.generatedBy === 'ai' || merged.metadata?.generated === true;
-      if (isAiGenerated) {
+      if (isAiGenerated && mergedKind !== 'voice') {
+        // Safe-mode permanece até aprovação explícita (admin/super-admin).
+        const requestedApprove = body?.metadata?.approveAiGenerated === true;
+        const canApprove = !!(authResult.valid && (isSuperAdmin(req.agent) || req.agent.role === 'admin'));
+        const keepRequiresReview = !(requestedApprove && canApprove);
+
+        merged.metadata = {
+          ...(merged.metadata && typeof merged.metadata === 'object' ? merged.metadata : {}),
+          generatedBy: 'ai',
+          generated: true,
+          status: keepRequiresReview ? 'draft' : 'active',
+          requiresReview: keepRequiresReview,
+        };
+        // Não persistir flag de aprovação no fluxo
+        if (merged.metadata && Object.prototype.hasOwnProperty.call(merged.metadata, 'approveAiGenerated')) {
+          delete merged.metadata.approveAiGenerated;
+        }
+
         const { validateGeneratedPlanOrThrow } = require('../engine/ai/validateGeneratedPlan');
         try {
           validateGeneratedPlanOrThrow(merged, 'chatbot');
@@ -3871,7 +8885,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Validação completa usando o validador da engine
-      const validationResult = validateFlow(merged);
+      const validationResult = mergedKind === 'voice' ? validateVoiceFlow(merged) : validateFlow(merged);
       if (!validationResult.valid && validationResult.errors.length > 0) {
         // ✅ Mapeia erros técnicos para mensagens amigáveis
         sendJson(res, 400, {
@@ -4011,7 +9025,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const result = validateFlow(body);
+      const kind = (body && typeof body === 'object' && typeof body.kind === 'string')
+        ? String(body.kind).trim().toLowerCase()
+        : 'chat';
+
+      const result = kind === 'voice' ? validateVoiceFlow(body) : validateFlow(body);
       
       sendJson(res, 200, {
         valid: Boolean(result && result.valid),
@@ -4031,8 +9049,320 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   }
 
   // -----------------------------------------------------------------------
+  // Preview / Diff de fluxo (read-only, safe)
+  // -----------------------------------------------------------------------
+  // POST /flows/preview
+  if (method === 'POST' && pathname === '/flows/preview') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { flow, baseFlowId = null } = body || {};
+      if (!flow || typeof flow !== 'object') {
+        badRequest(res, 'Campo "flow" é obrigatório e deve ser um FlowDefinition');
+        return;
+      }
+
+      const structureValidation = validateFlowStructure(flow);
+      if (!structureValidation.valid) {
+        sendJson(res, 200, {
+          ok: false,
+          valid: false,
+          errors: [{ code: 'INVALID_FLOW_STRUCTURE', message: structureValidation.error || 'Estrutura do fluxo inválida' }],
+        });
+        return;
+      }
+
+      function collectEdges(f) {
+        const edges = [];
+        const nodes = Array.isArray(f.nodes) ? f.nodes : [];
+        for (const n of nodes) {
+          if (!n || !n.id) continue;
+          if (typeof n.next === 'string') edges.push({ from: n.id, to: n.next });
+          else if (Array.isArray(n.next)) {
+            for (const to of n.next) if (typeof to === 'string') edges.push({ from: n.id, to });
+          }
+          if (n.type === 'router' && Array.isArray(n?.config?.rules)) {
+            for (const r of n.config.rules) if (r && typeof r.next === 'string') edges.push({ from: n.id, to: r.next });
+          }
+          if (n.type === 'schedule_router' && Array.isArray(n?.config?.schedules)) {
+            for (const s of n.config.schedules) if (s && typeof s.next === 'string') edges.push({ from: n.id, to: s.next });
+            if (typeof n?.config?.defaultNext === 'string') edges.push({ from: n.id, to: n.config.defaultNext });
+          }
+        }
+        return edges;
+      }
+
+      function summarize(f) {
+        const nodes = Array.isArray(f.nodes) ? f.nodes : [];
+        const edges = collectEdges(f);
+        const byType = {};
+        for (const n of nodes) {
+          const t = n?.type || 'unknown';
+          byType[t] = (byType[t] || 0) + 1;
+        }
+        return {
+          id: f.id || null,
+          tenantId: f.tenantId || null,
+          version: f.version || null,
+          nodeCount: nodes.length,
+          edgeCount: edges.length,
+          nodesByType: byType,
+          hasFallback: !!byType.fallback,
+          hasApiNode: !!byType.api,
+          requiresReview: f?.metadata?.requiresReview === true,
+          status: f?.metadata?.status || null,
+        };
+      }
+
+      const base = baseFlowId ? flows.get(String(baseFlowId)) : null;
+      const edges = collectEdges(flow);
+      const summary = summarize(flow);
+      const diff = base ? (() => {
+        const baseEdges = collectEdges(base);
+        const baseNodeMap = new Map((base.nodes || []).filter(Boolean).map(n => [n.id, n]));
+        const nextNodeMap = new Map((flow.nodes || []).filter(Boolean).map(n => [n.id, n]));
+
+        const addedNodes = [];
+        const removedNodes = [];
+        const changedNodes = [];
+
+        for (const [id, n] of nextNodeMap.entries()) {
+          if (!baseNodeMap.has(id)) addedNodes.push(id);
+          else {
+            const before = baseNodeMap.get(id);
+            if (JSON.stringify(before) !== JSON.stringify(n)) changedNodes.push(id);
+          }
+        }
+        for (const [id] of baseNodeMap.entries()) {
+          if (!nextNodeMap.has(id)) removedNodes.push(id);
+        }
+
+        const edgeKey = (e) => `${e.from}->${e.to}`;
+        const baseSet = new Set(baseEdges.map(edgeKey));
+        const nextSet = new Set(edges.map(edgeKey));
+        const addedEdges = [];
+        const removedEdges = [];
+        for (const k of nextSet) if (!baseSet.has(k)) addedEdges.push(k);
+        for (const k of baseSet) if (!nextSet.has(k)) removedEdges.push(k);
+
+        return {
+          baseFlowId,
+          addedNodes,
+          removedNodes,
+          changedNodes,
+          addedEdges,
+          removedEdges,
+        };
+      })() : null;
+
+      sendJson(res, 200, {
+        ok: true,
+        valid: true,
+        summary,
+        edges,
+        diff,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err.message && err.message.includes('excede o tamanho máximo')) {
+        badRequest(res, err.message);
+      } else {
+        logger.error('Erro ao gerar preview/diff do fluxo:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao gerar preview/diff do fluxo' });
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
   // Geração de fluxo a partir de descrição
   // -----------------------------------------------------------------------
+
+  // POST /flows/generate/prompt-preview
+  // Preview do prompt FINAL que seria enviado ao provedor (incluindo RAG),
+  // SEM executar a chamada ao provedor.
+  //
+  // Segurança:
+  // - Restrito a Super Admin (prompt pode conter conteúdo sensível via RAG/scraping).
+  // - Super Admin deve selecionar tenant via header X-Tenant-Id (requireTenant).
+  if (method === 'POST' && pathname === '/flows/generate/prompt-preview') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode pré-visualizar prompts completos' });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const body = await parseJsonBody(req);
+      if (!body || typeof body !== 'object') {
+        badRequest(res, 'Body deve ser um objeto válido');
+        return;
+      }
+      const description = typeof body.description === 'string' ? body.description.trim() : '';
+      if (!description) {
+        badRequest(res, 'Campo "description" é obrigatório');
+        return;
+      }
+
+      // Monta descrição enriquecida (best-effort) para ficar próxima do que /flows/generate usará.
+      let descriptionForPrompt = description;
+
+      // FAQ/perguntas (se habilitado)
+      try {
+        const includeQuestions = body.includeQuestions === true;
+        const questions = includeQuestions && Array.isArray(body.questions) ? body.questions : [];
+        const normalized = questions
+          .filter((q) => typeof q === 'string')
+          .map((q) => q.trim())
+          .filter(Boolean)
+          .map((q) => (q.length > 220 ? q.slice(0, 220) : q))
+          .slice(0, 50);
+
+        if (includeQuestions && normalized.length > 0) {
+          const lines = normalized.map((q) => `- ${q}`);
+          const faqBlock = [
+            '## Perguntas (FAQ) que o bot deve saber responder',
+            ...lines,
+            '',
+            'Requisitos obrigatórios:',
+            '- O fluxo deve permitir que o usuário faça qualquer uma das perguntas acima.',
+            '- Use um nó do tipo "ai" para responder, e habilite RAG quando disponível.',
+            '- Se a resposta não estiver clara no conhecimento, peça esclarecimentos (não invente).',
+            '',
+          ].join('\n');
+          descriptionForPrompt = `${descriptionForPrompt}\n\n${faqBlock}`.trim();
+        }
+      } catch (_) {
+        // best-effort
+      }
+
+      // Web Scraping (best-effort): adiciona contexto na própria descrição (sem indexar)
+      try {
+        const useWebScraping = body.useWebScraping === true;
+        const targets = useWebScraping && Array.isArray(body.scrapingTargets) ? body.scrapingTargets : [];
+        const urls = targets
+          .filter((u) => typeof u === 'string')
+          .map((u) => u.trim())
+          .filter(Boolean)
+          .slice(0, 5);
+
+        if (useWebScraping && urls.length > 0) {
+          const webScrapingService = require('./services/webScrapingService');
+          const scrapingResults = [];
+          for (const url of urls) {
+            // eslint-disable-next-line no-await-in-loop
+            const scrapeResult = await webScrapingService.scrapeUrl(url, {
+              tenantId,
+              autoIndex: false,
+            });
+            if (scrapeResult && scrapeResult.success && scrapeResult.content) {
+              scrapingResults.push(`\n### ${scrapeResult.title || url}:\n${String(scrapeResult.content || '').substring(0, 1000)}...\n`);
+            }
+          }
+          if (scrapingResults.length > 0) {
+            const scrapingBlock = `\n## Fontes Externas (Scraping):\n${scrapingResults.join('\n')}\n`;
+            descriptionForPrompt = `${descriptionForPrompt}\n\n${scrapingBlock}`.trim();
+          }
+        }
+      } catch (scrapeErr) {
+        // best-effort: não falha preview por scraping
+        logger.debug('[POST /flows/generate/prompt-preview] Falha no scraping (best-effort)', {
+          error: scrapeErr?.message || String(scrapeErr),
+        });
+      }
+
+      // RAG: se useRag=true, tenta montar ragContext (sem pipeline), para evitar dupla consulta
+      let ragContext = null;
+      try {
+        if (body.useRag === true) {
+          const desiredSources = Array.isArray(body.ragSources) ? body.ragSources : [];
+          const query = `${body.name ? `${String(body.name)}\n` : ''}${description}`.slice(0, 1800);
+          const { buildDiverseRagContext } = require('./services/ragContextBuilder');
+          const diverse = await buildDiverseRagContext({
+            query,
+            tenantId,
+            totalK: 12,
+            minUploaded: 0,
+            minWeb: 0,
+            minScore: 0.12,
+            maxTokens: 4500,
+            // Observação: desiredSources é mantido no payload (para auditoria), mas o builder atual não filtra por ele.
+          });
+
+          const contextSources = Array.isArray(diverse?.contextSources) ? diverse.contextSources : [];
+          const chunks = contextSources.slice(0, 18).map((s) => ({
+            sourceFile: s?.sourceId || s?.sourceType || 'unknown',
+            content: String(s?.text || s?.excerpt || '').slice(0, 2400),
+          }));
+          const bySourceId = new Map();
+          for (const s of contextSources) {
+            const id = s?.sourceId || s?.sourceType || 'unknown';
+            bySourceId.set(id, (bySourceId.get(id) || 0) + 1);
+          }
+          const sources = Array.from(bySourceId.entries()).slice(0, 40).map(([documentId, chunksCount]) => ({
+            documentId,
+            chunksCount,
+          }));
+
+          ragContext = {
+            enabled: true,
+            executionId: null,
+            chunks,
+            sources,
+            // Mantém referência das fontes solicitadas (best-effort)
+            requestedSources: desiredSources,
+          };
+        }
+      } catch (ragErr) {
+        logger.debug('[POST /flows/generate/prompt-preview] Falha ao montar ragContext (best-effort)', {
+          error: ragErr?.message || String(ragErr),
+        });
+        ragContext = null;
+      }
+
+      const { buildChatbotFinalPrompt } = require('./services/aiWrappersAdapter');
+      const preview = await buildChatbotFinalPrompt(descriptionForPrompt, {
+        tenantId,
+        useRag: body.useRag === true,
+        ragSources: Array.isArray(body.ragSources) ? body.ragSources : [],
+        ragContext: ragContext && ragContext.enabled ? ragContext : undefined,
+        name: body.name || body.flowName || null,
+      });
+
+      sendJson(res, 200, {
+        success: true,
+        tenantId,
+        objective: preview.objective,
+        promptSummary: preview.promptSummary,
+        ragMeta: preview.ragMeta,
+        finalPrompt: preview.finalPrompt,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao gerar prompt-preview:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar prompt-preview' });
+      }
+    }
+    return;
+  }
 
   // POST /flows/generate
   if (method === 'POST' && pathname === '/flows/generate') {
@@ -4043,6 +9373,19 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      // Cancelamento real: se o cliente abortar/fechar a conexão, interrompe a orquestração
+      const abortController = new AbortController();
+      const signal = abortController.signal;
+      const onClientGone = (reason) => {
+        try {
+          if (!signal.aborted) abortController.abort(reason);
+        } catch (_) {}
+      };
+      req.on('aborted', () => onClientGone(new Error('client_aborted')));
+      res.on('close', () => {
+        if (!res.writableEnded) onClientGone(new Error('response_closed'));
+      });
+
       const body = await parseJsonBody(req);
       if (!body || typeof body !== 'object') {
         badRequest(res, 'Body deve ser um objeto válido');
@@ -4071,11 +9414,33 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const result = await orchestrateGeneration(body, {
         tenantId: finalTenantId,
         autoResolveDependencies: body.autoResolveDependencies || false,
+        signal,
       });
 
       if (!result.success) {
         badRequest(res, result.error || 'Erro na orquestração de geração');
         return;
+      }
+
+      // ✅ Compatibilidade/UX: expõe warnings de validação em top-level (não bloqueante),
+      // no mesmo formato que o POST /flows já usa, para o frontend conseguir exibir facilmente.
+      // Observação: a validação completa já está em result.validation.flow.
+      try {
+        const flowValidation = result?.validation?.flow || null;
+        if (flowValidation && flowValidation.valid === false && Array.isArray(flowValidation.errors)) {
+          result.validationWarnings = {
+            valid: false,
+            errors: flowValidation.errors, // já inclui messageUi
+            codes: flowValidation.errors.map((e) => e && e.code).filter(Boolean),
+          };
+        } else {
+          result.validationWarnings = { valid: true, errors: [], codes: [] };
+        }
+      } catch (warnErr) {
+        // best-effort: nunca falhar o endpoint por causa de warnings
+        logger.debug('[POST /flows/generate] Falha ao montar validationWarnings (best-effort)', {
+          error: warnErr?.message || String(warnErr),
+        });
       }
 
       // Registra para auditoria
@@ -4093,6 +9458,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
+      } else if (err && typeof err === 'object' && typeof err.code === 'string' && err.code.startsWith('FLOW_')) {
+        sendJson(res, 400, { error: err.code, code: err.code, message: err.message });
+      } else if (err && (err.name === 'AbortError' || err.message === 'client_aborted' || err.message === 'client_closed' || err.message === 'response_closed')) {
+        // Cliente já foi embora: não tenta responder (evita ruído e trabalho extra)
+        logger.info('[POST /flows/generate] Requisição abortada pelo cliente', {
+          name: err.name,
+          message: err.message,
+        });
+        return;
       } else {
         logger.error('Erro ao gerar fluxo:', err);
         sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar fluxo' });
@@ -4268,22 +9642,137 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const userId = req.agent?.id || req.agent?.username || finalTenantId;
       const agentId = req.agent?.id;
 
-      // Callback para enviar atualizações de progresso via WebSocket
-      const { emitEvent } = require('./services/websocketService');
-      const onProgress = (progress) => {
-        if (agentId) {
-          emitEvent('generation.progress', progress, { agentId });
-        } else if (finalTenantId) {
-          emitEvent('generation.progress', progress, { tenantId: finalTenantId });
+      // Pipeline visível: única fonte de verdade é o backend via `pipeline.status`
+      // emitido pelo `pipelineExecutionContext` (updateStage/updateStatus).
+      const {
+        ensureExecutionContext,
+        requireStages,
+        updateStage,
+        updateStatus,
+      } = require('./services/pipelineExecutionContext');
+      const { failGeneration } = require('./services/failGeneration');
+      const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+
+      const executionIdHint =
+        (typeof body?.executionId === 'string' && body.executionId.trim()) ? body.executionId.trim() : null;
+
+      const execution = ensureExecutionContext(
+        { ...(body || {}), executionId: executionIdHint || body?.executionId },
+        { tenantId: finalTenantId, userId, agent: req.agent }
+      );
+
+      // Etapas pré-pipeline que agora também vêm do backend (sem updates locais no frontend).
+      requireStages(execution, ['providerValidated', 'ragValidated']);
+
+      // Se o fluxo for tenantPipeline, também exigimos as etapas “UI-level” quando aplicável.
+      if (body?.tenantPipeline === true) {
+        const wantsWebScraping =
+          body?.useWebScraping === true &&
+          Array.isArray(body?.scrapingTargets) &&
+          body.scrapingTargets.some((u) => typeof u === 'string' && u.trim().startsWith('http'));
+        if (wantsWebScraping) requireStages(execution, ['webScraping']);
+
+        const wantsQuestions = body?.includeQuestions === true;
+        if (wantsQuestions) requireStages(execution, ['questionsGenerated']);
+
+        // Em dry-run, a UI sempre exibe "Sugerir descrição" (mesmo quando o usuário preencheu).
+        if ((body?.executionMode || 'dry-run') === 'dry-run') requireStages(execution, ['descriptionSuggested']);
+      }
+
+      // Best-effort: se alguns passos não forem aplicáveis, marcamos como concluídos aqui
+      // para evitar cards “pendentes” quando o frontend não executou a etapa.
+      try {
+        const hasDescription = typeof body?.description === 'string' && body.description.trim().length > 0;
+        if (hasDescription) updateStage(execution, 'descriptionSuggested', true);
+
+        const includeQuestions = body?.includeQuestions === true;
+        const hasQuestions = Array.isArray(body?.questions) && body.questions.length > 0;
+        if (!includeQuestions || hasQuestions) updateStage(execution, 'questionsGenerated', true);
+
+        const wantsWebScraping = body?.useWebScraping === true;
+        const hasUrls = Array.isArray(body?.scrapingTargets) && body.scrapingTargets.length > 0;
+        const isDryRun = (body?.executionMode || 'dry-run') === 'dry-run';
+        if (!wantsWebScraping || !hasUrls || isDryRun) updateStage(execution, 'webScraping', true);
+      } catch (_) {
+        // best-effort
+      }
+
+      updateStatus(execution, 'running', {
+        message: 'Iniciando geração e validação...',
+        source: '/system/generate-and-validate',
+      });
+
+      // Validação determinística inicial (antes de iniciar o pipeline):
+      // providerValidated -> ragValidated
+      try {
+        const { ensureTenantAiConfigLoaded } = require('./services/aiProviderService');
+        const { getAiProviderForTenant } = require('../engine/aiProviderManager');
+        await ensureTenantAiConfigLoaded(finalTenantId);
+        const provider = getAiProviderForTenant(finalTenantId);
+        if (!provider) {
+          throw new Error(`Nenhum provider de IA configurado para tenant: ${finalTenantId}`);
         }
-      };
+        updateStage(execution, 'providerValidated', true);
+      } catch (err) {
+        const msg = err?.message || 'Falha ao validar provider de IA';
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.INVALID_PROVIDER,
+            error: new Error(msg),
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate' },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+        sendApiError(res, buildApiError({
+          code: 'PROVIDER_NOT_AVAILABLE',
+          message: msg,
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: finalTenantId, executionId: executionIdHint },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      try {
+        const useRag = body?.useRag !== false;
+        if (useRag) {
+          const { isRagAvailable } = require('./services/ragService');
+          const ok = await isRagAvailable(finalTenantId);
+          if (!ok) throw new Error('Serviço RAG não disponível');
+        }
+        updateStage(execution, 'ragValidated', true);
+      } catch (err) {
+        const msg = err?.message || 'Falha ao validar serviço RAG';
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.RAG_UNAVAILABLE,
+            error: new Error(msg),
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate' },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+        sendApiError(res, buildApiError({
+          code: 'RAG_NOT_AVAILABLE',
+          message: msg,
+          httpStatus: 424,
+          retryable: false,
+          details: { tenantId: finalTenantId, executionId: executionIdHint },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
 
       // Usa orquestrador único generate-and-validate
       const result = await generateAndValidate(body, {
         tenantId: finalTenantId,
         userId,
         agent: req.agent, // Passa agente para verificação de super-admin
-      }, onProgress);
+      }, null);
 
       // Trata erro de rate limit no resultado
       if (result.rateLimitExceeded) {
@@ -4296,7 +9785,90 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Retorna resultado completo
-      sendJson(res, 200, result);
+      // Se o pipeline falhou, retorna como erro com envelope (409/424)
+      if (result && result.success === false) {
+        const errorsText = Array.isArray(result.errors) ? result.errors.join(' | ') : '';
+        const providerNotAvailable = /api key não configurada|openai não configurado|não configurad/i.test(errorsText);
+        const isAbstained = result.abstained === true || result.abstentionReason;
+        const isTenantPipeline = body?.tenantPipeline === true;
+
+        // SAFE-MODE (tenantPipeline): não retorna 409 para falhas não-críticas.
+        // Converte erros em warnings e permite revisão humana com sucesso parcial (207).
+        if (isTenantPipeline && !providerNotAvailable && !isAbstained) {
+          const existingWarnings = Array.isArray(result.warnings) ? result.warnings : [];
+          const existingErrors = Array.isArray(result.errors) ? result.errors : [];
+          const nonBlockingWarnings = existingErrors.map((msg) => ({
+            type: 'TENANT_PIPELINE_NON_BLOCKING_ERROR',
+            message: String(msg || 'Falha não especificada'),
+            rule: 'TENANT_SAFE_MODE',
+          }));
+
+          sendJson(res, 207, {
+            ...result,
+            success: true,
+            errors: [],
+            warnings: [...existingWarnings, ...nonBlockingWarnings],
+            motivo: result.motivo || 'Concluído com avisos (tenant safe-mode)',
+            tenantSafeMode: true,
+          });
+          return;
+        }
+
+        const httpStatus = providerNotAvailable ? 424 : 409;
+        const code = providerNotAvailable
+          ? 'PROVIDER_NOT_AVAILABLE'
+          : (isAbstained ? 'PIPELINE_ABSTAINED' : 'PIPELINE_ABORTED');
+        const message = result.motivo || (providerNotAvailable ? 'Provider de IA não disponível' : (isAbstained ? 'Pipeline absteve' : 'Pipeline abortado'));
+
+        // Falha terminal centralizada
+        try {
+          await failGeneration({
+            execution,
+            reason: GenerationFailureReasons.UNKNOWN,
+            error: new Error(message),
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate', code },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+
+        sendApiError(res, buildApiError({
+          code,
+          message,
+          httpStatus,
+          retryable: false,
+          details: {
+            tenantId: finalTenantId,
+            executionId: result.executionId,
+            errors: Array.isArray(result.errors) ? result.errors : [],
+            warnings: Array.isArray(result.warnings) ? result.warnings : [],
+            abstained: isAbstained,
+            abstentionReason: result.abstentionReason || null,
+            evidenceContext: result.evidenceContext || null,
+            // Diagnóstico adicional (especialmente útil quando RPA falha)
+            reportLink: result.reportLink || null,
+            replayLink: result.replayLink || null,
+            rpaFailedStep: result.rpaFailedStep || null,
+            rpa: {
+              generated: !!result.rpaGenerated,
+              executed: !!result.rpaExecuted,
+              passed: result.rpaPassed === true,
+            },
+            rpaTestId: result.rpaTest?.id || null,
+          },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      // SAFE-MODE (tenantPipeline): permite sucesso parcial com 207 para facilitar UX
+      // (ex.: RPA falhou, ou gate gerou warnings), mantendo revisão humana obrigatória.
+      const isTenantPipeline = body?.tenantPipeline === true;
+      const hasWarnings = Array.isArray(result?.warnings) && result.warnings.length > 0;
+      const isPartial =
+        isTenantPipeline && (hasWarnings || result?.rpaPassed === false);
+
+      sendJson(res, isPartial ? 207 : 200, result);
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
@@ -4313,7 +9885,28 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         });
       } else {
         logger.error('Erro em generate-and-validate:', err);
-        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno em generate-and-validate' });
+        try {
+          const { failGeneration } = require('./services/failGeneration');
+          const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+          await failGeneration({
+            executionId: executionIdHint,
+            reason: GenerationFailureReasons.UNKNOWN,
+            error: err,
+            extra: { tenantId: finalTenantId, endpoint: '/system/generate-and-validate' },
+            agentId: agentId || null,
+            tenantId: finalTenantId,
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+        sendApiError(res, buildApiError({
+          code: 'INTERNAL_ERROR',
+          message: err.message || 'Erro interno em generate-and-validate',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: req.tenantId || null },
+          req,
+        }), setCorsHeaders);
       }
     }
     return;
@@ -4619,7 +10212,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Valida o fluxo antes de simular
-      const validationResult = validateFlow(flow);
+      const kind = String(flow.kind || 'chat').trim().toLowerCase();
+      const validationResult = kind === 'voice' ? validateVoiceFlow(flow) : validateFlow(flow);
       if (!validationResult.valid && validationResult.errors.length > 0) {
         sendJson(res, 400, {
           error: 'flow_invalid',
@@ -4643,6 +10237,74 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sessionEvents.set(sessionId, Array.isArray(result.events) ? result.events : []);
         // Salva conversas após adicionar eventos
         saveSessionEventsToFile();
+      }
+
+      // Execution ledger (DB-first) - best-effort
+      // Persist steps/events por nó para auditoria/debug.
+      try {
+        if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+          const { startFlowExecution, appendNodeExecution, finishFlowExecution } = require('./services/flowExecutionLedgerService');
+          const tenantId = flow.tenantId || 'system';
+          const nodeTypeById = new Map();
+          if (Array.isArray(flow.nodes)) {
+            for (const n of flow.nodes) {
+              if (n && n.id) nodeTypeById.set(String(n.id), String(n.type || ''));
+            }
+          }
+          const started = await startFlowExecution({
+            tenantId,
+            flowId: flow.id,
+            flowVersion: flow.version,
+            sessionId: sessionId || null,
+            correlationId: sessionId ? `simulate:${sessionId}` : `simulate:${flow.id}:${Date.now()}`,
+            subjectType: 'session',
+            subjectId: sessionId || null,
+            meta: {
+              mode: 'simulation',
+              source: '/flows/simulate',
+              maxSteps: options?.maxSteps || null,
+              startNodeId: options?.startNodeId || null,
+            },
+          });
+          if (started && started.ok) {
+            const executionId = started.executionId;
+            const steps = Array.isArray(result.steps) ? result.steps : [];
+            for (const step of steps) {
+              const idx = step && step.index != null ? Number(step.index) : null;
+              const before = step?.stateBefore || {};
+              const after = step?.stateAfter || {};
+              const nodeId = before?.currentNodeId || null;
+              const nodeType = nodeId ? (nodeTypeById.get(String(nodeId)) || null) : null;
+              const evs = Array.isArray(step?.events) ? step.events : [];
+              const startedAt = evs[0]?.timestamp ? new Date(String(evs[0].timestamp)) : null;
+              const finishedAt = evs.length > 0 && evs[evs.length - 1]?.timestamp ? new Date(String(evs[evs.length - 1].timestamp)) : null;
+              // input não é persistido na simulação atual (pode ser estendido futuramente)
+              // Persistimos output/state/events para replay/debug.
+              // eslint-disable-next-line no-await-in-loop
+              await appendNodeExecution({
+                tenantId,
+                executionId,
+                nodeId,
+                nodeType,
+                stepIndex: idx,
+                status: 'ok',
+                startedAt,
+                finishedAt,
+                input: {},
+                output: step?.output || {},
+                stateBefore: before,
+                stateAfter: after,
+                events: evs,
+                errorMessage: null,
+              }).catch(() => {});
+            }
+            await finishFlowExecution({ tenantId, executionId, status: 'done', metaPatch: { steps: steps.length } }).catch(() => {});
+            // Anexa executionId no payload de resposta (não quebra compatibilidade)
+            result.executionId = executionId;
+          }
+        }
+      } catch (e) {
+        // best-effort: não bloquear simulação por falha de ledger
       }
 
       // Retorna resultado completo da simulação (SimulationResultUi)
@@ -4965,6 +10627,4062 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // Sistema de Filas e Tickets
   // -----------------------------------------------------------------------
 
+  // -----------------------------------------------------------------------
+  // Filas físicas (Admin / autenticado)
+  // -----------------------------------------------------------------------
+  // GET /api/physical/queues?locationId=...&status=...
+  if (method === 'GET' && pathname === '/api/physical/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const status = urlObj.searchParams.get('status');
+      const { listQueues } = require('./services/physicalQueueService');
+      const items = await listQueues({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+        status: status ? String(status) : null,
+      });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PhysicalAdmin] Erro ao listar filas físicas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar filas físicas' });
+    }
+    return;
+  }
+
+  // POST /api/physical/queues - cria/atualiza fila física
+  if (method === 'POST' && pathname === '/api/physical/queues') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const id = body && body.id ? String(body.id).trim() : null;
+      const locationId = body && body.locationId ? String(body.locationId).trim() : null;
+      const name = body && body.name ? String(body.name).trim() : '';
+      const status = body && body.status ? String(body.status).trim() : 'active';
+      const rules = body && typeof body.rules === 'object' && body.rules ? body.rules : {};
+      const { upsertQueue } = require('./services/physicalQueueService');
+      const item = await upsertQueue({
+        tenantId: req.tenantId,
+        id,
+        locationId,
+        name,
+        status,
+        rules,
+      });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'physical_queue_name_required') {
+        sendJson(res, 400, { error: 'bad_request', message: 'Nome da fila é obrigatório' });
+        return;
+      }
+      logger.error('[PhysicalAdmin] Erro ao salvar fila física:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar fila física' });
+    }
+    return;
+  }
+
+  // GET /api/physical/metrics?locationId=...
+  if (method === 'GET' && pathname === '/api/physical/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const { getMetrics } = require('./services/physicalQueueService');
+      const metrics = await getMetrics({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+      });
+      sendJson(res, 200, metrics);
+    } catch (err) {
+      logger.error('[PhysicalAdmin] Erro ao obter métricas físicas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas físicas' });
+    }
+    return;
+  }
+
+  // GET /api/physical/tickets?locationId=&queueId=&status=&stationId=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/physical/tickets') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const queueId = urlObj.searchParams.get('queueId');
+      const status = urlObj.searchParams.get('status');
+      const stationId = urlObj.searchParams.get('stationId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const { listTickets } = require('./services/physicalQueueService');
+      const result = await listTickets({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+        queueId: queueId ? String(queueId) : null,
+        status: status ? String(status) : null,
+        stationId: stationId ? String(stationId) : null,
+        limit: limit != null ? Number(limit) : 100,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.reason || 'physical_tickets_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[PhysicalAdmin] Erro ao listar tickets físicos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar tickets físicos' });
+    }
+    return;
+  }
+
+  // GET /api/orders/metrics?locationId=...
+  if (method === 'GET' && pathname === '/api/orders/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const locationId = urlObj.searchParams.get('locationId');
+      const { getOrderMetrics } = require('./services/orderService');
+      const metrics = await getOrderMetrics({
+        tenantId: req.tenantId,
+        locationId: locationId ? String(locationId) : null,
+      });
+      sendJson(res, 200, metrics);
+    } catch (err) {
+      logger.error('[OrdersAdmin] Erro ao obter métricas de pedidos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas de pedidos' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Marketing v1 (Admin / autenticado)
+  // -----------------------------------------------------------------------
+  // GET /api/marketing/forms
+  if (method === 'GET' && pathname === '/api/marketing/forms') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const marketing = require('./services/marketing/marketingService');
+      const items = await marketing.listForms({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar forms:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar forms' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/forms
+  if (method === 'POST' && pathname === '/api/marketing/forms') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const slug = body && body.slug ? String(body.slug).trim() : '';
+      const name = body && body.name ? String(body.name).trim() : '';
+      const fields = body && body.fields ? body.fields : {};
+      const landingHtml = body && body.landingHtml != null ? body.landingHtml : null;
+      const settings = body && body.settings ? body.settings : {};
+      const status = body && body.status ? String(body.status).trim() : 'active';
+
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.upsertForm({ tenantId: req.tenantId, slug, name, fields, landingHtml, settings, status });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao upsert form:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar form' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/links
+  if (method === 'GET' && pathname === '/api/marketing/links') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const service = require('./services/marketing/marketingLinkService');
+      const out = await service.listLinks({
+        tenantId: req.tenantId,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: out.error || 'links_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar links:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar links' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/links
+  if (method === 'POST' && pathname === '/api/marketing/links') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/marketing/marketingLinkService');
+      const out = await service.createLink({
+        tenantId: req.tenantId,
+        name: body && body.name ? String(body.name).trim() : null,
+        targetUrl: body && body.targetUrl ? String(body.targetUrl).trim() : null,
+        source: body && body.source ? String(body.source).trim() : null,
+        campaign: body && body.campaign ? String(body.campaign).trim() : null,
+        medium: body && body.medium ? String(body.medium).trim() : null,
+        content: body && body.content ? String(body.content).trim() : null,
+        term: body && body.term ? String(body.term).trim() : null,
+        code: body && body.code ? String(body.code).trim() : null,
+        status: body && body.status ? String(body.status).trim() : 'active',
+        metadata: body && body.metadata ? body.metadata : {},
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error });
+        return;
+      }
+      sendJson(res, 201, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao criar link:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar link' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/leads?stage=&minScore=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/marketing/leads') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const stage = urlObj.searchParams.get('stage');
+      const minScore = urlObj.searchParams.get('minScore');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.listLeads({
+        tenantId: req.tenantId,
+        stage: stage ? String(stage) : null,
+        minScore: minScore != null ? Number(minScore) : null,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar leads:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar leads' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/leads/stats
+  if (method === 'GET' && pathname === '/api/marketing/leads/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.getLeadStats({ tenantId: req.tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao obter stats:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats' });
+    }
+    return;
+  }
+
+  // GET /api/marketing/scoring-rules
+  if (method === 'GET' && pathname === '/api/marketing/scoring-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const marketing = require('./services/marketing/marketingService');
+      const items = await marketing.listScoringRules({ tenantId: req.tenantId });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[Marketing] Erro ao listar scoring rules:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar scoring rules' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/scoring-rules
+  if (method === 'POST' && pathname === '/api/marketing/scoring-rules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.upsertScoringRule({
+        tenantId: req.tenantId,
+        id: body && body.id ? String(body.id).trim() : null,
+        name: body && body.name ? String(body.name).trim() : null,
+        enabled: body ? body.enabled !== false : true,
+        eventType: body && body.eventType ? String(body.eventType).trim() : null,
+        delta: body && body.delta != null ? Number(body.delta) : 0,
+        conditions: body && body.conditions ? body.conditions : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao upsert scoring rule:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar scoring rule' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/email-campaigns
+  if (method === 'POST' && pathname === '/api/marketing/email-campaigns') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.createEmailCampaign({
+        tenantId: req.tenantId,
+        name: body && body.name ? String(body.name).trim() : null,
+        subject: body && body.subject ? String(body.subject).trim() : null,
+        bodyText: body && body.bodyText != null ? body.bodyText : null,
+        bodyHtml: body && body.bodyHtml != null ? body.bodyHtml : null,
+        minScore: body && body.minScore != null ? Number(body.minScore) : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 201, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao criar campanha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar campanha' });
+    }
+    return;
+  }
+
+  // POST /api/marketing/email-campaigns/:id/send?limit=
+  if (method === 'POST' && pathname.startsWith('/api/marketing/email-campaigns/') && pathname.endsWith('/send')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/api/marketing/email-campaigns/'.length).replace(/\/send$/, '')).trim();
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit');
+      const marketing = require('./services/marketing/marketingService');
+      const out = await marketing.sendEmailCampaignNow({ tenantId: req.tenantId, campaignId: id, limit: limit != null ? Number(limit) : 2000 });
+      if (!out.ok) {
+        const msg = out.error === 'campaign_not_found' ? 'Campanha não encontrada' : 'Falha ao enviar';
+        sendJson(res, 400, { ok: false, error: out.error, message: msg });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[Marketing] Erro ao enviar campanha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao enviar campanha' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Ops: Execution Queue (DLQ/metrics) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/ops/event-ledger/metrics
+  if (method === 'GET' && pathname === '/api/ops/event-ledger/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowMinutes = urlObj.searchParams.get('windowMinutes');
+      const { getEventLedgerMetrics } = require('./services/eventLedgerMetricsService');
+      const result = await getEventLedgerMetrics({
+        tenantId: req.tenantId,
+        windowMinutes: windowMinutes != null ? Number(windowMinutes) : null,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'event_ledger_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics, windowMinutes: result.windowMinutes });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas do event_ledger:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas do event_ledger' });
+    }
+    return;
+  }
+
+  // GET /api/ops/flow-executions/metrics
+  if (method === 'GET' && pathname === '/api/ops/flow-executions/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowMinutes = urlObj.searchParams.get('windowMinutes');
+      const { getFlowExecutionLedgerMetrics } = require('./services/flowExecutionLedgerMetricsService');
+      const result = await getFlowExecutionLedgerMetrics({
+        tenantId: req.tenantId,
+        windowMinutes: windowMinutes != null ? Number(windowMinutes) : null,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'flow_execution_ledger_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics, windowMinutes: result.windowMinutes });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas do execution ledger:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas do execution ledger' });
+    }
+    return;
+  }
+
+  // GET /api/ops/execution-queue/metrics (alias de /api/ops/execution-jobs/metrics)
+  if (method === 'GET' && pathname === '/api/ops/execution-queue/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getExecutionQueueMetrics } = require('./services/executionQueueService');
+      const result = await getExecutionQueueMetrics({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'queue_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas da execution queue (alias):', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas da execution queue' });
+    }
+    return;
+  }
+
+  // GET /api/ops/execution-jobs/metrics
+  if (method === 'GET' && pathname === '/api/ops/execution-jobs/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getExecutionQueueMetrics } = require('./services/executionQueueService');
+      const result = await getExecutionQueueMetrics({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'queue_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...result.metrics });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas da execution queue:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas da execution queue' });
+    }
+    return;
+  }
+
+  // GET /api/ops/execution-jobs/metrics-by-kind?kind=...&kind=...
+  if (method === 'GET' && pathname === '/api/ops/execution-jobs/metrics-by-kind') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const rawKinds = urlObj.searchParams.getAll('kind');
+      const kinds = rawKinds
+        .flatMap((k) => String(k || '').split(','))
+        .map((k) => k.trim())
+        .filter(Boolean);
+
+      const { getExecutionQueueMetricsByKind } = require('./services/executionQueueService');
+      const result = await getExecutionQueueMetricsByKind({
+        tenantId: req.tenantId,
+        kinds: kinds.length ? kinds : null,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'queue_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, items: result.items });
+    } catch (err) {
+      logger.error('[Ops] Erro ao obter métricas por kind da execution queue:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas por kind' });
+    }
+    return;
+  }
+
+  // GET /api/ops/execution-jobs/dead?kind=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/ops/execution-jobs/dead') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const kind = urlObj.searchParams.get('kind');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const { listDeadJobs } = require('./services/executionQueueService');
+      const result = await listDeadJobs({
+        tenantId: req.tenantId,
+        kind: kind ? String(kind) : null,
+        limit: limit != null ? Number(limit) : 100,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      logger.error('[Ops] Erro ao listar DLQ da execution queue:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar DLQ da execution queue' });
+    }
+    return;
+  }
+
+  // POST /api/ops/execution-jobs/retry { jobId }
+  if (method === 'POST' && pathname === '/api/ops/execution-jobs/retry') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const jobId = body && body.jobId ? String(body.jobId).trim() : '';
+      if (!jobId) {
+        badRequest(res, 'Campo "jobId" é obrigatório');
+        return;
+      }
+      const { retryDeadJob } = require('./services/executionQueueService');
+      const result = await retryDeadJob({ tenantId: req.tenantId, jobId });
+      if (!result.ok) {
+        if (result.error === 'dead_job_not_found') {
+          sendJson(res, 404, { error: 'job_not_found', message: 'Job DLQ não encontrado' });
+          return;
+        }
+        sendJson(res, 400, { error: 'bad_request', message: result.error || 'retry_failed' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'execution_job_retry',
+          resource: 'execution_job',
+          resourceId: jobId,
+          details: { fromStatus: 'dead', toStatus: 'pending' },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, job: result.job });
+    } catch (err) {
+      logger.error('[Ops] Erro ao reprocessar job DLQ:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao reprocessar job DLQ' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Execution ledger (flow_executions/node_executions) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/executions?correlationId=&sessionId=&subjectType=&subjectId=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/executions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const correlationId = urlObj.searchParams.get('correlationId');
+      const sessionId = urlObj.searchParams.get('sessionId');
+      const subjectType = urlObj.searchParams.get('subjectType');
+      const subjectId = urlObj.searchParams.get('subjectId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+
+      const { listFlowExecutions } = require('./services/flowExecutionLedgerService');
+      const result = await listFlowExecutions({
+        tenantId: req.tenantId,
+        correlationId: correlationId ? String(correlationId) : null,
+        sessionId: sessionId ? String(sessionId) : null,
+        subjectType: subjectType ? String(subjectType) : null,
+        subjectId: subjectId ? String(subjectId) : null,
+        limit: limit != null ? Number(limit) : 50,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'execution_ledger_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao listar execuções:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar execuções' });
+    }
+    return;
+  }
+
+  // GET /api/executions/ledger (alias de /api/executions)
+  if (method === 'GET' && pathname === '/api/executions/ledger') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const correlationId = urlObj.searchParams.get('correlationId');
+      const sessionId = urlObj.searchParams.get('sessionId');
+      const subjectType = urlObj.searchParams.get('subjectType');
+      const subjectId = urlObj.searchParams.get('subjectId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+
+      const { listFlowExecutions } = require('./services/flowExecutionLedgerService');
+      const result = await listFlowExecutions({
+        tenantId: req.tenantId,
+        correlationId: correlationId ? String(correlationId) : null,
+        sessionId: sessionId ? String(sessionId) : null,
+        subjectType: subjectType ? String(subjectType) : null,
+        subjectId: subjectId ? String(subjectId) : null,
+        limit: limit != null ? Number(limit) : 50,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'execution_ledger_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao listar execuções (alias):', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar execuções' });
+    }
+    return;
+  }
+
+  // GET /api/executions/:id
+  if (method === 'GET' && pathname.startsWith('/api/executions/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const execId = decodeURIComponent(pathname.slice('/api/executions/'.length));
+      if (!execId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'executionId obrigatório' });
+        return;
+      }
+
+      const { getFlowExecutionDetails } = require('./services/flowExecutionLedgerService');
+      const result = await getFlowExecutionDetails({ tenantId: req.tenantId, executionId: execId });
+      if (!result.ok) {
+        if (result.error === 'execution_not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'execution_ledger_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao obter execução:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter execução' });
+    }
+    return;
+  }
+
+  // POST /api/executions/:id/replay-from-node  { fromNodeExecutionId|fromStepIndex, maxSteps }
+  if (method === 'POST' && pathname.startsWith('/api/executions/') && pathname.endsWith('/replay-from-node')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const execId = decodeURIComponent(pathname.slice('/api/executions/'.length).replace(/\/replay-from-node$/, ''));
+      const body = await parseJsonBody(req);
+      const fromNodeExecutionId = body && body.fromNodeExecutionId ? String(body.fromNodeExecutionId).trim() : null;
+      const fromStepIndex = body && body.fromStepIndex != null ? Number(body.fromStepIndex) : null;
+      const maxSteps = body && body.maxSteps != null ? Number(body.maxSteps) : 200;
+
+      const { replayFromNode } = require('./services/flowExecutionLedgerService');
+      const result = await replayFromNode({
+        tenantId: req.tenantId,
+        executionId: execId,
+        fromNodeExecutionId,
+        fromStepIndex,
+        maxSteps,
+      });
+      if (!result.ok) {
+        const msgMap = {
+          replay_disabled: 'Replay está desabilitado. Defina ENABLE_EXECUTION_LEDGER_REPLAY=true para habilitar.',
+          replay_only_supported_for_simulation: 'Replay a partir do ledger só é suportado para execuções de simulação (meta.mode=simulation), a menos que ENABLE_EXECUTION_LEDGER_REPLAY_REAL=true esteja habilitado.',
+          replay_execution_running: 'Replay não permitido para execuções em andamento. Aguarde a conclusão da execução.',
+          replay_real_not_allowed: 'Replay real bloqueado por allowlist. Configure EXECUTION_LEDGER_REPLAY_REAL_ALLOWLIST_EXECUTIONS ou EXECUTION_LEDGER_REPLAY_REAL_ALLOWLIST_CORRELATIONS.',
+          from_node_not_found: 'Node de origem não encontrado nesta execução.',
+          replay_not_allowed_for_tenant: 'Replay não permitido para este tenant.',
+        };
+        sendJson(res, 400, { error: String(result.error || 'replay_failed'), message: msgMap[result.error] || 'Não foi possível executar replay' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'execution_replay_from_node',
+          resource: 'flow_execution',
+          resourceId: execId,
+          details: { replayExecutionId: result.replayExecutionId, fromNodeExecutionId: fromNodeExecutionId || null, fromStepIndex: fromStepIndex != null ? fromStepIndex : null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[ExecutionLedger] Erro ao executar replay-from-node:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar replay-from-node' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Event ledger query (audit/debug) - autenticado
+  // -----------------------------------------------------------------------
+  // POST /api/voice/events - ingestão de eventos de voz (ARI/AMI/gateway)
+  if (method === 'POST' && pathname === '/api/voice/events') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { ingestVoiceEvent } = require('./services/voiceEventService');
+      const out = await ingestVoiceEvent({
+        tenantId: req.tenantId,
+        eventType: body?.eventType || body?.type,
+        callId: body?.callId || body?.call_id,
+        occurredAt: body?.occurredAt || body?.occurred_at || null,
+        correlationId: body?.correlationId || body?.correlation_id || null,
+        subjectType: body?.subjectType || body?.subject_type || 'pbx_call',
+        subjectId: body?.subjectId || body?.subject_id || null,
+        actorType: body?.actorType || body?.actor_type || 'system',
+        actorId: body?.actorId || body?.actor_id || 'voice_gateway',
+        payload: body?.payload || {},
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_event_invalid' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceEvents] Erro ao ingerir evento de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao ingerir evento de voz' });
+    }
+    return;
+  }
+
+  // POST /api/voice/runtime/start - inicia fluxo de voz (URA) via editor
+  if (method === 'POST' && pathname === '/api/voice/runtime/start') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { runVoiceSession } = require('./services/voiceRuntimeService');
+      const out = await runVoiceSession({
+        tenantId: req.tenantId,
+        flowId: body?.flowId || body?.flow_id,
+        callId: body?.callId || body?.call_id,
+        input: body?.input || null,
+        variables: body?.variables || null,
+        maxSteps: body?.maxSteps || body?.max_steps || 40,
+        startIfMissing: true,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_runtime_start_failed' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao iniciar fluxo de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao iniciar fluxo de voz' });
+    }
+    return;
+  }
+
+  // POST /api/voice/runtime/step - executa próximo passo com input
+  if (method === 'POST' && pathname === '/api/voice/runtime/step') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const { runVoiceSession } = require('./services/voiceRuntimeService');
+      const hasFlow = !!(body?.flowId || body?.flow_id);
+      const out = await runVoiceSession({
+        tenantId: req.tenantId,
+        flowId: body?.flowId || body?.flow_id,
+        callId: body?.callId || body?.call_id,
+        input: body?.input || null,
+        variables: body?.variables || null,
+        maxSteps: body?.maxSteps || body?.max_steps || 40,
+        startIfMissing: hasFlow,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_runtime_step_failed' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao executar passo de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar passo de voz' });
+    }
+    return;
+  }
+
+  // DELETE /api/voice/runtime/session/:callId - encerra sessão de voz (best-effort)
+  if (method === 'DELETE' && pathname.startsWith('/api/voice/runtime/session/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const callId = decodeURIComponent(pathname.slice('/api/voice/runtime/session/'.length));
+      const { clearVoiceSession } = require('./services/voiceRuntimeService');
+      const cleared = clearVoiceSession({ tenantId: req.tenantId, callId });
+      sendJson(res, 200, { ok: true, cleared: !!cleared });
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao limpar sessão de voz:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao limpar sessão de voz' });
+    }
+    return;
+  }
+
+  // GET /api/voice/runtime/stats - sessões ativas de runtime de voz
+  if (method === 'GET' && pathname === '/api/voice/runtime/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getVoiceRuntimeStats } = require('./services/voiceRuntimeService');
+      const out = getVoiceRuntimeStats({ tenantId: req.tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceRuntime] Erro ao obter stats de runtime:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats de runtime' });
+    }
+    return;
+  }
+
+  // GET /api/voice/metrics - métricas básicas de voz (por tipo)
+  if (method === 'GET' && pathname === '/api/voice/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowDays = urlObj.searchParams.get('windowDays');
+      const { getVoiceMetrics } = require('./services/voiceEventService');
+      const out = await getVoiceMetrics({
+        tenantId: req.tenantId,
+        windowDays: windowDays != null ? Number(windowDays) : 7,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'voice_metrics_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[VoiceEvents] Erro ao obter métricas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter métricas' });
+    }
+    return;
+  }
+
+  // GET /api/event-ledger?subjectType=&subjectId=&correlationId=&type=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/event-ledger') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const subjectType = urlObj.searchParams.get('subjectType');
+      const subjectId = urlObj.searchParams.get('subjectId');
+      const correlationId = urlObj.searchParams.get('correlationId');
+      const type = urlObj.searchParams.get('type');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+
+      const { listEvents } = require('./services/eventLedgerService');
+      const result = await listEvents({
+        tenantId: req.tenantId,
+        subjectType: subjectType ? String(subjectType) : null,
+        subjectId: subjectId ? String(subjectId) : null,
+        correlationId: correlationId ? String(correlationId) : null,
+        type: type ? String(type) : null,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[EventLedger] Erro ao listar eventos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar eventos' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Tenant settings (SSO/SCIM) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/tenant-settings/:key
+  if (method === 'GET' && pathname.startsWith('/api/tenant-settings/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
+      const allowedKeys = new Set(['sso', 'scim', 'phone-masking']);
+      if (!allowedKeys.has(String(key))) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim|phone-masking' });
+        return;
+      }
+      const service = require('./services/tenantSettingsService');
+      const out = await service.getSetting({ tenantId, key });
+      // Fallback resiliente para ambientes sem DB: não quebrar UI nem RPA.
+      if (String(key) === 'phone-masking' && !out.ok) {
+        sendJson(res, 200, { ok: true, key, value: { enabled: false }, fallback: true });
+        return;
+      }
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, key, value: out.value });
+    } catch (err) {
+      const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
+      if (String(key) === 'phone-masking') {
+        sendJson(res, 200, { ok: true, key, value: { enabled: false }, fallback: true });
+        return;
+      }
+      logger.error('[TenantSettings] Erro ao obter setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter setting' });
+    }
+    return;
+  }
+
+  // POST /api/tenant-settings/:key
+  if (method === 'POST' && pathname.startsWith('/api/tenant-settings/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const key = decodeURIComponent(pathname.slice('/api/tenant-settings/'.length));
+      const allowedKeys = new Set(['sso', 'scim', 'phone-masking']);
+      if (!allowedKeys.has(String(key))) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Chave inválida. Use: sso|scim|phone-masking' });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const service = require('./services/tenantSettingsService');
+      const out = await service.upsertSetting({ tenantId, key, value: body?.value || {} });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, key, value: out.value });
+    } catch (err) {
+      logger.error('[TenantSettings] Erro ao salvar setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar setting' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // WhatsApp IVR (URA WhatsApp empacotada)
+  // -----------------------------------------------------------------------
+  // GET /whatsapp/ivr
+  if (method === 'GET' && pathname === '/whatsapp/ivr') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/tenantSettingsService');
+      const out = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      const value = out.value && typeof out.value === 'object' ? out.value : {};
+      sendJson(res, 200, {
+        ok: true,
+        value: {
+          enabled: value.enabled === true,
+          departments: Array.isArray(value.departments) ? value.departments : [],
+          rules: Array.isArray(value.rules) ? value.rules : [],
+        },
+      });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao obter setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter setting' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/ivr
+  if (method === 'POST' && pathname === '/whatsapp/ivr') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const value = {
+        enabled: body && body.enabled === true,
+        departments: Array.isArray(body?.departments) ? body.departments : [],
+        rules: Array.isArray(body?.rules) ? body.rules : [],
+      };
+      const service = require('./services/tenantSettingsService');
+      const out = await service.upsertSetting({ tenantId, key: 'whatsapp_ivr', value });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, value: out.value });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao salvar setting:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar setting' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/ivr/department
+  if (method === 'POST' && pathname === '/whatsapp/ivr/department') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      const queue = body && body.queue ? String(body.queue).trim() : '';
+      if (!name || !queue) {
+        badRequest(res, 'name e queue são obrigatórios');
+        return;
+      }
+      const id = body && body.id ? String(body.id).trim() : `wivr-dept-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+      const enabled = body && body.enabled !== undefined ? body.enabled === true : true;
+
+      const service = require('./services/tenantSettingsService');
+      const current = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
+      const value = current.value && typeof current.value === 'object' ? current.value : {};
+      const departments = Array.isArray(value.departments) ? value.departments : [];
+      const existingIndex = departments.findIndex((d) => d && d.id === id);
+      const next = { id, name, queue, enabled };
+      if (existingIndex >= 0) {
+        departments[existingIndex] = { ...departments[existingIndex], ...next };
+      } else {
+        departments.push(next);
+      }
+      const out = await service.upsertSetting({
+        tenantId,
+        key: 'whatsapp_ivr',
+        value: {
+          enabled: value.enabled === true,
+          departments,
+          rules: Array.isArray(value.rules) ? value.rules : [],
+        },
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, department: next, value: out.value });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao salvar departamento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar departamento' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/ivr/rule
+  if (method === 'POST' && pathname === '/whatsapp/ivr/rule') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const keyword = body && body.keyword ? String(body.keyword).trim() : '';
+      const departmentId = body && body.departmentId ? String(body.departmentId).trim() : '';
+      if (!keyword || !departmentId) {
+        badRequest(res, 'keyword e departmentId são obrigatórios');
+        return;
+      }
+      const id = body && body.id ? String(body.id).trim() : `wivr-rule-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+      const enabled = body && body.enabled !== undefined ? body.enabled === true : true;
+      const priority = body && body.priority != null ? Number(body.priority) : 0;
+
+      const service = require('./services/tenantSettingsService');
+      const current = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
+      const value = current.value && typeof current.value === 'object' ? current.value : {};
+      const rules = Array.isArray(value.rules) ? value.rules : [];
+      const existingIndex = rules.findIndex((r) => r && r.id === id);
+      const next = { id, keyword, departmentId, priority, enabled };
+      if (existingIndex >= 0) {
+        rules[existingIndex] = { ...rules[existingIndex], ...next };
+      } else {
+        rules.push(next);
+      }
+      const out = await service.upsertSetting({
+        tenantId,
+        key: 'whatsapp_ivr',
+        value: {
+          enabled: value.enabled === true,
+          departments: Array.isArray(value.departments) ? value.departments : [],
+          rules,
+        },
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, rule: next, value: out.value });
+    } catch (err) {
+      logger.error('[WhatsAppIVR] Erro ao salvar regra:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar regra' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // WhatsApp QR Connections (além da Cloud API)
+  // -----------------------------------------------------------------------
+  // GET /whatsapp/connections
+  if (method === 'GET' && pathname === '/whatsapp/connections') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/whatsappQrService');
+      const out = await service.listConnections(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connections: out.connections || [] });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao listar conexões:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar conexões' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections
+  if (method === 'POST' && pathname === '/whatsapp/connections') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/whatsappQrService');
+      const out = await service.createConnection(tenantId, body || {});
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao criar conexão:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar conexão' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/qr
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/qr')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/qr'.length));
+      const service = require('./services/whatsappQrService');
+      const out = await service.generateQr(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection, qr: out.qr });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao gerar QR:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao gerar QR' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/disconnect
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/disconnect')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/disconnect'.length));
+      const service = require('./services/whatsappQrService');
+      const out = await service.disconnectConnection(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao desconectar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao desconectar' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/status
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/status')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/status'.length));
+      const body = await parseJsonBody(req);
+      const service = require('./services/whatsappQrService');
+      const out = await service.setConnectionStatus(tenantId, id, body || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        if (out.error === 'invalid_status') {
+          sendJson(res, 400, { error: 'invalid_status', message: 'Status inválido. Use connected|pairing|disconnected|error' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao atualizar status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar status' });
+    }
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/events
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/events')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/events'.length));
+      const body = await parseJsonBody(req);
+      const service = require('./services/whatsappQrService');
+      const out = await service.ingestConnectionEvent(tenantId, id, body || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        if (out.error === 'event_type_required') {
+          sendJson(res, 400, { error: 'event_type_required', message: 'eventType é obrigatório' });
+          return;
+        }
+        if (out.error === 'invalid_event_type') {
+          sendJson(res, 400, { error: 'invalid_event_type', message: 'eventType inválido. Use qr|pairing|connected|ready|disconnected|logout|closed|error|failed' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao ingerir evento de conexão:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao ingerir evento de conexão' });
+    }
+    return;
+  }
+
+  // GET /whatsapp/connections/:id/status
+  if (method === 'GET' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/status')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/status'.length));
+      const service = require('./services/whatsappQrService');
+      const out = await service.getStatus(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao obter status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter status' });
+    }
+    return;
+  }
+
+  // POST /webhooks/whatsapp-qr/events (integração com worker externo)
+  if (method === 'POST' && pathname === '/webhooks/whatsapp-qr/events') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const secretExpected = String(process.env.WHATSAPP_QR_WEBHOOK_SECRET || '').trim();
+      if (secretExpected) {
+        const provided = String(req.headers['x-whatsapp-qr-secret'] || '').trim();
+        if (!provided || provided !== secretExpected) {
+          sendJson(res, 401, { error: 'unauthorized', message: 'Invalid webhook secret' });
+          return;
+        }
+      }
+      const tenantId = body?.tenantId || body?.tenant_id;
+      const connectionId = body?.connectionId || body?.connection_id;
+      if (!tenantId || !connectionId) {
+        sendJson(res, 400, { error: 'invalid_payload', message: 'tenantId e connectionId são obrigatórios' });
+        return;
+      }
+      const service = require('./services/whatsappQrService');
+      const out = await service.ingestConnectionEvent(String(tenantId), String(connectionId), body || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        if (out.error === 'event_type_required' || out.error === 'invalid_event_type') {
+          sendJson(res, 400, { error: out.error, message: 'eventType inválido ou ausente' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro no webhook de eventos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao processar webhook de evento' });
+    }
+    return;
+  }
+
+  // GET /api/whatsapp/qr-bridge/stats
+  if (method === 'GET' && pathname === '/api/whatsapp/qr-bridge/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getWhatsAppQrBridgeStats } = require('./services/whatsappQrBridgeService');
+      sendJson(res, 200, { ok: true, ...getWhatsAppQrBridgeStats() });
+    } catch (err) {
+      logger.error('[WhatsAppQRBridge] Erro ao obter stats:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats do bridge' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Backup/DR (export/import) - autenticado
+  // -----------------------------------------------------------------------
+  // GET /api/backup/export
+  if (method === 'GET' && pathname === '/api/backup/export') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const { Flow, TenantSetting } = require('./db/models');
+      const FlowModel = Flow();
+      const TenantSettingModel = TenantSetting();
+      const flowRows = await FlowModel.findAll({ where: { tenant_key: tenantId } });
+      const flowsPayload = flowRows.map((row) => {
+        const data = row.data && typeof row.data === 'object' ? row.data : {};
+        return { ...data, id: row.id, tenantId };
+      });
+      const settingsRows = await TenantSettingModel.findAll({ where: { tenant_id: String(tenantId) } });
+      const settings = settingsRows.map((row) => {
+        const json = row.toJSON ? row.toJSON() : row;
+        return { key: json.key, value: json.value || {} };
+      });
+      sendJson(res, 200, {
+        ok: true,
+        tenantId,
+        exportedAt: new Date().toISOString(),
+        flows: flowsPayload,
+        settings,
+      });
+    } catch (err) {
+      logger.error('[Backup] Erro ao exportar backup:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao exportar backup' });
+    }
+    return;
+  }
+
+  // POST /api/backup/import
+  if (method === 'POST' && pathname === '/api/backup/import') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const flowsInput = Array.isArray(body?.flows) ? body.flows : [];
+      const settingsInput = Array.isArray(body?.settings) ? body.settings : [];
+      const overwrite = body?.overwrite === true;
+
+      const { Flow, TenantSetting } = require('./db/models');
+      const FlowModel = Flow();
+      const TenantSettingModel = TenantSetting();
+      let flowImported = 0;
+      let flowSkipped = 0;
+      let settingImported = 0;
+
+      for (const f of flowsInput) {
+        if (!f || !f.id) {
+          flowSkipped += 1;
+          continue;
+        }
+        const nextFlow = { ...f, tenantId };
+        // eslint-disable-next-line no-await-in-loop
+        const existing = await FlowModel.findByPk(String(f.id));
+        if (existing && !overwrite) {
+          flowSkipped += 1;
+          continue;
+        }
+        const now = new Date();
+        if (existing) {
+          // eslint-disable-next-line no-await-in-loop
+          await existing.update({ tenant_key: tenantId, name: nextFlow.name || null, data: nextFlow, updated_at: now });
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          await FlowModel.create({ id: String(f.id), tenant_key: tenantId, name: nextFlow.name || null, data: nextFlow, created_at: now, updated_at: now });
+        }
+        flows.set(String(f.id), nextFlow);
+        flowImported += 1;
+      }
+
+      for (const s of settingsInput) {
+        if (!s || !s.key) continue;
+        const key = String(s.key);
+        const value = s.value && typeof s.value === 'object' ? s.value : {};
+        // eslint-disable-next-line no-await-in-loop
+        const existing = await TenantSettingModel.findOne({ where: { tenant_id: String(tenantId), key } });
+        if (existing) {
+          // eslint-disable-next-line no-await-in-loop
+          await existing.update({ value });
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          await TenantSettingModel.create({ tenant_id: String(tenantId), key, value });
+        }
+        settingImported += 1;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId,
+          action: 'backup_import',
+          resource: 'tenant_backup',
+          resourceId: tenantId,
+          details: { flowImported, flowSkipped, settingImported, overwrite },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, flowImported, flowSkipped, settingImported, overwrite });
+    } catch (err) {
+      logger.error('[Backup] Erro ao importar backup:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao importar backup' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Developer API Keys (API pública com API Keys + rate limit)
+  // -----------------------------------------------------------------------
+  // GET /developer/keys - lista chaves de API (kind=developer)
+  if (method === 'GET' && pathname === '/developer/keys') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const includeTokenParam = urlObj.searchParams.get('includeToken');
+      const activeParam = urlObj.searchParams.get('active');
+      const active = activeParam === null ? null : (activeParam === 'true' ? true : activeParam === 'false' ? false : null);
+      const includeToken = includeTokenParam === 'true';
+
+      if (includeToken) {
+        const permSecrets = requirePermission(req, 'config', 'update');
+        if (!permSecrets.allowed) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para incluir tokens em texto claro' });
+          return;
+        }
+      }
+
+      const { listPublicTokens } = require('./services/publicAccessTokenService');
+      const items = await listPublicTokens({
+        tenantId: req.tenantId,
+        kind: 'developer',
+        active,
+        includeToken,
+      });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[DeveloperKeys] Erro ao listar chaves:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar chaves' });
+    }
+    return;
+  }
+
+  // POST /developer/keys - cria chave de API (kind=developer)
+  if (method === 'POST' && pathname === '/developer/keys') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      const description = body && body.description ? String(body.description).trim() : '';
+      const expiresInSec = body && body.expiresInSec != null ? Number(body.expiresInSec) : null;
+      const meta = {
+        name: name || null,
+        description: description || null,
+      };
+
+      const { createPublicToken } = require('./services/publicAccessTokenService');
+      const tokenRow = await createPublicToken({
+        tenantId: req.tenantId,
+        kind: 'developer',
+        meta,
+        expiresInSec,
+      });
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'developer_key_create',
+          resource: 'developer_key',
+          resourceId: tokenRow.id,
+          details: { name: name || null, expiresInSec: expiresInSec || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, key: tokenRow });
+    } catch (err) {
+      logger.error('[DeveloperKeys] Erro ao criar chave:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar chave' });
+    }
+    return;
+  }
+
+  // GET /developer/usage - estatísticas de uso (kind=developer)
+  if (method === 'GET' && pathname === '/developer/usage') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getPublicTokenStats, listPublicTokens } = require('./services/publicAccessTokenService');
+      const result = await getPublicTokenStats({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'developer_usage_unavailable' });
+        return;
+      }
+      const items = Array.isArray(result.items) ? result.items.filter((it) => it.kind === 'developer') : [];
+      const keys = await listPublicTokens({ tenantId: req.tenantId, kind: 'developer', includeToken: false });
+      const routesMap = new Map();
+      for (const key of keys || []) {
+        const usageByRoute = key?.meta?.usageByRoute && typeof key.meta.usageByRoute === 'object'
+          ? key.meta.usageByRoute
+          : {};
+        for (const [routeKey, routeInfo] of Object.entries(usageByRoute)) {
+          const current = routesMap.get(routeKey) || {
+            route: routeKey,
+            count: 0,
+            lastUsedAt: null,
+            lastStatusCode: null,
+            keys: 0,
+          };
+          const count = Number(routeInfo?.count || 0);
+          const lastUsedAtRaw = routeInfo?.lastUsedAt ? new Date(routeInfo.lastUsedAt) : null;
+          current.count += count;
+          current.keys += 1;
+          current.lastStatusCode = Number(routeInfo?.lastStatusCode || current.lastStatusCode || 0) || current.lastStatusCode;
+          if (lastUsedAtRaw && !Number.isNaN(lastUsedAtRaw.getTime())) {
+            if (!current.lastUsedAt || lastUsedAtRaw > new Date(current.lastUsedAt)) {
+              current.lastUsedAt = lastUsedAtRaw.toISOString();
+            }
+          }
+          routesMap.set(routeKey, current);
+        }
+      }
+      const routes = Array.from(routesMap.values()).sort((a, b) => b.count - a.count).slice(0, 100);
+      const totals = items.reduce((acc, it) => {
+        acc.total += it.total;
+        acc.active += it.active;
+        acc.inactive += it.inactive;
+        acc.revoked += it.revoked;
+        acc.expired += it.expired;
+        return acc;
+      }, { total: 0, active: 0, inactive: 0, revoked: 0, expired: 0 });
+      sendJson(res, 200, { ok: true, tenantId: req.tenantId, totals, items, routes });
+    } catch (err) {
+      logger.error('[DeveloperKeys] Erro ao obter uso:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter uso' });
+    }
+    return;
+  }
+
+  // POST /public/* - endpoint público (API Keys)
+  if (method === 'POST' && pathname.startsWith('/public/')) {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const apiKey = (() => {
+        const headerKey = req.headers['x-api-key'] || req.headers['x-api_key'] || null;
+        if (headerKey) return String(headerKey).trim();
+        const authHeader = req.headers.authorization ? String(req.headers.authorization) : '';
+        if (authHeader.toLowerCase().startsWith('bearer ')) {
+          return authHeader.slice(7).trim();
+        }
+        if (authHeader.toLowerCase().startsWith('apikey ')) {
+          return authHeader.slice(7).trim();
+        }
+        return null;
+      })();
+      if (!apiKey) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'API key obrigatória' });
+        return;
+      }
+
+      const { resolvePublicToken, recordPublicTokenUsage } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token: apiKey, allowedKinds: ['developer'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'API key inválida' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_API',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const response = {
+        ok: true,
+        route: pathname,
+        tenantId: resolved.tenantId,
+        tokenId: resolved.tokenId,
+        received: body || null,
+      };
+
+      try {
+        await recordPublicTokenUsage({
+          tokenId: resolved.tokenId,
+          route: pathname,
+          method,
+          statusCode: 200,
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, response);
+    } catch (err) {
+      logger.error('[PublicAPI] Erro ao processar request:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao processar request público' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Automações low-code (MVP)
+  // -----------------------------------------------------------------------
+  // GET /automations
+  if (method === 'GET' && pathname === '/automations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/automationService');
+      const out = await service.listAutomations(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automations: out.automations || [] });
+    } catch (err) {
+      logger.error('[Automations] Erro ao listar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar automações' });
+    }
+    return;
+  }
+
+  // POST /automations
+  if (method === 'POST' && pathname === '/automations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      if (!name) {
+        badRequest(res, 'name é obrigatório');
+        return;
+      }
+      const service = require('./services/automationService');
+      const out = await service.upsertAutomation(tenantId, {
+        id: body?.id || null,
+        name,
+        description: body?.description || '',
+        status: body?.status || 'draft',
+        definition: body?.definition || {},
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automation: out.automation });
+    } catch (err) {
+      logger.error('[Automations] Erro ao salvar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar automação' });
+    }
+    return;
+  }
+
+  // POST /automations/:id/publish
+  if (method === 'POST' && pathname.startsWith('/automations/') && pathname.endsWith('/publish')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/automations/'.length, -'/publish'.length));
+      const service = require('./services/automationService');
+      const out = await service.publishAutomation(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Automação não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automation: out.automation });
+    } catch (err) {
+      logger.error('[Automations] Erro ao publicar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao publicar automação' });
+    }
+    return;
+  }
+
+  // POST /automations/:id/run
+  if (method === 'POST' && pathname.startsWith('/automations/') && pathname.endsWith('/run')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/automations/'.length, -'/run'.length));
+      const service = require('./services/automationService');
+      const out = await service.runAutomation(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Automação não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'automations_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, automation: out.automation, run: out.run });
+    } catch (err) {
+      logger.error('[Automations] Erro ao executar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar automação' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Tarefas e lembretes (MVP)
+  // -----------------------------------------------------------------------
+  // GET /tasks
+  if (method === 'GET' && pathname === '/tasks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/tasksService');
+      const out = await service.listTasks(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, tasks: out.tasks || [] });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao listar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar tarefas' });
+    }
+    return;
+  }
+
+  // POST /tasks
+  if (method === 'POST' && pathname === '/tasks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const title = body && body.title ? String(body.title).trim() : '';
+      if (!title) {
+        badRequest(res, 'title é obrigatório');
+        return;
+      }
+      const service = require('./services/tasksService');
+      const out = await service.createTask(tenantId, {
+        title,
+        description: body?.description || '',
+        dueAt: body?.dueAt || null,
+        priority: body?.priority || 'normal',
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 201, { ok: true, task: out.task });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao criar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar tarefa' });
+    }
+    return;
+  }
+
+  // POST /tasks/:id/complete
+  if (method === 'POST' && pathname.startsWith('/tasks/') && pathname.endsWith('/complete')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const id = decodeURIComponent(pathname.slice('/tasks/'.length, -'/complete'.length));
+      const service = require('./services/tasksService');
+      const out = await service.completeTask(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Tarefa não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, task: out.task });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao completar:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao completar tarefa' });
+    }
+    return;
+  }
+
+  // POST /tasks/:id/reminder
+  if (method === 'POST' && pathname.startsWith('/tasks/') && pathname.endsWith('/reminder')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const id = decodeURIComponent(pathname.slice('/tasks/'.length, -'/reminder'.length));
+      const body = await parseJsonBody(req);
+      const reminderAt = body && body.reminderAt ? String(body.reminderAt) : null;
+      const service = require('./services/tasksService');
+      const out = await service.scheduleReminder(tenantId, id, reminderAt);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Tarefa não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'tasks_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, task: out.task });
+    } catch (err) {
+      logger.error('[Tasks] Erro ao agendar lembrete:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao agendar lembrete' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // SLA por cliente (MVP)
+  // -----------------------------------------------------------------------
+  // GET /sla/policies
+  if (method === 'GET' && pathname === '/sla/policies') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/slaService');
+      const out = await service.listPolicies(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'sla_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, policies: out.policies || [] });
+    } catch (err) {
+      logger.error('[SLA] Erro ao listar policies:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar policies' });
+    }
+    return;
+  }
+
+  // POST /sla/policies
+  if (method === 'POST' && pathname === '/sla/policies') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const name = body && body.name ? String(body.name).trim() : '';
+      if (!name) {
+        badRequest(res, 'name é obrigatório');
+        return;
+      }
+      const service = require('./services/slaService');
+      const out = await service.upsertPolicy(tenantId, {
+        id: body?.id || null,
+        name,
+        description: body?.description || '',
+        customerSegment: body?.customerSegment || 'default',
+        responseTimeMin: body?.responseTimeMin,
+        resolutionTimeMin: body?.resolutionTimeMin,
+        enabled: body?.enabled !== false,
+      });
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'sla_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, policy: out.policy });
+    } catch (err) {
+      logger.error('[SLA] Erro ao salvar policy:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar policy' });
+    }
+    return;
+  }
+
+  // GET /sla/breaches
+  if (method === 'GET' && pathname === '/sla/breaches') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/slaService');
+      const out = await service.listBreaches(tenantId);
+      if (!out.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'sla_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, breaches: out.breaches || [] });
+    } catch (err) {
+      logger.error('[SLA] Erro ao listar breaches:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar breaches' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Public Tokens (Storefront/Kiosk/Panel/Station)
+  // -----------------------------------------------------------------------
+  // GET /public-tokens - Lista tokens públicos do tenant
+  if (method === 'GET' && pathname === '/public-tokens') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    // Ver tokens é sensível (retorna secrets apenas se solicitado e autorizado)
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const kind = urlObj.searchParams.get('kind');
+      const locationId = urlObj.searchParams.get('locationId');
+      const activeParam = urlObj.searchParams.get('active');
+      const includeTokenParam = urlObj.searchParams.get('includeToken');
+      const active = activeParam === null ? null : (activeParam === 'true' ? true : activeParam === 'false' ? false : null);
+      const includeToken = includeTokenParam === 'true';
+
+      // Para incluir o token real, exige permissão de update (mais restritiva)
+      if (includeToken) {
+        const permSecrets = requirePermission(req, 'config', 'update');
+        if (!permSecrets.allowed) {
+          sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para incluir tokens em texto claro' });
+          return;
+        }
+      }
+
+      const { listPublicTokens } = require('./services/publicAccessTokenService');
+      const items = await listPublicTokens({
+        tenantId: req.tenantId,
+        kind: kind ? String(kind) : null,
+        locationId: locationId ? String(locationId) : null,
+        active,
+        includeToken,
+      });
+      sendJson(res, 200, { ok: true, items });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao listar tokens:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar tokens públicos' });
+    }
+    return;
+  }
+
+  // GET /public-tokens/stats - Stats mínimos de uso por kind (dashboard)
+  if (method === 'GET' && pathname === '/public-tokens/stats') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const { getPublicTokenStats } = require('./services/publicAccessTokenService');
+      const result = await getPublicTokenStats({ tenantId: req.tenantId });
+      if (!result.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: result.error || 'public_token_stats_unavailable' });
+        return;
+      }
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao obter stats:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter stats de tokens públicos' });
+    }
+    return;
+  }
+
+  // POST /public-tokens - Cria token público (por tenant) para telas públicas
+  if (method === 'POST' && pathname === '/public-tokens') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const kind = body && body.kind ? String(body.kind).trim() : '';
+      const locationId = body && body.locationId ? String(body.locationId).trim() : null;
+      const meta = body && typeof body.meta === 'object' && body.meta ? body.meta : {};
+      const expiresInSec = body && body.expiresInSec != null ? Number(body.expiresInSec) : null;
+
+      const allowedKinds = new Set(['storefront', 'kiosk', 'panel', 'station']);
+      if (!allowedKinds.has(kind)) {
+        badRequest(res, 'Campo "kind" inválido. Use: storefront|kiosk|panel|station');
+        return;
+      }
+
+      const { createPublicToken } = require('./services/publicAccessTokenService');
+      const tokenRow = await createPublicToken({
+        tenantId: req.tenantId,
+        kind,
+        locationId,
+        meta,
+        expiresInSec,
+      });
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'public_token_create',
+          resource: 'public_token',
+          resourceId: tokenRow.id,
+          details: { kind, locationId: locationId || null, expiresInSec: expiresInSec || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, token: tokenRow });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao criar token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar token público' });
+    }
+    return;
+  }
+
+  // POST /public-tokens/:id/revoke - Revoga um token público
+  if (method === 'POST' && pathname.startsWith('/public-tokens/') && pathname.endsWith('/revoke')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const parts = pathname.split('/').filter(Boolean); // ["public-tokens", ":id", "revoke"]
+      const tokenId = parts[1] ? String(parts[1]) : null;
+      if (!tokenId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'tokenId obrigatório' });
+        return;
+      }
+      const reason = (() => {
+        try {
+          const urlObj = new URL(req.url || '/', 'http://localhost');
+          const q = urlObj.searchParams.get('reason');
+          return q ? String(q) : null;
+        } catch (_) {
+          return null;
+        }
+      })();
+
+      const { revokePublicToken } = require('./services/publicAccessTokenService');
+      const result = await revokePublicToken({ tenantId: req.tenantId, tokenId, reason });
+      if (!result.ok) {
+        sendJson(res, 404, { error: 'not_found', message: 'Token não encontrado' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'public_token_revoke',
+          resource: 'public_token',
+          resourceId: tokenId,
+          details: { reason: reason || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, token: result.token });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao revogar token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao revogar token público' });
+    }
+    return;
+  }
+
+  // POST /public-tokens/:id/rotate - Rotaciona token público (revoga antigo e cria novo)
+  if (method === 'POST' && pathname.startsWith('/public-tokens/') && pathname.endsWith('/rotate')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const parts = pathname.split('/').filter(Boolean); // ["public-tokens", ":id", "rotate"]
+      const tokenId = parts[1] ? String(parts[1]) : null;
+      if (!tokenId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'tokenId obrigatório' });
+        return;
+      }
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const expiresInSecRaw = urlObj.searchParams.get('expiresInSec');
+      const expiresInSec = expiresInSecRaw != null ? Number(expiresInSecRaw) : null;
+
+      const { rotatePublicToken } = require('./services/publicAccessTokenService');
+      const result = await rotatePublicToken({ tenantId: req.tenantId, tokenId, expiresInSec });
+      if (!result.ok) {
+        const code = result.error;
+        if (code === 'token_not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Token não encontrado' });
+          return;
+        }
+        if (code === 'token_inactive') {
+          sendJson(res, 409, { error: 'conflict', message: 'Token já está inativo' });
+          return;
+        }
+        sendJson(res, 400, { error: 'bad_request', message: 'Não foi possível rotacionar token' });
+        return;
+      }
+
+      try {
+        logAction({
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          tenantId: req.tenantId,
+          action: 'public_token_rotate',
+          resource: 'public_token',
+          resourceId: tokenId,
+          details: { newTokenId: result.newToken?.id || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, oldTokenId: result.oldTokenId, newToken: result.newToken });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao rotacionar token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao rotacionar token público' });
+    }
+    return;
+  }
+
+  // GET /public-tokens/resolve?token=... - Resolve token público (para telas públicas)
+  if (method === 'GET' && pathname === '/public-tokens/resolve') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Token obrigatório' });
+        return;
+      }
+
+      // Anti brute-force: rate limit por IP
+      const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+      const rl = await checkRateLimit({ userId: `ip:${ipAddress}`, operationType: 'PUBLIC_TOKEN_RESOLVE' });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({
+        token,
+        allowedKinds: ['storefront', 'kiosk', 'panel', 'station'],
+      });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Auditoria best-effort (evento público)
+      try {
+        logAction({
+          agentId: 'public',
+          username: 'public',
+          tenantId: resolved.tenantId,
+          action: 'public_token_resolve',
+          resource: 'public_token',
+          resourceId: resolved.tokenId,
+          details: { kind: resolved.kind, locationId: resolved.locationId || null },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, {
+        ok: true,
+        token: {
+          id: resolved.tokenId,
+          kind: resolved.kind,
+          tenantId: resolved.tenantId,
+          locationId: resolved.locationId,
+          meta: resolved.meta || {},
+        },
+      });
+    } catch (err) {
+      logger.error('[PublicTokens] Erro ao resolver token:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao resolver token público' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Storefront (público por token)
+  // -----------------------------------------------------------------------
+  // POST /storefront/orders?token=... - cria pedido
+  if (method === 'POST' && pathname === '/storefront/orders') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=storefront)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const customerName = body && body.customerName ? String(body.customerName).trim() : null;
+      const customerPhone = body && body.customerPhone ? String(body.customerPhone).trim() : null;
+      const notes = body && body.notes ? String(body.notes).trim() : null;
+      const items = body && Array.isArray(body.items) ? body.items : [];
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      const deliveryType = body && body.deliveryType ? String(body.deliveryType).trim() : 'delivery';
+      const deliveryAddress = body && typeof body.deliveryAddress === 'object' && body.deliveryAddress ? body.deliveryAddress : {};
+
+      const { createOrder } = require('./services/orderService');
+      const order = await createOrder({
+        tenantId: resolved.tenantId,
+        source: 'storefront',
+        locationId: resolved.locationId,
+        customerName,
+        customerPhone,
+        items,
+        notes,
+        deliveryType,
+        deliveryAddress,
+        context: { publicTokenId: resolved.tokenId, idempotencyKey: idempotencyKey || null },
+      });
+
+      // cria Delivery best-effort (para SLA) quando for delivery
+      let delivery = null;
+      if (deliveryType === 'delivery') {
+        try {
+          const { createDeliveryForOrder } = require('./services/deliveryService');
+          delivery = await createDeliveryForOrder({
+            tenantId: resolved.tenantId,
+            orderId: order.id,
+            deliveryAddress,
+            context: {
+              publicTokenId: resolved.tokenId,
+              correlationId: order?.context?.correlationId || null,
+              idempotencyKey: idempotencyKey ? `${idempotencyKey}:delivery` : null,
+            },
+          });
+        } catch (e) {
+          // best-effort: não bloquear criação do pedido
+        }
+      }
+
+      sendJson(res, 201, { ok: true, order, delivery });
+    } catch (err) {
+      logger.error('[Storefront] Erro ao criar pedido:', err);
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'order_items_required') {
+        sendJson(res, 400, { error: 'bad_request', message: 'Itens do pedido são obrigatórios' });
+        return;
+      }
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar pedido' });
+    }
+    return;
+  }
+
+  // GET /storefront/orders/:id?token=... - status do pedido
+  if (method === 'GET' && pathname.startsWith('/storefront/orders/')) {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['storefront'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=storefront)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STOREFRONT',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const orderId = decodeURIComponent(pathname.slice('/storefront/orders/'.length));
+      const { getOrderById } = require('./services/orderService');
+      const order = await getOrderById({ tenantId: resolved.tenantId, orderId });
+      if (!order) {
+        sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+        return;
+      }
+
+      const { getDeliveryByOrderId } = require('./services/deliveryService');
+      const delivery = await getDeliveryByOrderId({ tenantId: resolved.tenantId, orderId });
+      sendJson(res, 200, { ok: true, order, delivery });
+    } catch (err) {
+      logger.error('[Storefront] Erro ao obter status do pedido:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter status do pedido' });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // Filas físicas (público por token)
+  // -----------------------------------------------------------------------
+  // POST /physical/kiosk/tickets?token=... - cria senha
+  if (method === 'POST' && pathname === '/physical/kiosk/tickets') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['kiosk'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=kiosk)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_KIOSK',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const priority = body && body.priority != null ? Number(body.priority) : 0;
+      const queueId = body && body.queueId ? String(body.queueId).trim() : null;
+      const context = body && typeof body.context === 'object' && body.context ? body.context : {};
+      const biometricMode = body && body.biometricMode ? String(body.biometricMode).trim() : null;
+      const biometricRef = body && body.biometricRef ? String(body.biometricRef).trim() : null;
+      const customerIdInput = body && body.customerIdInput ? String(body.customerIdInput).trim() : null;
+
+      const tokenMeta = (resolved && resolved.meta && typeof resolved.meta === 'object') ? resolved.meta : {};
+      const mode = biometricMode || (tokenMeta.biometricMode ? String(tokenMeta.biometricMode) : null);
+      const requireBiometric = tokenMeta.requireBiometric === true;
+      const biometricSecret = tokenMeta.biometricSecret || tokenMeta.biobridgeSecret || null;
+
+      let biometric = null;
+      if (mode || requireBiometric || biometricRef) {
+        if (!mode) {
+          sendJson(res, 400, { error: 'bad_request', message: 'biometricMode obrigatório quando biometria está habilitada' });
+          return;
+        }
+        if (requireBiometric && !biometricRef) {
+          sendJson(res, 400, { error: 'bad_request', message: 'biometricRef obrigatório' });
+          return;
+        }
+        if (biometricRef) {
+          const { verifyBiometricRef } = require('./services/biometricService');
+          biometric = verifyBiometricRef({
+            secret: biometricSecret,
+            ref: biometricRef,
+            expectedTokenId: resolved.tokenId,
+            expectedLocationId: resolved.locationId || null,
+            allowedModes: ['identify-1n', 'verify-1to1', 'dedupe-only'],
+            maxAgeSec: 180,
+          });
+
+          if (mode && biometric.mode !== mode) {
+            sendJson(res, 400, { error: 'bad_request', message: 'biometricRef não corresponde ao biometricMode atual' });
+            return;
+          }
+
+          if (biometric.mode === 'verify-1to1') {
+            if (!customerIdInput) {
+              sendJson(res, 400, { error: 'bad_request', message: 'customerIdInput obrigatório no modo verify-1to1' });
+              return;
+            }
+            const expectedSubject = `cust:${customerIdInput}`;
+            if (biometric.subjectId !== expectedSubject) {
+              sendJson(res, 401, { error: 'unauthorized', message: 'Biometria não corresponde ao identificador informado' });
+              return;
+            }
+          }
+
+          if (biometric.mode === 'dedupe-only') {
+            // Deduplica: se já existe ticket ativo hoje para este subjectId + locationId, devolve o mesmo.
+            try {
+              const { PhysicalTicket } = require('./db/models');
+              const TicketModel = PhysicalTicket();
+              const sequelize = TicketModel.sequelize;
+              const locationId = resolved.locationId || null;
+              if (sequelize && locationId) {
+                const [rows] = await sequelize.query(
+                  `SELECT id, tenant_key, physical_queue_id, ticket_number, status, priority, called_at, started_at, finished_at, station_id, context, created_at, updated_at
+                   FROM physical_tickets
+                   WHERE tenant_key = :tenantKey
+                     AND status IN ('waiting','called')
+                     AND (context->>'locationId') = :locationId
+                     AND (context->>'biometricSubjectId') = :subjectId
+                     AND created_at::date = CURRENT_DATE
+                   ORDER BY created_at DESC
+                   LIMIT 1`,
+                  {
+                    replacements: {
+                      tenantKey: resolved.tenantId,
+                      locationId: String(locationId),
+                      subjectId: String(biometric.subjectId),
+                    },
+                  },
+                );
+                if (Array.isArray(rows) && rows.length > 0 && rows[0] && rows[0].id) {
+                  sendJson(res, 200, { ok: true, ticket: rows[0], idempotent: true });
+                  return;
+                }
+              }
+            } catch (_) {
+              // best-effort: não bloquear emissão de senha por falha no dedupe
+            }
+          }
+        }
+      }
+
+      const { createTicket } = require('./services/physicalQueueService');
+      const ticket = await createTicket({
+        tenantId: resolved.tenantId,
+        locationId: resolved.locationId,
+        queueId,
+        priority,
+        context: {
+          ...context,
+          publicTokenId: resolved.tokenId,
+          locationId: resolved.locationId || null,
+          idempotencyKey: (context && context.idempotencyKey) ? String(context.idempotencyKey) : null,
+          biometricMode: biometric ? biometric.mode : (mode || null),
+          biometricSubjectId: biometric ? biometric.subjectId : null,
+          customerIdInput: customerIdInput || null,
+        },
+      });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_ticket_create',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || null,
+          details: {
+            kind: 'kiosk',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            queueId: ticket?.physical_queue_id || queueId || null,
+            ticketNumber: ticket?.ticket_number || null,
+            priority,
+            biometricMode: biometric ? biometric.mode : (mode || null),
+            biometricSubjectId: biometric ? biometric.subjectId : null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Physical] Erro ao criar senha:', err);
+      const code = err && err.code ? String(err.code) : null;
+      if (code && String(code).startsWith('invalid_biometric_ref')) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Biometria inválida' });
+        return;
+      }
+      if (code === 'biometric_ref_expired') {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Biometria expirada' });
+        return;
+      }
+      if (code === 'biometric_secret_missing') {
+        sendJson(res, 500, { error: 'internal_error', message: 'Biometria habilitada sem secret configurado' });
+        return;
+      }
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar senha' });
+    }
+    return;
+  }
+
+  // GET /physical/panel/state?token=... - estado do painel
+  if (method === 'GET' && pathname === '/physical/panel/state') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['panel'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=panel)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_PANEL',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const { getPanelState } = require('./services/physicalQueueService');
+      const state = await getPanelState({ tenantId: resolved.tenantId, locationId: resolved.locationId });
+      sendJson(res, 200, { ok: true, ...state });
+    } catch (err) {
+      logger.error('[Physical] Erro ao obter estado do painel:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter estado do painel' });
+    }
+    return;
+  }
+
+  // POST /physical/station/call-next?token=... - chama próximo
+  if (method === 'POST' && pathname === '/physical/station/call-next') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const { callNext } = require('./services/physicalQueueService');
+      const ticket = await callNext({ tenantId: resolved.tenantId, locationId: resolved.locationId, stationId });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_call_next',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || null,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketFound: !!ticket,
+            ticketNumber: ticket?.ticket_number || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Physical] Erro ao chamar próximo:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao chamar próximo' });
+    }
+    return;
+  }
+
+  // POST /physical/station/finish?token=... - finaliza atendimento
+  if (method === 'POST' && pathname === '/physical/station/finish') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+
+      const { finishTicket } = require('./services/physicalQueueService');
+      const ticket = await finishTicket({ tenantId: resolved.tenantId, ticketId });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_finish',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            stationId: ticket?.station_id || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao finalizar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao finalizar atendimento' });
+    }
+    return;
+  }
+
+  // POST /physical/station/start?token=... - inicia atendimento (in_service)
+  if (method === 'POST' && pathname === '/physical/station/start') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { startService } = require('./services/physicalQueueService');
+      const ticket = await startService({ tenantId: resolved.tenantId, ticketId, stationId, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_start_service',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || ticket?.station_id || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao iniciar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao iniciar atendimento' });
+    }
+    return;
+  }
+
+  // POST /physical/station/skip?token=... - pula senha (volta para waiting)
+  if (method === 'POST' && pathname === '/physical/station/skip') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const reason = body && body.reason ? String(body.reason).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { skipTicket } = require('./services/physicalQueueService');
+      const ticket = await skipTicket({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_skip',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            reason: reason || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao pular senha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao pular senha' });
+    }
+    return;
+  }
+
+  // POST /physical/station/pause?token=... - pausa atendimento (in_service -> paused)
+  if (method === 'POST' && pathname === '/physical/station/pause') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const reason = body && body.reason ? String(body.reason).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { pauseService } = require('./services/physicalQueueService');
+      const ticket = await pauseService({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_pause',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            reason: reason || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao pausar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao pausar atendimento' });
+    }
+    return;
+  }
+
+  // POST /physical/station/resume?token=... - retoma atendimento (paused -> in_service)
+  if (method === 'POST' && pathname === '/physical/station/resume') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+      const { resumeService } = require('./services/physicalQueueService');
+      const ticket = await resumeService({ tenantId: resolved.tenantId, ticketId, stationId, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_resume',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao retomar atendimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao retomar atendimento' });
+    }
+    return;
+  }
+
+  // POST /physical/station/transfer?token=... - transfere senha para outra fila
+  if (method === 'POST' && pathname === '/physical/station/transfer') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const toQueueId = body && body.toQueueId ? String(body.toQueueId).trim() : '';
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId || !toQueueId) {
+        badRequest(res, 'Campos "ticketId" e "toQueueId" são obrigatórios');
+        return;
+      }
+      const { transferTicket } = require('./services/physicalQueueService');
+      const ticket = await transferTicket({ tenantId: resolved.tenantId, ticketId, toQueueId, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_transfer',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            toQueueId,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      logger.error('[Physical] Erro ao transferir senha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao transferir senha' });
+    }
+    return;
+  }
+
+  // POST /physical/station/abandon?token=... - marca como abandonada (no-show)
+  if (method === 'POST' && pathname === '/physical/station/abandon') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const ticketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const stationId = body && body.stationId ? String(body.stationId).trim() : null;
+      const reason = body && body.reason ? String(body.reason).trim() : null;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+      if (!ticketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+
+      const { abandonTicket } = require('./services/physicalQueueService');
+      const ticket = await abandonTicket({ tenantId: resolved.tenantId, ticketId, stationId, reason, idempotencyKey });
+
+      try {
+        logAction({
+          agentId: null,
+          username: null,
+          tenantId: resolved.tenantId,
+          action: 'physical_station_abandon',
+          resource: 'physical_ticket',
+          resourceId: ticket?.id || ticketId,
+          details: {
+            kind: 'station',
+            publicTokenId: resolved.tokenId,
+            locationId: resolved.locationId || null,
+            stationId: stationId || null,
+            ticketId,
+            ticketNumber: ticket?.ticket_number || null,
+            reason: reason || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+
+      sendJson(res, 200, { ok: true, ticket });
+    } catch (err) {
+      if (err && err.code === 'physical_ticket_not_found') {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      if (err && err.code === 'physical_ticket_invalid_transition') {
+        sendJson(res, 409, { error: 'invalid_transition', message: 'Transição de estado inválida' });
+        return;
+      }
+      logger.error('[Physical] Erro ao abandonar senha:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao abandonar senha' });
+    }
+    return;
+  }
+
+  // POST /physical/station/open-support-ticket?token=... - cria ticket digital vinculado à senha física
+  if (method === 'POST' && pathname === '/physical/station/open-support-ticket') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const token = urlObj.searchParams.get('token');
+      if (!token) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token obrigatório' });
+        return;
+      }
+      const { resolvePublicToken } = require('./services/publicAccessTokenService');
+      const resolved = await resolvePublicToken({ token, allowedKinds: ['station'] });
+      if (!resolved.ok) {
+        sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
+        return;
+      }
+
+      // Rate limit por token público (kind=station)
+      const rl = await checkRateLimit({
+        userId: `publicToken:${resolved.tokenId}`,
+        operationType: 'PUBLIC_TOKEN_STATION',
+      });
+      if (!rl.allowed) {
+        res.setHeader('Retry-After', rl.retryAfter || 60);
+        sendJson(res, 429, {
+          error: 'rate_limit_exceeded',
+          message: `Limite de requisições excedido. Tente novamente em ${rl.retryAfter || 60} segundos.`,
+          retryAfter: rl.retryAfter || 60,
+        });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const physicalTicketId = body && body.ticketId ? String(body.ticketId).trim() : '';
+      const queue = body && body.queue ? String(body.queue).trim() : 'FastService';
+      const message = body && body.message ? String(body.message).trim() : 'Atendimento físico: suporte solicitado';
+      if (!physicalTicketId) {
+        badRequest(res, 'Campo "ticketId" é obrigatório');
+        return;
+      }
+
+      const { PhysicalTicket } = require('./db/models');
+      const TicketModel = PhysicalTicket();
+      const row = await TicketModel.findOne({ where: { tenant_key: resolved.tenantId, id: physicalTicketId } });
+      if (!row) {
+        sendJson(res, 404, { error: 'ticket_not_found', message: 'Senha não encontrada' });
+        return;
+      }
+      const json = row.toJSON ? row.toJSON() : row;
+
+      // Idempotência simples: se já existe supportTicketId no contexto, devolve.
+      const existingSupportId = json?.context?.supportTicketId || null;
+      if (existingSupportId) {
+        sendJson(res, 200, { ok: true, idempotent: true, ticketId: existingSupportId });
+        return;
+      }
+
+      const sessionId = `physical_${physicalTicketId}`;
+      const ticket = createTicket({
+        tenantId: resolved.tenantId,
+        sessionId,
+        queue,
+        lastUserMessage: message,
+        context: {
+          escalationReason: 'physical_support_ticket',
+          metadata: {
+            kind: 'physical_support_ticket',
+            physicalTicketId: physicalTicketId,
+            ticketNumber: json.ticket_number,
+            locationId: json?.context?.locationId || resolved.locationId || null,
+            correlationId: json?.context?.correlationId || null,
+          },
+        },
+        tags: ['fast_service', 'physical'],
+      });
+
+      // Persist link in physical ticket context (best-effort)
+      try {
+        await row.update({
+          context: { ...(json.context || {}), supportTicketId: ticket.id },
+        });
+      } catch (_) {}
+
+      // Canonical event (best-effort)
+      try {
+        const { appendEventV1 } = require('./services/eventLedgerService');
+        await appendEventV1({
+          tenantId: resolved.tenantId,
+          type: 'SupportTicketOpened',
+          source: 'physical.station',
+          occurredAt: new Date(),
+          correlationId: json?.context?.correlationId || null,
+          subject: { type: 'physical_ticket', id: physicalTicketId },
+          actor: { type: 'public_token', id: String(resolved.tokenId) },
+          idempotencyKey: `physical_support_ticket:${resolved.tenantId}:${physicalTicketId}:${ticket.id}`,
+          payload: {
+            ticketId: ticket.id,
+            queue,
+            physicalTicketId,
+          },
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Physical] Erro ao abrir ticket digital:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao abrir ticket digital' });
+    }
+    return;
+  }
+
   // POST /tickets - Cria um novo ticket manualmente (para conversas iniciadas por agente)
   if (method === 'POST' && pathname === '/tickets') {
     const authResult = requireAuth(req);
@@ -5138,6 +14856,314 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       });
       return;
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Orders (Delivery Ops) - Rotas autenticadas
+  // -----------------------------------------------------------------------
+  // GET /orders - lista pedidos
+  if (method === 'GET' && pathname === '/orders') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const status = urlObj.searchParams.get('status');
+      const limit = urlObj.searchParams.get('limit') || '50';
+      const offset = urlObj.searchParams.get('offset') || '0';
+      const { listOrders } = require('./services/orderService');
+      const result = await listOrders({ tenantId: req.tenantId, status, limit, offset });
+      sendJson(res, 200, { ok: true, orders: result.items, total: result.total });
+    } catch (err) {
+      logger.error('[Orders] Erro ao listar pedidos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar pedidos' });
+    }
+    return;
+  }
+
+  // GET /orders/:id - obtém pedido
+  if (method === 'GET' && pathname.startsWith('/orders/')) {
+    // Evita conflito com /orders (já tratado acima)
+    if (pathname === '/orders') {
+      // noop
+    } else {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      const permResult = requirePermission(req, 'tickets', 'read');
+      if (!permResult.allowed) {
+        sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+        return;
+      }
+
+      try {
+        const orderId = decodeURIComponent(pathname.slice('/orders/'.length));
+        const { getOrderById } = require('./services/orderService');
+        const order = await getOrderById({ tenantId: req.tenantId, orderId });
+        if (!order) {
+          sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+          return;
+        }
+        const { getDeliveryByOrderId } = require('./services/deliveryService');
+        const delivery = await getDeliveryByOrderId({ tenantId: req.tenantId, orderId });
+        sendJson(res, 200, { ok: true, order, delivery });
+      } catch (err) {
+        logger.error('[Orders] Erro ao obter pedido:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter pedido' });
+      }
+      return;
+    }
+  }
+
+  // GET /deliveries/:id - obtém delivery
+  if (method === 'GET' && pathname.startsWith('/deliveries/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const deliveryId = decodeURIComponent(pathname.slice('/deliveries/'.length));
+      const { Delivery } = require('./db/models');
+      const DeliveryModel = Delivery();
+      const row = await DeliveryModel.findOne({ where: { tenant_key: req.tenantId, id: String(deliveryId) } });
+      if (!row) {
+        sendJson(res, 404, { error: 'delivery_not_found', message: 'Delivery não encontrado' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, delivery: row.toJSON ? row.toJSON() : row });
+    } catch (err) {
+      logger.error('[Delivery] Erro ao obter delivery:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter delivery' });
+    }
+    return;
+  }
+
+  // PUT /deliveries/:id/status - atualiza status do delivery
+  if (method === 'PUT' && pathname.match(/^\/deliveries\/[^\/]+\/status$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const deliveryId = decodeURIComponent(pathname.split('/')[2]);
+      const body = await parseJsonBody(req);
+      const status = body && body.status ? String(body.status).trim() : '';
+      const { updateDeliveryStatus } = require('./services/deliveryService');
+      const delivery = await updateDeliveryStatus({ tenantId: req.tenantId, deliveryId, status });
+      sendJson(res, 200, { ok: true, delivery });
+    } catch (err) {
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'delivery_not_found') {
+        sendJson(res, 404, { error: 'delivery_not_found', message: 'Delivery não encontrado' });
+        return;
+      }
+      logger.error('[Delivery] Erro ao atualizar status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar status do delivery' });
+    }
+    return;
+  }
+
+  // PUT /orders/:id/status - atualiza status do pedido
+  if (method === 'PUT' && pathname.match(/^\/orders\/[^\/]+\/status$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const orderId = decodeURIComponent(pathname.split('/')[2]);
+      const body = await parseJsonBody(req);
+      const status = body && body.status ? String(body.status).trim() : '';
+      const { updateOrderStatus } = require('./services/orderService');
+      const order = await updateOrderStatus({ tenantId: req.tenantId, orderId, status });
+      // Best-effort: sincroniza delivery quando aplicável
+      try {
+        if (status === 'dispatched' || status === 'delivered' || status === 'cancelled') {
+          const { getDeliveryByOrderId, updateDeliveryStatus } = require('./services/deliveryService');
+          const delivery = await getDeliveryByOrderId({ tenantId: req.tenantId, orderId });
+          if (delivery && delivery.id) {
+            await updateDeliveryStatus({
+              tenantId: req.tenantId,
+              deliveryId: delivery.id,
+              status: status === 'cancelled' ? 'cancelled' : status,
+            }).catch(() => {});
+          }
+        }
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, order });
+    } catch (err) {
+      const code = err && err.code ? String(err.code) : null;
+      if (code === 'order_not_found') {
+        sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+        return;
+      }
+      if (code === 'invalid_order_status_transition') {
+        sendJson(res, 400, { error: 'invalid_transition', message: 'Transição de status inválida', details: err.details });
+        return;
+      }
+      logger.error('[Orders] Erro ao atualizar status:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar status do pedido' });
+    }
+    return;
+  }
+
+  // POST /orders/:id/incidents - abre incidente de suporte vinculado ao pedido
+  if (method === 'POST' && pathname.match(/^\/orders\/[^\/]+\/incidents$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const orderId = decodeURIComponent(pathname.split('/')[2]);
+      const { getOrderById } = require('./services/orderService');
+      const order = await getOrderById({ tenantId: req.tenantId, orderId });
+      if (!order) {
+        sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const queue = body && body.queue ? String(body.queue).trim() : 'Delivery';
+      const incidentType = body && body.type ? String(body.type).trim() : 'generic';
+      const message = body && body.message ? String(body.message).trim() : `Incidente (${incidentType}) no pedido ${order.order_number}`;
+      const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
+
+      // Incidente 1:1 com pedido (idempotente): se já existe incidente aberto no contexto do pedido, devolve.
+      try {
+        const { getOrderIncident } = require('./services/orderService');
+        const existingIncident = await getOrderIncident({ tenantId: req.tenantId, orderId: order.id });
+        const existingTicketId = existingIncident?.ticketId || null;
+        const existingStatus = existingIncident?.status || null;
+        if (existingTicketId && existingStatus !== 'closed') {
+          let existingTicket = null;
+          try {
+            existingTicket = getTicket(existingTicketId) || null;
+          } catch (_) {}
+          sendJson(res, 200, { ok: true, idempotent: true, ticketId: existingTicketId, ticket: existingTicket || { id: existingTicketId } });
+          return;
+        }
+      } catch (_) {}
+
+      // Cria ticket digital (in-memory) com contexto mínimo para o atendente
+      const sessionId = `order_${order.id}`;
+      const ticket = createTicket({
+        tenantId: req.tenantId,
+        sessionId,
+        queue,
+        lastUserMessage: message,
+        context: {
+          escalationReason: 'order_incident',
+          metadata: {
+            kind: 'order_incident',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            incidentType,
+            correlationId: order?.context?.correlationId || null,
+            idempotencyKey: idempotencyKey || null,
+          },
+        },
+        tags: ['delivery', 'incident'],
+      });
+
+      // Persist 1:1 link no pedido (best-effort)
+      try {
+        const { setOrderIncident } = require('./services/orderService');
+        await setOrderIncident({
+          tenantId: req.tenantId,
+          orderId: order.id,
+          incident: {
+            ticketId: ticket.id,
+            type: incidentType,
+            queue,
+            status: 'open',
+            message,
+            idempotencyKey: idempotencyKey || null,
+            createdAt: new Date().toISOString(),
+            actorUserId: req.agent?.id || null,
+          },
+        });
+      } catch (_) {}
+
+      // Canonical event (best-effort)
+      try {
+        const { appendEventV1 } = require('./services/eventLedgerService');
+        await appendEventV1({
+          tenantId: req.tenantId,
+          type: 'SupportIncidentOpened',
+          source: 'orders.ops',
+          occurredAt: new Date(),
+          correlationId: order?.context?.correlationId || null,
+          subject: { type: 'order', id: order.id },
+          actor: { type: 'user', id: String(req.agent?.id || 'unknown') },
+          idempotencyKey: `incident:${req.tenantId}:${order.id}:${incidentType}:${idempotencyKey || ticket.id}`,
+          payload: {
+            ticketId: ticket.id,
+            orderId: order.id,
+            incidentType,
+            queue,
+          },
+        });
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, ticket });
+    } catch (err) {
+      logger.error('[Orders] Erro ao abrir incidente:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao abrir incidente' });
+    }
+    return;
   }
 
   // GET /queues - Lista todas as filas disponíveis
@@ -5505,6 +15531,352 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /inbox/conversations - Lista conversas do inbox (tickets não fechados por padrão)
+  if (method === 'GET' && pathname === '/inbox/conversations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const status = urlObj.searchParams.get('status');
+    const queue = urlObj.searchParams.get('queue');
+    const assignedTo = urlObj.searchParams.get('assignedTo');
+    const limitRaw = urlObj.searchParams.get('limit');
+    const offsetRaw = urlObj.searchParams.get('offset');
+
+    const base = listAllTickets({
+      tenantId: req.tenantId,
+      status: status && status !== 'open' ? status : undefined,
+      queue,
+      limit: 10000,
+      offset: 0,
+    });
+
+    let list = Array.isArray(base.tickets) ? base.tickets : [];
+
+    if (!status || status === 'open') {
+      list = list.filter((ticket) => ticket.status !== 'closed');
+    }
+
+    if (assignedTo) {
+      list = list.filter((ticket) => ticket.assignedTo === assignedTo);
+    }
+
+    if (req.agent.role === 'agent') {
+      list = list.filter((ticket) => canAccessTicket(req.agent, ticket));
+    }
+
+    const total = list.length;
+    const limit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 200), 10000);
+    const offset = Math.max(0, parseInt(offsetRaw, 10) || 0);
+    const paginated = list.slice(offset, offset + limit);
+
+    sendJson(res, 200, { tickets: paginated, total, limit, offset });
+    return;
+  }
+
+  // GET /inbox/conversations/:id - Obtém conversa específica do inbox
+  if (method === 'GET' && pathname.startsWith('/inbox/conversations/') &&
+      !pathname.endsWith('/assign') && !pathname.endsWith('/transfer') && !pathname.endsWith('/notes')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!canAccessTicket(req.agent, ticket)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você não tem permissão para acessar este ticket' });
+      return;
+    }
+
+    sendJson(res, 200, ticket);
+    return;
+  }
+
+  // POST /inbox/conversations/:id/assign - Atribui ticket (atalho para inbox)
+  if (method === 'POST' && pathname.startsWith('/inbox/conversations/') && pathname.endsWith('/assign')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'assign');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length, -'/assign'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      let assignedTo = req.agent.id;
+      if (body && body.assignedTo) {
+        if (req.agent.role === 'admin' || req.agent.role === 'supervisor') {
+          assignedTo = String(body.assignedTo);
+        } else {
+          assignedTo = req.agent.id;
+        }
+      }
+
+      const updatedTicket = assignTicket(id, assignedTo);
+      if (!updatedTicket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      const tenantId = req.tenantId;
+      triggerWebhooks(tenantId, 'ticket.assigned', {
+        ticketId: id,
+        assignedTo,
+        assignedBy: req.agent.id,
+      }).catch((err) => {
+        logger.error('[Webhook] Erro ao disparar webhook para ticket.assigned (inbox):', err);
+      });
+
+      emitEvent('ticket.assigned', {
+        ticketId: id,
+        assignedTo,
+        assignedBy: req.agent.id,
+        ticket: updatedTicket,
+      }, { tenantId, agentId: assignedTo });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'ticket_assign',
+        resource: 'ticket',
+        resourceId: id,
+        details: { assignedTo, source: 'inbox' },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, updatedTicket);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao atribuir ticket (inbox):', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /inbox/conversations/:id/transfer - Transfere ticket de fila/atendente
+  if (method === 'POST' && pathname.startsWith('/inbox/conversations/') && pathname.endsWith('/transfer')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length, -'/transfer'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!canModifyTicket(req.agent, ticket)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você não tem permissão para modificar este ticket' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const queue = body && body.queue ? String(body.queue).trim() : null;
+      if (!queue) {
+        badRequest(res, 'queue é obrigatório');
+        return;
+      }
+
+      let assignedTo;
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'assignedTo')) {
+        if (body.assignedTo === null || body.assignedTo === '') {
+          assignedTo = null;
+        } else if (req.agent.role === 'admin' || req.agent.role === 'supervisor') {
+          assignedTo = String(body.assignedTo);
+        } else {
+          assignedTo = req.agent.id;
+        }
+      } else {
+        assignedTo = null; // por padrão, transfere para fila e desatribui
+      }
+
+      const updatedTicket = transferTicket(id, { queue, assignedTo });
+      if (!updatedTicket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      emitEvent('ticket.updated', {
+        ticketId: id,
+        ticket: updatedTicket,
+        updatedBy: req.agent.id,
+      }, { tenantId: req.tenantId });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'ticket_transfer',
+        resource: 'ticket',
+        resourceId: id,
+        details: { queue, assignedTo, source: 'inbox' },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, updatedTicket);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao transferir ticket (inbox):', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
+  // POST /inbox/conversations/:id/notes - Adiciona nota interna
+  if (method === 'POST' && pathname.startsWith('/inbox/conversations/') && pathname.endsWith('/notes')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const id = decodeURIComponent(pathname.slice('/inbox/conversations/'.length, -'/notes'.length));
+    const ticket = getTicket(id);
+    if (!ticket) {
+      sendJson(res, 404, { error: 'ticket_not_found' });
+      return;
+    }
+
+    if (req.tenantId && ticket.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Ticket não pertence ao seu tenant' });
+      return;
+    }
+
+    if (!canModifyTicket(req.agent, ticket)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Você não tem permissão para modificar este ticket' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const note = body && body.note ? String(body.note).trim() : '';
+      if (!note) {
+        badRequest(res, 'note é obrigatório');
+        return;
+      }
+
+      const updatedTicket = addTicketNote(id, note, req.agent);
+      if (!updatedTicket) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+
+      emitEvent('ticket.updated', {
+        ticketId: id,
+        ticket: updatedTicket,
+        updatedBy: req.agent.id,
+      }, { tenantId: req.tenantId });
+
+      logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'ticket_note',
+        resource: 'ticket',
+        resourceId: id,
+        details: { noteLength: note.length, source: 'inbox' },
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+
+      sendJson(res, 200, updatedTicket);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao adicionar nota (inbox):', err);
+        sendJson(res, 500, { error: 'internal_error' });
+      }
+    }
+    return;
+  }
+
   // GET /tickets - Lista todos os tickets (com filtros opcionais e paginação)
   if (method === 'GET' && pathname === '/tickets') {
     const authResult = requireAuth(req);
@@ -5655,6 +16027,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           text: typeof m.body?.text === 'string' ? m.body.text : null,
           body: m.body || {},
           externalMessageId: m.externalMessageId || null,
+          status: m.status || null,
           timestamp: m.createdAt || null,
         }));
         const ticketItems = (messages || []).map((m) => ({
@@ -5665,6 +16038,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           text: m.text || '',
           body: { text: m.text || '' },
           externalMessageId: m.externalMessageId || m.id || null,
+          status: m.status || (m.sender === 'agent' || m.sender === 'bot' ? 'sent' : 'received'),
           timestamp: m.timestamp || null,
         }));
 
@@ -6818,7 +17192,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // API Interna de Geração por IA (Wrappers)
   // -----------------------------------------------------------------------
 
-  // POST /ai/chatbot/generate - Gera fluxo de chatbot via wrapper oficial
+  // POST /ai/chatbot/generate - Alias do orquestrador (formato alinhado com /flows/generate)
   if (method === 'POST' && pathname === '/ai/chatbot/generate') {
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -6826,6 +17200,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
       const body = await parseJsonBody(req);
       const { userInput, options = {} } = body || {};
 
@@ -6834,60 +17216,47 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      logger.info('[API] Geração de chatbot via wrapper', {
-        inputLength: userInput.length
-      });
-
-      // Chama wrapper oficial
-      const wrapperResult = await generateChatbotFlow(userInput, options);
-
-      // Converte para formato IaGenerationResult
-      const iaResult = {
-        success: wrapperResult.success,
-        domain: 'chatbot',
-        meta: {
-          prompt: 'chatbot.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        }
+      const payload = {
+        name: options.flowName || options.name || 'Fluxo Gerado',
+        description: userInput,
+        tenantId,
+        useRag: options.useRag === true,
+        ragSources: Array.isArray(options.ragSources) ? options.ragSources : [],
+        useWebScraping: options.useWebScraping === true,
+        scrapingTargets: Array.isArray(options.scrapingTargets) ? options.scrapingTargets : [],
+        includeQuestions: options.includeQuestions === true,
+        questions: Array.isArray(options.questions) ? options.questions : [],
+        generateRpaTest: options.generateRpaTest === true,
+        rpaMode: options.rpaMode,
       };
 
-      if (wrapperResult.success) {
-        iaResult.data = {
-          flow: wrapperResult.flow,
-          validation: wrapperResult.validation,
-          promptVersion: wrapperResult.promptVersion
-        };
-      } else {
-        iaResult.errors = wrapperResult.error ? [{
-          code: wrapperResult.error.type || 'GENERATION_ERROR',
-          message: wrapperResult.error.message || 'Erro na geração',
-          source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
-        }] : [];
+      const result = await orchestrateGeneration(payload, { tenantId });
+
+      // Mantém compatibilidade com /flows/generate: validação warnings em top-level
+      try {
+        const flowValidation = result?.validation?.flow || null;
+        if (flowValidation && flowValidation.valid === false && Array.isArray(flowValidation.errors)) {
+          result.validationWarnings = {
+            valid: false,
+            errors: flowValidation.errors,
+            codes: flowValidation.errors.map((e) => e && e.code).filter(Boolean),
+          };
+        } else {
+          result.validationWarnings = { valid: true, errors: [], codes: [] };
+        }
+      } catch (_) {
+        // best-effort
       }
 
-      sendJson(res, wrapperResult.success ? 200 : 400, iaResult);
+      sendJson(res, result.success ? 200 : 400, result);
     } catch (err) {
-      logger.error('[API] Erro ao gerar chatbot', { error: err.message, stack: err.stack });
-      sendJson(res, 500, {
-        success: false,
-        domain: 'chatbot',
-        meta: {
-          prompt: 'chatbot.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        },
-        errors: [{
-          code: 'INTERNAL_ERROR',
-          message: err.message || 'Erro interno ao gerar chatbot',
-          source: 'validator'
-        }]
-      });
+      logger.error('[API] Erro ao gerar chatbot (alias do orquestrador)', { error: err.message, stack: err.stack });
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar chatbot' });
     }
     return;
   }
 
-  // POST /ai/rpa/generate - Gera teste RPA via wrapper oficial
+  // POST /ai/rpa/generate - Alias do orquestrador (formato alinhado com /flows/generate)
   if (method === 'POST' && pathname === '/ai/rpa/generate') {
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -6895,6 +17264,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
       const body = await parseJsonBody(req);
       const { userInput, options = {} } = body || {};
 
@@ -6903,55 +17280,60 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      logger.info('[API] Geração de RPA via wrapper', {
-        inputLength: userInput.length
-      });
-
-      // Chama wrapper oficial
-      const wrapperResult = await generateRpaTest(userInput, options);
-
-      // Converte para formato IaGenerationResult
-      const iaResult = {
-        success: wrapperResult.success,
-        domain: 'rpa',
-        meta: {
-          prompt: 'rpa.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        }
+      // Alias: gera flow + rpaTest usando o mesmo orquestrador do /flows/generate
+      const payload = {
+        name: options.flowName || options.name || 'Fluxo Gerado',
+        description: userInput,
+        tenantId,
+        useRag: options.useRag === true,
+        ragSources: Array.isArray(options.ragSources) ? options.ragSources : [],
+        useWebScraping: options.useWebScraping === true,
+        scrapingTargets: Array.isArray(options.scrapingTargets) ? options.scrapingTargets : [],
+        includeQuestions: options.includeQuestions === true,
+        questions: Array.isArray(options.questions) ? options.questions : [],
+        generateRpaTest: true,
+        rpaMode: options.rpaMode || 'infer',
       };
 
-      if (wrapperResult.success) {
-        iaResult.data = {
-          plan: wrapperResult.plan,
-          validation: wrapperResult.validation,
-          promptVersion: wrapperResult.promptVersion
-        };
-      } else {
-        iaResult.errors = wrapperResult.error ? [{
-          code: wrapperResult.error.type || 'GENERATION_ERROR',
-          message: wrapperResult.error.message || 'Erro na geração',
-          source: wrapperResult.error.type === 'VALIDATION_FAILED' ? 'gate' : 'validator'
-        }] : [];
+      const result = await orchestrateGeneration(payload, { tenantId });
+      try {
+        const flowValidation = result?.validation?.flow || null;
+        if (flowValidation && flowValidation.valid === false && Array.isArray(flowValidation.errors)) {
+          result.validationWarnings = {
+            valid: false,
+            errors: flowValidation.errors,
+            codes: flowValidation.errors.map((e) => e && e.code).filter(Boolean),
+          };
+        } else {
+          result.validationWarnings = { valid: true, errors: [], codes: [] };
+        }
+      } catch (_) {
+        // best-effort
       }
 
-      sendJson(res, wrapperResult.success ? 200 : 400, iaResult);
+      sendJson(res, result.success ? 200 : 400, result);
     } catch (err) {
       logger.error('[API] Erro ao gerar RPA', { error: err.message, stack: err.stack });
-      sendJson(res, 500, {
-        success: false,
-        domain: 'rpa',
-        meta: {
-          prompt: 'rpa.generator.prompt.md',
-          ragVersion: null,
-          timestamp: new Date().toISOString()
-        },
-        errors: [{
-          code: 'INTERNAL_ERROR',
-          message: err.message || 'Erro interno ao gerar RPA',
-          source: 'validator'
-        }]
-      });
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        ? String(req.headers['x-request-id']).trim()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      try {
+        const { buildAiEnvelope, validateAiEnvelopeOrThrow } = require('../engine/ai/aiEnvelope');
+        const envelope = validateAiEnvelopeOrThrow(buildAiEnvelope('rpa_test', {}, {
+          valid: false,
+          errors: [{ type: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar RPA' }],
+          warnings: [],
+          qualityScore: 0,
+          riskFlags: ['INTERNAL_ERROR'],
+        }, {
+          provider: { name: null, model: null, temperature: null },
+          input: { prompt_summary: 'rpa.generator.prompt.md', user_goal: null, context: {} },
+          audit: { request_id: requestId, seed: null, tenant_id: req.tenantId || null, user_id: req.agent?.id || req.agent?.username || null },
+        }));
+        sendJson(res, 500, { envelope, error: { code: 'INTERNAL_ERROR', message: err.message || 'Erro interno ao gerar RPA' } });
+      } catch (_) {
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar RPA' });
+      }
     }
     return;
   }
@@ -6966,7 +17348,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { prompt, sessionId, flowId, nodeId, tenantId } = body || {};
+      const { prompt, sessionId, flowId, nodeId, tenantId, executionId } = body || {};
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const execIdForWs = requireExecutionId({ executionId }, res, badRequest);
+      if (!execIdForWs) return;
 
       logger.debug('Requisição de IA recebida', {
         promptLength: prompt?.length,
@@ -6974,6 +17359,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         flowId,
         nodeId,
         tenantId,
+        executionId: execIdForWs,
       });
 
       if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
@@ -6986,6 +17372,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       logger.debug('Usando tenant para IA', { effectiveTenantId });
 
       try {
+        // Emite etapa para feedback visual (toasts) via WS.
+        try {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          if (effectiveTenantId) {
+            emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+              stage: 'ai-generate',
+              status: 'running',
+              message: 'Executando IA...',
+              meta: { flowId: flowId || null, nodeId: nodeId || null },
+            });
+          }
+        } catch (_) {}
+
         logger.debug('Gerando resposta de IA...', {
           tenantId: effectiveTenantId,
           promptPreview: prompt.substring(0, 100),
@@ -7003,6 +17403,19 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           hasUsage: !!result?.usage,
         });
 
+        try {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          if (effectiveTenantId) {
+            emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+              stage: 'ai-generate',
+              status: 'success',
+              message: 'IA executada.',
+              meta: { usage: result?.usage || null },
+            });
+          }
+        } catch (_) {}
+
         sendJson(res, 200, {
           text: typeof result === 'string' ? result : result.text,
           usage: result.usage || null,
@@ -7014,11 +17427,91 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           tenantId: effectiveTenantId,
           promptPreview: prompt.substring(0, 100),
         });
-        sendJson(res, 500, {
-          error: 'ai_generation_failed',
-          message: aiError.message || 'Erro ao gerar resposta de IA',
-          details: process.env.NODE_ENV === 'development' ? aiError.stack : undefined,
-        });
+        const rawMessage = String(aiError?.message || 'Erro ao gerar resposta de IA');
+        const rawCode = String(aiError?.code || aiError?.error?.code || '');
+        const rawStatus = Number(aiError?.status || aiError?.response?.status || 0) || null;
+        const isQuota =
+          rawCode === 'insufficient_quota' ||
+          /exceeded your current quota/i.test(rawMessage);
+        const isRateLimit =
+          (rawStatus === 429 && !isQuota) ||
+          rawCode === 'rate_limit_exceeded' ||
+          /rate limit/i.test(rawMessage);
+
+        if (isQuota) {
+          try {
+            const { createPipelineWs } = require('./ws/pipelineEmitter');
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            if (effectiveTenantId) {
+              emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+                stage: 'ai-generate',
+                status: 'error',
+                message: rawMessage || 'Cota do provider excedida',
+                meta: { code: 'PROVIDER_QUOTA_EXCEEDED' },
+              });
+            }
+          } catch (_) {}
+          sendApiError(res, buildApiError({
+            code: 'PROVIDER_QUOTA_EXCEEDED',
+            message: rawMessage,
+            httpStatus: 402,
+            retryable: false,
+            details: { tenantId: effectiveTenantId, providerErrorCode: rawCode || null },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+        if (isRateLimit) {
+          const retryAfter = Number(aiError?.retryAfter || aiError?.headers?.['retry-after'] || 60);
+          try {
+            const { createPipelineWs } = require('./ws/pipelineEmitter');
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            if (effectiveTenantId) {
+              emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+                stage: 'ai-generate',
+                status: 'error',
+                message: rawMessage || 'Rate limit excedido no provider de IA',
+                meta: { code: 'RATE_LIMIT_EXCEEDED', retryAfter },
+              });
+            }
+          } catch (_) {}
+          sendApiError(res, buildApiError({
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rawMessage,
+            httpStatus: 429,
+            retryable: true,
+            details: { tenantId: effectiveTenantId, retryAfter },
+            req,
+          }), setCorsHeaders);
+          return;
+        }
+
+        try {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          if (effectiveTenantId) {
+            emitPipelineStage(createPipelineWs({ tenantId: effectiveTenantId }), execIdForWs, {
+              stage: 'ai-generate',
+              status: 'error',
+              message: rawMessage || 'Erro ao gerar resposta de IA',
+              meta: { code: 'AI_GENERATION_FAILED', status: rawStatus || null, providerErrorCode: rawCode || null },
+            });
+          }
+        } catch (_) {}
+
+        sendApiError(res, buildApiError({
+          code: 'AI_GENERATION_FAILED',
+          message: rawMessage,
+          httpStatus: 500,
+          retryable: true,
+          details: {
+            tenantId: effectiveTenantId,
+            providerErrorCode: rawCode || null,
+            status: rawStatus || null,
+            ...(process.env.NODE_ENV === 'development' ? { stack: aiError?.stack } : {}),
+          },
+          req,
+        }), setCorsHeaders);
       }
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -7221,8 +17714,97 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (body.object === 'page') {
         const entries = body.entry || [];
         for (const entry of entries) {
-          // Processa mensagens do Messenger
-          await processMessengerMessage(entry, flows, sessionEvents);
+          const messagingArr = Array.isArray(entry.messaging) ? entry.messaging : [];
+          for (const messaging of messagingArr) {
+            // 1) Persiste no gateway (best-effort) e resolve tenant
+            // eslint-disable-next-line no-await-in-loop
+            const ingest = await channelGatewayService.ingestIncoming('messenger', { messaging, entry, raw: body }).catch(() => null);
+            const tenantId = ingest?.tenantId || null;
+            if (!tenantId) {
+              logger.warn('[Webhook Messenger] Mensagem ignorada: tenant não resolvido (channel_account ausente/inativo)', {
+                page_id: entry?.id || null,
+                senderId: messaging?.sender?.id ? String(messaging.sender.id) : null,
+                externalMessageId: messaging?.message?.mid || null,
+              });
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            // Idempotência inbound: se duplicada, não processa ticket/engine
+            if (ingest?.persist?.idempotent === true) {
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            const senderId = messaging?.sender?.id ? String(messaging.sender.id) : null;
+            const externalConversationId = ingest?.normalized?.conversationKey?.externalId || senderId || null;
+            const messageText = messaging?.message?.text ? String(messaging.message.text) : '[Mensagem recebida]';
+            const externalMessageId = messaging?.message?.mid ? String(messaging.message.mid) : null;
+            const iso = messaging?.timestamp ? new Date(Number(messaging.timestamp)).toISOString() : null;
+
+            // 2) Resolve ticket existente (ou cria, se configurado)
+            // eslint-disable-next-line no-await-in-loop
+            const link = await resolveOrCreateTicketFromIncomingMessage(
+              tenantId,
+              'messenger',
+              String(externalConversationId || ''),
+              { contactId: externalConversationId || null }
+            ).catch(() => null);
+            const ticket = link?.ticket || null;
+
+            // 2.1) Ledger do ticket (idempotente por externalMessageId)
+            let updatedTicket = null;
+            if (ticket && ticket.id) {
+              try {
+                updatedTicket = appendTicketMessage(ticket.id, {
+                  direction: 'in',
+                  text: messageText,
+                  externalMessageId,
+                  timestamp: iso,
+                });
+              } catch (_) {
+                updatedTicket = ticket;
+              }
+            }
+            const effectiveTicket = updatedTicket || ticket;
+
+            // 3) Se ticket em modo humano, NÃO roda engine; apenas notifica UI
+            if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
+              if ((effectiveTicket.mode || 'bot') === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
+                autoAssignTicket(effectiveTicket.id).catch(() => null);
+              }
+              try {
+                emitEvent('ticket.message.received', {
+                  ticketId: effectiveTicket.id,
+                  message: messageText,
+                  sender: 'user',
+                  ticket: effectiveTicket,
+                }, { tenantId: effectiveTicket.tenantId, agentId: effectiveTicket.assignedTo });
+              } catch (e) {}
+              // eslint-disable-next-line no-continue
+              continue;
+            }
+
+            // 4) Processa na engine (pipeline compartilhado), usando channelType=messenger
+            const compatibleMessage = {
+              from: senderId || 'unknown',
+              id: externalMessageId || `ms-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+              text: { body: messageText || '' },
+              type: 'text',
+              timestamp: messaging?.timestamp ? Math.floor(Number(messaging.timestamp) / 1000) : undefined,
+            };
+            const compatibleValue = { metadata: { phone_number_id: entry?.id ? String(entry.id) : null } };
+
+            // eslint-disable-next-line no-await-in-loop
+            await processWhatsAppMessage(compatibleMessage, compatibleValue, {
+              flows,
+              sessionEvents,
+              saveSessionEvents: saveSessionEventsToFile,
+              tenantId,
+              conversationId: ingest?.persist?.conversationId || null,
+              channelType: 'messenger',
+            });
+          }
         }
       }
 
@@ -7658,7 +18240,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       const flow = ensureFlowHasMeta(raw, req.tenantId);
 
-      const validationResult = validateFlow(flow);
+      const flowKind = String(flow.kind || 'chat').trim().toLowerCase();
+      const validationResult = flowKind === 'voice' ? validateVoiceFlow(flow) : validateFlow(flow);
       const hasValidationErrors = !validationResult.valid && validationResult.errors.length > 0;
 
       flows.set(flow.id, flow);
@@ -7842,7 +18425,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Valida o fluxo antes de salvar como template
-      const validationResult = validateFlow(body.flow);
+      const kind = (body.flow && typeof body.flow === 'object' && typeof body.flow.kind === 'string')
+        ? String(body.flow.kind).trim().toLowerCase()
+        : 'chat';
+      const validationResult = kind === 'voice' ? validateVoiceFlow(body.flow) : validateFlow(body.flow);
       if (!validationResult.valid && validationResult.errors.length > 0) {
         sendJson(res, 400, {
           error: 'validation_failed',
@@ -7969,21 +18555,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }
         
         // Sanitiza a configuração: remove apiKey e seção ai completa para evitar vazamento
+        // OBS: API keys globais foram removidas; credenciais são por-tenant (DB) e nunca devem aparecer aqui.
         // A configuração de IA por tenant deve ser obtida via endpoint específico
         const sanitizedConfig = JSON.parse(JSON.stringify(configData)); // Deep copy
         
-        // Remove apiKey de qualquer provider de IA
-        if (sanitizedConfig.ai) {
-          if (sanitizedConfig.ai.openai && sanitizedConfig.ai.openai.apiKey) {
-            delete sanitizedConfig.ai.openai.apiKey;
-          }
-          if (sanitizedConfig.ai.anthropic && sanitizedConfig.ai.anthropic.apiKey) {
-            delete sanitizedConfig.ai.anthropic.apiKey;
-          }
-          // Remove a seção ai completamente para evitar confusão
-          // A configuração de IA deve ser obtida via /tenants/:tenantId/ai-config
-          delete sanitizedConfig.ai;
-        }
+        // Remove a seção ai completamente para evitar confusão/vazamento.
+        // A configuração de IA do tenant e credenciais devem ser obtidas via endpoints de tenant.
+        if (sanitizedConfig.ai) delete sanitizedConfig.ai;
         
         sendJson(res, 200, sanitizedConfig);
       } catch (err) {
@@ -8213,6 +18791,165 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /tenants/current/ai-credentials/test - Valida credenciais salvas (criptografadas) do tenant atual
+  // IMPORTANTE: Esta validação SEMPRE usa chamadas diretas à API, nunca usa fallback
+  if (method === 'POST' && pathname === '/tenants/current/ai-credentials/test') {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      let tenantId = authResult.agent.tenantId;
+      if (tenantId === 'current') {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido: "current" não é um tenant válido.' });
+        return;
+      }
+      if (!tenantId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'Agente não possui tenantId' });
+        return;
+      }
+
+      // RBAC: config:update ou super-admin
+      const permResult = requirePermission(req, 'config', 'update');
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para validar credenciais de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const providerFromBody = body?.provider ? String(body.provider).trim() : null;
+
+      const { getAIConfig, getDecryptedAPIKey } = require('./services/tenantAIService');
+      const aiCfg = await getAIConfig(tenantId);
+
+      // A validação automática deve refletir o runtime: precisa de provider primário CONFIGURADO no tenant.
+      const configuredPrimary = aiCfg?.primary || aiCfg?.provider || null;
+      if (!aiCfg?.configured || !configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: null,
+          error: 'Provider primário não configurado (salve a configuração de IA do tenant)',
+        });
+        return;
+      }
+
+      // Se o client informou provider, ele deve bater com o primário configurado; senão, usa o primário.
+      const providerToTest = providerFromBody || configuredPrimary;
+      if (providerFromBody && providerFromBody !== configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: providerFromBody,
+          error: `Provider informado (${providerFromBody}) difere do provider primário configurado (${configuredPrimary}). Salve a configuração de IA.`,
+        });
+        return;
+      }
+
+      if (providerToTest !== 'openai' && providerToTest !== 'anthropic') {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Provider não suportado' });
+        return;
+      }
+
+      const apiKey = await getDecryptedAPIKey(tenantId, providerToTest);
+      if (!apiKey || !String(apiKey).trim()) {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Credenciais não encontradas para este provider' });
+        return;
+      }
+
+      const cleanApiKey = String(apiKey).trim();
+      let isValid = false;
+      let error = null;
+
+      try {
+        if (providerToTest === 'openai') {
+          const response = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${cleanApiKey}` },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && Array.isArray(data.data)) isValid = true;
+            else error = 'Resposta inválida da API OpenAI';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        } else if (providerToTest === 'anthropic') {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': cleanApiKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'test' }],
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && data.content) isValid = true;
+            else error = 'Resposta inválida da API Anthropic';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        }
+      } catch (validationError) {
+        if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
+          error = 'Timeout ao validar credenciais. Verifique sua conexão com a internet.';
+        } else if (validationError.name === 'TypeError' && String(validationError.message || '').includes('fetch')) {
+          error = 'Erro de conexão. Verifique sua conexão com a internet.';
+        } else {
+          error = validationError.message || 'Erro ao validar credenciais';
+        }
+      }
+
+      // Se o client informar executionId via header, emitimos progresso via WS (pipeline.status).
+      try {
+        const executionIdHeader =
+          (req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const executionId =
+          (typeof executionIdHeader === 'string' && executionIdHeader.trim()) ? executionIdHeader.trim() : null;
+        const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
+        if (isValidExecutionId && isValid === true) {
+          const { emitEvent } = require('./services/websocketService');
+          emitEvent('pipeline.status', {
+            executionId,
+            status: 'running',
+            stages: { providerValidated: true },
+            metadata: { message: 'Provider de IA validado', source: '/tenants/current/ai-credentials/test', provider: providerToTest },
+          }, { tenantId });
+        }
+      } catch (_) {
+        // best-effort: não bloquear validação por WS
+      }
+
+      sendJson(res, 200, { success: true, valid: isValid, provider: providerToTest, error: error || null });
+    } catch (err) {
+      logger.error('Erro ao validar credenciais de IA do tenant atual', err);
+      sendJson(res, 500, { success: false, error: 'Erro ao validar credenciais', message: err.message });
+    }
+    return;
+  }
+
   // GET /tenants/:tenantKey/ai-config - Obtém configuração de IA do tenant (sem segredos)
   if (method === 'GET' && pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/)) {
     const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-config$/);
@@ -8362,6 +19099,161 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       } else {
         sendJson(res, 500, { error: 'Erro ao salvar credenciais de IA', message: err.message });
       }
+    }
+    return;
+  }
+
+  // POST /tenants/:tenantKey/ai-credentials/test - Valida credenciais salvas (criptografadas) do tenant
+  // IMPORTANTE: Esta validação SEMPRE usa chamadas diretas à API, nunca usa fallback
+  if (method === 'POST' && pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/)) {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/);
+    const tenantKey = match[1];
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      const isSuperAdmin = require('./services/superAdminService').isSuperAdmin(authResult.agent);
+      if (!isSuperAdmin && authResult.agent.tenantId !== tenantKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado a este tenant' });
+        return;
+      }
+
+      // RBAC: config:update ou super-admin
+      const permResult = requirePermission(req, 'config', 'update');
+      if (!permResult.allowed && !isSuperAdmin) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para validar credenciais de IA' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const providerFromBody = body?.provider ? String(body.provider).trim() : null;
+
+      const { getAIConfig, getDecryptedAPIKey } = require('./services/tenantAIService');
+      const aiCfg = await getAIConfig(tenantKey);
+
+      const configuredPrimary = aiCfg?.primary || aiCfg?.provider || null;
+      if (!aiCfg?.configured || !configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: null,
+          error: 'Provider primário não configurado (salve a configuração de IA do tenant)',
+        });
+        return;
+      }
+
+      const providerToTest = providerFromBody || configuredPrimary;
+      if (providerFromBody && providerFromBody !== configuredPrimary) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: providerFromBody,
+          error: `Provider informado (${providerFromBody}) difere do provider primário configurado (${configuredPrimary}). Salve a configuração de IA.`,
+        });
+        return;
+      }
+
+      if (providerToTest !== 'openai' && providerToTest !== 'anthropic') {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Provider não suportado' });
+        return;
+      }
+
+      const apiKey = await getDecryptedAPIKey(tenantKey, providerToTest);
+      if (!apiKey || !String(apiKey).trim()) {
+        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Credenciais não encontradas para este provider' });
+        return;
+      }
+
+      const cleanApiKey = String(apiKey).trim();
+      let isValid = false;
+      let error = null;
+
+      try {
+        if (providerToTest === 'openai') {
+          const response = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${cleanApiKey}` },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && Array.isArray(data.data)) isValid = true;
+            else error = 'Resposta inválida da API OpenAI';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        } else if (providerToTest === 'anthropic') {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': cleanApiKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'test' }],
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            if (data && data.content) isValid = true;
+            else error = 'Resposta inválida da API Anthropic';
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) error = 'Token inválido ou expirado';
+            else if (response.status === 403) error = 'Token não tem permissão para acessar a API';
+            else error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
+          }
+        }
+      } catch (validationError) {
+        if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
+          error = 'Timeout ao validar credenciais. Verifique sua conexão com a internet.';
+        } else if (validationError.name === 'TypeError' && String(validationError.message || '').includes('fetch')) {
+          error = 'Erro de conexão. Verifique sua conexão com a internet.';
+        } else {
+          error = validationError.message || 'Erro ao validar credenciais';
+        }
+      }
+
+      // Se o client informar executionId via header, emitimos progresso via WS (pipeline.status).
+      try {
+        const executionIdHeader =
+          (req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const executionId =
+          (typeof executionIdHeader === 'string' && executionIdHeader.trim()) ? executionIdHeader.trim() : null;
+        const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
+        if (isValidExecutionId && isValid === true) {
+          const { emitEvent } = require('./services/websocketService');
+          emitEvent('pipeline.status', {
+            executionId,
+            status: 'running',
+            stages: { providerValidated: true },
+            metadata: { message: 'Provider de IA validado', source: '/tenants/:tenantKey/ai-credentials/test', provider: providerToTest },
+          }, { tenantId: tenantKey });
+        }
+      } catch (_) {
+        // best-effort: não bloquear validação por WS
+      }
+
+      sendJson(res, 200, { success: true, valid: isValid, provider: providerToTest, error: error || null });
+    } catch (err) {
+      logger.error('Erro ao validar credenciais de IA do tenant', err);
+      sendJson(res, 500, { success: false, error: 'Erro ao validar credenciais', message: err.message });
     }
     return;
   }
@@ -9598,6 +20490,264 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // Dashboard de Análise (Analytics)
   // -----------------------------------------------------------------------
 
+  // -----------------------------------------------------------------------
+  // Painel Supervisor
+  // -----------------------------------------------------------------------
+
+  // GET /supervisor/metrics?groupBy=agent|queue&period=day|hour&from=...&to=...
+  if (method === 'GET' && pathname === '/supervisor/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const groupBy = urlObj.searchParams.get('groupBy') || 'agent';
+      const period = urlObj.searchParams.get('period') || 'day';
+      const from = urlObj.searchParams.get('from') || undefined;
+      const to = urlObj.searchParams.get('to') || undefined;
+
+      const metrics = await getSupervisorMetrics({
+        tenantId,
+        groupBy,
+        period,
+        from,
+        to,
+      });
+
+      const summary = await getGeneralMetrics({
+        tenantId,
+        startDate: from || undefined,
+        endDate: to || undefined,
+      });
+
+      sendJson(res, 200, { summary, ...metrics });
+    } catch (err) {
+      logger.error('Erro ao obter métricas de supervisor:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /supervisor/agents/status
+  if (method === 'GET' && pathname === '/supervisor/agents/status') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const agents = await getSupervisorAgentStatus({ tenantId });
+      sendJson(res, 200, { agents });
+    } catch (err) {
+      logger.error('Erro ao obter status de agentes:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /supervisor/queues/status
+  if (method === 'GET' && pathname === '/supervisor/queues/status') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const queues = await getSupervisorQueueStatus({ tenantId });
+      sendJson(res, 200, { queues });
+    } catch (err) {
+      logger.error('Erro ao obter status de filas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // -----------------------------------------------------------------------
+  // RBAC
+  // -----------------------------------------------------------------------
+
+  // GET /rbac/roles
+  if (method === 'GET' && pathname === '/rbac/roles') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'agents', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const roles = getRoleDefinitions();
+      sendJson(res, 200, { roles });
+    } catch (err) {
+      logger.error('Erro ao listar roles:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rbac/roles
+  if (method === 'POST' && pathname === '/rbac/roles') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const role = body && body.role ? String(body.role).trim() : '';
+      const permissions = body && Array.isArray(body.permissions) ? body.permissions : [];
+
+      const result = createRole(role, permissions);
+      if (!result.success) {
+        sendJson(res, 400, { error: 'invalid_role', message: result.error });
+        return;
+      }
+
+      sendJson(res, 201, { role: result.role, permissions: result.permissions });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao criar role:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
+  // GET /rbac/permissions
+  if (method === 'GET' && pathname === '/rbac/permissions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'agents', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const permissions = listPermissions();
+      sendJson(res, 200, { permissions });
+    } catch (err) {
+      logger.error('Erro ao listar permissões:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rbac/assign
+  if (method === 'POST' && pathname === '/rbac/assign') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'agents', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const agentId = body && body.agentId ? String(body.agentId).trim() : '';
+      const role = body && body.role ? String(body.role).trim() : '';
+      if (!agentId || !role) {
+        badRequest(res, 'agentId e role são obrigatórios');
+        return;
+      }
+
+      const target = await getAgent(agentId);
+      if (!target) {
+        sendJson(res, 404, { error: 'agent_not_found' });
+        return;
+      }
+
+      if (target.tenantId && target.tenantId !== tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Agente não pertence ao seu tenant' });
+        return;
+      }
+
+      const result = await updateAgent(agentId, { role });
+      if (!result.success) {
+        sendJson(res, 400, { error: 'update_failed', message: result.error });
+        return;
+      }
+
+      sendJson(res, 200, { agent: result.agent });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao atribuir role:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message });
+      }
+    }
+    return;
+  }
+
   // GET /analytics/metrics - Obtém todas as métricas
   if (method === 'GET' && pathname === '/analytics/metrics') {
     const authResult = requireAuth(req);
@@ -9625,6 +20775,74 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, 200, metrics);
     } catch (err) {
       logger.error('Erro ao obter métricas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /analytics/roi - Resumo de ROI (orders vs leads)
+  if (method === 'GET' && pathname === '/analytics/roi') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowDays = urlObj.searchParams.get('windowDays');
+      const { getRoiSummary } = require('./services/roiService');
+      const out = await getRoiSummary({
+        tenantId: req.tenantId,
+        windowDays: windowDays != null ? Number(windowDays) : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'roi_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao obter ROI:', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // GET /analytics/funnel - Funil básico (leads/forms/orders + canais)
+  if (method === 'GET' && pathname === '/analytics/funnel') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'reports', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const windowDays = urlObj.searchParams.get('windowDays');
+      const { getFunnelMetrics } = require('./services/roiService');
+      const out = await getFunnelMetrics({
+        tenantId: req.tenantId,
+        windowDays: windowDays != null ? Number(windowDays) : null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, { ok: false, error: out.error || 'funnel_unavailable' });
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao obter funil:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
     }
     return;
@@ -10594,6 +21812,97 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /rag/health - Health do RAG (Node): compara BD vs vector store e retorna warning se inconsistente
+  if (method === 'GET' && pathname === '/rag/health') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+      const autoRepair = url.searchParams.get('autoRepair') === 'true';
+
+      const { getRagHealth } = require('./services/ragDocumentsService');
+      const health = await getRagHealth(tenantId, { autoRepair });
+
+      // status code: 200 sempre, mas inclui status=warning para UI
+      sendJson(res, 200, health);
+    } catch (err) {
+      logger.error('Erro ao obter rag health:', err);
+      sendApiError(res, buildApiError({
+        code: 'INTERNAL_ERROR',
+        message: 'Erro ao obter health do RAG',
+        httpStatus: 500,
+        retryable: true,
+        details: { message: err.message },
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
+  // POST /rag/documents/clean-orphans - Limpa documentos órfãos do vector store (vector_ahead)
+  if (method === 'POST' && pathname === '/rag/documents/clean-orphans') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
+      const body = await parseJsonBody(req);
+      const { documentIds } = body || {};
+
+      const ragDocuments = require('./services/ragDocumentsService');
+
+      // Se o caller fornecer IDs, usa a limpeza direta; senão, detecta automaticamente.
+      let result;
+      if (Array.isArray(documentIds) && documentIds.length > 0) {
+        result = await ragDocuments.cleanOrphanedDocuments(tenantId, documentIds.map(String));
+        sendJson(res, 200, result);
+        return;
+      }
+
+      result = await ragDocuments.detectAndCleanOrphanedVectorDocuments(tenantId);
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao limpar documentos órfãos:', err);
+      sendApiError(res, buildApiError({
+        code: 'INTERNAL_ERROR',
+        message: 'Erro ao limpar documentos órfãos do vector store',
+        httpStatus: 500,
+        retryable: true,
+        details: { message: err.message },
+        req,
+      }), setCorsHeaders);
+    }
+    return;
+  }
+
   // GET /rag/deduplication/stats - Estatísticas de deduplicação
   if (method === 'GET' && pathname === '/rag/deduplication/stats') {
     const authResult = requireAuth(req);
@@ -10664,18 +21973,434 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
+      // GET /rag/documents/:id/download - Download do binário original (quando existir)
+      if (pathname.endsWith('/download')) {
+        const tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+
+        const rawId = decodeURIComponent(pathname.slice('/rag/documents/'.length).replace(/\/download$/, ''));
+        const { getDocumentFileFromDb } = require('./services/ragDocumentsService');
+        const fileRow = await getDocumentFileFromDb(rawId, tenantId);
+        if (!fileRow || !fileRow.data) {
+          sendJson(res, 404, { error: 'file_not_found', message: 'Arquivo original não encontrado no banco de dados' });
+          return;
+        }
+
+        const filename = (fileRow.filename || `documento-${rawId}`).replace(/[\r\n"]/g, '_');
+        const mimeType = fileRow.mimeType || 'application/octet-stream';
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        if (Number.isFinite(fileRow.sizeBytes)) {
+          res.setHeader('Content-Length', String(fileRow.sizeBytes));
+        }
+        res.writeHead(200);
+        res.end(fileRow.data);
+        return;
+      }
+
+      // Para GET /rag/documents/:id, exige tenant e valida ownership
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+
       const documentId = decodeURIComponent(pathname.slice('/rag/documents/'.length));
       const document = getDocument(documentId);
       
-      if (!document) {
+      if (!document || (document.tenantId && document.tenantId !== tenantId)) {
         sendJson(res, 404, { error: 'document_not_found' });
         return;
+      }
+
+      // Se for documento de upload (source=file), confirma (best-effort) se há binário no BD
+      // e anexa metadata.originalBinary para a UI (sem expor o binário aqui).
+      try {
+        const meta = document.metadata || {};
+        const looksLikeFileUpload = meta.source === 'file' || !!meta.fileName || !!meta.filename;
+        if (looksLikeFileUpload && (!meta.originalBinary || meta.originalBinary.stored !== true)) {
+          const { getDocumentFileFromDb } = require('./services/ragDocumentsService');
+          const fileRow = await getDocumentFileFromDb(documentId, tenantId);
+          if (fileRow && fileRow.data) {
+            document.metadata = {
+              ...meta,
+              originalBinary: {
+                stored: true,
+                filename: fileRow.filename || meta.fileName || meta.filename || null,
+                mimeType: fileRow.mimeType || meta.mime || meta.fileType || null,
+                sizeBytes: Number.isFinite(fileRow.sizeBytes) ? fileRow.sizeBytes : null,
+              },
+            };
+          }
+        }
+      } catch {
+        // best-effort: não bloqueia GET do documento
       }
 
       sendJson(res, 200, document);
     } catch (err) {
       logger.error('Erro ao obter documento:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/documents/upload - Upload (multipart) com extração server-side (PDF/OCR)
+  if (method === 'POST' && pathname === '/rag/documents/upload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const contentType = String(req.headers['content-type'] || '');
+    if (!contentType.toLowerCase().includes('multipart/form-data')) {
+      badRequest(res, 'Content-Type deve ser multipart/form-data');
+      return;
+    }
+
+    try {
+      const { fields, files } = await parseMultipartFormData(req);
+      const file = Array.isArray(files) ? files[0] : null;
+      if (!file) {
+        badRequest(res, 'Arquivo é obrigatório');
+        return;
+      }
+
+      const requestTenantId = req.tenantId || req.agent?.tenantId || null;
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+
+      // Hardening: tenantId em form-data não define tenant efetivo (compat: aceita se igual)
+      if (fields && fields.tenantId) {
+        const bodyTenantId = String(fields.tenantId).trim();
+        if (requestTenantId && bodyTenantId && bodyTenantId !== String(requestTenantId)) {
+          badRequest(res, 'tenantId no form-data não é permitido (use X-Tenant-Id).');
+          return;
+        }
+      }
+
+      const rawPersistTenantId = (fields && (fields.persistTenantId || fields.targetTenantId))
+        ? String(fields.persistTenantId || fields.targetTenantId).trim()
+        : null;
+      if (rawPersistTenantId && !isSuperAdminUser) {
+        sendJson(res, 403, { error: 'forbidden', message: 'persistTenantId é permitido apenas para super-admin' });
+        return;
+      }
+
+      const finalTenantId = (rawPersistTenantId && rawPersistTenantId.trim())
+        ? rawPersistTenantId.trim()
+        : requestTenantId;
+
+      if (!requestTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+      if (!finalTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const isDryRun = fields && String(fields.dryRun || '').toLowerCase() === 'true';
+
+      // Pipeline (toasts): executionId é opcional aqui para não quebrar uploads fora do pipeline,
+      // mas quando fornecido, emitimos feedback via `generation.stage`.
+      let pipelineWsForStage = null;
+      let execIdForStage = null;
+      try {
+        const { isValidExecutionId } = require('./middleware/requireExecutionId');
+        const rawExec = (fields && fields.executionId) ? String(fields.executionId).trim() : null;
+        if (rawExec && isValidExecutionId(rawExec)) {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          execIdForStage = rawExec;
+          // WS deve seguir o tenant do contexto do request (token/header), não o tenant de persistência.
+          pipelineWsForStage = createPipelineWs({ tenantId: requestTenantId });
+          emitPipelineStage(pipelineWsForStage, execIdForStage, {
+            stage: 'file-ocr',
+            status: 'running',
+            message: `Processando arquivo "${file.filename}"...`,
+            meta: { fileName: file.filename, mimeType: file.mimeType, dryRun: !!isDryRun },
+          });
+        }
+      } catch (_) {
+        // best-effort
+      }
+
+      // Limite simples de tamanho (10MB)
+      const maxSizeBytes = 10 * 1024 * 1024;
+      if (Number(file.size || 0) > maxSizeBytes) {
+        sendApiError(res, buildApiError({
+          code: 'FILE_TOO_LARGE',
+          message: 'Arquivo muito grande. Tamanho máximo: 10MB.',
+          httpStatus: 400,
+          retryable: false,
+          details: { fileName: file.filename, fileSize: file.size, maxSizeBytes },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      // eslint-disable-next-line global-require
+      const { extractTextFromFile } = require('./services/fileExtractionService');
+
+      // Parse de metadados/tags (best-effort)
+      let metadataFromField = {};
+      try {
+        if (fields && fields.metadata) {
+          metadataFromField = JSON.parse(String(fields.metadata));
+        }
+      } catch {
+        metadataFromField = {};
+      }
+      let tags = [];
+      try {
+        if (fields && fields.tags) {
+          const parsed = JSON.parse(String(fields.tags));
+          tags = Array.isArray(parsed) ? parsed : [];
+        }
+      } catch {
+        tags = (fields && fields.tags) ? [String(fields.tags)] : [];
+      }
+
+      const normalizeExtractedText = (value) => (typeof value === 'string' ? value.trim() : '');
+      const looksLikePlaceholder = (text) => {
+        if (!text) return false;
+        // Placeholder gerado no frontend quando a extração falha
+        if (text.includes('Não foi possível extrair conteúdo automaticamente')) return true;
+        if (text.startsWith('[Arquivo:') && text.includes('Não foi possível extrair')) return true;
+        return false;
+      };
+
+      // Se o frontend já enviou conteúdo extraído (OCR/PDF/etc.), priorizamos isso.
+      // Motivo: em dev/prod o OCR server-side pode estar desabilitado (USE_OCR!=true),
+      // mas o cliente pode ter conseguido extrair texto.
+      const clientProvidedExtracted = normalizeExtractedText(
+        (metadataFromField && (metadataFromField.extractedContent || metadataFromField.extractedText)) || ''
+      );
+      const hasMeaningfulClientText = !!clientProvidedExtracted && clientProvidedExtracted.length >= 10 && !looksLikePlaceholder(clientProvidedExtracted);
+
+      /** @type {{ extractedText: string, warnings: Array<any>, source: 'client'|'server'|'none' }} */
+      let extractionResult = { extractedText: '', warnings: [], source: 'none' };
+
+      if (hasMeaningfulClientText) {
+        extractionResult = { extractedText: clientProvidedExtracted, warnings: [], source: 'client' };
+      } else {
+        const extraction = await extractTextFromFile({
+          buffer: file.buffer,
+          mimeType: file.mimeType,
+          filename: file.filename,
+        }, {
+          timeoutMs: 15000,
+          useOcr: String(process.env.USE_OCR || '').toLowerCase() === 'true',
+        });
+        extractionResult = {
+          extractedText: normalizeExtractedText(extraction.extractedText),
+          warnings: Array.isArray(extraction.warnings) ? extraction.warnings : [],
+          source: 'server',
+        };
+      }
+
+      const extractedText = extractionResult.extractedText;
+      const warnings = extractionResult.warnings;
+      const finalText = extractedText || 'Sem texto extraído. Indexando metadados do arquivo.';
+      if (!extractedText) {
+        warnings.push({
+          code: 'NO_TEXT_EXTRACTED',
+          message: 'Sem texto extraído. Indexando metadados do arquivo.',
+          details: { fileName: file.filename, mimeType: file.mimeType },
+        });
+      }
+
+      // DRY-RUN: não cria documento nem grava binário no BD.
+      if (isDryRun) {
+        const payload = {
+          dryRun: true,
+          tenantId: finalTenantId,
+          fileName: file.filename,
+          mimeType: file.mimeType,
+          sizeBytes: Number(file.size || 0),
+          extractedText,
+          warnings,
+          message: 'DRY-RUN: extração concluída, sem persistência no RAG/BD.',
+        };
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'success',
+              message: `Arquivo "${file.filename}" processado`,
+              meta: { fileName: file.filename, dryRun: true, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+            });
+          }
+        } catch (_) {}
+        sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      const documentData = {
+        title: file.filename || 'Arquivo enviado',
+        content: finalText,
+        metadata: {
+          source: (fields && fields.source) ? String(fields.source).trim() : 'file',
+          category: (fields && fields.category) ? String(fields.category).trim() : null,
+          tags,
+          fileName: file.filename,
+          filename: file.filename,
+          mime: file.mimeType,
+          fileType: file.mimeType,
+          fileSize: file.size,
+          uploadedAt: nowIso,
+          // Para UI: texto extraído puro (OCR/PDF) quando disponível
+          extractedText,
+          extractedContent: extractedText,
+          extractionSource: extractionResult.source,
+          extractionWarnings: warnings,
+          ...metadataFromField,
+        },
+        autoIndex: !(fields && String(fields.autoIndex).toLowerCase() === 'false'),
+      };
+
+      const result = await createDocument(documentData, finalTenantId);
+      if (!result.success) {
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: 'error',
+              message: result.error || 'Falha ao criar/indexar documento no RAG',
+              meta: { code: 'RAG_INDEX_FAILED', fileName: file.filename },
+            });
+          }
+        } catch (_) {}
+        sendApiError(res, buildApiError({
+          code: 'RAG_INDEX_FAILED',
+          message: result.error || 'Falha ao criar/indexar documento no RAG',
+          httpStatus: 500,
+          retryable: true,
+          details: { tenantId: finalTenantId, fileName: file.filename, mimeType: file.mimeType },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      // Salva binário original no BD (best-effort)
+      try {
+        const ragDocumentsService = require('./services/ragDocumentsService');
+        await ragDocumentsService.upsertDocumentFileToDb({
+          documentId: result.document.id,
+          tenantId: finalTenantId,
+          filename: file.filename,
+          mimeType: file.mimeType,
+          sizeBytes: Number(file.size || 0),
+          data: file.buffer,
+        });
+
+        // Marca no metadata (best-effort) para a UI saber que há binário disponível
+        try {
+          await ragDocumentsService.updateDocument(result.document.id, {
+            metadata: {
+              originalBinary: {
+                stored: true,
+                filename: file.filename,
+                mimeType: file.mimeType,
+                sizeBytes: Number(file.size || 0),
+                storedAt: new Date().toISOString(),
+              },
+            },
+          });
+        } catch {
+          // ignore
+        }
+      } catch (e) {
+        logger.warn('[RAGDocuments] Falha ao salvar binário original no BD (best-effort)', {
+          tenantId: finalTenantId,
+          documentId: result.document?.id,
+          error: e.message,
+        });
+      }
+
+      if (result.isDuplicate) {
+        const payload = { ...result.document, isDuplicate: true, warnings };
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: 'success',
+              message: `Arquivo "${file.filename}" processado`,
+              meta: { fileName: file.filename, isDuplicate: true, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+            });
+          }
+        } catch (_) {}
+        sendJson(res, 200, { ok: true, data: payload, warnings, ...payload });
+        return;
+      }
+
+      const payload = { ...result.document, warnings, indexing: result.indexing || null };
+
+      // Sucesso parcial: upload/extraiu/criou, mas indexação falhou
+      if (result.indexing && result.indexing.attempted && result.indexing.success === false) {
+        try {
+          if (pipelineWsForStage && execIdForStage) {
+            const { emitPipelineStage } = require('./ws/emitPipelineStage');
+            emitPipelineStage(pipelineWsForStage, execIdForStage, {
+              stage: 'file-ocr',
+              status: 'warning',
+              message: `Arquivo "${file.filename}" processado`,
+              meta: { fileName: file.filename, indexing: result.indexing, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+            });
+          }
+        } catch (_) {}
+        sendJson(res, 207, { ok: true, data: payload, warnings, ...payload });
+        return;
+      }
+
+      try {
+        if (pipelineWsForStage && execIdForStage) {
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          emitPipelineStage(pipelineWsForStage, execIdForStage, {
+            stage: 'file-ocr',
+            status: Array.isArray(warnings) && warnings.length > 0 ? 'warning' : 'success',
+            message: `Arquivo "${file.filename}" processado`,
+            meta: { fileName: file.filename, warningsCount: Array.isArray(warnings) ? warnings.length : 0 },
+          });
+        }
+      } catch (_) {}
+
+      sendJson(res, 201, { ok: true, data: payload, warnings, ...payload });
+    } catch (err) {
+      logger.error('Erro ao fazer upload e extrair arquivo:', err);
+      try {
+        // best-effort: tenta emitir erro se for parte de um pipeline
+        const { isValidExecutionId } = require('./middleware/requireExecutionId');
+        const rawExec = (req && req.headers && (req.headers['x-execution-id'] || req.headers['x-pipeline-execution-id'])) || null;
+        const execId = (typeof rawExec === 'string' && rawExec.trim() && isValidExecutionId(rawExec.trim())) ? rawExec.trim() : null;
+        const tenantIdForWs = req.tenantId || req.agent?.tenantId || null;
+        if (execId && tenantIdForWs) {
+          const { createPipelineWs } = require('./ws/pipelineEmitter');
+          const { emitPipelineStage } = require('./ws/emitPipelineStage');
+          emitPipelineStage(createPipelineWs({ tenantId: tenantIdForWs }), execId, {
+            stage: 'file-ocr',
+            status: 'error',
+            message: err.message || 'Erro ao processar upload de arquivo',
+            meta: { code: 'FILE_UPLOAD_FAILED' },
+          });
+        }
+      } catch (_) {}
+      sendApiError(res, buildApiError({
+        code: 'FILE_UPLOAD_FAILED',
+        message: err.message || 'Erro ao processar upload de arquivo',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -10701,11 +22426,64 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const tenantId = body.tenantId || req.tenantId;
-      const result = await createDocument(body, tenantId);
+      const requestTenantId = req.tenantId || req.agent?.tenantId || null;
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+
+      // Hardening: tenantId no body não deve definir o tenant efetivo.
+      // - compat: se vier igual ao tenant do request, aceitamos e ignoramos
+      // - segurança: se vier diferente, rejeitamos
+      if (body && body.tenantId) {
+        const bodyTenantId = String(body.tenantId).trim();
+        if (requestTenantId && bodyTenantId && bodyTenantId !== String(requestTenantId)) {
+          badRequest(res, 'tenantId no body não é permitido (use X-Tenant-Id).');
+          return;
+        }
+        // remove para evitar fallback interno
+        try { delete body.tenantId; } catch {}
+      }
+
+      const rawPersistTenantId = body?.persistTenantId || body?.targetTenantId || null;
+      if (rawPersistTenantId && !isSuperAdminUser) {
+        sendJson(res, 403, { error: 'forbidden', message: 'persistTenantId é permitido apenas para super-admin' });
+        return;
+      }
+      if (rawPersistTenantId) {
+        try { delete body.persistTenantId; } catch {}
+        try { delete body.targetTenantId; } catch {}
+      }
+
+      const persistTenantId = rawPersistTenantId ? String(rawPersistTenantId).trim() : null;
+      const finalTenantId = persistTenantId || requestTenantId;
+      if (!finalTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      const result = await createDocument(body, finalTenantId);
 
       if (!result.success) {
         sendJson(res, 400, { error: 'creation_failed', message: result.error });
+        return;
+      }
+
+      // Se a criação funcionou mas a indexação falhou, retorna 207 com aviso (sem quebrar criação).
+      // O frontend pode exibir toast com base em `indexing.errorCode`.
+      if (result.indexing && result.indexing.attempted && result.indexing.success === false) {
+        logAction({
+          agentId: req.agent.id,
+          username: req.agent.username,
+          action: 'rag_document_create_index_failed',
+          resource: 'rag_document',
+          resourceId: result.document.id,
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+
+        // 207 Multi-Status: indica sucesso parcial (criou, mas não indexou)
+        sendJson(res, 207, {
+          ...result.document,
+          indexing: result.indexing,
+        });
         return;
       }
 
@@ -10858,7 +22636,14 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const result = await reindexDocument(documentId);
 
       if (!result.success) {
-        sendJson(res, 400, { error: 'reindex_failed', message: result.error });
+        sendApiError(res, buildApiError({
+          code: result.errorCode || 'RAG_INDEX_FAILED',
+          message: result.error || 'Falha ao reindexar documento no RAG',
+          httpStatus: 500,
+          retryable: true,
+          details: { documentId, tenantId: req.tenantId || req.agent?.tenantId || null },
+          req,
+        }), setCorsHeaders);
         return;
       }
 
@@ -10923,6 +22708,43 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('Erro ao reindexar documentos em lote:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/reindex-all?tenantId=... - Reindex completo do tenant (zera rag_chunks e reprocessa)
+  if (method === 'POST' && pathname === '/rag/reindex-all') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      const tenantId = url.searchParams.get('tenantId') || requireTenant(req, res);
+      if (!tenantId) return;
+
+      const { reindexAllTenant } = require('./services/ragDocumentsService');
+      const result = await reindexAllTenant(String(tenantId));
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      logger.error('Erro ao reindexar tenant:', err);
+      sendApiError(res, buildApiError({
+        code: 'RAG_REINDEX_ALL_FAILED',
+        message: 'Erro ao reindexar tenant',
+        httpStatus: 500,
+        retryable: true,
+        details: { message: err.message },
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -11393,7 +23215,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown',
       });
-      sendJson(res, 200, result);
+      const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+      sendJson(res, 200, { ok: true, data: result, warnings, ...result });
     } catch (err) {
       // Trata erro de rate limit
       if (err.code === 'RATE_LIMIT_EXCEEDED') {
@@ -11410,7 +23233,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       logger.error('Erro ao raspar URL:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message });
+      // Erros de validação devem ser 400
+      const msg = (err && err.message) ? String(err.message) : 'Erro ao raspar URL';
+      const isBadRequest = msg.toLowerCase().includes('url inválida') || msg.toLowerCase().includes('url invalida');
+      sendApiError(res, buildApiError({
+        code: 'SCRAPE_FAILED',
+        message: msg || 'Falha ao raspar URL',
+        httpStatus: isBadRequest ? 400 : 500,
+        retryable: !isBadRequest,
+        details: { tenantId: req.tenantId || null, url: body?.url || null },
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -11431,36 +23264,240 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       badRequest(res, 'Content-Type deve ser application/json');
       return;
     }
+    let executionIdForWs = null;
+    let pipelineWsForStage = null;
     try {
       const body = await parseJsonBody(req);
       if (!body.urls || !Array.isArray(body.urls) || body.urls.length === 0) {
         badRequest(res, 'URLs é obrigatório e deve ser um array não vazio');
         return;
       }
+      const requestTenantId = req.tenantId || req.agent?.tenantId || null;
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      if (!requestTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId é obrigatório' });
+        return;
+      }
+
+      // Hardening: tenantId no body não define tenant efetivo (compat: aceita se igual)
+      if (body && body.tenantId) {
+        const bodyTenantId = String(body.tenantId).trim();
+        if (bodyTenantId && bodyTenantId !== String(requestTenantId)) {
+          badRequest(res, 'tenantId no body não é permitido (use X-Tenant-Id).');
+          return;
+        }
+      }
+
+      const rawPersistTenantId = body?.persistTenantId || body?.targetTenantId || null;
+      if (rawPersistTenantId && !isSuperAdminUser) {
+        sendJson(res, 403, { error: 'forbidden', message: 'persistTenantId é permitido apenas para super-admin' });
+        return;
+      }
+      const persistTenantId = rawPersistTenantId ? String(rawPersistTenantId).trim() : null;
+      const finalPersistTenantId = persistTenantId || requestTenantId;
+
+      const isDryRun = body && body.dryRun === true;
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) return;
+      executionIdForWs = executionId;
+
+      const { createPipelineWs } = require('./ws/pipelineEmitter');
+      const { emitPipelineStage } = require('./ws/emitPipelineStage');
+      // WS/execução seguem o tenant do request (token/header), não o tenant de persistência.
+      const pipelineWs = createPipelineWs({ tenantId: requestTenantId });
+      pipelineWsForStage = pipelineWs;
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'scrape-batch',
+        status: 'running',
+        message: `Web scraping em execução (${Array.isArray(body.urls) ? body.urls.length : 0} URL(s))...`,
+        meta: { dryRun: !!isDryRun },
+      });
+
+      // Pipeline (backend-only): etapa explícita para o card "Web scraping"
+      let pipelineExecution = null;
+      if (executionId) {
+        try {
+          const { ensureExecutionContext, requireStages, updateStatus } = require('./services/pipelineExecutionContext');
+          pipelineExecution = ensureExecutionContext({ executionId }, { tenantId: requestTenantId });
+          requireStages(pipelineExecution, ['webScraping']);
+          pipelineExecution.stages.webScraping = false;
+          updateStatus(pipelineExecution, 'running', {
+            currentStage: 'webScraping',
+            stageStatus: 'in_progress',
+            message: `Web scraping em execução (${Array.isArray(body.urls) ? body.urls.length : 0} URL(s))...`,
+            source: '/web-scraping/scrape-batch',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
       const results = await scrapeUrls(body.urls, {
         contentSelector: body.contentSelector,
         removeSelectors: body.removeSelectors,
         timeout: body.timeout || 30000,
         concurrency: body.concurrency || 3,
-        autoIndex: body.autoIndex !== false,
+        // DRY-RUN: nunca indexa (evita side effects no RAG/BD)
+        autoIndex: isDryRun ? false : (body.autoIndex !== false),
         source: body.source || 'web_scraping',
         category: body.category,
         tags: body.tags || [],
-        tenantId: req.tenantId,
+        tenantId: finalPersistTenantId,
       });
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'web_scraping_batch',
-        resource: 'web_scraping',
-        details: { urlsCount: body.urls.length },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
+
+      const total = body.urls.length;
+      const successCount = (Array.isArray(results) ? results : []).filter(r => r && r.success).length;
+      const failedCount = total - successCount;
+      const duplicatesCount = (Array.isArray(results) ? results : []).filter(r => r && r.success && r.isDuplicate).length;
+      const newCount = successCount - duplicatesCount;
+
+      // Gate terminal (quando usado como pipeline de geração): scraping sem sucesso => falha
+      if (successCount === 0 && executionId) {
+        const { failGeneration } = require('./services/failGeneration');
+        const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+        try {
+          await failGeneration({
+            execution: pipelineExecution,
+            reason: GenerationFailureReasons.SCRAPING_EMPTY,
+            error: new Error('Nenhuma URL foi raspada com sucesso'),
+            extra: { urlsTotal: total, endpoint: '/web-scraping/scrape-batch', stage: 'webScraping' },
+          });
+        } catch (_) {
+          // failGeneration relança por contrato; ignoramos aqui para responder HTTP.
+        }
+        emitPipelineStage(pipelineWs, executionId, {
+          stage: 'scrape-batch',
+          status: 'error',
+          message: 'Nenhuma URL foi raspada com sucesso',
+          meta: { code: 'SCRAPING_EMPTY', urlsTotal: total },
+        });
+        sendApiError(res, buildApiError({
+          code: 'SCRAPING_EMPTY',
+          message: 'Nenhuma URL foi raspada com sucesso',
+          httpStatus: 409,
+          retryable: false,
+          details: { tenantId: req.tenantId || null, executionId, urlsTotal: total },
+          req,
+        }), setCorsHeaders);
+        return;
+      }
+
+      const errorSummary = (Array.isArray(results) ? results : [])
+        .filter(r => r && !r.success)
+        .map((r) => {
+          const err = (r.error && typeof r.error === 'object')
+            ? r.error
+            : { name: 'Error', message: r.error ? String(r.error) : 'Erro desconhecido' };
+          return {
+            url: r.url,
+            name: err.name || 'Error',
+            message: err.message || 'Erro desconhecido',
+          };
+        });
+
+      const payload = {
+        total,
+        success: successCount,
+        failed: failedCount,
+        new: Math.max(0, newCount),
+        duplicates: Math.max(0, duplicatesCount),
+        results: Array.isArray(results) ? results : [],
+        errorSummary: Array.isArray(errorSummary) ? errorSummary : [],
+        dryRun: isDryRun,
+      };
+      // DRY-RUN: não grava auditoria no BD.
+      if (!isDryRun) {
+        logAction({
+          agentId: req.agent.id,
+          username: req.agent.username,
+          action: 'web_scraping_batch',
+          resource: 'web_scraping',
+          details: { urlsCount: body.urls.length },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      }
+      // Status code: 200 se 100% sucesso, 207 se houve qualquer falha (inclui 0 sucesso)
+      const statusCode = successCount === total ? 200 : 207;
+      const warnings = [];
+      if (statusCode === 207) {
+        warnings.push({
+          code: 'PARTIAL_SUCCESS',
+          message: 'Extração parcial: usamos fallback quando necessário e continuamos com o melhor conteúdo disponível.',
+        });
+      }
+      if (isDryRun) {
+        warnings.push({
+          code: 'DRY_RUN_NO_INDEX',
+          message: 'DRY-RUN: scraping executado sem indexação/persistência.',
+        });
+      }
+      try {
+        const warningItems = (Array.isArray(payload.results) ? payload.results : [])
+          .flatMap((r) => (Array.isArray(r?.warnings) ? r.warnings : []));
+        if (warningItems.length > 0) {
+          warnings.push({
+            code: 'EXTRACTION_WARNINGS',
+            message: 'Algumas URLs retornaram avisos durante a extração.',
+            details: { count: warningItems.length },
+          });
+        }
+      } catch {
+        // ignora
+      }
+      // Pipeline (backend-only): conclui etapa
+      if (pipelineExecution && executionId) {
+        try {
+          const { updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+          updateStage(pipelineExecution, 'webScraping', true);
+          updateStatus(pipelineExecution, pipelineExecution.status, {
+            currentStage: 'webScraping',
+            stageStatus: statusCode === 207 ? 'warning' : 'completed',
+            message: successCount === 0
+              ? 'Web scraping falhou.'
+              : `Web scraping concluído: ${successCount}/${total} URL(s)`,
+            source: '/web-scraping/scrape-batch',
+          });
+        } catch (_) {
+          // best-effort
+        }
+      }
+
+      emitPipelineStage(pipelineWs, executionId, {
+        stage: 'scrape-batch',
+        status: statusCode === 207 ? 'warning' : 'success',
+        message: successCount === 0
+          ? 'Web scraping falhou.'
+          : `Web scraping concluído: ${successCount}/${total} URL(s)`,
+        meta: { total, success: successCount, failed: failedCount, duplicates: duplicatesCount, new: newCount, dryRun: !!isDryRun },
       });
-      sendJson(res, 200, { results });
+
+      sendJson(res, statusCode, { ok: true, data: payload, warnings, ...payload });
     } catch (err) {
       logger.error('Erro ao raspar URLs:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message });
+      try {
+        const { emitPipelineStage } = require('./ws/emitPipelineStage');
+        if (pipelineWsForStage && executionIdForWs) {
+          emitPipelineStage(pipelineWsForStage, executionIdForWs, {
+            stage: 'scrape-batch',
+            status: 'error',
+            message: err?.message || 'Falha ao raspar URLs',
+            meta: { code: 'SCRAPE_FAILED' },
+          });
+        }
+      } catch (_) {
+        // best-effort
+      }
+      sendApiError(res, buildApiError({
+        code: 'SCRAPE_FAILED',
+        message: err.message || 'Falha ao raspar URLs',
+        httpStatus: 500,
+        retryable: true,
+        details: { tenantId: req.tenantId || null },
+        req,
+      }), setCorsHeaders);
     }
     return;
   }
@@ -12795,6 +24832,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       !pathname.startsWith('/version') &&
       !pathname.startsWith('/system') &&
       !pathname.startsWith('/metrics') &&
+      !pathname.startsWith('/storefront') &&
+      !pathname.startsWith('/orders') &&
+      !pathname.startsWith('/deliveries') &&
+      !pathname.startsWith('/public-tokens') &&
+      !pathname.startsWith('/physical') &&
       !pathname.startsWith('/tickets') &&
       !pathname.startsWith('/queues') &&
       !pathname.startsWith('/flows') &&
@@ -12879,12 +24921,26 @@ function createServer() {
     // Garante que erros não derrubem o processo.
     requestHandler(req, res).catch((err) => {
       logger.error('Erro inesperado ao processar requisição', err);
-      sendJson(res, 500, { error: 'internal_error' });
+      try {
+        const { buildApiError, sendApiError } = require('./utils/apiError');
+        sendApiError(res, buildApiError({
+          code: 'INTERNAL_ERROR',
+          message: 'Erro interno',
+          httpStatus: 500,
+          retryable: false,
+          details: { message: err?.message },
+          req,
+        }), setCorsHeaders);
+      } catch {
+        sendJson(res, 500, { error: 'internal_error' });
+      }
     });
   });
 
-  // Inicializa WebSocket
-  initializeWebSocket(server);
+  // Inicializa WebSocket (pode ser desabilitado por env)
+  if (process.env.DISABLE_WEBSOCKET !== 'true') {
+    initializeWebSocket(server);
+  }
 
   return server;
 }
@@ -13117,6 +25173,9 @@ async function startInitialization() {
 process.on('SIGINT', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
+  try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
+  try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
+  try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
@@ -13124,6 +25183,9 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
+  try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
+  try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
+  try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
   saveSessionEventsToFileImmediate();
   process.exit(0);
 });
@@ -13166,6 +25228,15 @@ if (require.main === module) {
       }
     }
 
+    // Reconciliação automática de consistência RAG (BD <-> Vector Store) - best-effort
+    // Objetivo: evitar que inconsistências persistam (órfãos no vector store / BD à frente)
+    try {
+      const { startRagConsistencyWorker } = require('./services/ragConsistencyWorker');
+      startRagConsistencyWorker();
+    } catch (err) {
+      logger.warn('[RAGReconcile] Falha ao iniciar worker (ignorado)', { error: err.message });
+    }
+
     // Auto-return-to-bot (best-effort)
     if (process.env.ENABLE_AUTO_RETURN_TO_BOT !== 'false') {
       const inactivityMinutes = parseInt(process.env.AUTO_RETURN_TO_BOT_MINUTES || '30', 10);
@@ -13199,6 +25270,36 @@ if (require.main === module) {
         logger.warn('[ChannelHealth] Falha ao iniciar monitor (ignorado)', { error: err.message });
       }
     }
+
+    // Execution Queue + Scheduler (best-effort) - internal ops jobs
+    if (process.env.ENABLE_EXECUTION_WORKER !== 'false') {
+      try {
+        const { startExecutionQueueWorker } = require('./services/executionQueueService');
+        const intervalMs = parseInt(process.env.EXECUTION_WORKER_INTERVAL_MS || '800', 10);
+        startExecutionQueueWorker({ intervalMs });
+      } catch (err) {
+        logger.warn('[ExecutionQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
+      }
+    }
+    if (process.env.ENABLE_SCHEDULER_WORKER !== 'false') {
+      try {
+        const { startScheduler } = require('./services/schedulerService');
+        const intervalMs = parseInt(process.env.SCHEDULER_INTERVAL_MS || '2000', 10);
+        startScheduler({ intervalMs, batchSize: 10 });
+      } catch (err) {
+        logger.warn('[Scheduler] Falha ao iniciar scheduler (ignorado)', { error: err.message });
+      }
+    }
+
+    // WhatsApp QR bridge (opcional): integra provider QR real (ex.: whatsapp-web.js)
+    try {
+      const { startWhatsAppQrBridge } = require('./services/whatsappQrBridgeService');
+      startWhatsAppQrBridge().catch((err) => {
+        logger.warn('[WhatsAppQRBridge] Falha ao iniciar bridge (ignorado)', { error: err?.message || String(err) });
+      });
+    } catch (err) {
+      logger.warn('[WhatsAppQRBridge] Bridge indisponível (ignorado)', { error: err?.message || String(err) });
+    }
   }).catch((error) => {
     console.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
     console.error('[Server] Erro:', error);
@@ -13211,11 +25312,14 @@ if (require.main === module) {
   });
 } else {
   console.log('[Server] ⚠️  Bloco if (require.main === module) NÃO executado - servidor não será iniciado automaticamente');
-  // Mesmo assim, inicia a inicialização em background
-  startInitialization().catch(err => {
-    console.error('[Server] Erro na inicialização em background:', err);
-    logger.error('[Server] Erro na inicialização em background:', err);
-  });
+  // Mesmo assim, inicia a inicialização em background (exceto em testes)
+  const disableBackgroundInit = process.env.NODE_ENV === 'test' || process.env.DISABLE_BACKGROUND_INIT === 'true';
+  if (!disableBackgroundInit) {
+    startInitialization().catch(err => {
+      console.error('[Server] Erro na inicialização em background:', err);
+      logger.error('[Server] Erro na inicialização em background:', err);
+    });
+  }
 }
 
 module.exports = {
@@ -13223,6 +25327,7 @@ module.exports = {
   server,
   // também exportamos helpers principais para facilitar testes isolados, se preciso
   _internal: {
+    requestHandler,
     parseJsonBody,
     sendJson,
     notFound,
@@ -13233,5 +25338,3 @@ module.exports = {
     sessionEvents,
   },
 };
-
-

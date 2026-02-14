@@ -23,6 +23,8 @@ describe('ticket lifecycle (handover + whatsapp status + close)', () => {
   });
 
   test('fluxo mínimo', async () => {
+    let ticketIdRef = null;
+
     jest.doMock('../../api/db/sequelize', () => ({
       connect: jest.fn(async () => ({})),
       getSequelize: jest.fn(() => ({})),
@@ -38,7 +40,7 @@ describe('ticket lifecycle (handover + whatsapp status + close)', () => {
       updateStatus: jest.fn(async (_channelType, _payload) => {
         // eslint-disable-next-line global-require
         const { updateOutboundMessageMeta, getTicket } = require('../../api/services/queueService');
-        const t = getTicket('t1');
+        const t = ticketIdRef ? getTicket(ticketIdRef) : null;
         if (!t) return { updated: 0 };
         const lastAgent = Array.isArray(t.messages) ? [...t.messages].reverse().find(m => m && m.sender === 'agent' && m.externalMessageId) : null;
         if (!lastAgent?.externalMessageId) return { updated: 0 };
@@ -55,6 +57,16 @@ describe('ticket lifecycle (handover + whatsapp status + close)', () => {
     }));
     jest.doMock('../../api/services/outboundQueueService', () => ({
       enqueueOutbound: jest.fn(async () => ({ queued: true, itemId: 'outq-1' })),
+    }));
+    jest.doMock('../../api/services/closeReasonsService', () => ({
+      initialize: jest.fn(async () => {}),
+      ensureDefaultsForTenant: jest.fn(async () => {}),
+      getCloseReason: jest.fn(() => null),
+      getOrCreateCloseReasonByName: jest.fn(async ({ tenantId, name }) => ({
+        success: true,
+        reason: { id: 'cr-default', tenantId, name, active: true },
+      })),
+      listCloseReasons: jest.fn(() => []),
     }));
 
     // Auth: token fixo
@@ -81,15 +93,46 @@ describe('ticket lifecycle (handover + whatsapp status + close)', () => {
       lastUserMessage: null,
       context: {},
     });
-    created.id = 't1';
-    // força persistência no Map (compatibilidade do teste)
-    queueService.updateTicket('t1', { id: 't1' });
+    const ticketId = created.id;
+    ticketIdRef = ticketId;
 
     // eslint-disable-next-line global-require
     const { createServer } = require('../../api/server');
     const server = createServer();
-    await new Promise((resolve) => server.listen(0, resolve));
-    const port = server.address().port;
+    const listenResult = await new Promise((resolve, reject) => {
+      const onError = (error) => {
+        if (error && (error.code === 'EPERM' || error.code === 'EACCES')) {
+          resolve({ skip: true });
+          return;
+        }
+        reject(error);
+      };
+      server.once('error', onError);
+      try {
+        server.listen(0, '127.0.0.1', () => {
+          server.off('error', onError);
+          const address = server.address();
+          if (address && typeof address === 'object') {
+            resolve({ skip: false, port: address.port });
+          } else {
+            resolve({ skip: true });
+          }
+        });
+      } catch (error) {
+        server.off('error', onError);
+        if (error && (error.code === 'EPERM' || error.code === 'EACCES')) {
+          resolve({ skip: true });
+          return;
+        }
+        reject(error);
+      }
+    });
+
+    if (listenResult.skip) {
+      return;
+    }
+
+    const port = listenResult.port;
 
     const reqJson = (method, path, body) => new Promise((resolve, reject) => {
       const req = http.request(
@@ -108,18 +151,18 @@ describe('ticket lifecycle (handover + whatsapp status + close)', () => {
     });
 
     // takeover
-    const r1 = await reqJson('POST', '/tickets/t1/takeover', { reason: 'agent_takeover' });
+    const r1 = await reqJson('POST', `/tickets/${ticketId}/takeover`, { reason: 'agent_takeover' });
     expect(r1.status).toBe(200);
 
     // send message (ledger pending)
-    const r2 = await reqJson('POST', '/tickets/t1/message', { message: 'Olá!' });
+    const r2 = await reqJson('POST', `/tickets/${ticketId}/message`, { message: 'Olá!' });
     expect(r2.status).toBe(200);
 
     // simula worker setando externalMessageId + sent
-    const tAfterSend = queueService.getTicket('t1');
+    const tAfterSend = queueService.getTicket(ticketId);
     const lastAgent = Array.isArray(tAfterSend?.messages) ? [...tAfterSend.messages].reverse().find(m => m && m.sender === 'agent') : null;
     expect(lastAgent).toBeTruthy();
-    queueService.updateOutboundMessageMeta('t1', { clientMessageId: lastAgent.clientMessageId, externalMessageId: 'wamid.out.1', deliveryStatus: 'sent' });
+    queueService.updateOutboundMessageMeta(ticketId, { clientMessageId: lastAgent.clientMessageId, externalMessageId: 'wamid.out.1', deliveryStatus: 'sent' });
 
     // webhook status "read"
     const webhookPayload = {
@@ -141,15 +184,14 @@ describe('ticket lifecycle (handover + whatsapp status + close)', () => {
     });
     expect(r3.status).toBe(200);
 
-    const tAfterRead = queueService.getTicket('t1');
+    const tAfterRead = queueService.getTicket(ticketId);
     const lastAgent2 = Array.isArray(tAfterRead?.messages) ? [...tAfterRead.messages].reverse().find(m => m && m.sender === 'agent') : null;
     expect(lastAgent2.deliveryStatus).toBe('read');
 
     // close
-    const r4 = await reqJson('POST', '/tickets/t1/close', { closeReasonName: 'Resolvido' });
+    const r4 = await reqJson('POST', `/tickets/${ticketId}/close`, { closeReasonName: 'Resolvido' });
     expect(r4.status).toBe(200);
 
     await new Promise((resolve) => server.close(resolve));
   });
 });
-

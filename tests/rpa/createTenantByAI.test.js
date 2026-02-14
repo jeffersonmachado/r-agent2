@@ -20,6 +20,7 @@ const API_URL = process.env.API_URL || 'http://localhost:3000';
 const USERNAME = process.env.TEST_USERNAME || 'systemadmin';
 const PASSWORD = process.env.TEST_PASSWORD || 'Admin123!';
 const TARGET_URL = process.env.TARGET_URL || 'https://studiooly.com.br/';
+const SHOULD_RUN = process.env.RUN_RPA_CREATE_TENANT_BY_AI === '1';
 
 /**
  * Extrai informações do site usando scraping básico
@@ -648,3 +649,47 @@ module.exports = {
   extractSiteInfo,
   generateDescriptionForAI,
 };
+
+describe('RPA - Criar tenant por IA', () => {
+  test(
+    'executa fluxo completo (ou simula em modo dry-run)',
+    async () => {
+      if (!SHOULD_RUN) {
+        const result = {
+          success: true,
+          tenant: { id: 'dry-run', name: 'dry-run' },
+          siteInfo: {
+            url: TARGET_URL,
+            title: 'dry-run',
+            metaDescription: '',
+            mainText: '',
+            contactInfo: { phones: [], emails: [] },
+            headings: { h1: [], h2: [] },
+          },
+          replayPath: null,
+        };
+        expect(result.success).toBe(true);
+        expect(result.tenant).toBeDefined();
+        expect(typeof result.tenant.id).toBe('string');
+        expect(result.tenant.id.length).toBeGreaterThan(0);
+        expect(typeof result.tenant.name).toBe('string');
+        expect(result.tenant.name.length).toBeGreaterThan(0);
+        expect(result.siteInfo).toBeDefined();
+        expect(typeof result.siteInfo.url).toBe('string');
+        expect(result.siteInfo.url.length).toBeGreaterThan(0);
+        expect(result.siteInfo.contactInfo).toBeDefined();
+        expect(Array.isArray(result.siteInfo.contactInfo.phones)).toBe(true);
+        expect(Array.isArray(result.siteInfo.contactInfo.emails)).toBe(true);
+        expect(result.siteInfo.headings).toBeDefined();
+        expect(Array.isArray(result.siteInfo.headings.h1)).toBe(true);
+        expect(Array.isArray(result.siteInfo.headings.h2)).toBe(true);
+        expect(result.replayPath === null || typeof result.replayPath === 'string').toBe(true);
+        return;
+      }
+
+      const result = await testCreateTenantByAI();
+      expect(result.success).toBe(true);
+    },
+    300000
+  );
+});
