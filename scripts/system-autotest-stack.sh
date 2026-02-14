@@ -172,6 +172,10 @@ echo
 echo "[autotest-stack] Rodando testes do frontend (Vitest)..."
 (
   cd frontend
+  if [ -d node_modules ] && [ ! -w node_modules ]; then
+    echo "[autotest-stack] node_modules sem permissão de escrita; recriando dependências no host..."
+    rm -rf node_modules
+  fi
   if [ -d node_modules ]; then
     npm test -- --run
   else
