@@ -174,7 +174,10 @@ echo "[autotest-stack] Rodando testes do frontend (Vitest)..."
   cd frontend
   if [ -d node_modules ] && [ ! -w node_modules ]; then
     echo "[autotest-stack] node_modules sem permissão de escrita; recriando dependências no host..."
-    rm -rf node_modules
+    if ! rm -rf node_modules; then
+      echo "[autotest-stack] rm local falhou por permissão; limpando via container..."
+      docker run --rm -v "$(pwd):/work" -w /work node:22-bookworm-slim sh -lc 'rm -rf node_modules'
+    fi
   fi
   if [ -d node_modules ]; then
     npm test -- --run
