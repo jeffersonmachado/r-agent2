@@ -99,6 +99,7 @@ function main() {
       'node tools/system/launch-plan-status.js',
       { LAUNCH_PLAN_ALLOW_PENDING_RELEASE_WINDOW: '1' }
     );
+    runStep(report, 'release-suite-confirm', 'node tools/system/release-suite-confirm.js');
     runStep(
       report,
       'release-manifest',

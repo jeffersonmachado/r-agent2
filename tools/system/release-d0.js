@@ -10,6 +10,7 @@ const REPORT_PATH = process.env.RELEASE_D0_REPORT_PATH || 'qa/release-d0-report.
 const DRY_RUN = String(process.env.RELEASE_D0_DRY_RUN || '1') === '1';
 const DEPLOY_COMMAND = process.env.RELEASE_D0_DEPLOY_COMMAND || '';
 const RUN_BACKUP = String(process.env.RELEASE_D0_RUN_BACKUP || '1') === '1';
+const ALLOW_DIRTY = String(process.env.RELEASE_D0_ALLOW_DIRTY || (DRY_RUN ? '1' : '0')) === '1';
 
 function runStep(report, label, command, options = {}) {
   const startedAt = Date.now();
@@ -66,6 +67,7 @@ function main() {
     config: {
       deployCommandConfigured: !!DEPLOY_COMMAND,
       runBackup: RUN_BACKUP,
+      allowDirtyWorkspace: ALLOW_DIRTY,
     },
     artifacts: {
       d0Report: REPORT_PATH,
@@ -75,6 +77,7 @@ function main() {
       releaseManifest: 'qa/release-manifest.json',
       releaseSummary: 'qa/release-summary.md',
       releaseDecision: 'qa/release-decision.json',
+      suiteConfirmation: 'qa/release-suite-confirmation.json',
     },
     error: null,
   };
@@ -84,7 +87,7 @@ function main() {
       report,
       'release-clean-check',
       'node tools/system/release-clean-check.js',
-      DRY_RUN ? { skip: true, skipReason: 'DRY_RUN' } : {}
+      ALLOW_DIRTY ? { skip: true, skipReason: 'ALLOW_DIRTY_WORKSPACE' } : {}
     );
 
     runStep(
@@ -103,7 +106,12 @@ function main() {
       'release-window-full',
       'node tools/system/release-window.js',
       DRY_RUN
-        ? { skip: true, skipReason: 'DRY_RUN' }
+        ? {
+            envPatch: {
+              RELEASE_WINDOW_FAST: '1',
+              GO_NO_GO_RUN_ROLLBACK_DRILL: '0',
+            },
+          }
         : {
             envPatch: {
               RELEASE_WINDOW_FAST: '0',
@@ -119,11 +127,22 @@ function main() {
       DRY_RUN ? { skip: true, skipReason: 'DRY_RUN' } : {}
     );
 
+    runStep(report, 'release-suite-confirm', 'node tools/system/release-suite-confirm.js');
+    runStep(report, 'release-manifest', 'node tools/system/release-manifest.js');
+    runStep(report, 'release-summary', 'node tools/system/release-summary.js');
+
     runStep(
       report,
       'launch-plan-status-final',
       'node tools/system/launch-plan-status.js',
-      DRY_RUN ? { skip: true, skipReason: 'DRY_RUN' } : {}
+      { envPatch: DRY_RUN ? { LAUNCH_PLAN_ALLOW_PENDING_RELEASE_WINDOW: '1' } : {} }
+    );
+
+    runStep(
+      report,
+      'release-evidence-pack',
+      'node tools/system/release-evidence-pack.js',
+      DRY_RUN ? { envPatch: { RELEASE_EVIDENCE_DRY_RUN: '1' } } : {}
     );
 
     report.status = 'pass';

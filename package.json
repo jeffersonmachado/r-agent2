@@ -41,6 +41,7 @@
     "system:release-evidence-prune": "node tools/system/release-evidence-prune.js",
     "system:release-clean-check": "node tools/system/release-clean-check.js",
     "system:release-summary": "node tools/system/release-summary.js",
+    "system:release-suite-confirm": "node tools/system/release-suite-confirm.js",
     "system:release-window": "node tools/system/release-window.js",
     "system:release-d0": "node tools/system/release-d0.js",
     "system:release-contingency": "node tools/system/release-contingency.js",

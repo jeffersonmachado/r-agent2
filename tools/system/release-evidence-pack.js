@@ -21,6 +21,7 @@ const REQUIRED_FILES = [
   'qa/launch-plan-status.md',
   'qa/release-window-report.json',
   'qa/release-manifest.json',
+  'qa/release-suite-confirmation.json',
   'qa/release-summary.md',
   'qa/smoke-evidence.json',
   'qa/l01-physical-queue-evidence.json',

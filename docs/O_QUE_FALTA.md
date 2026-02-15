@@ -315,7 +315,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [ ] validar workspace de release (sem pendências fora de QA):
   - `npm run system:release-clean-check`
 - [ ] executar publicação/deploy da versão candidata
-- [ ] execução guiada de D0 (opcional, comando único):
+- [x] execução guiada de D0 (opcional, comando único):
   - dry-run (padrão seguro): `npm run system:release-d0`
   - execução real: `RELEASE_D0_DRY_RUN=0 RELEASE_D0_DEPLOY_COMMAND="<comando_deploy>" npm run system:release-d0`
   - saída: `qa/release-d0-report.json`
@@ -331,9 +331,9 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `npm run system:launch-plan-status`
   - validar `qa/launch-plan-status.md` como checklist final da ata de release
 - [ ] confirmar operação mínima por suíte:
-  - Fast service (kiosk/panel/station)
-  - Orders/Delivery (create/order lifecycle/status)
-  - PBX/Voz (dialplan/runtime/eventos)
+  - comando: `npm run system:release-suite-confirm`
+  - saída: `qa/release-suite-confirmation.json`
+  - valida: Fast service (kiosk/panel/station), Orders/Delivery (create/order lifecycle/status), PBX/Voz (dialplan/runtime/eventos), ChatPro
 - [ ] arquivar evidências finais da janela:
   - `qa/release-gate-report.json`
   - `qa/smoke-evidence.json`
@@ -344,6 +344,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `qa/release-window-report.json`
   - `qa/release-manifest.json`
   - `qa/release-summary.md`
+  - `qa/release-suite-confirmation.json`
   - `qa/launch-plan-status.json`
   - `qa/launch-plan-status.md`
   - comando recomendado para pacote consolidado: `npm run system:release-evidence-pack`

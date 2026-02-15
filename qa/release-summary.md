@@ -1,7 +1,7 @@
 # Release Summary
 
-- Generated at: 2026-02-14T21:34:31.323Z
-- Candidate: f54823c (feat/f10-ai-envelope-safe-mode)
+- Generated at: 2026-02-15T02:07:58.435Z
+- Candidate: d08471e (feat/f10-ai-envelope-safe-mode)
 - Decision: READY
 
 ## Gates
@@ -11,6 +11,7 @@
 - Release decision: pass
 - Launch plan: ready
 - Release window: pass
+- Suites mínimas (Fast/Orders/PBX/ChatPro): pass
 
 ## Reports
 - Release gate report: qa/release-gate-report.json
@@ -20,4 +21,5 @@
 - Launch plan status: qa/launch-plan-status.json
 - Release window report: qa/release-window-report.json
 - Release manifest: qa/release-manifest.json
+- Release suite confirmation: qa/release-suite-confirmation.json
 

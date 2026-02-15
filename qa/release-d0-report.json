@@ -1,7 +1,7 @@
 {
-  "startedAt": "2026-02-14T21:34:31.569Z",
-  "finishedAt": "2026-02-14T21:34:31.570Z",
-  "durationMs": 1,
+  "startedAt": "2026-02-15T02:07:57.993Z",
+  "finishedAt": "2026-02-15T02:07:58.539Z",
+  "durationMs": 546,
   "dryRun": true,
   "status": "pass",
   "steps": [
@@ -9,18 +9,18 @@
       "label": "release-clean-check",
       "command": "node tools/system/release-clean-check.js",
       "status": "skipped",
-      "startedAt": "2026-02-14T21:34:31.570Z",
-      "finishedAt": "2026-02-14T21:34:31.570Z",
+      "startedAt": "2026-02-15T02:07:57.994Z",
+      "finishedAt": "2026-02-15T02:07:57.994Z",
       "durationMs": 0,
       "error": null,
-      "reason": "DRY_RUN"
+      "reason": "ALLOW_DIRTY_WORKSPACE"
     },
     {
       "label": "deploy-candidate",
       "command": "",
       "status": "skipped",
-      "startedAt": "2026-02-14T21:34:31.570Z",
-      "finishedAt": "2026-02-14T21:34:31.570Z",
+      "startedAt": "2026-02-15T02:07:57.994Z",
+      "finishedAt": "2026-02-15T02:07:57.994Z",
       "durationMs": 0,
       "error": null,
       "reason": "DRY_RUN"
@@ -28,37 +28,78 @@
     {
       "label": "release-window-full",
       "command": "node tools/system/release-window.js",
-      "status": "skipped",
-      "startedAt": "2026-02-14T21:34:31.570Z",
-      "finishedAt": "2026-02-14T21:34:31.570Z",
-      "durationMs": 0,
+      "status": "pass",
+      "startedAt": "2026-02-15T02:07:57.994Z",
+      "finishedAt": "2026-02-15T02:07:58.303Z",
+      "durationMs": 309,
       "error": null,
-      "reason": "DRY_RUN"
+      "reason": null
     },
     {
       "label": "release-gate-post-deploy",
       "command": "node tools/system/release-gate.js",
       "status": "skipped",
-      "startedAt": "2026-02-14T21:34:31.570Z",
-      "finishedAt": "2026-02-14T21:34:31.570Z",
+      "startedAt": "2026-02-15T02:07:58.303Z",
+      "finishedAt": "2026-02-15T02:07:58.303Z",
       "durationMs": 0,
       "error": null,
       "reason": "DRY_RUN"
     },
     {
+      "label": "release-suite-confirm",
+      "command": "node tools/system/release-suite-confirm.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T02:07:58.303Z",
+      "finishedAt": "2026-02-15T02:07:58.335Z",
+      "durationMs": 32,
+      "error": null,
+      "reason": null
+    },
+    {
+      "label": "release-manifest",
+      "command": "node tools/system/release-manifest.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T02:07:58.335Z",
+      "finishedAt": "2026-02-15T02:07:58.408Z",
+      "durationMs": 73,
+      "error": null,
+      "reason": null
+    },
+    {
+      "label": "release-summary",
+      "command": "node tools/system/release-summary.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T02:07:58.408Z",
+      "finishedAt": "2026-02-15T02:07:58.445Z",
+      "durationMs": 37,
+      "error": null,
+      "reason": null
+    },
+    {
       "label": "launch-plan-status-final",
       "command": "node tools/system/launch-plan-status.js",
-      "status": "skipped",
-      "startedAt": "2026-02-14T21:34:31.570Z",
-      "finishedAt": "2026-02-14T21:34:31.570Z",
-      "durationMs": 0,
+      "status": "pass",
+      "startedAt": "2026-02-15T02:07:58.445Z",
+      "finishedAt": "2026-02-15T02:07:58.493Z",
+      "durationMs": 48,
       "error": null,
-      "reason": "DRY_RUN"
+      "reason": null
+    },
+    {
+      "label": "release-evidence-pack",
+      "command": "node tools/system/release-evidence-pack.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T02:07:58.493Z",
+      "finishedAt": "2026-02-15T02:07:58.539Z",
+      "durationMs": 46,
+      "error": null,
+      "reason": null
     }
   ],
   "config": {
     "deployCommandConfigured": false,
-    "runBackup": true
+    "runBackup": true,
+    "allowDirtyWorkspace": true
   },
   "artifacts": {
     "d0Report": "qa/release-d0-report.json",
@@ -67,7 +108,8 @@
     "launchPlanStatus": "qa/launch-plan-status.json",
     "releaseManifest": "qa/release-manifest.json",
     "releaseSummary": "qa/release-summary.md",
-    "releaseDecision": "qa/release-decision.json"
+    "releaseDecision": "qa/release-decision.json",
+    "suiteConfirmation": "qa/release-suite-confirmation.json"
   },
   "error": null
 }

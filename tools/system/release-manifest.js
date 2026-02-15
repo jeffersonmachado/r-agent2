@@ -12,6 +12,7 @@ const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa
 const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
 const LAUNCH_PLAN_STATUS_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
 const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
+const RELEASE_SUITE_CONFIRMATION_PATH = process.env.RELEASE_SUITE_CONFIRMATION_PATH || 'qa/release-suite-confirmation.json';
 const ALLOW_PENDING_RELEASE_WINDOW = String(process.env.RELEASE_MANIFEST_ALLOW_PENDING_RELEASE_WINDOW || '0') === '1';
 
 function readJson(relPath) {
@@ -46,6 +47,7 @@ function buildManifest() {
   const goNoGo = readJson(GO_NO_GO_REPORT_PATH);
   const launchPlan = readJson(LAUNCH_PLAN_STATUS_PATH);
   const releaseWindow = readJson(RELEASE_WINDOW_REPORT_PATH);
+  const suiteConfirmation = readJson(RELEASE_SUITE_CONFIRMATION_PATH);
 
   const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD'], 'unknown');
   const commit = runGit(['rev-parse', 'HEAD'], 'unknown');
@@ -60,6 +62,7 @@ function buildManifest() {
   const windowPass = ALLOW_PENDING_RELEASE_WINDOW
     ? !!releaseWindow
     : releaseWindow && releaseWindow.status === 'pass';
+  const suitesPass = suiteConfirmation && suiteConfirmation.status === 'pass';
 
   return {
     generatedAt: new Date().toISOString(),
@@ -91,8 +94,12 @@ function buildManifest() {
         path: RELEASE_WINDOW_REPORT_PATH,
         status: releaseWindow ? releaseWindow.status : 'missing',
       },
+      suites: {
+        path: RELEASE_SUITE_CONFIRMATION_PATH,
+        status: suiteConfirmation ? suiteConfirmation.status : 'missing',
+      },
     },
-    decision: gatePass && drillPass && go && planReady && windowPass ? 'READY' : 'BLOCKED',
+    decision: gatePass && drillPass && go && planReady && windowPass && suitesPass ? 'READY' : 'BLOCKED',
   };
 }
 

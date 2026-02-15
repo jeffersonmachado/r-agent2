@@ -207,6 +207,10 @@ function checkQAScripts() {
       description: 'Resumo executivo de release para handoff'
     },
     {
+      name: 'system:release-suite-confirm',
+      description: 'Confirmação da operação mínima por suíte no release'
+    },
+    {
       name: 'system:release-window',
       description: 'Execução padronizada da janela de release'
     },
@@ -250,6 +254,7 @@ function checkLaunchEvidence() {
   const releaseWindowPath = path.join(ROOT_DIR, 'qa', 'release-window-report.json');
   const releaseManifestPath = path.join(ROOT_DIR, 'qa', 'release-manifest.json');
   const releaseSummaryPath = path.join(ROOT_DIR, 'qa', 'release-summary.md');
+  const releaseSuiteConfirmationPath = path.join(ROOT_DIR, 'qa', 'release-suite-confirmation.json');
 
   const evidenceFiles = [
     { name: 'Release gate report', path: releaseGatePath },
@@ -259,6 +264,7 @@ function checkLaunchEvidence() {
     { name: 'Release window report', path: releaseWindowPath },
     { name: 'Release manifest', path: releaseManifestPath },
     { name: 'Release summary', path: releaseSummaryPath },
+    { name: 'Release suite confirmation', path: releaseSuiteConfirmationPath },
     { name: 'Smoke evidence summary', path: smokePath },
   ];
 

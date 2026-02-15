@@ -12,6 +12,7 @@ const RELEASE_DECISION_PATH = process.env.RELEASE_DECISION_PATH || 'qa/release-d
 const LAUNCH_PLAN_STATUS_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
 const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
 const RELEASE_MANIFEST_PATH = process.env.RELEASE_MANIFEST_PATH || 'qa/release-manifest.json';
+const RELEASE_SUITE_CONFIRMATION_PATH = process.env.RELEASE_SUITE_CONFIRMATION_PATH || 'qa/release-suite-confirmation.json';
 const OUTPUT_PATH = process.env.RELEASE_SUMMARY_PATH || 'qa/release-summary.md';
 
 function readJson(relPath) {
@@ -37,6 +38,7 @@ function main() {
   const plan = readJson(LAUNCH_PLAN_STATUS_PATH);
   const window = readJson(RELEASE_WINDOW_REPORT_PATH);
   const manifest = readJson(RELEASE_MANIFEST_PATH);
+  const suiteConfirmation = readJson(RELEASE_SUITE_CONFIRMATION_PATH);
 
   const lines = [];
   lines.push('# Release Summary');
@@ -52,6 +54,7 @@ function main() {
   lines.push(statusLine('Release decision', releaseDecision?.status));
   lines.push(statusLine('Launch plan', plan?.overall));
   lines.push(statusLine('Release window', window?.status));
+  lines.push(statusLine('Suites mínimas (Fast/Orders/PBX/ChatPro)', suiteConfirmation?.status));
   lines.push('');
   lines.push('## Reports');
   lines.push(statusLine('Release gate report', RELEASE_GATE_REPORT_PATH));
@@ -61,6 +64,7 @@ function main() {
   lines.push(statusLine('Launch plan status', LAUNCH_PLAN_STATUS_PATH));
   lines.push(statusLine('Release window report', RELEASE_WINDOW_REPORT_PATH));
   lines.push(statusLine('Release manifest', RELEASE_MANIFEST_PATH));
+  lines.push(statusLine('Release suite confirmation', RELEASE_SUITE_CONFIRMATION_PATH));
   lines.push('');
 
   const absOut = path.join(ROOT, OUTPUT_PATH);
