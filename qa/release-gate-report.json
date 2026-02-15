@@ -1,12 +1,12 @@
 {
-  "startedAt": "2026-02-14T18:53:27.840Z",
+  "startedAt": "2026-02-15T03:12:55.897Z",
   "status": "pass",
   "steps": [
     {
       "label": "autotest de stack (validação completa)",
       "command": "bash scripts/system-autotest-stack.sh",
       "status": "pass",
-      "durationMs": 308437
+      "durationMs": 289875
     }
   ],
   "selftest": {
@@ -17,7 +17,7 @@
     "path": "qa/smoke-evidence.json",
     "found": true,
     "data": {
-      "generatedAt": "2026-02-14T18:58:08.702Z",
+      "generatedAt": "2026-02-15T03:17:23.569Z",
       "smokes": {
         "l01": {
           "status": "pass",
@@ -25,12 +25,12 @@
           "evidencePath": "qa/l01-physical-queue-evidence.json",
           "evidence": {
             "smoke": "L-01",
-            "generatedAt": "2026-02-14T18:57:04.638Z",
+            "generatedAt": "2026-02-15T03:16:19.396Z",
             "ok": true,
             "tenantId": "system",
-            "locationId": "smoke-loc-1771095424638",
-            "queueId": "pq-1771095424650-6a3e0b62c05a",
-            "ticketId": "pt-1771095424745-5af3949fe610",
+            "locationId": "smoke-loc-1771125379396",
+            "queueId": "pq-1771125379409-5ece3b570637",
+            "ticketId": "pt-1771125379479-a6d99b3cf5b3",
             "stationId": "A1",
             "transitions": {
               "callNext": true,
@@ -52,18 +52,18 @@
           "evidencePath": "qa/l02-ura-publish-rollback-evidence.json",
           "evidence": {
             "smoke": "L-02",
-            "generatedAt": "2026-02-14T18:55:18.431Z",
+            "generatedAt": "2026-02-15T03:14:33.380Z",
             "ok": true,
             "authMode": "admin",
             "tenantId": "system",
             "versions": {
               "rollbackTargetVersion": 1,
-              "topVersionSignature": "8db985738bd1b530204fdd75"
+              "topVersionSignature": "3ddc9579b299758e336a5795"
             },
             "signatures": {
-              "v1": "8db985738bd1b530204fdd75",
-              "v2": "1b12e6e72026e0323daba5fe",
-              "rollback": "8db985738bd1b530204fdd75"
+              "v1": "3ddc9579b299758e336a5795",
+              "v2": "42decfefe0a09844e24b9465",
+              "rollback": "3ddc9579b299758e336a5795"
             },
             "audit": {
               "source": "api.pbx.audit",
@@ -78,14 +78,14 @@
           "evidencePath": "qa/l03-pbx-voice-tts-asr-evidence.json",
           "evidence": {
             "smoke": "L-03",
-            "generatedAt": "2026-02-14T18:56:49.294Z",
+            "generatedAt": "2026-02-15T03:16:04.308Z",
             "ok": true,
             "authMode": "admin",
             "tenantId": "system",
-            "flowId": "flow-voice-tts-asr-smoke-1771095318541",
-            "callId": "call-voice-tts-asr-1771095318541",
-            "extension": "1141",
-            "dialplanSignature": "1b12e6e72026e0323daba5fe",
+            "flowId": "flow-voice-tts-asr-smoke-1771125273554",
+            "callId": "call-voice-tts-asr-1771125273554",
+            "extension": "1154",
+            "dialplanSignature": "42decfefe0a09844e24b9465",
             "runtime": {
               "startAction": "prompt_listen",
               "asrAction": "listen_asr",
@@ -93,7 +93,7 @@
             },
             "realCall": {
               "attempted": true,
-              "click2callId": "cc_c2c-1771095318626-dac9e3ca4607",
+              "click2callId": "cc_c2c-1771125273645-d5e0bebd565c",
               "click2callStatus": "originated",
               "cdrFound": false,
               "cdr": null
@@ -107,13 +107,13 @@
           "evidencePath": "qa/l04-pbx-call-events-runtime-evidence.json",
           "evidence": {
             "smoke": "L-04",
-            "generatedAt": "2026-02-14T18:57:04.057Z",
+            "generatedAt": "2026-02-15T03:16:18.990Z",
             "ok": true,
             "authMode": "admin",
             "tenantId": "system",
             "cdr": {
-              "id": "cdr-l04-1771095409433",
-              "uniqueid": "l04-1771095409433",
+              "id": "cdr-l04-1771125364461",
+              "uniqueid": "l04-1771125364461",
               "source": "synthetic_insert"
             },
             "trigger": {
@@ -126,23 +126,23 @@
                 "scanned": 1,
                 "emitted": 3,
                 "cursor": {
-                  "calldate": "2026-02-14T18:56:50.042Z",
-                  "cdrId": "cdr-l04-1771095409433"
+                  "calldate": "2026-02-15T03:16:05.013Z",
+                  "cdrId": "cdr-l04-1771125364461"
                 }
               },
               "eventIds": [
-                "evt-1771095411074-b44595ac8342",
-                "evt-1771095411100-0c41db362ddb",
-                "evt-1771095411106-d4ffed07b5dc"
+                "evt-1771125366039-3f1af075d933",
+                "evt-1771125366062-a406f8782d26",
+                "evt-1771125366067-413f8b4eca10"
               ],
               "queue": {
-                "consumer": "webhooks_l04_1771095411116",
+                "consumer": "webhooks_l04_1771125366078",
                 "enqueue": {
                   "ok": true,
                   "enqueued": 16,
                   "cursor": {
-                    "receivedAt": "2026-02-14T18:56:51.106Z",
-                    "eventId": "evt-1771095411106-d4ffed07b5dc"
+                    "receivedAt": "2026-02-15T03:16:06.067Z",
+                    "eventId": "evt-1771125366067-413f8b4eca10"
                   }
                 },
                 "jobsTotal": 3,
@@ -153,10 +153,10 @@
               }
             },
             "flow": {
-              "flowId": "flow-pbx-call-events-runtime-smoke-1771095409433",
-              "executionId": "fx-1771095423547-e348fe64e39d",
+              "flowId": "flow-pbx-call-events-runtime-smoke-1771125364461",
+              "executionId": "fx-1771125378184-6ccacf571ff8",
               "status": "done",
-              "latencyMs": 280,
+              "latencyMs": 282,
               "nodesCount": 3
             },
             "dispatch": {
@@ -173,15 +173,15 @@
           "evidencePath": "qa/l05-chatpro-omnichannel-evidence.json",
           "evidence": {
             "smoke": "L-05",
-            "generatedAt": "2026-02-14T18:57:05.294Z",
+            "generatedAt": "2026-02-15T03:16:19.982Z",
             "ok": true,
             "authMode": "admin",
             "tenantId": "system",
             "ticket": {
-              "id": "default-1771095425311-cquolls",
+              "id": "default-1771125380003-eh2r33f",
               "created": true,
-              "assignedTo": "e1699568-97f5-46dc-be43-80d72220bbe8",
-              "queueAfterTransfer": "ux1_smoke_1771095425294",
+              "assignedTo": "0940aa63-5ab0-40e1-9ec8-aba514cce772",
+              "queueAfterTransfer": "ux1_smoke_1771125379982",
               "originalQueue": "default",
               "originalAssignedTo": null
             },
@@ -209,6 +209,6 @@
     }
   },
   "error": null,
-  "finishedAt": "2026-02-14T18:58:36.278Z",
-  "durationMs": 308438
+  "finishedAt": "2026-02-15T03:17:45.774Z",
+  "durationMs": 289876
 }

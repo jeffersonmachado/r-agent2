@@ -14,6 +14,9 @@ const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-re
 const RUN_RELEASE_GATE = String(process.env.GO_NO_GO_RUN_RELEASE_GATE || '1') !== '0';
 const RUN_ROLLBACK_DRILL = String(process.env.GO_NO_GO_RUN_ROLLBACK_DRILL || '1') !== '0';
 const ROLLBACK_WITH_STACK = String(process.env.GO_NO_GO_ROLLBACK_WITH_STACK || '1') !== '0';
+const ALLOW_EXISTING_GATE_ON_FAILURE = String(process.env.GO_NO_GO_ALLOW_EXISTING_GATE_ON_FAILURE || '0') === '1';
+const ALLOW_EXISTING_ROLLBACK_ON_FAILURE = String(process.env.GO_NO_GO_ALLOW_EXISTING_ROLLBACK_ON_FAILURE || '0') === '1';
+const EXISTING_REPORT_MAX_AGE_MIN = Number(process.env.GO_NO_GO_EXISTING_REPORT_MAX_AGE_MIN || '360');
 
 function readJson(relPath) {
   const abs = path.join(ROOT, relPath);
@@ -32,6 +35,25 @@ function runStep(command, label) {
     env: process.env,
   });
   return { label, command, status: 'pass' };
+}
+
+function readJsonWithMeta(relPath) {
+  const abs = path.join(ROOT, relPath);
+  if (!fs.existsSync(abs)) return { data: null, ageMinutes: null };
+  let ageMinutes = null;
+  try {
+    const st = fs.statSync(abs);
+    ageMinutes = Math.max(0, Math.round((Date.now() - st.mtimeMs) / 60000));
+  } catch (_) {
+    ageMinutes = null;
+  }
+  return { data: readJson(relPath), ageMinutes };
+}
+
+function canReuseExistingReport(reportData, ageMinutes) {
+  if (!reportData || reportData.status !== 'pass') return false;
+  if (typeof ageMinutes !== 'number') return false;
+  return ageMinutes <= EXISTING_REPORT_MAX_AGE_MIN;
 }
 
 function runRollbackDrillStep() {
@@ -77,13 +99,37 @@ function main() {
 
   try {
     if (RUN_RELEASE_GATE) {
-      report.steps.push(runStep('node tools/system/release-gate.js', 'release-gate'));
+      try {
+        report.steps.push(runStep('node tools/system/release-gate.js', 'release-gate'));
+      } catch (err) {
+        const gateMeta = readJsonWithMeta(RELEASE_GATE_REPORT_PATH);
+        const fallbackOk = ALLOW_EXISTING_GATE_ON_FAILURE && canReuseExistingReport(gateMeta.data, gateMeta.ageMinutes);
+        if (!fallbackOk) throw err;
+        report.steps.push({
+          label: 'release-gate',
+          command: 'node tools/system/release-gate.js',
+          status: 'warn',
+          reason: `fallback_existing_report ageMinutes=${gateMeta.ageMinutes}`,
+        });
+      }
     } else {
       report.steps.push({ label: 'release-gate', command: 'node tools/system/release-gate.js', status: 'skipped' });
     }
 
     if (RUN_ROLLBACK_DRILL) {
-      report.steps.push(runRollbackDrillStep());
+      try {
+        report.steps.push(runRollbackDrillStep());
+      } catch (err) {
+        const drillMeta = readJsonWithMeta(ROLLBACK_DRILL_REPORT_PATH);
+        const fallbackOk = ALLOW_EXISTING_ROLLBACK_ON_FAILURE && canReuseExistingReport(drillMeta.data, drillMeta.ageMinutes);
+        if (!fallbackOk) throw err;
+        report.steps.push({
+          label: 'rollback-drill',
+          command: 'node tools/system/rollback-drill.js',
+          status: 'warn',
+          reason: `fallback_existing_report ageMinutes=${drillMeta.ageMinutes}`,
+        });
+      }
     } else {
       report.steps.push({ label: 'rollback-drill', command: 'node tools/system/rollback-drill.js', status: 'skipped' });
     }

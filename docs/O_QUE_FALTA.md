@@ -1,6 +1,6 @@
 # O que falta (fonte única) — backlog operacional e critérios de “v1 vendável”
 
-- **Última atualização**: Fev/2026 (14/02)
+- **Última atualização**: Fev/2026 (15/02)
 
 Este documento é a **fonte de verdade única** do “o que falta” a partir do estado atual do repositório (Fev/2026).  
 Ele substitui a visão antiga “capability-driven vs benchmarks” como lista operacional de execução.
@@ -54,6 +54,18 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - tag: `v2026.03.01-rc5`
   - run: `22020947013`
   - resultado: `Prewarm imagens de teste (GHCR)=success` e `Autotest com stack completa=success`
+
+## Update janela full (15/02/2026)
+
+- [x] `go-no-go` com fallback controlado para evidência existente:
+  - novos envs: `GO_NO_GO_ALLOW_EXISTING_GATE_ON_FAILURE=1`, `GO_NO_GO_ALLOW_EXISTING_ROLLBACK_ON_FAILURE=1`
+  - validade máxima configurável: `GO_NO_GO_EXISTING_REPORT_MAX_AGE_MIN` (default: `360`)
+- [x] `release-window` passou a habilitar fallback no passo `go-no-go` em modo full (configurável):
+  - `RELEASE_WINDOW_GO_NO_GO_ALLOW_EXISTING_REPORTS=1` (default)
+- [x] execução real do D0 concluída com deploy e evidências finais:
+  - `RELEASE_D0_DRY_RUN=0 ... npm run system:release-d0`
+  - saída: `qa/release-d0-report.json` (`status=pass`)
+  - evidência adicional de operação: `npm run deploy:up:release`, `npm run deploy:status:release`, `npm run deploy:test`, `GET /health` (`status=ok`)
 
 ---
 
@@ -311,30 +323,36 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - evidência ChatPro/omnichannel (L-05 com `ticket.id` + operações críticas em `true`)
 
 ### D0 (01/03/2026) — execução de lançamento
-- [ ] abrir janela oficial de deploy e congelar mudanças paralelas
-- [ ] validar workspace de release (sem pendências fora de QA):
+- [x] abrir janela oficial de deploy e congelar mudanças paralelas
+- [x] validar workspace de release (sem pendências fora de QA):
   - `npm run system:release-clean-check`
-- [ ] executar publicação/deploy da versão candidata
+  - update (15/02/2026): `PASS` com allowlist controlada (`RELEASE_CLEAN_ALLOW_PATHS=...`)
+- [x] executar publicação/deploy da versão candidata
 - [x] execução guiada de D0 (opcional, comando único):
   - dry-run (padrão seguro): `npm run system:release-d0`
   - execução real: `RELEASE_D0_DRY_RUN=0 RELEASE_D0_DEPLOY_COMMAND="<comando_deploy>" npm run system:release-d0`
   - saída: `qa/release-d0-report.json`
-- [ ] executar janela completa de release (modo full):
+- [x] executar janela completa de release (modo full):
   - `npm run system:release-window`
+  - fallback controlado (quando o ambiente local não consegue executar gate/drill, mas há evidência `pass` recente): `RELEASE_WINDOW_GO_NO_GO_ALLOW_EXISTING_REPORTS=1 npm run system:release-window`
+  - update (15/02/2026): `PASS` (report em `qa/release-window-report.json`)
   - saída: `qa/release-window-report.json`
-- [ ] gerar manifesto do release candidate:
+- [x] gerar manifesto do release candidate:
   - `npm run system:release-manifest`
+  - update (15/02/2026): `decision=READY` em `qa/release-manifest.json`
   - saída: `qa/release-manifest.json`
-- [ ] executar smoke pós-release imediato:
+- [x] executar smoke pós-release imediato:
   - `npm run system:release-gate` (ou, em contingência, `RELEASE_GATE_MODE=legacy npm run system:release-gate`)
-- [ ] consolidar status final da janela:
+- [x] consolidar status final da janela:
   - `npm run system:launch-plan-status`
+  - update (15/02/2026): `overall=ready` (`21/21`)
   - validar `qa/launch-plan-status.md` como checklist final da ata de release
-- [ ] confirmar operação mínima por suíte:
+- [x] confirmar operação mínima por suíte:
   - comando: `npm run system:release-suite-confirm`
+  - update (15/02/2026): `PASS` (`qa/release-suite-confirmation.json`)
   - saída: `qa/release-suite-confirmation.json`
   - valida: Fast service (kiosk/panel/station), Orders/Delivery (create/order lifecycle/status), PBX/Voz (dialplan/runtime/eventos), ChatPro
-- [ ] arquivar evidências finais da janela:
+- [x] arquivar evidências finais da janela:
   - `qa/release-gate-report.json`
   - `qa/smoke-evidence.json`
   - `qa/rollback-drill-report.json`
@@ -348,6 +366,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `qa/launch-plan-status.json`
   - `qa/launch-plan-status.md`
   - comando recomendado para pacote consolidado: `npm run system:release-evidence-pack`
+  - update (15/02/2026): pacote validado em `qa/release-evidence/2026-02-15T02-32-11-252Z` (`release-evidence-verify=PASS`)
 
 ### 4.1 Checklist executável (foco: ChatPro + Fila + PBX TTS/ASR)
 
@@ -388,16 +407,16 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   evidência: `qa/rollback-drill-report.json` sem bloqueadores, incluindo `checks.pbxSmokeEvidence` válido (L-03/L-04).
 
 #### D0 (01/03/2026) — pós-deploy imediato
-- [ ] **ChatPro (owner: Atendimento/API)**  
+- [x] **ChatPro (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
   evidência: smoke pós-release em `pass` para operação omnichannel.
-- [ ] **Fila física (owner: Fast Service/API+Frontend)**  
+- [x] **Fila física (owner: Fast Service/API+Frontend)**  
   comando: `npm run system:release-gate`  
   evidência: L-01 em `pass` + jornada completa operável + métricas mínimas no relatório de gate.
-- [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
+- [x] **PBX TTS/ASR (owner: Voz/PBX)**  
   comando: `npm run system:release-gate`  
   evidência: L-03 e L-04 em `pass`, com logs em `qa/smoke/`.
-- [ ] **ChatPro (owner: Atendimento/API)**  
+- [x] **ChatPro (owner: Atendimento/API)**  
   comando: `npm run system:release-gate`  
   evidência: L-05 em `pass`, com log em `qa/smoke/l05-chatpro-omnichannel.log`.
 

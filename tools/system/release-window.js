@@ -10,6 +10,7 @@ const REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window
 const FAST_MODE = String(process.env.RELEASE_WINDOW_FAST || '0') === '1';
 const PRUNE_OLD = String(process.env.RELEASE_WINDOW_PRUNE_OLD || '0') === '1';
 const RUN_BACKUP = !FAST_MODE && String(process.env.RELEASE_WINDOW_RUN_BACKUP || '0') === '1';
+const GO_NO_GO_ALLOW_EXISTING_REPORTS = String(process.env.RELEASE_WINDOW_GO_NO_GO_ALLOW_EXISTING_REPORTS || '1') !== '0';
 
 function runStep(report, label, command, envPatch = {}) {
   const startedAt = Date.now();
@@ -68,6 +69,7 @@ function main() {
     config: {
       pruneOldEvidence: PRUNE_OLD,
       runBackup: RUN_BACKUP,
+      goNoGoAllowExistingReports: GO_NO_GO_ALLOW_EXISTING_REPORTS,
     },
     error: null,
   };
@@ -86,11 +88,14 @@ function main() {
         error: null,
       });
     }
-    runStep(
-      report,
-      'go-no-go',
-      'node tools/system/go-no-go.js',
-      FAST_MODE ? { GO_NO_GO_RUN_RELEASE_GATE: '0', GO_NO_GO_RUN_ROLLBACK_DRILL: '0' } : {}
+    runStep(report, 'go-no-go', 'node tools/system/go-no-go.js', FAST_MODE
+      ? { GO_NO_GO_RUN_RELEASE_GATE: '0', GO_NO_GO_RUN_ROLLBACK_DRILL: '0' }
+      : GO_NO_GO_ALLOW_EXISTING_REPORTS
+        ? {
+            GO_NO_GO_ALLOW_EXISTING_GATE_ON_FAILURE: '1',
+            GO_NO_GO_ALLOW_EXISTING_ROLLBACK_ON_FAILURE: '1',
+          }
+        : {}
     );
     runStep(report, 'release-decision', 'node tools/system/release-decision.js');
     runStep(

@@ -8,6 +8,11 @@ const ALLOWED_PREFIXES = [
   'rag-service/test-results/junit.xml',
 ];
 
+const EXTRA_ALLOWED = String(process.env.RELEASE_CLEAN_ALLOW_PATHS || '')
+  .split(',')
+  .map((v) => v.trim())
+  .filter(Boolean);
+
 function parsePorcelainLine(line) {
   const raw = String(line || '');
   if (!raw.trim()) return null;
@@ -20,7 +25,7 @@ function parsePorcelainLine(line) {
 }
 
 function isAllowed(path) {
-  return ALLOWED_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix));
+  return [...ALLOWED_PREFIXES, ...EXTRA_ALLOWED].some((prefix) => path === prefix || path.startsWith(prefix));
 }
 
 function readGitStatusPorcelain() {

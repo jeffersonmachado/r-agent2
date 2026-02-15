@@ -1,0 +1,45 @@
+{
+  "startedAt": "2026-02-15T02:35:36.843Z",
+  "finishedAt": "2026-02-15T02:36:37.029Z",
+  "durationMs": 60186,
+  "dryRun": false,
+  "status": "fail",
+  "steps": [
+    {
+      "label": "release-clean-check",
+      "command": "node tools/system/release-clean-check.js",
+      "status": "skipped",
+      "startedAt": "2026-02-15T02:35:36.843Z",
+      "finishedAt": "2026-02-15T02:35:36.843Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "ALLOW_DIRTY_WORKSPACE"
+    },
+    {
+      "label": "deploy-candidate",
+      "command": "npm run deploy:build && npm run deploy:up && npm run deploy:status",
+      "status": "fail",
+      "startedAt": "2026-02-15T02:35:36.843Z",
+      "finishedAt": "2026-02-15T02:36:37.029Z",
+      "durationMs": 60186,
+      "error": "Command failed: npm run deploy:build && npm run deploy:up && npm run deploy:status",
+      "reason": null
+    }
+  ],
+  "config": {
+    "deployCommandConfigured": true,
+    "runBackup": false,
+    "allowDirtyWorkspace": true
+  },
+  "artifacts": {
+    "d0Report": "qa/release-d0-report.json",
+    "releaseWindowReport": "qa/release-window-report.json",
+    "releaseGateReport": "qa/release-gate-report.json",
+    "launchPlanStatus": "qa/launch-plan-status.json",
+    "releaseManifest": "qa/release-manifest.json",
+    "releaseSummary": "qa/release-summary.md",
+    "releaseDecision": "qa/release-decision.json",
+    "suiteConfirmation": "qa/release-suite-confirmation.json"
+  },
+  "error": "Command failed: npm run deploy:build && npm run deploy:up && npm run deploy:status"
+}

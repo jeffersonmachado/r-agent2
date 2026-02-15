@@ -1,0 +1,61 @@
+{
+  "smoke": "L-04",
+  "generatedAt": "2026-02-15T02:29:03.166Z",
+  "ok": true,
+  "authMode": "admin",
+  "tenantId": "system",
+  "cdr": {
+    "id": "cdr-l04-1771122528213",
+    "uniqueid": "l04-1771122528213",
+    "source": "synthetic_insert"
+  },
+  "trigger": {
+    "type": "CallEnded",
+    "source": "pbx.cdr"
+  },
+  "pipeline": {
+    "scan": {
+      "ok": true,
+      "scanned": 1,
+      "emitted": 3,
+      "cursor": {
+        "calldate": "2026-02-15T02:28:48.794Z",
+        "cdrId": "cdr-l04-1771122528213"
+      }
+    },
+    "eventIds": [
+      "evt-1771122529727-70fb0bb29ebd",
+      "evt-1771122529749-4339f4b4f31f",
+      "evt-1771122529754-3c4d3b3db77f"
+    ],
+    "queue": {
+      "consumer": "webhooks_l04_1771122529763",
+      "enqueue": {
+        "ok": true,
+        "enqueued": 16,
+        "cursor": {
+          "receivedAt": "2026-02-15T02:28:49.754Z",
+          "eventId": "evt-1771122529754-3c4d3b3db77f"
+        }
+      },
+      "jobsTotal": 3,
+      "jobsDone": 3,
+      "jobsDead": 0,
+      "jobsPending": 0,
+      "lastErrors": []
+    }
+  },
+  "flow": {
+    "flowId": "flow-pbx-call-events-runtime-smoke-1771122528213",
+    "executionId": "fx-1771122542540-705b9e9058f6",
+    "status": "done",
+    "latencyMs": 281,
+    "nodesCount": 3
+  },
+  "dispatch": {
+    "metricsAvailable": false,
+    "doneRecent": 0,
+    "deadRecent": 0,
+    "flowTriggerFailuresRecent": 0
+  }
+}

@@ -326,37 +326,38 @@ function validateRedisConfig() {
 
 /**
  * Obtém a URL de conexão do banco de dados.
- * Prioridade: config.json > env vars (DATABASE_URL ou PGHOST/PGUSER/etc)
+ * Prioridade: env vars (DATABASE_URL/PG*) > config.json
  * 
  * @returns {string} URL de conexão do banco
  */
 function getDatabaseUrl() {
-  // 1) Tenta config.json primeiro
+  // 1) DATABASE_URL explícita em env sempre vence (produção/containers)
+  if (process.env.DATABASE_URL) {
+    // eslint-disable-next-line no-console
+    console.log('[Config] Usando DATABASE_URL de variável de ambiente');
+    return process.env.DATABASE_URL;
+  }
+
+  // 2) Se variáveis PG* estiverem presentes, monta URL a partir delas
+  if (process.env.PGHOST || process.env.PGUSER || process.env.PGDATABASE || process.env.PGPASSWORD || process.env.PGPORT) {
+    const host = process.env.PGHOST || 'localhost';
+    const port = process.env.PGPORT || '5432';
+    const database = process.env.PGDATABASE || 'r_agent2';
+    const username = process.env.PGUSER || 'postgres';
+    const password = process.env.PGPASSWORD || 'postgres';
+    // eslint-disable-next-line no-console
+    console.log('[Config] Usando variáveis de ambiente individuais para banco');
+    return `postgres://${username}:${password}@${host}:${port}/${database}`;
+  }
+
+  // 3) Fallback para config.json
   const configUrl = get('database.url');
   if (configUrl) {
     return configUrl;
   }
 
-  // 2) Fallback para DATABASE_URL (env)
-  if (process.env.DATABASE_URL) {
-    // eslint-disable-next-line no-console
-    console.log('[Config] Usando DATABASE_URL de variável de ambiente (fallback)');
-    return process.env.DATABASE_URL;
-  }
-
-  // 3) Fallback: constrói URL a partir de variáveis individuais
-  const host = process.env.PGHOST || get('database.host') || 'localhost';
-  const port = process.env.PGPORT || get('database.port') || '5432';
-  const database = process.env.PGDATABASE || get('database.database') || 'r_agent2';
-  const username = process.env.PGUSER || get('database.username') || 'postgres';
-  const password = process.env.PGPASSWORD || get('database.password') || 'postgres';
-
-  if (process.env.PGHOST || process.env.PGUSER) {
-    // eslint-disable-next-line no-console
-    console.log('[Config] Usando variáveis de ambiente individuais para banco (fallback)');
-  }
-
-  return `postgres://${username}:${password}@${host}:${port}/${database}`;
+  // 4) Último fallback local
+  return 'postgres://postgres:postgres@localhost:5432/r_agent2';
 }
 
 /**
@@ -427,4 +428,3 @@ module.exports = {
   getDatabaseSsl,
   parseDatabaseUrlSafe,
 };
-

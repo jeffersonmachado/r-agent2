@@ -1,0 +1,33 @@
+{
+  "smoke": "L-05",
+  "generatedAt": "2026-02-15T02:29:04.276Z",
+  "ok": true,
+  "authMode": "admin",
+  "tenantId": "system",
+  "ticket": {
+    "id": "default-1771122544296-xby2jz7",
+    "created": true,
+    "assignedTo": "eb2d7308-bb80-4b63-8c01-2c9ef2a1975e",
+    "queueAfterTransfer": "ux1_smoke_1771122544276",
+    "originalQueue": "default",
+    "originalAssignedTo": null
+  },
+  "conversation": {
+    "noteFound": true,
+    "messagesCount": 6
+  },
+  "operations": {
+    "assign": true,
+    "transfer": true,
+    "note": true,
+    "addTag": true,
+    "removeTag": true,
+    "quickReplyCreate": true,
+    "quickReplyUse": true,
+    "quickReplyList": true,
+    "phoneMaskingToggle": "unavailable"
+  },
+  "warnings": [
+    "phone_masking_unavailable:503"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "startedAt": "2026-02-15T02:19:14.916Z",
+  "finishedAt": "2026-02-15T02:25:28.158Z",
+  "durationMs": 373242,
+  "mode": "full",
+  "status": "fail",
+  "steps": [
+    {
+      "label": "release-clean-check",
+      "command": "node tools/system/release-clean-check.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T02:19:14.917Z",
+      "finishedAt": "2026-02-15T02:19:14.967Z",
+      "durationMs": 50,
+      "error": null
+    },
+    {
+      "label": "go-no-go",
+      "command": "node tools/system/go-no-go.js",
+      "status": "fail",
+      "startedAt": "2026-02-15T02:19:14.967Z",
+      "finishedAt": "2026-02-15T02:25:28.158Z",
+      "durationMs": 373191,
+      "error": "Command failed: node tools/system/go-no-go.js"
+    }
+  ],
+  "artifacts": {
+    "goNoGo": "qa/go-no-go-report.json",
+    "launchPlanStatus": "qa/launch-plan-status.json",
+    "launchPlanStatusMd": "qa/launch-plan-status.md",
+    "releaseManifest": "qa/release-manifest.json",
+    "releaseSummary": "qa/release-summary.md",
+    "evidencePackRoot": "qa/release-evidence",
+    "releaseWindowReport": "qa/release-window-report.json"
+  },
+  "config": {
+    "pruneOldEvidence": false,
+    "runBackup": false
+  },
+  "error": "Command failed: node tools/system/go-no-go.js"
+}

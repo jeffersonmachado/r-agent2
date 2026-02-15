@@ -1,12 +1,12 @@
 {
   "smoke": "L-04",
-  "generatedAt": "2026-02-14T18:57:04.057Z",
+  "generatedAt": "2026-02-15T03:16:18.990Z",
   "ok": true,
   "authMode": "admin",
   "tenantId": "system",
   "cdr": {
-    "id": "cdr-l04-1771095409433",
-    "uniqueid": "l04-1771095409433",
+    "id": "cdr-l04-1771125364461",
+    "uniqueid": "l04-1771125364461",
     "source": "synthetic_insert"
   },
   "trigger": {
@@ -19,23 +19,23 @@
       "scanned": 1,
       "emitted": 3,
       "cursor": {
-        "calldate": "2026-02-14T18:56:50.042Z",
-        "cdrId": "cdr-l04-1771095409433"
+        "calldate": "2026-02-15T03:16:05.013Z",
+        "cdrId": "cdr-l04-1771125364461"
       }
     },
     "eventIds": [
-      "evt-1771095411074-b44595ac8342",
-      "evt-1771095411100-0c41db362ddb",
-      "evt-1771095411106-d4ffed07b5dc"
+      "evt-1771125366039-3f1af075d933",
+      "evt-1771125366062-a406f8782d26",
+      "evt-1771125366067-413f8b4eca10"
     ],
     "queue": {
-      "consumer": "webhooks_l04_1771095411116",
+      "consumer": "webhooks_l04_1771125366078",
       "enqueue": {
         "ok": true,
         "enqueued": 16,
         "cursor": {
-          "receivedAt": "2026-02-14T18:56:51.106Z",
-          "eventId": "evt-1771095411106-d4ffed07b5dc"
+          "receivedAt": "2026-02-15T03:16:06.067Z",
+          "eventId": "evt-1771125366067-413f8b4eca10"
         }
       },
       "jobsTotal": 3,
@@ -46,10 +46,10 @@
     }
   },
   "flow": {
-    "flowId": "flow-pbx-call-events-runtime-smoke-1771095409433",
-    "executionId": "fx-1771095423547-e348fe64e39d",
+    "flowId": "flow-pbx-call-events-runtime-smoke-1771125364461",
+    "executionId": "fx-1771125378184-6ccacf571ff8",
     "status": "done",
-    "latencyMs": 280,
+    "latencyMs": 282,
     "nodesCount": 3
   },
   "dispatch": {

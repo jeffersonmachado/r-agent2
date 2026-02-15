@@ -1,7 +1,7 @@
 {
-  "startedAt": "2026-02-14T19:02:37.124Z",
-  "finishedAt": "2026-02-14T19:02:37.629Z",
-  "durationMs": 506,
+  "startedAt": "2026-02-15T03:12:26.815Z",
+  "finishedAt": "2026-02-15T03:12:27.399Z",
+  "durationMs": 584,
   "status": "pass",
   "config": {
     "baseUrl": "http://localhost:13001",
@@ -14,7 +14,7 @@
     "tenantId": "system",
     "evidence": {
       "status": 200,
-      "durationMs": 138
+      "durationMs": 174
     },
     "error": null
   },
@@ -23,18 +23,18 @@
       "ok": true,
       "status": 200,
       "selftestStatus": "WARN",
-      "durationMs": 225
+      "durationMs": 229
     },
     "orders": {
       "ok": true,
       "status": 200,
-      "durationMs": 26,
+      "durationMs": 33,
       "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"createdCount\":0,\"confirmedCount\":0,\"preparingCount\":0,\"readyCount\":0,\"dispatchedCount\":0,\"deliveredCount\":0,\"cancelledCount\":0,\"avgOrderToReadySeconds\":null,\"avgOrderToDeliverSeconds\":null,\"slaOrderToReadyBreachedCount\":0,\"slaOrderToDeliverBreachedCount\":0,\"slaOrderToReadyMinutes\":25,\"slaOrderToDeliverMinutes\":60},\"byHour\":[]}"
     },
     "fastService": {
       "ok": true,
       "status": 200,
-      "durationMs": 21,
+      "durationMs": 30,
       "payloadSnippet": "{\"ok\":true,\"tenantId\":\"system\",\"locationId\":null,\"today\":{\"doneCount\":0,\"abandonedCount\":0,\"waitingCount\":0,\"calledCount\":0,\"inServiceCount\":0,\"pausedCount\":0,\"activeCount\":0,\"avgWaitSeconds\":null,\"avgServiceSeconds\":null,\"avgSkipCount\":null,\"abandonmentRate\":0},\"byStation\":[],\"byQueue\":[],\"byHour\":[]}"
     },
     "pbx": {
@@ -64,7 +64,7 @@
         "l04": {
           "status": "pass",
           "evidenceOk": true,
-          "executionId": "fx-1771095423547-e348fe64e39d",
+          "executionId": "fx-1771124974074-b3ce691a9e4f",
           "nodesCount": 3
         }
       },
@@ -74,7 +74,7 @@
       "ok": true,
       "status": 200,
       "selftestStatus": "WARN",
-      "durationMs": 84
+      "durationMs": 100
     }
   },
   "error": null

@@ -1,0 +1,71 @@
+{
+  "startedAt": "2026-02-15T02:25:40.308Z",
+  "finishedAt": "2026-02-15T02:32:10.919Z",
+  "status": "pass",
+  "decision": "GO",
+  "steps": [
+    {
+      "label": "release-gate",
+      "command": "node tools/system/release-gate.js",
+      "status": "pass"
+    },
+    {
+      "label": "rollback-drill",
+      "command": "bash -lc 'set -euo pipefail; cleanup(){ bash scripts/test-stack-down.sh || true; }; trap cleanup EXIT; bash scripts/test-stack-up.sh; bash scripts/wait-ready.sh; ROLLBACK_DRILL_API_URL=\"${ROLLBACK_DRILL_API_URL:-http://localhost:13001}\" TEST_TENANT_ID=\"${TEST_TENANT_ID:-system}\" node tools/system/rollback-drill.js'",
+      "status": "pass"
+    }
+  ],
+  "checks": {
+    "releaseGate": {
+      "path": "qa/release-gate-report.json",
+      "loaded": true,
+      "status": "pass"
+    },
+    "rollbackDrill": {
+      "path": "qa/rollback-drill-report.json",
+      "loaded": true,
+      "status": "pass"
+    },
+    "smoke": {
+      "path": "qa/smoke-evidence.json",
+      "loaded": true,
+      "status": "pass",
+      "pbx": {
+        "ok": true,
+        "click2callStatus": "originated",
+        "originated": true,
+        "cdrFound": false,
+        "acceptedWithoutCdr": true
+      },
+      "pillars": {
+        "chatpro": {
+          "ok": true,
+          "ticketId": "default-1771122544296-xby2jz7"
+        },
+        "queue": {
+          "ok": true,
+          "queueId": "pq-1771122543554-6873d775722d",
+          "ticketId": "pt-1771122543637-e660f9269bb5",
+          "doneCount": 1
+        },
+        "pbx": {
+          "ok": true,
+          "l03": {
+            "ok": true,
+            "click2callStatus": "originated",
+            "originated": true,
+            "cdrFound": false,
+            "acceptedWithoutCdr": true
+          },
+          "l04": {
+            "ok": true,
+            "executionId": "fx-1771122542540-705b9e9058f6",
+            "nodesCount": 3
+          }
+        }
+      },
+      "reasons": []
+    }
+  },
+  "reasons": []
+}

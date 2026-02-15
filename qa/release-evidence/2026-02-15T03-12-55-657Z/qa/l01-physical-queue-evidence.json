@@ -1,0 +1,22 @@
+{
+  "smoke": "L-01",
+  "generatedAt": "2026-02-15T03:09:35.176Z",
+  "ok": true,
+  "tenantId": "system",
+  "locationId": "smoke-loc-1771124975176",
+  "queueId": "pq-1771124975187-3c09e84c7830",
+  "ticketId": "pt-1771124975281-3816ae95e8f0",
+  "stationId": "A1",
+  "transitions": {
+    "callNext": true,
+    "start": true,
+    "pause": true,
+    "resume": true,
+    "finish": true
+  },
+  "metrics": {
+    "doneCount": 1,
+    "pausedCount": 0,
+    "byQueueCount": 1
+  }
+}

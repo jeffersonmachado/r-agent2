@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-02-15T02:32:11.032Z",
+  "overall": "ready",
+  "summary": {
+    "done": 21,
+    "total": 21,
+    "progressPct": 100
+  },
+  "milestones": {
+    "d7": [
+      {
+        "done": true,
+        "label": "Executar gate completo",
+        "detail": "qa/release-gate-report.json"
+      },
+      {
+        "done": true,
+        "label": "Validar L-01..L-05 em pass",
+        "detail": "qa/smoke-evidence.json"
+      },
+      {
+        "done": true,
+        "label": "Congelar escopo da release",
+        "detail": "qa/release-decision.json#scope"
+      },
+      {
+        "done": true,
+        "label": "Confirmar branch/tag candidata e owners de plantao",
+        "detail": "qa/release-decision.json#candidate-owners"
+      },
+      {
+        "done": true,
+        "label": "ChatPro com evidência operacional",
+        "detail": "qa/smoke-evidence.json#l05"
+      },
+      {
+        "done": true,
+        "label": "Fila física com jornada completa",
+        "detail": "qa/smoke-evidence.json#l01"
+      },
+      {
+        "done": true,
+        "label": "PBX TTS/ASR + call events com runtime",
+        "detail": "qa/smoke-evidence.json#l03-l04"
+      }
+    ],
+    "d1": [
+      {
+        "done": true,
+        "label": "Executar decisão consolidada",
+        "detail": "qa/go-no-go-report.json"
+      },
+      {
+        "done": true,
+        "label": "Formalizar decisão go/no-go (data/hora/responsáveis)",
+        "detail": "qa/release-decision.json"
+      },
+      {
+        "done": true,
+        "label": "Executar rollback drill",
+        "detail": "qa/rollback-drill-report.json"
+      },
+      {
+        "done": true,
+        "label": "Revalidar release gate",
+        "detail": "qa/release-gate-report.json"
+      },
+      {
+        "done": true,
+        "label": "ChatPro sem divergência mensagem/ticket/SLA",
+        "detail": "qa/smoke-evidence.json#l05"
+      },
+      {
+        "done": true,
+        "label": "Fila física (call/start/pause/resume/finish/skip/transfer)",
+        "detail": "qa/smoke-evidence.json#l01"
+      },
+      {
+        "done": true,
+        "label": "PBX com originated + trigger de runtime",
+        "detail": "qa/smoke-evidence.json#l03-l04"
+      }
+    ],
+    "d0": [
+      {
+        "done": true,
+        "label": "Smoke pós-release em pass",
+        "detail": "qa/release-gate-report.json"
+      },
+      {
+        "done": true,
+        "label": "Operação mínima por suíte (L-01..L-05)",
+        "detail": "qa/smoke-evidence.json"
+      },
+      {
+        "done": true,
+        "label": "Evidência final de GO",
+        "detail": "qa/go-no-go-report.json"
+      },
+      {
+        "done": true,
+        "label": "Janela de release executada",
+        "detail": "qa/release-window-report.json"
+      },
+      {
+        "done": true,
+        "label": "ChatPro pós-release em pass",
+        "detail": "qa/smoke-evidence.json#l05"
+      },
+      {
+        "done": true,
+        "label": "Fila física pós-release em pass",
+        "detail": "qa/smoke-evidence.json#l01"
+      },
+      {
+        "done": true,
+        "label": "PBX TTS/ASR pós-release em pass",
+        "detail": "qa/smoke-evidence.json#l03-l04"
+      }
+    ]
+  },
+  "pillars": {
+    "chatpro": {
+      "ok": true,
+      "ticketId": "default-1771122544296-xby2jz7"
+    },
+    "queue": {
+      "ok": true,
+      "queueId": "pq-1771122543554-6873d775722d",
+      "ticketId": "pt-1771122543637-e660f9269bb5",
+      "doneCount": 1
+    },
+    "pbx": {
+      "ok": true,
+      "l03": {
+        "ok": true,
+        "click2callStatus": "originated",
+        "originated": true,
+        "cdrFound": false,
+        "acceptedWithoutCdr": true
+      },
+      "l04": {
+        "ok": true,
+        "executionId": "fx-1771122542540-705b9e9058f6",
+        "nodesCount": 3
+      }
+    }
+  },
+  "sources": {
+    "releaseGate": "qa/release-gate-report.json",
+    "rollbackDrill": "qa/rollback-drill-report.json",
+    "smokeEvidence": "qa/smoke-evidence.json",
+    "goNoGo": "qa/go-no-go-report.json",
+    "releaseDecision": "qa/release-decision.json",
+    "releaseWindow": "qa/release-window-report.json"
+  }
+}

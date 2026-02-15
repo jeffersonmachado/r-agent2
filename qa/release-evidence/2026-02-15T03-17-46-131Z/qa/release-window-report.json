@@ -1,0 +1,134 @@
+{
+  "startedAt": "2026-02-15T03:05:18.869Z",
+  "finishedAt": "2026-02-15T03:12:55.832Z",
+  "durationMs": 456963,
+  "mode": "full",
+  "status": "pass",
+  "steps": [
+    {
+      "label": "release-clean-check",
+      "command": "node tools/system/release-clean-check.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:05:18.869Z",
+      "finishedAt": "2026-02-15T03:05:18.946Z",
+      "durationMs": 77,
+      "error": null
+    },
+    {
+      "label": "go-no-go",
+      "command": "node tools/system/go-no-go.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:05:18.946Z",
+      "finishedAt": "2026-02-15T03:12:55.323Z",
+      "durationMs": 456377,
+      "error": null
+    },
+    {
+      "label": "release-decision",
+      "command": "node tools/system/release-decision.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.323Z",
+      "finishedAt": "2026-02-15T03:12:55.407Z",
+      "durationMs": 84,
+      "error": null
+    },
+    {
+      "label": "launch-plan-status",
+      "command": "node tools/system/launch-plan-status.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.407Z",
+      "finishedAt": "2026-02-15T03:12:55.444Z",
+      "durationMs": 37,
+      "error": null
+    },
+    {
+      "label": "release-suite-confirm",
+      "command": "node tools/system/release-suite-confirm.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.444Z",
+      "finishedAt": "2026-02-15T03:12:55.497Z",
+      "durationMs": 53,
+      "error": null
+    },
+    {
+      "label": "release-manifest",
+      "command": "node tools/system/release-manifest.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.497Z",
+      "finishedAt": "2026-02-15T03:12:55.580Z",
+      "durationMs": 83,
+      "error": null
+    },
+    {
+      "label": "release-summary",
+      "command": "node tools/system/release-summary.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.580Z",
+      "finishedAt": "2026-02-15T03:12:55.619Z",
+      "durationMs": 39,
+      "error": null
+    },
+    {
+      "label": "release-evidence-pack",
+      "command": "node tools/system/release-evidence-pack.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.619Z",
+      "finishedAt": "2026-02-15T03:12:55.677Z",
+      "durationMs": 58,
+      "error": null
+    },
+    {
+      "label": "release-evidence-verify",
+      "command": "node tools/system/release-evidence-verify.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.677Z",
+      "finishedAt": "2026-02-15T03:12:55.759Z",
+      "durationMs": 82,
+      "error": null
+    },
+    {
+      "label": "release-evidence-prune",
+      "command": "node tools/system/release-evidence-prune.js",
+      "status": "skipped",
+      "startedAt": "2026-02-15T03:12:55.759Z",
+      "finishedAt": "2026-02-15T03:12:55.759Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "RELEASE_WINDOW_PRUNE_OLD=0"
+    },
+    {
+      "label": "postgres-backup",
+      "command": "bash scripts/backup-postgres.sh",
+      "status": "skipped",
+      "startedAt": "2026-02-15T03:12:55.759Z",
+      "finishedAt": "2026-02-15T03:12:55.759Z",
+      "durationMs": 0,
+      "error": null,
+      "reason": "RELEASE_WINDOW_RUN_BACKUP=0"
+    },
+    {
+      "label": "checklist-strict",
+      "command": "node tools/system/checklist.js",
+      "status": "pass",
+      "startedAt": "2026-02-15T03:12:55.759Z",
+      "finishedAt": "2026-02-15T03:12:55.832Z",
+      "durationMs": 73,
+      "error": null
+    }
+  ],
+  "artifacts": {
+    "goNoGo": "qa/go-no-go-report.json",
+    "launchPlanStatus": "qa/launch-plan-status.json",
+    "launchPlanStatusMd": "qa/launch-plan-status.md",
+    "releaseManifest": "qa/release-manifest.json",
+    "releaseSummary": "qa/release-summary.md",
+    "evidencePackRoot": "qa/release-evidence",
+    "releaseWindowReport": "qa/release-window-report.json"
+  },
+  "config": {
+    "pruneOldEvidence": false,
+    "runBackup": false,
+    "goNoGoAllowExistingReports": true
+  },
+  "error": null
+}

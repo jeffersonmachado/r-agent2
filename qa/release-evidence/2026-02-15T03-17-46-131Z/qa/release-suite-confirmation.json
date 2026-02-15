@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-02-15T03:17:45.829Z",
+  "status": "pass",
+  "sources": {
+    "smokeEvidence": "qa/smoke-evidence.json",
+    "releaseGate": "qa/release-gate-report.json"
+  },
+  "suites": {
+    "fastService": {
+      "ok": true,
+      "label": "Fast service (kiosk/panel/station)",
+      "detail": "qa/l01-physical-queue-evidence.json",
+      "status": "pass"
+    },
+    "ordersDelivery": {
+      "ok": true,
+      "label": "Orders/Delivery (create/order lifecycle/status)",
+      "detail": "qa/l02-ura-publish-rollback-evidence.json",
+      "status": "pass"
+    },
+    "pbxVoice": {
+      "ok": true,
+      "label": "PBX/Voz (dialplan/runtime/eventos)",
+      "detail": "qa/l03-pbx-voice-tts-asr-evidence.json + qa/l04-pbx-call-events-runtime-evidence.json",
+      "status": "pass"
+    },
+    "chatPro": {
+      "ok": true,
+      "label": "ChatPro/omnichannel",
+      "detail": "qa/l05-chatpro-omnichannel-evidence.json",
+      "status": "pass"
+    }
+  },
+  "checks": {
+    "releaseGatePass": true
+  },
+  "reasons": []
+}
