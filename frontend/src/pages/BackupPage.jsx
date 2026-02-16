@@ -71,8 +71,30 @@ export function BackupPage() {
   return (
     <div className="support-page">
       <ToastContainer />
-      <div style={{ padding: '24px' }}>
-        <h1 style={{ fontSize: '22px', marginBottom: '12px' }}>Backup / DR</h1>
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>🗄️ Backup / DR</h1>
+        </div>
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
+      </div>
+
+      <div style={{ padding: '0 24px 24px 24px' }}>
         <p style={{ color: '#6b7280', marginBottom: '20px' }}>
           Exportação e importação de flows e settings do tenant.
         </p>

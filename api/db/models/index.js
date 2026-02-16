@@ -47,6 +47,7 @@ const getPhysicalTicket = require('./PhysicalTicket');
 const getPhysicalTicketSequence = require('./PhysicalTicketSequence');
 const getPbxTenant = require('./PbxTenant');
 const getPbxExtension = require('./PbxExtension');
+const getPbxAcl = require('./PbxAcl');
 const getPbxTrunk = require('./PbxTrunk');
 const getPbxRoute = require('./PbxRoute');
 const getPbxQueue = require('./PbxQueue');
@@ -134,6 +135,7 @@ const PhysicalTicket = () => getPhysicalTicket();
 const PhysicalTicketSequence = () => getPhysicalTicketSequence();
 const PbxTenant = () => getPbxTenant();
 const PbxExtension = () => getPbxExtension();
+const PbxAcl = () => getPbxAcl();
 const PbxTrunk = () => getPbxTrunk();
 const PbxRoute = () => getPbxRoute();
 const PbxQueue = () => getPbxQueue();
@@ -355,6 +357,7 @@ module.exports = {
   PhysicalTicketSequence,
   PbxTenant,
   PbxExtension,
+  PbxAcl,
   PbxTrunk,
   PbxRoute,
   PbxQueue,
@@ -438,6 +441,7 @@ module.exports = {
   getPhysicalTicketSequence,
   getPbxTenant,
   getPbxExtension,
+  getPbxAcl,
   getPbxTrunk,
   getPbxRoute,
   getPbxQueue,

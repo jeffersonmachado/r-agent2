@@ -149,7 +149,7 @@ async function ensurePbxTenantRow(tenantKey) {
   });
 }
 
-async function materializeExtensionToRealtime({ tenantKey, extension, displayName, authUsername, authPassword }) {
+async function materializeExtensionToRealtime({ tenantKey, extension, displayName, authUsername, authPassword, endpointOptions }) {
   const sq = getSequelize();
   if (!sq) throw new Error('Sequelize não inicializado');
 
@@ -157,8 +157,29 @@ async function materializeExtensionToRealtime({ tenantKey, extension, displayNam
   const username = authUsername || extension;
   const password = authPassword || '';
   const callerid = `${displayName || extension} <${extension}>`;
+  const aclId = endpointOptions && typeof endpointOptions === 'object' ? (endpointOptions.aclId ?? null) : null;
+  let acl = null;
+  if (aclId) {
+    try {
+      // eslint-disable-next-line global-require
+      const pbxAcls = require('./pbxAclsService');
+      // eslint-disable-next-line no-await-in-loop
+      acl = await pbxAcls.resolveAsteriskAclSectionById({ tenantKey, aclId });
+    } catch (_) {
+      acl = null;
+    }
+  }
 
-  const defaultAllow = 'ulaw,alaw';
+  const allowSet = new Set(['ulaw', 'alaw']);
+  if (endpointOptions?.gsm === true) allowSet.add('gsm');
+  if (endpointOptions?.g729 === true) allowSet.add('g729');
+  if (Array.isArray(endpointOptions?.provisioning?.codecs)) {
+    for (const c of endpointOptions.provisioning.codecs) {
+      const codec = String(c || '').trim().toLowerCase();
+      if (codec) allowSet.add(codec);
+    }
+  }
+  const defaultAllow = Array.from(allowSet).join(',');
   const defaultDisallow = 'all';
 
   await sq.query(
@@ -178,19 +199,41 @@ async function materializeExtensionToRealtime({ tenantKey, extension, displayNam
     { replacements: { id } },
   );
 
-  await sq.query(
-    `INSERT INTO ps_endpoints (id, aors, auth, context, disallow, allow, direct_media, dtmf_mode, callerid, rewrite_contact, rtp_symmetric, force_rport, ice_support, allow_transfer, allow_subscribe, created_at, updated_at)
-     VALUES (:id, :id, :id, :context, :disallow, :allow, 'no', 'rfc4733', :callerid, 'yes', 'yes', 'yes', 'yes', 'yes', 'yes', NOW(), NOW())
-     ON CONFLICT (id) DO UPDATE SET
-       aors = EXCLUDED.aors,
-       auth = EXCLUDED.auth,
-       context = EXCLUDED.context,
-       disallow = EXCLUDED.disallow,
-       allow = EXCLUDED.allow,
-       callerid = EXCLUDED.callerid,
-       updated_at = NOW()`,
-    { replacements: { id, context: tenantKey, disallow: defaultDisallow, allow: defaultAllow, callerid } },
-  );
+  try {
+    await sq.query(
+      `INSERT INTO ps_endpoints (id, aors, auth, context, disallow, allow, direct_media, dtmf_mode, callerid, rewrite_contact, rtp_symmetric, force_rport, ice_support, allow_transfer, allow_subscribe, acl, created_at, updated_at)
+       VALUES (:id, :id, :id, :context, :disallow, :allow, 'no', 'rfc4733', :callerid, 'yes', 'yes', 'yes', 'yes', 'yes', 'yes', :acl, NOW(), NOW())
+       ON CONFLICT (id) DO UPDATE SET
+         aors = EXCLUDED.aors,
+         auth = EXCLUDED.auth,
+         context = EXCLUDED.context,
+         disallow = EXCLUDED.disallow,
+         allow = EXCLUDED.allow,
+         callerid = EXCLUDED.callerid,
+         acl = EXCLUDED.acl,
+         updated_at = NOW()`,
+      { replacements: { id, context: tenantKey, disallow: defaultDisallow, allow: defaultAllow, callerid, acl } },
+    );
+  } catch (e) {
+    // Backward-compatible fallback (before ps_endpoints.acl existed).
+    if (e && (e.original?.code === '42703' || e.parent?.code === '42703')) {
+      await sq.query(
+        `INSERT INTO ps_endpoints (id, aors, auth, context, disallow, allow, direct_media, dtmf_mode, callerid, rewrite_contact, rtp_symmetric, force_rport, ice_support, allow_transfer, allow_subscribe, created_at, updated_at)
+         VALUES (:id, :id, :id, :context, :disallow, :allow, 'no', 'rfc4733', :callerid, 'yes', 'yes', 'yes', 'yes', 'yes', 'yes', NOW(), NOW())
+         ON CONFLICT (id) DO UPDATE SET
+           aors = EXCLUDED.aors,
+           auth = EXCLUDED.auth,
+           context = EXCLUDED.context,
+           disallow = EXCLUDED.disallow,
+           allow = EXCLUDED.allow,
+           callerid = EXCLUDED.callerid,
+           updated_at = NOW()`,
+        { replacements: { id, context: tenantKey, disallow: defaultDisallow, allow: defaultAllow, callerid } },
+      );
+      return;
+    }
+    throw e;
+  }
 }
 
 async function listExtensions({ tenantKey }) {
@@ -267,6 +310,7 @@ async function upsertExtension({ tenantKey, payload, actorUserId = null }) {
     displayName: data.displayName,
     authUsername: data.authUsername,
     authPassword: data.authPassword,
+    endpointOptions: nextEndpointOptions,
   });
 
   // Best-effort audit event (optional)
@@ -321,4 +365,3 @@ module.exports = {
   upsertExtension,
   bulkUpsertExtensions,
 };
-

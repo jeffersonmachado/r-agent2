@@ -400,6 +400,14 @@ export function InboxPage() {
         </div>
       </div>
 
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
+      </div>
+
       <div className="support-grid">
         <div className="support-tickets-panel">
           <div className="support-tickets-list" role="list">

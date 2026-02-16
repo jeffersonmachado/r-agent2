@@ -205,6 +205,14 @@ export function SystemStatusPage() {
             <h1>📊 Status dos Serviços</h1>
           </div>
         </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
+      </div>
         <div className="flex items-center justify-center py-12">
           <div className="text-text-secondary">Carregando...</div>
         </div>

@@ -190,7 +190,17 @@ export function SuperAdminPage() {
       <div className="support-page">
         <div className="support-header">
           <h1>🔐 Super Admin</h1>
+        
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
         </div>
+      </div>
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 text-center">
           <p className="text-text-secondary">
             Apenas Super Admin pode acessar esta área.

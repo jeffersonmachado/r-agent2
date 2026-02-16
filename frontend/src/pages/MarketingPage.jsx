@@ -16,6 +16,7 @@ import {
   createMarketingLink,
 } from '../api/marketing';
 import { buildApiUrl } from '../api/client';
+import { Button } from '../styles/Button';
 
 const STAGE_ORDER = ['visitor', 'lead', 'mql', 'sql', 'customer'];
 
@@ -381,8 +382,61 @@ export function MarketingPage() {
   return (
     <div className="support-page">
       <ToastContainer />
-      <div style={{ padding: '24px' }}>
-        <h1 style={{ fontSize: '22px', marginBottom: '12px' }}>Marketing v1</h1>
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>🧲 Marketing v1</h1>
+        </div>
+        <div className="support-controls">
+          <Button onClick={loadAll} style={{ backgroundColor: '#6366f1', color: 'white' }}>
+            🔄 Atualizar
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">Stage</label>
+            <input
+              value={leadFilters.stage}
+              onChange={(e) => setLeadFilters((s) => ({ ...s, stage: e.target.value }))}
+              placeholder="lead, mql, sql..."
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">Score mínimo</label>
+            <input
+              type="number"
+              value={leadFilters.minScore}
+              onChange={(e) => setLeadFilters((s) => ({ ...s, minScore: e.target.value }))}
+              placeholder="0"
+            />
+          </div>
+          <div className="flex items-end">
+            <Button onClick={handleFilterLeads} disabled={loading} className="w-full" variant="primary">
+              Filtrar Leads
+            </Button>
+          </div>
+          <div className="flex items-end">
+            <Button
+              onClick={() => {
+                setLeadFilters({ stage: '', minScore: '' });
+                loadAll();
+              }}
+              disabled={loading && !leadFilters.stage && !leadFilters.minScore}
+              className="w-full"
+            >
+              Limpar Filtros
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '24px', paddingTop: 0 }}>
         <p style={{ color: '#6b7280', marginBottom: '20px' }}>
           Gestão de forms, leads, scoring, campanhas e jornada/funil operacional.
         </p>
@@ -609,11 +663,6 @@ export function MarketingPage() {
 
           <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
             <h2 style={{ marginBottom: '8px' }}>Leads</h2>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-              <input placeholder="stage" value={leadFilters.stage} onChange={(e) => setLeadFilters((s) => ({ ...s, stage: e.target.value }))} />
-              <input placeholder="minScore" type="number" value={leadFilters.minScore} onChange={(e) => setLeadFilters((s) => ({ ...s, minScore: e.target.value }))} />
-              <button onClick={handleFilterLeads} disabled={loading}>Filtrar</button>
-            </div>
             <table style={{ width: '100%', fontSize: '13px' }}>
               <thead>
                 <tr>

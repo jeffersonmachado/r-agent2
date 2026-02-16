@@ -1,6 +1,7 @@
 const { getLegacyInventory } = require('./inventory');
 const { checkMariaDbHealth } = require('./mariadbClient');
 const { listRamais, upsertRamal } = require('./ramaisService');
+const { listXmlEntity, upsertXmlEntity, deleteXmlEntity, supportedXmlEntities } = require('./xmlEntitiesService');
 
 async function getPbxHealth() {
   const inventory = await getLegacyInventory();
@@ -20,5 +21,8 @@ module.exports = {
   getPbxHealth,
   listRamais,
   upsertRamal,
+  listXmlEntity,
+  upsertXmlEntity,
+  deleteXmlEntity,
+  supportedXmlEntities,
 };
-

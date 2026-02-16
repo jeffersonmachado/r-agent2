@@ -68,6 +68,24 @@ export function DashboardPage() {
 
   const features = [
     {
+      id: 'chat-humano-dashboard',
+      title: 'Dashboard Chat Humano',
+      description: 'Pilar 1: cockpit de atendimento omnichannel',
+      icon: '💬',
+      path: '/chat-humano',
+      color: 'bg-cyan-500',
+      category: 'Pilares',
+    },
+    {
+      id: 'queue-physical-dashboard',
+      title: 'Dashboard Fila Física',
+      description: 'Pilar 2: operação kiosk/station/panel',
+      icon: '🎫',
+      path: '/fila-fisica',
+      color: 'bg-indigo-500',
+      category: 'Pilares',
+    },
+    {
       id: 'support',
       title: 'Atendimento',
       description: 'Gerencie tickets e conversas com clientes',
@@ -484,6 +502,16 @@ export function DashboardPage() {
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Bem-vindo, {agent?.name || agent?.username}! Acesse todas as funcionalidades do sistema.
         </p>
+      
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
       </div>
 
       {/* KPIs operacionais (Blip-like) */}

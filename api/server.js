@@ -1865,6 +1865,129 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /api/pbx-legacy/xml-entities?entity=...
+  if (method === 'GET' && pathname === '/api/pbx-legacy/xml-entities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!requireTenant(req, res)) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const entity = urlObj.searchParams.get('entity');
+      const pbxLegacy = require('./services/pbxLegacy');
+      const out = pbxLegacy.listXmlEntity({ entity });
+      sendJson(res, 200, { ok: true, ...out, supported: pbxLegacy.supportedXmlEntities });
+    } catch (err) {
+      const code = err.code || 'pbx_legacy_xml_list_error';
+      const httpStatus = ['entity_required', 'entity_not_supported', 'pbx_xml_dir_not_configured', 'invalid_path_outside_base'].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em GET /api/pbx-legacy/xml-entities', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao listar entidade XML do legado',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx-legacy/xml-entities?entity=... (upsert)
+  if (method === 'POST' && pathname === '/api/pbx-legacy/xml-entities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!requireTenant(req, res)) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const entity = urlObj.searchParams.get('entity');
+      const body = await parseJsonBody(req);
+      const pbxLegacy = require('./services/pbxLegacy');
+      const item = pbxLegacy.upsertXmlEntity({ entity, payload: body });
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_legacy_xml_upsert_error';
+      const httpStatus = [
+        'entity_required',
+        'entity_not_supported',
+        'id_required',
+        'pbx_xml_dir_not_configured',
+        'invalid_path_outside_base',
+      ].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx-legacy/xml-entities', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar entidade XML do legado',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // DELETE /api/pbx-legacy/xml-entities?entity=...&id=...
+  if (method === 'DELETE' && pathname === '/api/pbx-legacy/xml-entities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!requireTenant(req, res)) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const entity = urlObj.searchParams.get('entity');
+      const id = urlObj.searchParams.get('id');
+      const pbxLegacy = require('./services/pbxLegacy');
+      const result = pbxLegacy.deleteXmlEntity({ entity, id });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      const code = err.code || 'pbx_legacy_xml_delete_error';
+      const httpStatus = [
+        'entity_required',
+        'entity_not_supported',
+        'id_required',
+        'pbx_xml_dir_not_configured',
+        'invalid_path_outside_base',
+      ].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em DELETE /api/pbx-legacy/xml-entities', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao remover entidade XML do legado',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
   // -----------------------------------------------------------------------
   // PBX v1 (Postgres-first + Asterisk Realtime)
   // -----------------------------------------------------------------------
@@ -2211,6 +2334,131 @@ async function requestHandler(req, res) {
     } catch (err) {
       logger.error('[PBX] Erro em GET /api/pbx/audit', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao consultar auditoria PBX' });
+    }
+    return;
+  }
+
+  // GET /api/pbx/acls
+  if (method === 'GET' && pathname === '/api/pbx/acls') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const pbxAcls = require('./services/pbx/pbxAclsService');
+      const items = await pbxAcls.listAcls({ tenantKey });
+      sendJson(res, 200, { items });
+    } catch (err) {
+      logger.error('[PBX] Erro em GET /api/pbx/acls', err);
+      sendJson(res, 500, buildApiError({
+        code: 'pbx_acls_list_error',
+        message: err.message || 'Erro ao listar ACLs',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/pbx/acls (upsert)
+  if (method === 'POST' && pathname === '/api/pbx/acls') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const pbxAcls = require('./services/pbx/pbxAclsService');
+      const actorUserId = req.user?.id || null;
+      const item = await pbxAcls.upsertAcl({ tenantKey, payload: body, actorUserId });
+      try {
+        logAction({
+          agentId: req.user?.id || null,
+          username: req.user?.username || null,
+          tenantId: tenantKey,
+          action: 'pbx.acls.upsert',
+          resource: 'pbx_acl',
+          resourceId: item?.id || null,
+          details: { id: item?.id || null, name: item?.name || null, enabled: item?.enabled ? true : false },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+        });
+      } catch (_) {}
+      sendJson(res, 200, { ok: true, item });
+    } catch (err) {
+      const code = err.code || 'pbx_acls_upsert_error';
+      const httpStatus = ['acl_name_required'].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em POST /api/pbx/acls', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar ACL',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // DELETE /api/pbx/acls?id=...
+  if (method === 'DELETE' && pathname === '/api/pbx/acls') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const id = urlObj.searchParams.get('id');
+      const pbxAcls = require('./services/pbx/pbxAclsService');
+      const actorUserId = req.user?.id || null;
+      const result = await pbxAcls.deleteAcl({ tenantKey, id, actorUserId });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      const code = err.code || 'pbx_acls_delete_error';
+      const httpStatus = ['acl_id_required'].includes(code) ? 400 : 500;
+      logger.error('[PBX] Erro em DELETE /api/pbx/acls', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao remover ACL',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
     }
     return;
   }

@@ -331,20 +331,27 @@ export async function fetchJson(path, init) {
       : '') || '';
     const isJson = contentType.includes('application/json');
 
-    // HTTP 207 (Multi-Status) é considerado sucesso pelo fetch (ok=true),
-    // e deve ser tratado como resposta válida pelo frontend.
-    if (!response.ok) {
-      const isPipelineStatusNotFound = false;
-      if (!isPipelineStatusNotFound) {
-        console.log('[HTTP Client] ❌ Resposta não OK:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-        });
-      }
-      let errorBody = null;
-      if (isJson) {
-        try {
+	    // HTTP 207 (Multi-Status) é considerado sucesso pelo fetch (ok=true),
+	    // e deve ser tratado como resposta válida pelo frontend.
+	    if (!response.ok) {
+	      const expectedErrorCodes = Array.isArray(init?.expectedErrorCodes) ? init.expectedErrorCodes : [];
+	      const expectedStatuses = Array.isArray(init?.expectedStatuses) ? init.expectedStatuses : [];
+	      const suppressErrorLog = init?.suppressErrorLog === true;
+	      const suppressNonOkConsoleLog = suppressErrorLog || expectedStatuses.includes(response.status) || expectedErrorCodes.length > 0;
+
+	      const isPipelineStatusNotFound = false;
+	      if (!isPipelineStatusNotFound) {
+	        if (!suppressNonOkConsoleLog) {
+	          console.log('[HTTP Client] ❌ Resposta não OK:', {
+	            status: response.status,
+	            statusText: response.statusText,
+	            url: response.url,
+	          });
+	        }
+	      }
+	      let errorBody = null;
+	      if (isJson) {
+	        try {
           errorBody = await response.json();
         } catch {
           // ignora parse error
@@ -368,28 +375,43 @@ export async function fetchJson(path, init) {
         (path.includes('/system/websocket/connections') || 
          path.includes('/analytics/metrics'));
 
-      // Não há polling de pipeline (progresso via WebSocket).
-      const isPipelineStatusNotFoundForLogs = false;
-      
-      if (!isTicketNotFound && !isOptionalDevEndpoint && !isPipelineStatusNotFoundForLogs) {
-        // Log estruturado com URL final resolvida
-        logger.error(`HTTP Error ${response.status}`, { 
-          method: init?.method || 'GET',
-          url, 
+	      // Não há polling de pipeline (progresso via WebSocket).
+	      const isPipelineStatusNotFoundForLogs = false;
+	
+	      // Permite que chamadas conhecidas/esperadas não poluam o console.
+	      // Uso: fetchJson('/path', { expectedErrorCodes: ['some_code'] }) ou { suppressErrorLog: true }.
+	      const envelopeCode = (errorBody &&
+	        typeof errorBody === 'object' &&
+	        errorBody.error &&
+	        typeof errorBody.error === 'object' &&
+	        typeof errorBody.error.code === 'string')
+	        ? errorBody.error.code
+	        : null;
+	      const isExpectedError = suppressErrorLog ||
+	        expectedStatuses.includes(response.status) ||
+	        (envelopeCode && expectedErrorCodes.includes(envelopeCode));
+	      
+	      if (!isTicketNotFound && !isOptionalDevEndpoint && !isPipelineStatusNotFoundForLogs && !isExpectedError) {
+	        // Log estruturado com URL final resolvida
+	        logger.error(`HTTP Error ${response.status}`, { 
+	          method: init?.method || 'GET',
+	          url, 
           path,
           status: response.status, 
           errorBody 
         });
       }
 
-      // Tratamento especial para erro 401 (Unauthorized)
-      // Redireciona para login, exceto se já estiver em rotas de autenticação
-      console.log('[HTTP Client] 🔍 Verificando status da resposta:', {
-        status: response.status,
-        is401: response.status === 401,
-      });
-      
-      if (response.status === 401) {
+	      // Tratamento especial para erro 401 (Unauthorized)
+	      // Redireciona para login, exceto se já estiver em rotas de autenticação
+	      if (!suppressNonOkConsoleLog) {
+	        console.log('[HTTP Client] 🔍 Verificando status da resposta:', {
+	          status: response.status,
+	          is401: response.status === 401,
+	        });
+	      }
+	      
+	      if (response.status === 401) {
         console.log('[HTTP Client] 🚨 ERRO 401 DETECTADO! Iniciando tratamento...');
         
         const isAuthRoute = path.includes('/auth/') || path.includes('/login');
@@ -569,8 +591,30 @@ export async function fetchJson(path, init) {
     });
     return result;
   } catch (err) {
+    // Some endpoints are optional or environment-dependent. Callers can pass
+    // `expectedErrorCodes` / `expectedStatuses` / `suppressErrorLog` to avoid noisy logs.
+    const expectedErrorCodes = Array.isArray(init?.expectedErrorCodes) ? init.expectedErrorCodes : [];
+    const expectedStatuses = Array.isArray(init?.expectedStatuses) ? init.expectedStatuses : [];
+    const suppressErrorLog = init?.suppressErrorLog === true;
+
+    const errStatus = err?.status ?? err?.httpStatus;
+    const errCode =
+      (typeof err?.code === 'string' ? err.code : null) ||
+      (err?.body &&
+      typeof err.body === 'object' &&
+      err.body.error &&
+      typeof err.body.error === 'object' &&
+      typeof err.body.error.code === 'string'
+        ? err.body.error.code
+        : null);
+    const isExpectedError =
+      suppressErrorLog ||
+      (Number.isFinite(errStatus) && expectedStatuses.includes(errStatus)) ||
+      (errCode && expectedErrorCodes.includes(errCode)) ||
+      (typeof err?.message === 'string' && expectedErrorCodes.includes(err.message));
+
     // Para polling do pipeline, evitamos spam de console no catch (timeouts/abort podem ocorrer sob carga).
-    if (!silent && !isPipelineStatusRequest) {
+    if (!silent && !isPipelineStatusRequest && !isExpectedError) {
       console.error('[HTTP Client] 💥 Erro capturado no catch:', {
         name: err?.name,
         message: err?.message,
@@ -652,7 +696,7 @@ export async function fetchJson(path, init) {
             hint: 'Servidor pode estar iniciando. Tentando novamente...',
           });
         } else {
-          logger.error('API não acessível - verifique se o servidor está rodando', { 
+          if (!isExpectedError) logger.error('API não acessível - verifique se o servidor está rodando', { 
             method: init?.method || 'GET',
             url,
             path,
@@ -664,12 +708,14 @@ export async function fetchJson(path, init) {
         err.connectionRefused = true;
         err.status = 0;
       } else {
-        logger.error('Request failed', { 
-          method: init?.method || 'GET',
-          url, 
-          path,
-          error: err.message 
-        });
+        if (!isExpectedError) {
+          logger.error('Request failed', { 
+            method: init?.method || 'GET',
+            url, 
+            path,
+            error: err.message 
+          });
+        }
       }
     }
     throw err;
@@ -790,5 +836,3 @@ export const httpClient = {
   fetchJson,
   fetchBlob,
 };
-
-

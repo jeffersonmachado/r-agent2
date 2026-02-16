@@ -490,7 +490,17 @@ export function AnalyticsPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>📈 Analytics & Métricas</h1>
           </div>
+        
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
         </div>
+      </div>
         <div className="text-center py-12">
           <p className="text-text-secondary">Carregando métricas...</p>
         </div>

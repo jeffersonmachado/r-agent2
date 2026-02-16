@@ -7,6 +7,20 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 > Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
 
+## Mandato de Paridade Total RIPABX (16/02/2026)
+
+- A partir desta data, o critério de aceite para modernização do legado é:
+  - **todas as telas de referência devem ter cobertura total no novo produto**.
+  - **“parcial” não é aceito como estado final**.
+- Definição de cobertura total por tela:
+  - mesmos campos funcionais de negócio (não apenas labels visuais)
+  - mesmas validações e regras de persistência
+  - mesmas ações de operação (CRUD, execuções, efeitos colaterais relevantes)
+  - mesma integração fim a fim quando aplicável (`.html` + `.js` + `.cgi` + `.xml` + `.php`)
+- Controle operacional:
+  - checklist de execução e status por tela em `docs/PARIDADE_TOTAL_TELAS_RIPABX.md`
+  - só pode marcar concluído quando status da tela estiver em **Total**
+
 ## Update L-01/L-02/L-03/L-04/L-05 (13/02/2026)
 
 - [x] **L-01** fechado com smoke dedicado de filas físicas (kiosk/panel/station):

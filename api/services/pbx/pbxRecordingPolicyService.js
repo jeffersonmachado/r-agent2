@@ -41,7 +41,14 @@ function normalizePolicy(input) {
 
 async function getRecordingPolicy({ tenantKey }) {
   const out = await getSetting({ tenantId: tenantKey, key: POLICY_KEY });
-  if (!out || !out.ok) return { ok: false, error: out?.error || 'settings_unavailable' };
+  if (!out || !out.ok) {
+    return {
+      ok: true,
+      policy: defaultPolicy(),
+      warning: out?.error || 'settings_unavailable',
+      fallback: true,
+    };
+  }
   return { ok: true, policy: normalizePolicy(out.value || null) };
 }
 

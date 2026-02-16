@@ -18,6 +18,22 @@ export function bulkUpsertExtensions(items) {
   });
 }
 
+export function listAcls() {
+  return fetchJson('/api/pbx/acls', { method: 'GET' });
+}
+
+export function upsertAcl(payload) {
+  return fetchJson('/api/pbx/acls', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
+export function deleteAcl(id) {
+  const qs = `?id=${encodeURIComponent(String(id || ''))}`;
+  return fetchJson(`/api/pbx/acls${qs}`, { method: 'DELETE' });
+}
+
 export function getProvisioningToken() {
   return fetchJson('/api/pbx/provisioning-token', { method: 'GET' });
 }

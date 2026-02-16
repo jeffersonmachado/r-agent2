@@ -20,6 +20,25 @@ function parseRecordingFilename(fileName) {
   return { tenantKey: m[1], uniqueid: m[2] };
 }
 
+function fallbackRecordingPolicy() {
+  const toBool = (v, dflt) => {
+    const raw = String(v ?? '').trim().toLowerCase();
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return dflt;
+  };
+  const toInt = (v, dflt) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.floor(n) : dflt;
+  };
+  return {
+    enabled: toBool(process.env.PBX_RECORDING_ENABLED, false),
+    retentionDays: toInt(process.env.PBX_RECORDING_RETENTION_DAYS, 30),
+    maskPhoneNumbers: toBool(process.env.PBX_RECORDING_MASK_PHONE_NUMBERS, true),
+    requireConsent: toBool(process.env.PBX_RECORDING_REQUIRE_CONSENT, false),
+  };
+}
+
 async function scanAndUpsertRecordings({ tenantKey }) {
   const Model = models.PbxRecording();
   const root = getRecordingsRoot();
@@ -72,13 +91,13 @@ async function listRecordings({ tenantKey, limit = 200 }) {
   const Model = models.PbxRecording();
   const sequelize = getSequelize();
   const Op = sequelize ? sequelize.constructor.Op : null;
-  const policyOut = await getRecordingPolicy({ tenantKey });
-  if (!policyOut?.ok) {
-    const err = new Error('recording_policy_unavailable');
-    err.code = 'recording_policy_unavailable';
-    throw err;
+  let policy = fallbackRecordingPolicy();
+  try {
+    const policyOut = await getRecordingPolicy({ tenantKey });
+    if (policyOut?.ok && policyOut.policy) policy = policyOut.policy;
+  } catch {
+    // fallback para defaults em caso de indisponibilidade de settings
   }
-  const policy = policyOut.policy || {};
   const rows = await Model.findAll({
     where: {
       tenantKey,
@@ -101,13 +120,13 @@ async function listRecordings({ tenantKey, limit = 200 }) {
 
 async function getRecordingFilePath({ tenantKey, id }) {
   const Model = models.PbxRecording();
-  const policyOut = await getRecordingPolicy({ tenantKey });
-  if (!policyOut?.ok) {
-    const err = new Error('recording_policy_unavailable');
-    err.code = 'recording_policy_unavailable';
-    throw err;
+  let policy = fallbackRecordingPolicy();
+  try {
+    const policyOut = await getRecordingPolicy({ tenantKey });
+    if (policyOut?.ok && policyOut.policy) policy = policyOut.policy;
+  } catch {
+    // fallback para defaults em caso de indisponibilidade de settings
   }
-  const policy = policyOut.policy || {};
   if (!policy.enabled) {
     const err = new Error('recording_access_disabled');
     err.code = 'recording_access_disabled';

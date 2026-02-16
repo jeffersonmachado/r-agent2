@@ -51,6 +51,12 @@ import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
 import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
 import { PbxPage } from './pages/PbxPage';
+import { PbxRoutesPage } from './pages/PbxRoutesPage';
+import { PbxExtensionsPage } from './pages/PbxExtensionsPage';
+import { PbxTrunksPage } from './pages/PbxTrunksPage';
+import { PbxModulePage } from './pages/PbxModulePage';
+import { ChatHumanoDashboardPage } from './pages/ChatHumanoDashboardPage';
+import { QueuePhysicalDashboardPage } from './pages/QueuePhysicalDashboardPage';
 import { MarketingPage } from './pages/MarketingPage';
 import { SolutionsPage } from './pages/SolutionsPage';
 import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
@@ -152,67 +158,78 @@ function App() {
 function AppWithAuth() {
   const { currentPath, navigate } = useRouter();
   const { isAuthenticated, loading, agent } = useAuth();
+  const isRoute = (basePath) =>
+    currentPath === basePath ||
+    currentPath.startsWith(`${basePath}/`) ||
+    currentPath.startsWith(`${basePath}?`);
 
   // Determina qual página renderizar baseado na URL
   const isStorefrontOrder = currentPath === '/storefront/order' || currentPath.startsWith('/storefront/order?');
   const isStorefrontOrderStatus = currentPath.startsWith('/storefront/order/');
-  const isKiosk = currentPath === '/kiosk' || currentPath.startsWith('/kiosk');
-  const isPanel = currentPath === '/panel' || currentPath.startsWith('/panel');
-  const isStation = currentPath === '/station' || currentPath.startsWith('/station');
+  const isKiosk = isRoute('/kiosk');
+  const isPanel = isRoute('/panel');
+  const isStation = isRoute('/station');
   const isDashboard = currentPath === '/' || currentPath === '/dashboard';
-  const isEditor = currentPath === '/editor' || currentPath.startsWith('/editor');
-  const isSupport = currentPath === '/support' || currentPath.startsWith('/support');
-  const isInbox = currentPath === '/inbox' || currentPath.startsWith('/inbox');
-  const isMaintenance = currentPath === '/maintenance' || currentPath.startsWith('/maintenance');
-  const isConfig = currentPath === '/config' || currentPath.startsWith('/config');
-  const isAgents = currentPath === '/agents' || currentPath.startsWith('/agents');
-  const isTenants = currentPath === '/tenants' || currentPath.startsWith('/tenants');
-  const isSuperAdminPage = currentPath === '/super-admin' || currentPath.startsWith('/super-admin');
-  const isOnboarding = currentPath === '/onboarding' || currentPath.startsWith('/onboarding');
-  const isAudit = currentPath === '/audit' || currentPath.startsWith('/audit');
-  const isQuickReplies = currentPath === '/quick-replies' || currentPath.startsWith('/quick-replies');
-  const isFaq = currentPath === '/faq' || currentPath.startsWith('/faq');
-  const isDepartments = currentPath === '/departments' || currentPath.startsWith('/departments');
-  const isBulkMessaging = currentPath === '/bulk-messaging' || currentPath.startsWith('/bulk-messaging');
-  const isAnalytics = currentPath === '/analytics' || currentPath.startsWith('/analytics');
-  const isSupervisor = currentPath === '/supervisor' || currentPath.startsWith('/supervisor');
-  const isRbac = currentPath === '/rbac' || currentPath.startsWith('/rbac');
-  const isMfa = currentPath === '/mfa' || currentPath.startsWith('/mfa');
-  const isWhatsAppIvr = currentPath === '/whatsapp-ivr' || currentPath.startsWith('/whatsapp-ivr');
-  const isWhatsAppConnections = currentPath === '/whatsapp-connections' || currentPath.startsWith('/whatsapp-connections');
-  const isDeveloperKeys = currentPath === '/developer-keys' || currentPath.startsWith('/developer-keys');
-  const isAutomations = currentPath === '/automations' || currentPath.startsWith('/automations');
-  const isTasks = currentPath === '/tasks' || currentPath.startsWith('/tasks');
-  const isSlaPolicies = currentPath === '/sla-policies' || currentPath.startsWith('/sla-policies');
-  const isExport = currentPath === '/export' || currentPath.startsWith('/export');
-  const isAITools = currentPath === '/ai-tools' || currentPath.startsWith('/ai-tools');
-  const isSegmentation = currentPath === '/segmentation' || currentPath.startsWith('/segmentation');
-  const isWhatsAppTemplates = currentPath === '/whatsapp-templates' || currentPath.startsWith('/whatsapp-templates');
-  const isKnowledgeBase = currentPath === '/knowledge-base' || currentPath.startsWith('/knowledge-base');
-  const isProductDocs = currentPath === '/product-docs' || currentPath.startsWith('/product-docs');
-  const isRAGDocuments = currentPath === '/rag-documents' || currentPath.startsWith('/rag-documents');
-  const isWebScraping = currentPath === '/web-scraping' || currentPath.startsWith('/web-scraping');
-  const isRpaTest = currentPath === '/rpa-test' || currentPath.startsWith('/rpa-test');
-  const isRpaReplays = currentPath === '/rpa-replays' || currentPath.startsWith('/rpa-replays');
-  const isRpaSeeds = currentPath === '/rpa-seeds' || currentPath.startsWith('/rpa-seeds');
-  const isChat = currentPath === '/chat' || currentPath.startsWith('/chat');
-  const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
-  const isGenerateSystem = currentPath === '/generate-system' || currentPath.startsWith('/generate-system');
-  const isSystemStatus = currentPath === '/system-status' || currentPath.startsWith('/system-status');
-  const isChannelHealth = currentPath === '/channel-health' || currentPath.startsWith('/channel-health');
-  const isChannelAccounts = currentPath === '/channel-accounts' || currentPath.startsWith('/channel-accounts');
-  const isPlanUsage = currentPath === '/plan-usage' || currentPath.startsWith('/plan-usage');
-  const isPbx = currentPath === '/pbx' || currentPath.startsWith('/pbx');
-  const isDevDashboard = currentPath === '/dev' || currentPath === '/dev-dashboard' || currentPath.startsWith('/dev');
-  const isOrders = currentPath === '/orders' || currentPath.startsWith('/orders');
-  const isKitchen = currentPath === '/kitchen' || currentPath.startsWith('/kitchen');
-  const isDispatch = currentPath === '/dispatch' || currentPath.startsWith('/dispatch');
-  const isMarketing = currentPath === '/marketing' || currentPath.startsWith('/marketing');
-  const isSolutions = currentPath === '/solutions' || currentPath.startsWith('/solutions');
-  const isNodeMarketplace = currentPath === '/node-marketplace' || currentPath.startsWith('/node-marketplace');
-  const isSsoScim = currentPath === '/sso-scim' || currentPath.startsWith('/sso-scim');
-  const isBackup = currentPath === '/backup' || currentPath.startsWith('/backup');
-  const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
+  const isEditor = isRoute('/editor');
+  const isSupport = isRoute('/support');
+  const isInbox = isRoute('/inbox');
+  const isMaintenance = isRoute('/maintenance');
+  const isConfig = isRoute('/config');
+  const isAgents = isRoute('/agents');
+  const isTenants = isRoute('/tenants');
+  const isSuperAdminPage = isRoute('/super-admin');
+  const isOnboarding = isRoute('/onboarding');
+  const isAudit = isRoute('/audit');
+  const isQuickReplies = isRoute('/quick-replies');
+  const isFaq = isRoute('/faq');
+  const isDepartments = isRoute('/departments');
+  const isBulkMessaging = isRoute('/bulk-messaging');
+  const isAnalytics = isRoute('/analytics');
+  const isSupervisor = isRoute('/supervisor');
+  const isRbac = isRoute('/rbac');
+  const isMfa = isRoute('/mfa');
+  const isWhatsAppIvr = isRoute('/whatsapp-ivr');
+  const isWhatsAppConnections = isRoute('/whatsapp-connections');
+  const isDeveloperKeys = isRoute('/developer-keys');
+  const isAutomations = isRoute('/automations');
+  const isTasks = isRoute('/tasks');
+  const isSlaPolicies = isRoute('/sla-policies');
+  const isExport = isRoute('/export');
+  const isAITools = isRoute('/ai-tools');
+  const isSegmentation = isRoute('/segmentation');
+  const isWhatsAppTemplates = isRoute('/whatsapp-templates');
+  const isKnowledgeBase = isRoute('/knowledge-base');
+  const isProductDocs = isRoute('/product-docs');
+  const isRAGDocuments = isRoute('/rag-documents');
+  const isWebScraping = isRoute('/web-scraping');
+  const isRpaTest = isRoute('/rpa-test');
+  const isRpaReplays = isRoute('/rpa-replays');
+  const isRpaSeeds = isRoute('/rpa-seeds');
+  const isChat = isRoute('/chat');
+  const isQa = isRoute('/qa');
+  const isGenerateSystem = isRoute('/generate-system');
+  const isSystemStatus = isRoute('/system-status');
+  const isChannelHealth = isRoute('/channel-health');
+  const isChannelAccounts = isRoute('/channel-accounts');
+  const isPlanUsage = isRoute('/plan-usage');
+  const isPbxExtensions = isRoute('/pbx/extensions');
+  const isPbxTrunks = isRoute('/pbx/trunks');
+  const isPbxRoutes = isRoute('/pbx/routes');
+  const isPbxBulkProvisioning = isRoute('/pbx/provisioning-lote');
+  const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxBulkProvisioning;
+  const isPbx = isRoute('/pbx');
+  const isChatHumanoDashboard = isRoute('/chat-humano');
+  const isQueuePhysicalDashboard = isRoute('/fila-fisica');
+  const isDevDashboard = isRoute('/dev') || isRoute('/dev-dashboard');
+  const isOrders = isRoute('/orders');
+  const isKitchen = isRoute('/kitchen');
+  const isDispatch = isRoute('/dispatch');
+  const isMarketing = isRoute('/marketing');
+  const isSolutions = isRoute('/solutions');
+  const isNodeMarketplace = isRoute('/node-marketplace');
+  const isSsoScim = isRoute('/sso-scim');
+  const isBackup = isRoute('/backup');
+  const isLogin = isRoute('/login');
 
   // Verifica se é Super Admin usando a função completa que considera originalTenantId
   const isSuperAdmin = checkIsSuperAdmin(agent);
@@ -228,9 +245,9 @@ function AppWithAuth() {
     const allRoutes = [
       isStorefrontOrder, isStorefrontOrderStatus,
       isKiosk, isPanel, isStation,
-      isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbx, isDevDashboard,
+      isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOrders, isKitchen, isDispatch,
       isLogin
@@ -245,8 +262,9 @@ function AppWithAuth() {
     }
   }, [
     isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbx, isDevDashboard, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
+    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isQueuePhysicalDashboard, isDevDashboard,
+    isOrders, isKitchen, isDispatch, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -300,6 +318,28 @@ function AppWithAuth() {
       '/channel-accounts': '🔌 Canais',
       '/plan-usage': '📦 Plano e Uso',
       '/pbx': '📞 PBX',
+      '/pbx/extensions': '📞 PBX • Ramais',
+      '/pbx/trunks': '🌐 PBX • Troncos',
+      '/pbx/routes': '🧭 PBX • Rotas',
+      '/pbx/acls': '🛡️ PBX • ACLs',
+      '/pbx/dids': '📥 PBX • DIDs',
+      '/pbx/ivr': '🎛️ PBX • IVR',
+      '/pbx/queues': '📞 PBX • Filas',
+      '/pbx/queue-members': '👥 PBX • Membros de Filas',
+      '/pbx/dialplan': '🔀 PBX • Dialplan',
+      '/pbx/media': '🎵 PBX • Mídia',
+      '/pbx/recordings': '🎙️ PBX • Gravações',
+      '/pbx/cdr': '📄 PBX • CDR',
+      '/pbx/governance': '🏢 PBX • Governança',
+      '/pbx/cc/pause-reasons': '⏸️ PBX • Motivos de Pausa',
+      '/pbx/cc/contact-reasons': '🏷️ PBX • Motivos de Contato',
+      '/pbx/cc/campaigns': '📢 PBX • Campanhas',
+      '/pbx/cc/campaign-list': '📋 PBX • Lista de Campanha',
+      '/pbx/cc/callbacks': '📅 PBX • Callbacks',
+      '/pbx/cc/click2call': '📱 PBX • Click2Call',
+      '/pbx/referencia/xml': '🗄️ PBX • Referência XML',
+      '/chat-humano': '💬 Dashboard Chat Humano',
+      '/fila-fisica': '🎫 Dashboard Fila Física',
       '/marketing': '🧲 Marketing',
       '/solutions': '📦 Solutions Packs',
       '/node-marketplace': '🧩 Node Marketplace',
@@ -310,13 +350,16 @@ function AppWithAuth() {
       '/login': '🔐 Login',
     };
 
-    // Encontra o título correspondente à rota atual
-    let pageTitle = 'Chatbot Flow Editor'; // Título padrão
-    
+    // Encontra o título mais específico correspondente à rota atual
+    let pageTitle = 'Chatbot Flow Editor';
+    let bestMatchLength = -1;
+
     for (const [route, title] of Object.entries(pageTitles)) {
-      if (currentPath === route || (route !== '/' && currentPath.startsWith(route))) {
+      const matches = currentPath === route || (route !== '/' && currentPath.startsWith(route));
+      if (!matches) continue;
+      if (route.length > bestMatchLength) {
         pageTitle = title;
-        break;
+        bestMatchLength = route.length;
       }
     }
 
@@ -338,7 +381,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/quick-replies', '/faq', '/marketing', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/sla-policies'];
+  const protectedRoutes = ['/', '/editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -484,8 +527,20 @@ function AppWithAuth() {
         <ChannelAccountsPage />
       ) : isPlanUsage ? (
         <PlanUsagePage />
+      ) : isPbxExtensions ? (
+        <PbxExtensionsPage />
+      ) : isPbxTrunks ? (
+        <PbxTrunksPage />
+      ) : isPbxRoutes ? (
+        <PbxRoutesPage />
+      ) : isPbxModule ? (
+        <PbxModulePage />
       ) : isPbx ? (
         <PbxPage />
+      ) : isChatHumanoDashboard ? (
+        <ChatHumanoDashboardPage />
+      ) : isQueuePhysicalDashboard ? (
+        <QueuePhysicalDashboardPage />
       ) : isOrders ? (
         <OrdersPage />
       ) : isKitchen ? (

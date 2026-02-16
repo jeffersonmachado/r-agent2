@@ -250,6 +250,7 @@ services:
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
       - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
+      - r-agent2-api-data:/r-agent2-api-data:ro
       - r-agent2-pbx-media-data:/var/lib/asterisk/sounds/pbx
       - r-agent2-pbx-recordings-data:/var/spool/asterisk/monitor/pbx
     command: sh -c "asterisk -f -vvvvv -d"
@@ -305,4 +306,3 @@ volumes:
 networks:
   r-agent2-network:
     driver: bridge
-

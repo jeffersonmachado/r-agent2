@@ -9,16 +9,31 @@
 const crypto = require('crypto');
 const models = require('../../db/models');
 
+function makeId(prefix) {
+  return `${prefix}_${crypto.randomUUID()}`;
+}
+
 function maskToken(token) {
   const s = String(token || '');
   if (s.length <= 12) return '***';
   return `${s.slice(0, 6)}***${s.slice(-4)}`;
 }
 
-async function getProvisioningToken({ tenantKey, includeToken = false }) {
+async function ensurePbxTenantRow(tenantKey) {
   const PbxTenant = models.PbxTenant();
-  const row = await PbxTenant.findOne({ where: { tenantKey } });
-  if (!row) return { ok: false, error: 'pbx_tenant_not_found' };
+  const existing = await PbxTenant.findOne({ where: { tenantKey } });
+  if (existing) return existing;
+  return PbxTenant.create({
+    id: makeId('pbx_tenant'),
+    tenantKey,
+    name: tenantKey,
+    status: 'active',
+    settings: {},
+  });
+}
+
+async function getProvisioningToken({ tenantKey, includeToken = false }) {
+  const row = await ensurePbxTenantRow(tenantKey);
   const json = row.toJSON ? row.toJSON() : row;
   const settings = json?.settings && typeof json.settings === 'object' ? json.settings : {};
   const token = settings?.provisioningPublicToken || null;
@@ -38,9 +53,7 @@ async function getProvisioningToken({ tenantKey, includeToken = false }) {
 }
 
 async function rotateProvisioningToken({ tenantKey, actorUserId = null, expiresInSec = null }) {
-  const PbxTenant = models.PbxTenant();
-  const row = await PbxTenant.findOne({ where: { tenantKey } });
-  if (!row) return { ok: false, error: 'pbx_tenant_not_found' };
+  const row = await ensurePbxTenantRow(tenantKey);
   const json = row.toJSON ? row.toJSON() : row;
   const settings = (json?.settings && typeof json.settings === 'object') ? { ...json.settings } : {};
   const token = crypto.randomBytes(24).toString('hex');
@@ -59,9 +72,7 @@ async function rotateProvisioningToken({ tenantKey, actorUserId = null, expiresI
 }
 
 async function revokeProvisioningToken({ tenantKey, actorUserId = null }) {
-  const PbxTenant = models.PbxTenant();
-  const row = await PbxTenant.findOne({ where: { tenantKey } });
-  if (!row) return { ok: false, error: 'pbx_tenant_not_found' };
+  const row = await ensurePbxTenantRow(tenantKey);
   const json = row.toJSON ? row.toJSON() : row;
   const settings = (json?.settings && typeof json.settings === 'object') ? { ...json.settings } : {};
 

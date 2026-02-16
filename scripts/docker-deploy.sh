@@ -171,6 +171,10 @@ while [[ $# -gt 0 ]]; do
             BUILD_SERVICE="rag-service"
             shift
             ;;
+        --asterisk-only)
+            BUILD_SERVICE="asterisk"
+            shift
+            ;;
         --host)
             REMOTE_HOST="$2"
             shift 2
@@ -190,7 +194,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             error "Argumento desconhecido: $1"
-            echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--pull] [--frontend-only] [--api-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
+            echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--pull] [--frontend-only] [--api-only] [--rag-only] [--asterisk-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
             exit 1
             ;;
     esac
@@ -347,6 +351,9 @@ EXCLUDE_LIST=(
     "--exclude=venv"
     "--exclude=.venv"
     "--exclude=*/venv"
+    # Diretórios grandes de testes que não entram no build da API (evita sync lento/desnecessário)
+    "--exclude=tests/rpa/replay"
+    "--exclude=tests/rpa/reports"
 )
 
 # Conjuntos de paths a sincronizar (mínimo para rebuild com docker-compose.prod.yml)
@@ -358,6 +365,7 @@ SYNC_PATHS=(
     "env.example"
     "api"
     "rpa"
+    "scripts"
     "frontend"
     "engine"
     "rag-service"
@@ -368,6 +376,7 @@ SYNC_PATHS=(
     "tests"
     "redis"
     "lib"
+    "pbx"
 )
 
 info "  Diretórios/arquivos que serão sincronizados:"
@@ -482,6 +491,63 @@ get_env_val() {
   printf '%s' "${line#*=}" | tr -d '\r\n'
 }
 
+# Detecta conflitos de portas do Asterisk (AMI/SIP). Se estiverem ocupadas por outro container,
+# derruba o container conflitante automaticamente para não falhar o `docker compose up`.
+port_busy() {
+  local proto="$1"  # tcp|udp
+  local port="$2"
+  netstat -tulpn 2>/dev/null | awk -v proto="$proto" -v port=":$port" '
+    $1 ~ proto && $4 ~ (port "$") { found=1; exit }
+    END { exit (found ? 0 : 1) }
+  '
+}
+
+asterisk_container_running() {
+  docker ps --format '{{.Names}}' 2>/dev/null | grep -qx 'r-agent2-asterisk-prod'
+}
+
+containers_publishing_port() {
+  local port="$1"
+  # Outputs: "<id> <name>" per line
+  docker ps --format '{{.ID}} {{.Names}} {{.Ports}}' 2>/dev/null | awk -v p=":$port->" '
+    index($0, p) { print $1, $2 }
+  '
+}
+
+stop_conflicting_containers_for_port() {
+  local proto="$1" # tcp|udp (apenas informativo no log)
+  local port="$2"
+
+  # Se estiver ocupado por host process (não container publish), não temos como "derrubar container".
+  # Tentamos primeiro identificar container(s) que publicam a porta no host.
+  local found
+  found="$(containers_publishing_port "$port" || true)"
+
+  if [ -z "$found" ]; then
+    echo "ERRO: Porta ${proto^^} ${port} ocupada, mas nenhum container publicou essa porta (pode ser processo do host ou container host-network)."
+    netstat -tulpn 2>/dev/null | awk '$4 ~ /:'"$port"'$/ {print}'
+    exit 1
+  fi
+
+  echo "$found" | while read -r cid cname; do
+    if [ -z "$cid" ] || [ -z "$cname" ]; then
+      continue
+    fi
+    if [ "$cname" = "r-agent2-asterisk-prod" ]; then
+      continue
+    fi
+    echo "WARN: Derrubando container conflitante na porta ${port}: ${cname} (${cid})"
+    docker stop -t 20 "$cid" >/dev/null
+  done
+
+  # Confirma que liberou
+  if port_busy "$proto" "$port"; then
+    echo "ERRO: Porta ${proto^^} ${port} continua ocupada mesmo após derrubar container(s) conflitantes."
+    netstat -tulpn 2>/dev/null | awk '$4 ~ /:'"$port"'$/ {print}'
+    exit 1
+  fi
+}
+
 # Compatibilidade: se o servidor ainda usa PGUSER/PGPASSWORD/PGDATABASE,
 # preenche POSTGRES_* automaticamente (sem expor valores em stdout).
 upsert_env_key() {
@@ -526,6 +592,28 @@ if [ -z "${POSTGRES_DB}" ]; then POSTGRES_DB="r_agent2"; fi
 upsert_env_key "POSTGRES_USER" "${POSTGRES_USER}"
 upsert_env_key "POSTGRES_PASSWORD" "${POSTGRES_PASSWORD}"
 upsert_env_key "POSTGRES_DB" "${POSTGRES_DB}"
+
+# Portas do PBX/Asterisk (uso de env vars do compose)
+AMI_PUBLIC_PORT="$(get_env_val AMI_PUBLIC_PORT)"
+SIP_UDP_PORT="$(get_env_val SIP_UDP_PORT)"
+if [ -z "${AMI_PUBLIC_PORT}" ]; then AMI_PUBLIC_PORT="5038"; fi
+if [ -z "${SIP_UDP_PORT}" ]; then SIP_UDP_PORT="5060"; fi
+
+if port_busy tcp "${AMI_PUBLIC_PORT}"; then
+  if asterisk_container_running; then
+    echo "OK: AMI_PUBLIC_PORT=${AMI_PUBLIC_PORT} em uso pelo stack r-agent2 existente."
+  else
+    stop_conflicting_containers_for_port tcp "${AMI_PUBLIC_PORT}"
+  fi
+fi
+
+if port_busy udp "${SIP_UDP_PORT}"; then
+  if asterisk_container_running; then
+    echo "OK: SIP_UDP_PORT=${SIP_UDP_PORT} em uso pelo stack r-agent2 existente."
+  else
+    stop_conflicting_containers_for_port udp "${SIP_UDP_PORT}"
+  fi
+fi
 
 # Carrega apenas o necessário do .env (ENCRYPTION_KEY precisa vir do arquivo)
 set -a
@@ -594,7 +682,8 @@ if [ "$BUILD" = true ]; then
                 # (diretório REMOTE_DIR) e não './frontend'.
                 BUILD_CMD="docker build --build-arg VITE_BASE_PATH=/r-agent2/ -t r-agent2-frontend:latest -f frontend/Dockerfile ."
             elif [ "$BUILD_SERVICE" = "api" ]; then
-                BUILD_CMD="docker build -t r-agent2-api:latest -f api/Dockerfile ."
+                # A API depende de uma base pre-aquecida (Playwright/ffmpeg) para reduzir tempo e evitar falhas.
+                BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base . && docker build -t r-agent2-api:latest -f api/Dockerfile ."
             elif [ "$BUILD_SERVICE" = "rag-service" ]; then
                 BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
             else
@@ -605,6 +694,17 @@ if [ "$BUILD" = true ]; then
             # docker compose build só constrói serviços com 'build:', então precisamos construir manualmente
             # as imagens que só têm 'image:' definido (api e rag-service)
             info "Construindo imagens que não têm build no compose (API e RAG Service)..."
+
+            # Build API base (Playwright/ffmpeg)
+            info "Construindo imagem base da API (Playwright/ffmpeg)..."
+            API_BASE_BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base ."
+            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD"
+            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
+            API_BASE_BUILD_EXIT=${PIPESTATUS[0]}
+            if [ $API_BASE_BUILD_EXIT -ne 0 ]; then
+                error "❌ Build da imagem base da API FALHOU"
+                exit 1
+            fi
             
             # Build API
             info "Construindo imagem da API..."

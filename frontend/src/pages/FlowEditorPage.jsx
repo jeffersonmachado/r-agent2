@@ -2060,6 +2060,23 @@ export function FlowEditorPage() {
 
           {!paletteCollapsed ? (
             <div className="flex-1 p-2 text-sm space-y-2 overflow-y-auto">
+                {String(displayedFlow?.kind || currentFlow?.kind || 'chat').toLowerCase() !== 'voice' ? (
+                  <div className="rounded-lg border border-border-default bg-bg-elevated p-2">
+                    <div className="text-xs text-text-secondary">
+                      Nos de voz (URA) estao ocultos porque o fluxo esta em <strong>Chat</strong>.
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleFlowKindChange('voice')}
+                        title="Troca o tipo do fluxo para Voz (URA) e mostra os nos de voz na paleta"
+                      >
+                        Ativar Voz (URA)
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
                 <NodePalette flowKind={displayedFlow?.kind || currentFlow?.kind || 'chat'} />
             </div>
           ) : (

@@ -61,6 +61,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
+      - api-data:/app/api/data
       - pbx-media:/app/api/data/pbx-media
       - pbx-recordings:/app/api/data/pbx-recordings
 
@@ -77,6 +78,7 @@ services:
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
       - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
+      - api-data:/r-agent2-api-data:ro
       - pbx-media:/var/lib/asterisk/sounds/pbx
       - pbx-recordings:/var/spool/asterisk/monitor/pbx
     command: sh -c "asterisk -f -vvvvv -d"
@@ -179,7 +181,6 @@ volumes:
   rag-vector-store:
   redis-data:
   postgres-data:
+  api-data:
   pbx-media:
   pbx-recordings:
-
-

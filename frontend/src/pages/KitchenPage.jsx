@@ -41,6 +41,14 @@ export function KitchenPage() {
         </div>
       </div>
 
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
+      </div>
+
       {error ? (
         <div style={{ padding: '0.75rem', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, margin: '0 1rem 1rem' }}>
           <strong>Erro:</strong> {error}

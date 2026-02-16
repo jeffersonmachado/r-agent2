@@ -2307,6 +2307,16 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
             )}
           </div>
         </div>
+      
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Estatísticas Gerais */}
