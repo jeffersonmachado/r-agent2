@@ -1,3 +1,7 @@
+jest.mock('../../api/services/websocketService', () => ({
+  emitEvent: jest.fn(),
+}));
+
 describe('whatsappQrService', () => {
   afterEach(() => {
     jest.resetModules();
@@ -99,5 +103,60 @@ describe('whatsappQrService', () => {
     expect(out.connection.metadata.providerSessionId).toBe('p-1');
     expect(out.connection.metadata.lastProviderEventType).toBe('connected');
     expect(out.connection.qr).toBeNull();
+  });
+
+  test('listConnections aplica defaults retrocompatíveis para bot', async () => {
+    const settingsStore = {
+      whatsapp_connections: {
+        connections: [
+          {
+            id: 'conn-legacy',
+            name: 'Conexao Legada',
+            status: 'disconnected',
+          },
+        ],
+      },
+    };
+
+    jest.doMock('../../api/services/tenantSettingsService', () => ({
+      getSetting: jest.fn(async ({ key }) => ({ ok: true, value: settingsStore[key] || null })),
+      upsertSetting: jest.fn(async ({ key, value }) => {
+        settingsStore[key] = value;
+        return { ok: true, value };
+      }),
+    }));
+
+    const service = require('../../api/services/whatsappQrService');
+    const out = await service.listConnections('tenant-1');
+    expect(out.ok).toBe(true);
+    expect(out.connections[0].botEnabled).toBe(false);
+    expect(out.connections[0].botFlowId).toBeNull();
+  });
+
+  test('createConnection persiste configuração de bot/flow', async () => {
+    const settingsStore = {
+      whatsapp_connections: {
+        connections: [],
+      },
+    };
+
+    jest.doMock('../../api/services/tenantSettingsService', () => ({
+      getSetting: jest.fn(async ({ key }) => ({ ok: true, value: settingsStore[key] || null })),
+      upsertSetting: jest.fn(async ({ key, value }) => {
+        settingsStore[key] = value;
+        return { ok: true, value };
+      }),
+    }));
+
+    const service = require('../../api/services/whatsappQrService');
+    const out = await service.createConnection('tenant-1', {
+      name: 'Conn com Bot',
+      botEnabled: true,
+      botFlowId: 'flow-abc',
+    });
+
+    expect(out.ok).toBe(true);
+    expect(out.connection.botEnabled).toBe(true);
+    expect(out.connection.botFlowId).toBe('flow-abc');
   });
 });

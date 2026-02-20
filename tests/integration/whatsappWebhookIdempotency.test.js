@@ -12,6 +12,17 @@ jest.mock('../../api/utils/logger', () => ({
   error: jest.fn(),
 }));
 
+jest.mock('../../api/services/whatsappQrRunner', () => {
+  return class MockWhatsAppQrRunner {
+    setInboundDepsProvider() {}
+    getStatus() { return { status: 'disconnected' }; }
+    getCachedQr() { return null; }
+    async ensureSession() { return null; }
+    async startSession() { return null; }
+    async stopSession() { return null; }
+  };
+});
+
 describe('webhook WhatsApp (idempotência)', () => {
   beforeEach(() => {
     jest.resetModules();
