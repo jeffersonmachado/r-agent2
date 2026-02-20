@@ -23,6 +23,7 @@ function normalizeConnection(conn) {
   return {
     id: String(conn.id || ''),
     name: conn.name ? String(conn.name) : '',
+    label: conn.label ? String(conn.label) : '',
     provider: conn.provider ? String(conn.provider) : 'whatsapp-qr',
     status: conn.status ? String(conn.status) : 'disconnected',
     createdAt: conn.createdAt || null,
@@ -104,6 +105,7 @@ async function createConnection(tenantId, input) {
   const next = normalizeConnection({
     id,
     name: input?.name ? String(input.name).trim() : `WhatsApp QR ${out.store.connections.length + 1}`,
+    label: input?.label ? String(input.label).trim() : '',
     provider: input?.provider ? String(input.provider).trim() : 'whatsapp-qr',
     status: input?.status ? String(input.status) : 'disconnected',
     createdAt: now,
@@ -196,7 +198,20 @@ async function setConnectionStatus(tenantId, connectionId, input = {}) {
   out.store.connections[idx] = normalizeConnection(next);
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
-  return { ok: true, connection: normalizeConnection(out.store.connections[idx]) };
+
+  const connection = normalizeConnection(out.store.connections[idx]);
+
+  // Notifica o frontend em tempo real (evita precisar dar refresh na página)
+  // Import aqui para minimizar risco de dependência circular.
+  try {
+    // eslint-disable-next-line global-require
+    const WebSocketService = require('./websocketService');
+    WebSocketService.emitEvent(tenantId, 'whatsapp.connection.updated', { connection });
+  } catch (e) {
+    // Não quebra o fluxo se websocket não estiver ativo
+  }
+
+  return { ok: true, connection };
 }
 
 async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
@@ -253,7 +268,18 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
   out.store.connections[idx] = normalizeConnection(next);
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
-  return { ok: true, connection: normalizeConnection(out.store.connections[idx]) };
+  const connection = normalizeConnection(out.store.connections[idx]);
+
+  // Notifica o frontend em tempo real (ex.: página de conexões QR)
+  try {
+    // eslint-disable-next-line global-require
+    const WebSocketService = require('./websocketService');
+    WebSocketService.emitEvent('whatsapp.connection.updated', { connection }, { tenantId });
+  } catch (e) {
+    // Não deve quebrar o fluxo se websocket não estiver ativo
+  }
+
+  return { ok: true, connection };
 }
 
 async function getStatus(tenantId, connectionId) {
@@ -276,6 +302,17 @@ async function getStatus(tenantId, connectionId) {
   };
 }
 
+async function removeConnection(tenantId, connectionId) {
+  const out = await getStore(tenantId);
+  if (!out.ok) return out;
+  const idx = out.store.connections.findIndex((c) => c && String(c.id) === String(connectionId));
+  if (idx < 0) return { ok: false, error: 'not_found' };
+  out.store.connections.splice(idx, 1);
+  const saved = await saveStore(tenantId, out.store);
+  if (!saved.ok) return saved;
+  return { ok: true };
+}
+
 module.exports = {
   listConnections,
   createConnection,
@@ -284,4 +321,5 @@ module.exports = {
   setConnectionStatus,
   ingestConnectionEvent,
   getStatus,
+  removeConnection,
 };

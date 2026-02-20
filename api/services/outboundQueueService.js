@@ -92,7 +92,7 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
       env: process.env.NODE_ENV || 'unknown',
       allowDirect: allowDirectSendWithoutDb(),
     });
-    await deliverOutbound({ tenantId, channelType, message });
+    await deliverOutbound({ tenantId, channelType, message: injectChannelAccountId(message, channelAccountId) });
     return { queued: false, direct: true };
   }
 
@@ -164,19 +164,41 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
   return { queued: true, itemId: item.id };
 }
 
+function injectChannelAccountId(message, channelAccountId) {
+  if (!channelAccountId) return message;
+  if (!message || typeof message !== 'object') return message;
+  const meta = (message.meta || (message.body && message.body.meta) || {});
+  // Preserva o que já existe e injeta channelAccountId para providers (ex.: WhatsApp QR)
+  return {
+    ...message,
+    meta: { ...meta, channelAccountId: meta.channelAccountId || meta.channel_account_id || channelAccountId },
+  };
+}
+
 async function deliverOutbound({ tenantId, channelType, message }) {
   // messageNormalized esperado: { to, type, body }
   const meta = message && typeof message === 'object'
     ? (message.meta || (message.body && message.body.meta) || null)
     : null;
   if (channelType === 'whatsapp') {
+    // Suporte a múltiplos providers via factory
+    const WhatsAppProviderFactory = require('./whatsappProviderFactory');
+    // channelAccount pode vir de message.meta ou message.channelAccount
+    const channelAccount = (meta && meta.channelAccount) || message.channelAccount || null;
+    const provider = await WhatsAppProviderFactory.get(tenantId, channelAccount);
     const to = message.to;
     const kind = message.type || 'text';
+    let result, externalMessageId;
     if (kind === 'text') {
       const text = message.body?.text || message.body?.body || message.text;
       if (!to || !text) throw new Error('Outbound WhatsApp requer {to, body.text}');
-      const result = await sendTextMessage(to, text);
-      const externalMessageId = result?.messages?.[0]?.id || null;
+      result = await provider.sendText(tenantId, to, text, contextFromMessage(message));
+      
+      // Validação melhorada: verificar formato da resposta
+      if (!result || !Array.isArray(result?.messages)) {
+        throw new Error(`Provider retornou formato inválido para sendText: ${JSON.stringify({ resultType: typeof result, hasMessages: !!result?.messages, messagesType: result?.messages ? typeof result.messages : 'undefined' })}`);
+      }
+      externalMessageId = result?.messages?.[0]?.id || result?.externalMessageId || null;
       await persistOutboundMessage({
         tenantId,
         channelType,
@@ -190,57 +212,18 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       });
       return { success: true, externalMessageId };
     }
-
     if (kind === 'template') {
       const templateName = message.body?.templateName || message.body?.name || message.templateName;
       const languageCode = message.body?.languageCode || message.body?.language || message.languageCode || 'pt_BR';
       const parameters = Array.isArray(message.body?.parameters) ? message.body.parameters : (Array.isArray(message.parameters) ? message.parameters : []);
       if (!to || !templateName) throw new Error('Outbound WhatsApp template requer {to, body.templateName}');
-
-      const phoneNumberId = config.get('whatsapp.phoneNumberId');
-      const accessToken = config.get('whatsapp.accessToken');
-      if (!phoneNumberId || !accessToken) throw new Error('Credenciais do WhatsApp não configuradas');
-
-      const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
-      const payload = {
-        messaging_product: 'whatsapp',
-        to: String(to).replace(/^\+/, ''),
-        type: 'template',
-        template: {
-          name: templateName,
-          language: { code: languageCode || 'pt_BR' },
-        },
-      };
-
-      if (parameters && parameters.length > 0) {
-        payload.template.components = [
-          {
-            type: 'body',
-            parameters: parameters.map((param) => ({
-              type: 'text',
-              text: String(param),
-            })),
-          },
-        ];
+      result = await provider.sendTemplate(tenantId, to, templateName, languageCode, parameters, contextFromMessage(message));
+      
+      // Validação melhorada: verificar formato da resposta
+      if (!result || !Array.isArray(result?.messages)) {
+        throw new Error(`Provider sendTemplate retornou formato inválido: resultType=${typeof result}, hasMessages=${!!result?.messages}`);
       }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `WhatsApp API error: ${response.status}`);
-      }
-
-      const data = await response.json().catch(() => ({}));
-      const externalMessageId = data?.messages?.[0]?.id || null;
-
+      externalMessageId = result?.messages?.[0]?.id || result?.externalMessageId || null;
       await persistOutboundMessage({
         tenantId,
         channelType,
@@ -257,11 +240,41 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       }).catch((err) => {
         logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
       });
-
       return { success: true, externalMessageId };
     }
-
+    if (kind === 'media' || kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'document') {
+      const mediaType = kind;
+      const mediaUrlOrPath = message.body?.url || message.body?.mediaUrl || message.mediaUrl;
+      const caption = message.body?.caption || message.caption || '';
+      if (!to || !mediaUrlOrPath) throw new Error('Outbound WhatsApp media requer {to, body.url/mediaUrl}');
+      result = await provider.sendMedia(tenantId, to, mediaType, mediaUrlOrPath, caption, contextFromMessage(message));
+      
+      // Validação melhorada: verificar formato da resposta
+      if (!result || !Array.isArray(result?.messages)) {
+        throw new Error(`Provider sendMedia retornou formato inválido: resultType=${typeof result}, hasMessages=${!!result?.messages}`);
+      }
+      externalMessageId = result?.messages?.[0]?.id || result?.externalMessageId || null;
+      await persistOutboundMessage({
+        tenantId,
+        channelType,
+        to,
+        type: mediaType,
+        body: { url: mediaUrlOrPath, caption, ...(meta ? { meta } : {}) },
+        externalMessageId,
+        status: 'sent',
+      }).catch((err) => {
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+      });
+      return { success: true, externalMessageId };
+    }
     throw new Error(`Outbound WhatsApp: type "${kind}" ainda não suportado`);
+  }
+
+  // ...existing code...
+
+  function contextFromMessage(message) {
+    // Extrai contexto relevante do message/meta para providers
+    return (message && message.meta) ? message.meta : {};
   }
 
   if (channelType === 'instagram') {
@@ -375,6 +388,9 @@ function computeReasonCode(err) {
   if (msg.includes('outside the allowed window') || msg.includes('24 hour') || msg.includes('requires a template')) return 'outside_window_24h';
   if (msg.includes('credentials')) return 'credentials_invalid';
   if (msg.includes('timeout')) return 'timeout';
+  if (msg.includes('conflict') || msg.includes('outro dispositivo') || msg.includes('outro lugar')) return 'wa_conflict';
+  if (msg.includes('sessão') && msg.includes('não iniciada')) return 'wa_not_connected';
+  if (msg.includes('não conectada')) return 'wa_not_connected';
   return 'send_failed';
 }
 
@@ -544,7 +560,7 @@ async function processDue({ limit = 25 } = {}) {
       const result = await deliverOutbound({
         tenantId: row.tenant_key,
         channelType: row.channel_type,
-        message: row.message || {},
+        message: injectChannelAccountId(row.message || {}, row.channel_account_id),
       });
 
       sent++;
@@ -669,6 +685,7 @@ async function processDue({ limit = 25 } = {}) {
         channelType: row.channel_type,
         attempts,
         nextAttemptAt: nextAttemptAt.toISOString(),
+        reasonCode,
         error: err.message,
       });
     }

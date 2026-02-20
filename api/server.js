@@ -1,3 +1,11 @@
+// --- WhatsApp QR Runner ---
+const WhatsAppQrRunner = require('./services/whatsappQrRunner');
+const qrRunner = new WhatsAppQrRunner({ sessionsDir: __dirname + '/data/wa_sessions' });
+
+// ...existing code...
+
+// Os endpoints WhatsApp QR devem ser movidos para dentro da função async requestHandler(req, res)
+
 /**
  * Servidor HTTP mínimo para expor a engine via API.
  *
@@ -1030,6 +1038,81 @@ function hasJsonContentType(req) {
  */
 async function requestHandler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
+  // URL é relativa; usamos base fictícia apenas para parse
+  const url = new URL(req.url || '/', 'http://localhost');
+  const { pathname } = url;
+
+  // --- WhatsApp QR Endpoints ---
+  // POST /whatsapp/connections/:id/start
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/start')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'write');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    
+    const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/start'.length));
+    const channelAccountId = id;
+    let lastQr = null;
+
+    logger.info('WA_QR_HTTP', 'start requested', {
+      tenantId,
+      channelAccountId,
+      path: pathname,
+    });
+
+    await qrRunner.startSession(tenantId, channelAccountId, (qr) => { lastQr = qr; });
+
+    logger.info('WA_QR_HTTP', 'start done', {
+      tenantId,
+      channelAccountId,
+      hasQr: !!lastQr,
+    });
+    sendJson(res, 200, { ok: true, qr: lastQr });
+    return;
+  }
+
+  // POST /whatsapp/connections/:id/stop
+  if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/stop')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'write');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    
+    const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/stop'.length));
+    const channelAccountId = id;
+
+    logger.info('WA_QR_HTTP', 'stop requested', {
+      tenantId,
+      channelAccountId,
+      path: pathname,
+    });
+
+    await qrRunner.stopSession(tenantId, channelAccountId);
+
+    logger.info('WA_QR_HTTP', 'stop done', {
+      tenantId,
+      channelAccountId,
+    });
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
   // Garante traceId em TODA requisição
   try {
     const { requestIdMiddleware } = require('./middleware/requestId');
@@ -1045,10 +1128,6 @@ async function requestHandler(req, res) {
     res.end();
     return;
   }
-
-  // URL é relativa; usamos base fictícia apenas para parse
-  const url = new URL(req.url || '/', 'http://localhost');
-  const { pathname } = url;
 
   // Log de debug para todas as requisições GET a /metrics
   if (method === 'GET' && pathname.startsWith('/metrics')) {
@@ -12155,6 +12234,242 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /api/support/dashboard - Dashboard de suporte com estatísticas de mensagens
+  if (method === 'GET' && pathname === '/api/support/dashboard') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = req.tenantId;
+      const sequelize = require('./db/sequelize').getSequelize();
+      
+      if (!sequelize) {
+        sendJson(res, 503, { error: 'service_unavailable', message: 'Database not available' });
+        return;
+      }
+
+      // Conta mensagens pendentes
+      const [pendingResult] = await sequelize.query(
+        `SELECT COUNT(*) as count
+         FROM outbound_queue
+         WHERE tenant_key = :tenantId
+           AND status = 'pending'`,
+        { replacements: { tenantId } }
+      );
+      const outboundPendingCount = parseInt(pendingResult[0]?.count || 0, 10);
+
+      // Conta mensagens falhas
+      const [failedResult] = await sequelize.query(
+        `SELECT COUNT(*) as count
+         FROM outbound_queue
+         WHERE tenant_key = :tenantId
+           AND status = 'failed'`,
+        { replacements: { tenantId } }
+      );
+      const outboundFailedCount = parseInt(failedResult[0]?.count || 0, 10);
+
+      // Busca erros recentes (top 5)
+      const [recentErrors] = await sequelize.query(
+        `SELECT id, channel_type, status, attempts, last_error, reason_code, created_at, updated_at
+         FROM outbound_queue
+         WHERE tenant_key = :tenantId
+           AND (status = 'failed' OR last_error IS NOT NULL)
+         ORDER BY updated_at DESC
+         LIMIT 5`,
+        { replacements: { tenantId } }
+      );
+
+      // Estrutura a resposta
+      const errorList = Array.isArray(recentErrors) ? recentErrors.map(err => ({
+        id: err.id,
+        channelType: err.channel_type,
+        status: err.status,
+        attempts: err.attempts,
+        last_error: err.last_error,
+        reasonCode: err.reason_code,
+        createdAt: err.created_at,
+        updatedAt: err.updated_at,
+      })) : [];
+
+      sendJson(res, 200, {
+        outboundPendingCount,
+        outboundFailedCount,
+        recentErrors: errorList,
+      });
+    } catch (err) {
+      logger.error('[SupportDashboard] Erro ao obter dashboard:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter dados do dashboard' });
+    }
+    return;
+  }
+
+  // GET /api/support/failed-messages - Lista completa de mensagens falhadas com paginação
+  if (method === 'GET' && pathname === '/api/support/failed-messages') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = req.tenantId;
+      const sequelize = require('./db/sequelize').getSequelize();
+      
+      if (!sequelize) {
+        sendJson(res, 503, { error: 'service_unavailable', message: 'Database not available' });
+        return;
+      }
+
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const channel = urlObj.searchParams.get('channel');
+      const status = urlObj.searchParams.get('status') || 'failed';
+      const limitRaw = urlObj.searchParams.get('limit') || '50';
+      const offsetRaw = urlObj.searchParams.get('offset') || '0';
+      const sortBy = urlObj.searchParams.get('sortBy') || 'updated_at';
+      const searchId = urlObj.searchParams.get('searchId');
+
+      const limit = Math.min(Math.max(1, parseInt(limitRaw, 10)), 500);
+      const offset = Math.max(0, parseInt(offsetRaw, 10));
+
+      // Validar sortBy
+      const validSortBy = ['updated_at', 'attempts', 'created_at'].includes(sortBy) ? sortBy : 'updated_at';
+
+      // Montar WHERE clause
+      let whereClause = `WHERE tenant_key = :tenantId`;
+      if (status === 'all' || !status) {
+        whereClause += ` AND (status = 'failed' OR status = 'pending')`;
+      } else if (status) {
+        whereClause += ` AND status = :status`;
+      }
+      if (channel) {
+        whereClause += ` AND channel_type = :channel`;
+      }
+      if (searchId) {
+        whereClause += ` AND id LIKE :searchId`;
+      }
+
+      // Contar total
+      const [countResult] = await sequelize.query(
+        `SELECT COUNT(*) as total FROM outbound_queue ${whereClause}`,
+        { replacements: { tenantId, status, channel, searchId: searchId ? `%${searchId}%` : null } }
+      );
+      const total = parseInt(countResult[0]?.total || 0, 10);
+
+      // Buscar mensagens
+      const [messages] = await sequelize.query(
+        `SELECT id, channel_type, status, attempts, last_error, reason_code, external_message_id, message, created_at, updated_at
+         FROM outbound_queue
+         ${whereClause}
+         ORDER BY ${validSortBy} DESC
+         LIMIT :limit OFFSET :offset`,
+        { replacements: { tenantId, status, channel, searchId: searchId ? `%${searchId}%` : null, limit, offset } }
+      );
+
+      sendJson(res, 200, {
+        messages: Array.isArray(messages) ? messages : [],
+        total,
+        limit,
+        offset,
+        page: Math.floor(offset / limit) + 1,
+      });
+    } catch (err) {
+      logger.error('[FailedMessages] Erro ao listar mensagens falhadas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar mensagens falhadas' });
+    }
+    return;
+  }
+
+  // GET /api/support/delivered-messages - Lista de mensagens entregues com sucesso
+  if (method === 'GET' && pathname === '/api/support/delivered-messages') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const tenantId = req.tenantId;
+      const sequelize = require('./db/sequelize').getSequelize();
+      
+      if (!sequelize) {
+        sendJson(res, 503, { error: 'service_unavailable', message: 'Database not available' });
+        return;
+      }
+
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const channel = urlObj.searchParams.get('channel');
+      const limitRaw = urlObj.searchParams.get('limit') || '50';
+      const offsetRaw = urlObj.searchParams.get('offset') || '0';
+      const sortBy = urlObj.searchParams.get('sortBy') || 'updated_at';
+      const searchId = urlObj.searchParams.get('searchId');
+
+      const limit = Math.min(Math.max(1, parseInt(limitRaw, 10)), 500);
+      const offset = Math.max(0, parseInt(offsetRaw, 10));
+
+      // Validar sortBy
+      const validSortBy = ['updated_at', 'attempts', 'created_at'].includes(sortBy) ? sortBy : 'updated_at';
+
+      // Montar WHERE clause para mensagens entregues
+      let whereClause = `WHERE tenant_key = :tenantId AND status = 'delivered'`;
+      if (channel) {
+        whereClause += ` AND channel_type = :channel`;
+      }
+      if (searchId) {
+        whereClause += ` AND id LIKE :searchId`;
+      }
+
+      // Contar total
+      const [countResult] = await sequelize.query(
+        `SELECT COUNT(*) as total FROM outbound_queue ${whereClause}`,
+        { replacements: { tenantId, channel, searchId: searchId ? `%${searchId}%` : null } }
+      );
+      const total = parseInt(countResult[0]?.total || 0, 10);
+
+      // Buscar mensagens
+      const [messages] = await sequelize.query(
+        `SELECT id, channel_type, status, attempts, last_error, reason_code, external_message_id, message, created_at, updated_at
+         FROM outbound_queue
+         ${whereClause}
+         ORDER BY ${validSortBy} DESC
+         LIMIT :limit OFFSET :offset`,
+        { replacements: { tenantId, channel, searchId: searchId ? `%${searchId}%` : null, limit, offset } }
+      );
+
+      sendJson(res, 200, {
+        messages: Array.isArray(messages) ? messages : [],
+        total,
+        limit,
+        offset,
+        page: Math.floor(offset / limit) + 1,
+      });
+    } catch (err) {
+      logger.error('[DeliveredMessages] Erro ao listar mensagens entregues:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar mensagens entregues' });
+    }
+    return;
+  }
+
   // -----------------------------------------------------------------------
   // WhatsApp IVR (URA WhatsApp empacotada)
   // -----------------------------------------------------------------------
@@ -12381,7 +12696,41 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
       }
-      sendJson(res, 200, { ok: true, connections: out.connections || [] });
+      const connections = (out.connections || []).map((conn) => {
+        const runtime = qrRunner.getStatus(tenantId, conn.id);
+        const runtimeStatus = String(runtime?.status || '').toLowerCase();
+        const runtimeDisconnectCode = Number(runtime?.lastDisconnectCode || 0) || null;
+        const runtimeDisconnectReason =
+          (typeof runtime?.lastError === 'string' && runtime.lastError.trim()) ||
+          runtime?.lastError?.output?.payload?.message ||
+          null;
+        const runtimeLastDisconnectAt =
+          runtimeStatus === 'disconnected' && Number(runtime?.updatedAt || 0) > 0
+            ? new Date(Number(runtime.updatedAt)).toISOString()
+            : null;
+
+        const merged = {
+          ...conn,
+          status: String(conn?.status || 'disconnected').trim(),
+          runtimeStatus: String(runtimeStatus || 'disconnected').trim(),
+          lastDisconnectCode: runtimeDisconnectCode ?? conn?.lastDisconnectCode ?? null,
+          lastDisconnectReason: (typeof runtimeDisconnectReason === 'string' ? runtimeDisconnectReason.trim() : null) || 
+                                (typeof conn?.lastDisconnectReason === 'string' ? conn.lastDisconnectReason.trim() : null) || 
+                                null,
+          lastDisconnectAtRuntime: runtimeLastDisconnectAt,
+        };
+
+        if (runtimeStatus === 'connected') {
+          return { ...merged, status: 'connected' };
+        }
+        if (runtimeStatus === 'syncing' || runtimeStatus === 'connecting' || runtimeStatus === 'qr') {
+          if (String(conn.status || '').toLowerCase() !== 'connected') {
+            return { ...merged, status: 'pairing' };
+          }
+        }
+        return merged;
+      });
+      sendJson(res, 200, { ok: true, connections });
     } catch (err) {
       logger.error('[WhatsAppQR] Erro ao listar conexões:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar conexões' });
@@ -12424,6 +12773,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   }
 
   // POST /whatsapp/connections/:id/qr
+  // OBS: Este endpoint precisa devolver o QR REAL do WhatsApp Web (Baileys).
+  // Antes ele chamava whatsappQrService.generateQr() e gerava "waqr:...", que é inválido no WhatsApp.
   if (method === 'POST' && pathname.startsWith('/whatsapp/connections/') && pathname.endsWith('/qr')) {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
@@ -12437,22 +12788,72 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
     const tenantId = requireTenant(req, res);
     if (!tenantId) return;
+
     try {
       const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/qr'.length));
-      const service = require('./services/whatsappQrService');
-      const out = await service.generateQr(tenantId, id);
-      if (!out.ok) {
-        if (out.error === 'not_found') {
-          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+
+      // Se já existe um QR recente em cache, devolve imediatamente (evita churn sob carga)
+      try {
+        const cached = qrRunner.getCachedQr?.(tenantId, id, 15000);
+        if (cached) {
+          sendJson(res, 200, { ok: true, qr: { text: cached, cached: true } });
           return;
         }
-        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
-        return;
-      }
-      sendJson(res, 200, { ok: true, connection: out.connection, qr: out.qr });
+      } catch (_) {}
+
+	      // buscar info da conexão (para enriquecer logs/metadata)
+	      let connectionName = null;
+	      try {
+	        const service = require('./services/whatsappQrService');
+	        const c = await service.getConnectionById(tenantId, id);
+	        connectionName = c?.name || c?.label || null;
+	      } catch (_) {}
+
+      const qrText = await new Promise((resolve, reject) => {
+        let done = false;
+        const t = setTimeout(() => {
+          if (done) return;
+          done = true;
+          reject(new Error('QR_TIMEOUT'));
+        }, 60000);
+
+	        // Não derruba sessão existente: apenas garante que ela está rodando e aguarda o próximo QR.
+	        qrRunner.ensureSession(tenantId, id, (qr) => {
+          if (done) return;
+          done = true;
+          clearTimeout(t);
+          resolve(qr);
+	        }, { name: connectionName, qrCacheMs: 15000 }).catch((err) => {
+          if (done) return;
+          done = true;
+          clearTimeout(t);
+          reject(err);
+        });
+      });
+
+      sendJson(res, 200, { ok: true, qr: { text: qrText } });
     } catch (err) {
-      logger.error('[WhatsAppQR] Erro ao gerar QR:', err);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao gerar QR' });
+      const msg = err?.message === 'QR_TIMEOUT'
+        ? 'Tempo esgotado aguardando QR. Tente novamente.'
+        : 'Erro ao gerar QR';
+      
+      // Log melhorado: captura informações do erro de forma robusta
+      const errorDetails = {
+        tenantId: requireTenant(req) || 'unknown',
+        connectionId: id || 'unknown',
+        message: err?.message,
+        code: err?.code,
+        name: err?.name,
+        status: err?.status || err?.statusCode || err?.output?.statusCode,
+        isQrTimeout: err?.message === 'QR_TIMEOUT',
+        stack: err?.stack,
+        // Baileys errors podem ter output/payload
+        boomOutput: err?.output ? { statusCode: err.output.statusCode, payload: err.output.payload } : null,
+        raw: String(err),
+      };
+      logger.error('[WhatsAppQR] Erro ao gerar QR (Baileys):', errorDetails);
+      
+      sendJson(res, err?.message === 'QR_TIMEOUT' ? 504 : 500, { error: err?.message === 'QR_TIMEOUT' ? 'timeout' : 'internal_error', message: msg });
     }
     return;
   }
@@ -12597,6 +12998,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     if (!tenantId) return;
     try {
       const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/status'.length));
+      
+      logger.debug('WA_QR_HTTP', 'status requested', {
+        tenantId,
+        connectionId: id,
+        path: pathname,
+      });
+      
       const service = require('./services/whatsappQrService');
       const out = await service.getStatus(tenantId, id);
       if (!out.ok) {
@@ -12607,13 +13015,90 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
       }
-      sendJson(res, 200, out);
+      const runtime = qrRunner.getStatus(tenantId, id);
+      const runtimeStatus = String(runtime?.status || '').toLowerCase();
+      let effectiveStatus = out.status;
+
+      if (runtimeStatus === 'connected') {
+        effectiveStatus = 'connected';
+      } else if ((runtimeStatus === 'syncing' || runtimeStatus === 'connecting' || runtimeStatus === 'qr') && String(out.status || '').toLowerCase() !== 'connected') {
+        effectiveStatus = 'pairing';
+      }
+
+      if (effectiveStatus !== out.status) {
+        try {
+          await service.setConnectionStatus(tenantId, id, {
+            status: effectiveStatus,
+            metadata: { source: 'qrRunner-runtime-sync', runtimeStatus },
+          });
+        } catch (_) {}
+      }
+
+      const responsePayload = {
+        ...out,
+        status: String(effectiveStatus || 'disconnected').trim(),
+        runtimeStatus: String(runtimeStatus || 'disconnected').trim(),
+        lastDisconnectCode: Number(runtime?.lastDisconnectCode || 0) || null,
+        lastDisconnectReason: (() => {
+          const fallback = (typeof runtime?.lastError === 'string' && runtime.lastError.trim()) || null;
+          const message = runtime?.lastError?.output?.payload?.message;
+          if (typeof message === 'string' && message.trim()) return message;
+          return fallback;
+        })(),
+        lastDisconnectAtRuntime:
+          runtimeStatus === 'disconnected' && Number(runtime?.updatedAt || 0) > 0
+            ? new Date(Number(runtime.updatedAt)).toISOString()
+            : null,
+      };
+
+      logger.debug('WA_QR_HTTP', 'status response', {
+        tenantId,
+        connectionId: id,
+        status: responsePayload.status,
+        runtimeStatus: responsePayload.runtimeStatus,
+      });
+
+      sendJson(res, 200, responsePayload);
     } catch (err) {
       logger.error('[WhatsAppQR] Erro ao obter status:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter status' });
     }
     return;
   }
+
+    // DELETE /whatsapp/connections/:id
+    if (method === 'DELETE' && pathname.startsWith('/whatsapp/connections/')) {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+      const permResult = requirePermission(req, 'config', 'update');
+      if (!permResult.allowed) {
+        sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+        return;
+      }
+      const tenantId = requireTenant(req, res);
+      if (!tenantId) return;
+      try {
+        const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length));
+        const service = require('./services/whatsappQrService');
+        const out = await service.removeConnection(tenantId, id);
+        if (!out.ok) {
+          if (out.error === 'not_found') {
+            sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+            return;
+          }
+          sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+          return;
+        }
+        sendJson(res, 200, { ok: true });
+      } catch (err) {
+        logger.error('[WhatsAppQR] Erro ao remover conexão:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao remover conexão' });
+      }
+      return;
+    }
 
   // POST /webhooks/whatsapp-qr/events (integração com worker externo)
   if (method === 'POST' && pathname === '/webhooks/whatsapp-qr/events') {
@@ -14978,7 +15463,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const sessionId = `whatsapp_${cleanPhone.replace(/^\+/, '')}`;
 
       // Verifica se já existe ticket ativo para este número
-      const existingTicket = getTicketBySession(sessionId);
+      // HARD multi-tenant: evita colisão entre tenants com o mesmo sessionId
+      const existingTicket = getTicketBySession(sessionId, req.tenantId);
       if (existingTicket && existingTicket.status !== 'closed') {
         sendJson(res, 409, {
           error: 'ticket_already_exists',
@@ -16201,7 +16687,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     const sessionId = decodeURIComponent(pathname.slice('/tickets/session/'.length));
-    const ticket = getTicketBySession(sessionId);
+    // HARD multi-tenant: evita retornar ticket de outro tenant
+    const ticket = getTicketBySession(sessionId, req.tenantId);
     if (!ticket) {
       sendJson(res, 404, { error: 'ticket_not_found' });
       return;

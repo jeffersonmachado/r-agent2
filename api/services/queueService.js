@@ -189,7 +189,12 @@ function persistTicketBestEffort(ticket) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     upsertTicketToDb(ticket).catch((err) => {
-      logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', { ticketId: ticket.id, error: err.message });
+      logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', {
+        ticketId: ticket.id,
+        error: err?.message || String(err),
+        name: err?.name || null,
+        errors: Array.isArray(err?.errors) ? err.errors.map(e => ({ message: e?.message, path: e?.path, value: e?.value, validatorKey: e?.validatorKey })) : null,
+      });
     });
   });
 }

@@ -24,6 +24,43 @@ const { ChannelConversation, Ticket: TicketGetter } = require('../db/models');
 const queueService = require('./queueService');
 const { checkLimit } = require('./planLimitsService');
 
+// ---------------------------------------------------------------------------
+// Concurrency guard (best-effort)
+//
+// Em cenários omnichannel (WhatsApp Cloud + QR / retries / UI), dois handlers
+// podem chamar "resolveOrCreateTicketFromIncomingMessage" praticamente ao mesmo
+// tempo para a MESMA conversa. Sem uma trava, isso pode criar dois tickets
+// (ou dois fluxos) para a mesma chave externa, dando a impressão de "2 tickets
+// com o mesmo número".
+//
+// Aqui serializamos por (tenantId + channelType + externalConversationId).
+// É uma trava em memória (por processo) – suficiente para evitar duplicidade
+// dentro do mesmo worker/API. A consistência forte entre processos fica por
+// conta do banco (quando disponível).
+// ---------------------------------------------------------------------------
+
+const _inflightByConvKey = new Map(); // key -> Promise
+
+function _convKey(tenantId, channelType, externalConversationId) {
+  return `${String(tenantId || '').trim()}::${String(channelType || '').trim()}::${String(externalConversationId || '').trim()}`;
+}
+
+async function _withInflightLock(key, fn) {
+  const existing = _inflightByConvKey.get(key);
+  if (existing) return existing;
+
+  const p = (async () => {
+    try {
+      return await fn();
+    } finally {
+      _inflightByConvKey.delete(key);
+    }
+  })();
+
+  _inflightByConvKey.set(key, p);
+  return p;
+}
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -100,9 +137,13 @@ async function touchConversation({ tenantId, conversationId, status = null } = {
  * @returns {Promise<{conversation: any, ticket: any, createdTicket: boolean}>}
  */
 async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, externalConversationId, contactRef = {}) {
-  const effectiveTenantId = ensureTenantId(tenantId);
-  if (!channelType || typeof channelType !== 'string') throw new Error('channelType é obrigatório');
-  if (!externalConversationId || typeof externalConversationId !== 'string') throw new Error('externalConversationId é obrigatório');
+  // Serializa chamadas concorrentes para a mesma conversa.
+  // Isso evita criação dupla em race conditions (ex.: webhook retry + QR runner + UI).
+  const lockKey = _convKey(tenantId, channelType, externalConversationId);
+  return _withInflightLock(lockKey, async () => {
+    const effectiveTenantId = ensureTenantId(tenantId);
+    if (!channelType || typeof channelType !== 'string') throw new Error('channelType é obrigatório');
+    if (!externalConversationId || typeof externalConversationId !== 'string') throw new Error('externalConversationId é obrigatório');
 
   // Compatibilidade / rollout seguro:
   // - por padrão, NÃO cria ticket automaticamente para todo inbound (evita inundar a UI atual)
@@ -290,7 +331,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     updated_at: now,
   }).catch(() => null);
 
-  return { conversation, ticket, createdTicket: true };
+    return { conversation, ticket, createdTicket: true };
+  });
 }
 
 /**

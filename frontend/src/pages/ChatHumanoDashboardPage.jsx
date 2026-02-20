@@ -1,10 +1,46 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from '../hooks/useRouter';
 
 export function ChatHumanoDashboardPage() {
   const { navigate } = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [failedMessages, setFailedMessages] = useState({ pending: 0, failed: 0, errors: [] });
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+  // ✅ Buscar dados de mensagens falhadas
+  useEffect(() => {
+    const fetchFailedMessages = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        
+        const response = await fetch('/api/support/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFailedMessages({
+            pending: data.outboundPendingCount || 0,
+            failed: data.outboundFailedCount || 0,
+            errors: data.recentErrors || []
+          });
+        }
+      } catch (err) {
+        console.error('[ChatHumano] Erro ao carregar métricas:', err);
+      } finally {
+        setLoadingMetrics(false);
+      }
+    };
+
+    fetchFailedMessages();
+    const interval = setInterval(fetchFailedMessages, 30000); // Atualiza a cada 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const features = [
     { id: 'support', title: 'Atendimento', description: 'Operação central de tickets e conversas', icon: '💬', path: '/support', color: 'bg-cyan-500', category: 'Operação' },
@@ -12,6 +48,7 @@ export function ChatHumanoDashboardPage() {
     { id: 'quick-replies', title: 'Respostas Rápidas', description: 'Templates e atalhos operacionais', icon: '⚡', path: '/quick-replies', color: 'bg-emerald-500', category: 'Produtividade' },
     { id: 'faq', title: 'FAQ / RAG', description: 'Base de conhecimento para apoiar atendimento', icon: '📚', path: '/faq', color: 'bg-violet-500', category: 'Conhecimento' },
     { id: 'departments', title: 'Departamentos', description: 'Estrutura de squads e roteamento por equipe', icon: '🏢', path: '/departments', color: 'bg-indigo-500', category: 'Organização' },
+    { id: 'whatsapp', title: 'WhatsApp', description: 'Gerencie conexões, IVR e templates do WhatsApp', icon: '🟢', path: '/whatsapp-connections', color: 'bg-green-500', category: 'Omnichannel' },
     { id: 'sla', title: 'SLA', description: 'Políticas de prazo e governança operacional', icon: '⏱️', path: '/sla-policies', color: 'bg-amber-500', category: 'Governança' },
     { id: 'supervisor', title: 'Painel Supervisor', description: 'TME, TMA, abandono e status operacional', icon: '🧭', path: '/supervisor', color: 'bg-teal-500', category: 'Analytics' },
     { id: 'analytics', title: 'Analytics', description: 'Métricas de performance e qualidade', icon: '📊', path: '/analytics', color: 'bg-rose-500', category: 'Analytics' },
@@ -72,7 +109,61 @@ export function ChatHumanoDashboardPage() {
           <div className="text-2xl font-semibold text-text-primary">Supervisor + Analytics</div>
           <div className="text-xs text-text-secondary">medição e ajuste</div>
         </div>
+        <div 
+          className={`rounded-xl border p-4 shadow-lg cursor-pointer transition-all ${failedMessages.failed > 0 ? 'bg-red-50 border-red-300 hover:shadow-xl' : 'bg-bg-elevated border-border-default'}`}
+          onClick={() => navigate('/inbox')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="text-xs text-text-tertiary flex items-center gap-2">
+            {failedMessages.failed > 0 ? '⚠️' : '✅'} Mensagens Falhadas
+          </div>
+          <div className={`text-2xl font-semibold ${failedMessages.failed > 0 ? 'text-red-600' : 'text-text-primary'}`}>
+            {failedMessages.failed}
+          </div>
+          <div className="text-xs text-text-secondary mt-1">
+            {failedMessages.pending} pendentes • Clique para ver
+          </div>
+        </div>
       </div>
+
+      {failedMessages.errors.length > 0 && (
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+          <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+            <span>🚨</span>
+            <span>Erros Recentes</span>
+          </h3>
+          <div className="space-y-2">
+            {failedMessages.errors.slice(0, 5).map((error, idx) => (
+              <div key={idx} 
+                className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm cursor-pointer hover:bg-red-100 transition-colors"
+                onClick={() => navigate('/failed-messages')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-mono text-xs text-red-700 cursor-help" title={`ID: ${error.id}\n\nClique para filtrar em Mensagens Falhadas`}>
+                      {error.id?.substring(0, 20)}
+                      {error.id?.length > 20 ? '...' : ''}
+                    </div>
+                    <div className="text-text-secondary">{error.last_error}</div>
+                  </div>
+                  <div className="text-xs text-text-tertiary">
+                    {error.attempts || 0} tentativas
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate('/failed-messages')}
+            className="mt-4 w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+          >
+            Ver Todas as Falhas
+          </button>
+        </div>
+      )}
 
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
         <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">

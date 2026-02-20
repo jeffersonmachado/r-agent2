@@ -20,11 +20,67 @@ export function WebSocketProvider({ children }) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const pingIntervalRef = useRef(null);
+  const reconnectWatchdogRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const eventHandlersRef = useRef(new Map()); // Map<componentId, { onEvent, subscribeEvents }>
   const allSubscribedEventsRef = useRef(new Set()); // Set de todos os eventos inscritos
   const isIntentionalCloseRef = useRef(false); // Flag para evitar reconexão quando fechamos intencionalmente
   const isConnectingRef = useRef(false); // Flag para evitar múltiplas conexões simultâneas
+  const checkServerHealthRef = useRef(null);
+
+  const logReconnectConsole = useCallback((message, data = null) => {
+    const timestamp = new Date().toISOString();
+    if (data) {
+      // eslint-disable-next-line no-console
+      console.info(`[${timestamp}] [WS_RECONNECT] ${message}`, data);
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.info(`[${timestamp}] [WS_RECONNECT] ${message}`);
+  }, []);
+
+  const scheduleReconnect = useCallback((reason, extra = {}) => {
+    if (isIntentionalCloseRef.current) {
+      return;
+    }
+
+    if (reconnectTimeoutRef.current) {
+      return;
+    }
+
+    reconnectAttemptsRef.current += 1;
+    const isServerRestart = Boolean(extra.isServerRestart);
+    const baseDelay = isServerRestart ? 3000 : 1000;
+    const delay = Math.min(baseDelay * Math.pow(1.5, reconnectAttemptsRef.current - 1), 30000);
+
+    logger.info(`[WebSocketContext] Reconectando em ${Math.round(delay)}ms (tentativa ${reconnectAttemptsRef.current})`, {
+      reason,
+      ...extra,
+    });
+    logReconnectConsole(`Tentativa ${reconnectAttemptsRef.current} em ${Math.round(delay)}ms`, {
+      reason,
+      ...extra,
+    });
+
+    reconnectTimeoutRef.current = setTimeout(async () => {
+      reconnectTimeoutRef.current = null;
+
+      if (isServerRestart && reconnectAttemptsRef.current <= 3) {
+        const isHealthy = checkServerHealthRef.current ? await checkServerHealthRef.current() : false;
+        if (!isHealthy) {
+          logger.debug('[WebSocketContext] Servidor ainda não está pronto, aguardando mais um pouco...');
+          logReconnectConsole('Servidor ainda indisponível, nova tentativa em 2000ms');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectTimeoutRef.current = null;
+            connectRef.current();
+          }, 2000);
+          return;
+        }
+      }
+
+      connectRef.current();
+    }, delay);
+  }, [logReconnectConsole]);
 
   // Constrói URL do WebSocket
   const getWebSocketUrl = useCallback(() => {
@@ -179,6 +235,10 @@ export function WebSocketProvider({ children }) {
     }
   }, [getWebSocketUrl]);
 
+  useEffect(() => {
+    checkServerHealthRef.current = checkServerHealth;
+  }, [checkServerHealth]);
+
   // Conecta ao WebSocket
   const connect = useCallback(async () => {
     // Se já está conectando, ignora nova tentativa
@@ -238,6 +298,7 @@ export function WebSocketProvider({ children }) {
 
       ws.onopen = () => {
         logger.info('[WebSocketContext] Conectado');
+        logReconnectConsole('Conectado com sucesso');
         isConnectingRef.current = false;
         setConnected(true);
         reconnectAttemptsRef.current = 0;
@@ -359,6 +420,8 @@ export function WebSocketProvider({ children }) {
         isConnectingRef.current = false;
         setConnected(false);
         setAuthenticated(false);
+
+        scheduleReconnect('onerror', { error: errorMessage, url });
       };
 
       ws.onclose = (event) => {
@@ -395,6 +458,12 @@ export function WebSocketProvider({ children }) {
             ? 'Servidor pode estar reiniciando (nodemon). Reconectando automaticamente...' 
             : (event.code === 1006 ? 'Servidor pode não estar rodando ou não estar acessível. Verifique se o servidor está ativo em ' + url.replace('ws://', 'http://').replace('wss://', 'https://').replace('/ws', '') : undefined)
         });
+        logReconnectConsole('Desconectado', {
+          code: event.code,
+          reason: event.reason || reasonText,
+          url,
+          wasClean: event.wasClean,
+        });
         isConnectingRef.current = false;
         setConnected(false);
         setAuthenticated(false);
@@ -411,45 +480,24 @@ export function WebSocketProvider({ children }) {
           return;
         }
 
-        // Reconecta se não foi fechamento intencional
-        // Para reinicializações do servidor (nodemon), usa delay menor e verifica saúde do servidor
-        if (event.code !== 1000) {
-          // Para reinicializações do servidor, aguarda um pouco mais para dar tempo do servidor reiniciar
-          const baseDelay = isServerRestart ? 3000 : 1000;
-          const delay = Math.min(baseDelay * Math.pow(1.5, reconnectAttemptsRef.current), 30000);
-          reconnectAttemptsRef.current++;
-
-          logger.info(`[WebSocketContext] Reconectando em ${Math.round(delay)}ms (tentativa ${reconnectAttemptsRef.current})${isServerRestart ? ' - servidor reiniciando' : ''}`);
-
-          reconnectTimeoutRef.current = setTimeout(async () => {
-            // Para reinicializações do servidor, verifica saúde antes de reconectar
-            if (isServerRestart && reconnectAttemptsRef.current <= 3) {
-              const isHealthy = await checkServerHealth();
-              if (!isHealthy) {
-                logger.debug('[WebSocketContext] Servidor ainda não está pronto, aguardando mais um pouco...');
-                // Aguarda mais um pouco e tenta novamente
-                reconnectTimeoutRef.current = setTimeout(() => {
-                  connectRef.current();
-                }, 2000);
-                return;
-              }
-            }
-            connectRef.current();
-          }, delay);
-        }
+        // Reconecta para qualquer fechamento não intencional (inclusive código 1000)
+        scheduleReconnect('onclose', {
+          code: event.code,
+          reason: event.reason || reasonText,
+          isServerRestart,
+          wasClean: event.wasClean,
+        });
       };
     } catch (err) {
       logger.error('[WebSocketContext] Erro ao criar conexão', err);
       isConnectingRef.current = false;
       setConnected(false);
       setAuthenticated(false);
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-      reconnectAttemptsRef.current++;
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connectRef.current();
-      }, delay);
+      scheduleReconnect('create_connection_error', {
+        error: err?.message || 'erro desconhecido',
+      });
     }
-  }, [getWebSocketUrl, sendMessage, checkServerHealth]);
+  }, [getWebSocketUrl, sendMessage, scheduleReconnect, logReconnectConsole]);
 
   // Registra um handler de eventos
   const registerHandler = useCallback((componentId, { onEvent, subscribeEvents = [] }) => {
@@ -499,16 +547,53 @@ export function WebSocketProvider({ children }) {
   useEffect(() => {
     connectRef.current();
 
+    const triggerRecoveryConnect = (source) => {
+      if (isIntentionalCloseRef.current) return;
+      if (connected && authenticated) return;
+      logger.info('[WebSocketContext] Trigger de recuperação de conexão', { source });
+      reconnect();
+    };
+
+    const handleOnline = () => {
+      triggerRecoveryConnect('browser-online');
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        triggerRecoveryConnect('tab-visible');
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    reconnectWatchdogRef.current = setInterval(() => {
+      if (isIntentionalCloseRef.current || isConnectingRef.current) return;
+      const wsState = wsRef.current?.readyState;
+      const hasPendingReconnect = !!reconnectTimeoutRef.current;
+
+      if (!connected && !hasPendingReconnect && (wsState == null || wsState === WebSocket.CLOSED)) {
+        logger.info('[WebSocketContext] Watchdog: forçando nova tentativa de conexão');
+        connectRef.current();
+      }
+    }, 5000);
+
     return () => {
       // Limpa ao desmontar
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+      if (reconnectWatchdogRef.current) {
+        clearInterval(reconnectWatchdogRef.current);
+        reconnectWatchdogRef.current = null;
+      }
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
       }
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (wsRef.current) {
         const currentState = wsRef.current.readyState;
         // Só fecha se não estiver em estado CONNECTING (que causaria erro)
@@ -617,7 +702,7 @@ export function WebSocketProvider({ children }) {
  * @param {Array<string>} options.subscribeEvents - Eventos para se inscrever
  * @returns {Object} { connected, authenticated, send, reconnect }
  */
-export function useWebSocketContext({ enabled = true, onEvent, subscribeEvents = [] } = {}) {
+export function useWebSocketContext({ enabled = true, onEvent, subscribeEvents = [], testEventTrigger } = {}) {
   const context = useContext(WebSocketContext);
   if (!context) {
     throw new Error('useWebSocketContext deve ser usado dentro de WebSocketProvider');
@@ -628,6 +713,10 @@ export function useWebSocketContext({ enabled = true, onEvent, subscribeEvents =
   useEffect(() => {
     if (enabled) {
       context.registerHandler(componentIdRef.current, { onEvent, subscribeEvents });
+      // Expor trigger de evento para testes automatizados
+      if (typeof window !== 'undefined' && process.env.NODE_ENV === 'test') {
+        window.__wsTestTrigger__ = onEvent;
+      }
       return () => {
         context.unregisterHandler(componentIdRef.current);
       };

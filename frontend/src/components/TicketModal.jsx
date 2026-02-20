@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getTicketShortLabel } from '../utils/ticketDisplay';
 import { Dialog } from './Dialog';
 import {
   assignTicket,
@@ -317,7 +318,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title={`Ticket #${currentTicket.id.slice(0, 12)}`}
+        title={`Ticket #${getTicketShortLabel(currentTicket)}`}
         size="full"
         resizable={true}
         draggable={true}

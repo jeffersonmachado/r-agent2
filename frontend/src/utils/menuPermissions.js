@@ -323,6 +323,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'flows', action: 'read' },
     { resource: 'flows', action: 'update' },
     { resource: 'config', action: 'read' },
+    { resource: 'config', action: 'update' },
     { resource: 'agents', action: 'list_all' },
     { resource: 'agents', action: 'invite' },
     { resource: 'audit', action: 'read' },

@@ -11,7 +11,7 @@ function frontendRoutesPlugin() {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat', '/inbox', '/failed-messages'];
       
       // IMPORTANTE: Este middleware deve ser executado ANTES do proxy do Vite
       // Para garantir que rotas de API sejam passadas adiante sem modificação
@@ -46,12 +46,13 @@ function frontendRoutesPlugin() {
         // - /config pode ser tanto API quanto página (depende do Accept header)
         const isApiRoute = url.startsWith('/tickets') || 
                           url.startsWith('/queues') || 
+                          url.startsWith('/inbox') ||
                           url.startsWith('/segmentation') ||
                           url.startsWith('/quick-replies') ||
                           url.startsWith('/close-reasons') ||
                           url.startsWith('/bulk-campaigns') ||
                           url.startsWith('/channel-accounts') ||
-                          url.startsWith('/whatsapp') ||
+                          (url === '/whatsapp' || url.startsWith('/whatsapp/')) ||
                           url.startsWith('/ai') ||
                           url.startsWith('/flow-templates') ||
                           url.startsWith('/flows') || 
@@ -183,6 +184,26 @@ const viteConfig = defineConfig({
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
+      },
+      '^/inbox': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // /inbox é rota de página do frontend (SPA) quando é GET para /inbox (sem subcaminho) + navegação
+          // Subrotas como /inbox/conversations são APIs
+          if (req.method === 'GET' && req.url === '/inbox') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') && 
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              // Não faz proxy - deixa o plugin frontend-routes servir index.html
+              return false;
+            }
+          }
+          // Para /inbox/conversations e outros métodos, faz proxy para API
+          return undefined;
+        },
       },
       '^/segmentation': {
         target: `http://localhost:${config.api?.port || 3000}`,

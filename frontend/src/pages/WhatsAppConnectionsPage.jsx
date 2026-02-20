@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/authContext';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
@@ -10,9 +11,13 @@ import {
   generateWhatsAppQr,
   disconnectWhatsAppConnection,
   getWhatsAppConnectionStatus,
-  updateWhatsAppConnectionStatus,
 } from '../api/whatsappConnections';
+import { getWebSocketStatusMeta } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
+
+const PROVIDER_OPTIONS = [
+  { value: 'whatsapp-qr', label: 'WhatsApp QR' },
+];
 
 function statusBadge(status) {
   const value = String(status || 'unknown').toLowerCase();
@@ -22,17 +27,63 @@ function statusBadge(status) {
   return { label: value, className: 'bg-bg-secondary text-text-secondary border border-border-default' };
 }
 
+function formatDisconnectDetails(connection) {
+  const code = Number(connection?.lastDisconnectCode || 0) || null;
+  const reason = String(connection?.lastDisconnectReason || '').trim();
+  if (!code && !reason) return null;
+  if (code && reason) return `[${code}] ${reason}`;
+  if (code) return `[${code}]`;
+  return reason;
+}
+
+function formatDateTime(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('pt-BR');
+}
+
 export function WhatsAppConnectionsPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
 
+  const [wsUiStatus, setWsUiStatus] = useState({ phase: 'connecting' });
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState([]);
   const [form, setForm] = useState({ name: '', provider: 'whatsapp-qr' });
   const [qrState, setQrState] = useState({ connectionId: null, qr: null });
   const [qrImageError, setQrImageError] = useState(false);
   const [busyId, setBusyId] = useState(null);
+
+  const handleWebSocketEvent = useCallback((event, data) => {
+    if (event !== 'whatsapp.connection.updated') return;
+
+    const connection = data?.connection;
+    if (!connection?.id) return;
+
+    setConnections((prev) => {
+      const index = prev.findIndex((item) => item.id === connection.id);
+      if (index < 0) return [connection, ...prev];
+
+      const next = [...prev];
+      next[index] = { ...next[index], ...connection };
+      return next;
+    });
+
+    setQrState((prev) => {
+      if (prev.connectionId === connection.id && connection.status === 'connected') {
+        return { connectionId: null, qr: null };
+      }
+      return prev;
+    });
+  }, []);
+
+  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+    enabled: isAuthenticated,
+    onEvent: handleWebSocketEvent,
+    subscribeEvents: ['whatsapp.connection.updated'],
+  });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -59,11 +110,35 @@ export function WhatsAppConnectionsPage() {
     }
   }, [authLoading, isAuthenticated]);
 
+  useEffect(() => {
+    let timeoutId = null;
+
+    if (wsConnected && wsAuthenticated) {
+      setWsUiStatus({ phase: 'ready' });
+      return () => {};
+    }
+
+    if (wsConnected && !wsAuthenticated) {
+      setWsUiStatus({ phase: 'auth' });
+      return () => {};
+    }
+
+    setWsUiStatus({ phase: 'connecting' });
+    timeoutId = setTimeout(() => {
+      setWsUiStatus({ phase: 'disconnected' });
+    }, 1500);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [wsConnected, wsAuthenticated]);
+
   async function handleCreate() {
     if (!form.name.trim()) {
       showToast('Informe um nome para a conexão', 'warning');
       return;
     }
+
     setLoading(true);
     try {
       await createWhatsAppConnection({ name: form.name.trim(), provider: form.provider.trim() || 'whatsapp-qr' });
@@ -108,27 +183,23 @@ export function WhatsAppConnectionsPage() {
     }
   }
 
-  async function handleMarkConnected(connectionId) {
-    setBusyId(connectionId);
-    try {
-      await updateWhatsAppConnectionStatus(connectionId, { status: 'connected' });
-      if (qrState.connectionId === connectionId) {
-        setQrState({ connectionId: null, qr: null });
-      }
-      await loadConnections();
-      showToast('Conexão marcada como conectada', 'success');
-    } catch (err) {
-      showToast('Erro ao atualizar status da conexão', 'error');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function handleRefreshStatus(connectionId) {
     setBusyId(connectionId);
     try {
       const out = await getWhatsAppConnectionStatus(connectionId);
-      setConnections((prev) => prev.map((c) => (c.id === connectionId ? { ...c, status: out?.status || c.status, updatedAt: out?.updatedAt || c.updatedAt } : c)));
+      setConnections((prev) => prev.map((c) => (
+        c.id === connectionId
+          ? {
+              ...c,
+              status: String(out?.status || c.status || '').trim() || 'disconnected',
+              updatedAt: out?.updatedAt || c.updatedAt,
+              runtimeStatus: out?.runtimeStatus || c.runtimeStatus,
+              lastDisconnectCode: out?.lastDisconnectCode ?? c.lastDisconnectCode,
+              lastDisconnectReason: String(out?.lastDisconnectReason || c.lastDisconnectReason || '').trim() || null,
+              lastDisconnectedAt: out?.lastDisconnectedAt || c.lastDisconnectedAt,
+            }
+          : c
+      )));
       showToast('Status atualizado', 'success');
     } catch (err) {
       showToast('Erro ao atualizar status', 'error');
@@ -158,6 +229,14 @@ export function WhatsAppConnectionsPage() {
   }
   if (!isAuthenticated) return null;
 
+  const connectedCount = connections.filter((conn) => String(conn.status || '').toLowerCase() === 'connected').length;
+  const pairingCount = connections.filter((conn) => String(conn.status || '').toLowerCase() === 'pairing').length;
+  const disconnectedCount = connections.filter((conn) => String(conn.status || '').toLowerCase() === 'disconnected').length;
+  const wsMeta = getWebSocketStatusMeta(wsUiStatus.phase);
+  const formProviderOptions = PROVIDER_OPTIONS.some((option) => option.value === form.provider)
+    ? PROVIDER_OPTIONS
+    : [{ value: form.provider, label: `${form.provider} (atual)` }, ...PROVIDER_OPTIONS];
+
   const waQrImageUrl = qrState?.qr?.text
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrState.qr.text)}`
     : null;
@@ -165,23 +244,41 @@ export function WhatsAppConnectionsPage() {
   return (
     <div className="support-page">
       <ToastContainer />
+
       <div className="support-header">
-        <h1>📱 WhatsApp QR</h1>
-        <div className="support-controls" style={{ gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>📱 WhatsApp QR</h1>
+        </div>
+        <div className="support-controls">
+          <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5" title={wsMeta.title}>
+            <span className={`inline-block h-2 w-2 rounded-full ${wsMeta.dotClassName} animate-pulse`} />
+            <span className="text-sm text-text-secondary">{wsMeta.label}</span>
+          </div>
           <Button onClick={loadConnections} disabled={loading} className="support-button">Atualizar</Button>
         </div>
       </div>
 
-      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
-        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-          <span>🔍</span>
-          <span>Filtros</span>
-        </h3>
-        <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <div className="rounded-lg border border-border-default bg-bg-secondary p-3">
+          <div className="text-xs text-text-secondary">Total de conexões</div>
+          <div className="mt-1 text-2xl font-semibold text-text-primary">{connections.length}</div>
+        </div>
+        <div className="rounded-lg border border-border-default bg-bg-secondary p-3">
+          <div className="text-xs text-text-secondary">Conectadas</div>
+          <div className="mt-1 text-2xl font-semibold text-status-success">{connectedCount}</div>
+        </div>
+        <div className="rounded-lg border border-border-default bg-bg-secondary p-3">
+          <div className="text-xs text-text-secondary">Pareando</div>
+          <div className="mt-1 text-2xl font-semibold text-status-warning">{pairingCount}</div>
+        </div>
+        <div className="rounded-lg border border-border-default bg-bg-secondary p-3">
+          <div className="text-xs text-text-secondary">Desconectadas</div>
+          <div className="mt-1 text-2xl font-semibold text-status-error">{disconnectedCount}</div>
+        </div>
       </div>
 
-      <div className="support-grid" style={{ gridTemplateColumns: '1fr', gap: '16px' }}>
-        <div className="support-details-panel">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="support-details-panel rounded-lg border border-border-default xl:col-span-4">
           <div className="support-details-title">Nova conexão</div>
           <div className="support-form-group">
             <label className="support-form-label">Nome</label>
@@ -189,47 +286,68 @@ export function WhatsAppConnectionsPage() {
           </div>
           <div className="support-form-group">
             <label className="support-form-label">Provider</label>
-            <Input value={form.provider} onChange={(e) => setForm((p) => ({ ...p, provider: e.target.value }))} placeholder="whatsapp-qr" />
+            <select
+              className="support-form-select"
+              value={form.provider}
+              onChange={(e) => setForm((prev) => ({ ...prev, provider: e.target.value }))}
+            >
+              {formProviderOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
           </div>
           <Button onClick={handleCreate} className="support-button-full" disabled={loading}>Criar conexão</Button>
           <div className="text-xs text-text-tertiary" style={{ marginTop: '8px' }}>
-            Use este fluxo para parear sessões via QR (WhatsApp Web/provedores externos).
+            Esta tela conecta números via WhatsApp Web (QR Code). Se você usa API oficial (Cloud API), gerencie em Canal/Contas em vez deste fluxo.
           </div>
         </div>
 
-        <div className="support-details-panel">
+        <div className="support-details-panel rounded-lg border border-border-default xl:col-span-8">
           <div className="support-details-title">Conexões</div>
           {connections.length === 0 ? (
             <div className="text-text-tertiary">Nenhuma conexão cadastrada.</div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
               {connections.map((conn) => {
                 const badge = statusBadge(conn.status);
+                const disconnectDetails = formatDisconnectDetails(conn);
+                const disconnectedAtLabel = formatDateTime(conn.lastDisconnectedAt);
                 return (
-                  <div key={conn.id} className="p-4 rounded-lg border border-border-default bg-bg-tertiary">
-                    <div className="flex items-center justify-between">
-                      <div>
+                  <div key={conn.id} className="rounded-lg border border-border-default bg-bg-tertiary p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <div className="text-sm font-semibold text-text-primary">{conn.name || conn.id}</div>
                         <div className="text-xs text-text-tertiary">{conn.provider || 'whatsapp-qr'}</div>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded-full ${badge.className}`}>{badge.label}</span>
                     </div>
-                    <div className="text-xs text-text-tertiary mt-2">
+
+                    <div className="mt-2 grid grid-cols-1 gap-1 text-xs text-text-tertiary sm:grid-cols-2">
                       <div><strong>ID</strong>: {conn.id}</div>
                       <div><strong>Atualizado</strong>: {conn.updatedAt || '-'}</div>
                       <div><strong>Último QR</strong>: {conn.lastQrAt || '-'}</div>
                     </div>
-                    <div className="flex gap-2 justify-end mt-4">
-                      <Button onClick={() => handleMarkConnected(conn.id)} style={{ width: 'auto' }} disabled={busyId === conn.id}>
-                        {busyId === conn.id ? 'Atualizando...' : 'Marcar conectado'}
-                      </Button>
-                      <Button onClick={() => handleRefreshStatus(conn.id)} style={{ width: 'auto' }} disabled={busyId === conn.id}>
+
+                    {String(conn.status || '').toLowerCase() === 'disconnected' && disconnectDetails && (
+                      <div className="mt-2 text-xs text-status-error">
+                        <strong>Última desconexão:</strong> {disconnectDetails}
+                      </div>
+                    )}
+
+                    {String(conn.status || '').toLowerCase() === 'disconnected' && disconnectedAtLabel && (
+                      <div className="mt-1 text-xs text-text-tertiary">
+                        <strong>Quando:</strong> {disconnectedAtLabel}
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button onClick={() => handleRefreshStatus(conn.id)} style={{ width: 'auto' }} disabled={busyId === conn.id} size="sm">
                         {busyId === conn.id ? 'Atualizando...' : 'Status'}
                       </Button>
-                      <Button onClick={() => handleGenerateQr(conn.id)} style={{ width: 'auto' }} disabled={busyId === conn.id}>
+                      <Button onClick={() => handleGenerateQr(conn.id)} style={{ width: 'auto' }} disabled={busyId === conn.id} size="sm">
                         {busyId === conn.id ? 'Gerando...' : 'Gerar QR'}
                       </Button>
-                      <Button onClick={() => handleDisconnect(conn.id)} className="support-button-danger" style={{ width: 'auto' }} disabled={busyId === conn.id}>
+                      <Button onClick={() => handleDisconnect(conn.id)} className="support-button-danger" style={{ width: 'auto' }} disabled={busyId === conn.id} size="sm">
                         Desconectar
                       </Button>
                     </div>
@@ -241,7 +359,7 @@ export function WhatsAppConnectionsPage() {
         </div>
 
         {qrState?.qr?.text && (
-          <div className="support-details-panel">
+          <div className="support-details-panel rounded-lg border border-border-default xl:col-span-12">
             <div className="support-details-title">QR de pareamento</div>
             <div className="text-xs text-text-tertiary">
               Escaneie este código no WhatsApp. Expira em: {qrState.qr.expiresAt || 'n/a'}
@@ -254,7 +372,7 @@ export function WhatsAppConnectionsPage() {
                   width={240}
                   height={240}
                   onError={() => setQrImageError(true)}
-                  style={{ border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff' }}
+                  className="rounded-lg border border-border-default bg-bg-elevated"
                 />
               </div>
             )}
@@ -263,8 +381,8 @@ export function WhatsAppConnectionsPage() {
                 Não foi possível carregar o QR visual. Use o texto abaixo para cópia/debug.
               </div>
             )}
-            <pre className="mt-3 p-3 bg-bg-secondary rounded-lg text-xs overflow-x-auto">{qrState.qr.text}</pre>
-            <div className="flex justify-end gap-2 mt-3">
+            <pre className="mt-3 overflow-x-auto rounded-lg bg-bg-secondary p-3 text-xs">{qrState.qr.text}</pre>
+            <div className="mt-3 flex justify-end gap-2">
               <Button onClick={handleCopyQr} style={{ width: 'auto' }}>Copiar QR</Button>
               <Button onClick={() => setQrState({ connectionId: null, qr: null })} variant="ghost" style={{ width: 'auto' }}>Fechar</Button>
             </div>

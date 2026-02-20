@@ -152,7 +152,35 @@ function verifyWebhook(mode, token) {
   return mode === 'subscribe' && token === WHATSAPP_VERIFY_TOKEN;
 }
 
+
+/**
+ * Wrappers de compatibilidade para o fluxo de outbound queue / provider "cloud".
+ *
+ * O provider cloud chama whatsappService.sendText/sendMedia/sendTemplate.
+ * Este serviço originalmente expõe sendTextMessage(to, text).
+ * Para manter compatibilidade sem quebrar chamadas existentes, expomos as funções esperadas.
+ */
+async function sendText(tenantId, to, text, context) {
+  // tenantId/context são aceitos para compatibilidade; o envio atual usa apenas (to, text)
+  return sendTextMessage(to, text);
+}
+
+async function sendMedia() {
+  throw new Error('WhatsApp Cloud: sendMedia ainda não implementado em whatsappService');
+}
+
+async function sendTemplate() {
+  throw new Error('WhatsApp Cloud: sendTemplate ainda não implementado em whatsappService');
+}
+
+
 module.exports = {
+  // API esperada pelos providers
+  sendText,
+  sendMedia,
+  sendTemplate,
+
+  // API interna/legada
   sendTextMessage,
   verifyWebhook,
   areCredentialsValid,

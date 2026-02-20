@@ -56,6 +56,7 @@ import { PbxExtensionsPage } from './pages/PbxExtensionsPage';
 import { PbxTrunksPage } from './pages/PbxTrunksPage';
 import { PbxModulePage } from './pages/PbxModulePage';
 import { ChatHumanoDashboardPage } from './pages/ChatHumanoDashboardPage';
+import { FailedMessagesPage } from './pages/FailedMessagesPage';
 import { QueuePhysicalDashboardPage } from './pages/QueuePhysicalDashboardPage';
 import { MarketingPage } from './pages/MarketingPage';
 import { SolutionsPage } from './pages/SolutionsPage';
@@ -219,6 +220,7 @@ function AppWithAuth() {
   const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxBulkProvisioning;
   const isPbx = isRoute('/pbx');
   const isChatHumanoDashboard = isRoute('/chat-humano');
+  const isFailedMessages = isRoute('/failed-messages');
   const isQueuePhysicalDashboard = isRoute('/fila-fisica');
   const isDevDashboard = isRoute('/dev') || isRoute('/dev-dashboard');
   const isOrders = isRoute('/orders');
@@ -247,7 +249,7 @@ function AppWithAuth() {
       isKiosk, isPanel, isStation,
       isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOrders, isKitchen, isDispatch,
       isLogin
@@ -263,7 +265,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isQueuePhysicalDashboard, isDevDashboard,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
     isOrders, isKitchen, isDispatch, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
@@ -339,6 +341,7 @@ function AppWithAuth() {
       '/pbx/cc/click2call': '📱 PBX • Click2Call',
       '/pbx/referencia/xml': '🗄️ PBX • Referência XML',
       '/chat-humano': '💬 Dashboard Chat Humano',
+      '/failed-messages': '🚨 Mensagens Falhadas',
       '/fila-fisica': '🎫 Dashboard Fila Física',
       '/marketing': '🧲 Marketing',
       '/solutions': '📦 Solutions Packs',
@@ -539,6 +542,8 @@ function AppWithAuth() {
         <PbxPage />
       ) : isChatHumanoDashboard ? (
         <ChatHumanoDashboardPage />
+      ) : isFailedMessages ? (
+        <FailedMessagesPage />
       ) : isQueuePhysicalDashboard ? (
         <QueuePhysicalDashboardPage />
       ) : isOrders ? (

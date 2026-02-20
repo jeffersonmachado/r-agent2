@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getTicketShortLabel } from '../utils/ticketDisplay';
 import { Dialog } from './Dialog';
 import {
   listQueueTickets,
@@ -378,7 +379,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                       className={`queue-modal-ticket-item ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
                     >
                       <div className="queue-modal-ticket-item-header">
-                        <span className="queue-modal-ticket-item-id">#{ticket.id.slice(0, 12)}</span>
+                        <span className="queue-modal-ticket-item-id">#{getTicketShortLabel(ticket)}</span>
                         {ticket.unreadCount > 0 && (
                           <span className="queue-modal-ticket-item-badge">{ticket.unreadCount}</span>
                         )}
@@ -418,7 +419,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                   <div className="queue-modal-chat-header">
                     <div className="queue-modal-chat-header-info">
                       <div className="queue-modal-chat-header-title">
-                        Ticket #{selectedTicket.id.slice(0, 12)}
+                        Ticket #{getTicketShortLabel(selectedTicket)}
                         {selectedTicket.unreadCount > 0 && (
                           <span className="queue-modal-chat-header-badge">
                             {selectedTicket.unreadCount} nova(s)

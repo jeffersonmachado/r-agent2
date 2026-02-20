@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { getTicketShortLabel } from '../utils/ticketDisplay';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -118,7 +119,7 @@ export function InboxPage() {
     } finally {
       setLoading(false);
     }
-  }, [assignedFilter, queueFilter, selectedTicket, showToast, statusFilter]);
+  }, [assignedFilter, queueFilter, showToast, statusFilter]);
 
   const loadMessages = useCallback(async (ticketId) => {
     if (!ticketId) {
@@ -136,23 +137,28 @@ export function InboxPage() {
       }
     } catch (err) {
       logger.error('[Inbox] Erro ao carregar mensagens', err);
-      showToast('Erro ao carregar mensagens do ticket', 'error');
+      // Não adicionar showToast em dependency - usar diretamente
+      try {
+        showToast('Erro ao carregar mensagens do ticket', 'error');
+      } catch (toastErr) {
+        console.error('Erro ao exibir toast:', toastErr);
+      }
       setMessages([]);
     }
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       loadQueues();
       loadTickets();
     }
-  }, [authLoading, isAuthenticated, loadQueues, loadTickets]);
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       loadTickets();
     }
-  }, [assignedFilter, authLoading, isAuthenticated, loadTickets, queueFilter, statusFilter]);
+  }, [assignedFilter, authLoading, isAuthenticated, queueFilter, statusFilter]);
 
   useEffect(() => {
     if (selectedTicket?.id) {
@@ -424,7 +430,7 @@ export function InboxPage() {
                 tabIndex={0}
               >
                 <div className="support-ticket-header">
-                  <span className="support-ticket-id">#{ticket.id.slice(0, 12)}</span>
+                  <span className="support-ticket-id">#{getTicketShortLabel(ticket)}</span>
                   <span className={`support-ticket-status ${ticket.status || ''}`}>{ticket.status}</span>
                 </div>
                 <div className="support-ticket-message">
@@ -463,7 +469,7 @@ export function InboxPage() {
           {selectedTicket ? (
             <div className="support-details-content">
               <div className="support-details-header">
-                <h3 className="support-details-title">Ticket #{selectedTicket.id.slice(0, 12)}</h3>
+                <h3 className="support-details-title">Ticket #{getTicketShortLabel(selectedTicket)}</h3>
                 <div style={{ color: 'var(--color-text-tertiary)' }}>
                   Status: {selectedTicket.status || '-'} · Fila: {selectedTicket.queue || '-'}
                 </div>

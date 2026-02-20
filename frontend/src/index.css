@@ -5560,3 +5560,53 @@ body.flow-editor-active .user-menu-dropdown {
   width: 100%;
   justify-content: center;
 }
+
+
+/* Support / Tickets - Histórico de mensagens (tema + contraste) */
+.support-history-log{
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--color-bg-secondary);
+  min-height: 0;
+}
+.support-history-empty{
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  text-align: center;
+  margin: 8px 0;
+}
+.support-message{
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  max-width: 92%;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25);
+}
+.support-message.is-user{
+  margin-left: auto;
+  text-align: right;
+  border-color: rgba(94,106,210,.35);
+  background: rgba(94,106,210,.16); /* accent light, com contraste */
+}
+.support-message.is-other{
+  margin-right: auto;
+  text-align: left;
+}
+.support-message-meta{
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.support-message-text{
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
+  color: var(--color-text-primary);
+}

@@ -5,6 +5,7 @@
   ],
   "ext": "js,json",
   "ignore": [
+    "api/data",
     "node_modules",
     "frontend",
     "logs",
@@ -21,7 +22,7 @@
     "*.test.js",
     "*.spec.js"
   ],
-  "exec": "node api/server.js",
+  "exec": "node",
   "env": {
     "NODE_ENV": "development"
   },

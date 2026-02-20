@@ -76,7 +76,16 @@ async function resolveTenantForWebhook(channelType, payload) {
       externalId = payload?.pageId || payload?.entry?.id || payload?.entry?.[0]?.id || payload?.page_id || null;
     }
 
-    if (!externalId) return { tenantId: null, account: null };
+    if (!externalId) {
+      logger.warn('WA_QR_RESOLVE', 'Falha ao resolver tenant: externalId ausente (metadata.phone_number_id)', {
+        channelType,
+        sample: {
+          hasValueMetadata: !!payload?.value?.metadata,
+          hasMetadata: !!payload?.metadata,
+        },
+      });
+      return { tenantId: null, account: null };
+    }
 
     const account = await AccountModel.findOne({
       where: {
@@ -87,7 +96,13 @@ async function resolveTenantForWebhook(channelType, payload) {
       order: [['created_at', 'DESC']],
     });
 
-    if (!account) return { tenantId: null, account: null };
+    if (!account) {
+      logger.warn('WA_QR_RESOLVE', 'Falha ao resolver tenant: channel_account não encontrado para external_id', {
+        channelType,
+        externalId: String(externalId),
+      });
+      return { tenantId: null, account: null };
+    }
 
     return {
       tenantId: account.tenant_key,
@@ -95,7 +110,7 @@ async function resolveTenantForWebhook(channelType, payload) {
     };
   } catch (err) {
     // HARDENING: erro ao resolver tenant => ignora (caller deve descartar com segurança).
-    logger.warn('[ChannelGateway] Falha ao resolver tenant do webhook; ignorando', { channelType, error: err.message });
+    logger.warn('ChannelGateway', 'Falha ao resolver tenant do webhook; ignorando', { channelType, error: err.message });
     return { tenantId: null, account: null };
   }
 }
@@ -397,6 +412,13 @@ async function ingestIncoming(channelType, payload, options = {}) {
 
   // HARDENING: sem tenant resolvido, não persiste e deixa o caller decidir (server deve ignorar).
   if (!tenantId) {
+    logger.warn('WA_QR_DROP', 'Inbound não persistido: tenant não resolvido (discard seguro)', {
+      channelType,
+      externalId: payload?.value?.metadata?.phone_number_id || payload?.metadata?.phone_number_id || null,
+      conversationId: normalized?.message?.externalConversationId || normalized?.conversationKey?.externalConversationId || null,
+      messageId: normalized?.message?.externalMessageId || null,
+      reason: 'tenant_unresolved',
+    });
     return { tenantId: null, account: null, normalized, persist: { persisted: false, reason: 'tenant_unresolved' } };
   }
 
@@ -406,7 +428,7 @@ async function ingestIncoming(channelType, payload, options = {}) {
     conversationKey: normalized.conversationKey,
     messageNormalized: normalized.message,
   }).catch((err) => {
-    logger.warn('[ChannelGateway] Falha ao persistir inbound (best-effort)', { channelType, tenantId, error: err.message });
+    logger.warn('ChannelGateway', 'Falha ao persistir inbound (best-effort)', { channelType, tenantId, error: err.message });
     return { persisted: false, reason: 'persist_failed' };
   });
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getTicketShortLabel } from '../utils/ticketDisplay';
 import {
   listQueues,
   listAllTickets,
@@ -30,6 +31,7 @@ import { useWebSocketContext } from '../context/WebSocketContext';
 import { useDebounce } from '../hooks/useDebounce';
 import { usePhoneMasking } from '../hooks/usePhoneMasking';
 import { MaskedPhone } from '../components/MaskedPhone';
+import { getWebSocketStatusMeta } from '../utils/webSocketStatusConfig';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
 
@@ -660,7 +662,7 @@ export function SupportPage() {
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: '12px', color: '#666' }}>
+            <div className="support-message-meta">
               {mime ? <span>{String(mime)}</span> : null}
               {mime && id ? <span> • </span> : null}
               {id ? <span>media_id: <code>{String(id)}</code></span> : null}
@@ -685,7 +687,7 @@ export function SupportPage() {
           {url ? (
             <a href={url} target="_blank" rel="noreferrer">Abrir documento</a>
           ) : (
-            <div style={{ fontSize: '12px', color: '#666' }}>
+            <div className="support-message-meta">
               {mime ? <span>{String(mime)}</span> : null}
               {mime && id ? <span> • </span> : null}
               {id ? <span>media_id: <code>{String(id)}</code></span> : null}
@@ -711,7 +713,7 @@ export function SupportPage() {
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: '12px', color: '#666' }}>
+            <div className="support-message-meta">
               {mime ? <span>{String(mime)}</span> : null}
               {mime && id ? <span> • </span> : null}
               {id ? <span>media_id: <code>{String(id)}</code></span> : null}
@@ -739,7 +741,7 @@ export function SupportPage() {
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: '12px', color: '#666' }}>
+            <div className="support-message-meta">
               {mime ? <span>{String(mime)}</span> : null}
               {mime && id ? <span> • </span> : null}
               {id ? <span>media_id: <code>{String(id)}</code></span> : null}
@@ -1265,66 +1267,10 @@ export function SupportPage() {
           <h1>💬 Atendimento</h1>
         </div>
         <div className="support-controls">
-          {wsUiStatus.phase === 'ready' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span
-                title="WebSocket conectado e autenticado - Atualizações em tempo real ativas"
-                style={{
-                  display: 'inline-block',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgb(37, 211, 102)',
-                  animation: 'pulse 2s ease 0s infinite normal none running pulse',
-                }}
-              />
-              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Conectado</span>
-            </div>
-          ) : wsUiStatus.phase === 'auth' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span
-                title="WebSocket conectado, autenticando..."
-                style={{
-                  display: 'inline-block',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgb(59, 130, 246)',
-                  animation: 'pulse 2s ease 0s infinite normal none running pulse',
-                }}
-              />
-              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Autenticando...</span>
-            </div>
-          ) : wsUiStatus.phase === 'connecting' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span
-                title="WebSocket conectando..."
-                style={{
-                  display: 'inline-block',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgb(59, 130, 246)',
-                  animation: 'pulse 2s ease 0s infinite normal none running pulse',
-                }}
-              />
-              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Conectando...</span>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span
-                title="WebSocket desconectado"
-                style={{
-                  display: 'inline-block',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgb(245, 158, 11)',
-                }}
-              />
-              <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>Desconectado</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5" title={getWebSocketStatusMeta(wsUiStatus.phase).title}>
+            <span className={`inline-block h-2 w-2 rounded-full ${getWebSocketStatusMeta(wsUiStatus.phase).dotClassName} animate-pulse`} />
+            <span className="text-sm text-text-secondary">{getWebSocketStatusMeta(wsUiStatus.phase).label}</span>
+          </div>
           <Button 
             onClick={() => {
               if (loadTicketsRef.current) {
@@ -1380,11 +1326,11 @@ export function SupportPage() {
                     }
                   }}
                   className={`support-ticket-card ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
-                  aria-label={`Ticket ${ticket.id.slice(0, 12)}, ${ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'in_progress' ? 'Em atendimento' : 'Fechado'}, ${ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : ''}`}
+                  aria-label={`Ticket ${getTicketShortLabel(ticket)}, ${ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'in_progress' ? 'Em atendimento' : 'Fechado'}, ${ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : ''}`}
                   aria-selected={selectedTicket?.id === ticket.id}
                 >
                   <div className="support-ticket-header">
-                    <span className="support-ticket-id">#{ticket.id.slice(0, 12)}</span>
+                    <span className="support-ticket-id">#{getTicketShortLabel(ticket)}</span>
                     <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${ticket.status}`}>
                       {ticket.status === 'waiting'
                         ? 'Aguardando'
@@ -1463,7 +1409,7 @@ export function SupportPage() {
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ flexShrink: 0 }}>
                     <h3 className="support-details-title">
-                      Ticket #{selectedTicket.id.slice(0, 12)}
+                      Ticket #{getTicketShortLabel(selectedTicket)}
                       {selectedTicket.unreadCount > 0 && (
                         <span style={{
                           marginLeft: '10px',
@@ -1551,40 +1497,21 @@ export function SupportPage() {
                   </h4>
                   <div
                     ref={messagesContainerRef}
-                    style={{
-                      flex: 1,
-                      overflowY: 'auto',
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      padding: '10px',
-                      backgroundColor: '#f9f9f9',
-                      minHeight: 0
-                    }}
+                    className="support-history-log"
                     role="log"
                     aria-label="Histórico de mensagens do ticket"
                   >
                     {timelineMessages.length === 0 ? (
-                      <p style={{ color: '#999', fontSize: '12px', textAlign: 'center' }}>
+                      <p className="support-history-empty">
                         Nenhuma mensagem ainda
                       </p>
                     ) : (
                       timelineMessages.map((msg) => (
                         <div
                           key={msg.key}
-                          style={{
-                            marginBottom: '12px',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            backgroundColor: msg.sender === 'user' ? '#dcf8c6' : '#ffffff',
-                            border: msg.sender === 'user' ? 'none' : '1px solid #ddd',
-                            textAlign: msg.sender === 'user' ? 'right' : 'left',
-                          }}
+                          className={`support-message ${msg.sender === 'user' ? 'is-user' : 'is-other'}`}
                         >
-                          <div style={{
-                            fontSize: '12px',
-                            color: '#666',
-                            marginBottom: '4px'
-                          }}>
+                          <div className="support-message-meta">
                             {msg.sender === 'user' ? '👤 Usuário' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'}
                             {msg.source === 'channel' ? <span style={{ marginLeft: '6px', color: '#999' }}>(canal)</span> : null}
                             {' • '}
@@ -1606,7 +1533,7 @@ export function SupportPage() {
                               );
                             })()}
                           </div>
-                          <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
+                          <div className="support-message-text">
                             {renderTimelineMessageContent(msg)}
                           </div>
                         </div>
@@ -2059,7 +1986,7 @@ export function SupportPage() {
                         const reasonCode = it?.reason_code || it?.reasonCode || null;
                         return (
                           <div key={it.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                            <div className="support-message-meta">
                               <strong>{it.channel_type}</strong> • {it.status} • tentativas: {it.attempts ?? '-'}
                               {to ? ` • para: ${to}` : ''}
                             </div>
@@ -2111,7 +2038,7 @@ export function SupportPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
                       {deliveryFailures.channelMessages.map((m) => (
                         <div key={m.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
-                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                          <div className="support-message-meta">
                             <strong>{m.channel_type}</strong> • {m.status} • {m.created_at ? new Date(m.created_at).toLocaleString('pt-BR') : ''}
                           </div>
                           <div style={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>
