@@ -79,9 +79,10 @@ function extractTextFromBaileysMessage(messageObj) {
 }
 
 class WhatsAppQrRunner extends EventEmitter {
-  constructor({ sessionsDir }) {
+  constructor({ sessionsDir, inboundDepsProvider = null }) {
     super();
     this.sessionsDir = sessionsDir;
+    this.inboundDepsProvider = typeof inboundDepsProvider === 'function' ? inboundDepsProvider : null;
     this.sessions = new Map();    // key: tenantId:connectionId
     this.sessionMeta = new Map(); // key: tenantId:connectionId -> { status, ... }
     this.sessionTimers = new Map(); // key -> { reconnectTimer, promoteConnectedTimer }
@@ -98,6 +99,10 @@ class WhatsAppQrRunner extends EventEmitter {
         nodeEnv: process.env.NODE_ENV,
       });
     } catch (_) {}
+  }
+
+  setInboundDepsProvider(provider) {
+    this.inboundDepsProvider = typeof provider === 'function' ? provider : null;
   }
 
   getSessionKey(tenantId, connectionId) {
@@ -557,7 +562,7 @@ class WhatsAppQrRunner extends EventEmitter {
 	              value: {
 	                metadata: {
 	                  // ajuda a debugar/reconciliar com a conta no painel
-	                  phone_number_id: this.sessionMeta.get(sessionKeyLocal)?.name || String(connectionId),
+                    phone_number_id: String(connectionId),
 	                },
 	              },
 	              __qr: {
@@ -577,14 +582,15 @@ class WhatsAppQrRunner extends EventEmitter {
 	            const normalized = normalizedArr && normalizedArr[0] ? normalizedArr[0] : null;
 
 	            // Pipeline completo (gateway -> ticket -> humano/bot)
-	            await handleWhatsAppInbound({
+              const inboundDeps = this.inboundDepsProvider ? this.inboundDepsProvider() : null;
+
+              await handleWhatsAppInbound({
 	              source: 'qr',
 	              tenantId,
 	              payload,
 	              normalized,
               traceId,
-              // deps não passado aqui: bot processing será skipped com missing_deps
-              // Para ativar processamento bot, precisa injetar flows/sessionEvents do server.js
+              deps: inboundDeps,
             });
 	          }
 	        } catch (e) {
