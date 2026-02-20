@@ -1,8 +1,6 @@
 const WhatsAppProvider = require('./whatsappProvider');
 
-const WhatsAppQrRunner = require('./whatsappQrRunner');
-const path = require('path');
-const runner = new WhatsAppQrRunner({ sessionsDir: path.join(__dirname, '../data/wa_sessions') });
+const runner = require('./whatsappQrRunnerInstance');
 const logger = require('../utils/logger');
 const tenantSettingsService = require('./tenantSettingsService');
 

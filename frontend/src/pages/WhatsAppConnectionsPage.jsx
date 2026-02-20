@@ -80,6 +80,12 @@ export function WhatsAppConnectionsPage() {
       if (prev.connectionId === connection.id && connection.status === 'connected') {
         return { connectionId: null, qr: null };
       }
+      if (
+        String(connection.status || '').toLowerCase() === 'pairing' &&
+        connection?.qr?.text
+      ) {
+        return { connectionId: connection.id, qr: connection.qr };
+      }
       return prev;
     });
   }, []);

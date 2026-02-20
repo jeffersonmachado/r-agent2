@@ -1,6 +1,5 @@
 // --- WhatsApp QR Runner ---
-const WhatsAppQrRunner = require('./services/whatsappQrRunner');
-const qrRunner = new WhatsAppQrRunner({ sessionsDir: __dirname + '/data/wa_sessions' });
+const qrRunner = require('./services/whatsappQrRunnerInstance');
 
 // ...existing code...
 
@@ -1075,7 +1074,7 @@ async function requestHandler(req, res) {
       path: pathname,
     });
 
-    await qrRunner.startSession(tenantId, channelAccountId, (qr) => { lastQr = qr; });
+    await qrRunner.ensureSession(tenantId, channelAccountId, (qr) => { lastQr = qr; }, { qrCacheMs: 15000 });
 
     logger.info('WA_QR_HTTP', 'start done', {
       tenantId,
@@ -12884,8 +12883,31 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const tenantId = requireTenant(req, res);
     if (!tenantId) return;
 
+    let id = null;
     try {
-      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/qr'.length));
+      id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/qr'.length));
+
+      logger.info('WA_QR_HTTP_TRIGGER', 'QR endpoint acionado', {
+        tenantId,
+        connectionId: id,
+        method,
+        pathname,
+        source: {
+          origin: String(req.headers.origin || '').trim() || null,
+          referer: String(req.headers.referer || '').trim() || null,
+          userAgent: String(req.headers['user-agent'] || '').trim() || null,
+          forwardedFor: String(req.headers['x-forwarded-for'] || '').trim() || null,
+          realIp: String(req.headers['x-real-ip'] || '').trim() || null,
+          secFetchSite: String(req.headers['sec-fetch-site'] || '').trim() || null,
+          secFetchMode: String(req.headers['sec-fetch-mode'] || '').trim() || null,
+          secFetchDest: String(req.headers['sec-fetch-dest'] || '').trim() || null,
+        },
+        actor: {
+          userId: req.user?.id || null,
+          username: req.user?.username || null,
+          role: req.user?.role || null,
+        },
+      });
 
       // Se já existe um QR recente em cache, devolve imediatamente (evita churn sob carga)
       try {

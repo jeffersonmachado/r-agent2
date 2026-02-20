@@ -79,6 +79,10 @@ function extractTextFromBaileysMessage(messageObj) {
 }
 
 class WhatsAppQrRunner extends EventEmitter {
+  static MAX_QR_ATTEMPTS = 5; // Limite máximo antes de parar reconexões automáticas
+  static CONFLICT_RESTART_COOLDOWN_MS = 15000; // Evita restart storm após conflitos em sequência
+  static UNAUTHORIZED_RESTART_COOLDOWN_MS = 15000; // Evita loop agressivo quando WhatsApp devolve 401
+
   constructor({ sessionsDir, inboundDepsProvider = null }) {
     super();
     this.sessionsDir = sessionsDir;
@@ -86,9 +90,11 @@ class WhatsAppQrRunner extends EventEmitter {
     this.sessions = new Map();    // key: tenantId:connectionId
     this.sessionMeta = new Map(); // key: tenantId:connectionId -> { status, ... }
     this.sessionTimers = new Map(); // key -> { reconnectTimer, promoteConnectedTimer }
+    this.startingSessions = new Map(); // key -> Promise da inicialização em andamento
     // callbacks pendentes de QR (para atender múltiplas chamadas concorrentes ao endpoint /qr)
     this.qrWaiters = new Map(); // key -> Set<Function(qrText)>
     this.recentConflicts = new Map(); // key -> timestamp of last conflict (para diagnosticar erros de envio)
+    this.recentUnauthorized = new Map(); // key -> timestamp of last 401 unauthorized
 
     // Log de boot do módulo para garantir visibilidade de carregamento
     try {
@@ -178,14 +184,49 @@ class WhatsAppQrRunner extends EventEmitter {
 
     const reset = options.reset === true;
 
+    const inFlight = this.startingSessions.get(sessionKey);
+    if (inFlight) {
+      const cached = this.getCachedQr(tenantId, connectionId, options.qrCacheMs ?? 15000);
+      if (cached && onQr) {
+        try { onQr(cached); } catch (_) {}
+      } else {
+        this._addQrWaiter(sessionKey, onQr);
+      }
+      return inFlight;
+    }
+
+    const existing = this.sessions.get(sessionKey);
+    if (existing && !reset) {
+      const cached = this.getCachedQr(tenantId, connectionId, options.qrCacheMs ?? 15000);
+      if (cached && onQr) {
+        try { onQr(cached); } catch (_) {}
+      } else {
+        this._addQrWaiter(sessionKey, onQr);
+      }
+      return existing;
+    }
+
+    let resolveStart;
+    let rejectStart;
+    const startPromise = new Promise((resolve, reject) => {
+      resolveStart = resolve;
+      rejectStart = reject;
+    });
+    this.startingSessions.set(sessionKey, startPromise);
+    // Mantém callback(s) de QR pendentes mesmo se a sessão for reiniciada internamente (ex.: reset após 401).
+    this._addQrWaiter(sessionKey, onQr);
+
+    try {
+
     // Log obrigatório: chamada do startSession
     try {
-      logger.info('WA_QR_START', 'startSession chamado', {
+      logger.info('WA_QR_START', 'startSession chamado (MAX_ATTEMPTS=' + WhatsAppQrRunner.MAX_QR_ATTEMPTS + ')', {
         tenantId,
         connectionId,
         sessionKey,
         sessionPath,
         reset,
+        maxAttemptsLimit: WhatsAppQrRunner.MAX_QR_ATTEMPTS,
         options: { ...options, onQr: !!onQr },
       });
     } catch (_) {}
@@ -213,9 +254,10 @@ class WhatsAppQrRunner extends EventEmitter {
       reconnectAttempts: 0,
       lastConnectedAt: null,
     };
-	    if (options?.name) meta.name = options.name;
+    if (options?.name) meta.name = options.name;
     meta.status = 'connecting';
     meta.updatedAt = Date.now();
+    meta.reconnectAttempts = 0; // Reset contador ao iniciar nova sessão
     this.sessionMeta.set(sessionKey, meta);
     this._clearTimers(sessionKey);
 
@@ -318,7 +360,38 @@ class WhatsAppQrRunner extends EventEmitter {
         });
       }
 
-      sock.ev.on('creds.update', saveCreds);
+      const persistCredsSafely = async () => {
+        try {
+          await saveCreds();
+        } catch (err) {
+          // Corrige corrida quando a pasta da sessão é removida durante shutdown/restart.
+          if (err?.code === 'ENOENT') {
+            try {
+              await fs.ensureDir(sessionPath);
+              await saveCreds();
+              return;
+            } catch (retryErr) {
+              logger.warn('WA_QR_CREDS_SAVE_RETRY_FAILED', 'Falha ao persistir creds após recriar pasta da sessão', {
+                tenantId,
+                connectionId,
+                sessionKey,
+                message: retryErr?.message || String(retryErr),
+                code: retryErr?.code || null,
+              });
+              return;
+            }
+          }
+
+          logger.warn('WA_QR_CREDS_SAVE_FAILED', 'Falha ao persistir creds.update', {
+            tenantId,
+            connectionId,
+            sessionKey,
+            message: err?.message || String(err),
+            code: err?.code || null,
+          });
+        }
+      };
+      sock.ev.on('creds.update', persistCredsSafely);
 
       // Quando o history sync terminar, promovemos para "connected"
       sock.ev.on('messaging-history.set', () => {
@@ -339,7 +412,7 @@ class WhatsAppQrRunner extends EventEmitter {
         this.emit('status', { tenantId, connectionId, status: 'connected', user: m.user });
       });
 
-      sock.ev.on('connection.update', (update) => {
+      sock.ev.on('connection.update', async (update) => {
         const now = Date.now();
         const m = this.sessionMeta.get(sessionKey) || meta;
 
@@ -352,10 +425,15 @@ class WhatsAppQrRunner extends EventEmitter {
           this.sessionMeta.set(sessionKey, m);
 
           try {
-            whatsappQrService.ingestConnectionEvent(tenantId, connectionId, { eventType: 'qr' });
+            whatsappQrService.ingestConnectionEvent(tenantId, connectionId, {
+              eventType: 'qr',
+              qr: {
+                text: update.qr,
+                expiresAt: new Date(now + 2 * 60 * 1000).toISOString(),
+              },
+            });
           } catch (_) {}
 
-          if (onQr) onQr(update.qr);
           // atende quaisquer waiters pendentes (várias requisições concorrentes)
           this._flushQrWaiters(sessionKey, update.qr);
         }
@@ -430,28 +508,84 @@ class WhatsAppQrRunner extends EventEmitter {
             });
           } catch (_) {}
 
+          // unauthorized (401) -> credenciais locais inválidas/corrompidas; força reset do auth state e novo QR
+          const isUnauthorized401 =
+            code === 401 ||
+            disconnectMessage?.includes?.('Unauthorized') ||
+            disconnectMessage?.includes?.('Connection Failure');
+          if (isUnauthorized401) {
+            const unauthorizedAt = Date.now();
+            const previousUnauthorizedAt = this.recentUnauthorized.get(sessionKey) || 0;
+            const elapsedSincePreviousUnauthorized = unauthorizedAt - previousUnauthorizedAt;
+            this.recentUnauthorized.set(sessionKey, unauthorizedAt);
+            setTimeout(() => this.recentUnauthorized.delete(sessionKey), 5 * 60 * 1000);
+
+            logger.warn('WA_QR_UNAUTHORIZED_RESET', '401 detectado no handshake; resetando auth state para gerar novo QR limpo', {
+              tenantId,
+              connectionId,
+              sessionKey,
+              code,
+              reason,
+              disconnectMessage,
+              elapsedSincePreviousUnauthorized,
+              timestamp: new Date().toISOString(),
+            });
+
+            this._clearTimers(sessionKey);
+            this.sessions.delete(sessionKey);
+            this.sessionMeta.delete(sessionKey);
+
+            if (elapsedSincePreviousUnauthorized > 0 && elapsedSincePreviousUnauthorized < WhatsAppQrRunner.UNAUTHORIZED_RESTART_COOLDOWN_MS) {
+              logger.warn('WA_QR_UNAUTHORIZED_COOLDOWN', '401 repetido em curto intervalo; suprimindo auto-restart para evitar loop', {
+                tenantId,
+                connectionId,
+                sessionKey,
+                elapsedSincePreviousUnauthorized,
+                cooldownMs: WhatsAppQrRunner.UNAUTHORIZED_RESTART_COOLDOWN_MS,
+              });
+              return;
+            }
+
+            setTimeout(() => {
+              try {
+                this.startSession(tenantId, connectionId, null, { reset: true });
+              } catch (restartErr) {
+                logger.error('WA_QR_UNAUTHORIZED_RESTART_ERROR', 'Erro ao reiniciar sessão após 401', {
+                  tenantId,
+                  connectionId,
+                  error: restartErr?.message || String(restartErr),
+                });
+              }
+            }, 1000);
+            return;
+          }
+
           // loggedOut -> apaga credenciais e não reconecta
           if (code === DisconnectReason.loggedOut) {
             this._clearTimers(sessionKey);
             this.sessions.delete(sessionKey);
             this.sessionMeta.delete(sessionKey);
-            try { fs.removeSync(sessionPath); } catch (_) {}
             return;
           }
 
           // conflict (440) -> conta conectada em outro local, limpa sessão e força novo login
           if (code === 440 || reason === 'conflict' || disconnectMessage?.includes?.('conflict')) {
+            const conflictAt = Date.now();
+            const previousConflictAt = this.recentConflicts.get(sessionKey) || 0;
+            const elapsedSincePreviousConflict = conflictAt - previousConflictAt;
+
             logger.error('WA_QR_CONFLICT_DETECTED', 'DETECTADO: Sua conta WhatsApp está conectada em outro dispositivo/local. Gerando novo QR code para reconectar...', {
               tenantId,
               connectionId,
               sessionKey,
               code,
               reason,
+              elapsedSincePreviousConflict,
               timestamp: new Date().toISOString(),
             });
             
             // Registra o conflito recente para diagnóstico
-            this.recentConflicts.set(sessionKey, Date.now());
+            this.recentConflicts.set(sessionKey, conflictAt);
             // Limpa registro de conflito após 5 minutos (para não bloquear indefinidamente)
             setTimeout(() => this.recentConflicts.delete(sessionKey), 5 * 60 * 1000);
             
@@ -461,12 +595,22 @@ class WhatsAppQrRunner extends EventEmitter {
             this._clearTimers(sessionKey);
             this.sessions.delete(sessionKey);
             this.sessionMeta.delete(sessionKey);
-            try { fs.removeSync(sessionPath); } catch (_) {}
+
+            if (elapsedSincePreviousConflict > 0 && elapsedSincePreviousConflict < WhatsAppQrRunner.CONFLICT_RESTART_COOLDOWN_MS) {
+              logger.warn('WA_QR_CONFLICT_COOLDOWN', 'Conflito repetido em curto intervalo; suprimindo auto-restart para evitar loop', {
+                tenantId,
+                connectionId,
+                sessionKey,
+                elapsedSincePreviousConflict,
+                cooldownMs: WhatsAppQrRunner.CONFLICT_RESTART_COOLDOWN_MS,
+              });
+              return;
+            }
             
             // Força reconexão imediata com novo QR code
-            setImmediate(() => {
+            setTimeout(() => {
               try {
-                this.startSession(tenantId, connectionId);
+                this.startSession(tenantId, connectionId, null, { reset: true });
               } catch (err) {
                 logger.error('WA_QR_RESTART_ERROR', 'Erro ao reiniciar sessão após conflict', {
                   tenantId,
@@ -474,7 +618,7 @@ class WhatsAppQrRunner extends EventEmitter {
                   error: err.message,
                 });
               }
-            });
+            }, 1000);
             return;
           }
 
@@ -484,6 +628,67 @@ class WhatsAppQrRunner extends EventEmitter {
           const attempts = (m.reconnectAttempts || 0) + 1;
           m.reconnectAttempts = attempts;
           this.sessionMeta.set(sessionKey, m);
+
+          // ===== VERIFICAÇÃO: Limite máximo de tentativas ====
+          if (attempts >= WhatsAppQrRunner.MAX_QR_ATTEMPTS) {
+            m.status = 'failed_max_attempts';
+            m.updatedAt = Date.now();
+            this.sessionMeta.set(sessionKey, m);
+            this._clearTimers(sessionKey);
+            this.sessions.delete(sessionKey);
+
+            // ===== DIAGNÓSTICO DETALHADO =====
+            const diagnosis = {
+              tenantId,
+              connectionId,
+              sessionKey,
+              maxAttemptsReached: WhatsAppQrRunner.MAX_QR_ATTEMPTS,
+              totalAttempts: attempts,
+              lastError: m.lastError,
+              lastErrorCode: code ?? null,
+              accountInfo: sock?.user?.id ? { id: sock.user.id, name: sock.user?.name } : null,
+              timestamp: new Date().toISOString(),
+              qrFrequency: 'A cada ~20-30 segundos (timeout Baileys)',
+              possibleCauses: [
+                { cause: 'Conexão de rede lenta ou instável', indicator: 'Timeout 408 após múltiplas tentativas' },
+                { cause: 'Conta WhatsApp logada em outro dispositivo', indicator: 'Erro 440 (conflict) observado' },
+                { cause: 'Rate limiting do WhatsApp na sua conta/IP', indicator: 'Múltiplas 408 em sequência' },
+                { cause: 'Versão Baileys desatualizada ou incompatível', indicator: 'Falha consistente no handshake' },
+                { cause: 'Conta WhatsApp suspensa/verificação pendente', indicator: 'HandshakeMessage não validada' },
+              ],
+              recommendedActions: [
+                '1. Verifique se conta está ativa: acesse WhatsApp Web (web.whatsapp.com)',
+                '2. Feche outras sessões: WhatsApp Settings > Linked Devices',
+                '3. Aguarde 2-5 minutos e tente novo emparelhamento QR',
+                '4. Se persistir, use Provider Cloud (API credentials) como fallback',
+                '5. Verifique logs completos em: logs/api/api.log',
+              ],
+            };
+
+            logger.error('QR_MAX_ATTEMPTS_EXCEEDED', 'Emparelhamento QR falhou após 5 tentativas. Requer ação manual do usuário.', diagnosis);
+
+            // ===== EMITIR EVENTO PARA FRONTEND =====
+            this.emit('qr_failed', {
+              tenantId,
+              connectionId,
+              attempts: attempts,
+              maxAttempts: WhatsAppQrRunner.MAX_QR_ATTEMPTS,
+              errorCode: code ?? null,
+              errorMessage: m.lastError,
+              userMessage: 'Falha no emparelhamento QR após ' + attempts + ' tentativas. Causas: (1) Conexão lenta, (2) Conta em outro dispositivo, (3) Rate limit. Tente novo QR em 5 min ou use Provider Cloud.',
+              diagnosis,
+            });
+
+            try {
+              await whatsappQrService.ingestConnectionEvent(tenantId, connectionId, {
+                eventType: 'failed',
+                metadata: { reason: 'max_attempts_exceeded', attempts, errorCode: code ?? null },
+              });
+            } catch (_) {}
+
+            return; // PARA aqui, não reconecta mais
+          }
+          // ===== FIM DA VERIFICAÇÃO =====
 
           const delay = Math.min(30000, 1000 * Math.pow(2, Math.min(attempts, 5))); // 2s,4s,8s,16s,32s -> cap 30s
           const timers = this.sessionTimers.get(sessionKey) || {};
@@ -609,7 +814,17 @@ class WhatsAppQrRunner extends EventEmitter {
       return sock;
     };
 
-    return connect();
+    const sock = connect();
+    resolveStart(sock);
+    return sock;
+    } catch (err) {
+      rejectStart(err);
+      throw err;
+    } finally {
+      if (this.startingSessions.get(sessionKey) === startPromise) {
+        this.startingSessions.delete(sessionKey);
+      }
+    }
   }
 
   async stopSession(tenantId, connectionId) {
