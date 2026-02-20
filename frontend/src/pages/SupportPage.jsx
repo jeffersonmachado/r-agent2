@@ -782,6 +782,7 @@ export function SupportPage() {
         text: m?.text || '',
         timestamp: m?.timestamp || null,
         externalMessageId: m?.externalMessageId || null,
+        clientMessageId: m?.clientMessageId || null,
         deliveryStatus: m?.deliveryStatus || null,
         raw: m,
       });
@@ -1516,6 +1517,16 @@ export function SupportPage() {
                             {msg.source === 'channel' ? <span style={{ marginLeft: '6px', color: '#999' }}>(canal)</span> : null}
                             {' • '}
                             {formatDate(msg.timestamp)}
+                            {(() => {
+                              const idValue = msg.externalMessageId || msg.clientMessageId || null;
+                              if (!idValue) return null;
+                              const label = msg.externalMessageId ? 'ID' : 'client_id';
+                              return (
+                                <span style={{ marginLeft: '8px', color: 'var(--color-text-tertiary)' }}>
+                                  • {label}: {String(idValue)}
+                                </span>
+                              );
+                            })()}
                             {(() => {
                               // Mostra badge apenas para outbound do atendente/bot
                               const isOutbound = msg.sender === 'agent' || msg.sender === 'bot';
