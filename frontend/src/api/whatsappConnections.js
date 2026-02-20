@@ -16,6 +16,13 @@ export function createWhatsAppConnection(payload) {
   });
 }
 
+export function updateWhatsAppConnection(connectionId, payload) {
+  return fetchJson(`/whatsapp/connections/${encodeURIComponent(connectionId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
 export function generateWhatsAppQr(connectionId) {
   return fetchJson(`/whatsapp/connections/${encodeURIComponent(connectionId)}/qr`, {
     method: 'POST',

@@ -8,10 +8,13 @@ import { Input } from '../styles/Input';
 import {
   listWhatsAppConnections,
   createWhatsAppConnection,
+  updateWhatsAppConnection,
   generateWhatsAppQr,
   disconnectWhatsAppConnection,
   getWhatsAppConnectionStatus,
 } from '../api/whatsappConnections';
+import { listFlows } from '../api/flows';
+import { getCurrentTenantPlanUsage } from '../api/tenants';
 import { getWebSocketStatusMeta } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
 
@@ -51,7 +54,9 @@ export function WhatsAppConnectionsPage() {
   const [wsUiStatus, setWsUiStatus] = useState({ phase: 'connecting' });
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState([]);
-  const [form, setForm] = useState({ name: '', provider: 'whatsapp-qr' });
+  const [form, setForm] = useState({ name: '', provider: 'whatsapp-qr', botEnabled: false, botFlowId: null });
+  const [availableFlows, setAvailableFlows] = useState([]);
+  const [planAllowsWhatsAppBot, setPlanAllowsWhatsAppBot] = useState(false);
   const [qrState, setQrState] = useState({ connectionId: null, qr: null });
   const [qrImageError, setQrImageError] = useState(false);
   const [busyId, setBusyId] = useState(null);
@@ -95,7 +100,12 @@ export function WhatsAppConnectionsPage() {
     setLoading(true);
     try {
       const out = await listWhatsAppConnections();
-      setConnections(Array.isArray(out?.connections) ? out.connections : []);
+      const nextConnections = Array.isArray(out?.connections) ? out.connections : [];
+      setConnections(nextConnections.map((conn) => ({
+        ...conn,
+        botEnabled: conn?.botEnabled === true,
+        botFlowId: conn?.botEnabled === true && conn?.botFlowId ? String(conn.botFlowId) : null,
+      })));
     } catch (err) {
       logger.error('[WhatsAppConnections] erro ao carregar', err);
       showToast('Erro ao carregar conexões', 'error');
@@ -104,8 +114,29 @@ export function WhatsAppConnectionsPage() {
     }
   }
 
+  async function loadDependencies() {
+    try {
+      const [flowsResult, planResult] = await Promise.all([
+        listFlows().catch(() => []),
+        getCurrentTenantPlanUsage().catch(() => null),
+      ]);
+
+      const list = Array.isArray(flowsResult)
+        ? flowsResult
+        : (Array.isArray(flowsResult?.flows) ? flowsResult.flows : []);
+      setAvailableFlows(list);
+
+      const allows = planResult?.limits?.features?.whatsapp_bot === true;
+      setPlanAllowsWhatsAppBot(allows);
+    } catch (_) {
+      setAvailableFlows([]);
+      setPlanAllowsWhatsAppBot(false);
+    }
+  }
+
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
+      loadDependencies();
       loadConnections();
     }
   }, [authLoading, isAuthenticated]);
@@ -139,16 +170,58 @@ export function WhatsAppConnectionsPage() {
       return;
     }
 
+    if (form.botEnabled && !planAllowsWhatsAppBot) {
+      showToast('Seu plano não suporta bot no WhatsApp', 'warning');
+      return;
+    }
+
+    if (form.botEnabled && !form.botFlowId) {
+      showToast('Selecione um Flow para esta conexão', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
-      await createWhatsAppConnection({ name: form.name.trim(), provider: form.provider.trim() || 'whatsapp-qr' });
-      setForm({ name: '', provider: 'whatsapp-qr' });
+      await createWhatsAppConnection({
+        name: form.name.trim(),
+        provider: form.provider.trim() || 'whatsapp-qr',
+        botEnabled: !!form.botEnabled,
+        botFlowId: form.botEnabled ? String(form.botFlowId) : null,
+      });
+      setForm({ name: '', provider: 'whatsapp-qr', botEnabled: false, botFlowId: null });
       await loadConnections();
       showToast('Conexão criada', 'success');
     } catch (err) {
       showToast('Erro ao criar conexão', 'error');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSaveConnectionBot(conn) {
+    if (conn?.botEnabled && !planAllowsWhatsAppBot) {
+      showToast('Seu plano não suporta bot no WhatsApp', 'warning');
+      return;
+    }
+    if (conn?.botEnabled && !conn?.botFlowId) {
+      showToast('Selecione um Flow para esta conexão', 'warning');
+      return;
+    }
+
+    setBusyId(conn.id);
+    try {
+      await updateWhatsAppConnection(conn.id, {
+        name: conn.name,
+        provider: conn.provider,
+        botEnabled: conn?.botEnabled === true,
+        botFlowId: conn?.botEnabled === true ? conn.botFlowId : null,
+      });
+      await loadConnections();
+      showToast('Configuração da conexão atualizada', 'success');
+    } catch (err) {
+      showToast('Erro ao salvar configuração da conexão', 'error');
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -296,6 +369,42 @@ export function WhatsAppConnectionsPage() {
               ))}
             </select>
           </div>
+          <div className="support-form-group">
+            <label className="inline-flex items-center gap-2 text-sm text-text-primary">
+              <input
+                type="checkbox"
+                checked={!!form.botEnabled}
+                disabled={!planAllowsWhatsAppBot}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setForm((prev) => ({
+                    ...prev,
+                    botEnabled: checked,
+                    botFlowId: checked ? prev.botFlowId : null,
+                  }));
+                }}
+              />
+              Ativar Bot nesta conexão
+            </label>
+            {!planAllowsWhatsAppBot && (
+              <div className="mt-1 text-xs text-status-warning">Seu plano não suporta bot no WhatsApp</div>
+            )}
+          </div>
+          {form.botEnabled && (
+            <div className="support-form-group">
+              <label className="support-form-label">Flow do Bot</label>
+              <select
+                className="support-form-select"
+                value={form.botFlowId || ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, botFlowId: e.target.value || null }))}
+              >
+                <option value="">Selecione um flow</option>
+                {availableFlows.map((flow) => (
+                  <option key={flow.id} value={flow.id}>{flow.name || flow.id}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <Button onClick={handleCreate} className="support-button-full" disabled={loading}>Criar conexão</Button>
           <div className="text-xs text-text-tertiary" style={{ marginTop: '8px' }}>
             Esta tela conecta números via WhatsApp Web (QR Code). Se você usa API oficial (Cloud API), gerencie em Canal/Contas em vez deste fluxo.
@@ -350,6 +459,61 @@ export function WhatsAppConnectionsPage() {
                       <Button onClick={() => handleDisconnect(conn.id)} className="support-button-danger" style={{ width: 'auto' }} disabled={busyId === conn.id} size="sm">
                         Desconectar
                       </Button>
+                    </div>
+
+                    <div className="mt-4 rounded-md border border-border-default bg-bg-secondary p-3">
+                      <label className="inline-flex items-center gap-2 text-xs text-text-primary">
+                        <input
+                          type="checkbox"
+                          checked={conn?.botEnabled === true}
+                          disabled={!planAllowsWhatsAppBot}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setConnections((prev) => prev.map((item) => (
+                              item.id === conn.id
+                                ? { ...item, botEnabled: checked, botFlowId: checked ? item.botFlowId : null }
+                                : item
+                            )));
+                          }}
+                        />
+                        Ativar Bot nesta conexão
+                      </label>
+                      {!planAllowsWhatsAppBot && (
+                        <div className="mt-1 text-xs text-status-warning">Seu plano não suporta bot no WhatsApp</div>
+                      )}
+
+                      {conn?.botEnabled === true && (
+                        <div className="mt-2">
+                          <select
+                            className="support-form-select"
+                            value={conn?.botFlowId || ''}
+                            onChange={(e) => {
+                              const value = e.target.value || null;
+                              setConnections((prev) => prev.map((item) => (
+                                item.id === conn.id
+                                  ? { ...item, botFlowId: value }
+                                  : item
+                              )));
+                            }}
+                          >
+                            <option value="">Selecione um flow</option>
+                            {availableFlows.map((flow) => (
+                              <option key={flow.id} value={flow.id}>{flow.name || flow.id}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          size="sm"
+                          style={{ width: 'auto' }}
+                          onClick={() => handleSaveConnectionBot(conn)}
+                          disabled={busyId === conn.id}
+                        >
+                          {busyId === conn.id ? 'Salvando...' : 'Salvar Bot'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
