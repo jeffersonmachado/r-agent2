@@ -26,6 +26,7 @@ const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
 const { verifyWebhook } = require('./services/whatsappService');
 const { processWhatsAppMessage } = require('./services/messageProcessor');
+const { handleWhatsAppInbound } = require('./services/whatsappInboundService');
 const outboundQueueService = require('./services/outboundQueueService');
 const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
 const logger = require('./utils/logger');
@@ -386,6 +387,12 @@ function saveSessionEventsToFile() {
   // Migrado para banco de dados - não salva mais em arquivo JSON
   logger.debug('[Conversations] saveSessionEventsToFile chamado mas ignorado (dados estão no banco de dados)');
 }
+
+qrRunner.setInboundDepsProvider(() => ({
+  flows,
+  sessionEvents,
+  saveSessionEvents: saveSessionEventsToFile,
+}));
 
 /**
  * Salva conversas imediatamente.
@@ -12675,6 +12682,43 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // -----------------------------------------------------------------------
   // WhatsApp QR Connections (além da Cloud API)
   // -----------------------------------------------------------------------
+  async function validateWhatsAppConnectionBotPayload(tenantId, body = {}) {
+    if (!body || typeof body !== 'object') {
+      return { ok: false, status: 422, error: 'invalid_payload', message: 'Payload inválido' };
+    }
+
+    if (typeof body.botEnabled !== 'boolean') {
+      return { ok: false, status: 422, error: 'invalid_payload', message: 'Campo botEnabled é obrigatório e deve ser boolean' };
+    }
+
+    if (body.botEnabled !== true) {
+      return { ok: true, normalized: { ...body, botEnabled: false, botFlowId: null } };
+    }
+
+    const { checkFeature } = require('./services/planLimitsService');
+    const featureCheck = await checkFeature(tenantId, 'whatsapp_bot');
+    if (!featureCheck.allowed) {
+      return {
+        ok: false,
+        status: 403,
+        error: 'feature_not_allowed',
+        message: 'Seu plano não suporta bot no WhatsApp',
+      };
+    }
+
+    const botFlowId = body.botFlowId != null ? String(body.botFlowId).trim() : '';
+    if (!botFlowId) {
+      return { ok: false, status: 422, error: 'invalid_flow', message: 'Flow inválido para esta conexão' };
+    }
+
+    const flow = flows.get(botFlowId);
+    if (!flow || String(flow?.tenantId || '') !== String(tenantId)) {
+      return { ok: false, status: 422, error: 'invalid_flow', message: 'Flow inválido para esta conexão' };
+    }
+
+    return { ok: true, normalized: { ...body, botEnabled: true, botFlowId } };
+  }
+
   // GET /whatsapp/connections
   if (method === 'GET' && pathname === '/whatsapp/connections') {
     const authResult = requireAuth(req);
@@ -12758,8 +12802,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
     try {
       const body = await parseJsonBody(req);
+      const validation = await validateWhatsAppConnectionBotPayload(tenantId, body || {});
+      if (!validation.ok) {
+        sendJson(res, validation.status || 422, { error: validation.error || 'validation_error', message: validation.message || 'Payload inválido' });
+        return;
+      }
       const service = require('./services/whatsappQrService');
-      const out = await service.createConnection(tenantId, body || {});
+      const out = await service.createConnection(tenantId, validation.normalized || {});
       if (!out.ok) {
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
@@ -12768,6 +12817,52 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('[WhatsAppQR] Erro ao criar conexão:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar conexão' });
+    }
+    return;
+  }
+
+  // PUT /whatsapp/connections/:id
+  if (method === 'PUT' && /^\/whatsapp\/connections\/[^/]+$/.test(pathname)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length));
+      const body = await parseJsonBody(req);
+      const validation = await validateWhatsAppConnectionBotPayload(tenantId, body || {});
+      if (!validation.ok) {
+        sendJson(res, validation.status || 422, { error: validation.error || 'validation_error', message: validation.message || 'Payload inválido' });
+        return;
+      }
+
+      const service = require('./services/whatsappQrService');
+      const out = await service.updateConnection(tenantId, id, validation.normalized || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      logger.error('[WhatsAppQR] Erro ao atualizar conexão:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar conexão' });
     }
     return;
   }
@@ -18309,99 +18404,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
                 const normalizedArr = channelNormalizationService.normalizeWhatsAppIncoming({ message: msg, value, raw: body });
                 const normalized = normalizedArr && normalizedArr[0] ? normalizedArr[0] : null;
 
-                // 1) Persiste no gateway (best-effort) e resolve tenant
                 // eslint-disable-next-line no-await-in-loop
-                const ingest = await channelGatewayService.ingestIncoming('whatsapp', { message: msg, value, raw: body }).catch(() => null);
-
-                // HARDENING (CRÍTICO): sem tenant resolvido (phone_number_id não cadastrado/ativo),
-                // ignoramos a mensagem. Nunca processar engine e nunca criar ticket sem tenant.
-                const tenantId = ingest?.tenantId || null;
-                if (!tenantId) {
-                  logger.warn('[Webhook WhatsApp] Mensagem ignorada: tenant não resolvido (channel_account ausente/inativo)', {
-                    phone_number_id: value?.metadata?.phone_number_id || null,
-                    from: msg?.from ? String(msg.from) : null,
-                    externalMessageId: msg?.id ? String(msg.id) : null,
-                  });
-                  // eslint-disable-next-line no-continue
-                  continue;
-                }
-
-                // HARDENING (CRÍTICO): idempotência inbound.
-                // Se o gateway marcou a mensagem como duplicada (já persistida), NÃO processa ticket/engine novamente.
-                if (ingest?.persist?.idempotent === true) {
-                  // eslint-disable-next-line no-continue
-                  continue;
-                }
-                const externalConversationId = normalized?.externalConversationId
-                  || ingest?.normalized?.conversationKey?.externalId
-                  || (msg?.from ? String(msg.from) : null);
-                const messageText = typeof normalized?.text === 'string'
-                  ? normalized.text
-                  : (msg?.text?.body ? String(msg.text.body) : '');
-                const externalMessageId = normalized?.externalMessageId || (msg?.id ? String(msg.id) : null);
-                const iso = normalized?.timestamp || (() => {
-                  const ts = msg?.timestamp ? Number(msg.timestamp) : null;
-                  return ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
-                })();
-
-                // 2) Resolve ticket existente (ou cria, se configurado), sem quebrar compatibilidade
-                // eslint-disable-next-line no-await-in-loop
-                const link = await resolveOrCreateTicketFromIncomingMessage(
-                  tenantId,
-                  'whatsapp',
-                  String(externalConversationId || ''),
-                  { phone: msg?.from ? String(msg.from) : null }
-                ).catch(() => null);
-
-                const ticket = link?.ticket || null;
-
-                // 2.1) Registra inbound no "ledger" do ticket (idempotente por externalMessageId)
-                // (channel_messages já é persistido no ingestIncoming).
-                let updatedTicket = null;
-                if (ticket && ticket.id) {
-                  try {
-                    updatedTicket = appendTicketMessage(ticket.id, {
-                      direction: 'in',
-                      text: messageText,
-                      externalMessageId,
-                      timestamp: iso,
-                    });
-                  } catch (_) {
-                    updatedTicket = ticket;
-                  }
-                }
-
-                const effectiveTicket = updatedTicket || ticket;
-
-                // 3) Se há ticket em modo humano, NÃO roda engine; apenas registra mensagem e notifica UI
-                if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
-                  // Fase 3: se entrou em atendimento humano e ainda não está atribuído, tenta auto-assign
-                  if ((effectiveTicket.mode || 'bot') === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
-                    autoAssignTicket(effectiveTicket.id).catch(() => null);
-                  }
-                  try {
-                    emitEvent('ticket.message.received', {
-                      ticketId: effectiveTicket.id,
-                      message: messageText,
-                      sender: 'user',
-                      ticket: effectiveTicket,
-                    }, { tenantId: effectiveTicket.tenantId, agentId: effectiveTicket.assignedTo });
-                  } catch (e) {
-                    // best-effort
-                  }
-                  // eslint-disable-next-line no-continue
-                  continue;
-                }
-
-                // 4) Caso contrário, processa normalmente na engine (bot)
-                // eslint-disable-next-line no-await-in-loop
-                await processWhatsAppMessage(msg, value, {
-                  flows,
-                  sessionEvents,
-                  saveSessionEvents: saveSessionEventsToFile,
-                  tenantId,
-                  conversationId: ingest?.persist?.conversationId || null,
-                  channelType: 'whatsapp',
+                await handleWhatsAppInbound({
+                  source: 'cloud',
+                  tenantId: null,
+                  payload: { message: msg, value, raw: body },
+                  normalized,
+                  deps: {
+                    flows,
+                    sessionEvents,
+                    saveSessionEvents: saveSessionEventsToFile,
+                  },
                 });
               }
             }

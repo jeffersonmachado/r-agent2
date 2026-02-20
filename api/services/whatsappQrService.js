@@ -20,6 +20,10 @@ function normalizeStore(value) {
 
 function normalizeConnection(conn) {
   if (!conn || typeof conn !== 'object') return null;
+  const botEnabled = conn.botEnabled === true;
+  const botFlowId = botEnabled && conn.botFlowId != null && String(conn.botFlowId).trim()
+    ? String(conn.botFlowId).trim()
+    : null;
   return {
     id: String(conn.id || ''),
     name: conn.name ? String(conn.name) : '',
@@ -33,6 +37,8 @@ function normalizeConnection(conn) {
     lastDisconnectedAt: conn.lastDisconnectedAt || null,
     metadata: conn.metadata && typeof conn.metadata === 'object' ? conn.metadata : {},
     qr: conn.qr && typeof conn.qr === 'object' ? conn.qr : null,
+    botEnabled,
+    botFlowId,
   };
 }
 
@@ -108,6 +114,8 @@ async function createConnection(tenantId, input) {
     label: input?.label ? String(input.label).trim() : '',
     provider: input?.provider ? String(input.provider).trim() : 'whatsapp-qr',
     status: input?.status ? String(input.status) : 'disconnected',
+    botEnabled: input?.botEnabled === true,
+    botFlowId: input?.botEnabled === true ? input?.botFlowId : null,
     createdAt: now,
     updatedAt: now,
     metadata: input?.metadata && typeof input.metadata === 'object' ? input.metadata : {},
@@ -121,6 +129,70 @@ async function createConnection(tenantId, input) {
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
   return { ok: true, connection: next, connections: saved.store.connections.map(normalizeConnection).filter(Boolean) };
+}
+
+async function updateConnection(tenantId, connectionId, input = {}) {
+  const out = await getStore(tenantId);
+  if (!out.ok) return out;
+  const idx = out.store.connections.findIndex((c) => c && String(c.id) === String(connectionId));
+  if (idx < 0) return { ok: false, error: 'not_found' };
+
+  const prev = normalizeConnection(out.store.connections[idx]) || {};
+  const now = new Date().toISOString();
+  const next = normalizeConnection({
+    ...prev,
+    ...(input?.name != null ? { name: String(input.name).trim() } : {}),
+    ...(input?.label != null ? { label: String(input.label).trim() } : {}),
+    ...(input?.provider != null ? { provider: String(input.provider).trim() || prev.provider } : {}),
+    ...(input?.metadata && typeof input.metadata === 'object'
+      ? { metadata: { ...(prev.metadata || {}), ...input.metadata } }
+      : {}),
+    botEnabled: input?.botEnabled === true,
+    botFlowId: input?.botEnabled === true ? input?.botFlowId : null,
+    updatedAt: now,
+  });
+
+  out.store.connections[idx] = next;
+  const saved = await saveStore(tenantId, out.store);
+  if (!saved.ok) return saved;
+
+  return { ok: true, connection: next };
+}
+
+async function getConnectionById(tenantId, connectionId) {
+  const out = await getStore(tenantId);
+  if (!out.ok) return null;
+  const conn = out.store.connections.find((c) => c && String(c.id) === String(connectionId));
+  return normalizeConnection(conn);
+}
+
+async function resolveConnectionForInbound(tenantId, payload = {}) {
+  const out = await getStore(tenantId);
+  if (!out.ok) return null;
+
+  const connectionIdFromQr = payload?.__qr?.connectionId ? String(payload.__qr.connectionId).trim() : null;
+  const phoneNumberId = payload?.value?.metadata?.phone_number_id || payload?.metadata?.phone_number_id || null;
+  const normalizedPhoneNumberId = phoneNumberId ? String(phoneNumberId).trim() : null;
+
+  const connections = out.store.connections.map(normalizeConnection).filter(Boolean);
+
+  if (connectionIdFromQr) {
+    const byId = connections.find((c) => String(c.id) === connectionIdFromQr);
+    if (byId) return byId;
+  }
+
+  if (normalizedPhoneNumberId) {
+    const byCloudId = connections.find((c) => String(c.id) === normalizedPhoneNumberId);
+    if (byCloudId) return byCloudId;
+
+    const byMetadataPhone = connections.find((c) => {
+      const meta = c?.metadata || {};
+      return String(meta.phone_number_id || meta.phoneNumberId || meta.externalId || '').trim() === normalizedPhoneNumberId;
+    });
+    if (byMetadataPhone) return byMetadataPhone;
+  }
+
+  return null;
 }
 
 async function generateQr(tenantId, connectionId) {
@@ -316,6 +388,9 @@ async function removeConnection(tenantId, connectionId) {
 module.exports = {
   listConnections,
   createConnection,
+  updateConnection,
+  getConnectionById,
+  resolveConnectionForInbound,
   generateQr,
   disconnectConnection,
   setConnectionStatus,

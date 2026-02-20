@@ -7,6 +7,8 @@ const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = requir
 const { autoAssignTicket } = require('./routingService');
 const { emitEvent } = require('./websocketService');
 const { processWhatsAppMessage } = require('./messageProcessor');
+const whatsappQrService = require('./whatsappQrService');
+const { checkFeature } = require('./planLimitsService');
 
 function jsonSafe(obj) {
   try { return JSON.stringify(obj); } catch (_) { return '[unserializable]'; }
@@ -15,6 +17,25 @@ function jsonSafe(obj) {
 function isHumanMode(ticket) {
   const mode = (ticket?.mode || 'bot');
   return mode === 'human' || mode === 'paused';
+}
+
+function resolveInboundConnectionIdentifiers(payload = {}) {
+  const connectionId = payload?.__qr?.connectionId ? String(payload.__qr.connectionId).trim() : null;
+  const phoneNumberIdRaw = payload?.value?.metadata?.phone_number_id || payload?.metadata?.phone_number_id || null;
+  const phoneNumberId = phoneNumberIdRaw != null ? String(phoneNumberIdRaw).trim() : null;
+  return { connectionId, phoneNumberId };
+}
+
+function buildInboundSessionId(payload = {}, message = {}, fallbackConversationId = null) {
+  const from = message?.from ? String(message.from).trim() : null;
+  const { connectionId, phoneNumberId } = resolveInboundConnectionIdentifiers(payload);
+
+  if (connectionId && from) return `whatsapp_qr_${connectionId}_${from}`;
+  if (phoneNumberId && from) return `whatsapp_cloud_${phoneNumberId}_${from}`;
+
+  const channelSuffix = phoneNumberId || connectionId || String(fallbackConversationId || 'unknown');
+  const fromSuffix = from || 'unknown';
+  return `whatsapp_${channelSuffix}_${fromSuffix}`;
 }
 
 // Normaliza o identificador da conversa para evitar duplicação de ticket em cenários Baileys/MD
@@ -99,6 +120,34 @@ async function handleWhatsAppInbound({
     return { ok: true, idempotent: true };
   }
 
+  const resolvedConnection = await whatsappQrService.resolveConnectionForInbound(effectiveTenantId, payload).catch(() => null);
+  const resolvedConnectionId = resolvedConnection?.id ? String(resolvedConnection.id) : (payload?.__qr?.connectionId ? String(payload.__qr.connectionId) : null);
+  const resolvedBotEnabled = resolvedConnection?.botEnabled === true;
+  const resolvedBotFlowId = resolvedBotEnabled && resolvedConnection?.botFlowId ? String(resolvedConnection.botFlowId) : null;
+  const inboundSessionId = buildInboundSessionId(payload, message, externalConversationId);
+
+  let blockedByPlan = false;
+  if (resolvedBotEnabled) {
+    const featureCheck = await checkFeature(effectiveTenantId, 'whatsapp_bot').catch(() => ({ allowed: false }));
+    blockedByPlan = !featureCheck.allowed;
+  }
+
+  const modeFromConnection = (!resolvedConnection || blockedByPlan || !resolvedBotEnabled || !resolvedBotFlowId)
+    ? 'human'
+    : 'bot';
+
+  logger.info('WA_INBOUND_ROUTE', {
+    traceId: traceId || 'n/a',
+    tenantId: effectiveTenantId,
+    source,
+    connectionId: resolvedConnectionId,
+    phone_number_id: payload?.value?.metadata?.phone_number_id || payload?.metadata?.phone_number_id || null,
+    mode: modeFromConnection,
+    flowId: modeFromConnection === 'bot' ? resolvedBotFlowId : null,
+    blockedByPlan,
+    hasConnection: !!resolvedConnection,
+  });
+
   const messageText = typeof normalized?.text === 'string'
     ? normalized.text
     : (message?.text?.body ? String(message.text.body) : '');
@@ -142,7 +191,7 @@ async function handleWhatsAppInbound({
   }
 
   // 3) Modo humano/pausado: não roda bot
-  if (effectiveTicket && effectiveTicket.status !== 'closed' && isHumanMode(effectiveTicket)) {
+  if (effectiveTicket && effectiveTicket.status !== 'closed' && (isHumanMode(effectiveTicket) || modeFromConnection === 'human')) {
     if ((effectiveTicket.mode || 'bot') === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
       autoAssignTicket(effectiveTicket.id).catch(() => null);
     }
@@ -156,8 +205,8 @@ async function handleWhatsAppInbound({
     } catch (e) {
       logger.warn(`[WA_PIPE_HUMAN_EMIT_WARN] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, errMessage: e?.message || String(e) })}`);
     }
-    logger.info(`[WA_PIPE_HUMAN_MODE_ON] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, mode: effectiveTicket.mode })}`);
-    return { ok: true, mode: 'human', ticketId: effectiveTicket.id };
+    logger.info(`[WA_PIPE_HUMAN_MODE_ON] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, mode: effectiveTicket.mode, connectionId: resolvedConnectionId, blockedByPlan })}`);
+    return { ok: true, mode: 'human', ticketId: effectiveTicket.id, connectionId: resolvedConnectionId };
   }
 
   // 4) Bot: processa engine (best-effort)
@@ -178,10 +227,12 @@ async function handleWhatsAppInbound({
       tenantId: effectiveTenantId,
       conversationId: ingest?.persist?.conversationId || null,
       channelType: 'whatsapp',
+      flowId: resolvedBotFlowId || null,
+      sessionId: inboundSessionId,
     });
 
-    logger.info(`[WA_PIPE_BOT_DONE] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id })}`);
-    return { ok: true, mode: 'bot', ticketId: effectiveTicket.id };
+    logger.info(`[WA_PIPE_BOT_DONE] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, connectionId: resolvedConnectionId, flowId: resolvedBotFlowId })}`);
+    return { ok: true, mode: 'bot', ticketId: effectiveTicket.id, connectionId: resolvedConnectionId, flowId: resolvedBotFlowId };
   } catch (e) {
     logger.error(`[WA_PIPE_BOT_ERR] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, errMessage: e?.message || String(e), errStack: e?.stack || null })}`);
     return { ok: false, reason: 'bot_error', ticketId: effectiveTicket.id };

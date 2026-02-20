@@ -29,6 +29,9 @@ const PLAN_LIMITS = {
     tokens_ia: 50000,
     documentos_rag: 50,
     storage_mb: 500,
+    features: {
+      whatsapp_bot: false,
+    },
   },
   free: {
     usuarios: 1,
@@ -40,6 +43,9 @@ const PLAN_LIMITS = {
     tokens_ia: 10000,
     documentos_rag: 10,
     storage_mb: 100,
+    features: {
+      whatsapp_bot: false,
+    },
   },
   trial: {
     usuarios: 3,
@@ -51,6 +57,9 @@ const PLAN_LIMITS = {
     tokens_ia: 50000,
     documentos_rag: 50,
     storage_mb: 500,
+    features: {
+      whatsapp_bot: false,
+    },
   },
   pro: {
     usuarios: 10,
@@ -62,6 +71,9 @@ const PLAN_LIMITS = {
     tokens_ia: 500000,
     documentos_rag: 500,
     storage_mb: 5000,
+    features: {
+      whatsapp_bot: true,
+    },
   },
   enterprise: {
     usuarios: -1, // Ilimitado
@@ -73,6 +85,9 @@ const PLAN_LIMITS = {
     tokens_ia: -1,
     documentos_rag: -1,
     storage_mb: -1,
+    features: {
+      whatsapp_bot: true,
+    },
   },
 };
 
@@ -135,6 +150,32 @@ async function checkLimit(tenantId, resource, amount = 1) {
   }
 
   return { allowed: true, limit, current };
+}
+
+async function checkFeature(tenantId, featureKey) {
+  const tenant = await getTenant(tenantId);
+  if (!tenant) {
+    return { allowed: false, error: 'Tenant não encontrado' };
+  }
+
+  const safeFeatureKey = String(featureKey || '').trim();
+  if (!safeFeatureKey) {
+    return { allowed: false, error: 'feature_key_required' };
+  }
+
+  const defaultLimits = getPlanLimits(tenant.plan);
+  const tenantFeatures = tenant?.limits?.features && typeof tenant.limits.features === 'object'
+    ? tenant.limits.features
+    : {};
+  const defaultFeatures = defaultLimits?.features && typeof defaultLimits.features === 'object'
+    ? defaultLimits.features
+    : {};
+
+  const enabled = tenantFeatures[safeFeatureKey] === true || (tenantFeatures[safeFeatureKey] == null && defaultFeatures[safeFeatureKey] === true);
+  return {
+    allowed: enabled === true,
+    feature: safeFeatureKey,
+  };
 }
 
 /**
@@ -243,6 +284,7 @@ function getUsageMetrics(tenantId) {
 module.exports = {
   getPlanLimits,
   checkLimit,
+  checkFeature,
   requireLimit,
   incrementUsage,
   getUsageMetrics,

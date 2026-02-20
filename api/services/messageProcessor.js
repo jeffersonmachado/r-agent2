@@ -161,10 +161,18 @@ function createInitialState(flow, sessionId, from) {
  *
  * @param {any} message - Objeto de mensagem do webhook do WhatsApp (value.messages[i])
  * @param {any} value - Objeto "value" completo do webhook (contém metadata da conversation)
- * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null, channelType?: string|null }} deps
+ * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null, channelType?: string|null, flowId?: string|null, sessionId?: string|null }} deps
  */
 async function processWhatsAppMessage(message, value, deps) {
-  const { flows, sessionEvents, saveSessionEvents, tenantId: inboundTenantId, conversationId } = deps || {};
+  const {
+    flows,
+    sessionEvents,
+    saveSessionEvents,
+    tenantId: inboundTenantId,
+    conversationId,
+    flowId: explicitFlowId,
+    sessionId: explicitSessionId,
+  } = deps || {};
   const effectiveChannelType = (deps && deps.channelType && String(deps.channelType).trim())
     ? String(deps.channelType).trim()
     : 'whatsapp';
@@ -172,7 +180,9 @@ async function processWhatsAppMessage(message, value, deps) {
   const from = message.from; // número do usuário (ex.: "5511999999999")
   const text = message.text && message.text.body ? String(message.text.body) : '';
   const messageId = message.id;
-  const sessionId = `${effectiveChannelType}_${from}`;
+  const sessionId = explicitSessionId && String(explicitSessionId).trim()
+    ? String(explicitSessionId).trim()
+    : `${effectiveChannelType}_${from}`;
 
   async function sendWhatsAppTextBestEffort(to, textToSend) {
     const effectiveTenantId = inboundTenantId || state?.tenantId;
@@ -372,11 +382,13 @@ async function processWhatsAppMessage(message, value, deps) {
 
   // Se não existe sessão, cria nova baseada em um fluxo padrão
   if (!state) {
-    const defaultFlowId = config.get('flows.defaultFlowId');
+    const selectedFlowId = explicitFlowId && String(explicitFlowId).trim()
+      ? String(explicitFlowId).trim()
+      : config.get('flows.defaultFlowId');
     
     // Valida se defaultFlowId não é um placeholder
-    if (!defaultFlowId || defaultFlowId === 'ID_DO_FLUXO_PADRAO' || defaultFlowId.includes('SEU_') || defaultFlowId.includes('YOUR_')) {
-        logger.error('[ERROR] defaultFlowId não configurado ou é placeholder. Configure flows.defaultFlowId em config.json');
+    if (!selectedFlowId || selectedFlowId === 'ID_DO_FLUXO_PADRAO' || selectedFlowId.includes('SEU_') || selectedFlowId.includes('YOUR_')) {
+        logger.error('[ERROR] FlowId não configurado ou é placeholder. Configure botFlowId da conexão ou flows.defaultFlowId em config.json');
       try {
         await sendWhatsAppTextBestEffort(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
       } catch (err) {
@@ -385,9 +397,9 @@ async function processWhatsAppMessage(message, value, deps) {
       return;
     }
 
-    const flow = flows.get(defaultFlowId);
+    const flow = flows.get(selectedFlowId);
     if (!flow) {
-      logger.error(`[ERROR] Flow "${defaultFlowId}" não encontrado. Verifique se o fluxo existe e se flows.defaultFlowId está correto em config.json`);
+      logger.error(`[ERROR] Flow "${selectedFlowId}" não encontrado. Verifique se o fluxo existe e se botFlowId da conexão (ou flows.defaultFlowId) está correto`);
       try {
         await sendWhatsAppTextBestEffort(from, 'Serviço indisponível no momento. Por favor, tente novamente mais tarde.');
       } catch (err) {
