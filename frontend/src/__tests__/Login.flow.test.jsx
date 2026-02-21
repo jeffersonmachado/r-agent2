@@ -88,10 +88,7 @@ async function loadLoginWithMocks() {
   return { Login };
 }
 
-// Suite conhecida por ser instável quando executada junto do suite completo,
-// devido a mocks hoisted em outros arquivos com `isolate: false`.
-// Mantemos os testes do gate em `TenantGate.test.jsx` como regressão principal.
-describe.skip('Login (via formulário) - seleção de tenant obrigatória', () => {
+describe('Login (via formulário) - seleção de tenant obrigatória', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -104,10 +101,7 @@ describe.skip('Login (via formulário) - seleção de tenant obrigatória', () =
     vi.unstubAllGlobals();
   });
 
-  // Nota: este cenário (usuário comum) tem se mostrado instável no suite completo
-  // por causa de mocks hoisted em outros arquivos com `isolate: false`.
-  // Mantemos a cobertura principal (super-admin + gate) como regressão do bug.
-  it.skip('deve limpar auth_token/auth_agent ao submeter e exigir confirmação do tenant (usuário comum)', async () => {
+  it('deve limpar auth_token/auth_agent ao submeter e exigir confirmação do tenant (usuário comum)', async () => {
     const user = userEvent.setup();
     const { Login } = await loadLoginWithMocks();
 

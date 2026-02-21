@@ -241,6 +241,8 @@ const {
 const ragService = require('./services/ragService');
 const { buildDiverseRagContext } = require('./services/ragContextBuilder');
 const { parseMultipartFormData } = require('./utils/multipartParser');
+const { handleRegisterPushRoute, handleUnregisterPushRoute } = require('./services/push/pushRouteService');
+const { validatePushStartupConfig } = require('./services/push');
 const {
   scrapeUrl,
   scrapeUrls,
@@ -12547,6 +12549,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
       }
+      try {
+        const WebSocketService = require('./services/websocketService');
+        WebSocketService.emitEvent('whatsapp.ivr.updated', { value: out.value }, { tenantId });
+      } catch (_) {
+        // Não deve quebrar fluxo de persistência
+      }
       sendJson(res, 200, { ok: true, value: out.value });
     } catch (err) {
       logger.error('[WhatsAppIVR] Erro ao salvar setting:', err);
@@ -12607,6 +12615,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (!out.ok) {
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
+      }
+      try {
+        const WebSocketService = require('./services/websocketService');
+        WebSocketService.emitEvent('whatsapp.ivr.updated', { value: out.value }, { tenantId });
+      } catch (_) {
+        // Não deve quebrar fluxo de persistência
       }
       sendJson(res, 200, { ok: true, department: next, value: out.value });
     } catch (err) {
@@ -12669,6 +12683,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (!out.ok) {
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
+      }
+      try {
+        const WebSocketService = require('./services/websocketService');
+        WebSocketService.emitEvent('whatsapp.ivr.updated', { value: out.value }, { tenantId });
+      } catch (_) {
+        // Não deve quebrar fluxo de persistência
       }
       sendJson(res, 200, { ok: true, rule: next, value: out.value });
     } catch (err) {
@@ -24276,6 +24296,36 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // Webhooks Customizados
   // -----------------------------------------------------------------------
 
+  // POST /push/register - registra/atualiza token de push do usuário autenticado
+  if (method === 'POST' && pathname === '/push/register') {
+    try {
+      const result = await handleRegisterPushRoute(req, { parseJsonBody, hasJsonContentType });
+      sendJson(res, result.status, result.body);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        sendJson(res, 400, { error: 'validation_error', message: err.message || 'Falha ao registrar token push' });
+      }
+    }
+    return;
+  }
+
+  // POST /push/unregister - remove token de push do usuário autenticado
+  if (method === 'POST' && pathname === '/push/unregister') {
+    try {
+      const result = await handleUnregisterPushRoute(req, { parseJsonBody, hasJsonContentType });
+      sendJson(res, result.status, result.body);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        sendJson(res, 400, { error: 'validation_error', message: err.message || 'Falha ao remover token push' });
+      }
+    }
+    return;
+  }
+
   // GET /webhooks/events - Lista eventos disponíveis
   if (method === 'GET' && pathname === '/webhooks/events') {
     const authResult = requireAuth(req);
@@ -25933,6 +25983,17 @@ async function startInitialization() {
         // Não falha a inicialização se houver erro nos providers
         console.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
         logger.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
+      }
+
+      try {
+        validatePushStartupConfig();
+        console.log('[Init] ✅ Push config validada');
+        logger.info('[Init] ✅ Push config validada');
+      } catch (pushCfgErr) {
+        const error = `Falha ao validar PUSH config: ${pushCfgErr.message}`;
+        console.error(`[Init] ❌ ${error}`);
+        logger.error(`[Init] ❌ ${error}`);
+        throw new Error(error);
       }
   })();
   

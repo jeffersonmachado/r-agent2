@@ -17,6 +17,7 @@ const WebSocketContext = createContext(null);
 export function WebSocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [authFailed, setAuthFailed] = useState(false);
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const pingIntervalRef = useRef(null);
@@ -301,6 +302,7 @@ export function WebSocketProvider({ children }) {
         logReconnectConsole('Conectado com sucesso');
         isConnectingRef.current = false;
         setConnected(true);
+        setAuthFailed(false);
         reconnectAttemptsRef.current = 0;
 
         // Tenta autenticar se houver token disponível
@@ -346,6 +348,7 @@ export function WebSocketProvider({ children }) {
             if (data.status === 'success') {
               logger.info('[WebSocketContext] Autenticado com sucesso', data.agent);
               setAuthenticated(true);
+              setAuthFailed(false);
               // As subscriptions serão atualizadas pelo useEffect que observa 'authenticated'
             } else {
               // Se não há token, é esperado (usuário ainda não fez login)
@@ -357,6 +360,7 @@ export function WebSocketProvider({ children }) {
                 logger.error('[WebSocketContext] Falha na autenticação', data.message || data);
               }
               setAuthenticated(false);
+              setAuthFailed(true);
             }
             return;
           }
@@ -420,6 +424,7 @@ export function WebSocketProvider({ children }) {
         isConnectingRef.current = false;
         setConnected(false);
         setAuthenticated(false);
+        setAuthFailed(false);
 
         scheduleReconnect('onerror', { error: errorMessage, url });
       };
@@ -467,6 +472,7 @@ export function WebSocketProvider({ children }) {
         isConnectingRef.current = false;
         setConnected(false);
         setAuthenticated(false);
+        setAuthFailed(false);
 
         // Limpa ping interval
         if (pingIntervalRef.current) {
@@ -493,6 +499,7 @@ export function WebSocketProvider({ children }) {
       isConnectingRef.current = false;
       setConnected(false);
       setAuthenticated(false);
+      setAuthFailed(false);
       scheduleReconnect('create_connection_error', {
         error: err?.message || 'erro desconhecido',
       });
@@ -627,7 +634,7 @@ export function WebSocketProvider({ children }) {
 
   // Observa mudanças no token e tenta autenticar o WebSocket quando conectado
   useEffect(() => {
-    if (!connected || authenticated) {
+    if (!connected || authenticated || authFailed) {
       return;
     }
 
@@ -640,7 +647,26 @@ export function WebSocketProvider({ children }) {
       }, 200);
       return () => clearTimeout(timeoutId);
     }
-  }, [connected, authenticated, authenticateWebSocket]);
+  }, [connected, authenticated, authFailed, authenticateWebSocket]);
+
+  // Reseta authFailed quando o token muda (novo login em outra aba)
+  // Isso permite que o cliente tente autenticar novamente com o novo token
+  useEffect(() => {
+    const lastTokenRef = { value: getToken() };
+
+    const checkTokenChange = setInterval(() => {
+      const currentToken = getToken();
+      if (currentToken !== lastTokenRef.value) {
+        lastTokenRef.value = currentToken;
+        if (currentToken && authFailed) {
+          logger.debug('[WebSocketContext] Token mudou, resetando authFailed para permitir nova tentativa');
+          setAuthFailed(false);
+        }
+      }
+    }, 500);
+
+    return () => clearInterval(checkTokenChange);
+  }, [authFailed]);
 
   // Observa mudanças no localStorage para detectar quando o token é salvo (após login)
   useEffect(() => {
@@ -652,6 +678,8 @@ export function WebSocketProvider({ children }) {
       // Se o token foi salvo e não estamos autenticados, tenta autenticar
       if (e.key === 'auth_token' && e.newValue && !authenticated) {
         logger.debug('[WebSocketContext] Token detectado no localStorage (outra aba), tentando autenticar...');
+        // Reseta authFailed para permitir nova tentativa
+        setAuthFailed(false);
         setTimeout(() => {
           authenticateWebSocket();
         }, 200);
@@ -663,8 +691,9 @@ export function WebSocketProvider({ children }) {
 
     // Verifica periodicamente se o token mudou (para a mesma aba - após login)
     // Isso é necessário porque o evento 'storage' só dispara em outras abas
+    // Nota: para de tentar se authFailed=true (tentativa anterior falhou - deve aguardar novo login)
     const checkTokenInterval = setInterval(() => {
-      if (!connected || authenticated) {
+      if (!connected || authenticated || authFailed) {
         return;
       }
       
@@ -679,11 +708,12 @@ export function WebSocketProvider({ children }) {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(checkTokenInterval);
     };
-  }, [connected, authenticated, authenticateWebSocket]);
+  }, [connected, authenticated, authFailed, authenticateWebSocket]);
 
   const value = {
     connected,
     authenticated,
+    authFailed,
     send: sendMessage,
     reconnect,
     registerHandler,

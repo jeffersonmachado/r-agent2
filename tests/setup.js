@@ -5,6 +5,18 @@
 process.env.NODE_ENV = 'test';
 process.env.DISABLE_BACKGROUND_INIT = 'true';
 
+// Mock global para @whiskeysockets/baileys (ESM não compatível com Jest)
+jest.mock('@whiskeysockets/baileys', () => ({
+  default: jest.fn(),
+  makeWASocket: jest.fn(() => ({
+    ev: { emit: jest.fn(), on: jest.fn(), off: jest.fn() },
+    socket: { end: jest.fn() },
+    end: jest.fn(),
+  })),
+  DisconnectReason: {},
+  fetchLatestBaileysVersion: jest.fn(() => ({ version: ['2.0.1'] })),
+}), { virtual: true });
+
 // Timeout global para hooks
 jest.setTimeout(10000);
 

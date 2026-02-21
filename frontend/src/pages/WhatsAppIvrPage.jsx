@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/authContext';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
@@ -9,6 +10,7 @@ import {
   upsertWhatsAppIvrDepartment,
   upsertWhatsAppIvrRule,
 } from '../api/whatsappIvr';
+import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
 
 export function WhatsAppIvrPage() {
@@ -23,6 +25,26 @@ export function WhatsAppIvrPage() {
 
   const [deptData, setDeptData] = useState({ name: '', queue: '', enabled: true });
   const [ruleData, setRuleData] = useState({ keyword: '', departmentId: '', priority: 0, enabled: true });
+
+  const handleWebSocketEvent = useCallback((event, data) => {
+    if (event !== 'whatsapp.ivr.updated') return;
+    const value = data?.value || {};
+    setEnabled(value.enabled === true);
+    setDepartments(Array.isArray(value.departments) ? value.departments : []);
+    setRules(Array.isArray(value.rules) ? value.rules : []);
+  }, []);
+
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
+    enabled: isAuthenticated,
+    onEvent: handleWebSocketEvent,
+    subscribeEvents: ['whatsapp.ivr.updated'],
+  });
+
+  const wsStatus = useWebSocketStatus({
+    connected: wsConnected,
+    authenticated: wsAuthenticated,
+    authFailed,
+  });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -117,6 +139,10 @@ export function WhatsAppIvrPage() {
       <div className="support-header">
         <h1>💬 URA WhatsApp</h1>
         <div className="support-controls" style={{ gap: '12px' }}>
+          <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5" title={wsStatus.title}>
+            <span className={`inline-block h-2 w-2 rounded-full ${wsStatus.indicatorDotClassName}`} />
+            <span className="text-sm text-text-secondary">{wsStatus.label}</span>
+          </div>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={enabled} onChange={(e) => handleToggle(e.target.checked)} />
             <span>{enabled ? 'Ativo' : 'Inativo'}</span>

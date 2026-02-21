@@ -30,6 +30,7 @@ import { NavigationLink } from '../components/NavigationLink';
 import { FallbackEventsViewer } from '../components/FallbackEventsViewer';
 import { getNodeSchema } from '../editor/nodeSchemas';
 import { useWebSocketContext } from '../context/WebSocketContext';
+import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { shouldLockCanvas as shouldLockCanvasUtil } from '../utils/aiGenerationLock';
 import { FlowCurrentDisplay } from '../components/FlowCurrentDisplay';
@@ -196,10 +197,16 @@ export function FlowEditorPage() {
   }, [currentFlow, loadFlow, showToast]);
 
   // Conecta ao WebSocket quando autenticado
-  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
     enabled: isAuthenticated,
     onEvent: handleWebSocketEvent,
     subscribeEvents: ['flow.updated'], // Inscreve-se em atualizações de fluxo
+  });
+
+  const wsStatus = useWebSocketStatus({
+    connected: wsConnected,
+    authenticated: wsAuthenticated,
+    authFailed,
   });
 
   // Monitora erros do editorStore e exibe via Toast
@@ -1943,23 +1950,13 @@ export function FlowEditorPage() {
         {isAuthenticated && (
           <div 
             className="flex items-center gap-1 px-2 py-1 text-xs"
-            title={wsConnected && wsAuthenticated 
-              ? 'WebSocket conectado e autenticado - Atualizações em tempo real ativas' 
-              : wsConnected 
-                ? 'WebSocket conectado, aguardando autenticação...' 
-                : 'WebSocket desconectado'}
+            title={wsStatus.title}
           >
             <span 
-              className={`inline-block w-2 h-2 rounded-full ${
-                wsConnected && wsAuthenticated 
-                  ? 'bg-green-500 animate-pulse' 
-                  : wsConnected 
-                    ? 'bg-yellow-500' 
-                    : 'bg-red-500'
-              }`}
+              className={`inline-block w-2 h-2 rounded-full ${wsStatus.indicatorDotClassName}`}
             />
             <span className="hidden sm:inline text-text-secondary">
-              {wsConnected && wsAuthenticated ? 'WS' : wsConnected ? 'WS...' : 'WS'}
+              {wsStatus.label}
             </span>
           </div>
         )}

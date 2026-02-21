@@ -193,14 +193,16 @@ module.exports = {
 
 // Linha de boot do logger (ajuda a descobrir caminho real do arquivo)
 try {
-  setImmediate(() => {
-    try {
-      log('INFO', 'LOGGER', 'Logger carregado', {
-        logToFile: isLogToFileEnabled(),
-        logFile: path.join(getLogDir(), getLogFile()),
-        cwd: process.cwd(),
-        nodeEnv: process.env.NODE_ENV,
-      });
-    } catch (_) {}
-  });
+  if (process.env.NODE_ENV !== 'test') {
+    setImmediate(() => {
+      try {
+        log('INFO', 'LOGGER', 'Logger carregado', {
+          logToFile: isLogToFileEnabled(),
+          logFile: path.join(getLogDir(), getLogFile()),
+          cwd: process.cwd(),
+          nodeEnv: process.env.NODE_ENV,
+        });
+      } catch (_) {}
+    });
+  }
 } catch (_) {}

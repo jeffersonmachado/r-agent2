@@ -141,10 +141,14 @@ function initializeWebSocket(httpServer) {
 
             logger.info(`[WebSocketService] Cliente ${clientId} autenticado como ${client.username}`);
           } else {
+            logger.warn(`[WebSocketService] Falha de autenticação do cliente ${clientId}`, {
+              reason: validation?.error || 'Token inválido',
+              tokenPrefix: data.token ? data.token.substring(0, 8) + '...' : 'vazio',
+            });
             sendToClient(clientId, {
               type: 'auth',
               status: 'error',
-              message: 'Token inválido',
+              message: validation?.error || 'Token inválido',
             });
           }
           return;

@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
+import { useInFlightGuard } from '../hooks/useInFlightGuard';
 import * as onboardingApi from '../api/onboarding';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
@@ -21,7 +22,7 @@ export function OnboardingPage() {
   const [cannotStartOnboarding, setCannotStartOnboarding] = useState(false);
 
   // Evita duplicação de chamadas em dev (React StrictMode) e/ou re-renders.
-  const loadInFlightRef = useRef(false);
+  const onboardingLoadGuard = useInFlightGuard();
   const startAttemptedRef = useRef(false);
 
   const canStartOnboarding = useMemo(() => {
@@ -43,8 +44,7 @@ export function OnboardingPage() {
   }, [isAuthenticated, canStartOnboarding]);
 
   const loadOnboardingStatus = async () => {
-    if (loadInFlightRef.current) return;
-    loadInFlightRef.current = true;
+    if (!onboardingLoadGuard.start()) return;
     try {
       setLoading(true);
       setCannotStartOnboarding(false);
@@ -85,7 +85,7 @@ export function OnboardingPage() {
       }
     } finally {
       setLoading(false);
-      loadInFlightRef.current = false;
+      onboardingLoadGuard.end();
     }
   };
 

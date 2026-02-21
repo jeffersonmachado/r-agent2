@@ -1,10 +1,12 @@
+import { useEffect, useState } from 'react';
+
 /**
  * WebSocket Status Configuration Module
  * Centralizes WebSocket status metadata for consistent UI display across all pages
  * Provides standardized badge, label, and styling configuration
  */
 
-export const WS_STATUS_META = {
+const WS_STATUS_META = {
   ready: {
     title: 'WebSocket conectado e autenticado - Atualizações em tempo real ativas',
     label: 'Conectado',
@@ -14,6 +16,11 @@ export const WS_STATUS_META = {
     title: 'WebSocket conectado, autenticando...',
     label: 'Autenticando...',
     dotClassName: 'bg-accent-primary',
+  },
+  auth_error: {
+    title: 'WebSocket conectado, falha de autenticação',
+    label: 'Falha de autenticação',
+    dotClassName: 'bg-status-error',
   },
   connecting: {
     title: 'WebSocket conectando...',
@@ -27,26 +34,82 @@ export const WS_STATUS_META = {
   },
 };
 
-/**
- * Get UI metadata for WebSocket phase
- * Falls back to disconnected state if phase is unknown
- * @param {string} phase - The WebSocket phase ('ready', 'auth', 'connecting', 'disconnected')
- * @returns {Object} The metadata object with title, label, and dotClassName
- */
-export function getWebSocketStatusMeta(phase) {
+function resolveStatusMeta(phase) {
   return WS_STATUS_META[phase] || WS_STATUS_META.disconnected;
 }
 
+function useResolvedStatusPhase({ connected, authenticated, authFailed, disconnectDelayMs = 1500 }) {
+  const [phase, setPhase] = useState('connecting');
+
+  useEffect(() => {
+    let timeoutId = null;
+
+    if (connected && authenticated) {
+      setPhase('ready');
+      return () => {};
+    }
+
+    if (connected && authFailed) {
+      setPhase('auth_error');
+      return () => {};
+    }
+
+    if (connected && !authenticated) {
+      setPhase('auth');
+      return () => {};
+    }
+
+    setPhase('connecting');
+    timeoutId = setTimeout(() => {
+      setPhase('disconnected');
+    }, disconnectDelayMs);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [connected, authenticated, authFailed, disconnectDelayMs]);
+
+  return phase;
+}
+
 /**
- * Standardized WebSocket status indicator component data
- * Returns ready-to-use configuration for rendering status badges
- * @param {string} phase - Current WebSocket phase
- * @returns {Object} Configuration with className and visual properties
+ * Hook completo para status visual do WebSocket.
+ * Centraliza fase, metadados e comportamento de animação do indicador.
+ *
+ * @param {Object} params
+ * @param {boolean} params.connected
+ * @param {boolean} params.authenticated
+ * @param {boolean} params.authFailed
+ * @param {number} [params.disconnectDelayMs=1500]
+ * @returns {{
+ *   phase: string,
+ *   title: string,
+ *   label: string,
+ *   dotClassName: string,
+ *   shouldPulse: boolean,
+ *   dotAnimationClassName: string,
+ *   indicatorDotClassName: string,
+ * }}
  */
-export function getWebSocketStatusConfig(phase) {
-  const meta = getWebSocketStatusMeta(phase);
+export function useWebSocketStatus({ connected, authenticated, authFailed, disconnectDelayMs = 1500 }) {
+  const phase = useResolvedStatusPhase({
+    connected,
+    authenticated,
+    authFailed,
+    disconnectDelayMs,
+  });
+
+  const meta = resolveStatusMeta(phase);
+  const shouldPulse = !connected;
+  const dotAnimationClassName = shouldPulse ? 'animate-pulse' : '';
+
   return {
-    ...meta,
     phase,
+    title: meta.title,
+    label: meta.label,
+    dotClassName: meta.dotClassName,
+    shouldPulse,
+    dotAnimationClassName,
+    indicatorDotClassName: `${meta.dotClassName} ${dotAnimationClassName}`.trim(),
   };
 }

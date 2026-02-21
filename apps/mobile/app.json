@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "R-Agent2",
+    "slug": "r-agent2-mobile",
+    "scheme": "ragent2",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.results.ragent2",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.results.ragent2"
+    },
+    "plugins": [
+      "expo-notifications"
+    ],
+    "extra": {
+      "apiBaseUrl": "http://10.0.2.2:3000"
+    }
+  }
+}

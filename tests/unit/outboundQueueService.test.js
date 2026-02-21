@@ -74,6 +74,14 @@ describe('OutboundQueueService', () => {
     jest.doMock('../../api/services/queueService', () => ({ updateOutboundMessageMeta: jest.fn(), getTicket: jest.fn() }));
     jest.doMock('../../api/services/websocketService', () => ({ emitEvent: jest.fn() }));
     jest.doMock('../../api/utils/config', () => ({ get: jest.fn() }));
+    // Mock factory para retornar provider que chama sendTextMessage
+    jest.doMock('../../api/services/whatsappProviderFactory', () => ({
+      get: jest.fn(async () => ({
+        sendText: jest.fn(async () => sendTextMessage()),
+        sendTemplate: jest.fn(async () => ({ messages: [{ id: 'wamid.out.1' }] })),
+        sendMedia: jest.fn(async () => ({ messages: [{ id: 'wamid.out.1' }] })),
+      })),
+    }));
 
     // eslint-disable-next-line global-require
     const { enqueueOutbound } = require('../../api/services/outboundQueueService');

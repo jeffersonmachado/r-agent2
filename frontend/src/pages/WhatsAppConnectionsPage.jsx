@@ -15,7 +15,7 @@ import {
 } from '../api/whatsappConnections';
 import { listFlows } from '../api/flows';
 import { getCurrentTenantPlanUsage } from '../api/tenants';
-import { getWebSocketStatusMeta } from '../utils/webSocketStatusConfig';
+import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
 
 const PROVIDER_OPTIONS = [
@@ -51,7 +51,6 @@ export function WhatsAppConnectionsPage() {
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
 
-  const [wsUiStatus, setWsUiStatus] = useState({ phase: 'connecting' });
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState([]);
   const [form, setForm] = useState({ name: '', provider: 'whatsapp-qr', botEnabled: false, botFlowId: null });
@@ -90,7 +89,7 @@ export function WhatsAppConnectionsPage() {
     });
   }, []);
 
-  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
     enabled: isAuthenticated,
     onEvent: handleWebSocketEvent,
     subscribeEvents: ['whatsapp.connection.updated'],
@@ -147,28 +146,11 @@ export function WhatsAppConnectionsPage() {
     }
   }, [authLoading, isAuthenticated]);
 
-  useEffect(() => {
-    let timeoutId = null;
-
-    if (wsConnected && wsAuthenticated) {
-      setWsUiStatus({ phase: 'ready' });
-      return () => {};
-    }
-
-    if (wsConnected && !wsAuthenticated) {
-      setWsUiStatus({ phase: 'auth' });
-      return () => {};
-    }
-
-    setWsUiStatus({ phase: 'connecting' });
-    timeoutId = setTimeout(() => {
-      setWsUiStatus({ phase: 'disconnected' });
-    }, 1500);
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [wsConnected, wsAuthenticated]);
+  const wsStatus = useWebSocketStatus({
+    connected: wsConnected,
+    authenticated: wsAuthenticated,
+    authFailed,
+  });
 
   async function handleCreate() {
     if (!form.name.trim()) {
@@ -311,7 +293,6 @@ export function WhatsAppConnectionsPage() {
   const connectedCount = connections.filter((conn) => String(conn.status || '').toLowerCase() === 'connected').length;
   const pairingCount = connections.filter((conn) => String(conn.status || '').toLowerCase() === 'pairing').length;
   const disconnectedCount = connections.filter((conn) => String(conn.status || '').toLowerCase() === 'disconnected').length;
-  const wsMeta = getWebSocketStatusMeta(wsUiStatus.phase);
   const formProviderOptions = PROVIDER_OPTIONS.some((option) => option.value === form.provider)
     ? PROVIDER_OPTIONS
     : [{ value: form.provider, label: `${form.provider} (atual)` }, ...PROVIDER_OPTIONS];
@@ -329,9 +310,9 @@ export function WhatsAppConnectionsPage() {
           <h1>📱 WhatsApp QR</h1>
         </div>
         <div className="support-controls">
-          <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5" title={wsMeta.title}>
-            <span className={`inline-block h-2 w-2 rounded-full ${wsMeta.dotClassName} animate-pulse`} />
-            <span className="text-sm text-text-secondary">{wsMeta.label}</span>
+          <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5" title={wsStatus.title}>
+            <span className={`inline-block h-2 w-2 rounded-full ${wsStatus.indicatorDotClassName}`} />
+            <span className="text-sm text-text-secondary">{wsStatus.label}</span>
           </div>
           <Button onClick={loadConnections} disabled={loading} className="support-button">Atualizar</Button>
         </div>

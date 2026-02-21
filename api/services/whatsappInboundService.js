@@ -9,6 +9,12 @@ const { emitEvent } = require('./websocketService');
 const { processWhatsAppMessage } = require('./messageProcessor');
 const whatsappQrService = require('./whatsappQrService');
 const { checkFeature } = require('./planLimitsService');
+const { sendToUser, trimPreview } = require('./push');
+const {
+  shouldNotifyTicketMessage,
+  selectRecipientUserIdsForTicket,
+  consumeMessageDedup,
+} = require('./push/notificationRules');
 
 function jsonSafe(obj) {
   try { return JSON.stringify(obj); } catch (_) { return '[unserializable]'; }
@@ -36,6 +42,11 @@ function buildInboundSessionId(payload = {}, message = {}, fallbackConversationI
   const channelSuffix = phoneNumberId || connectionId || String(fallbackConversationId || 'unknown');
   const fromSuffix = from || 'unknown';
   return `whatsapp_${channelSuffix}_${fromSuffix}`;
+}
+
+function buildPushBody({ from, text }) {
+  const sender = String(from || 'Contato');
+  return `${sender}: ${trimPreview(text || '', 100)}`;
 }
 
 // Normaliza o identificador da conversa para evitar duplicação de ticket em cenários Baileys/MD
@@ -205,6 +216,51 @@ async function handleWhatsAppInbound({
     } catch (e) {
       logger.warn(`[WA_PIPE_HUMAN_EMIT_WARN] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, errMessage: e?.message || String(e) })}`);
     }
+
+    // Push para app mobile (somente destinatários relevantes; mínimo: assignedTo)
+    if (shouldNotifyTicketMessage(effectiveTicket)) {
+      const dedup = consumeMessageDedup({
+        tenantId: effectiveTicket.tenantId,
+        ticketId: effectiveTicket.id,
+        externalMessageId,
+      });
+
+      if (!dedup.duplicate) {
+        const recipients = selectRecipientUserIdsForTicket(effectiveTicket);
+        for (const userId of recipients) {
+          // eslint-disable-next-line no-await-in-loop
+          await sendToUser({
+            tenantId: effectiveTicket.tenantId,
+            userId,
+            notification: {
+              title: 'Nova mensagem no WhatsApp',
+              body: buildPushBody({ from: message?.from, text: messageText }),
+            },
+            data: {
+              tenantId: effectiveTicket.tenantId,
+              ticketId: effectiveTicket.id,
+              channel: 'whatsapp',
+              conversationId: effectiveTicket.conversationId || '',
+              kind: 'ticket_message',
+            },
+            context: {
+              tenantId: effectiveTicket.tenantId,
+              ticketId: effectiveTicket.id,
+            },
+          }).catch((err) => {
+            logger.warn('[WA_PIPE_PUSH_WARN]', {
+              traceId: traceId || 'n/a',
+              ticketId: effectiveTicket.id,
+              tenantId: effectiveTicket.tenantId,
+              userId,
+              error: err?.message || String(err),
+            });
+            return null;
+          });
+        }
+      }
+    }
+
     logger.info(`[WA_PIPE_HUMAN_MODE_ON] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, mode: effectiveTicket.mode, connectionId: resolvedConnectionId, blockedByPlan })}`);
     return { ok: true, mode: 'human', ticketId: effectiveTicket.id, connectionId: resolvedConnectionId };
   }

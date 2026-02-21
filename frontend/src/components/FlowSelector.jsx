@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { listFlows } from '../api/flows';
+import { useInFlightGuard } from '../hooks/useInFlightGuard';
 
 /**
  * Seletor de fluxos salvos - dropdown para carregar fluxos
@@ -11,12 +12,10 @@ export function FlowSelector({ onFlowSelected, currentFlowId, refreshTrigger }) 
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState(null);
   const hasLoadedRef = useRef(false);
-
-  const loadingRef = useRef(false);
+  const loadFlowsGuard = useInFlightGuard();
   
   const loadFlows = useCallback(async () => {
-    if (loadingRef.current) return; // Evita múltiplas chamadas simultâneas
-    loadingRef.current = true;
+    if (!loadFlowsGuard.start()) return; // Evita múltiplas chamadas simultâneas
     setLoading(true);
     setError(null);
     try {
@@ -28,7 +27,7 @@ export function FlowSelector({ onFlowSelected, currentFlowId, refreshTrigger }) 
       setError(err.message || 'Erro ao carregar fluxos');
       setFlows([]);
     } finally {
-      loadingRef.current = false;
+      loadFlowsGuard.end();
       setLoading(false);
     }
   }, []);

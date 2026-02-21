@@ -89,6 +89,7 @@ const getMarketingEmailCampaign = require('./MarketingEmailCampaign');
 const getMarketingEmailSend = require('./MarketingEmailSend');
 const getMarketingLink = require('./MarketingLink');
 const getMarketingLinkClick = require('./MarketingLinkClick');
+const getPushToken = require('./PushToken');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -177,6 +178,7 @@ const MarketingEmailCampaign = () => getMarketingEmailCampaign();
 const MarketingEmailSend = () => getMarketingEmailSend();
 const MarketingLink = () => getMarketingLink();
 const MarketingLinkClick = () => getMarketingLinkClick();
+const PushToken = () => getPushToken();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -397,6 +399,7 @@ module.exports = {
   MarketingScoringRule,
   MarketingEmailCampaign,
   MarketingEmailSend,
+  PushToken,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -483,4 +486,5 @@ module.exports = {
   getMarketingEmailSend,
   getMarketingLink,
   getMarketingLinkClick,
+  getPushToken,
 };

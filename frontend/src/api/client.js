@@ -231,15 +231,13 @@ export async function fetchJson(path, init) {
 
     // Importante: algumas rotas NÃO devem ser influenciadas por tenant-context via header.
     // - Rotas de super-admin operam globalmente e falham/filtram quando X-Tenant-Id é enviado
-    // - Rotas /auth/* devem depender do token, não de um tenant "persistido" no localStorage
+    // Nota: /auth/me e outras rotas /auth/* PRECISAM do X-Tenant-Id para validação de tenant
     const normalizedPath = path && typeof path === 'string'
       ? (path.startsWith('/') ? path : `/${path}`)
       : '';
     const shouldStripTenantHeader =
       normalizedPath.startsWith('/super-admin/') ||
-      normalizedPath === '/super-admin' ||
-      normalizedPath.startsWith('/auth/') ||
-      normalizedPath === '/auth';
+      normalizedPath === '/super-admin';
     if (shouldStripTenantHeader && mergedHeaders['X-Tenant-Id']) {
       delete mergedHeaders['X-Tenant-Id'];
     }

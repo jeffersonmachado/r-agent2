@@ -29,9 +29,11 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useDebounce } from '../hooks/useDebounce';
+import { useInFlightGuard } from '../hooks/useInFlightGuard';
+import { useLatestRef } from '../hooks/useLatestRef';
 import { usePhoneMasking } from '../hooks/usePhoneMasking';
 import { MaskedPhone } from '../components/MaskedPhone';
-import { getWebSocketStatusMeta } from '../utils/webSocketStatusConfig';
+import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
 
@@ -121,12 +123,8 @@ export function SupportPage() {
   }
 
   // Usa useRef para manter referências estáveis
-  const showToastRef = React.useRef(showToast);
+  const showToastRef = useLatestRef(showToast);
   const loadTicketsRef = React.useRef();
-
-  React.useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
 
   // Debounce para loadTickets - agrupa múltiplos eventos WebSocket
   // DEVE ser definido ANTES de handleWebSocketEvent para evitar erro de inicialização
@@ -283,7 +281,7 @@ export function SupportPage() {
     }
   }, [agent, debouncedLoadTickets]);
 
-  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
     enabled: isAuthenticated && autoRefresh,
     onEvent: handleWebSocketEvent,
     subscribeEvents: [
@@ -296,31 +294,12 @@ export function SupportPage() {
     ],
   });
 
-  // UI: status do WebSocket (mostra imediatamente ao carregar a página)
-  const [wsUiStatus, setWsUiStatus] = useState({ phase: 'connecting' }); // connecting | auth | ready | disconnected
-  useEffect(() => {
-    let timeoutId = null;
-
-    if (wsConnected && wsAuthenticated) {
-      setWsUiStatus({ phase: 'ready' });
-      return () => {};
-    }
-
-    if (wsConnected && !wsAuthenticated) {
-      setWsUiStatus({ phase: 'auth' });
-      return () => {};
-    }
-
-    // Não conectado: mostra "Conectando..." por um curto período e depois "Desconectado"
-    setWsUiStatus({ phase: 'connecting' });
-    timeoutId = setTimeout(() => {
-      setWsUiStatus({ phase: 'disconnected' });
-    }, 1500);
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [wsConnected, wsAuthenticated]);
+  // UI: status do WebSocket centralizado no módulo
+  const wsStatus = useWebSocketStatus({
+    connected: wsConnected,
+    authenticated: wsAuthenticated,
+    authFailed,
+  });
 
   // Carrega filas disponíveis (apenas para o modal de nova conversa)
   const loadQueues = useCallback(async () => {
@@ -461,7 +440,7 @@ export function SupportPage() {
   }, [showCloseModal]);
 
   // Flag para evitar requisições duplicadas
-  const isLoadingTicketsRef = React.useRef(false);
+  const loadTicketsGuard = useInFlightGuard();
   // Timestamp do último erro mostrado para evitar spam de toasts
   const lastErrorToastTimeRef = React.useRef(0);
   const ERROR_TOAST_COOLDOWN = 30000; // 30 segundos entre erros
@@ -469,11 +448,10 @@ export function SupportPage() {
   // Carrega tickets do usuário ou sem atribuição
   const loadTickets = useCallback(async () => {
     // Evita requisições duplicadas
-    if (isLoadingTicketsRef.current) {
+    if (!loadTicketsGuard.start()) {
       return;
     }
-    
-    isLoadingTicketsRef.current = true;
+
     setLoading(true);
     try {
       // Carrega tickets waiting e in_progress
@@ -522,7 +500,7 @@ export function SupportPage() {
       }
     } finally {
       setLoading(false);
-      isLoadingTicketsRef.current = false;
+      loadTicketsGuard.end();
     }
   }, []); // Sem dependências - usa refs e state setters funcionais
 
@@ -934,11 +912,7 @@ export function SupportPage() {
   }, [selectedTicket?.id]); // Apenas quando o ID do ticket muda
 
   // Auto-refresh a cada 5 segundos - usa refs para evitar recriação do intervalo
-  const selectedTicketIdRef = React.useRef(null);
-  
-  React.useEffect(() => {
-    selectedTicketIdRef.current = selectedTicket?.id || null;
-  }, [selectedTicket?.id]);
+  const selectedTicketIdRef = useLatestRef(selectedTicket?.id || null);
 
   const loadTicketMessagesRef = React.useRef();
   React.useEffect(() => {
@@ -1268,9 +1242,9 @@ export function SupportPage() {
           <h1>💬 Atendimento</h1>
         </div>
         <div className="support-controls">
-          <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5" title={getWebSocketStatusMeta(wsUiStatus.phase).title}>
-            <span className={`inline-block h-2 w-2 rounded-full ${getWebSocketStatusMeta(wsUiStatus.phase).dotClassName} animate-pulse`} />
-            <span className="text-sm text-text-secondary">{getWebSocketStatusMeta(wsUiStatus.phase).label}</span>
+          <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5" title={wsStatus.title}>
+            <span className={`inline-block h-2 w-2 rounded-full ${wsStatus.indicatorDotClassName}`} />
+            <span className="text-sm text-text-secondary">{wsStatus.label}</span>
           </div>
           <Button 
             onClick={() => {

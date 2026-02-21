@@ -1,35 +1,36 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import { SupportPage } from '../pages/SupportPage';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useAuth } from '../context/authContext';
 
-jest.mock('../context/WebSocketContext');
-jest.mock('../context/authContext');
-jest.mock('../api/tickets', () => ({
-  listQueues: jest.fn(() => Promise.resolve([])),
-  listAllTickets: jest.fn(() => Promise.resolve({ tickets: [
+vi.mock('../context/WebSocketContext');
+vi.mock('../context/authContext');
+vi.mock('../api/tickets', () => ({
+  listQueues: vi.fn(() => Promise.resolve([])),
+  listAllTickets: vi.fn(() => Promise.resolve({ tickets: [
     { id: 't1', status: 'in_progress', unreadCount: 0, createdAt: new Date().toISOString(), phoneNumber: '5511999999999', mode: 'human', lastUserMessage: 'Olá', assignedTo: 'agent1', tags: [], queue: 'default', context: {}, ticketAuditLogs: [], conversationId: 'c1' }
   ] })),
-  assignTicket: jest.fn(),
-  closeTicket: jest.fn(),
-  sendTicketMessage: jest.fn(),
-  getTicketMessages: jest.fn(() => Promise.resolve({ messages: [
+  assignTicket: vi.fn(),
+  closeTicket: vi.fn(),
+  sendTicketMessage: vi.fn(),
+  getTicketMessages: vi.fn(() => Promise.resolve({ messages: [
     { id: 'm1', sender: 'user', text: 'Mensagem WhatsApp QR', timestamp: new Date().toISOString() }
   ] })),
-  markTicketAsRead: jest.fn(),
-  createTicket: jest.fn(),
-  takeOverTicket: jest.fn(),
-  returnToBotTicket: jest.fn(),
-  pauseTicket: jest.fn(),
-  resumeTicket: jest.fn(),
-  getTicketDeliveryFailures: jest.fn(() => Promise.resolve({ outboundQueue: [], channelMessages: [] })),
-  getTicketAiSummary: jest.fn(() => Promise.resolve({ summary: null })),
-  generateTicketAiSummary: jest.fn(() => Promise.resolve({ summary: null })),
-  addTagToTicket: jest.fn(),
-  removeTagFromTicket: jest.fn(),
-  getAllTags: jest.fn(() => Promise.resolve({ tags: [] })),
-  queryAuditLogs: jest.fn(() => Promise.resolve({ items: [] })),
+  markTicketAsRead: vi.fn(),
+  createTicket: vi.fn(),
+  takeOverTicket: vi.fn(),
+  returnToBotTicket: vi.fn(),
+  pauseTicket: vi.fn(),
+  resumeTicket: vi.fn(),
+  getTicketDeliveryFailures: vi.fn(() => Promise.resolve({ outboundQueue: [], channelMessages: [] })),
+  getTicketAiSummary: vi.fn(() => Promise.resolve({ summary: null })),
+  generateTicketAiSummary: vi.fn(() => Promise.resolve({ summary: null })),
+  addTagToTicket: vi.fn(),
+  removeTagFromTicket: vi.fn(),
+  getAllTags: vi.fn(() => Promise.resolve({ tags: [] })),
+  queryAuditLogs: vi.fn(() => Promise.resolve({ items: [] })),
 }));
 
 const mockAgent = { id: 'agent1', username: 'agent1', tenantId: 'tenant1' };

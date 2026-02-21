@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import './index.css';
 import { EditorProvider } from './state/editorStore';
 import { ThemeProvider } from './styles/themeContext';
@@ -75,6 +76,7 @@ import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
 import { useRouter } from './hooks/useRouter';
+import { useWebSocketAuthGuard } from './hooks/useWebSocketAuthGuard';
 import { canAccessPath, isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
 
 /**
@@ -159,6 +161,10 @@ function App() {
 function AppWithAuth() {
   const { currentPath, navigate } = useRouter();
   const { isAuthenticated, loading, agent } = useAuth();
+  
+  // Monitora falhas de autenticação do WebSocket e redireciona para login
+  useWebSocketAuthGuard();
+  
   const isRoute = (basePath) =>
     currentPath === basePath ||
     currentPath.startsWith(`${basePath}/`) ||
@@ -603,3 +609,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 );
+
+const shouldRegisterPwa = import.meta.env.PROD || import.meta.env.VITE_ENABLE_PWA_DEV === 'true';
+
+if ('serviceWorker' in navigator && shouldRegisterPwa) {
+  registerSW({
+    immediate: true,
+    onRegistered(registration) {
+      if (registration) {
+        console.log('PWA service worker registrado com sucesso.');
+      }
+    },
+    onRegisterError(error) {
+      console.error('Falha ao registrar PWA service worker:', error);
+    },
+  });
+}

@@ -13,6 +13,9 @@ import { useToast } from './Toast';
 import { useConfirmDialog } from './ConfirmDialog';
 import { Button } from '../styles/Button';
 import { useWebSocketContext } from '../context/WebSocketContext';
+import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
+import { useLatestRef } from '../hooks/useLatestRef';
+import { useModalDataLifecycle } from '../hooks/useModalDataLifecycle';
 import logger from '../utils/logger';
 
 /**
@@ -30,18 +33,10 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const showToastRef = React.useRef(showToast);
+  const showToastRef = useLatestRef(showToast);
   const loadTicketsRef = React.useRef();
-  const selectedTicketRef = React.useRef(selectedTicket);
+  const selectedTicketRef = useLatestRef(selectedTicket);
   const loadTicketMessagesRef = React.useRef();
-
-  React.useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
-
-  React.useEffect(() => {
-    selectedTicketRef.current = selectedTicket;
-  }, [selectedTicket]);
 
   // WebSocket para atualizações em tempo real
   const handleWebSocketEvent = useCallback((event, data) => {
@@ -104,7 +99,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     }
   }, []);
 
-  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
     enabled: isOpen && autoRefresh && !!queueName,
     onEvent: handleWebSocketEvent,
     subscribeEvents: [
@@ -115,6 +110,12 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
       'ticket.message.received',
       'ticket.message.sent',
     ],
+  });
+
+  const wsStatus = useWebSocketStatus({
+    connected: wsConnected,
+    authenticated: wsAuthenticated,
+    authFailed,
   });
 
   // Carrega tickets da fila
@@ -146,11 +147,11 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
   }, [loadTickets]);
 
   // Carrega tickets quando o modal abre ou a fila muda
-  useEffect(() => {
-    if (isOpen && queueName) {
-      loadTickets();
-    }
-  }, [isOpen, queueName, loadTickets]);
+  useModalDataLifecycle({
+    isOpen,
+    canLoad: !!queueName,
+    load: loadTickets,
+  });
 
   // Carrega mensagens do ticket selecionado
   const loadTicketMessages = useCallback(async (ticketId) => {
@@ -182,13 +183,12 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
   }, [loadTicketMessages]);
 
   // Carrega mensagens quando ticket é selecionado
-  useEffect(() => {
-    if (selectedTicket) {
-      loadTicketMessages(selectedTicket.id);
-    } else {
-      setTicketMessages([]);
-    }
-  }, [selectedTicket, loadTicketMessages]);
+  useModalDataLifecycle({
+    isOpen: true,
+    canLoad: !!selectedTicket,
+    load: () => loadTicketMessages(selectedTicket.id),
+    reset: () => setTicketMessages([]),
+  });
 
   // Polling removido - apenas WebSocket é usado para atualizações em tempo real
   // Se o WebSocket não estiver conectado, as atualizações só ocorrerão quando:
@@ -319,7 +319,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
         <div className="queue-modal-container">
           {/* Controles superiores */}
           <div className="queue-modal-controls">
-            {wsConnected && wsAuthenticated ? (
+            {wsStatus.phase === 'ready' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span 
                   style={{
@@ -327,10 +327,9 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    backgroundColor: '#25D366',
-                    animation: 'pulse 2s infinite'
+                    backgroundColor: '#25D366'
                   }}
-                  title="WebSocket conectado - Atualizações em tempo real ativas"
+                  title={wsStatus.title}
                 />
                 <span style={{ fontSize: '14px', color: '#666' }}>
                   Atualização em tempo real
