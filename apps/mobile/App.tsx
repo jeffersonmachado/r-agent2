@@ -42,6 +42,35 @@ function formatBadgeCount(value: number): string {
   return String(Math.max(0, value));
 }
 
+function getTicketUnreadCount(ticket: SupportTicket | null | undefined): number {
+  if (!ticket || typeof ticket !== 'object') return 0;
+  const raw = (ticket as SupportTicket & { unread_count?: unknown }).unreadCount
+    ?? (ticket as SupportTicket & { unread_count?: unknown }).unread_count;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+}
+
+function normalizeSupportTicket(ticket: SupportTicket): SupportTicket {
+  const source = (ticket || {}) as SupportTicket & {
+    unread_count?: unknown;
+    assigned_to?: unknown;
+    last_user_message?: unknown;
+    phone_number?: unknown;
+    conversation_id?: unknown;
+  };
+
+  return {
+    ...source,
+    unreadCount: getTicketUnreadCount(source),
+    assignedTo: source.assignedTo ?? (typeof source.assigned_to === 'string' ? source.assigned_to : undefined),
+    lastUserMessage:
+      source.lastUserMessage ?? (typeof source.last_user_message === 'string' ? source.last_user_message : undefined),
+    phoneNumber: source.phoneNumber ?? (typeof source.phone_number === 'string' ? source.phone_number : undefined),
+    conversationId:
+      source.conversationId ?? (typeof source.conversation_id === 'string' ? source.conversation_id : undefined),
+  };
+}
+
 function logFrontend(event: string, details: Record<string, unknown> = {}): void {
   if (!__DEV__) return;
   // eslint-disable-next-line no-console
@@ -567,7 +596,7 @@ export default function App() {
         tenantId: tenantId.trim() || undefined,
         requestId: args.requestId,
       });
-      const listAll = Array.isArray(result?.tickets) ? result.tickets : [];
+      const listAll = Array.isArray(result?.tickets) ? result.tickets.map(normalizeSupportTicket) : [];
       const list = listAll.filter((ticket) => String(ticket?.status || '').toLowerCase() !== 'closed');
       const listWithAssignedDisplay = await resolveAssignedToDisplay(list, args);
       setTickets(listWithAssignedDisplay);
@@ -888,8 +917,15 @@ export default function App() {
     setSelectedTicketId(normalizedTicketId);
     setIsChatScreen(true);
     setShowOptionsMenu(false);
-    const requestId = buildRequestId('support-open-ticket');
-    markTicketAsRead(normalizedTicketId, { requestId });
+    const selected = tickets.find((item) => String(item.id) === normalizedTicketId);
+    const shouldMarkRead =
+      selected &&
+      String(selected.status || '').toLowerCase() === 'in_progress' &&
+      getTicketUnreadCount(selected) > 0;
+    if (shouldMarkRead) {
+      const requestId = buildRequestId('support-open-ticket');
+      markTicketAsRead(normalizedTicketId, { requestId });
+    }
   }
 
   async function onAssignSelectedTicketToMe(): Promise<void> {
@@ -1276,7 +1312,7 @@ export default function App() {
 
   const showLogin = !authToken && !sessionBootstrapping;
   const selectedTicket = tickets.find((t) => String(t.id) === selectedTicketId);
-  const totalUnreadCount = tickets.reduce((sum, ticket) => sum + Math.max(0, Number(ticket.unreadCount || 0)), 0);
+  const totalUnreadCount = tickets.reduce((sum, ticket) => sum + getTicketUnreadCount(ticket), 0);
   const selectedAssignedTo = String(selectedTicket?.assignedTo || '').trim();
   const selectedAssignedToDisplay = String(selectedTicket?.assignedToDisplay || '').trim();
   const selectedAssignedToMe = Boolean(
@@ -1757,10 +1793,10 @@ export default function App() {
                               </Text>
                             </View>
                             <View>
-                              {(ticket.unreadCount || 0) > 0 ? (
+                              {getTicketUnreadCount(ticket) > 0 ? (
                                 <View style={styles.ticketUnreadBadgeWa}>
                                   <Text style={styles.ticketUnreadBadgeTextWa}>
-                                    {formatBadgeCount(Number(ticket.unreadCount || 0))}
+                                    {formatBadgeCount(getTicketUnreadCount(ticket))}
                                   </Text>
                                 </View>
                               ) : null}

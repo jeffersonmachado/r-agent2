@@ -20,6 +20,7 @@ export type SupportTicket = {
   assignedTo?: string | null;
   assignedToDisplay?: string;
   unreadCount?: number;
+  unread_count?: number;
   lastUserMessage?: string;
   customerPhoto?: string | null;
 };
