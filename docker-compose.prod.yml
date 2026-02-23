@@ -3,6 +3,9 @@
 
 services:
   api:
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
     image: r-agent2-api:latest
     container_name: r-agent2-api-prod
     environment:
@@ -137,6 +140,9 @@ services:
           memory: 128M
 
   rag-service:
+    build:
+      context: .
+      dockerfile: ./rag-service/Dockerfile
     image: r-agent2-rag-service:latest
     container_name: r-agent2-rag-service-prod
     environment:

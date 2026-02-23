@@ -22,10 +22,11 @@
       "package": "com.results.ragent2"
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      "expo-secure-store"
     ],
     "extra": {
-      "apiBaseUrl": "http://10.0.2.2:3000"
+      "apiBaseUrl": "https://www.results.com.br/r-agent2"
     }
   }
 }

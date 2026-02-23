@@ -14,6 +14,14 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 | Deploy (com gate de QA) | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Push em `main`/tags + manual | `system:validate` + `frontend build` antes de build Docker | Não publica artifacts de testes |
 | Notificações | [`.github/workflows/notify.yml`](.github/workflows/notify.yml) | `workflow_run` (falha) | Notifica (Slack/email placeholders) | N/A |
 
+## Script local de CI (repo)
+
+- `npm run test:ci` executa a sequência:
+  - `npm run test:websocket`
+  - `jest tests/ci`
+- Objetivo: garantir regressão de WebSocket (auth/reconnect/session) antes da suíte de CI focada.
+- Observação: esse script local **não substitui** o workflow de CI principal; no GitHub Actions, o gate oficial continua sendo `npm run system:validate`.
+
 ## Detalhe por workflow
 
 ### CI principal — `ci.yml`

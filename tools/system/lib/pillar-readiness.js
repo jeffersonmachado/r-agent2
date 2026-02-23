@@ -12,12 +12,14 @@ function evaluatePillars(smokes) {
   const l03 = smokes?.l03 || null;
   const l04 = smokes?.l04 || null;
   const l05 = smokes?.l05 || null;
+  const l06 = smokes?.l06 || null;
 
   if (!l01 || l01.status !== 'pass') reasons.push('l01_not_pass');
   if (!l02 || l02.status !== 'pass') reasons.push('l02_not_pass');
   if (!l03 || l03.status !== 'pass') reasons.push('l03_not_pass');
   if (!l04 || l04.status !== 'pass') reasons.push('l04_not_pass');
   if (!l05 || l05.status !== 'pass') reasons.push('l05_not_pass');
+  if (!l06 || l06.status !== 'pass') reasons.push('l06_not_pass');
 
   const l01Done = Number(l01?.evidence?.metrics?.doneCount || 0);
   const l01Transitions = l01?.evidence?.transitions || {};
@@ -65,6 +67,18 @@ function evaluatePillars(smokes) {
   );
   if (!chatProPillarOk) reasons.push('l05_omnichannel_invalid');
 
+  const l06OpportunitiesCount = Number(l06?.evidence?.opportunitiesCount || 0);
+  const l06StagesMovedCount = Number(l06?.evidence?.stagesMovedCount || 0);
+  const l06TimelineItemsCount = Number(l06?.evidence?.timelineItemsCount || 0);
+  const crmPillarOk = (
+    l06?.evidence?.ok === true
+    && hasTruthy(l06?.evidence?.opportunityId)
+    && l06OpportunitiesCount >= 1
+    && l06StagesMovedCount >= 1
+    && l06TimelineItemsCount >= 3
+  );
+  if (!crmPillarOk) reasons.push('l06_crm_invalid');
+
   const allSmokesPass = reasons.every((r) => !r.endsWith('_not_pass'));
 
   return {
@@ -96,6 +110,13 @@ function evaluatePillars(smokes) {
           executionId: l04?.evidence?.flow?.executionId || null,
           nodesCount: Number(l04?.evidence?.flow?.nodesCount || 0),
         },
+      },
+      crm: {
+        ok: crmPillarOk,
+        opportunityId: l06?.evidence?.opportunityId || null,
+        opportunitiescount: l06OpportunitiesCount,
+        stagesMoved: l06StagesMovedCount,
+        timelineItems: l06TimelineItemsCount,
       },
     },
   };

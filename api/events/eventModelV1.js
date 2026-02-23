@@ -47,6 +47,15 @@ const EVENT_TYPES_V1 = new Set([
   'VoiceFlowInput',
   'VoiceFlowAction',
   'VoiceRecordingCaptured',
+
+  // CRM operacional integrado
+  'CrmAccountUpserted',
+  'CrmContactUpserted',
+  'CrmLeadUpserted',
+  'CrmPipelineUpserted',
+  'CrmOpportunityUpserted',
+  'CrmOpportunityStageChanged',
+  'CrmActivityLogged',
 ]);
 
 function makeId(prefix) {

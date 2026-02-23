@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia requirements primeiro (otimização de cache)
-COPY requirements.txt .
+COPY rag-service/requirements.txt .
 
 # Instala dependências Python (apenas produção)
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip cache purge
 
 # Copia código da aplicação
-COPY . .
+COPY rag-service/ .
 
 # Cria diretório para dados e vector store
 RUN mkdir -p /app/data /app/data/vector_store && \

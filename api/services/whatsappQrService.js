@@ -53,6 +53,9 @@ function isQrExpired(conn, now = new Date()) {
 function normalizeStatus(inputStatus) {
   const s = String(inputStatus || '').trim().toLowerCase();
   if (s === 'connected') return 'connected';
+  if (s === 'connecting') return 'pairing';
+  if (s === 'syncing') return 'pairing';
+  if (s === 'qr') return 'pairing';
   if (s === 'pairing') return 'pairing';
   if (s === 'disconnected') return 'disconnected';
   if (s === 'error') return 'error';
@@ -310,7 +313,7 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
     },
   };
 
-  if (eventType === 'qr' || eventType === 'pairing') {
+  if (eventType === 'qr' || eventType === 'pairing' || eventType === 'connecting') {
     const qrText = input?.qr?.text != null ? String(input.qr.text).trim() : '';
     const token = input?.qr?.token != null ? String(input.qr.token).trim() : '';
     const expiresAtRaw = input?.qr?.expiresAt || input?.qr?.expires_at || null;

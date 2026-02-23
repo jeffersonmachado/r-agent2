@@ -2,56 +2,118 @@ import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+}));
+
 jest.mock('../src/push', () => ({
   registerNativePush: jest.fn(),
   unregisterNativePush: jest.fn(),
 }));
 
+jest.mock('../src/auth', () => ({
+  loginWithPassword: jest.fn(),
+}));
+
+jest.mock('../src/api', () => ({
+  getJson: jest.fn().mockResolvedValue({ tickets: [], messages: [] }),
+  postJson: jest.fn().mockResolvedValue({}),
+}));
+
+jest.mock('../src/config', () => ({
+  getApiBaseUrlResolution: () => ({
+    baseUrl: 'http://api.test',
+    source: 'env',
+    port: '3001',
+  }),
+  getApiSourceLabel: () => 'Configuração manual por variável de ambiente',
+}));
+
+jest.mock('../src/session', () => ({
+  loadStoredSession: jest.fn().mockResolvedValue(null),
+  saveStoredSession: jest.fn().mockResolvedValue(undefined),
+  clearStoredSession: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('expo-notifications', () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  dismissAllNotificationsAsync: jest.fn().mockResolvedValue(undefined),
+  setBadgeCountAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 import App from '../App';
+import { loginWithPassword } from '../src/auth';
 import { registerNativePush } from '../src/push';
 
 describe('App', () => {
-  it('exibe aviso quando tenta registrar sem JWT', () => {
+  it('renderiza a tela de login', async () => {
     const screen = render(<App />);
 
-    fireEvent.press(screen.getByText('Registrar Push'));
-
-    expect(screen.getByText('Informe um JWT válido antes de registrar push.')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('Login de Agente')).toBeTruthy();
+      expect(screen.getByPlaceholderText('Digite seu username')).toBeTruthy();
+      expect(screen.getByPlaceholderText('Digite sua senha')).toBeTruthy();
+    });
   });
 
-  it('registra push com token trimado e mostra sucesso', async () => {
-    const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
-    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
-    try {
-      (registerNativePush as jest.Mock).mockResolvedValue({
-        platform: 'android',
-        token: 'device-token',
+  it('valida campos obrigatórios no login', async () => {
+    const screen = render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Entrar')).toBeTruthy();
+    });
+
+    fireEvent.changeText(screen.getByPlaceholderText('Digite seu username'), 'admin');
+    fireEvent.changeText(screen.getByPlaceholderText('Digite sua senha'), '123456');
+
+    expect(screen.queryByText('Digite username e senha.')).toBeFalsy();
+  });
+
+  it('realiza login e registra push com sucesso', async () => {
+    (loginWithPassword as jest.Mock).mockResolvedValue({
+      token: 'jwt-from-login',
+      agent: {
+        id: 'agent-1',
+        username: 'systemadmin',
+        tenantId: 'system',
+      },
+    });
+    (registerNativePush as jest.Mock).mockResolvedValue({
+      platform: 'android',
+      token: 'push-123',
+    });
+
+    const screen = render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Entrar')).toBeTruthy();
+    });
+
+    fireEvent.changeText(screen.getByPlaceholderText('Digite seu username'), 'systemadmin');
+    fireEvent.changeText(screen.getByPlaceholderText('Digite sua senha'), 'Admin123!');
+    fireEvent.changeText(screen.getByPlaceholderText('system'), 'system');
+    fireEvent.press(screen.getByText('Entrar'));
+
+    await waitFor(() => {
+      expect(loginWithPassword).toHaveBeenCalledWith({
+        apiBaseUrl: 'http://api.test',
+        username: 'systemadmin',
+        password: 'Admin123!',
+        tenantId: 'system',
+        requestId: expect.any(String),
       });
 
-      const screen = render(<App />);
-
-      fireEvent.changeText(screen.getByPlaceholderText('Cole o token JWT'), '  jwt-123  ');
-      fireEvent.press(screen.getByText('Registrar Push'));
-
-      await waitFor(() => {
-        expect(registerNativePush).toHaveBeenCalledWith({
-          apiBaseUrl: 'http://api.test',
-          authToken: 'jwt-123',
-          appVersion: '1.0.0',
-        });
-        expect(screen.getByText('Push registrado com sucesso (android).')).toBeTruthy();
+      expect(registerNativePush).toHaveBeenCalledWith({
+        apiBaseUrl: 'http://api.test',
+        authToken: 'jwt-from-login',
+        tenantId: 'system',
+        appVersion: '1.0.0',
+        requestId: expect.any(String),
       });
-    } finally {
-      if (typeof previous === 'string') {
-        process.env.EXPO_PUBLIC_API_BASE_URL = previous;
-      } else {
-        delete process.env.EXPO_PUBLIC_API_BASE_URL;
-      }
-    }
+
+      expect(screen.getByText('App iniciado. Push registrado com sucesso (android).')).toBeTruthy();
+    });
   });
 
   it('atualiza preview de rota quando recebe clique em notificação com ticketId', async () => {

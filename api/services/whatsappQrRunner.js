@@ -30,6 +30,30 @@ function safeKeys(obj) {
   try { return obj && typeof obj === 'object' ? Object.keys(obj) : []; } catch (_) { return []; }
 }
 
+function safeString(value) {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  return s ? s : null;
+}
+
+function normalizePhoneFromJid(jidOrPhone) {
+  const raw = safeString(jidOrPhone);
+  if (!raw) return null;
+  const base = raw.includes('@') ? raw.split('@')[0] : raw;
+  const digits = String(base).replace(/\D/g, '');
+  return digits || null;
+}
+
+function resolveBaileysContactName(msg, sock, remoteJid, fallbackFrom) {
+  const direct = safeString(msg?.pushName || msg?.verifiedBizName || msg?.notify);
+  if (direct) return direct;
+
+  const contactKey = remoteJid || (fallbackFrom ? `${fallbackFrom}@s.whatsapp.net` : null);
+  const contact = contactKey && sock?.contacts ? sock.contacts[contactKey] : null;
+  const contactName = safeString(contact?.notify || contact?.name || contact?.verifiedName || contact?.shortName);
+  return contactName || null;
+}
+
 function logSockEvent(logger, baseCtx, eventName, payload, level = 'info') {
   const entry = {
     ...baseCtx,
@@ -95,6 +119,7 @@ class WhatsAppQrRunner extends EventEmitter {
     this.qrWaiters = new Map(); // key -> Set<Function(qrText)>
     this.recentConflicts = new Map(); // key -> timestamp of last conflict (para diagnosticar erros de envio)
     this.recentUnauthorized = new Map(); // key -> timestamp of last 401 unauthorized
+    this.sessionContactNames = new Map(); // key -> Map<phoneDigits, contactName>
 
     // Log de boot do módulo para garantir visibilidade de carregamento
     try {
@@ -125,6 +150,26 @@ class WhatsAppQrRunner extends EventEmitter {
     if (timers.reconnectTimer) clearTimeout(timers.reconnectTimer);
     if (timers.promoteConnectedTimer) clearTimeout(timers.promoteConnectedTimer);
     this.sessionTimers.delete(sessionKey);
+  }
+
+  _setSessionContactName(sessionKey, jidOrPhone, name) {
+    const normalizedPhone = normalizePhoneFromJid(jidOrPhone);
+    const normalizedName = safeString(name);
+    if (!normalizedPhone || !normalizedName) return;
+    let store = this.sessionContactNames.get(sessionKey);
+    if (!store) {
+      store = new Map();
+      this.sessionContactNames.set(sessionKey, store);
+    }
+    store.set(normalizedPhone, normalizedName);
+  }
+
+  _getSessionContactName(sessionKey, jidOrPhone) {
+    const normalizedPhone = normalizePhoneFromJid(jidOrPhone);
+    if (!normalizedPhone) return null;
+    const store = this.sessionContactNames.get(sessionKey);
+    if (!store) return null;
+    return safeString(store.get(normalizedPhone));
   }
 
   _addQrWaiter(sessionKey, cb) {
@@ -534,6 +579,7 @@ class WhatsAppQrRunner extends EventEmitter {
             this._clearTimers(sessionKey);
             this.sessions.delete(sessionKey);
             this.sessionMeta.delete(sessionKey);
+            this.sessionContactNames.delete(sessionKey);
 
             if (elapsedSincePreviousUnauthorized > 0 && elapsedSincePreviousUnauthorized < WhatsAppQrRunner.UNAUTHORIZED_RESTART_COOLDOWN_MS) {
               logger.warn('WA_QR_UNAUTHORIZED_COOLDOWN', '401 repetido em curto intervalo; suprimindo auto-restart para evitar loop', {
@@ -565,6 +611,7 @@ class WhatsAppQrRunner extends EventEmitter {
             this._clearTimers(sessionKey);
             this.sessions.delete(sessionKey);
             this.sessionMeta.delete(sessionKey);
+            this.sessionContactNames.delete(sessionKey);
             return;
           }
 
@@ -595,6 +642,7 @@ class WhatsAppQrRunner extends EventEmitter {
             this._clearTimers(sessionKey);
             this.sessions.delete(sessionKey);
             this.sessionMeta.delete(sessionKey);
+            this.sessionContactNames.delete(sessionKey);
 
             if (elapsedSincePreviousConflict > 0 && elapsedSincePreviousConflict < WhatsAppQrRunner.CONFLICT_RESTART_COOLDOWN_MS) {
               logger.warn('WA_QR_CONFLICT_COOLDOWN', 'Conflito repetido em curto intervalo; suprimindo auto-restart para evitar loop', {
@@ -755,8 +803,14 @@ class WhatsAppQrRunner extends EventEmitter {
 	            // Log explícito no arquivo da API (sem "[object Object]")
 	            logger.info(`[WA_QR_MSG_TEXT] traceId=${traceId} ${jsonSafe({ tenantId, connectionId, from, remoteJid, remoteJidRaw, remoteJidAlt, messageId: msg?.key?.id || null, textPreview: String(text).slice(0, 300) })}`);
 
-	            // Adaptar para o formato de webhook que o ChannelGateway já entende (whatsapp)
-	            const payload = {
+              const contactName = resolveBaileysContactName(msg, sock, remoteJid, from)
+                || this._getSessionContactName(sessionKeyLocal, from);
+              if (contactName) {
+                this._setSessionContactName(sessionKeyLocal, from, contactName);
+              }
+
+              // Adaptar para o formato de webhook que o ChannelGateway já entende (whatsapp)
+		            const payload = {
 	              message: {
 	                from,
 	                id: msg?.key?.id,
@@ -769,14 +823,16 @@ class WhatsAppQrRunner extends EventEmitter {
 	                  // ajuda a debugar/reconciliar com a conta no painel
                     phone_number_id: String(connectionId),
 	                },
+                  contacts: contactName ? [{ wa_id: from, profile: { name: contactName } }] : [],
 	              },
-	              __qr: {
-	                connectionId,
-	                remoteJid,
-	                remoteJidRaw,
-	                remoteJidAlt,
-	              },
-	            };
+		              __qr: {
+		                connectionId,
+		                remoteJid,
+		                remoteJidRaw,
+		                remoteJidAlt,
+                    contactName: contactName || null,
+		              },
+		            };
 
 	            // Normaliza como no webhook (para ticket/ledger)
 	            const normalizedArr = channelNormalizationService.normalizeWhatsAppIncoming({
@@ -809,10 +865,26 @@ class WhatsAppQrRunner extends EventEmitter {
 	          // Log sem "[object Object]" + stack completo
 	          logger.error(`[WA_QR_MSG_ERROR] ${jsonSafe({ tenantId, connectionId, errMessage: e?.message || String(e), errName: e?.name || null, errStack: e?.stack || null })}`);
 	        }
-	      });
+		      });
 
-      return sock;
-    };
+        // Mantem um cache local de nomes (notify/pushName) por telefone na sessao.
+        const cacheContactsFromEvents = (items) => {
+          for (const item of items || []) {
+            if (!item || typeof item !== 'object') continue;
+            const jid = item.id || item.jid || item.wa_id || null;
+            const name = item.notify || item.name || item.verifiedName || item.shortName || item.pushName || null;
+            this._setSessionContactName(sessionKey, jid, name);
+          }
+        };
+        sock.ev.on('contacts.update', (items) => cacheContactsFromEvents(Array.isArray(items) ? items : []));
+        sock.ev.on('contacts.upsert', (items) => cacheContactsFromEvents(Array.isArray(items) ? items : []));
+        sock.ev.on('contacts.set', (payload) => {
+          const contacts = Array.isArray(payload?.contacts) ? payload.contacts : (Array.isArray(payload) ? payload : []);
+          cacheContactsFromEvents(contacts);
+        });
+
+	      return sock;
+	    };
 
     const sock = connect();
     resolveStart(sock);
@@ -842,9 +914,13 @@ class WhatsAppQrRunner extends EventEmitter {
     } finally {
       this.sessions.delete(sessionKey);
       this.sessionMeta.delete(sessionKey);
+      this.sessionContactNames.delete(sessionKey);
       // não remove credenciais automaticamente; quem quiser reset passa {reset:true} no startSession
       try {
-        await whatsappQrService.ingestConnectionEvent(tenantId, connectionId, { eventType: 'stopped' });
+        await whatsappQrService.setConnectionStatus(tenantId, connectionId, {
+          status: 'disconnected',
+          metadata: { source: 'qrRunner.stopSession' },
+        });
       } catch (_) {}
     }
 

@@ -180,6 +180,12 @@ async function processWhatsAppMessage(message, value, deps) {
   const from = message.from; // número do usuário (ex.: "5511999999999")
   const text = message.text && message.text.body ? String(message.text.body) : '';
   const messageId = message.id;
+  const inboundContactName = (() => {
+    const contacts = Array.isArray(value?.contacts) ? value.contacts : [];
+    const matched = contacts.find((c) => String(c?.wa_id || '').trim() === String(from || '').trim()) || contacts[0];
+    const profileName = String(matched?.profile?.name || '').trim();
+    return profileName || null;
+  })();
   const sessionId = explicitSessionId && String(explicitSessionId).trim()
     ? String(explicitSessionId).trim()
     : `${effectiveChannelType}_${from}`;
@@ -413,6 +419,13 @@ async function processWhatsAppMessage(message, value, deps) {
     // mantém o mesmo pipeline mas muda o metadado do canal.
     if (state && state.metadata) {
       state.metadata.channel = effectiveChannelType;
+    }
+  }
+
+  if (state && typeof state === 'object') {
+    if (!state.metadata || typeof state.metadata !== 'object') state.metadata = {};
+    if (inboundContactName) {
+      state.metadata.contactName = inboundContactName;
     }
   }
 
@@ -708,6 +721,7 @@ async function processWhatsAppMessage(message, value, deps) {
             flowVersion: result.state.flowVersion,
             currentNodeId: result.state.currentNodeId,
             channel: result.state.metadata?.channel || 'whatsapp',
+            contactName: result.state.metadata?.contactName || existing.context?.metadata?.contactName || null,
           },
         };
 
@@ -750,6 +764,7 @@ async function processWhatsAppMessage(message, value, deps) {
               flowVersion: result.state.flowVersion,
               currentNodeId: result.state.currentNodeId,
               channel: result.state.metadata?.channel || 'whatsapp',
+              contactName: result.state.metadata?.contactName || null,
             },
           },
         });

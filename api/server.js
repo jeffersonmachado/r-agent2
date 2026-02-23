@@ -845,7 +845,7 @@ function setCorsHeaders(res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id, X-Request-Id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id, X-Request-Id, X-Client');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
   // Permite que o browser leia o traceId
   res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
@@ -1141,6 +1141,23 @@ async function requestHandler(req, res) {
   if (method === 'GET' && pathname.startsWith('/metrics')) {
     logger.debug(`[Server] Requisição GET recebida: ${pathname}`);
   }
+
+  // CRM API Routes - TEMPORARIAMENTE DESABILITADO (causava timeout)
+  // O problema está no crmApp (Express) não ter associações Sequelize configuradas
+  // As rotas CRM antigas (linhas 11587+) continuam funcionando
+  /*
+  if (pathname.startsWith('/api/crm/')) {
+    try {
+      const { handleCrmRequest } = require('./middleware/crmApiAdapter');
+      await handleCrmRequest(req, res);
+      return;
+    } catch (err) {
+      logger.error('[CRM API] Erro ao processar requisição CRM:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao processar requisição CRM' });
+      return;
+    }
+  }
+  */
 
   // Healthcheck básico (mantido para compatibilidade)
   if (method === 'GET' && pathname === '/health') {
@@ -4282,13 +4299,37 @@ async function requestHandler(req, res) {
       // Extrai IP e User-Agent
       const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'unknown';
+      const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
+        || `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const client = (req.headers['x-client'] && String(req.headers['x-client']).trim()) || 'unknown';
+
+      logger.info('[Auth] Tentativa de login', {
+        requestId,
+        client,
+        username,
+        ipAddress,
+      });
 
       const result = await authLogin(username, password, ipAddress, userAgent);
 
       if (!result.success) {
+        logger.warn('[Auth] Login rejeitado', {
+          requestId,
+          client,
+          username,
+          ipAddress,
+          reason: result.error,
+        });
         sendJson(res, 401, { error: 'authentication_failed', message: result.error });
         return;
       }
+
+      logger.info('[Auth] Login aceito', {
+        requestId,
+        client,
+        username: result.agent?.username || username,
+        agentId: result.agent?.id || null,
+      });
 
       // Registra ação de auditoria
       logAction({
@@ -8284,6 +8325,35 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /auth/agents/:id/name - Obtém somente nome do agente (mesmo tenant)
+  if (method === 'GET' && pathname.startsWith('/auth/agents/') && pathname.endsWith('/name')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const agentId = decodeURIComponent(pathname.slice('/auth/agents/'.length, -'/name'.length));
+    const targetAgent = await getAgent(agentId);
+    if (!targetAgent) {
+      sendJson(res, 404, { error: 'agent_not_found' });
+      return;
+    }
+
+    if (req.tenantId && targetAgent.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Agente não pertence ao seu tenant' });
+      return;
+    }
+
+    sendJson(res, 200, {
+      agent: {
+        id: targetAgent.id,
+        name: targetAgent.name,
+      },
+    });
+    return;
+  }
+
   // GET /auth/agents/:id - Obtém agente específico
   if (method === 'GET' && pathname.startsWith('/auth/agents/')) {
     const authResult = requireAuth(req);
@@ -11472,6 +11542,688 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   }
 
   // -----------------------------------------------------------------------
+  // CRM Operacional Integrado (Admin / autenticado)
+  // -----------------------------------------------------------------------
+  // GET /api/crm/accounts
+  if (method === 'GET' && pathname === '/api/crm/accounts') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const status = urlObj.searchParams.get('status');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const crm = require('./services/crm/crmService');
+      const out = await crm.listAccounts({
+        tenantId: req.tenantId,
+        where: status ? { status: String(status) } : {},
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[CRM] Erro ao listar contas:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar contas' });
+    }
+    return;
+  }
+
+  // POST /api/crm/accounts
+  if (method === 'POST' && pathname === '/api/crm/accounts') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const crm = require('./services/crm/crmService');
+      const out = await crm.upsertAccount({
+        tenantId: req.tenantId,
+        id: body && body.id ? String(body.id).trim() : null,
+        externalId: body && body.externalId ? String(body.externalId).trim() : null,
+        name: body && body.name ? String(body.name).trim() : null,
+        ownerUserId: body && body.ownerUserId ? String(body.ownerUserId).trim() : null,
+        status: body && body.status ? String(body.status).trim() : 'active',
+        attributes: body && body.attributes ? body.attributes : {},
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao salvar conta:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar conta' });
+    }
+    return;
+  }
+
+  // GET /api/crm/contacts
+  if (method === 'GET' && pathname === '/api/crm/contacts') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const accountId = urlObj.searchParams.get('accountId');
+      const phone = urlObj.searchParams.get('phone');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const where = {};
+      if (accountId) {
+        where.account_id = String(accountId);
+      }
+      if (phone) {
+        const digits = String(phone).replace(/\D/g, '');
+        if (digits) {
+          where.phone = `+${digits}`;
+        }
+      }
+      const crm = require('./services/crm/crmService');
+      const out = await crm.listContacts({
+        tenantId: req.tenantId,
+        where,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[CRM] Erro ao listar contatos:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar contatos' });
+    }
+    return;
+  }
+
+  // POST /api/crm/contacts
+  if (method === 'POST' && pathname === '/api/crm/contacts') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const crm = require('./services/crm/crmService');
+      const out = await crm.upsertContact({
+        tenantId: req.tenantId,
+        id: body && body.id ? String(body.id).trim() : null,
+        accountId: body && body.accountId ? String(body.accountId).trim() : null,
+        externalId: body && body.externalId ? String(body.externalId).trim() : null,
+        name: body && body.name ? String(body.name).trim() : null,
+        email: body && body.email ? String(body.email).trim() : null,
+        phone: body && body.phone ? String(body.phone).trim() : null,
+        role: body && body.role ? String(body.role).trim() : null,
+        ownerUserId: body && body.ownerUserId ? String(body.ownerUserId).trim() : null,
+        status: body && body.status ? String(body.status).trim() : 'active',
+        attributes: body && body.attributes ? body.attributes : {},
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao salvar contato:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar contato' });
+    }
+    return;
+  }
+
+  // GET /api/crm/leads
+  if (method === 'GET' && pathname === '/api/crm/leads') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const status = urlObj.searchParams.get('status');
+      const ownerUserId = urlObj.searchParams.get('ownerUserId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const crm = require('./services/crm/crmService');
+      const out = await crm.listLeads({
+        tenantId: req.tenantId,
+        where: {
+          ...(status ? { status: String(status) } : {}),
+          ...(ownerUserId ? { owner_user_id: String(ownerUserId) } : {}),
+        },
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[CRM] Erro ao listar leads:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar leads' });
+    }
+    return;
+  }
+
+  // POST /api/crm/leads
+  if (method === 'POST' && pathname === '/api/crm/leads') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const crm = require('./services/crm/crmService');
+      const out = await crm.upsertLead({
+        tenantId: req.tenantId,
+        id: body && body.id ? String(body.id).trim() : null,
+        accountId: body && body.accountId ? String(body.accountId).trim() : null,
+        contactId: body && body.contactId ? String(body.contactId).trim() : null,
+        externalId: body && body.externalId ? String(body.externalId).trim() : null,
+        source: body && body.source ? String(body.source).trim() : null,
+        ownerUserId: body && body.ownerUserId ? String(body.ownerUserId).trim() : null,
+        status: body && body.status ? String(body.status).trim() : 'new',
+        score: body && body.score != null ? Number(body.score) : 0,
+        attributes: body && body.attributes ? body.attributes : {},
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao salvar lead:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar lead' });
+    }
+    return;
+  }
+
+  // GET /api/crm/pipelines
+  if (method === 'GET' && pathname === '/api/crm/pipelines') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const crm = require('./services/crm/crmService');
+      const out = await crm.listPipelines({ tenantId: req.tenantId, limit: 200, offset: 0 });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[CRM] Erro ao listar pipelines:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar pipelines' });
+    }
+    return;
+  }
+
+  // POST /api/crm/pipelines
+  if (method === 'POST' && pathname === '/api/crm/pipelines') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const crm = require('./services/crm/crmService');
+      const out = await crm.upsertPipeline({
+        tenantId: req.tenantId,
+        id: body && body.id ? String(body.id).trim() : null,
+        name: body && body.name ? String(body.name).trim() : null,
+        status: body && body.status ? String(body.status).trim() : 'active',
+        isDefault: body ? body.isDefault === true : false,
+        stages: body && body.stages ? body.stages : [],
+        attributes: body && body.attributes ? body.attributes : {},
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao salvar pipeline:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar pipeline' });
+    }
+    return;
+  }
+
+  // GET /api/crm/opportunities
+  if (method === 'GET' && pathname === '/api/crm/opportunities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const pipelineId = urlObj.searchParams.get('pipelineId');
+      const stageId = urlObj.searchParams.get('stageId');
+      const status = urlObj.searchParams.get('status');
+      const ownerUserId = urlObj.searchParams.get('ownerUserId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const crm = require('./services/crm/crmService');
+      const out = await crm.listOpportunities({
+        tenantId: req.tenantId,
+        where: {
+          ...(pipelineId ? { pipeline_id: String(pipelineId) } : {}),
+          ...(stageId ? { stage_id: String(stageId) } : {}),
+          ...(status ? { status: String(status) } : {}),
+          ...(ownerUserId ? { owner_user_id: String(ownerUserId) } : {}),
+        },
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[CRM] Erro ao listar oportunidades:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar oportunidades' });
+    }
+    return;
+  }
+
+  // POST /api/crm/opportunities
+  if (method === 'POST' && pathname === '/api/crm/opportunities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const crm = require('./services/crm/crmService');
+      const out = await crm.upsertOpportunity({
+        tenantId: req.tenantId,
+        id: body && body.id ? String(body.id).trim() : null,
+        pipelineId: body && body.pipelineId ? String(body.pipelineId).trim() : null,
+        stageId: body && body.stageId ? String(body.stageId).trim() : null,
+        title: body && body.title ? String(body.title).trim() : null,
+        accountId: body && body.accountId ? String(body.accountId).trim() : null,
+        contactId: body && body.contactId ? String(body.contactId).trim() : null,
+        leadId: body && body.leadId ? String(body.leadId).trim() : null,
+        ownerUserId: body && body.ownerUserId ? String(body.ownerUserId).trim() : null,
+        valueCents: body && body.valueCents != null ? Number(body.valueCents) : 0,
+        currency: body && body.currency ? String(body.currency).trim() : 'BRL',
+        status: body && body.status ? String(body.status).trim() : 'open',
+        correlationId: body && body.correlationId ? String(body.correlationId).trim() : null,
+        expectedCloseAt: body && body.expectedCloseAt ? body.expectedCloseAt : null,
+        attributes: body && body.attributes ? body.attributes : {},
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao salvar oportunidade:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar oportunidade' });
+    }
+    return;
+  }
+
+  // POST /api/crm/opportunities/:id/move
+  if (method === 'POST' && pathname.startsWith('/api/crm/opportunities/') && pathname.endsWith('/move')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const opportunityId = decodeURIComponent(pathname.slice('/api/crm/opportunities/'.length).replace(/\/move$/, '')).trim();
+      const body = await parseJsonBody(req);
+      const toStageId = body && body.toStageId ? String(body.toStageId).trim() : '';
+      const crm = require('./services/crm/crmService');
+      const out = await crm.moveOpportunityStage({
+        tenantId: req.tenantId,
+        opportunityId,
+        toStageId,
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        const code = out.error === 'opportunity_not_found' ? 404 : 400;
+        sendJson(res, code, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao mover estágio da oportunidade:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao mover estágio da oportunidade' });
+    }
+    return;
+  }
+
+  // GET /api/crm/activities
+  if (method === 'GET' && pathname === '/api/crm/activities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const opportunityId = urlObj.searchParams.get('opportunityId');
+      const ownerUserId = urlObj.searchParams.get('ownerUserId');
+      const status = urlObj.searchParams.get('status');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const crm = require('./services/crm/crmService');
+      const out = await crm.listActivities({
+        tenantId: req.tenantId,
+        where: {
+          ...(opportunityId ? { opportunity_id: String(opportunityId) } : {}),
+          ...(ownerUserId ? { owner_user_id: String(ownerUserId) } : {}),
+          ...(status ? { status: String(status) } : {}),
+        },
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+    } catch (err) {
+      logger.error('[CRM] Erro ao listar atividades:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar atividades' });
+    }
+    return;
+  }
+
+  // POST /api/crm/activities
+  if (method === 'POST' && pathname === '/api/crm/activities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const crm = require('./services/crm/crmService');
+      const out = await crm.logActivity({
+        tenantId: req.tenantId,
+        type: body && body.type ? String(body.type).trim() : null,
+        status: body && body.status ? String(body.status).trim() : 'open',
+        subjectType: body && body.subjectType ? String(body.subjectType).trim() : null,
+        subjectId: body && body.subjectId ? String(body.subjectId).trim() : null,
+        accountId: body && body.accountId ? String(body.accountId).trim() : null,
+        contactId: body && body.contactId ? String(body.contactId).trim() : null,
+        leadId: body && body.leadId ? String(body.leadId).trim() : null,
+        opportunityId: body && body.opportunityId ? String(body.opportunityId).trim() : null,
+        ownerUserId: body && body.ownerUserId ? String(body.ownerUserId).trim() : null,
+        dueAt: body && body.dueAt ? body.dueAt : null,
+        completedAt: body && body.completedAt ? body.completedAt : null,
+        correlationId: body && body.correlationId ? String(body.correlationId).trim() : null,
+        payload: body && body.payload ? body.payload : {},
+        actorId: req.agent?.id || null,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 201, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao registrar atividade:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao registrar atividade' });
+    }
+    return;
+  }
+
+  // GET /api/crm/timeline?subjectType=&subjectId=&correlationId=&limit=&offset=
+  if (method === 'GET' && pathname === '/api/crm/timeline') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const subjectType = urlObj.searchParams.get('subjectType');
+      const subjectId = urlObj.searchParams.get('subjectId');
+      const correlationId = urlObj.searchParams.get('correlationId');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const crm = require('./services/crm/crmService');
+      const out = await crm.getUnifiedTimeline({
+        tenantId: req.tenantId,
+        subjectType: subjectType ? String(subjectType).trim() : null,
+        subjectId: subjectId ? String(subjectId).trim() : null,
+        correlationId: correlationId ? String(correlationId).trim() : null,
+        limit: limit != null ? Number(limit) : 200,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao carregar timeline:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao carregar timeline' });
+    }
+    return;
+  }
+
+  // =========================================================================
+  // INTEGRAÇÃO TICKET ↔ CRM - Rotas de sincronização automática
+  // =========================================================================
+
+  // GET /api/tickets/:ticketId/crm - Busca dados CRM relacionados a um ticket
+  if (method === 'GET' && pathname.match(/^\/api\/tickets\/[^/]+\/crm$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const ticketId = pathname.split('/')[3];
+      const ticketCrmService = require('./services/ticketCrmIntegrationService');
+      const crmData = await ticketCrmService.getTicketCrmData(ticketId, req.tenantId);
+      
+      if (!crmData) {
+        sendJson(res, 404, { error: 'Ticket não encontrado' });
+        return;
+      }
+      
+      sendJson(res, 200, { success: true, data: crmData });
+    } catch (err) {
+      logger.error('[API] Erro ao buscar dados CRM do ticket:', err);
+      sendJson(res, 500, { error: 'Erro ao buscar dados CRM', details: err.message });
+    }
+    return;
+  }
+
+  // POST /api/tickets/:ticketId/crm/sync - Força sincronização manual do ticket com CRM
+  if (method === 'POST' && pathname.match(/^\/api\/tickets\/[^/]+\/crm\/sync$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const ticketId = pathname.split('/')[3];
+      const { getSequelize } = require('./db/sequelize');
+      const sequelize = getSequelize();
+      const { Ticket } = sequelize.models;
+      
+      const ticket = await Ticket.findOne({
+        where: { id: ticketId, tenant_key: req.tenantId }
+      });
+      
+      if (!ticket) {
+        sendJson(res, 404, { error: 'Ticket não encontrado' });
+        return;
+      }
+      
+      const ticketCrmService = require('./services/ticketCrmIntegrationService');
+      const contact = await ticketCrmService.syncTicketToCrm(ticket);
+      
+      sendJson(res, 200, {
+        success: true,
+        message: 'Ticket sincronizado com CRM',
+        data: { contactId: contact?.id, ticketId: ticket.id }
+      });
+    } catch (err) {
+      logger.error('[API] Erro ao sincronizar ticket:', err);
+      sendJson(res, 500, { error: 'Erro ao sincronizar', details: err.message });
+    }
+    return;
+  }
+
+  // POST /api/tickets/:ticketId/crm/convert-to-opportunity - Converte ticket em oportunidade CRM
+  if (method === 'POST' && pathname.match(/^\/api\/tickets\/[^/]+\/crm\/convert-to-opportunity$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const ticketId = pathname.split('/')[3];
+      const body = await parseJsonBody(req);
+      const ticketCrmService = require('./services/ticketCrmIntegrationService');
+      
+      const opportunity = await ticketCrmService.convertToOpportunity(
+        ticketId,
+        body,
+        req.tenantId
+      );
+      
+      sendJson(res, 200, {
+        success: true,
+        message: 'Oportunidade criada com sucesso',
+        data: opportunity
+      });
+    } catch (err) {
+      logger.error('[API] Erro ao converter em oportunidade:', err);
+      sendJson(res, 500, { error: 'Erro ao criar oportunidade', details: err.message });
+    }
+    return;
+  }
+
+  // =========================================================================
+  // FIM DA INTEGRAÇÃO TICKET ↔ CRM
+  // =========================================================================
+
+  // -----------------------------------------------------------------------
   // Ops: Execution Queue (DLQ/metrics) - autenticado
   // -----------------------------------------------------------------------
   // GET /api/ops/event-ledger/metrics
@@ -12761,7 +13513,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
       const connections = (out.connections || []).map((conn) => {
         const runtime = qrRunner.getStatus(tenantId, conn.id);
-        const runtimeStatus = String(runtime?.status || '').toLowerCase();
+        const runtimeStatus = String(runtime?.status || 'disconnected').toLowerCase();
         const runtimeDisconnectCode = Number(runtime?.lastDisconnectCode || 0) || null;
         const runtimeDisconnectReason =
           (typeof runtime?.lastError === 'string' && runtime.lastError.trim()) ||
@@ -12787,9 +13539,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           return { ...merged, status: 'connected' };
         }
         if (runtimeStatus === 'syncing' || runtimeStatus === 'connecting' || runtimeStatus === 'qr') {
-          if (String(conn.status || '').toLowerCase() !== 'connected') {
-            return { ...merged, status: 'pairing' };
-          }
+          return { ...merged, status: 'pairing' };
+        }
+        if (runtimeStatus === 'disconnected') {
+          return { ...merged, status: 'disconnected' };
         }
         return merged;
       });
@@ -13011,6 +13764,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     if (!tenantId) return;
     try {
       const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/disconnect'.length));
+      // Para evitar "falso conectado": derruba sessão runtime antes de persistir status.
+      try {
+        await qrRunner.stopSession(tenantId, id);
+      } catch (_) {}
+
       const service = require('./services/whatsappQrService');
       const out = await service.disconnectConnection(tenantId, id);
       if (!out.ok) {
@@ -13153,12 +13911,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       const runtime = qrRunner.getStatus(tenantId, id);
-      const runtimeStatus = String(runtime?.status || '').toLowerCase();
+      const runtimeStatus = String(runtime?.status || 'disconnected').toLowerCase();
       let effectiveStatus = out.status;
 
       if (runtimeStatus === 'connected') {
         effectiveStatus = 'connected';
-      } else if ((runtimeStatus === 'syncing' || runtimeStatus === 'connecting' || runtimeStatus === 'qr') && String(out.status || '').toLowerCase() !== 'connected') {
+      } else if (runtimeStatus === 'syncing' || runtimeStatus === 'connecting' || runtimeStatus === 'qr') {
         effectiveStatus = 'pairing';
       }
 
@@ -16806,6 +17564,31 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     });
     
     sendJson(res, 200, result);
+    return;
+  }
+
+  // POST /tickets/reload-cache - Recarrega cache de tickets (best-effort)
+  if (method === 'POST' && pathname === '/tickets/reload-cache') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const { initialize } = require('./services/queueService');
+      await initialize();
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      logger.error('Erro ao recarregar cache de tickets:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
     return;
   }
 
@@ -26123,6 +26906,15 @@ if (require.main === module) {
     }
 
     // WhatsApp QR bridge (opcional): integra provider QR real (ex.: whatsapp-web.js)
+    try {
+      const { restoreWhatsAppQrSessions } = require('./services/whatsappQrRunnerBootstrapService');
+      restoreWhatsAppQrSessions().catch((err) => {
+        logger.warn('[WhatsAppQR] Falha ao restaurar sessões do runner (ignorado)', { error: err?.message || String(err) });
+      });
+    } catch (err) {
+      logger.warn('[WhatsAppQR] Bootstrap de restore indisponível (ignorado)', { error: err?.message || String(err) });
+    }
+
     try {
       const { startWhatsAppQrBridge } = require('./services/whatsappQrBridgeService');
       startWhatsAppQrBridge().catch((err) => {

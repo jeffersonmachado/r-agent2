@@ -1,5 +1,3 @@
-ARG API_BASE_IMAGE=r-agent2-api-base:test
-
 FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
@@ -31,12 +29,37 @@ COPY qa/ ./qa/
 COPY lib/ ./lib/
 COPY scripts/ ./scripts/
 
-FROM ${API_BASE_IMAGE} AS runtime
+FROM node:22-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
+
+# Instala dependências de runtime e Playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libwayland-client0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    xdg-utils \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copia apenas artefatos do builder
 COPY --from=builder /app/package.json /app/package-lock.json* ./

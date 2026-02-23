@@ -90,6 +90,20 @@ const getMarketingEmailSend = require('./MarketingEmailSend');
 const getMarketingLink = require('./MarketingLink');
 const getMarketingLinkClick = require('./MarketingLinkClick');
 const getPushToken = require('./PushToken');
+const getCrmAccount = require('./CrmAccount');
+const getCrmContact = require('./CrmContact');
+const getCrmLead = require('./CrmLead');
+const getCrmPipeline = require('./CrmPipeline');
+const getCrmOpportunity = require('./CrmOpportunity');
+const getCrmActivity = require('./CrmActivity');
+const getCrmEvent = require('./CrmEvent');
+const getCrmRole = require('./CrmRole');
+const getCrmUserRole = require('./CrmUserRole');
+const getCrmResourcePermission = require('./CrmResourcePermission');
+const getCrmAuditLog = require('./CrmAuditLog');
+const getCrmWebhook = require('./CrmWebhook');
+const getCrmWebhookQueue = require('./CrmWebhookQueue');
+const getCrmApiIntegration = require('./CrmApiIntegration');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -179,6 +193,20 @@ const MarketingEmailSend = () => getMarketingEmailSend();
 const MarketingLink = () => getMarketingLink();
 const MarketingLinkClick = () => getMarketingLinkClick();
 const PushToken = () => getPushToken();
+const CrmAccount = () => getCrmAccount();
+const CrmContact = () => getCrmContact();
+const CrmLead = () => getCrmLead();
+const CrmPipeline = () => getCrmPipeline();
+const CrmOpportunity = () => getCrmOpportunity();
+const CrmActivity = () => getCrmActivity();
+const CrmEvent = () => getCrmEvent();
+const CrmRole = () => getCrmRole();
+const CrmUserRole = () => getCrmUserRole();
+const CrmResourcePermission = () => getCrmResourcePermission();
+const CrmAuditLog = () => getCrmAuditLog();
+const CrmWebhook = () => getCrmWebhook();
+const CrmWebhookQueue = () => getCrmWebhookQueue();
+const CrmApiIntegration = () => getCrmApiIntegration();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -215,6 +243,22 @@ function defineRelationships() {
   const ChannelConversationModel = ChannelConversation();
   const ChannelMessageModel = ChannelMessage();
   const OutboundQueueItemModel = OutboundQueueItem();
+
+  // Inicializar modelos CRM (necessário para registrar no sequelize.models)
+  const CrmAccountModel = CrmAccount();
+  const CrmContactModel = CrmContact();
+  const CrmLeadModel = CrmLead();
+  const CrmPipelineModel = CrmPipeline();
+  const CrmOpportunityModel = CrmOpportunity();
+  const CrmActivityModel = CrmActivity();
+  const CrmEventModel = CrmEvent();
+  const CrmRoleModel = CrmRole();
+  const CrmUserRoleModel = CrmUserRole();
+  const CrmResourcePermissionModel = CrmResourcePermission();
+  const CrmAuditLogModel = CrmAuditLog();
+  const CrmWebhookModel = CrmWebhook();
+  const CrmWebhookQueueModel = CrmWebhookQueue();
+  const CrmApiIntegrationModel = CrmApiIntegration();
 
   // Tenant <-> User (many-to-many via TenantUser)
   TenantModel.belongsToMany(UserModel, {
@@ -312,6 +356,17 @@ function defineRelationships() {
   // No explicit relationships for CloseReason/TicketTag (tenant_key-based)
   // No explicit relationships for FlowTemplate (tenant_key-based)
   // No explicit relationships for ChannelAccount/ChannelConversation/ChannelMessage/OutboundQueueItem (tenant_key-based)
+
+  // CRM Relationships
+  // CrmRole <-> CrmUserRole (one-to-many)
+  CrmRoleModel.hasMany(CrmUserRoleModel, {
+    foreignKey: 'role_id',
+    as: 'userRoles',
+  });
+  CrmUserRoleModel.belongsTo(CrmRoleModel, {
+    foreignKey: 'role_id',
+    as: 'role',
+  });
 }
 
 module.exports = {
@@ -399,6 +454,20 @@ module.exports = {
   MarketingScoringRule,
   MarketingEmailCampaign,
   MarketingEmailSend,
+  CrmAccount,
+  CrmContact,
+  CrmLead,
+  CrmPipeline,
+  CrmOpportunity,
+  CrmActivity,
+  CrmEvent,
+  CrmRole,
+  CrmUserRole,
+  CrmResourcePermission,
+  CrmAuditLog,
+  CrmWebhook,
+  CrmWebhookQueue,
+  CrmApiIntegration,
   PushToken,
   defineRelationships,
   // Exporta também as funções getter para uso direto
@@ -487,4 +556,18 @@ module.exports = {
   getMarketingLink,
   getMarketingLinkClick,
   getPushToken,
+  getCrmAccount,
+  getCrmContact,
+  getCrmLead,
+  getCrmPipeline,
+  getCrmOpportunity,
+  getCrmActivity,
+  getCrmEvent,
+  getCrmRole,
+  getCrmUserRole,
+  getCrmResourcePermission,
+  getCrmAuditLog,
+  getCrmWebhook,
+  getCrmWebhookQueue,
+  getCrmApiIntegration,
 };

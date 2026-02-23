@@ -1,10 +1,8 @@
 {
-  "generatedAt": "2026-02-15T03:17:23.569Z",
+  "generatedAt": "2026-02-21T18:08:06.658Z",
   "smokes": {
     "l01": {
       "status": "pass",
-      "logPath": "qa/smoke/l01-physical-queue.log",
-      "evidencePath": "qa/l01-physical-queue-evidence.json",
       "evidence": {
         "smoke": "L-01",
         "generatedAt": "2026-02-15T03:16:19.396Z",
@@ -30,8 +28,6 @@
     },
     "l02": {
       "status": "pass",
-      "logPath": "qa/smoke/l02-ura-publish-rollback.log",
-      "evidencePath": "qa/l02-ura-publish-rollback-evidence.json",
       "evidence": {
         "smoke": "L-02",
         "generatedAt": "2026-02-15T03:14:33.380Z",
@@ -56,8 +52,6 @@
     },
     "l03": {
       "status": "pass",
-      "logPath": "qa/smoke/l03-pbx-voice-tts-asr.log",
-      "evidencePath": "qa/l03-pbx-voice-tts-asr-evidence.json",
       "evidence": {
         "smoke": "L-03",
         "generatedAt": "2026-02-15T03:16:04.308Z",
@@ -85,8 +79,6 @@
     },
     "l04": {
       "status": "pass",
-      "logPath": "qa/smoke/l04-pbx-call-events-runtime.log",
-      "evidencePath": "qa/l04-pbx-call-events-runtime-evidence.json",
       "evidence": {
         "smoke": "L-04",
         "generatedAt": "2026-02-15T03:16:18.990Z",
@@ -151,8 +143,6 @@
     },
     "l05": {
       "status": "pass",
-      "logPath": "qa/smoke/l05-chatpro-omnichannel.log",
-      "evidencePath": "qa/l05-chatpro-omnichannel-evidence.json",
       "evidence": {
         "smoke": "L-05",
         "generatedAt": "2026-02-15T03:16:19.982Z",
@@ -185,6 +175,41 @@
         "warnings": [
           "phone_masking_unavailable:503"
         ]
+      }
+    },
+    "l06": {
+      "status": "pass",
+      "evidence": {
+        "smoke": "L-06",
+        "generatedAt": "2026-02-21T18:08:00.464Z",
+        "ok": true,
+        "auth": {
+          "mode": "admin",
+          "username": "admin",
+          "passwordHint": "bootstrap_default"
+        },
+        "entities": {
+          "pipelineId": "crmpl-1771697280469-fe0ac85f781b",
+          "accountId": "crmacc-1771697280487-bdb21b7e0f2e",
+          "contactId": "crmctt-1771697280501-32c122256e1a",
+          "leadId": "crmled-1771697280515-c8675f26b646",
+          "opportunityId": "crmopp-1771697280529-99971f749e79",
+          "activityId": "crmact-1771697280558-5b54340fb2f7"
+        },
+        "transitions": {
+          "movedToStage": "proposta"
+        },
+        "checks": {
+          "timelineStatus": 200,
+          "timelineItems": 4,
+          "listAccountsStatus": 200,
+          "listPipelinesStatus": 200,
+          "listOpportunitiesStatus": 200
+        },
+        "opportunityId": "crmopp-1771697280529-99971f749e79",
+        "opportunitiesCount": 1,
+        "stagesMovedCount": 1,
+        "timelineItemsCount": 4
       }
     }
   }

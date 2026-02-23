@@ -167,6 +167,10 @@ function checkQAScripts() {
       description: 'Gate oficial de release'
     },
     {
+      name: 'test:websocket',
+      description: 'Regressão focada de WebSocket (auth/reconnect/session)'
+    },
+    {
       name: 'system:rollback-drill',
       description: 'Drill oficial de rollback'
     },

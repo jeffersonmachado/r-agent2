@@ -1,6 +1,6 @@
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'react-native',
+  preset: 'jest-expo',
   setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts'],
   testMatch: ['<rootDir>/tests/**/*.test.ts', '<rootDir>/tests/**/*.test.tsx'],
   collectCoverageFrom: ['<rootDir>/App.tsx', '<rootDir>/src/**/*.ts'],
@@ -14,12 +14,6 @@ module.exports = {
       statements: 82,
     },
   },
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
-  },
-  transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native|expo(nent)?|@expo(nent)?/.*|@expo/.*))',
-  ],
   clearMocks: true,
   restoreMocks: true,
   resetMocks: true,

@@ -182,13 +182,15 @@ async function syncConnections() {
       const provider = String(conn.provider || 'whatsapp-qr').toLowerCase();
       if (!provider.includes('whatsapp')) continue;
       const key = clientKey(tenantId, conn.id);
-      desired.add(key);
       if (String(conn.status || '').toLowerCase() === 'disconnected') {
         // Quando desconectado no painel, garantimos stop do client local.
+        // NÃO adiciona ao desired para evitar reconexão automática.
         // eslint-disable-next-line no-await-in-loop
         await destroyClient(key);
         continue;
       }
+      // Só adiciona ao desired e garante client se está conectado/pareando
+      desired.add(key);
       // eslint-disable-next-line no-await-in-loop
       await ensureClient({ tenantId, connection: conn });
     }

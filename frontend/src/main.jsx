@@ -72,6 +72,7 @@ import { DispatchPage } from './pages/DispatchPage';
 import { KioskPage } from './pages/KioskPage';
 import { PanelPage } from './pages/PanelPage';
 import { StationPage } from './pages/StationPage';
+import { CrmDashboardPage } from './pages/crm/CrmDashboardPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
@@ -226,6 +227,8 @@ function AppWithAuth() {
   const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxBulkProvisioning;
   const isPbx = isRoute('/pbx');
   const isChatHumanoDashboard = isRoute('/chat-humano');
+  // Suporta CRM com ou sem prefixo /r-agent2 em produção
+  const isCrmDashboard = currentPath.startsWith('/crm') || currentPath.startsWith('/r-agent2/crm');
   const isFailedMessages = isRoute('/failed-messages');
   const isQueuePhysicalDashboard = isRoute('/fila-fisica');
   const isDevDashboard = isRoute('/dev') || isRoute('/dev-dashboard');
@@ -255,7 +258,7 @@ function AppWithAuth() {
       isKiosk, isPanel, isStation,
       isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOrders, isKitchen, isDispatch,
       isLogin
@@ -271,7 +274,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
     isOrders, isKitchen, isDispatch, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
@@ -548,6 +551,8 @@ function AppWithAuth() {
         <PbxPage />
       ) : isChatHumanoDashboard ? (
         <ChatHumanoDashboardPage />
+      ) : isCrmDashboard ? (
+        <CrmDashboardPage />
       ) : isFailedMessages ? (
         <FailedMessagesPage />
       ) : isQueuePhysicalDashboard ? (

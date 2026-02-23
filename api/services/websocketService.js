@@ -28,6 +28,7 @@ const logger = require('../utils/logger');
  * @property {string} username - Username do agente
  * @property {Date} connectedAt - Data de conexão
  * @property {Date} lastActivity - Última atividade
+ * @property {string|null} authToken - Token de autenticação ativo da conexão
  */
 
 /**
@@ -96,6 +97,7 @@ function initializeWebSocket(httpServer) {
       tenantId: null,
       agentId: null,
       username: null,
+      authToken: null,
       // Subscriptions por executionId (pipeline)
       executionIds: new Set(),
       connectedAt: new Date(),
@@ -127,6 +129,7 @@ function initializeWebSocket(httpServer) {
             client.tenantId = validation.agent.tenantId;
             client.agentId = validation.agent.id;
             client.username = validation.agent.username;
+            client.authToken = data.token;
 
             sendToClient(clientId, {
               type: 'auth',
@@ -141,6 +144,10 @@ function initializeWebSocket(httpServer) {
 
             logger.info(`[WebSocketService] Cliente ${clientId} autenticado como ${client.username}`);
           } else {
+            client.tenantId = null;
+            client.agentId = null;
+            client.username = null;
+            client.authToken = null;
             logger.warn(`[WebSocketService] Falha de autenticação do cliente ${clientId}`, {
               reason: validation?.error || 'Token inválido',
               tokenPrefix: data.token ? data.token.substring(0, 8) + '...' : 'vazio',
@@ -156,6 +163,21 @@ function initializeWebSocket(httpServer) {
 
         // Ping/Pong para manter conexão viva
         if (data.type === 'ping') {
+          if (client.authToken) {
+            const pingValidation = validateToken(client.authToken);
+            if (!pingValidation.valid) {
+              client.tenantId = null;
+              client.agentId = null;
+              client.username = null;
+              client.authToken = null;
+              sendToClient(clientId, {
+                type: 'auth',
+                status: 'error',
+                message: pingValidation?.error || 'Token inválido',
+              });
+            }
+          }
+
           sendToClient(clientId, {
             type: 'pong',
             timestamp: new Date().toISOString(),

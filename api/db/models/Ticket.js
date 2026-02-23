@@ -126,6 +126,22 @@ function getTicketModel() {
         allowNull: false,
         defaultValue: {},
       },
+      // Campos de integração com CRM
+      crm_contact_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Referência ao contato CRM associado'
+      },
+      crm_account_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Referência à conta CRM associada'
+      },
+      crm_opportunity_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Referência à oportunidade CRM gerada'
+      },
     }, {
       tableName: 'tickets',
       timestamps: true,
@@ -141,6 +157,10 @@ function getTicketModel() {
         { fields: ['tenant_key', 'first_response_at'], name: 'tickets_tenant_key_first_response_at_idx' },
         { fields: ['tenant_key', 'resolved_at'], name: 'tickets_tenant_key_resolved_at_idx' },
         { fields: ['created_at'], name: 'tickets_created_at_idx' },
+        { fields: ['crm_contact_id'], name: 'tickets_crm_contact_id_idx' },
+        { fields: ['crm_account_id'], name: 'tickets_crm_account_id_idx' },
+        { fields: ['crm_opportunity_id'], name: 'tickets_crm_opportunity_id_idx' },
+        { fields: ['tenant_key', 'crm_contact_id'], name: 'tickets_tenant_key_crm_contact_id_idx' },
       ],
     });
   }

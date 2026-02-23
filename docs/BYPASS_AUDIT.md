@@ -214,7 +214,7 @@ Esta auditoria mapeia:
 **Scripts Afetados:**
 - `npm run test:contracts` - Testes de contratos isolados
 - `npm run test:governance` - Testes de governança isolados
-- `npm run test:ci` - Testes de CI isolados
+- `npm run test:ci` - CI local focado (`test:websocket` + `tests/ci`)
 - `npm run test:runtime` - Testes de runtime isolados
 - `npm run test:organizational` - Testes organizacionais isolados
 - `npm run test:system` - Todos os testes sistêmicos juntos

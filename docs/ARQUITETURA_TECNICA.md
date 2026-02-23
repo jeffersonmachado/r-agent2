@@ -2,11 +2,12 @@
 
 ## 1) Objetivo
 
-Documentar a arquitetura-alvo da plataforma unificada (7 pilares) e como ela se materializa em módulos: editor visual, runtime DAG, registry de nodes/plugins, execução, filas/workers, scheduler, credenciais, serviços de IA, r-IPABX, filas físicas (totem/painel/senha), módulo de pedidos/delivery (marketplace/logística) e camada SaaS multi-tenant.
+Documentar a arquitetura-alvo da plataforma unificada (8 pilares) e como ela se materializa em módulos: editor visual, runtime DAG, registry de nodes/plugins, execução, filas/workers, scheduler, credenciais, serviços de IA, CRM operacional integrado, r-IPABX, filas físicas (totem/painel/senha), módulo de pedidos/delivery (marketplace/logística) e camada SaaS multi-tenant.
 
 Benchmarks inspiradores citados explicitamente:
 - **n8n** (automação)
 - **RD Station** (marketing)
+- **HubSpot/Zendesk** (estrutura CRM + operação de relacionamento)
 - **BLIP/Huggy/Zenvia** (atendimento)
 - **Twilio Flex/Talkdesk/Five9** (voz/contact center)
 - **LangFlow/Flowise** (orquestração de IA)
@@ -107,6 +108,21 @@ flowchart TB
 - Multi-tenant, RBAC, rate limiting, auditoria, planos/limites, super-admin, onboarding.
 - Requisitos de endurecimento:
   - isolamento em caches, workers e webhooks; testes de isolamento; observabilidade por tenant.
+
+### 3.13) CRM Operacional Integrado (novo pilar transversal)
+- **Princípio**: CRM orientado a eventos como fonte de verdade, conectado ao `event_ledger` e ao runtime DAG.
+- **Escopo MVP (entidades obrigatórias)**:
+  - `Conta`, `Contato`, `Lead`, `Oportunidade`, `Pipeline`, `Atividade`, `Evento`.
+- **Capacidades obrigatórias**:
+  - histórico unificado (mensagens, chamadas, tickets, bots, eventos)
+  - pipeline acionado por eventos reais do negócio
+  - automação nativa por status/movimentação
+  - SLA comercial e operacional
+  - IA integrada ao fluxo (classificação, sugestão, roteamento)
+- **Relação com arquitetura existente**:
+  - sem duplicar lógica de atendimento; CRM consome/publica eventos e compõe com os serviços existentes
+  - integrações diretas com automações (triggers/handlers), marketing operacional e voz/CCaaS
+  - consistência por idempotência, trilha de auditoria e isolamento multi-tenant desde a modelagem inicial
 
 ## 4) Fluxos end-to-end (exemplo unificado)
 

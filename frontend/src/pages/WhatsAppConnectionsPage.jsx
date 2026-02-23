@@ -11,6 +11,7 @@ import {
   updateWhatsAppConnection,
   generateWhatsAppQr,
   disconnectWhatsAppConnection,
+  deleteWhatsAppConnection,
   getWhatsAppConnectionStatus,
 } from '../api/whatsappConnections';
 import { listFlows } from '../api/flows';
@@ -244,6 +245,22 @@ export function WhatsAppConnectionsPage() {
     }
   }
 
+  async function handleRemove(connectionId) {
+    setBusyId(connectionId);
+    try {
+      await deleteWhatsAppConnection(connectionId);
+      if (qrState.connectionId === connectionId) {
+        setQrState({ connectionId: null, qr: null });
+      }
+      await loadConnections();
+      showToast('Conexão removida', 'success');
+    } catch (err) {
+      showToast('Erro ao remover conexão', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function handleRefreshStatus(connectionId) {
     setBusyId(connectionId);
     try {
@@ -406,6 +423,7 @@ export function WhatsAppConnectionsPage() {
             <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
               {connections.map((conn) => {
                 const badge = statusBadge(conn.status);
+                const isDisconnected = String(conn.status || '').toLowerCase() === 'disconnected';
                 const disconnectDetails = formatDisconnectDetails(conn);
                 const disconnectedAtLabel = formatDateTime(conn.lastDisconnectedAt);
                 return (
@@ -443,8 +461,11 @@ export function WhatsAppConnectionsPage() {
                       <Button onClick={() => handleGenerateQr(conn.id)} style={{ width: 'auto' }} disabled={busyId === conn.id} size="sm">
                         {busyId === conn.id ? 'Gerando...' : 'Gerar QR'}
                       </Button>
-                      <Button onClick={() => handleDisconnect(conn.id)} className="support-button-danger" style={{ width: 'auto' }} disabled={busyId === conn.id} size="sm">
-                        Desconectar
+                      <Button onClick={() => handleDisconnect(conn.id)} className="support-button-danger" style={{ width: 'auto' }} disabled={busyId === conn.id || isDisconnected} size="sm">
+                        {isDisconnected ? 'Desconectado' : 'Desconectar'}
+                      </Button>
+                      <Button onClick={() => handleRemove(conn.id)} className="support-button-danger" style={{ width: 'auto' }} disabled={busyId === conn.id} size="sm">
+                        Remover
                       </Button>
                     </div>
 

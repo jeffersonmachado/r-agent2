@@ -5,15 +5,17 @@
  * Gate oficial de release (bloco 3/4).
  *
  * Modo padrão (RELEASE_GATE_MODE=stack):
- * 1) bash scripts/system-autotest-stack.sh
+ * 1) npm run test:websocket
+ * 2) bash scripts/system-autotest-stack.sh
  *    (já inclui validação oficial + selftest read-only dentro da stack)
  *
  * Modo legado (RELEASE_GATE_MODE=legacy):
- * 1) npm run test:unit
- * 2) node tools/system/validate.js
- * 3) node scripts/autotest.js
- * 4) bash scripts/system-autotest-stack.sh
- * 5) GET /health/selftest (não pode FAIL; checks obrigatórios sem unhealthy)
+ * 1) npm run test:websocket
+ * 2) npm run test:unit
+ * 3) node tools/system/validate.js
+ * 4) node scripts/autotest.js
+ * 5) bash scripts/system-autotest-stack.sh
+ * 6) GET /health/selftest (não pode FAIL; checks obrigatórios sem unhealthy)
  */
 
 const { execSync } = require('child_process');
@@ -191,6 +193,20 @@ function assertCriticalSmokeEvidence(evidence) {
   ) {
     throw new Error('smoke_l05_omnichannel_evidence_missing');
   }
+  const l06 = evidence.data.smokes.l06 || null;
+  if (!l06 || l06.status !== 'pass') {
+    throw new Error('smoke_l06_not_pass');
+  }
+  if (
+    !l06.evidence
+    || l06.evidence.ok !== true
+    || !String(l06.evidence.opportunityId || '').trim()
+    || Number(l06.evidence.opportunitiesCount || 0) < 1
+    || Number(l06.evidence.stagesMovedCount || 0) < 1
+    || Number(l06.evidence.timelineItemsCount || 0) < 3
+  ) {
+    throw new Error('smoke_l06_crm_evidence_missing');
+  }
 }
 
 async function main() {
@@ -215,6 +231,7 @@ async function main() {
       if (skipStack) {
         throw new Error('invalid_gate_config: RELEASE_GATE_MODE=stack requer RELEASE_GATE_SKIP_STACK!=1');
       }
+      report.steps.push(runStep('npm run test:websocket', 'regressão websocket'));
       report.steps.push(runStep('bash scripts/system-autotest-stack.sh', 'autotest de stack (validação completa)'));
       report.smokeEvidence = loadSmokeEvidenceSummary();
       assertCriticalSmokeEvidence(report.smokeEvidence);
@@ -223,6 +240,7 @@ async function main() {
         info: 'Selftest já validado dentro de scripts/system-autotest-stack.sh',
       };
     } else if (gateMode === 'legacy') {
+      report.steps.push(runStep('npm run test:websocket', 'regressão websocket'));
       report.steps.push(runStep('npm run test:unit', 'testes unitários'));
       report.steps.push(runStep('node tools/system/validate.js', 'validação oficial do sistema'));
       report.steps.push(runStep('node scripts/autotest.js', 'autotest com veredito'));

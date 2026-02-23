@@ -198,6 +198,10 @@ export async function listAgents() {
   return fetchJson('/auth/agents');
 }
 
+export async function getAgentNameById(id) {
+  return fetchJson(`/auth/agents/${encodeURIComponent(id)}/name`);
+}
+
 export async function createAgent(data) {
   return fetchJson('/auth/agents', {
     method: 'POST',

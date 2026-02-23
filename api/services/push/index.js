@@ -20,8 +20,22 @@ let cachedApnsJwtToken = null;
 let cachedApnsJwtExpAt = 0;
 
 function isPushEnabled() {
-  const raw = String(process.env.PUSH_ENABLED || 'false').trim().toLowerCase();
-  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+  const explicit = getBooleanEnv('PUSH_ENABLED');
+  if (explicit !== null) {
+    return explicit;
+  }
+  return hasFcmConfig() || hasApnsConfig();
+}
+
+function getBooleanEnv(name) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === null || String(raw).trim() === '') {
+    return null;
+  }
+  const normalized = String(raw).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return null;
 }
 
 function base64UrlEncode(input) {
@@ -71,6 +85,21 @@ function getRequiredEnv(name) {
   return String(v);
 }
 
+function hasFcmConfig() {
+  return Boolean(
+    getRequiredEnv('FCM_PROJECT_ID')
+      && (getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON') || getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH'))
+  );
+}
+
+function hasFcmHints() {
+  return Boolean(
+    getRequiredEnv('FCM_PROJECT_ID')
+      || getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON')
+      || getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH')
+  );
+}
+
 function getFcmServiceAccount() {
   const inline = getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON');
   const pathValue = getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH');
@@ -112,30 +141,65 @@ function getApnsHost() {
     : 'https://api.sandbox.push.apple.com';
 }
 
+function hasApnsConfig() {
+  const hasCore = Boolean(
+    getRequiredEnv('APNS_TEAM_ID')
+      && getRequiredEnv('APNS_KEY_ID')
+      && getRequiredEnv('APNS_BUNDLE_ID')
+      && (getRequiredEnv('APNS_P8') || getRequiredEnv('APNS_P8_PATH'))
+  );
+  if (!hasCore) return false;
+  const apnsEnv = String(process.env.APNS_ENV || 'sandbox').toLowerCase();
+  return ['sandbox', 'production'].includes(apnsEnv);
+}
+
+function hasApnsHints() {
+  return Boolean(
+    getRequiredEnv('APNS_TEAM_ID')
+      || getRequiredEnv('APNS_KEY_ID')
+      || getRequiredEnv('APNS_BUNDLE_ID')
+      || getRequiredEnv('APNS_P8')
+      || getRequiredEnv('APNS_P8_PATH')
+      || getRequiredEnv('APNS_ENV')
+  );
+}
+
 function validatePushStartupConfig() {
   if (!isPushEnabled()) return;
 
   const missing = [];
 
-  if (!getRequiredEnv('FCM_PROJECT_ID')) missing.push('FCM_PROJECT_ID');
-  if (!getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON') && !getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH')) {
-    missing.push('FCM_SERVICE_ACCOUNT_JSON|FCM_SERVICE_ACCOUNT_PATH');
+  const explicit = getBooleanEnv('PUSH_ENABLED');
+  const checkFcm = explicit === true || hasFcmHints();
+  const checkApns = explicit === true || hasApnsHints();
+
+  if (checkFcm) {
+    if (!getRequiredEnv('FCM_PROJECT_ID')) missing.push('FCM_PROJECT_ID');
+    if (!getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON') && !getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH')) {
+      missing.push('FCM_SERVICE_ACCOUNT_JSON|FCM_SERVICE_ACCOUNT_PATH');
+    }
   }
 
-  if (!getRequiredEnv('APNS_TEAM_ID')) missing.push('APNS_TEAM_ID');
-  if (!getRequiredEnv('APNS_KEY_ID')) missing.push('APNS_KEY_ID');
-  if (!getRequiredEnv('APNS_BUNDLE_ID')) missing.push('APNS_BUNDLE_ID');
-  if (!getRequiredEnv('APNS_P8') && !getRequiredEnv('APNS_P8_PATH')) {
-    missing.push('APNS_P8|APNS_P8_PATH');
+  if (checkApns) {
+    if (!getRequiredEnv('APNS_TEAM_ID')) missing.push('APNS_TEAM_ID');
+    if (!getRequiredEnv('APNS_KEY_ID')) missing.push('APNS_KEY_ID');
+    if (!getRequiredEnv('APNS_BUNDLE_ID')) missing.push('APNS_BUNDLE_ID');
+    if (!getRequiredEnv('APNS_P8') && !getRequiredEnv('APNS_P8_PATH')) {
+      missing.push('APNS_P8|APNS_P8_PATH');
+    }
+
+    const apnsEnv = String(process.env.APNS_ENV || 'sandbox').toLowerCase();
+    if (!['sandbox', 'production'].includes(apnsEnv)) {
+      missing.push('APNS_ENV(sandbox|production)');
+    }
   }
 
-  const apnsEnv = String(process.env.APNS_ENV || 'sandbox').toLowerCase();
-  if (!['sandbox', 'production'].includes(apnsEnv)) {
-    missing.push('APNS_ENV(sandbox|production)');
+  if (!checkFcm && !checkApns) {
+    missing.push('FCM_* ou APNS_*');
   }
 
   if (missing.length > 0) {
-    throw new Error(`PUSH_ENABLED=true mas faltam variáveis obrigatórias: ${missing.join(', ')}`);
+    throw new Error(`Push habilitado, mas faltam variáveis obrigatórias: ${missing.join(', ')}`);
   }
 }
 

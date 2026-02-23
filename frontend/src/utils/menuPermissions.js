@@ -15,6 +15,13 @@ export const menuItems = [
     permission: null,
   },
   {
+    label: 'CRM',
+    path: '/crm',
+    icon: '💼',
+    permission: { resource: 'crm', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
     label: 'Atendimento',
     path: '/support',
     icon: '💬',
@@ -316,6 +323,10 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'create' },
     { resource: 'rag', action: 'update' },
     { resource: 'rag', action: 'delete' },
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
+    { resource: 'crm', action: 'delete' },
   ],
   admin: [
     { resource: 'tickets', action: 'read' },
@@ -336,6 +347,10 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'create' },
     { resource: 'rag', action: 'update' },
     { resource: 'rag', action: 'delete' },
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
+    { resource: 'crm', action: 'delete' },
   ],
   manager: [
     { resource: 'tickets', action: 'read' },
@@ -351,6 +366,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'create' },
     { resource: 'rag', action: 'update' },
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
   ],
   operator: [
     { resource: 'tickets', action: 'read' },
@@ -390,6 +408,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'create' },
     { resource: 'rag', action: 'update' },
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
   ],
   agent: [
     { resource: 'tickets', action: 'read' },
@@ -486,10 +507,17 @@ function normalizePath(path) {
     return '/';
   }
   const withoutQuery = path.split('?')[0].split('#')[0];
-  if (withoutQuery.length > 1 && withoutQuery.endsWith('/')) {
-    return withoutQuery.slice(0, -1);
+  
+  // Remove prefixo /r-agent2 se presente (producción fallback)
+  let normalized = withoutQuery;
+  if (normalized.startsWith('/r-agent2/')) {
+    normalized = normalized.substring('/r-agent2'.length) || '/';
   }
-  return withoutQuery;
+  
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    return normalized.slice(0, -1);
+  }
+  return normalized;
 }
 
 function canAccessMenuItem(agent, item) {

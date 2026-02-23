@@ -23,16 +23,19 @@ L02_STATUS="not_run"
 L03_STATUS="not_run"
 L04_STATUS="not_run"
 L05_STATUS="not_run"
+L06_STATUS="not_run"
 L01_LOG_PATH="qa/smoke/l01-physical-queue.log"
 L02_LOG_PATH="qa/smoke/l02-ura-publish-rollback.log"
 L03_LOG_PATH="qa/smoke/l03-pbx-voice-tts-asr.log"
 L04_LOG_PATH="qa/smoke/l04-pbx-call-events-runtime.log"
 L05_LOG_PATH="qa/smoke/l05-chatpro-omnichannel.log"
+L06_LOG_PATH="qa/smoke/l06-crm-operational.log"
 L01_EVIDENCE_PATH="qa/l01-physical-queue-evidence.json"
 L02_EVIDENCE_PATH="qa/l02-ura-publish-rollback-evidence.json"
 L03_EVIDENCE_PATH="qa/l03-pbx-voice-tts-asr-evidence.json"
 L04_EVIDENCE_PATH="qa/l04-pbx-call-events-runtime-evidence.json"
 L05_EVIDENCE_PATH="qa/l05-chatpro-omnichannel-evidence.json"
+L06_EVIDENCE_PATH="qa/l06-crm-operational-evidence.json"
 SMOKE_EVIDENCE_SUMMARY_PATH="${SMOKE_EVIDENCE_SUMMARY_PATH:-qa/smoke-evidence.json}"
 
 run_with_log() {
@@ -46,6 +49,7 @@ run_with_log() {
     L03_STATUS) timeout_sec="${L03_TIMEOUT_SEC:-$timeout_sec}" ;;
     L04_STATUS) timeout_sec="${L04_TIMEOUT_SEC:-$timeout_sec}" ;;
     L05_STATUS) timeout_sec="${L05_TIMEOUT_SEC:-$timeout_sec}" ;;
+    L06_STATUS) timeout_sec="${L06_TIMEOUT_SEC:-$timeout_sec}" ;;
   esac
   set +e
   if command -v timeout >/dev/null 2>&1 && [[ "$timeout_sec" =~ ^[0-9]+$ ]] && [[ "$timeout_sec" -gt 0 ]]; then
@@ -70,17 +74,20 @@ write_smoke_evidence_summary() {
   L03_STATUS="$L03_STATUS" \
   L04_STATUS="$L04_STATUS" \
   L05_STATUS="$L05_STATUS" \
+  L06_STATUS="$L06_STATUS" \
   L01_LOG_PATH="$L01_LOG_PATH" \
   L02_LOG_PATH="$L02_LOG_PATH" \
   L03_LOG_PATH="$L03_LOG_PATH" \
   L04_LOG_PATH="$L04_LOG_PATH" \
   L05_LOG_PATH="$L05_LOG_PATH" \
+  L06_LOG_PATH="$L06_LOG_PATH" \
   L01_EVIDENCE_PATH="$L01_EVIDENCE_PATH" \
   L02_EVIDENCE_PATH="$L02_EVIDENCE_PATH" \
   L03_EVIDENCE_PATH="$L03_EVIDENCE_PATH" \
   L04_EVIDENCE_PATH="$L04_EVIDENCE_PATH" \
   L05_EVIDENCE_PATH="$L05_EVIDENCE_PATH" \
-  node -e "const fs=require('fs');const p=process.env;const out=String(p.SMOKE_EVIDENCE_SUMMARY_PATH||'qa/smoke-evidence.json');const read=(f)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'));}catch(_){return null;}};const summary={generatedAt:new Date().toISOString(),smokes:{l01:{status:p.L01_STATUS||'unknown',logPath:p.L01_LOG_PATH||null,evidencePath:p.L01_EVIDENCE_PATH||null,evidence:read(p.L01_EVIDENCE_PATH||'')},l02:{status:p.L02_STATUS||'unknown',logPath:p.L02_LOG_PATH||null,evidencePath:p.L02_EVIDENCE_PATH||null,evidence:read(p.L02_EVIDENCE_PATH||'')},l03:{status:p.L03_STATUS||'unknown',logPath:p.L03_LOG_PATH||null,evidencePath:p.L03_EVIDENCE_PATH||null,evidence:read(p.L03_EVIDENCE_PATH||'')},l04:{status:p.L04_STATUS||'unknown',logPath:p.L04_LOG_PATH||null,evidencePath:p.L04_EVIDENCE_PATH||null,evidence:read(p.L04_EVIDENCE_PATH||'')},l05:{status:p.L05_STATUS||'unknown',logPath:p.L05_LOG_PATH||null,evidencePath:p.L05_EVIDENCE_PATH||null,evidence:read(p.L05_EVIDENCE_PATH||'')}}};fs.mkdirSync(require('path').dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(summary,null,2)+'\n','utf8');console.log('[autotest-stack] Smoke evidence summary:', out);"
+  L06_EVIDENCE_PATH="$L06_EVIDENCE_PATH" \
+  node -e "const fs=require('fs');const p=process.env;const out=String(p.SMOKE_EVIDENCE_SUMMARY_PATH||'qa/smoke-evidence.json');const read=(f)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'));}catch(_){return null;}};const summary={generatedAt:new Date().toISOString(),smokes:{l01:{status:p.L01_STATUS||'unknown',logPath:p.L01_LOG_PATH||null,evidencePath:p.L01_EVIDENCE_PATH||null,evidence:read(p.L01_EVIDENCE_PATH||'')},l02:{status:p.L02_STATUS||'unknown',logPath:p.L02_LOG_PATH||null,evidencePath:p.L02_EVIDENCE_PATH||null,evidence:read(p.L02_EVIDENCE_PATH||'')},l03:{status:p.L03_STATUS||'unknown',logPath:p.L03_LOG_PATH||null,evidencePath:p.L03_EVIDENCE_PATH||null,evidence:read(p.L03_EVIDENCE_PATH||'')},l04:{status:p.L04_STATUS||'unknown',logPath:p.L04_LOG_PATH||null,evidencePath:p.L04_EVIDENCE_PATH||null,evidence:read(p.L04_EVIDENCE_PATH||'')},l05:{status:p.L05_STATUS||'unknown',logPath:p.L05_LOG_PATH||null,evidencePath:p.L05_EVIDENCE_PATH||null,evidence:read(p.L05_EVIDENCE_PATH||'')},l06:{status:p.L06_STATUS||'unknown',logPath:p.L06_LOG_PATH||null,evidencePath:p.L06_EVIDENCE_PATH||null,evidence:read(p.L06_EVIDENCE_PATH||'')}}};fs.mkdirSync(require('path').dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(summary,null,2)+'\n','utf8');console.log('[autotest-stack] Smoke evidence summary:', out);"
 }
 
 echo "[autotest-stack] Preparando token RPA..."
@@ -169,6 +176,10 @@ node ./scripts/test-whatsapp-qr-smoke.js
 echo
 echo "[autotest-stack] Rodando smoke test Inbox/Support/TicketMaintenance (UX-01)..."
 run_with_log L05_STATUS "$L05_LOG_PATH" env INBOX_RUNTIME_EVIDENCE_PATH="$L05_EVIDENCE_PATH" node ./scripts/test-inbox-runtime-smoke.js
+
+echo
+echo "[autotest-stack] Rodando smoke test CRM operacional (L-06)..."
+run_with_log L06_STATUS "$L06_LOG_PATH" env CRM_SMOKE_EVIDENCE_PATH="$L06_EVIDENCE_PATH" node ./scripts/test-crm-smoke.js
 
 echo
 echo "[autotest-stack] Rodando testes do frontend (Vitest)..."

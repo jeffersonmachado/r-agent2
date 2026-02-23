@@ -1,8 +1,9 @@
 # Roadmap (fonte única)
 
-- **Última atualização**: Fev/2026 (05/02) — revisão completa com base no estado atual do repo
+- **Última atualização**: Fev/2026 (21/02) — alinhamento estratégico com Pilar CRM Operacional Integrado
 - **Onde ver o quê (fonte única)**:
   - **Roadmap (visão executiva + status + Now/Next/Later)**: `ROADMAP_3A5_ANOS.md`
+  - **Pilar CRM Operacional Integrado (definição formal + escopo + backlog)**: `CRM_OPERACIONAL_INTEGRADO.md`
   - **Backlog operacional (priorizado, com DoD/gates)**: `O_QUE_FALTA.md`
 
 ## Status atual (resumo do que já foi feito)
@@ -18,6 +19,7 @@
 - **PBX v1** (migrations produto/realtime/CDR) + CRUD básico + apply/preview + provisioning v1.1 (templates/token/validações): ver `ROADMAP_3A5_ANOS.md`
 - **Omnichannel v1 (mínimo vendável)**: unificação conversa↔ticket 1:1, status por mensagem e roteamento/skills básicos
 - **Marketing v1 completo** (core DB-first + público) com UI/admin completa, jornadas v1 e funil visual básico
+- **CRM Operacional Integrado (pilar transversal)**: diretriz formal de CRM orientado a eventos, com escopo MVP definido (Conta, Contato, Lead, Oportunidade, Pipeline, Atividade, Evento) e execução integrada a atendimento/automação/marketing/voz
 - **Voz v1 (base CCaaS)**: URA via editor de fluxos + runtime de voz + ingestão de eventos + métricas/custos básicos
 - **RPA Flow Pipeline v1 (preview/execução)**, **AI Output Envelope**, **Analytics/ROI v1** e **Node marketplace v0**
 - **Governança base**: ambientes de flow (dev/stage/prod) + SSO/SCIM + backup/DR básico
@@ -25,6 +27,7 @@
 ## Links rápidos
 
 - **Roadmap 3–5 anos (Now/Next/Later + fases)**: `ROADMAP_3A5_ANOS.md`
+- **Pilar CRM Operacional Integrado (documento oficial)**: `CRM_OPERACIONAL_INTEGRADO.md`
 - **Backlog “o que falta” (priorizado, com DoD/gates)**: `O_QUE_FALTA.md`
 - **Inventário de endpoints (codebase)**: `API_ENDPOINTS_CODEBASE.md`
 - **Inventário completo (api/**/*.js)**: `API_ENDPOINTS_CODEBASE_FULL.md`

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTicketShortLabel } from '../utils/ticketDisplay';
 import { Dialog } from './Dialog';
 import {
   assignTicket,
@@ -12,10 +11,11 @@ import { useToast } from './Toast';
 import { useConfirmDialog } from './ConfirmDialog';
 import { Button } from '../styles/Button';
 import { useTheme } from '../styles/themeContext';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { useLatestRef } from '../hooks/useLatestRef';
 import { useModalDataLifecycle } from '../hooks/useModalDataLifecycle';
 import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
+import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 
 /**
@@ -83,7 +83,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
     }
   }, [onTicketUpdate]);
 
-  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocket({
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
     enabled: isOpen && autoRefresh && !!currentTicket?.id,
     onEvent: handleWebSocketEvent,
     subscribeEvents: [
@@ -116,7 +116,35 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
 
     try {
       const result = await getTicketMessages(ticketId);
-      setTicketMessages(result.messages || []);
+      const messages = Array.isArray(result?.messages) ? result.messages : [];
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const ids = Array.from(new Set(
+        messages
+          .map((msg) => String(msg?.agentId || '').trim())
+          .filter((value) => uuidRegex.test(value))
+      ));
+
+      const resolvedById = {};
+      await Promise.all(ids.map(async (id) => {
+        try {
+          const resp = await getAgentNameById(id);
+          const name = String(resp?.agent?.name || '').trim();
+          resolvedById[id] = name || id;
+        } catch {
+          resolvedById[id] = id;
+        }
+      }));
+
+      const messagesWithDisplay = messages.map((msg) => {
+        const raw = String(msg?.agentId || '').trim();
+        if (!raw) return msg;
+        return {
+          ...msg,
+          agentNameDisplay: resolvedById[raw] || raw,
+        };
+      });
+
+      setTicketMessages(messagesWithDisplay);
       
       // Marca como lidas se ticket está atribuído e em progresso
       if (currentTicketRef.current && currentTicketRef.current.status === 'in_progress' && currentTicketRef.current.unreadCount > 0) {
@@ -318,7 +346,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title={`Ticket #${getTicketShortLabel(currentTicket)}`}
+        title={`Ticket #${currentTicket.id}`}
         size="full"
         resizable={true}
         draggable={true}
@@ -430,7 +458,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
                             minute: '2-digit' 
                           })}
                           {msg.sender === 'agent' && msg.agentId && (
-                            <span className="ticket-modal-message-sender"> • {msg.agentId}</span>
+                            <span className="ticket-modal-message-sender"> • {msg.agentNameDisplay || msg.agentId}</span>
                           )}
                         </div>
                       </div>

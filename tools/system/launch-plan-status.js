@@ -28,7 +28,7 @@ function readJson(relPath) {
 
 function smokePasses(smokeData) {
   const smokes = smokeData && smokeData.smokes ? smokeData.smokes : {};
-  const keys = ['l01', 'l02', 'l03', 'l04', 'l05'];
+  const keys = ['l01', 'l02', 'l03', 'l04', 'l05', 'l06'];
   return keys.every((k) => smokes[k] && smokes[k].status === 'pass');
 }
 
@@ -48,6 +48,7 @@ function buildStatus() {
   const chatproOk = pillars?.pillars?.chatpro?.ok === true;
   const queueOk = pillars?.pillars?.queue?.ok === true;
   const pbxOk = pillars?.pillars?.pbx?.ok === true;
+  const crmOk = pillars?.pillars?.crm?.ok === true;
   const rollbackOk = !!drill && drill.status === 'pass';
   const goNoGoOk = !!goNoGo && goNoGo.decision === 'GO';
   const releaseDecisionOk = !!releaseDecision && releaseDecision.status === 'pass' && releaseDecision.decision === 'GO';
@@ -66,12 +67,13 @@ function buildStatus() {
 
   const d7 = [
     makeItem(gateOk, 'Executar gate completo', RELEASE_GATE_REPORT_PATH),
-    makeItem(smokeOk, 'Validar L-01..L-05 em pass', SMOKE_EVIDENCE_SUMMARY_PATH),
+    makeItem(smokeOk, 'Validar L-01..L-06 em pass', SMOKE_EVIDENCE_SUMMARY_PATH),
     makeItem(releaseScopeFrozen, 'Congelar escopo da release', `${RELEASE_DECISION_PATH}#scope`),
     makeItem(releaseOwnersConfirmed, 'Confirmar branch/tag candidata e owners de plantao', `${RELEASE_DECISION_PATH}#candidate-owners`),
     makeItem(chatproOk, 'ChatPro com evidência operacional', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l05`),
     makeItem(queueOk, 'Fila física com jornada completa', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l01`),
     makeItem(pbxOk, 'PBX TTS/ASR + call events com runtime', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l03-l04`),
+    makeItem(crmOk, 'CRM operacional com opportunities + timeline', `${SMOKE_EVIDENCE_SUMMARY_PATH}#l06`),
   ];
 
   const d1 = [

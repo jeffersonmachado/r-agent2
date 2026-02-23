@@ -7,6 +7,7 @@ const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = requir
 const { autoAssignTicket } = require('./routingService');
 const { emitEvent } = require('./websocketService');
 const { processWhatsAppMessage } = require('./messageProcessor');
+const { getTicket } = require('./queueService');
 const whatsappQrService = require('./whatsappQrService');
 const { checkFeature } = require('./planLimitsService');
 const { sendToUser, trimPreview } = require('./push');
@@ -175,7 +176,11 @@ async function handleWhatsAppInbound({
     effectiveTenantId,
     'whatsapp',
     String(externalConversationId || ''),
-    { phone: message?.from ? String(message.from) : null }
+    { 
+      phone: message?.from ? String(message.from) : null,
+      // Fallback para __qr.contactName garante nome mesmo quando value.contacts não vier preenchido.
+      name: normalized?.sender?.name || payload?.__qr?.contactName || null
+    }
   ).catch((e) => {
     logger.error(`[WA_PIPE_TICKET_RESOLVE_ERR] traceId=${traceId || 'n/a'} ${jsonSafe({ tenantId: effectiveTenantId, externalConversationId, externalMessageId, errMessage: e?.message || String(e), errStack: e?.stack || null })}`);
     return null;
@@ -286,6 +291,22 @@ async function handleWhatsAppInbound({
       flowId: resolvedBotFlowId || null,
       sessionId: inboundSessionId,
     });
+
+    // Após a engine processar a mensagem, recupera o ticket atualizado e emite evento
+    // para que o frontend atualize a lista de conversas com a última mensagem
+    try {
+      const updatedTicket = getTicket(effectiveTicket.id);
+      if (updatedTicket) {
+        emitEvent('ticket.message.received', {
+          ticketId: updatedTicket.id,
+          message: messageText,
+          sender: 'user',
+          ticket: updatedTicket, // Inclui ticket completo para atualização local no frontend
+        }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
+      }
+    } catch (e) {
+      logger.warn(`[WA_PIPE_BOT_EMIT_WARN] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, errMessage: e?.message || String(e) })}`);
+    }
 
     logger.info(`[WA_PIPE_BOT_DONE] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: effectiveTicket.id, connectionId: resolvedConnectionId, flowId: resolvedBotFlowId })}`);
     return { ok: true, mode: 'bot', ticketId: effectiveTicket.id, connectionId: resolvedConnectionId, flowId: resolvedBotFlowId };

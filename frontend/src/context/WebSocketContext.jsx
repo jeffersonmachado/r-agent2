@@ -353,8 +353,12 @@ export function WebSocketProvider({ children }) {
             } else {
               // Se não há token, é esperado (usuário ainda não fez login)
               const hasToken = getToken();
+              const messageText = String(data?.message || '');
+              const isSessionExpired = /sessão expirada/i.test(messageText);
               if (!hasToken) {
                 logger.debug('[WebSocketContext] Falha na autenticação (sem token - esperado antes do login)', data.message || data);
+              } else if (isSessionExpired) {
+                logger.warn('[WebSocketContext] Sessão expirada no WebSocket; aguardando fluxo de logout/redirecionamento', data.message || data);
               } else {
                 // Se há token mas falhou, é um erro real
                 logger.error('[WebSocketContext] Falha na autenticação', data.message || data);
@@ -756,6 +760,7 @@ export function useWebSocketContext({ enabled = true, onEvent, subscribeEvents =
   return {
     connected: context.connected,
     authenticated: context.authenticated,
+    authFailed: context.authFailed,
     send: context.send,
     reconnect: context.reconnect,
   };

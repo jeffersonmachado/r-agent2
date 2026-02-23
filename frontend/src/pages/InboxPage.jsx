@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { getTicketShortLabel } from '../utils/ticketDisplay';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -13,6 +12,7 @@ import {
   transferInboxConversation,
   addInboxNote,
 } from '../api/inbox';
+import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 
 export function InboxPage() {
@@ -97,6 +97,35 @@ export function InboxPage() {
     }
   }, []);
 
+  const resolveAssignedToDisplay = useCallback(async (ticketList = []) => {
+    const list = Array.isArray(ticketList) ? ticketList : [];
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ids = Array.from(new Set(
+      list
+        .map((ticket) => String(ticket?.assignedTo || '').trim())
+        .filter((value) => uuidRegex.test(value))
+    ));
+
+    const resolvedById = {};
+    await Promise.all(ids.map(async (id) => {
+      try {
+        const resp = await getAgentNameById(id);
+        const name = String(resp?.agent?.name || '').trim();
+        resolvedById[id] = name || id;
+      } catch {
+        resolvedById[id] = id;
+      }
+    }));
+
+    return list.map((ticket) => {
+      const raw = String(ticket?.assignedTo || '').trim();
+      return {
+        ...ticket,
+        assignedToDisplay: resolvedById[raw] || raw,
+      };
+    });
+  }, []);
+
   const loadTickets = useCallback(async () => {
     setLoading(true);
     try {
@@ -108,9 +137,10 @@ export function InboxPage() {
         offset: 0,
       });
       const list = Array.isArray(data?.tickets) ? data.tickets : [];
-      setTickets(list);
+      const listWithDisplay = await resolveAssignedToDisplay(list);
+      setTickets(listWithDisplay);
       if (selectedTicket) {
-        const updated = list.find((t) => t.id === selectedTicket.id) || selectedTicket;
+        const updated = listWithDisplay.find((t) => t.id === selectedTicket.id) || selectedTicket;
         setSelectedTicket(updated);
       }
     } catch (err) {
@@ -119,7 +149,7 @@ export function InboxPage() {
     } finally {
       setLoading(false);
     }
-  }, [assignedFilter, queueFilter, showToast, statusFilter]);
+  }, [assignedFilter, queueFilter, resolveAssignedToDisplay, selectedTicket, showToast, statusFilter]);
 
   const loadMessages = useCallback(async (ticketId) => {
     if (!ticketId) {
@@ -303,6 +333,62 @@ export function InboxPage() {
     return d.toLocaleString();
   };
 
+  const formatTime = (value) => {
+    if (!value) return '-';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatTicketStatus = (status) => {
+    const normalized = String(status || '').trim().toLowerCase();
+    if (normalized === 'in_progress') return 'Em atendimento';
+    if (normalized === 'waiting') return 'Aguardando';
+    if (normalized === 'closed') return 'Fechado';
+    if (!normalized) return 'Aberto';
+    return normalized;
+  };
+
+  const formatTicketMode = (mode) => {
+    const normalized = String(mode || '').trim().toLowerCase();
+    if (normalized === 'bot' || normalized === 'assistant' || normalized === 'ai') return 'Bot';
+    if (!normalized || normalized === 'human' || normalized === 'agent') return 'Humano';
+    return normalized;
+  };
+
+  const formatBadgeCount = (value) => {
+    const n = Number(value || 0);
+    if (n > 99) return '99+';
+    return String(Math.max(0, n));
+  };
+
+  const getContactName = (ticket) => {
+    const crmName = String(ticket?.customerName || '').trim();
+    const contextName = String(ticket?.context?.metadata?.contactName || '').trim();
+    const variableName = String(
+      ticket?.context?.variables?.customerName ||
+      ticket?.context?.variables?.name ||
+      ticket?.context?.variables?.nome ||
+      ''
+    ).trim();
+    return crmName || contextName || variableName || 'Cliente';
+  };
+
+  const getPhoneNode = (ticket) => {
+    if (!ticket?.phoneNumber) return '—';
+    return <MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} />;
+  };
+
+  const getTicketPreview = (ticket) => {
+    const text = String(ticket?.lastUserMessage || '').trim();
+    if (!text) return 'Sem mensagens';
+    if (text.length <= 80) return text;
+    return `${text.slice(0, 79)}…`;
+  };
+
+  const getAssignedLabel = (ticket) => ticket?.assignedToDisplay || ticket?.assignedTo || 'Não atribuído';
+  const getQueueLabel = (ticket) => ticket?.queue || 'Sem fila';
+
   const formatSla = (ticket) => {
     const minutes = getSlaMinutes(ticket);
     if (!Number.isFinite(minutes)) return '-';
@@ -429,36 +515,28 @@ export function InboxPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSelectTicket(ticket)}
                 tabIndex={0}
               >
-                <div className="support-ticket-header">
-                  <span className="support-ticket-id">#{getTicketShortLabel(ticket)}</span>
-                  <span className={`support-ticket-status ${ticket.status || ''}`}>{ticket.status}</span>
+                <div className="support-ticket-contact-row">
+                  <span className="support-ticket-contact-name">{getContactName(ticket)}</span>
+                  <span className="support-ticket-contact-phone">{getPhoneNode(ticket)}</span>
                 </div>
-                <div className="support-ticket-message">
-                  <strong>Fila:</strong> {ticket.queue || '-'}
+                <div className="support-ticket-id-row">
+                  <span className="support-ticket-id">#{ticket.id}</span>
+                  <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
                 </div>
-                {ticket.phoneNumber && (
-                  <div className="support-ticket-message">
-                    <strong>Telefone:</strong> <MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} />
+                <div className="support-ticket-top-row">
+                  <div className="support-ticket-status-group">
+                    <span className={`support-ticket-status ${String(ticket.status || '').toLowerCase()}`}>
+                      {formatTicketStatus(ticket.status)}
+                    </span>
+                    <span className="support-ticket-time">{formatTime(ticket.updatedAt)}</span>
                   </div>
-                )}
-                <div className="support-ticket-message">
-                  <strong>Atendente:</strong> {ticket.assignedTo || '—'}
+                  {ticket.unreadCount > 0 ? (
+                    <span className="support-ticket-unread-badge">{formatBadgeCount(ticket.unreadCount)}</span>
+                  ) : null}
                 </div>
-                {ticket.lastUserMessage && (
-                  <div className="support-ticket-message">
-                    <strong>Última:</strong> {ticket.lastUserMessage}
-                  </div>
-                )}
-                {isSlaExceeded(ticket) && (
-                  <div className="support-ticket-message" style={{ color: 'var(--color-status-error)', fontWeight: 600 }}>
-                    SLA estourado
-                  </div>
-                )}
-                <div className="support-ticket-meta">
-                  <span>Criado: {formatDate(ticket.createdAt)}</span>
-                  <span style={{ color: isSlaExceeded(ticket) ? 'var(--color-status-error)' : 'inherit' }}>
-                    SLA: {formatSla(ticket)}
-                  </span>
+                <div className="support-ticket-preview">{getTicketPreview(ticket)}</div>
+                <div className="support-ticket-meta-row">
+                  {getAssignedLabel(ticket)} • {getQueueLabel(ticket)}
                 </div>
               </div>
             ))}
@@ -469,7 +547,7 @@ export function InboxPage() {
           {selectedTicket ? (
             <div className="support-details-content">
               <div className="support-details-header">
-                <h3 className="support-details-title">Ticket #{getTicketShortLabel(selectedTicket)}</h3>
+                <h3 className="support-details-title">Ticket #{selectedTicket.id}</h3>
                 <div style={{ color: 'var(--color-text-tertiary)' }}>
                   Status: {selectedTicket.status || '-'} · Fila: {selectedTicket.queue || '-'}
                 </div>

@@ -1,14 +1,15 @@
 ## Visão geral
 
-Este repositório evolui para uma **plataforma unificada** que converte processos e operações em **fluxos visuais (DAG)** com **nodes plugáveis**, reunindo sete pilares em um único produto SaaS multi-tenant:
+Este repositório evolui para uma **plataforma unificada** que converte processos e operações em **fluxos visuais (DAG)** com **nodes plugáveis**, reunindo oito pilares em um único produto SaaS multi-tenant:
 
 1) **Automação** (inspirado em **n8n**)  
 2) **Marketing automation** (inspirado em **RD Station**)  
-3) **Atendimento omnichannel** (inspirado em **BLIP / Huggy / Zenvia**)  
-4) **Voz / Contact Center** (inspirado em **Twilio Flex / Talkdesk / Five9**)  
-5) **Orquestração de IA** (inspirado em **LangFlow / Flowise**)  
-6) **Filas físicas / Fast service** (inspirado em **Qminder / QLess / Waitwhile / Skiplino**)  
-7) **Delivery / Marketplace de pedidos** (inspirado em **iFood / Uber Eats / Rappi / DoorDash**)  
+3) **CRM Operacional Integrado** (benchmark conceitual: **Sistema Operacional do Relacionamento com o Cliente**, inspirado em **HubSpot / Zendesk / RD Station / n8n / CCaaS**)  
+4) **Atendimento omnichannel** (inspirado em **BLIP / Huggy / Zenvia**)  
+5) **Voz / Contact Center** (inspirado em **Twilio Flex / Talkdesk / Five9**)  
+6) **Orquestração de IA** (inspirado em **LangFlow / Flowise**)  
+7) **Filas físicas / Fast service** (inspirado em **Qminder / QLess / Waitwhile / Skiplino**)  
+8) **Delivery / Marketplace de pedidos** (inspirado em **iFood / Uber Eats / Rappi / DoorDash**)  
 
 **Tese do produto**: no nosso sistema, *tudo vira node* dentro do DAG — desde “gerar senha no totem” até “enviar WhatsApp”, “acionar URA”, “atualizar CRM”, “disparar jornada”, “medir ROI” e “replay da execução”.
 
@@ -28,8 +29,37 @@ Organizações crescem usando ferramentas isoladas (automação, marketing, aten
 - **Objetivo final / visão**: `docs/OBJETIVO_FINAL_PLATAFORMA.md`
 - **Roadmap (atalho)**: `docs/ROADMAP.md`
 - **Roadmap 3–5 anos**: `docs/ROADMAP_3A5_ANOS.md`
+- **Pilar CRM Operacional Integrado**: `docs/CRM_OPERACIONAL_INTEGRADO.md`
 - **O que falta (fonte única)**: `docs/O_QUE_FALTA.md`
 - (Histórico) **Gaps vs benchmarks**: `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md`
+
+## Operações rápidas (tickets)
+
+Recarregar o cache de tickets após backfill ou ajustes no backend:
+
+```bash
+API_URL=http://localhost:3000 \
+AUTH_TOKEN=seu_token \
+TENANT_ID=tenant_key \
+npm run tickets:reload-cache
+```
+
+Variáveis:
+- `API_URL` (opcional) base do backend. Padrão: `http://localhost:3000`.
+- `AUTH_TOKEN` (obrigatório) token do usuário autenticado.
+- `TENANT_ID` (obrigatório) tenant alvo.
+
+Backfill de nomes de contato (CRM) para tickets antigos:
+
+```bash
+TENANT_ID=tenant_key \
+npm run tickets:backfill-contact-names -- --dry-run
+```
+
+Opções úteis:
+- `--tenant <tenant_key>` sobrescreve o tenant do env.
+- `--include-closed` inclui tickets fechados.
+- `--limit <n>` limita a quantidade processada.
 
 ## Pilares do produto (com benchmarks)
 
@@ -44,27 +74,33 @@ Organizações crescem usando ferramentas isoladas (automação, marketing, aten
 - Scoring, segmentação e jornadas
 - Email marketing, funil visual, analytics e ROI
 
-### 3) Atendimento omnichannel (BLIP / Huggy / Zenvia)
+### 3) CRM Operacional Integrado (benchmark conceitual)
+- **É** a camada operacional que unifica conta, contato, lead, oportunidade, pipeline, atividades e eventos em torno do cliente
+- **É** orientado a eventos reais do negócio (atendimento, voz, tickets, bots, marketing e operação)
+- **NÃO é** CRM puramente comercial de cadastro estático
+- **NÃO é** cópia literal de Salesforce ou suíte comercial monolítica
+
+### 4) Atendimento omnichannel (BLIP / Huggy / Zenvia)
 - Inbox omnichannel unificado (bot + humano)
 - Filas, SLA, roteamento e operação humana
 - Histórico completo do cliente (timeline)
 
-### 4) Voz / Contact Center (Twilio Flex / Talkdesk / Five9)
+### 5) Voz / Contact Center (Twilio Flex / Talkdesk / Five9)
 - URA visual, filas de voz, transferências e gravação
 - Click-to-call, discagem, disposition codes
 - Eventos de chamada como triggers/ações no DAG
 
-### 5) IA (LangFlow / Flowise)
+### 6) IA (LangFlow / Flowise)
 - Nodes reutilizáveis de IA (classificação, priorização, enriquecimento, sugestão)
 - Contexto unificado + governança (custo, privacidade, auditoria)
 
-### 6) Filas físicas / Fast service (Qminder / QLess / Waitwhile / Skiplino)
+### 7) Filas físicas / Fast service (Qminder / QLess / Waitwhile / Skiplino)
 - Emissão de senha (totem/kiosk), tipos de fila e prioridades
 - Painel de chamada (TV), estações/guichês e “chamar próximo”
 - Métricas: tempo de espera, throughput, abandono e produtividade
 - Integração com fluxos: **Totem → Fila → DAG → Atendimento/Voz/CRM/Marketing**
 
-### 7) Delivery / Marketplace de pedidos (iFood / Uber Eats / Rappi / DoorDash)
+### 8) Delivery / Marketplace de pedidos (iFood / Uber Eats / Rappi / DoorDash)
 - Criação de pedido, pagamento e antifraude (quando aplicável)
 - Status em tempo real (pedido → preparo → despacho → entrega)
 - Despacho de entregador e tracking

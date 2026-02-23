@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTicketShortLabel } from '../utils/ticketDisplay';
 import {
   listQueues,
   listAllTickets,
@@ -22,6 +21,7 @@ import { listQuickReplies, searchQuickReplies, useQuickReply } from '../api/quic
 import { listCloseReasons } from '../api/closeReasons';
 import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
 import { queryAuditLogs } from '../api/audit';
+import { getAgentNameById } from '../api/auth';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -212,7 +212,7 @@ export function SupportPage() {
         }
         // Se o ticket foi criado para este agente, mostra notificação
         if (data.agentId === agent?.id || !data.agentId) {
-          showToastRef.current(`Novo ticket criado: ${data.ticketId?.slice(0, 8)}`, 'info', 3000);
+          showToastRef.current(`Novo ticket criado: ${data.ticketId}`, 'info', 3000);
         }
         break;
         
@@ -226,7 +226,7 @@ export function SupportPage() {
         }
         // Se foi atribuído para este agente, mostra notificação
         if (data.assignedTo === agent?.id || data.assignedTo === agent?.username) {
-          showToastRef.current(`Ticket atribuído para você: ${data.ticketId?.slice(0, 8)}`, 'success', 3000);
+          showToastRef.current(`Ticket atribuído para você: ${data.ticketId}`, 'success', 3000);
         }
         break;
         
@@ -268,7 +268,7 @@ export function SupportPage() {
           }
           // Mostra notificação se não for o ticket atual em foco
           if (document.hidden || !document.hasFocus()) {
-            showToastRef.current(`Nova mensagem no ticket ${data.ticketId?.slice(0, 8)}`, 'info', 3000);
+            showToastRef.current(`Nova mensagem no ticket ${data.ticketId}`, 'info', 3000);
           }
         } else if (!data.ticket) {
           // Fallback: atualiza contador de não lidas na lista apenas se não tiver dados do ticket
@@ -805,6 +805,39 @@ export function SupportPage() {
     return items;
   }
 
+  async function resolveAgentNamesInSystemMessages(items = []) {
+    const list = Array.isArray(items) ? items : [];
+    const uuidRegex = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+    const ids = new Set();
+
+    for (const item of list) {
+      if (!item || item.sender !== 'system' || typeof item.text !== 'string') continue;
+      const matches = item.text.match(uuidRegex);
+      if (!matches) continue;
+      for (const id of matches) ids.add(id);
+    }
+
+    if (ids.size === 0) return list;
+
+    const resolvedById = {};
+    await Promise.all(Array.from(ids).map(async (id) => {
+      try {
+        const resp = await getAgentNameById(id);
+        const name = resp?.agent?.name;
+        if (name) resolvedById[id] = name;
+      } catch {
+        resolvedById[id] = id;
+      }
+    }));
+
+    return list.map((item) => {
+      if (!item || item.sender !== 'system' || typeof item.text !== 'string') return item;
+      const text = item.text.replace(uuidRegex, (id) => resolvedById[id] || id);
+      if (text === item.text) return item;
+      return { ...item, text };
+    });
+  }
+
   // Carrega mensagens do ticket selecionado
   const loadTicketMessages = useCallback(async (ticketId, conversationId) => {
     if (!ticketId) {
@@ -835,7 +868,9 @@ export function SupportPage() {
         setConversationMessages([]);
       }
 
-      setTimelineMessages(buildTimelineMessages(result.messages || [], convMsgs));
+      const timeline = buildTimelineMessages(result.messages || [], convMsgs);
+      const timelineWithNames = await resolveAgentNamesInSystemMessages(timeline);
+      setTimelineMessages(timelineWithNames);
       
       // Marca como lidas se ticket está atribuído e em progresso
       setTickets(prevTickets => {
@@ -1198,6 +1233,62 @@ export function SupportPage() {
     return date.toLocaleString('pt-BR');
   };
 
+  const formatTime = (value) => {
+    if (!value) return '-';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatTicketStatus = (status) => {
+    const normalized = String(status || '').trim().toLowerCase();
+    if (normalized === 'in_progress') return 'Em atendimento';
+    if (normalized === 'waiting') return 'Aguardando';
+    if (normalized === 'closed') return 'Fechado';
+    if (!normalized) return 'Aberto';
+    return normalized;
+  };
+
+  const formatTicketMode = (mode) => {
+    const normalized = String(mode || '').trim().toLowerCase();
+    if (normalized === 'bot' || normalized === 'assistant' || normalized === 'ai') return 'Bot';
+    if (!normalized || normalized === 'human' || normalized === 'agent') return 'Humano';
+    return normalized;
+  };
+
+  const formatBadgeCount = (value) => {
+    const n = Number(value || 0);
+    if (n > 99) return '99+';
+    return String(Math.max(0, n));
+  };
+
+  const getContactName = (ticket) => {
+    const crmName = String(ticket?.customerName || '').trim();
+    const contextName = String(ticket?.context?.metadata?.contactName || '').trim();
+    const variableName = String(
+      ticket?.context?.variables?.customerName ||
+      ticket?.context?.variables?.name ||
+      ticket?.context?.variables?.nome ||
+      ''
+    ).trim();
+    return crmName || contextName || variableName || 'Cliente';
+  };
+
+  const getPhoneNode = (ticket) => {
+    if (!ticket?.phoneNumber) return '—';
+    return <MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} />;
+  };
+
+  const getTicketPreview = (ticket) => {
+    const text = String(ticket?.lastUserMessage || '').trim();
+    if (!text) return 'Sem mensagens';
+    if (text.length <= 80) return text;
+    return `${text.slice(0, 79)}…`;
+  };
+
+  const getAssignedLabel = (ticket) => ticket?.assignedToDisplay || ticket?.assignedTo || 'Não atribuído';
+  const getQueueLabel = (ticket) => ticket?.queue || 'Sem fila';
+
   const formatPhoneNumber = (phone) => {
     if (!phone) return '-';
     // Formata número brasileiro: 5511999999999 -> (11) 99999-9999
@@ -1301,56 +1392,46 @@ export function SupportPage() {
                     }
                   }}
                   className={`support-ticket-card ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
-                  aria-label={`Ticket ${getTicketShortLabel(ticket)}, ${ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'in_progress' ? 'Em atendimento' : 'Fechado'}, ${ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : ''}`}
+                  aria-label={`Ticket ${ticket.id}, ${ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'in_progress' ? 'Em atendimento' : 'Fechado'}, ${ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : ''}`}
                   aria-selected={selectedTicket?.id === ticket.id}
                 >
-                  <div className="support-ticket-header">
-                    <span className="support-ticket-id">#{getTicketShortLabel(ticket)}</span>
-                    <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${ticket.status}`}>
-                      {ticket.status === 'waiting'
-                        ? 'Aguardando'
-                        : ticket.status === 'in_progress'
-                          ? 'Em atendimento'
-                          : 'Fechado'}
-                    </span>
-                    <span
-                      style={{
-                        marginLeft: '8px',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        border: '1px solid #ddd',
-                        background: getModeLabel(ticket.mode).bg,
-                        color: getModeLabel(ticket.mode).fg,
-                      }}
-                      aria-label={`Modo: ${(ticket.mode || 'bot') === 'human' ? 'HUMANO' : 'BOT'}`}
-                      title="Modo do ticket"
-                    >
-                      {getModeLabel(ticket.mode).label}
-                    </span>
-                  </div>
-                  <div className="support-ticket-phone" aria-label={`Telefone: ${ticket.phoneNumber || '-'}`}>
-                    📞 <MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} />
-                  </div>
-                  {ticket.lastUserMessage && (
-                    <div className="support-ticket-message">
-                      <strong>Última mensagem:</strong> {ticket.lastUserMessage}
+                    <div className="support-ticket-contact-row">
+                      <span className="support-ticket-contact-name">{getContactName(ticket)}</span>
+                      <span className="support-ticket-contact-phone" aria-label={`Telefone: ${ticket.phoneNumber || '-'}`}>
+                        {getPhoneNode(ticket)}
+                      </span>
                     </div>
-                  )}
-                  <div className="support-ticket-meta">
-                    Criado: {formatDate(ticket.createdAt)}
-                  </div>
-                  {ticket.assignedTo && (
-                    <div className="support-ticket-assigned">
-                      Atendente: {ticket.assignedTo}
+                    <div className="support-ticket-id-row">
+                      <span className="support-ticket-id">#{ticket.id}</span>
+                      <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
                     </div>
-                  )}
-                  {ticket.unreadCount > 0 && (
-                    <div
-                      className="support-ticket-unread-badge"
-                      role="status"
-                      aria-label={`${ticket.unreadCount} mensagens não lidas`}
-                      style={{
+                    <div className="support-ticket-top-row">
+                      <div className="support-ticket-status-group">
+                        <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${ticket.status}`}>
+                          {formatTicketStatus(ticket.status)}
+                        </span>
+                        <span className="support-ticket-time">{formatTime(ticket.updatedAt)}</span>
+                      </div>
+                      {ticket.unreadCount > 0 ? (
+                        <span
+                          className="support-ticket-unread-badge"
+                          role="status"
+                          aria-label={`${ticket.unreadCount} mensagens não lidas`}
+                        >
+                          {formatBadgeCount(ticket.unreadCount)}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="support-ticket-preview">{getTicketPreview(ticket)}</div>
+                    <div className="support-ticket-meta-row">
+                      {getAssignedLabel(ticket)} • {getQueueLabel(ticket)}
+                    </div>
+                    {ticket.unreadCount > 0 && (
+                      <div
+                        className="support-ticket-unread-badge sr-only"
+                        role="status"
+                        aria-label={`${ticket.unreadCount} mensagens não lidas`}
+                        style={{
                         position: 'absolute',
                         top: '10px',
                         right: '10px',
@@ -1384,7 +1465,7 @@ export function SupportPage() {
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ flexShrink: 0 }}>
                     <h3 className="support-details-title">
-                      Ticket #{getTicketShortLabel(selectedTicket)}
+                      Ticket #{selectedTicket.id}
                       {selectedTicket.unreadCount > 0 && (
                         <span style={{
                           marginLeft: '10px',

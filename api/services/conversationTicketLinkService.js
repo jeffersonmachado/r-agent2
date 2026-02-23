@@ -104,6 +104,60 @@ function ensureTenantId(tenantId) {
   return tenantId.trim();
 }
 
+function normalizeContactName(name) {
+  if (name === null || name === undefined) return null;
+  const value = String(name).trim();
+  return value || null;
+}
+
+function isGenericContactName(name, phoneDigits = null) {
+  const value = normalizeContactName(name);
+  if (!value) return true;
+  const low = value.toLowerCase();
+  if (low.startsWith('contato ') || low.startsWith('cliente ')) return true;
+  if (phoneDigits && value.replace(/\D/g, '') === String(phoneDigits).replace(/\D/g, '')) return true;
+  return false;
+}
+
+function shouldPromoteContactName({ incomingName, existingName, phoneDigits }) {
+  const nextName = normalizeContactName(incomingName);
+  if (!nextName) return false;
+  if (isGenericContactName(nextName, phoneDigits)) return false;
+
+  const currName = normalizeContactName(existingName);
+  if (!currName) return true;
+  if (currName === nextName) return false;
+  return isGenericContactName(currName, phoneDigits);
+}
+
+function maybeUpdateTicketContactName(ticket, contactName, phoneDigits = null) {
+  if (!ticket) return ticket;
+  const incomingName = normalizeContactName(contactName);
+  if (!incomingName) return ticket;
+
+  const currentContext = ticket.context && typeof ticket.context === 'object'
+    ? ticket.context
+    : {};
+  const currentMetadata = currentContext.metadata && typeof currentContext.metadata === 'object'
+    ? currentContext.metadata
+    : {};
+  const existingName = normalizeContactName(currentContext.customer_name) || normalizeContactName(currentMetadata.contactName);
+
+  if (!shouldPromoteContactName({ incomingName, existingName, phoneDigits })) return ticket;
+
+  const updated = queueService.updateTicket(ticket.id, {
+    context: {
+      ...currentContext,
+      metadata: {
+        ...currentMetadata,
+        contactName: incomingName,
+      },
+      customer_name: incomingName,
+    },
+  });
+  return updated || ticket;
+}
+
 async function touchConversation({ tenantId, conversationId, status = null } = {}) {
   if (!dbAvailable()) return;
   if (!tenantId || !conversationId) return;
@@ -169,6 +223,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
 
   const normalizedPhone = normalizePhone(contactRef.phone || externalConversationId);
   const contactId = contactRef.contactId ? String(contactRef.contactId) : (normalizedPhone ? normalizedPhone.replace(/^\+/, '') : null);
+  const contactName = normalizeContactName(contactRef.name);
 
   if (!conversation && dbAvailable()) {
     conversation = await ConversationModel.create({
@@ -228,6 +283,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
           externalConversationId,
           contactId,
         },
+        // Nome do contato para integração CRM
+        customer_name: contactName,
       },
     });
     return { conversation: null, ticket, createdTicket: true };
@@ -245,7 +302,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
         updated_at: now,
       }).catch(() => null);
     }
-    return { conversation, ticket: existingInMemory, createdTicket: false };
+    const updatedTicket = maybeUpdateTicketContactName(existingInMemory, contactName, normalizedPhone || externalConversationId);
+    return { conversation, ticket: updatedTicket, createdTicket: false };
   }
 
   // 2) Tenta achar ticket no DB por conversation_id (ticket aberto)
@@ -280,7 +338,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
       last_message_at: now,
       updated_at: now,
     }).catch(() => null);
-    return { conversation, ticket: existingDbTicket, createdTicket: false };
+    const updatedTicket = maybeUpdateTicketContactName(existingDbTicket, contactName, normalizedPhone || externalConversationId);
+    return { conversation, ticket: updatedTicket, createdTicket: false };
   }
 
   // 3) Cria ticket novo (modo BOT por padrão)
@@ -319,9 +378,13 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
       metadata: {
         externalConversationId,
         contactId,
+        contactName,
       },
+      // Nome do contato para integração CRM
+      customer_name: contactName,
     },
   });
+
 
   // Best-effort: aponta conversa para o ticket atual
   await conversation.update({

@@ -64,6 +64,26 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function deriveCustomerNameFromContext(context = {}) {
+  const contextCustomerName = context && (context.customer_name || context.customerName)
+    ? String(context.customer_name || context.customerName).trim()
+    : '';
+  if (contextCustomerName) return contextCustomerName;
+
+  const metadataName = context && context.metadata && context.metadata.contactName
+    ? String(context.metadata.contactName).trim()
+    : '';
+  if (metadataName) return metadataName;
+
+  const variables = context && context.variables && typeof context.variables === 'object'
+    ? context.variables
+    : {};
+  const variableName = String(
+    variables.customerName || variables.name || variables.nome || ''
+  ).trim();
+  return variableName || null;
+}
+
 async function updateConversationForTicket(ticket, patch = {}) {
   if (!ticket || !ticket.conversationId) return;
   if (!dbAvailable()) return;
@@ -115,6 +135,7 @@ function toDbPayload(ticket) {
 }
 
 function fromDbRow(row) {
+  const context = row.context || {};
   return {
     id: row.id,
     tenantId: row.tenant_key,
@@ -136,13 +157,14 @@ function fromDbRow(row) {
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
     lastUserMessage: row.last_user_message || null,
+    customerName: deriveCustomerNameFromContext(context),
     assignedTo: row.assigned_to || null,
     phoneNumber: row.phone_number || null,
     messages: Array.isArray(row.messages) ? row.messages : [],
     unreadCount: Number.isFinite(row.unread_count) ? row.unread_count : 0,
     tags: Array.isArray(row.tags) ? row.tags : [],
     category: row.category || null,
-    context: row.context || {},
+    context,
   };
 }
 
@@ -175,7 +197,30 @@ async function upsertTicketToDb(ticket) {
   if (existing) {
     await existing.update({ ...payload, updated_at: now });
   } else {
-    await TicketModel.create({ ...payload, created_at: now, updated_at: now });
+    const createdTicket = await TicketModel.create({ ...payload, created_at: now, updated_at: now });
+    
+    // Sincronização automática com CRM (assíncrona, não bloqueia criação do ticket)
+    setImmediate(() => {
+      syncTicketToCrmAsync(createdTicket).catch((err) => {
+        logger.debug('[QueueService] Falha na sincronização CRM (não crítico)', {
+          ticketId: createdTicket.id,
+          error: err?.message || String(err),
+        });
+      });
+    });
+  }
+}
+
+async function syncTicketToCrmAsync(ticket) {
+  try {
+    const ticketCrmService = require('./ticketCrmIntegrationService');
+    await ticketCrmService.syncTicketToCrm(ticket);
+  } catch (error) {
+    // Silencioso - sincronização CRM é best-effort
+    logger.debug('[QueueService] Erro na sincronização CRM', {
+      ticketId: ticket?.id,
+      error: error.message,
+    });
   }
 }
 
@@ -281,6 +326,11 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
   const id = `${queue}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const now = new Date().toISOString();
 
+  const inputContext = context && typeof context === 'object' ? context : {};
+  const inputMetadata = inputContext.metadata && typeof inputContext.metadata === 'object'
+    ? inputContext.metadata
+    : {};
+
   const ticket = {
     id,
     tenantId: effectiveTenantId.trim(),
@@ -300,6 +350,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
     createdAt: now,
     updatedAt: now,
     lastUserMessage: lastUserMessage || null,
+    customerName: deriveCustomerNameFromContext(inputContext),
     assignedTo: null,
     phoneNumber: extractPhoneNumber(sessionId),
     messages: lastUserMessage ? [{
@@ -313,15 +364,20 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
     category: category || null,
     // Contexto preservado para o atendente
     context: {
-      flowId: context.flowId || null,
-      escalationReason: context.escalationReason || null,
-      escalationAttempt: context.escalationAttempt || null,
-      botHistory: context.botHistory || [],
-      variables: context.variables || {},
-      allowReturnToBot: context.allowReturnToBot !== false, // Default: true
-      safeReturnNode: context.safeReturnNode || null,
-      handoverHistory: Array.isArray(context.handoverHistory) ? context.handoverHistory : [],
-      ...(context.metadata || {}),
+      ...inputContext,
+      flowId: inputContext.flowId || null,
+      escalationReason: inputContext.escalationReason || null,
+      escalationAttempt: inputContext.escalationAttempt || null,
+      botHistory: Array.isArray(inputContext.botHistory) ? inputContext.botHistory : [],
+      variables: inputContext.variables && typeof inputContext.variables === 'object'
+        ? inputContext.variables
+        : {},
+      allowReturnToBot: inputContext.allowReturnToBot !== false, // Default: true
+      safeReturnNode: inputContext.safeReturnNode || null,
+      handoverHistory: Array.isArray(inputContext.handoverHistory) ? inputContext.handoverHistory : [],
+      metadata: {
+        ...inputMetadata,
+      },
     },
   };
 
@@ -746,6 +802,10 @@ function updateTicket(ticketId, patch = {}) {
   }
 
   Object.assign(ticket, patch);
+  if (!ticket.customerName) {
+    const derivedName = deriveCustomerNameFromContext(ticket.context || {});
+    if (derivedName) ticket.customerName = derivedName;
+  }
   ticket.updatedAt = new Date().toISOString();
   persistTicketBestEffort(ticket);
   return ticket;

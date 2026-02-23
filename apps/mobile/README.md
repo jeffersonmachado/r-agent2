@@ -19,11 +19,36 @@ App mobile isolado para integração push do r-agent2 sem impactar o frontend we
 
 ## Configuração
 
-Defina URL da API (sem barra final):
+Por padrão, o app detecta automaticamente o host da máquina que está rodando o Metro:
+
+- Dispositivo físico: usa IP LAN detectado pelo Metro (ex.: `192.168.x.x`)
+- Emulador Android: fallback para `10.0.2.2`
+- Simulador iOS: fallback para `127.0.0.1`
+
+Se quiser sobrescrever manualmente, defina URL da API (sem barra final):
 
 ```bash
-export EXPO_PUBLIC_API_BASE_URL=http://SEU_HOST:3000
+export EXPO_PUBLIC_API_BASE_URL=http://SEU_HOST:3001
+
+# opcional: trocar apenas a porta mantendo auto-detecção de host
+export EXPO_PUBLIC_API_PORT=3001
 ```
+
+### Firebase Android (obrigatório para `getDevicePushTokenAsync`)
+
+Se aparecer erro como `Default FirebaseApp is not initialized`:
+
+1. No Firebase Console, adicione o app Android `com.results.ragent2`.
+2. Baixe o arquivo `google-services.json`.
+3. Salve em `apps/mobile/android/app/google-services.json`.
+4. Recrie o app nativo Android:
+
+```bash
+cd apps/mobile
+npx expo run:android
+```
+
+Observação: hot reload não aplica essa configuração nativa; precisa de rebuild/reinstalação do app.
 
 No backend, mantenha:
 

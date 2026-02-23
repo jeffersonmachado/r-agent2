@@ -12,12 +12,13 @@ Este documento foi reestruturado para um formato **Now/Next/Later** (horizontes 
 - **Endpoints no codebase não citados nos roadmaps**: `API_ENDPOINTS_UNDOCUMENTED.md`
 - **Endpoints exatos não citados**: `API_ENDPOINTS_UNDOCUMENTED_EXACT.md`
 
-## 1) Visão geral da plataforma (7 pilares)
+## 1) Visão geral da plataforma (8 pilares)
 
-Esta plataforma converge **sete** categorias de benchmarks em **um único produto SaaS multi-tenant enterprise**:
+Esta plataforma converge **oito** categorias de benchmarks em **um único produto SaaS multi-tenant enterprise**:
 
 - **CORE de automação** (inspirado em **n8n**): runtime DAG, nodes, execuções por nó, replay, scheduler, fila distribuída, credenciais, versionamento, subflows, templates e marketplace.
 - **Marketing automation** (inspirado em **RD Station**): forms, landing pages, tracker JS, scoring, jornadas, email marketing, funil visual, analytics e ROI.
+- **CRM Operacional Integrado** (benchmark conceitual: **Sistema Operacional do Relacionamento com o Cliente**, inspirado em **HubSpot/Zendesk/RD Station/n8n/CCaaS**): entidades CRM orientadas a eventos, histórico unificado, pipeline acionado por eventos reais do negócio e automação nativa por status/movimentação.
 - **Atendimento omnichannel** (inspirado em **BLIP/Huggy/Zenvia/ChatPro**): bot + humano, filas, SLA, distribuição inteligente, histórico completo do cliente.
 - **Voz/contact center** (inspirado em **Twilio Flex/Talkdesk/Five9**): URA visual, filas de voz, transferências, gravação, click-to-call e eventos de chamada como triggers.
 - **IA nativa** (inspirado em **LangFlow/Flowise**): nodes reutilizáveis, classificação, priorização, sugestão de ações, enriquecimento de dados, contexto unificado e governança.
@@ -226,6 +227,26 @@ flowchart LR
 ## 3) Roadmap operacional (Now/Next/Later)
 
 > Meta: converter o que já existe em **suítes vendáveis** (Fast service e Pedidos/Storefront/Delivery), sem perder o eixo “tudo vira evento/node” (DAG).
+
+### 3.0) Pilar CRM Operacional Integrado (transversal)
+
+- **Diretriz**: o CRM do R-Agent2 **não é módulo isolado**; ele conecta atendimento, automação, marketing e operação em torno do cliente.
+
+**Now (0–3 meses)**
+- Definir entidades base do CRM (`Conta`, `Contato`, `Lead`, `Oportunidade`, `Pipeline`, `Atividade`, `Evento`).
+- Integrar CRM ao atendimento e à automação sem duplicar lógica já existente.
+- Criar histórico unificado do cliente (mensagens, chamadas, tickets, bots, eventos).
+
+**Next (3–12 meses)**
+- Implementar pipeline visual orientado a eventos reais do negócio.
+- Implementar ownership de leads e contas.
+- Entregar métricas básicas de CRM (conversão por etapa, aging, SLA comercial/operacional).
+- Integrar CRM ao marketing operacional (jornadas e origem de leads).
+
+**Later (12–24 meses)**
+- Aplicar IA ao CRM (classificação, sugestão e roteamento no fluxo).
+- Gerar recomendações automáticas por contexto operacional.
+- Implementar previsão e otimização operacional (capacidade, risco de perda e prioridades).
 
 ### 3.1) Now (0–3 meses) — estabilizar MVPs e reduzir risco operacional
 

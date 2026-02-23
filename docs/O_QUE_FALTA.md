@@ -1,11 +1,11 @@
 # O que falta (fonte única) — backlog operacional e critérios de “v1 vendável”
 
-- **Última atualização**: Fev/2026 (15/02)
+- **Última atualização**: Fev/2026 (21/02)
 
 Este documento é a **fonte de verdade única** do “o que falta” a partir do estado atual do repositório (Fev/2026).  
 Ele substitui a visão antiga “capability-driven vs benchmarks” como lista operacional de execução.
 
-> Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
+> Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later), `docs/CRM_OPERACIONAL_INTEGRADO.md` (pilar CRM) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
 
 ## Mandato de Paridade Total RIPABX (16/02/2026)
 
@@ -135,6 +135,15 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - **Campanhas de email**: `POST /api/marketing/email-campaigns/:id/send` (envio best-effort).
 - **UI/admin completa**: gestão de forms/leads/scoring/email + jornadas v1 e funil visual básico.
 
+### CRM Operacional Integrado (novo pilar transversal)
+- **Definição formal e benchmark oficial**: `docs/CRM_OPERACIONAL_INTEGRADO.md`.
+- **Diretriz já consolidada**: CRM orientado a eventos como camada transversal (não módulo isolado).
+- **Base técnica já disponível para sustentação**:
+  - `event_ledger` como fonte de verdade operacional
+  - runtime DAG com triggers/handlers e execução auditável
+  - serviços de atendimento, marketing e voz já integráveis por `correlation_id`/`subject_id`
+- **Gap atual**: formalizar entidades CRM MVP e projeções operacionais derivadas de eventos.
+
 ### Voz (base técnica entregue)
 - **Voice nodes v0 (engine)**: `engine/nodes/voiceNodes.js` + `engine/__tests__/voiceNodes.test.js`.
 - **Ingestão básica de eventos de voz**: `api/services/voiceEventService.js` + `POST /api/voice/events`.
@@ -200,6 +209,14 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 ### Now (0–3 meses) — prioridade máxima (ChatPro + Fila + PBX TTS/ASR)
 
+#### 2.0 CRM Operacional Integrado (trilha transversal obrigatória)
+- **Fechar base do CRM orientado a eventos**
+  - definir entidades MVP: `Conta`, `Contato`, `Lead`, `Oportunidade`, `Pipeline`, `Atividade`, `Evento`
+  - histórico unificado por cliente (mensagens/chamadas/tickets/bots/eventos)
+  - projeções CRM derivadas do `event_ledger` (sem duplicar lógica de atendimento)
+  - multi-tenant by design + auditoria imutável de mudanças críticas
+  - **Critério de pronto**: CRM operando como camada transversal com consistência por evento e isolamento por tenant.
+
 #### 2.1 Atendimento ChatPro-like (omnichannel + operação)
 - **Fechar hardening do atendimento unificado**
   - conversa↔ticket 1:1 consistente em todos os canais
@@ -251,11 +268,22 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - custos por canal + KPIs de SLA mínimos (order_to_ready/order_to_deliver)
 - dashboards operacionais por suíte (fast service + orders/delivery)
 
+#### 2.8 CRM Operacional Integrado v1 (pipeline e ownership)
+- pipeline visual orientado a eventos reais do negócio
+- ownership de leads e contas
+- métricas básicas de CRM (conversão por etapa, aging e SLA comercial/operacional)
+- integração com marketing operacional (origem de lead e jornadas)
+
 ### Next (6–12 meses) — consolidação core + PBX/voz v1
 
 #### 2.7 PBX + voz v1 (base CCaaS)
 - URA visual v1, filas de voz e gravação com trilha auditável
 - observabilidade de voz (CDR/eventos) e custos básicos
+
+#### 2.9 CRM + IA no fluxo (recomendação e otimização)
+- classificação, sugestão e roteamento assistidos por IA no fluxo CRM
+- recomendações automáticas de próxima ação por contexto operacional
+- previsão e otimização operacional (capacidade, risco de perda, prioridade)
 
 ---
 
@@ -272,6 +300,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 
 ### 3.2 DoD (por tema)
 - **Prioridade de release (ChatPro + Fila + PBX TTS/ASR)**: evidência de operação real e auditável no gate para os três pilares.
+- **CRM Operacional Integrado**: entidades MVP + histórico unificado + pipeline por eventos + auditoria e multi-tenancy validados.
 - **Ledger por nó + replay**: execução auditável (inputs/outputs), replay parcial controlado, retenção por tenant.
 - **Queue/scheduler enterprise mínimo**: quotas, DLQ, métricas e selftest por limiar.
 - **Suites vendáveis** (Fast service + Orders/Delivery): estados consistentes + idempotência + auditoria + KPIs mínimos.

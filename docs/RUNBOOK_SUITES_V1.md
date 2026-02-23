@@ -73,8 +73,13 @@
   - congelar mudancas
   - executar rollback da suite afetada
   - rerodar gate tecnico minimo (`npm run system:release-gate`)
-  - observacao: o gate usa modo `stack` por padrao (sem duplicar suites)
+  - observacao: o gate usa modo `stack` por padrao e executa `npm run test:websocket` antes da stack
   - diagnostico (modo legado com etapas redundantes): `RELEASE_GATE_MODE=legacy npm run system:release-gate`
+
+## Gate tecnico (sequencia atual)
+- `npm run test:websocket`
+- `bash scripts/system-autotest-stack.sh`
+- artefato esperado: `qa/release-gate-report.json` com status `pass`
 
 ## Imagens Pre-aquecidas (test stack)
 - Objetivo:

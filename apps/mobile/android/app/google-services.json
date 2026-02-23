@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "223087007690",
+    "project_id": "r-agent2",
+    "storage_bucket": "r-agent2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:223087007690:android:5c15cb2144106c61d72133",
+        "android_client_info": {
+          "package_name": "com.results.ragent2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDI0gq0otmhMh5fTL1surQb0ZLA2XoOqrM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

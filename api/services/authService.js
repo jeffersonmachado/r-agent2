@@ -464,7 +464,14 @@ async function login(username, password, ipAddress = 'unknown', userAgent = 'unk
       },
     });
 
-    if (!row) return { success: false, error: 'Credenciais inválidas' };
+    if (!row) {
+      logger.warn('[AuthService] Login inválido: usuário não encontrado', {
+        username: usernameLower,
+        ipAddress,
+        userAgent,
+      });
+      return { success: false, error: 'Credenciais inválidas' };
+    }
 
     agent = {
       ...buildAgentFromUserRow(row),
@@ -479,10 +486,23 @@ async function login(username, password, ipAddress = 'unknown', userAgent = 'unk
     agents.set(row.id, agent);
   }
 
-  if (!agent) return { success: false, error: 'Credenciais inválidas' };
+  if (!agent) {
+    logger.warn('[AuthService] Login inválido: usuário ausente no cache', {
+      username: usernameLower,
+      ipAddress,
+      userAgent,
+    });
+    return { success: false, error: 'Credenciais inválidas' };
+  }
   if (!agent.active) return { success: false, error: 'Agente inativo' };
 
   if (!verifyPassword(password, agent._passwordHash)) {
+    logger.warn('[AuthService] Login inválido: senha incorreta', {
+      username: usernameLower,
+      agentId: agent.id,
+      ipAddress,
+      userAgent,
+    });
     return { success: false, error: 'Credenciais inválidas' };
   }
 

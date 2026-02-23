@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTicketShortLabel } from '../utils/ticketDisplay';
 import { Dialog } from './Dialog';
 import {
   listQueueTickets,
@@ -16,6 +15,7 @@ import { useWebSocketContext } from '../context/WebSocketContext';
 import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import { useLatestRef } from '../hooks/useLatestRef';
 import { useModalDataLifecycle } from '../hooks/useModalDataLifecycle';
+import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 
 /**
@@ -118,6 +118,35 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     authFailed,
   });
 
+  const resolveAssignedToDisplay = useCallback(async (ticketList = []) => {
+    const list = Array.isArray(ticketList) ? ticketList : [];
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ids = Array.from(new Set(
+      list
+        .map((ticket) => String(ticket?.assignedTo || '').trim())
+        .filter((value) => uuidRegex.test(value))
+    ));
+
+    const resolvedById = {};
+    await Promise.all(ids.map(async (id) => {
+      try {
+        const resp = await getAgentNameById(id);
+        const name = String(resp?.agent?.name || '').trim();
+        resolvedById[id] = name || id;
+      } catch {
+        resolvedById[id] = id;
+      }
+    }));
+
+    return list.map((ticket) => {
+      const raw = String(ticket?.assignedTo || '').trim();
+      return {
+        ...ticket,
+        assignedToDisplay: resolvedById[raw] || raw,
+      };
+    });
+  }, []);
+
   // Carrega tickets da fila
   const loadTickets = useCallback(async () => {
     if (!queueName) return;
@@ -125,11 +154,12 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     setLoading(true);
     try {
       const ticketsList = await listQueueTickets(queueName, { status: 'waiting' });
-      setTickets(ticketsList);
+      const ticketsWithDisplay = await resolveAssignedToDisplay(ticketsList);
+      setTickets(ticketsWithDisplay);
       
       // Atualiza ticket selecionado se ainda existir na lista
       if (selectedTicketRef.current?.id) {
-        const updatedTicket = ticketsList.find(t => t.id === selectedTicketRef.current.id);
+        const updatedTicket = ticketsWithDisplay.find(t => t.id === selectedTicketRef.current.id);
         if (updatedTicket) {
           setSelectedTicket(updatedTicket);
         }
@@ -140,7 +170,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     } finally {
       setLoading(false);
     }
-  }, [queueName]);
+  }, [queueName, resolveAssignedToDisplay]);
 
   React.useEffect(() => {
     loadTicketsRef.current = loadTickets;
@@ -378,7 +408,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                       className={`queue-modal-ticket-item ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
                     >
                       <div className="queue-modal-ticket-item-header">
-                        <span className="queue-modal-ticket-item-id">#{getTicketShortLabel(ticket)}</span>
+                        <span className="queue-modal-ticket-item-id">#{ticket.id}</span>
                         {ticket.unreadCount > 0 && (
                           <span className="queue-modal-ticket-item-badge">{ticket.unreadCount}</span>
                         )}
@@ -401,7 +431,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                       </div>
                       {ticket.assignedTo && (
                         <div className="queue-modal-ticket-item-assigned">
-                          👤 {ticket.assignedTo}
+                          👤 {ticket.assignedToDisplay || ticket.assignedTo}
                         </div>
                       )}
                     </div>
@@ -418,7 +448,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                   <div className="queue-modal-chat-header">
                     <div className="queue-modal-chat-header-info">
                       <div className="queue-modal-chat-header-title">
-                        Ticket #{getTicketShortLabel(selectedTicket)}
+                        Ticket #{selectedTicket.id}
                         {selectedTicket.unreadCount > 0 && (
                           <span className="queue-modal-chat-header-badge">
                             {selectedTicket.unreadCount} nova(s)

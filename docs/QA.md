@@ -25,6 +25,8 @@ Este documento consolida **o que existe hoje** de QA no repositório: **testes**
   - **Unit**: `npm run test:unit` → `tests/unit`
   - **Flow (validação estrutural)**: `npm run test:flow` → `tests/flow`
   - **Stress**: `npm run test:stress` → `tests/stress`
+  - **CI local (focado)**: `npm run test:ci` → `npm run test:websocket` + `jest tests/ci`
+    - Observação: este comando é complementar e não substitui o gate oficial de CI (`npm run system:validate`).
   - **Rate limit**: `npm run test:rate-limit` → `tests/rate-limit`
   - **Sistêmicos (contratos/governança/anti-bypass/runtime/organizacional/stress/rate-limit)**: `npm run test:system`
   - **Tudo (Jest)**: `npm run test:all`

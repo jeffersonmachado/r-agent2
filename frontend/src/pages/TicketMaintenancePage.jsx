@@ -8,6 +8,7 @@ import { NavigationLink } from '../components/NavigationLink';
 import { useRouter } from '../hooks/useRouter';
 import { usePhoneMasking } from '../hooks/usePhoneMasking';
 import { MaskedPhone } from '../components/MaskedPhone';
+import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 
 /**
@@ -169,6 +170,31 @@ export function TicketMaintenancePage() {
       } else {
         finalTotal = result.total || 0; // Total do backend (já paginado)
       }
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const ids = Array.from(new Set(
+        finalTickets
+          .map((ticket) => String(ticket?.assignedTo || '').trim())
+          .filter((value) => uuidRegex.test(value))
+      ));
+      const resolvedById = {};
+      await Promise.all(ids.map(async (id) => {
+        try {
+          const resp = await getAgentNameById(id);
+          const name = String(resp?.agent?.name || '').trim();
+          resolvedById[id] = name || id;
+        } catch {
+          resolvedById[id] = id;
+        }
+      }));
+
+      finalTickets = finalTickets.map((ticket) => {
+        const raw = String(ticket?.assignedTo || '').trim();
+        return {
+          ...ticket,
+          assignedToDisplay: resolvedById[raw] || raw,
+        };
+      });
 
       setTickets(finalTickets);
       setTotalTickets(finalTotal);
@@ -742,7 +768,7 @@ export function TicketMaintenancePage() {
                         <span className="empty-text">-</span>
                       )}
                     </td>
-                    <td>{ticket.assignedTo || <span className="empty-text">-</span>}</td>
+                    <td>{ticket.assignedToDisplay || ticket.assignedTo || <span className="empty-text">-</span>}</td>
                     <td className="date-cell">{formatDate(ticket.createdAt)}</td>
                     <td className="date-cell">{formatDate(ticket.updatedAt)}</td>
                   </tr>
