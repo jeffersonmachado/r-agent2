@@ -63,6 +63,8 @@ const {
   finishFlowExecutionSafe,
   buildExecutionLedgerAdapter,
 } = require('./flowExecutionLedgerService');
+const { normalizeInboundEvent } = require('./normalizeInboundEvent');
+const { processMedia } = require('./mediaProcessors');
 
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
 const sessions = new Map();
@@ -368,8 +370,42 @@ function getVoiceRuntimeStats({ tenantId = null } = {}) {
   };
 }
 
+/**
+ * Voice runtime service stub (phase-2 ready):
+ * - Aceita evento normalizado com channel=voice/media=audio
+ * - Reusa ConversationSessionStore e pipeline de chat
+ * - Sem integração SIP/ASR/TTS nesta fase
+ */
+async function processVoiceInboundEvent(event, deps = {}) {
+  const normalized = normalizeInboundEvent(event, {
+    channel: 'voice',
+    metadata: { source: 'voice_runtime_stub' },
+  }).event;
+
+  const voiceEvent = await processMedia({
+    ...normalized,
+    channel: 'voice',
+    media: normalized.media || 'audio',
+  });
+
+  logger.info('[VoiceRuntimeStub] evento recebido', {
+    trace_id: voiceEvent.trace_id,
+    tenant_id: voiceEvent.tenant_id,
+    session_id: voiceEvent.session_id,
+    lead_id: voiceEvent.lead_id || null,
+    channel: voiceEvent.channel,
+    media: voiceEvent.media,
+  });
+
+  // require tardio para evitar circular dependency com módulos de runtime de voz
+  // eslint-disable-next-line global-require
+  const { processNormalizedInboundEvent } = require('./messageProcessor');
+  return processNormalizedInboundEvent(voiceEvent, deps);
+}
+
 module.exports = {
   runVoiceSession,
   clearVoiceSession,
   getVoiceRuntimeStats,
+  processVoiceInboundEvent,
 };
