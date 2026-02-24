@@ -65,6 +65,7 @@ const {
 } = require('./flowExecutionLedgerService');
 const { normalizeInboundEvent } = require('./normalizeInboundEvent');
 const { processMedia } = require('./mediaProcessors');
+const { synthesizeText } = require('./voiceAdapters/ttsAdapter');
 
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
 const sessions = new Map();
@@ -400,7 +401,33 @@ async function processVoiceInboundEvent(event, deps = {}) {
   // require tardio para evitar circular dependency com módulos de runtime de voz
   // eslint-disable-next-line global-require
   const { processNormalizedInboundEvent } = require('./messageProcessor');
-  return processNormalizedInboundEvent(voiceEvent, deps);
+  const pipelineResult = await processNormalizedInboundEvent(voiceEvent, deps);
+
+  const responseText = pipelineResult && pipelineResult.output && pipelineResult.output.text
+    ? String(pipelineResult.output.text)
+    : (pipelineResult && pipelineResult.output && pipelineResult.output.response_text
+      ? String(pipelineResult.output.response_text)
+      : '');
+  const tts = await synthesizeText(voiceEvent, responseText);
+
+  logger.info('[VoiceRuntimeStub] processamento concluído', {
+    trace_id: voiceEvent.trace_id,
+    tenant_id: voiceEvent.tenant_id,
+    session_id: voiceEvent.session_id,
+    asr_provider: voiceEvent.voice_metadata && voiceEvent.voice_metadata.asr_provider
+      ? voiceEvent.voice_metadata.asr_provider
+      : null,
+    tts_provider: tts && tts.provider ? tts.provider : null,
+    tts_skipped: !!(tts && tts.skipped),
+  });
+
+  return {
+    ...pipelineResult,
+    voice: {
+      input: voiceEvent,
+      tts,
+    },
+  };
 }
 
 module.exports = {

@@ -7,6 +7,9 @@
  * - Enviar respostas da engine de volta ao usuário via WhatsApp.
  */
 
+module.exports.processWhatsAppMessage = async (...args) => processWhatsAppMessage(...args);
+module.exports.processNormalizedInboundEvent = async (...args) => processNormalizedInboundEvent(...args);
+
 const { executeStep } = require('../../engine/executeStep');
 const { NodeRegistry } = require('../../engine/nodeRegistry');
 const {
@@ -76,9 +79,6 @@ const { transitionFunnelState, createDefaultFunnelState } = require('./funnelSta
 const { decideNextResponse } = require('./decisionOrchestrator');
 const { appendEventV1 } = require('./eventLedgerService');
 const path = require('path');
-
-module.exports.processWhatsAppMessage = (...args) => processWhatsAppMessage(...args);
-module.exports.processNormalizedInboundEvent = (...args) => processNormalizedInboundEvent(...args);
 
 // Sessões em memória (para produção, ideal mover para Redis/DB)
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
