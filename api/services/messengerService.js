@@ -9,7 +9,7 @@
 
 const config = require('../utils/config');
 const logger = require('../utils/logger');
-const { processWhatsAppMessage } = require('./messageProcessor');
+const { processNormalizedInboundEvent } = require('./messageProcessor');
 
 /**
  * Verifica webhook do Facebook Messenger.
@@ -139,8 +139,25 @@ async function processMessengerMessage(messageData, flows, sessionEvents) {
       },
     };
     
-    // Processa usando o mesmo processador do WhatsApp
-    await processWhatsAppMessage(compatibleMessage, compatibleValue, {
+    await processNormalizedInboundEvent({
+      event_type: 'message',
+      channel: 'web',
+      media: 'text',
+      direction: 'inbound',
+      tenant_id: 'unknown',
+      lead_id: senderId,
+      session_id: `messenger_${senderId}`,
+      timestamp: new Date(messaging.timestamp || Date.now()).toISOString(),
+      payload: { text, raw: messaging },
+      metadata: {
+        message_id: message.mid || null,
+        phone_number_id: recipientId || null,
+        channel_type: 'messenger',
+      },
+      voice_metadata: {},
+      trace_id: message.mid || `ms-${Date.now()}`,
+      correlation_id: senderId,
+    }, {
       flows,
       sessionEvents,
     });

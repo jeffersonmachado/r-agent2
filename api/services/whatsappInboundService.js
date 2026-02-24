@@ -6,7 +6,7 @@ const channelGatewayService = require('./channelGatewayService');
 const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = require('./conversationTicketLinkService');
 const { autoAssignTicket } = require('./routingService');
 const { emitEvent } = require('./websocketService');
-const { processWhatsAppMessage } = require('./messageProcessor');
+const { processNormalizedInboundEvent } = require('./messageProcessor');
 const { getTicket } = require('./queueService');
 const whatsappQrService = require('./whatsappQrService');
 const { checkFeature } = require('./planLimitsService');
@@ -281,15 +281,32 @@ async function handleWhatsAppInbound({
       return { ok: true, mode: 'bot_skipped', ticketId: effectiveTicket.id };
     }
 
-    await processWhatsAppMessage(message, value, {
+    await processNormalizedInboundEvent({
+      event_type: 'message',
+      channel: 'whatsapp',
+      media: 'text',
+      direction: 'inbound',
+      tenant_id: effectiveTenantId,
+      lead_id: message?.from ? String(message.from) : null,
+      session_id: inboundSessionId,
+      timestamp: iso || new Date().toISOString(),
+      payload: {
+        text: messageText,
+        raw: message || null,
+      },
+      metadata: {
+        message_id: externalMessageId || null,
+        conversation_id: ingest?.persist?.conversationId || null,
+        source,
+      },
+      voice_metadata: {},
+      trace_id: traceId || externalMessageId || `${inboundSessionId}-${Date.now()}`,
+      correlation_id: ingest?.persist?.conversationId || externalConversationId || inboundSessionId,
+    }, {
       flows,
       sessionEvents,
       saveSessionEvents,
-      tenantId: effectiveTenantId,
-      conversationId: ingest?.persist?.conversationId || null,
-      channelType: 'whatsapp',
       flowId: resolvedBotFlowId || null,
-      sessionId: inboundSessionId,
     });
 
     // Após a engine processar a mensagem, recupera o ticket atualizado e emite evento

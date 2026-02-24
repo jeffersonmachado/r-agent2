@@ -9,7 +9,7 @@
 
 const config = require('../utils/config');
 const logger = require('../utils/logger');
-const { processWhatsAppMessage } = require('./messageProcessor');
+const { processNormalizedInboundEvent } = require('./messageProcessor');
 
 /**
  * Verifica webhook do Instagram.
@@ -145,8 +145,25 @@ async function processInstagramMessage(messageData, flows, sessionEvents) {
       },
     };
     
-    // Processa usando o mesmo processador
-    await processWhatsAppMessage(compatibleMessage, compatibleValue, {
+    await processNormalizedInboundEvent({
+      event_type: 'message',
+      channel: 'app',
+      media: 'text',
+      direction: 'inbound',
+      tenant_id: 'unknown',
+      lead_id: senderId,
+      session_id: `instagram_${senderId}`,
+      timestamp: new Date(messaging.timestamp || Date.now()).toISOString(),
+      payload: { text, raw: messaging },
+      metadata: {
+        message_id: message.mid || null,
+        phone_number_id: recipientId || null,
+        channel_type: 'instagram',
+      },
+      voice_metadata: {},
+      trace_id: message.mid || `ig-${Date.now()}`,
+      correlation_id: senderId,
+    }, {
       flows,
       sessionEvents,
     });

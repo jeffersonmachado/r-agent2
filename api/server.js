@@ -24,7 +24,7 @@ const { validateVoiceFlow } = require('./utils/voiceFlowValidator');
 const { simulateFlow } = require('../engine/flowSimulation');
 const { buildConversationReplay } = require('../engine/replay');
 const { verifyWebhook } = require('./services/whatsappService');
-const { processWhatsAppMessage } = require('./services/messageProcessor');
+const { processNormalizedInboundEvent } = require('./services/messageProcessor');
 const { handleWhatsAppInbound } = require('./services/whatsappInboundService');
 const outboundQueueService = require('./services/outboundQueueService');
 const { initializeAiProviders, generateAiResponse } = require('./services/aiProviderService');
@@ -1048,7 +1048,21 @@ async function requestHandler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
   // URL é relativa; usamos base fictícia apenas para parse
   const url = new URL(req.url || '/', 'http://localhost');
-  const { pathname } = url;
+  let { pathname } = url;
+
+  // Remove prefixo /r-agent2/api se presente (quando servido via nginx/apache com URL rewrite)
+  // Exemplos:
+  // - /r-agent2/api/auth/login → /auth/login
+  // - /r-agent2/health → /health
+  // Isso permite que as verificações de rotas públicas/auth funcionem corretamente
+  // sem necessidade de duplicar todas as rotas com e sem prefixo
+  if (pathname.startsWith('/r-agent2/api/')) {
+    pathname = pathname.substring('/r-agent2/api'.length); // Remove "/r-agent2/api" deixando "/..."
+  } else if (pathname.startsWith('/r-agent2/')) {
+    pathname = pathname.substring('/r-agent2'.length); // Remove "/r-agent2" deixando "/..."
+  } else if (pathname === '/r-agent2') {
+    pathname = '/';
+  }
 
   // --- WhatsApp QR Endpoints ---
   // POST /whatsapp/connections/:id/start
@@ -11978,6 +11992,48 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /api/crm/analytics/dashboard - CRM Dashboard Metrics
+  if (method === 'GET' && pathname === '/api/crm/analytics/dashboard') {
+    logger.info('[Dashboard] GET /api/crm/analytics/dashboard called');
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      logger.warn('[Dashboard] Auth failed:', authResult.error);
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    logger.info('[Dashboard] Auth OK, tenantId:', req.tenantId);
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      logger.warn('[Dashboard] Permission denied:', permResult.error);
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    logger.info('[Dashboard] Permissions OK');
+    try {
+      const { getSequelize } = require('./db/sequelize');
+      const sequelize = getSequelize();
+      if (!sequelize) {
+        logger.error('[Dashboard] No sequelize instance');
+        sendJson(res, 500, { error: 'database_error', message: 'Database connection not available' });
+        return;
+      }
+      
+      const analyticsService = require('./services/crm/analyticsService');
+      logger.info('[Dashboard] Fetching metrics for tenantId:', req.tenantId);
+      const metrics = await analyticsService.getDashboardMetrics(sequelize, req.tenantId);
+      
+      logger.info('[Dashboard] Got metrics:', JSON.stringify(metrics).substring(0, 200));
+      sendJson(res, 200, { 
+        ok: true,
+        dashboard: metrics
+      });
+    } catch (err) {
+      logger.error('[Dashboard] Error:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao carregar dashboard de analytics' });
+    }
+    return;
+  }
+
   // GET /api/crm/activities
   if (method === 'GET' && pathname === '/api/crm/activities') {
     const authResult = requireAuth(req);
@@ -11985,7 +12041,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-    const permResult = requirePermission(req, 'analytics', 'read');
+    const permResult = requirePermission(req, 'config', 'read');
     if (!permResult.allowed) {
       sendJson(res, 403, { error: 'forbidden', message: permResult.error });
       return;
@@ -12013,6 +12069,38 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       logger.error('[CRM] Erro ao listar atividades:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar atividades' });
     }
+    return;
+  }
+
+  // GET /api/crm/webhooks
+  if (method === 'GET' && pathname === '/api/crm/webhooks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    sendJson(res, 200, { ok: true, webhooks: [] });
+    return;
+  }
+
+  // GET /api/crm/audit
+  if (method === 'GET' && pathname === '/api/crm/audit') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    sendJson(res, 200, { ok: true, logs: [] });
     return;
   }
 
@@ -19369,13 +19457,28 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
             const compatibleValue = { metadata: { phone_number_id: entry?.id ? String(entry.id) : null } };
 
             // eslint-disable-next-line no-await-in-loop
-            await processWhatsAppMessage(compatibleMessage, compatibleValue, {
+            await processNormalizedInboundEvent({
+              event_type: 'message',
+              channel: 'web',
+              media: 'text',
+              direction: 'inbound',
+              tenant_id: tenantId,
+              lead_id: senderId || null,
+              session_id: `messenger_${senderId || 'unknown'}`,
+              timestamp: iso || new Date().toISOString(),
+              payload: { text: messageText, raw: messaging || null },
+              metadata: {
+                message_id: externalMessageId || null,
+                conversation_id: ingest?.persist?.conversationId || null,
+                channel_type: 'messenger',
+              },
+              voice_metadata: {},
+              trace_id: externalMessageId || `ms-${Date.now()}`,
+              correlation_id: ingest?.persist?.conversationId || externalConversationId || senderId || null,
+            }, {
               flows,
               sessionEvents,
               saveSessionEvents: saveSessionEventsToFile,
-              tenantId,
-              conversationId: ingest?.persist?.conversationId || null,
-              channelType: 'messenger',
             });
           }
         }
@@ -19553,13 +19656,28 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
             const compatibleValue = { metadata: { phone_number_id: entry?.id ? String(entry.id) : null } };
 
             // eslint-disable-next-line no-await-in-loop
-            await processWhatsAppMessage(compatibleMessage, compatibleValue, {
+            await processNormalizedInboundEvent({
+              event_type: 'message',
+              channel: 'app',
+              media: 'text',
+              direction: 'inbound',
+              tenant_id: tenantId,
+              lead_id: senderId || null,
+              session_id: `instagram_${senderId || 'unknown'}`,
+              timestamp: iso || new Date().toISOString(),
+              payload: { text: messageText, raw: messaging || null },
+              metadata: {
+                message_id: externalMessageId || null,
+                conversation_id: ingest?.persist?.conversationId || null,
+                channel_type: 'instagram',
+              },
+              voice_metadata: {},
+              trace_id: externalMessageId || `ig-${Date.now()}`,
+              correlation_id: ingest?.persist?.conversationId || externalConversationId || senderId || null,
+            }, {
               flows,
               sessionEvents,
               saveSessionEvents: saveSessionEventsToFile,
-              tenantId,
-              conversationId: ingest?.persist?.conversationId || null,
-              channelType: 'instagram',
             });
           }
         }

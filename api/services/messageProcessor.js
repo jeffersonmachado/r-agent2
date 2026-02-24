@@ -70,11 +70,24 @@ const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
 const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
+const { normalizeInboundEvent } = require('./normalizeInboundEvent');
+const { conversationSessionStore, buildConversationSessionKey } = require('./conversationSessionStore');
+const { transitionFunnelState, createDefaultFunnelState } = require('./funnelStateService');
+const { decideNextResponse } = require('./decisionOrchestrator');
+const { appendEventV1 } = require('./eventLedgerService');
 const path = require('path');
+
+module.exports.processWhatsAppMessage = (...args) => processWhatsAppMessage(...args);
+module.exports.processNormalizedInboundEvent = (...args) => processNormalizedInboundEvent(...args);
 
 // Sessões em memória (para produção, ideal mover para Redis/DB)
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
 const sessions = new Map();
+const messageMetrics = {
+  total: 0,
+  handoff: 0,
+  conversionByStage: {},
+};
 
 /**
  * Cria um NodeRegistry completo com todos os handlers padrão.
@@ -164,6 +177,7 @@ function createInitialState(flow, sessionId, from) {
  * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null, channelType?: string|null, flowId?: string|null, sessionId?: string|null }} deps
  */
 async function processWhatsAppMessage(message, value, deps) {
+  const processStartedAt = Date.now();
   const {
     flows,
     sessionEvents,
@@ -186,9 +200,23 @@ async function processWhatsAppMessage(message, value, deps) {
     const profileName = String(matched?.profile?.name || '').trim();
     return profileName || null;
   })();
-  const sessionId = explicitSessionId && String(explicitSessionId).trim()
+  const fallbackSessionId = explicitSessionId && String(explicitSessionId).trim()
     ? String(explicitSessionId).trim()
     : `${effectiveChannelType}_${from}`;
+  const normalized = normalizeInboundEvent({ message, value }, {
+    deps: {
+      ...(deps || {}),
+      sessionId: fallbackSessionId,
+      channelType: effectiveChannelType,
+    },
+  });
+  const normalizedEvent = normalized.event;
+  const traceId = normalizedEvent.trace_id;
+  const sessionId = normalizedEvent.session_id;
+  const sessionKey = buildConversationSessionKey({
+    tenantId: inboundTenantId || normalizedEvent.tenant_id || 'unknown',
+    sessionId,
+  });
 
   async function sendWhatsAppTextBestEffort(to, textToSend) {
     const effectiveTenantId = inboundTenantId || state?.tenantId;
@@ -198,6 +226,10 @@ async function processWhatsAppMessage(message, value, deps) {
         messageId: messageId ? String(messageId) : null,
         conversationId: conversationId || null,
         sessionId,
+        trace_id: traceId,
+        tenant_id: effectiveTenantId || null,
+        lead_id: from || null,
+        channel: effectiveChannelType,
       });
       return null;
     }
@@ -274,11 +306,19 @@ async function processWhatsAppMessage(message, value, deps) {
       from,
       messageId: messageId ? String(messageId) : null,
       conversationId: conversationId || null,
+      trace_id: traceId,
+      tenant_id: inboundTenantId || null,
+      session_id: sessionId,
+      lead_id: from || null,
+      channel: effectiveChannelType,
     });
     return;
   }
 
-  let state = sessions.get(sessionId);
+  let state = await conversationSessionStore.get(sessionKey);
+  if (!state) {
+    state = sessions.get(sessionId);
+  }
 
   // Verifica se já existe ticket ativo (handoff em andamento)
   // Importante: em ambiente multi-tenant, sessionId pode colidir; preferimos filtrar por tenant quando possível.
@@ -382,7 +422,13 @@ async function processWhatsAppMessage(message, value, deps) {
       }, { tenantId: inboundTenantId || ticket?.tenantId || null });
     } catch (_) {}
 
-    logger.debug(`[MessageProcessor] Mensagem recebida durante atendimento humano síncrono: ${sessionId}`);
+    logger.debug(`[MessageProcessor] Mensagem recebida durante atendimento humano síncrono: ${sessionId}`, {
+      trace_id: traceId,
+      tenant_id: inboundTenantId,
+      session_id: sessionId,
+      lead_id: from || null,
+      channel: effectiveChannelType,
+    });
     return;
   }
 
@@ -438,6 +484,22 @@ async function processWhatsAppMessage(message, value, deps) {
       logger.error('[ERROR] Não foi possível enviar mensagem de erro:', err);
     }
     return;
+  }
+
+  const currentNode = Array.isArray(flow?.nodes)
+    ? flow.nodes.find((n) => n && String(n.id) === String(state.currentNodeId || ''))
+    : null;
+  const shouldRestartState = !state.currentNodeId || (currentNode && currentNode.type === 'end');
+  if (shouldRestartState) {
+    const restartedState = createInitialState(flow, sessionId, from);
+    if (!restartedState.metadata || typeof restartedState.metadata !== 'object') restartedState.metadata = {};
+    restartedState.metadata = {
+      ...restartedState.metadata,
+      ...(state.metadata && typeof state.metadata === 'object' ? state.metadata : {}),
+      restartedAt: new Date().toISOString(),
+      restartedReason: 'current_node_missing',
+    };
+    state = restartedState;
   }
 
   let compiledFlow;
@@ -595,8 +657,41 @@ async function processWhatsAppMessage(message, value, deps) {
     );
   }
 
-  // Atualiza sessão
+  const previousFunnel = (result?.state?.metadata && result.state.metadata.funnel_state)
+    ? result.state.metadata.funnel_state
+    : createDefaultFunnelState();
+  const funnelTransition = transitionFunnelState(previousFunnel, { text });
+  if (!result.state.metadata || typeof result.state.metadata !== 'object') result.state.metadata = {};
+  result.state.metadata.funnel_state = funnelTransition.after;
+  result.state.metadata.last_event = normalizedEvent;
+  result.state.metadata.last_stage = funnelTransition.after.stage;
+  result.state.metadata.last_intent = funnelTransition.after.intent;
+
+  // Atualiza sessão (memory + store unificado)
   sessions.set(sessionId, result.state);
+  await conversationSessionStore.set(sessionKey, result.state, Number(process.env.CONVERSATION_SESSION_TTL_SECONDS || 86400));
+
+  try {
+    await appendEventV1({
+      tenantId: inboundTenantId,
+      type: 'FunnelStateTransition',
+      source: 'message.processor',
+      correlationId: normalizedEvent.correlation_id,
+      subject: { type: 'channel_session', id: sessionId },
+      actor: { type: 'system', id: 'funnel_orchestrator' },
+      idempotencyKey: `funnel_transition:${inboundTenantId}:${sessionId}:${messageId || traceId}`,
+      payload: {
+        trace_id: traceId,
+        tenant_id: inboundTenantId,
+        session_id: sessionId,
+        lead_id: from || null,
+        channel: effectiveChannelType,
+        stage_before: funnelTransition.before.stage,
+        stage_after: funnelTransition.after.stage,
+        reason: funnelTransition.reason,
+      },
+    });
+  } catch (_) {}
 
   // Execution ledger: marca execução como concluída quando conversa termina (best-effort)
   try {
@@ -844,12 +939,23 @@ async function processWhatsAppMessage(message, value, deps) {
 
     if (messageText) {
       try {
+        const decision = await decideNextResponse({
+          tenantId: inboundTenantId,
+          inboundText: text,
+          engineOutputText: messageText,
+          funnelTransition,
+          traceId,
+        });
+        const shortResponse = decision.optional_question
+          ? `${decision.response_text} ${decision.optional_question}`.trim()
+          : decision.response_text;
+
         // Validação CDR antes de enviar mensagem
-        const cdrValidation = validateCDR(messageText);
+        const cdrValidation = validateCDR(shortResponse);
         
         if (cdrValidation.status === 'error') {
           // Produção/QA: bloqueia resposta e usa resposta segura
-          const violationLog = generateViolationLog(cdrValidation, messageText);
+          const violationLog = generateViolationLog(cdrValidation, shortResponse);
           logger.error('[CDR_VIOLATION] Resposta bloqueada', violationLog);
           
           const safeMessage = getSafeResponse();
@@ -857,16 +963,16 @@ async function processWhatsAppMessage(message, value, deps) {
           return;
         } else if (cdrValidation.status === 'warn') {
           // Desenvolvimento: apenas loga warning mas permite resposta
-          const violationLog = generateViolationLog(cdrValidation, messageText);
+          const violationLog = generateViolationLog(cdrValidation, shortResponse);
           logger.warn('[CDR_WARNING] Resposta com violação (dev mode)', violationLog);
         }
         
         // Resposta válida ou warning em dev: envia normalmente
-        await sendWhatsAppTextBestEffort(from, messageText);
+        await sendWhatsAppTextBestEffort(from, shortResponse);
         
         if (replay) {
           replay.recordEvent('message_sent', {
-            messageLength: messageText.length,
+            messageLength: shortResponse.length,
             cdrValidated: cdrValidation.status === 'pass',
           });
         }
@@ -889,8 +995,77 @@ async function processWhatsAppMessage(message, value, deps) {
     replay.stop();
     replay.save(replayId);
   }
+
+  const latencyMs = Date.now() - processStartedAt;
+  const isHandoff = !!(result && result.output && (result.output.type === 'handoff' || result.output.type === 'fallback_human_live'));
+  messageMetrics.total += 1;
+  if (isHandoff) messageMetrics.handoff += 1;
+  const conversionStage = funnelTransition && funnelTransition.after ? funnelTransition.after.stage : null;
+  if (conversionStage) {
+    messageMetrics.conversionByStage[conversionStage] = Number(messageMetrics.conversionByStage[conversionStage] || 0) + 1;
+  }
+
+  logger.info('[MessageProcessor] Processamento concluído', {
+    trace_id: traceId,
+    tenant_id: inboundTenantId,
+    session_id: sessionId,
+    lead_id: from || null,
+    channel: effectiveChannelType,
+    latency_ms: latencyMs,
+    handoff: isHandoff,
+    handoff_rate: messageMetrics.total > 0 ? Number((messageMetrics.handoff / messageMetrics.total).toFixed(4)) : 0,
+    conversion_by_stage: messageMetrics.conversionByStage,
+  });
+
+  return {
+    ok: true,
+    trace_id: traceId,
+    session_id: sessionId,
+    tenant_id: inboundTenantId,
+    output: result ? result.output : null,
+    state: result ? result.state : null,
+  };
 }
 
-module.exports = {
-  processWhatsAppMessage,
-};
+/**
+ * Pipeline principal para evento normalizado (compatível com canais atuais e futuros).
+ * @param {import('../contracts/normalizedInboundEvent').NormalizedInboundEvent|any} event
+ * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, flowId?: string|null }} deps
+ */
+async function processNormalizedInboundEvent(event, deps = {}) {
+  const normalized = normalizeInboundEvent(event);
+  const ev = normalized.event;
+  const text = typeof ev?.payload === 'string'
+    ? ev.payload
+    : (ev?.payload && typeof ev.payload.text === 'string' ? ev.payload.text : '');
+
+  const compatibleMessage = {
+    from: ev.lead_id || 'unknown',
+    id: (ev.metadata && ev.metadata.message_id) || ev.trace_id || `evt-${Date.now()}`,
+    text: { body: text || '' },
+    type: ev.media === 'audio' ? 'audio' : 'text',
+    timestamp: Math.floor(new Date(ev.timestamp).getTime() / 1000),
+  };
+
+  const compatibleValue = {
+    metadata: {
+      phone_number_id: ev.metadata && ev.metadata.phone_number_id ? ev.metadata.phone_number_id : null,
+      channel: ev.channel,
+    },
+    contacts: ev.metadata && ev.metadata.contact_name
+      ? [{ profile: { name: String(ev.metadata.contact_name) }, wa_id: ev.lead_id || null }]
+      : [],
+  };
+
+  return processWhatsAppMessage(compatibleMessage, compatibleValue, {
+    ...deps,
+    tenantId: ev.tenant_id,
+    sessionId: ev.session_id,
+    conversationId: ev.correlation_id,
+    channelType: ev.channel,
+    traceId: ev.trace_id,
+  });
+}
+
+module.exports.processWhatsAppMessage = processWhatsAppMessage;
+module.exports.processNormalizedInboundEvent = processNormalizedInboundEvent;
