@@ -26,7 +26,7 @@
     "test:ai-governance": "jest tests/ai-governance",
     "test:contracts": "jest tests/contracts",
     "test:governance": "jest tests/governance",
-    "test:ci": "npm run test:websocket && npm run test:voice:generalista:jest && jest tests/ci",
+    "test:ci": "npm run test:websocket && npm run test:voice:generalista:jest && npm run test:voice:generalista:smoke && jest tests/ci",
     "test:runtime": "jest tests/runtime",
     "test:organizational": "jest tests/organizational",
     "test:stress": "jest tests/stress",
