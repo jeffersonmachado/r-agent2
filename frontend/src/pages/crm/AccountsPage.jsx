@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
+import { useToast } from '../../components/Toast';
 import {
   CrmCard,
   CrmTable,
@@ -9,13 +10,14 @@ import {
   CrmForm,
   CrmInput,
   CrmSelect,
-  CrmAlert,
 } from '../../components/crm/CrmComponents';
 
 export function AccountsPage() {
-  const { accounts, setAccounts, error, setErrorMsg, selectedAccount, setSelectedAccount } = useCrm();
-  const { listAccounts, upsertAccount, loading } = useCrmApi();
+  const { accounts: allAccounts, setAccounts } = useCrm();
+  const { listAccounts, upsertAccount, deleteAccount, loading } = useCrmApi();
+  const { showToast, ToastContainer } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filters, setFilters] = useState({ search: '', status: '' });
   const [formData, setFormData] = useState({
     name: '',
     status: 'active',
@@ -34,10 +36,35 @@ export function AccountsPage() {
   const loadAccounts = async () => {
     try {
       const response = await listAccounts();
-      setAccounts(response.data || []);
+      setAccounts(response.items || []);
     } catch (err) {
-      setErrorMsg(`Erro ao carregar accounts: ${err.message}`);
+      showToast(`Erro ao carregar accounts: ${err.message}`, 'error');
     }
+  };
+
+  const accounts = useMemo(() => {
+    return allAccounts.filter(acc => {
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const nameMatch = acc.name?.toLowerCase().includes(searchLower) || false;
+        const emailMatch = acc.email?.toLowerCase().includes(searchLower) || false;
+        if (!nameMatch && !emailMatch) {
+          return false;
+        }
+      }
+      if (filters.status && acc.status !== filters.status) {
+        return false;
+      }
+      return true;
+    });
+  }, [allAccounts, filters]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '', status: '' });
   };
 
   const handleOpenModal = (account = null) => {
@@ -61,7 +88,7 @@ export function AccountsPage() {
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      setErrorMsg('Nome é obrigatório');
+      showToast('Nome é obrigatório', 'error');
       return;
     }
 
@@ -70,10 +97,20 @@ export function AccountsPage() {
       if (response.account) {
         await loadAccounts();
         setIsModalOpen(false);
-        setErrorMsg('Account salva com sucesso!');
+        showToast('Account salva com sucesso!', 'success');
       }
     } catch (err) {
-      setErrorMsg(`Erro ao salvar: ${err.message}`);
+      showToast(`Erro ao salvar: ${err.message}`, 'error');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteAccount(id);
+      await loadAccounts();
+      showToast('Conta deletada com sucesso!', 'success');
+    } catch (err) {
+      showToast(`Erro ao deletar: ${err.message}`, 'error');
     }
   };
 
@@ -94,27 +131,84 @@ export function AccountsPage() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Contas (Accounts)</h1>
-        <CrmButton onClick={() => handleOpenModal()} variant="primary">
-          + Nova Conta
-        </CrmButton>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>🏢 Contas</h1>
+        </div>
+        <div className="support-controls">
+          <CrmButton onClick={() => handleOpenModal()} variant="primary">
+            ➕ Nova Conta
+          </CrmButton>
+        </div>
       </div>
 
-      {error && (
-        <CrmAlert
-          message={error}
-          variant="error"
-          onDismiss={() => setErrorMsg(null)}
-        />
-      )}
+      {/* Filtros */}
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">
+              Buscar
+            </label>
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              placeholder="Nome ou email..."
+              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">
+              Status
+            </label>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer"
+            >
+              <option value="">Todos</option>
+              <option value="active">Ativo</option>
+              <option value="inactive">Inativo</option>
+              <option value="prospect">Prospect</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <CrmButton
+              onClick={clearFilters}
+              variant="secondary"
+              style={{ width: '100%' }}
+              disabled={!filters.search && !filters.status}
+            >
+              Limpar Filtros
+            </CrmButton>
+          </div>
+        </div>
+
+        {/* Resumo dos filtros aplicados */}
+        {(filters.search || filters.status) && (
+          <div className="mt-4 pt-4 border-t border-border-default">
+            <p className="text-sm text-text-secondary">
+              Mostrando <strong>{accounts.length}</strong> de <strong>{allAccounts.length}</strong> conta(s)
+              {filters.search && ` contendo "${filters.search}"`}
+              {filters.status && ` com status "${filters.status === 'active' ? 'Ativo' : filters.status === 'inactive' ? 'Inativo' : 'Prospect'}"`}
+            </p>
+          </div>
+        )}
+      </div>
 
       <CrmCard>
         <CrmTable
           columns={columns}
           data={accounts}
           onRowClick={handleOpenModal}
+          onDelete={handleDelete}
           isLoading={loading}
         />
       </CrmCard>
@@ -170,6 +264,7 @@ export function AccountsPage() {
           />
         </CrmForm>
       </CrmModal>
+      <ToastContainer />
     </div>
   );
 }

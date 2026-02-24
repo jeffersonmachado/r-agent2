@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from '../../hooks/useRouter';
+import { useToast } from '../../components/Toast';
 import { CrmProvider } from '../../context/crm/CrmContext';
 import { AccountsPage } from './AccountsPage';
 import { ContactsPage } from './ContactsPage';
 import { LeadsPage } from './LeadsPage';
 import { PipelinesPage } from './PipelinesPage';
 import { OpportunitiesPage } from './OpportunitiesPage';
+import { ActivitiesPage } from './ActivitiesPage';
+import { AnalyticsPage } from './AnalyticsPage';
+import { ReportsPage } from './ReportsPage';
+import { CampaignsPage } from './CampaignsPage';
+import { WebhooksPage } from './WebhooksPage';
+import { RbacPage } from './RbacPage';
+import { AuditPage } from './AuditPage';
 
 export function CrmPage() {
   const { currentPath, navigate } = useRouter();
@@ -28,90 +36,99 @@ export function CrmPage() {
     }
   }, [currentPath]);
 
-  const navItems = [
-    { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
-    { id: 'accounts', label: '🏢 Accounts', icon: '🏢' },
-    { id: 'contacts', label: '👤 Contatos', icon: '👤' },
-    { id: 'leads', label: '🎯 Leads', icon: '🎯' },
-    { id: 'pipelines', label: '📈 Pipelines', icon: '📈' },
-    { id: 'opportunities', label: '💼 Opportunities', icon: '💼' },
-  ];
-
-  const handleNavClick = (sectionId) => {
-    setCurrentSection(sectionId);
-    if (sectionId === 'dashboard') {
-      navigate('/crm');
-    } else {
-      navigate(`/crm/${sectionId}`);
-    }
-  };
-
   return (
     <CrmProvider>
-      <div className="flex h-screen bg-bg-secondary">
-        {/* Sidebar */}
-        <div className="w-56 bg-bg-elevated shadow-lg border-r border-border-default">
-          <div className="p-6 border-b border-border-default">
-            <h1 className="text-2xl font-bold text-accent-primary">🚀 CRM</h1>
-            <p className="text-sm text-text-secondary mt-1">Operational Hub</p>
-          </div>
-
-          <nav className="p-4 space-y-2">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${
-                  currentSection === item.id
-                    ? 'bg-accent-primary text-white'
-                    : 'text-text-primary hover:bg-bg-hover'
-                }`}
-              >
-                <span className="mr-2">{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-bg-secondary border-t border-border-default w-56">
-            <button className="w-full px-4 py-2 bg-status-error text-white rounded-lg hover:opacity-80 font-medium">
-              🚪 Sair
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-auto">
-          {currentSection === 'dashboard' && <DashboardSection />}
-          {currentSection === 'accounts' && <AccountsPage />}
-          {currentSection === 'contacts' && <ContactsPage />}
-          {currentSection === 'leads' && <LeadsPage />}
-          {currentSection === 'pipelines' && <PipelinesPage />}
-          {currentSection === 'opportunities' && <OpportunitiesPage />}
-        </div>
-      </div>
+      {currentSection === 'dashboard' && <DashboardSection />}
+      {currentSection === 'accounts' && <AccountsPage />}
+      {currentSection === 'contacts' && <ContactsPage />}
+      {currentSection === 'leads' && <LeadsPage />}
+      {currentSection === 'pipelines' && <PipelinesPage />}
+      {currentSection === 'opportunities' && <OpportunitiesPage />}
+      {currentSection === 'activities' && <ActivitiesPage />}
+      {currentSection === 'analytics' && <AnalyticsPage />}
+      {currentSection === 'reports' && <ReportsPage />}
+      {currentSection === 'campaigns' && <CampaignsPage />}
+      {currentSection === 'webhooks' && <WebhooksPage />}
+      {currentSection === 'rbac' && <RbacPage />}
+      {currentSection === 'audit' && <AuditPage />}
     </CrmProvider>
   );
 }
 
 function DashboardSection() {
+  const { showToast, ToastContainer } = useToast();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+        const response = await fetch('/api/crm/analytics/dashboard', {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.ok) {
+          setDashboardData(data.dashboard);
+        } else {
+          showToast(data.error || 'Erro ao carregar dashboard', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [showToast]);
+
+  if (loading) {
+    return (
+      <div className="support-page">
+        <div className="support-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h1>📊 Dashboard CRM</h1>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
+            <p className="text-text-secondary">Carregando dashboard...</p>
+          </div>
+        </div>
+        <ToastContainer />
+      </div>
+    );
+  }
+
   const stats = [
-    { label: 'Total Accounts', value: '24', icon: '🏢', color: 'blue' },
-    { label: 'Active Contacts', value: '127', icon: '👤', color: 'green' },
-    { label: 'Qualified Leads', value: '18', icon: '🎯', color: 'orange' },
-    { label: 'Pipeline Value', value: 'R$ 2.5M', icon: '💰', color: 'purple' },
+    { label: 'Total de contas', value: dashboardData?.summary?.totalAccounts || 0, icon: '🏢' },
+    { label: 'Contatos ativos', value: dashboardData?.summary?.totalContacts || 0, icon: '👤' },
+    { label: 'Leads qualificados', value: dashboardData?.summary?.totalLeads || 0, icon: '🎯' },
+    { label: 'Valor do pipeline', value: `R$ ${(dashboardData?.opportunity?.totalValue || 0).toFixed(0)}`, icon: '💰' },
   ];
 
   const recentActivities = [
-    { id: 1, action: 'Nova opportunity criada: ABC Corp - R$ 150k', time: '2 min' },
-    { id: 2, action: 'Lead qualificado: João Silva', time: '15 min' },
-    { id: 3, action: 'Conta atualizada: Empresa XYZ', time: '1 hora' },
-    { id: 4, action: 'Atividade registrada em oportunidade', time: '2 horas' },
+    { id: 1, action: 'Total de oportunidades', value: dashboardData?.summary?.totalOpportunities || 0 },
+    { id: 2, action: 'Total de atividades', value: dashboardData?.summary?.totalActivities || 0 },
+    { id: 3, action: 'Taxa de ganho', value: dashboardData?.opportunity?.winRate || '0%' },
   ];
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-text-primary mb-6">Dashboard CRM</h1>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>📊 Dashboard CRM</h1>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -128,52 +145,44 @@ function DashboardSection() {
         ))}
       </div>
 
-      {/* Recent Activities */}
-      <div className="bg-bg-elevated rounded-lg shadow border border-border-default">
+      {/* Dashboard Summary */}
+      <div className="bg-bg-elevated rounded-lg shadow border border-border-default mb-6">
         <div className="p-6 border-b border-border-default">
-          <h2 className="text-xl font-bold text-text-primary">Atividades Recentes</h2>
+          <h2 className="text-xl font-bold text-text-primary">Métricas Principais</h2>
         </div>
-        <div className="divide-y divide-border-default">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
           {recentActivities.map((activity) => (
-            <div key={activity.id} className="p-4 hover:bg-bg-hover">
-              <p className="text-text-primary">{activity.action}</p>
-              <p className="text-xs text-text-tertiary mt-1">{activity.time} atrás</p>
+            <div key={activity.id} className="p-4 bg-bg-hover rounded-lg">
+              <p className="text-text-secondary text-sm">{activity.action}</p>
+              <p className="text-2xl font-bold text-accent-primary mt-2">{activity.value}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+      {/* Additional Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-bg-elevated rounded-lg shadow border border-border-default p-6">
-          <h3 className="font-bold text-text-primary mb-3">Próximos Passos</h3>
+          <h3 className="font-bold text-text-primary mb-3">ℹ️ Informações do Sistema</h3>
           <ul className="space-y-2 text-sm text-text-secondary">
-            <li>✓ Seguir com 5 leads qualificados</li>
-            <li>✓ Validar 3 propostas em aberto</li>
-            <li>✓ Agendar 2 reuniões de fechamento</li>
+            <li>✓ Dashboard carregado com sucesso</li>
+            <li>✓ Dados em tempo real do banco de dados</li>
+            <li>✓ Atualizado pelo endpoint `/api/crm/analytics/dashboard`</li>
+            <li>✓ Navegue pelas abas para gerenciar dados</li>
           </ul>
         </div>
         <div className="bg-bg-elevated rounded-lg shadow border border-border-default p-6">
-          <h3 className="font-bold text-text-primary mb-3">Performance</h3>
-          <div className="space-y-2">
-            <div>
-              <p className="text-xs text-text-secondary">Taxa de Conversão</p>
-              <div className="bg-bg-secondary rounded h-2 mt-1">
-                <div className="bg-status-success h-2 rounded" style={{ width: '68%' }}></div>
-              </div>
-              <p className="text-xs text-text-secondary mt-1">68%</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-bg-elevated rounded-lg shadow border border-border-default p-6">
-          <h3 className="font-bold text-text-primary mb-3">Pipeline Status</h3>
-          <div className="space-y-2 text-sm">
-            <p className="text-text-secondary">Qualificação: <span className="font-bold text-text-primary">12</span></p>
-            <p className="text-text-secondary">Proposta: <span className="font-bold text-text-primary">8</span></p>
-            <p className="text-text-secondary">Fechamento: <span className="font-bold text-text-primary">4</span></p>
-          </div>
+          <h3 className="font-bold text-text-primary mb-3">🎯 Próximas Ações</h3>
+          <ul className="space-y-2 text-sm text-text-secondary">
+            <li>→ Adicionar novas contas em Accounts</li>
+            <li>→ Gerenciar contatos em Contatos</li>
+            <li>→ Qualificar leads em Leads</li>
+            <li>→ Monitorar oportunidades em Opportunities</li>
+          </ul>
         </div>
       </div>
+
+      <ToastContainer />
     </div>
   );
 }

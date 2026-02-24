@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { CrmCard, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea } from '../../components/crm/CrmComponents';
+import { CrmCard, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea, CrmBadge } from '../../components/crm/CrmComponents';
 
 export function CampaignsPage() {
+  const statusLabel = (status) => {
+    const map = {
+      active: 'ativo',
+      scheduled: 'agendado',
+      completed: 'concluído',
+    };
+    return map[status] || status;
+  };
   const [campaigns] = useState([
     { id: 1, name: 'Q1 Outreach', status: 'active', leads: 45, converted: 12 },
     { id: 2, name: 'Product Launch', status: 'scheduled', leads: 0, converted: 0 },
@@ -10,10 +18,14 @@ export function CampaignsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Campanhas</h1>
-        <CrmButton onClick={() => setIsModalOpen(true)}>+ Nova Campanha</CrmButton>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>📢 Campanhas</h1>
+        </div>
+        <div className="support-controls">
+          <CrmButton onClick={() => setIsModalOpen(true)}>+ Nova Campanha</CrmButton>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -21,25 +33,22 @@ export function CampaignsPage() {
           <CrmCard key={campaign.id}>
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-semibold">{campaign.name}</h3>
-              <span className={`px-2 py-1 text-xs rounded ${
-                campaign.status === 'active' ? 'bg-green-200 text-green-800' :
-                campaign.status === 'scheduled' ? 'bg-blue-200 text-blue-800' :
-                'bg-gray-200 text-gray-800'
-              }`}>
-                {campaign.status}
-              </span>
+              <CrmBadge
+                label={statusLabel(campaign.status)}
+                variant={campaign.status === 'active' ? 'success' : campaign.status === 'scheduled' ? 'warning' : 'default'}
+              />
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Leads Gerados:</span>
+                <span className="text-text-secondary">Leads Gerados:</span>
                 <span className="font-semibold">{campaign.leads}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Convertidos:</span>
+                <span className="text-text-secondary">Convertidos:</span>
                 <span className="font-semibold">{campaign.converted}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Taxa:</span>
+                <span className="text-text-secondary">Taxa:</span>
                 <span className="font-semibold">
                   {campaign.leads > 0 ? ((campaign.converted / campaign.leads) * 100).toFixed(1) : 0}%
                 </span>

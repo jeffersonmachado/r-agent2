@@ -108,6 +108,7 @@ services:
       dockerfile: ./frontend/Dockerfile
       args:
         VITE_BASE_PATH: ${VITE_BASE_PATH:-/r-agent2/}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/r-agent2/api}
     image: r-agent2-frontend:latest
     container_name: r-agent2-frontend-prod
     environment:

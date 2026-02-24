@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
+import { useToast } from '../../components/Toast';
 import {
   CrmCard,
   CrmButton,
@@ -10,15 +11,16 @@ import {
   CrmSelect,
   CrmTextarea,
   CrmBadge,
-  CrmAlert,
 } from '../../components/crm/CrmComponents';
 
 export function OpportunitiesPage() {
-  const { opportunities, setOpportunities, pipelines, setPipelines, error, setErrorMsg } = useCrm();
-  const { listOpportunities, listPipelines, upsertOpportunity, moveOpportunityStage, loading } = useCrmApi();
+  const { opportunities, setOpportunities, pipelines, setPipelines } = useCrm();
+  const { showToast, ToastContainer } = useToast();
+  const { listOpportunities, listPipelines, upsertOpportunity, deleteOpportunity, moveOpportunityStage, loading } = useCrmApi();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' ou 'table'
   const [selectedPipeline, setSelectedPipeline] = useState(null);
+  const [filters, setFilters] = useState({ search: '' });
   const [formData, setFormData] = useState({
     title: '',
     pipelineId: '',
@@ -31,6 +33,14 @@ export function OpportunitiesPage() {
     description: '',
   });
 
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '' });
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -41,13 +51,13 @@ export function OpportunitiesPage() {
         listOpportunities(),
         listPipelines(),
       ]);
-      setOpportunities(oppsResponse.data || []);
-      setPipelines(pipelinesResponse.data || []);
-      if (pipelinesResponse.data?.length > 0) {
-        setSelectedPipeline(pipelinesResponse.data[0].id);
+      setOpportunities(oppsResponse.items || []);
+      setPipelines(pipelinesResponse.items || []);
+      if (pipelinesResponse.items?.length > 0) {
+        setSelectedPipeline(pipelinesResponse.items[0].id);
       }
     } catch (err) {
-      setErrorMsg(`Erro ao carregar: ${err.message}`);
+      showToast(`Erro ao carregar: ${err.message}`, 'error');
     }
   };
 
@@ -68,7 +78,7 @@ export function OpportunitiesPage() {
 
   const handleSubmit = async () => {
     if (!formData.title.trim() || !formData.pipelineId) {
-      setErrorMsg('Título e Pipeline são obrigatórios');
+      showToast('Título e Pipeline são obrigatórios', 'error');
       return;
     }
 
@@ -77,10 +87,10 @@ export function OpportunitiesPage() {
       if (response.opportunity) {
         await loadData();
         setIsModalOpen(false);
-        setErrorMsg('Opportunity salva com sucesso!');
+        showToast('Opportunity salva com sucesso!', 'success');
       }
     } catch (err) {
-      setErrorMsg(`Erro ao salvar: ${err.message}`);
+      showToast(`Erro ao salvar: ${err.message}`, 'error');
     }
   };
 
@@ -88,9 +98,19 @@ export function OpportunitiesPage() {
     try {
       await moveOpportunityStage(opportunityId, toStageId);
       await loadData();
-      setErrorMsg('Opportunity movida com sucesso!');
+      showToast('Opportunity movida com sucesso!', 'success');
     } catch (err) {
-      setErrorMsg(`Erro ao mover: ${err.message}`);
+      showToast(`Erro ao mover: ${err.message}`, 'error');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteOpportunity(id);
+      await loadData();
+      showToast('Opportunity deletada com sucesso!', 'success');
+    } catch (err) {
+      showToast(`Erro ao deletar: ${err.message}`, 'error');
     }
   };
 
@@ -106,44 +126,106 @@ export function OpportunitiesPage() {
   }));
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Opportunities</h1>
-          <div className="mt-2 flex gap-2">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`px-3 py-1 rounded ${viewMode === 'kanban' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-            >
-              Kanban
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1 rounded ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-            >
-              Tabela
-            </button>
-          </div>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>💼 Opportunities</h1>
         </div>
-        <CrmButton onClick={handleOpenModal} variant="primary">
-          + Nova Opportunity
-        </CrmButton>
+        <div className="support-controls">
+          <button
+            onClick={() => setViewMode('kanban')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: viewMode === 'kanban' ? 'var(--color-accent-primary)' : 'transparent',
+              color: viewMode === 'kanban' ? 'white' : 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border-default)',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '500',
+              marginRight: '8px'
+            }}
+          >
+            Kanban
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: viewMode === 'table' ? 'var(--color-accent-primary)' : 'transparent',
+              color: viewMode === 'table' ? 'white' : 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border-default)',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '500',
+              marginRight: '12px'
+            }}
+          >
+            Tabela
+          </button>
+          <CrmButton onClick={handleOpenModal} variant="primary">
+            ➕ Nova Opportunity
+          </CrmButton>
+        </div>
       </div>
 
-      {error && (
-        <CrmAlert
-          message={error}
-          variant="error"
-          onDismiss={() => setErrorMsg(null)}
-        />
-      )}
+      {/* Filtros */}
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">
+              Buscar Opportunity
+            </label>
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              placeholder="Título ou descrição..."
+              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
+            />
+          </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Pipeline</label>
+          <div className="flex items-end">
+            <CrmButton
+              onClick={clearFilters}
+              variant="secondary"
+              style={{ width: '100%' }}
+              disabled={!filters.search}
+            >
+              Limpar Filtros
+            </CrmButton>
+          </div>
+        </div>
+
+        {/* Resumo dos filtros aplicados */}
+        {filters.search && (
+          <div className="mt-4 pt-4 border-t border-border-default">
+            <p className="text-sm text-text-secondary">
+              Aplicando filtro: <strong>{filters.search}</strong>
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>Pipeline</label>
         <select
           value={selectedPipeline || ''}
           onChange={(e) => setSelectedPipeline(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg"
+          style={{
+            padding: '8px 12px',
+            borderRadius: '6px',
+            border: '1px solid var(--color-border-default)',
+            backgroundColor: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)',
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}
         >
           {pipelines.map((p) => (
             <option key={p.id} value={p.id}>
@@ -156,15 +238,19 @@ export function OpportunitiesPage() {
       {viewMode === 'kanban' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {kanbanColumns.map((column) => (
-            <div key={column.id} className="bg-gray-100 rounded-lg p-4">
-              <h2 className="font-bold text-gray-700 mb-3">
+            <div key={column.id} className="bg-bg-hover rounded-lg p-4">
+              <h2 className="font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>
                 {column.name} ({column.opportunities.length})
               </h2>
               <div className="space-y-2">
                 {column.opportunities.map((opp) => (
                   <div
                     key={opp.id}
-                    className="bg-white rounded p-3 shadow hover:shadow-md transition-shadow"
+                    className="rounded p-3 shadow transition-shadow"
+                    style={{
+                      backgroundColor: 'var(--color-bg-elevated)',
+                      cursor: 'grab'
+                    }}
                     draggable
                     onDragEnd={(e) => {
                       const nextStage = kanbanColumns[(kanbanColumns.findIndex((c) => c.id === column.id) + 1) % kanbanColumns.length];
@@ -173,14 +259,14 @@ export function OpportunitiesPage() {
                       }
                     }}
                   >
-                    <h3 className="font-semibold text-sm text-gray-900">{opp.title}</h3>
-                    <p className="text-xs text-gray-600 mt-1">{opp.description}</p>
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>{opp.title}</h3>
+                    <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>{opp.description}</p>
                     <div className="flex justify-between items-center mt-2">
                       <CrmBadge
                         label={`${opp.probability}%`}
                         variant={opp.probability > 70 ? 'success' : 'warning'}
                       />
-                      <span className="text-xs font-semibold text-blue-600">
+                      <span className="text-xs font-semibold" style={{ color: 'var(--color-accent-primary)' }}>
                         {opp.value ? `R$ ${opp.value}` : '-'}
                       </span>
                     </div>
@@ -193,21 +279,47 @@ export function OpportunitiesPage() {
       ) : (
         <CrmCard>
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 border-b">
+            <thead style={{ backgroundColor: 'var(--color-bg-hover)', borderBottom: '1px solid var(--color-border-default)' }}>
               <tr>
-                <th className="px-4 py-2 text-left">Título</th>
-                <th className="px-4 py-2 text-left">Stage</th>
-                <th className="px-4 py-2 text-left">Valor</th>
-                <th className="px-4 py-2 text-left">Probabilidade</th>
+                <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Título</th>
+                <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Stage</th>
+                <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Valor</th>
+                <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Probabilidade</th>
+                <th className="px-4 py-2 text-center" style={{ color: 'var(--color-text-primary)' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredOpportunities.map((opp) => (
-                <tr key={opp.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2">{opp.title}</td>
-                  <td className="px-4 py-2">{opp.stage_id}</td>
-                  <td className="px-4 py-2">{opp.value ? `R$ ${opp.value}` : '-'}</td>
-                  <td className="px-4 py-2">{opp.probability}%</td>
+                <tr key={opp.id} className="border-b" style={{ borderColor: 'var(--color-border-default)' }}>
+                  <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.title}</td>
+                  <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.stage_id}</td>
+                  <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.value ? `R$ ${opp.value}` : '-'}</td>
+                  <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.probability}%</td>
+                  <td className="px-4 py-2 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          setFormData({ ...opp, pipelineId: opp.pipeline_id, stageId: opp.stage_id });
+                          setIsModalOpen(true);
+                        }}
+                        className="text-accent-primary hover:text-accent-primary-hover transition-colors"
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Deseja deletar esta opportunity?')) {
+                            handleDelete(opp.id);
+                          }
+                        }}
+                        className="text-status-error hover:opacity-80 transition-opacity"
+                        title="Deletar"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -286,6 +398,7 @@ export function OpportunitiesPage() {
           />
         </CrmForm>
       </CrmModal>
+      <ToastContainer />
     </div>
   );
 }

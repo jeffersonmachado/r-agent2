@@ -55,6 +55,7 @@ export function SupportPage() {
   const [ticketMessages, setTicketMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   // Auto-refresh sempre ativo quando WebSocket não está disponível
   const autoRefresh = true;
@@ -991,10 +992,20 @@ export function SupportPage() {
     }
 
     try {
-      await assignTicket(selectedTicket.id, assigneeName);
+      const assignedTicket = await assignTicket(selectedTicket.id, assigneeName);
       showToastRef.current('Ticket atribuído com sucesso', 'success');
-      setSelectedTicket(null);
-      setAssignedTo('');
+
+      const nextTicket = {
+        ...selectedTicket,
+        ...(assignedTicket && typeof assignedTicket === 'object' ? assignedTicket : {}),
+        status: (assignedTicket && assignedTicket.status) ? assignedTicket.status : 'in_progress',
+        assignedTo: (assignedTicket && assignedTicket.assignedTo) ? assignedTicket.assignedTo : assigneeName,
+      };
+
+      setSelectedTicket(nextTicket);
+      setIsRightPanelCollapsed(true);
+      await loadTicketMessages(nextTicket.id, nextTicket.conversationId);
+
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
       }
@@ -1483,28 +1494,34 @@ export function SupportPage() {
                   </div>
 
                   {/* Handover Bot <-> Humano */}
-                  <div style={{ flexShrink: 0, display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                  <div className="support-ticket-actions">
+                    {selectedTicket.status === 'waiting' ? (
+                      <Button onClick={handleAssign} size="sm" className="support-ticket-action-btn">
+                        Atribuir Ticket
+                      </Button>
+                    ) : null}
+
                     {(selectedTicket.mode || 'bot') === 'bot' ? (
-                      <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-button-full">
+                      <Button onClick={handleTakeOver} disabled={handoverLoading} size="sm" className="support-ticket-action-btn">
                         Assumir atendimento
                       </Button>
                     ) : null}
                     {(selectedTicket.mode || 'bot') === 'human' ? (
                       <>
-                        <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">
+                        <Button onClick={handleReturnToBot} disabled={handoverLoading} size="sm" className="support-ticket-action-btn">
                           Devolver ao bot
                         </Button>
-                        <Button onClick={handlePause} disabled={handoverLoading} className="support-button-full">
+                        <Button onClick={handlePause} disabled={handoverLoading} size="sm" className="support-ticket-action-btn">
                           Pausar
                         </Button>
                       </>
                     ) : null}
                     {(selectedTicket.mode || 'bot') === 'paused' ? (
                       <>
-                        <Button onClick={handleResume} disabled={handoverLoading} className="support-button-full">
+                        <Button onClick={handleResume} disabled={handoverLoading} size="sm" className="support-ticket-action-btn">
                           Retomar (humano)
                         </Button>
-                        <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">
+                        <Button onClick={handleReturnToBot} disabled={handoverLoading} size="sm" className="support-ticket-action-btn">
                           Devolver ao bot
                         </Button>
                       </>
@@ -1514,11 +1531,22 @@ export function SupportPage() {
                     <Button
                       onClick={openDeliveryFailures}
                       disabled={deliveryFailuresLoading}
-                      className="support-button-full"
+                      size="sm"
+                      className="support-ticket-action-btn"
                       style={{ background: 'var(--color-bg-secondary)' }}
                       title="Ver falhas de entrega do outbound"
                     >
                       {deliveryFailuresLoading ? 'Carregando falhas...' : 'Falhas de entrega'}
+                    </Button>
+
+                    <Button
+                      onClick={() => handleClose(selectedTicket.id)}
+                      variant="danger"
+                      size="sm"
+                      className="support-ticket-action-btn"
+                      aria-label="Fechar ticket"
+                    >
+                      Fechar Ticket
                     </Button>
                   </div>
 
@@ -1610,32 +1638,6 @@ export function SupportPage() {
                   )}
 
                   <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    {selectedTicket.status === 'waiting' && (
-                  <div className="support-form-group">
-                    <label htmlFor="assign-ticket-input" className="support-form-label">
-                      Atribuir para:
-                    </label>
-                    <input
-                      id="assign-ticket-input"
-                      type="text"
-                      value={assignedTo || (agent?.username || agent?.id || '')}
-                      onChange={(e) => setAssignedTo(e.target.value)}
-                      placeholder="Nome do atendente"
-                      className="support-form-input"
-                      aria-label="Nome do atendente para atribuir o ticket"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAssign();
-                        }
-                      }}
-                    />
-                    <Button onClick={handleAssign} className="support-button-full">
-                      Atribuir Ticket
-                    </Button>
-                  </div>
-                    )}
-
                     {selectedTicket.status === 'in_progress' && (
                   <div className="support-form-group">
                     <label htmlFor="send-message-textarea" className="support-form-label">
@@ -1718,21 +1720,33 @@ export function SupportPage() {
                       </div>
                     )}
 
-                    <textarea
-                      id="send-message-textarea"
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      placeholder="Digite sua mensagem..."
-                      rows={4}
-                      className="support-form-textarea"
-                      aria-label="Campo para digitar mensagem"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
+                    <div className="support-message-compose">
+                      <textarea
+                        id="send-message-textarea"
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder="Digite sua mensagem..."
+                        rows={4}
+                        className="support-form-textarea support-message-compose-textarea"
+                        aria-label="Campo para digitar mensagem"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={handleSendMessage}
+                        className="support-send-icon-button"
+                        aria-label="Enviar mensagem"
+                        title="Enviar mensagem"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M3.4 20.2L21.3 12 3.4 3.8l.8 6.8 9.4 1.4-9.4 1.4-.8 6.8z" />
+                        </svg>
+                      </Button>
+                    </div>
                     {quickReplySlashOpen && quickReplySlashResults.length > 0 && (
                       <div
                         style={{
@@ -1773,27 +1787,28 @@ export function SupportPage() {
                         ))}
                       </div>
                     )}
-                    <Button onClick={handleSendMessage} className="support-button-full">
-                      Enviar Mensagem
-                    </Button>
                     <small style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                      Pressione Ctrl+Enter (ou Cmd+Enter no Mac) para enviar
+                      Pressione Enter para enviar (Shift+Enter para nova linha)
                     </small>
                   </div>
                     )}
 
-                    <Button
-                      onClick={() => handleClose(selectedTicket.id)}
-                      className="support-button-danger"
-                      aria-label="Fechar ticket"
-                    >
-                      Fechar Ticket
-                    </Button>
                   </div>
                 </div>
 
                 {/* Sidebar (console do operador) */}
-                <div style={{ width: '340px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+                <div className="support-right-panel-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setIsRightPanelCollapsed((prev) => !prev)}
+                    className="support-right-panel-toggle"
+                    aria-label={isRightPanelCollapsed ? 'Expandir painel direito' : 'Recolher painel direito'}
+                    title={isRightPanelCollapsed ? 'Expandir painel direito' : 'Recolher painel direito'}
+                  >
+                    {isRightPanelCollapsed ? '◀' : '▶'}
+                  </button>
+                  {!isRightPanelCollapsed ? (
+                    <div style={{ width: '340px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                       <div style={{ fontWeight: 700 }}>Contato</div>
@@ -1823,6 +1838,32 @@ export function SupportPage() {
                       <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
                     </div>
                   </div>
+
+                  {selectedTicket.status === 'waiting' && (
+                    <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                      <div style={{ fontWeight: 700, marginBottom: '8px' }}>Atribuição</div>
+                      <div className="support-form-group">
+                        <label htmlFor="assign-ticket-input" className="support-form-label">
+                          Atribuir para:
+                        </label>
+                        <input
+                          id="assign-ticket-input"
+                          type="text"
+                          value={assignedTo || (agent?.username || agent?.id || '')}
+                          onChange={(e) => setAssignedTo(e.target.value)}
+                          placeholder="Nome do atendente"
+                          className="support-form-input"
+                          aria-label="Nome do atendente para atribuir o ticket"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAssign();
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ fontWeight: 700, marginBottom: '8px' }}>Entidades</div>
@@ -1995,6 +2036,8 @@ export function SupportPage() {
                       ))}
                     </div>
                   </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </>

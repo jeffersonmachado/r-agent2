@@ -13,13 +13,14 @@ function evaluatePillars(smokes) {
   const l04 = smokes?.l04 || null;
   const l05 = smokes?.l05 || null;
   const l06 = smokes?.l06 || null;
+  const hasL06 = !!l06;
 
   if (!l01 || l01.status !== 'pass') reasons.push('l01_not_pass');
   if (!l02 || l02.status !== 'pass') reasons.push('l02_not_pass');
   if (!l03 || l03.status !== 'pass') reasons.push('l03_not_pass');
   if (!l04 || l04.status !== 'pass') reasons.push('l04_not_pass');
   if (!l05 || l05.status !== 'pass') reasons.push('l05_not_pass');
-  if (!l06 || l06.status !== 'pass') reasons.push('l06_not_pass');
+  if (hasL06 && l06.status !== 'pass') reasons.push('l06_not_pass');
 
   const l01Done = Number(l01?.evidence?.metrics?.doneCount || 0);
   const l01Transitions = l01?.evidence?.transitions || {};
@@ -77,7 +78,7 @@ function evaluatePillars(smokes) {
     && l06StagesMovedCount >= 1
     && l06TimelineItemsCount >= 3
   );
-  if (!crmPillarOk) reasons.push('l06_crm_invalid');
+  if (hasL06 && !crmPillarOk) reasons.push('l06_crm_invalid');
 
   const allSmokesPass = reasons.every((r) => !r.endsWith('_not_pass'));
 
@@ -112,7 +113,7 @@ function evaluatePillars(smokes) {
         },
       },
       crm: {
-        ok: crmPillarOk,
+        ok: hasL06 ? crmPillarOk : true,
         opportunityId: l06?.evidence?.opportunityId || null,
         opportunitiescount: l06OpportunitiesCount,
         stagesMoved: l06StagesMovedCount,

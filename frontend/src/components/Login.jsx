@@ -264,13 +264,34 @@ export function Login() {
         agent: result.agent,
       });
 
-      // Login via formulário: sempre exige confirmação do tenant.
-      console.log('[Login] Abrindo modal de seleção de tenant (sempre)');
-      setIsSuperAdminLogin(isSuperAdmin);
-      setShowTenantModal(true);
-      showToast('Login realizado com sucesso! Selecione o tenant.', 'success');
-
-      setLoading(false);
+      // Lógica de redirecionamento após login:
+      // 1. Super-admin: SEMPRE abre modal de seleção de tenants
+      // 2. Admin normal com tenantId: redireciona direto para /support (sem modal)
+      // 3. Outros: abre modal de seleção
+      if (isSuperAdmin) {
+        // Super-admin: sempre força seleção de tenant
+        console.log('[Login] Super-admin: abrindo modal de seleção de tenant');
+        setIsSuperAdminLogin(true);
+        setShowTenantModal(true);
+        showToast('Selecione o tenant para acessar.', 'success');
+        setLoading(false);
+      } else if (result.agent?.tenantId) {
+        // Admin normal com tenantId já integrado: faz login direto
+        console.log('[Login] Admin normal com tenantId: redirecionando para /support');
+        showToast('Login realizado com sucesso!', 'success');
+        setLoading(false);
+        // Redireciona imediatamente para /support
+        setTimeout(() => {
+          navigate('/support');
+        }, 100);
+      } else {
+        // Admin sem tenantId: precisa selecionar
+        console.log('[Login] Admin sem tenantId: abrindo modal de seleção');
+        setIsSuperAdminLogin(false);
+        setShowTenantModal(true);
+        showToast('Selecione o tenant para acessar.', 'success');
+        setLoading(false);
+      }
     } catch (err) {
       const errorMessage = err.body?.message || err.message || 'Erro ao fazer login';
       setError(errorMessage);

@@ -7,9 +7,10 @@
 
 async function getPipelineMetrics(sequelize, tenantKey, pipelineId) {
   const CrmOpportunity = sequelize.models.CrmOpportunity;
+  const tenantStr = String(tenantKey);
 
   const opportunities = await CrmOpportunity.findAll({
-    where: { tenant_key: tenantKey, pipeline_id: pipelineId },
+    where: { tenant_key: tenantStr, pipeline_id: pipelineId },
     raw: true,
   });
 
@@ -59,20 +60,21 @@ async function getAccountMetrics(sequelize, tenantKey, accountId) {
   const CrmContact = sequelize.models.CrmContact;
   const CrmOpportunity = sequelize.models.CrmOpportunity;
   const CrmActivity = sequelize.models.CrmActivity;
+  const tenantStr = String(tenantKey);
 
   const account = await CrmAccount.findOne({
-    where: { tenant_key: tenantKey, id: accountId },
+    where: { tenant_key: tenantStr, id: accountId },
   });
 
   if (!account) return null;
 
   const [contacts, opportunities, activities] = await Promise.all([
-    CrmContact.count({ where: { tenant_key: tenantKey, account_id: accountId } }),
+    CrmContact.count({ where: { tenant_key: tenantStr, account_id: accountId } }),
     CrmOpportunity.findAll({
-      where: { tenant_key: tenantKey, account_id: accountId },
+      where: { tenant_key: tenantStr, account_id: accountId },
       raw: true,
     }),
-    CrmActivity.count({ where: { tenant_key: tenantKey, subject_id: accountId } }),
+    CrmActivity.count({ where: { tenant_key: tenantStr, subject_id: accountId } }),
   ]);
 
   const totalOpportunityValue = opportunities.reduce((sum, opp) => sum + (opp.value || 0), 0);
@@ -94,8 +96,9 @@ async function getAccountMetrics(sequelize, tenantKey, accountId) {
 
 async function getLeadMetrics(sequelize, tenantKey, filters = {}) {
   const CrmLead = sequelize.models.CrmLead;
+  const tenantStr = String(tenantKey);
 
-  const where = { tenant_key: tenantKey };
+  const where = { tenant_key: tenantStr };
   if (filters.status) where.status = filters.status;
   if (filters.source) where.source = filters.source;
 
@@ -139,13 +142,21 @@ async function getDashboardMetrics(sequelize, tenantKey) {
   const CrmOpportunity = sequelize.models.CrmOpportunity;
   const CrmActivity = sequelize.models.CrmActivity;
 
+  // Normalize tenantKey to string like other functions do
+  const tenantStr = String(tenantKey);
+  
+  // Debug logging
+  console.log('[CRM Analytics] getDashboardMetrics - tenantKey:', tenantKey, 'tenantStr:', tenantStr);
+
   const [accounts, contacts, leads, opportunities, activities] = await Promise.all([
-    CrmAccount.count({ where: { tenant_key: tenantKey } }),
-    CrmContact.count({ where: { tenant_key: tenantKey } }),
-    CrmLead.count({ where: { tenant_key: tenantKey } }),
-    CrmOpportunity.findAll({ where: { tenant_key: tenantKey }, raw: true }),
-    CrmActivity.count({ where: { tenant_key: tenantKey } }),
+    CrmAccount.count({ where: { tenant_key: tenantStr } }),
+    CrmContact.count({ where: { tenant_key: tenantStr } }),
+    CrmLead.count({ where: { tenant_key: tenantStr } }),
+    CrmOpportunity.findAll({ where: { tenant_key: tenantStr }, raw: true }),
+    CrmActivity.count({ where: { tenant_key: tenantStr } }),
   ]);
+
+  console.log('[CRM Analytics] Query results - accounts:', accounts, 'contacts:', contacts, 'leads:', leads, 'opportunities:', opportunities.length);
 
   const totalOpportunityValue = opportunities.reduce((sum, opp) => sum + (opp.value || 0), 0);
   const closedWonValue = opportunities
@@ -172,7 +183,7 @@ async function getDashboardMetrics(sequelize, tenantKey) {
 
   const recentActivities = await CrmActivity.count({
     where: {
-      tenant_key: tenantKey,
+      tenant_key: tenantStr,
       created_at: { [sequelize.Sequelize.Op.gte]: sevenDaysAgo },
     },
   });

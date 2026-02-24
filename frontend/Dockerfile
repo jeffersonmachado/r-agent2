@@ -18,13 +18,18 @@ RUN npm ci && \
 # Copia código fonte do frontend
 COPY frontend/ ./
 
-# Aceita VITE_BASE_PATH como argumento de build
+# Aceita argumentos de build para Vite
 ARG VITE_BASE_PATH=/r-agent2/
+ARG VITE_API_BASE_URL=/r-agent2/api
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Build da aplicação em modo produção
 # Garante que NODE_ENV=production para que as variáveis de ambiente sejam definidas corretamente
-RUN NODE_ENV=production npm run build
+RUN NODE_ENV=production \
+    VITE_BASE_PATH=$VITE_BASE_PATH \
+    VITE_API_BASE_URL=$VITE_API_BASE_URL \
+    npm run build
 
 # Stage 2: Production
 FROM nginx:alpine

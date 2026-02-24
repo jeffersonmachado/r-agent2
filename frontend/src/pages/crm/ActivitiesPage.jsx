@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
-import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea, CrmAlert } from '../../components/crm/CrmComponents';
+import { useToast } from '../../components/Toast';
+import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea } from '../../components/crm/CrmComponents';
 
 export function ActivitiesPage() {
-  const { activities, setActivities, error, setErrorMsg } = useCrm();
+  const { activities, setActivities } = useCrm();
   const { listActivities, upsertActivity, loading } = useCrmApi();
+  const { showToast, ToastContainer } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     opportunityId: '',
@@ -23,9 +25,9 @@ export function ActivitiesPage() {
   const loadActivities = async () => {
     try {
       const response = await listActivities();
-      setActivities(response.data || []);
+      setActivities(response.items || []);
     } catch (err) {
-      setErrorMsg(`Erro ao carregar atividades: ${err.message}`);
+      showToast(`Erro ao carregar atividades: ${err.message}`, 'error');
     }
   };
 
@@ -47,7 +49,7 @@ export function ActivitiesPage() {
 
   const handleSubmit = async () => {
     if (!formData.subject.trim()) {
-      setErrorMsg('Assunto é obrigatório');
+      showToast('Assunto é obrigatório', 'error');
       return;
     }
 
@@ -55,9 +57,9 @@ export function ActivitiesPage() {
       await upsertActivity(formData);
       await loadActivities();
       setIsModalOpen(false);
-      setErrorMsg('Atividade salva com sucesso!');
+      showToast('Atividade salva com sucesso!', 'success');
     } catch (err) {
-      setErrorMsg(`Erro ao salvar: ${err.message}`);
+      showToast(`Erro ao salvar: ${err.message}`, 'error');
     }
   };
 
@@ -73,12 +75,15 @@ export function ActivitiesPage() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Atividades</h1>
-        <CrmButton onClick={() => handleOpenModal()}>+ Nova Atividade</CrmButton>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>📝 Atividades</h1>
+        </div>
+        <div className="support-controls">
+          <CrmButton onClick={() => handleOpenModal()}>+ Nova Atividade</CrmButton>
+        </div>
       </div>
-      {error && <CrmAlert message={error} variant="error" onDismiss={() => setErrorMsg(null)} />}
       <CrmCard>
         <CrmTable columns={columns} data={activities} onRowClick={handleOpenModal} isLoading={loading} />
       </CrmCard>
@@ -118,6 +123,7 @@ export function ActivitiesPage() {
           </div>
         </CrmForm>
       </CrmModal>
+      <ToastContainer />
     </div>
   );
 }

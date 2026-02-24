@@ -60,6 +60,12 @@ export function useCrmApi() {
     [request]
   );
 
+  const deleteAccount = useCallback(
+    (id) =>
+      request(`/api/crm/accounts/${id}`, { method: 'DELETE' }),
+    [request]
+  );
+
   // Contacts
   const listContacts = useCallback(
     (limit = 20, offset = 0) =>
@@ -75,6 +81,12 @@ export function useCrmApi() {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    [request]
+  );
+
+  const deleteContact = useCallback(
+    (id) =>
+      request(`/api/crm/contacts/${id}`, { method: 'DELETE' }),
     [request]
   );
 
@@ -96,6 +108,12 @@ export function useCrmApi() {
     [request]
   );
 
+  const deleteLead = useCallback(
+    (id) =>
+      request(`/api/crm/leads/${id}`, { method: 'DELETE' }),
+    [request]
+  );
+
   // Pipelines
   const listPipelines = useCallback(
     (limit = 20, offset = 0) =>
@@ -111,6 +129,12 @@ export function useCrmApi() {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    [request]
+  );
+
+  const deletePipeline = useCallback(
+    (id) =>
+      request(`/api/crm/pipelines/${id}`, { method: 'DELETE' }),
     [request]
   );
 
@@ -132,6 +156,12 @@ export function useCrmApi() {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    [request]
+  );
+
+  const deleteOpportunity = useCallback(
+    (id) =>
+      request(`/api/crm/opportunities/${id}`, { method: 'DELETE' }),
     [request]
   );
 
@@ -182,18 +212,23 @@ export function useCrmApi() {
     listAccounts,
     getAccount,
     upsertAccount,
+    deleteAccount,
     listContacts,
     getContact,
     upsertContact,
+    deleteContact,
     listLeads,
     getLead,
     upsertLead,
+    deleteLead,
     listPipelines,
     getPipeline,
     upsertPipeline,
+    deletePipeline,
     listOpportunities,
     getOpportunity,
     upsertOpportunity,
+    deleteOpportunity,
     moveOpportunityStage,
     listActivities,
     logActivity,

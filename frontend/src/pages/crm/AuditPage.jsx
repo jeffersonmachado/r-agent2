@@ -11,7 +11,7 @@ export function AuditPage() {
 
   const loadAuditLogs = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
       const response = await fetch('/api/crm/audit', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -19,6 +19,8 @@ export function AuditPage() {
       if (response.ok) {
         const data = await response.json();
         setAuditLogs(data.logs || []);
+      } else {
+        console.error('Error loading audit logs:', response.status);
       }
     } catch (err) {
       console.error('Error loading audit logs:', err);
@@ -36,13 +38,16 @@ export function AuditPage() {
   ];
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Auditoria CRM</h1>
+    <div className="support-page">
+      <div className="support-header">
+        <h1>📋 Auditoria CRM</h1>
+        <p>Logs de ações e compliance.</p>
+      </div>
 
       <CrmCard>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">Log de Atividades</h2>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-text-secondary">
             Total: {auditLogs.length} eventos
           </div>
         </div>
@@ -52,7 +57,7 @@ export function AuditPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <CrmCard>
           <h3 className="font-semibold mb-2">📝 Eventos Rastreados</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
+          <ul className="text-sm text-text-secondary space-y-1">
             <li>• Criação de registros</li>
             <li>• Atualizações</li>
             <li>• Exclusões</li>
@@ -61,7 +66,7 @@ export function AuditPage() {
         </CrmCard>
         <CrmCard>
           <h3 className="font-semibold mb-2">🔍 Compliance</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
+          <ul className="text-sm text-text-secondary space-y-1">
             <li>• Rastro completo de ações</li>
             <li>• Identificação de usuário</li>
             <li>• Timestamp UTC</li>
@@ -70,7 +75,7 @@ export function AuditPage() {
         </CrmCard>
         <CrmCard>
           <h3 className="font-semibold mb-2">💾 Retenção</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
+          <ul className="text-sm text-text-secondary space-y-1">
             <li>• 90 dias em hot storage</li>
             <li>• 2 anos em archive</li>
             <li>• Exportação sob demanda</li>

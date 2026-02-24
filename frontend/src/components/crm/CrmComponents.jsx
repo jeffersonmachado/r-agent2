@@ -143,7 +143,7 @@ export function CrmCard({ children, className = '' }) {
   );
 }
 
-export function CrmTable({ columns, data, onRowClick, isLoading }) {
+export function CrmTable({ columns, data, onRowClick, onDelete, isLoading }) {
   if (isLoading) {
     return <div className="text-center py-4 text-text-primary">Carregando...</div>;
   }
@@ -162,20 +162,54 @@ export function CrmTable({ columns, data, onRowClick, isLoading }) {
                 {col.label}
               </th>
             ))}
+            {onDelete && (
+              <th className="px-4 py-2 text-center font-semibold text-text-primary">Ações</th>
+            )}
           </tr>
         </thead>
         <tbody>
           {data.map((row) => (
             <tr
               key={row.id}
-              onClick={() => onRowClick?.(row)}
-              className="border-b border-border-default hover:bg-bg-hover cursor-pointer"
+              className="border-b border-border-default hover:bg-bg-hover"
             >
               {columns.map((col) => (
-                <td key={col.key} className="px-4 py-2 text-text-primary">
+                <td
+                  key={col.key}
+                  className="px-4 py-2 text-text-primary cursor-pointer hover:text-accent-primary"
+                  onClick={() => onRowClick?.(row)}
+                >
                   {col.render ? col.render(row[col.key], row) : row[col.key]}
                 </td>
               ))}
+              {onDelete && (
+                <td className="px-4 py-2 text-center">
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRowClick?.(row);
+                      }}
+                      className="text-accent-primary hover:text-accent-primary-hover transition-colors"
+                      title="Editar"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Deseja deletar este registro?')) {
+                          onDelete(row.id);
+                        }
+                      }}
+                      className="text-status-error hover:opacity-80 transition-opacity"
+                      title="Deletar"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

@@ -1,10 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
-import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmSelect, CrmBadge, CrmAlert } from '../../components/crm/CrmComponents';
+import { useToast } from '../../components/Toast';
+import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmSelect, CrmBadge } from '../../components/crm/CrmComponents';
 
 export function LeadsPage() {
-  const { leads, setLeads, error, setErrorMsg } = useCrm();
+  const { leads: allLeads, setLeads } = useCrm();
+  const { showToast, ToastContainer } = useToast();
+  const [filters, setFilters] = useState({ search: '', status: '' });
+  const leads = useMemo(() => {
+    return allLeads.filter(l => {
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        if (!l.source?.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+      }
+      if (filters.status && l.status !== filters.status) {
+        return false;
+      }
+      return true;
+    });
+  }, [allLeads, filters]);
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+  const clearFilters = () => {
+    setFilters({ search: '', status: '' });
+  };
   const { listLeads, upsertLead, loading } = useCrmApi();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,9 +46,9 @@ export function LeadsPage() {
   const loadLeads = async () => {
     try {
       const response = await listLeads();
-      setLeads(response.data || []);
+      setLeads(response.items || []);
     } catch (err) {
-      setErrorMsg(`Erro ao carregar: ${err.message}`);
+      showToast(`Erro ao carregar: ${err.message}`, 'error');
     }
   };
 
@@ -43,9 +66,19 @@ export function LeadsPage() {
       await upsertLead(formData);
       await loadLeads();
       setIsModalOpen(false);
-      setErrorMsg('Lead salvo com sucesso!');
+      showToast('Lead salvo com sucesso!', 'success');
     } catch (err) {
-      setErrorMsg(`Erro ao salvar: ${err.message}`);
+      showToast(`Erro ao salvar: ${err.message}`, 'error');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteLead(id);
+      await loadLeads();
+      showToast('Lead deletado com sucesso!', 'success');
+    } catch (err) {
+      showToast(`Erro ao deletar: ${err.message}`, 'error');
     }
   };
 
@@ -57,14 +90,78 @@ export function LeadsPage() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Leads</h1>
-        <CrmButton onClick={() => handleOpenModal()}>+ Novo Lead</CrmButton>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>🎯 Leads</h1>
+        </div>
+        <div className="support-controls">
+          <CrmButton onClick={() => handleOpenModal()}>➕ Novo Lead</CrmButton>
+        </div>
       </div>
-      {error && <CrmAlert message={error} variant="error" onDismiss={() => setErrorMsg(null)} />}
+      {/* Filtros */}
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">
+              Buscar Fonte
+            </label>
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              placeholder="Ex: website, email..."
+              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">
+              Status
+            </label>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer"
+            >
+              <option value="">Todos</option>
+              <option value="new">Novo</option>
+              <option value="contacted">Contactado</option>
+              <option value="qualified">Qualificado</option>
+              <option value="lost">Perdido</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <CrmButton
+              onClick={clearFilters}
+              variant="secondary"
+              style={{ width: '100%' }}
+              disabled={!filters.search && !filters.status}
+            >
+              Limpar Filtros
+            </CrmButton>
+          </div>
+        </div>
+
+        {/* Resumo dos filtros aplicados */}
+        {(filters.search || filters.status) && (
+          <div className="mt-4 pt-4 border-t border-border-default">
+            <p className="text-sm text-text-secondary">
+              Mostrando <strong>{leads.length}</strong> de <strong>{allLeads.length}</strong> lead(s)
+              {filters.search && ` with source "${filters.search}"`}
+              {filters.status && ` com status "${filters.status}"`}
+            </p>
+          </div>
+        )}
+      </div>
+
       <CrmCard>
-        <CrmTable columns={columns} data={leads} onRowClick={handleOpenModal} isLoading={loading} />
+        <CrmTable columns={columns} data={leads} onRowClick={handleOpenModal} onDelete={handleDelete} isLoading={loading} />
       </CrmCard>
       <CrmModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Lead" size="md">
         <CrmForm onSubmit={handleSubmit} isLoading={loading}>
@@ -110,6 +207,7 @@ export function LeadsPage() {
           />
         </CrmForm>
       </CrmModal>
+      <ToastContainer />
     </div>
   );
 }

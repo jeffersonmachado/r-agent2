@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
-import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea, CrmAlert } from '../../components/crm/CrmComponents';
+import { useToast } from '../../components/Toast';
+import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea } from '../../components/crm/CrmComponents';
 
 export function PipelinesPage() {
-  const { pipelines, setPipelines, error, setErrorMsg } = useCrm();
-  const { listPipelines, upsertPipeline, loading } = useCrmApi();
+  const { pipelines: allPipelines, setPipelines } = useCrm();
+  const { showToast, ToastContainer } = useToast();
+  const { listPipelines, upsertPipeline, deletePipeline, loading } = useCrmApi();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filters, setFilters] = useState({ search: '' });
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -14,16 +17,29 @@ export function PipelinesPage() {
     stages: '',
   });
 
-  useEffect(() => {
-    loadPipelines();
-  }, []);
+  const pipelines = useMemo(() => {
+    return allPipelines.filter(p => {
+      if (filters.search && !p.name.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+  }, [allPipelines, filters]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '' });
+  };
 
   const loadPipelines = async () => {
     try {
       const response = await listPipelines();
-      setPipelines(response.data || []);
+      setPipelines(response.items || []);
     } catch (err) {
-      setErrorMsg(`Erro ao carregar: ${err.message}`);
+      showToast(`Erro ao carregar: ${err.message}`, 'error');
     }
   };
 
@@ -54,7 +70,7 @@ export function PipelinesPage() {
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      setErrorMsg('Nome é obrigatório');
+      showToast('Nome é obrigatório', 'error');
       return;
     }
 
@@ -66,13 +82,23 @@ export function PipelinesPage() {
       });
       await loadPipelines();
       setIsModalOpen(false);
-      setErrorMsg('Pipeline salvo com sucesso!');
+      showToast('Pipeline salvo com sucesso!', 'success');
     } catch (err) {
       if (err instanceof SyntaxError) {
-        setErrorMsg('JSON de stages inválido');
+        showToast('JSON de stages inválido', 'error');
       } else {
-        setErrorMsg(`Erro ao salvar: ${err.message}`);
+        showToast(`Erro ao salvar: ${err.message}`, 'error');
       }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deletePipeline(id);
+      await loadPipelines();
+      showToast('Pipeline deletado com sucesso!', 'success');
+    } catch (err) {
+      showToast(`Erro ao deletar: ${err.message}`, 'error');
     }
   };
 
@@ -95,14 +121,60 @@ export function PipelinesPage() {
   );
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Pipelines</h1>
-        <CrmButton onClick={() => handleOpenModal()}>+ Novo Pipeline</CrmButton>
+    <div className="support-page">
+      <div className="support-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1>📈 Pipelines</h1>
+        </div>
+        <div className="support-controls">
+          <CrmButton onClick={() => handleOpenModal()}>➕ Novo Pipeline</CrmButton>
+        </div>
       </div>
-      {error && <CrmAlert message={error} variant="error" onDismiss={() => setErrorMsg(null)} />}
+      {/* Filtros */}
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2 text-sm font-medium text-text-primary">
+              Buscar Pipeline
+            </label>
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              placeholder="Nome do pipeline..."
+              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div className="flex items-end">
+            <CrmButton
+              onClick={clearFilters}
+              variant="secondary"
+              style={{ width: '100%' }}
+              disabled={!filters.search}
+            >
+              Limpar Filtros
+            </CrmButton>
+          </div>
+        </div>
+
+        {/* Resumo dos filtros aplicados */}
+        {filters.search && (
+          <div className="mt-4 pt-4 border-t border-border-default">
+            <p className="text-sm text-text-secondary">
+              Mostrando <strong>{pipelines.length}</strong> de <strong>{allPipelines.length}</strong> pipeline(s)
+              {filters.search && ` contendo "${filters.search}"`}
+            </p>
+          </div>
+        )}
+      </div>
+
       <CrmCard>
-        <CrmTable columns={columns} data={pipelines} onRowClick={handleOpenModal} isLoading={loading} />
+        <CrmTable columns={columns} data={pipelines} onRowClick={handleOpenModal} onDelete={handleDelete} isLoading={loading} />
       </CrmCard>
       <CrmModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Pipeline" size="lg">
         <CrmForm onSubmit={handleSubmit} isLoading={loading}>
@@ -131,10 +203,11 @@ export function PipelinesPage() {
               checked={formData.isDefault}
               onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
             />
-            <span className="text-sm font-medium text-gray-700">Definir como padrão</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Definir como padrão</span>
           </label>
         </CrmForm>
       </CrmModal>
+      <ToastContainer />
     </div>
   );
 }

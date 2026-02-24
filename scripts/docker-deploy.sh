@@ -680,7 +680,7 @@ if [ "$BUILD" = true ]; then
                 # Importante: o Dockerfile do frontend assume contexto na raiz do projeto,
                 # pois faz COPY de 'engine/' e 'frontend/...'. Por isso o contexto precisa ser '.'
                 # (diretório REMOTE_DIR) e não './frontend'.
-                BUILD_CMD="docker build --build-arg VITE_BASE_PATH=/r-agent2/ -t r-agent2-frontend:latest -f frontend/Dockerfile ."
+                BUILD_CMD="docker build --build-arg VITE_BASE_PATH=/r-agent2/ --build-arg VITE_API_BASE_URL=/r-agent2/api -t r-agent2-frontend:latest -f frontend/Dockerfile ."
             elif [ "$BUILD_SERVICE" = "api" ]; then
                 # A API depende de uma base pre-aquecida (Playwright/ffmpeg) para reduzir tempo e evitar falhas.
                 BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base . && docker build -t r-agent2-api:latest -f api/Dockerfile ."

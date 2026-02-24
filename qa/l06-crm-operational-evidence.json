@@ -1,6 +1,32 @@
 {
   "smoke": "L-06",
-  "generatedAt": "2026-02-22T02:01:53.757Z",
-  "ok": false,
-  "error": "This operation was aborted"
+  "generatedAt": "2026-02-24T09:12:32.011Z",
+  "ok": true,
+  "auth": {
+    "mode": "admin",
+    "username": "admin",
+    "passwordHint": "bootstrap_default"
+  },
+  "entities": {
+    "pipelineId": "crmpl-1771924352036-c46a603b87aa",
+    "accountId": "crmacc-1771924352089-e329a9960549",
+    "contactId": "crmctt-1771924352122-91db299f27fd",
+    "leadId": "crmled-1771924352158-bb43474c7c28",
+    "opportunityId": "crmopp-1771924352194-ca0d998ec1e3",
+    "activityId": "crmact-1771924352262-ee1ac5f7c503"
+  },
+  "transitions": {
+    "movedToStage": "proposta"
+  },
+  "checks": {
+    "timelineStatus": 200,
+    "timelineItems": 4,
+    "listAccountsStatus": 200,
+    "listPipelinesStatus": 200,
+    "listOpportunitiesStatus": 200
+  },
+  "opportunityId": "crmopp-1771924352194-ca0d998ec1e3",
+  "opportunitiesCount": 1,
+  "stagesMovedCount": 1,
+  "timelineItemsCount": 4
 }

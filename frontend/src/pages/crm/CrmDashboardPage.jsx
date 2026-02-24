@@ -16,7 +16,7 @@ export function CrmDashboardPage() {
   
   const isCrmSubSection = pathParts.length > 1 && 
     pathParts[0] === 'crm' && 
-    ['accounts', 'contacts', 'leads', 'pipelines', 'opportunities', 'activities', 'dashboards', 'webhooks', 'rbac', 'reports', 'audit'].includes(pathParts[1]);
+    ['accounts', 'contacts', 'leads', 'pipelines', 'opportunities', 'activities', 'analytics', 'reports', 'campaigns', 'webhooks', 'rbac', 'audit'].includes(pathParts[1]);
 
   // Se for uma seção CRM específica, renderiza a página interna
   if (isCrmSubSection) {
@@ -45,8 +45,11 @@ function CrmDashboardContent() {
   useEffect(() => {
     const fetchCrmMetrics = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+        if (!token) {
+          setLoadingMetrics(false);
+          return;
+        }
         
         const response = await fetch('/api/crm/analytics/dashboard', {
           headers: {
@@ -83,12 +86,12 @@ function CrmDashboardContent() {
   const features = [
     { 
       id: 'accounts', 
-      title: 'Contas (Accounts)', 
+      title: 'Contas', 
       description: 'Empresas e organizações no pipeline comercial', 
       icon: '🏢', 
       path: '/crm/accounts', 
       color: 'bg-blue-500', 
-      category: 'Core CRM' 
+      category: 'CRM Base' 
     },
     { 
       id: 'contacts', 
@@ -97,7 +100,7 @@ function CrmDashboardContent() {
       icon: '👤', 
       path: '/crm/contacts', 
       color: 'bg-green-500', 
-      category: 'Core CRM' 
+      category: 'CRM Base' 
     },
     { 
       id: 'leads', 
@@ -137,12 +140,12 @@ function CrmDashboardContent() {
     },
     { 
       id: 'analytics', 
-      title: 'Analytics', 
+      title: 'Análises', 
       description: 'Métricas de performance, conversão e receita', 
       icon: '📊', 
       path: '/crm/analytics', 
       color: 'bg-rose-500', 
-      category: 'Analytics' 
+      category: 'Analises' 
     },
     { 
       id: 'reports', 
@@ -151,7 +154,7 @@ function CrmDashboardContent() {
       icon: '📈', 
       path: '/crm/reports', 
       color: 'bg-amber-500', 
-      category: 'Analytics' 
+      category: 'Analises' 
     },
     { 
       id: 'campaigns', 
@@ -178,7 +181,7 @@ function CrmDashboardContent() {
       icon: '🔐', 
       path: '/crm/rbac', 
       color: 'bg-slate-500', 
-      category: 'Governança' 
+      category: 'Governanca' 
     },
     { 
       id: 'audit', 
@@ -187,7 +190,7 @@ function CrmDashboardContent() {
       icon: '📋', 
       path: '/crm/audit', 
       color: 'bg-gray-500', 
-      category: 'Governança' 
+      category: 'Governanca' 
     },
   ];
 

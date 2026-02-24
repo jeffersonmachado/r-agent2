@@ -3670,6 +3670,83 @@ div:has(svg[data-testid="connection"]) {
   width: 100%;
 }
 
+.support-send-icon-button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 999px;
+  padding: 0;
+  margin-top: 0;
+  margin-left: 0;
+  background: var(--color-accent-primary);
+  color: #fff;
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+}
+
+.support-send-icon-button svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.support-send-icon-button:hover {
+  background: var(--color-accent-hover);
+}
+
+.support-send-icon-button:active {
+  background: var(--color-accent-pressed);
+}
+
+.support-message-compose {
+  position: relative;
+}
+
+.support-message-compose-textarea {
+  padding-right: 52px;
+}
+
+.support-ticket-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.support-ticket-action-btn {
+  margin-top: 0;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.support-right-panel-wrap {
+  display: flex;
+  gap: 8px;
+  min-height: 0;
+}
+
+.support-right-panel-toggle {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.support-right-panel-toggle:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
 /* Modal de Nova Conversa */
 .support-modal-overlay {
   position: fixed;
