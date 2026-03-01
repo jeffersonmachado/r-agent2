@@ -118,6 +118,47 @@ const {
   getTags,
 } = require('./services/quickRepliesService');
 const { generateFlowFromDescription } = require('./services/flowGeneratorService');
+
+// Versão explícita declarada localmente no server.js.
+const SERVER_API_VERSION = '0.1.17';
+
+function resolveApiVersionInfo() {
+  const packagePath = path.resolve(__dirname, '..', 'package.json');
+  let packageJson = null;
+  try {
+    packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+  } catch (_) {}
+
+  const packageVersion = String(packageJson?.version || '0.0.0');
+  const name = String(
+    process.env.API_NAME
+    || packageJson?.name
+    || 'chatbot-engine-api'
+  );
+  const baseVersion = String(SERVER_API_VERSION || '0.0.0');
+  const commit = String(
+    process.env.GIT_COMMIT
+    || process.env.GITHUB_SHA
+    || process.env.VERCEL_GIT_COMMIT_SHA
+    || ''
+  ).trim();
+  const build = String(process.env.BUILD_ID || process.env.CI_PIPELINE_ID || '').trim();
+  const version = commit ? `${baseVersion}+${commit.slice(0, 7)}` : baseVersion;
+  const versionMismatch = packageVersion !== baseVersion;
+
+  return {
+    name,
+    version,
+    baseVersion,
+    serverVersion: baseVersion,
+    packageVersion,
+    versionMismatch,
+    commit: commit || null,
+    build: build || null,
+  };
+}
+
+const API_VERSION_INFO = resolveApiVersionInfo();
 const { validateGenerationContract } = require('./utils/contractValidator');
 const { orchestrateGeneration } = require('./services/generationOrchestrator');
 const { registerGeneration, generateAuditReport } = require('./services/auditService');
@@ -198,6 +239,7 @@ const {
 const channelNormalizationService = require('./services/channelNormalizationService');
 const channelGatewayService = require('./services/channelGatewayService');
 const outboundWorker = require('./services/outboundWorker');
+const scheduleRemindersWorker = require('./workers/scheduleRemindersWorker');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
 const {
   takeOver: takeOverTicket,
@@ -221,6 +263,9 @@ const {
   setTicketCategory,
   getSegmentationStats,
 } = require('./services/segmentationService');
+const contextApi = require('./context');
+const { suggestTagsFromText } = require('./support/tagRules');
+const { extractEntitiesFromText } = require('./entities/entityExtractor');
 const {
   sendTemplateMessage,
   listTemplates,
@@ -242,7 +287,12 @@ const ragService = require('./services/ragService');
 const { buildDiverseRagContext } = require('./services/ragContextBuilder');
 const { parseMultipartFormData } = require('./utils/multipartParser');
 const { handleRegisterPushRoute, handleUnregisterPushRoute } = require('./services/push/pushRouteService');
-const { validatePushStartupConfig } = require('./services/push');
+const { sendToUser, validatePushStartupConfig } = require('./services/push');
+const {
+  sanitizeMediaPathSegment,
+  saveSupportMedia,
+  getSupportMediaByPath,
+} = require('./services/supportMediaService');
 const {
   scrapeUrl,
   scrapeUrls,
@@ -889,6 +939,55 @@ function badRequest(res, msg) {
   sendJson(res, 400, { error: 'bad_request', message: msg });
 }
 
+const SUPPORT_MEDIA_DIR = path.join(__dirname, 'storage', 'support-media');
+
+function isWhitelistedWhatsAppMediaHost(hostname) {
+  const host = String(hostname || '').trim().toLowerCase();
+  if (!host) return false;
+  if (host === 'mmg.whatsapp.net') return true;
+  return host.endsWith('.whatsapp.net');
+}
+
+function inferMediaTypeFromMime(mimeType) {
+  const mime = String(mimeType || '').toLowerCase();
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'audio';
+  return 'document';
+}
+
+function sanitizeContextForDebug(input = {}) {
+  const context = input && typeof input === 'object' ? { ...input } : {};
+  const entities = context.entities && typeof context.entities === 'object' ? { ...context.entities } : {};
+  const sensitiveKeys = ['email', 'phone', 'cpf', 'cnpj', 'document', 'document_id'];
+
+  function maskValue(raw) {
+    if (raw === null || raw === undefined) return raw;
+    const str = String(raw);
+    if (str.length <= 4) return '***';
+    return `${str.slice(0, 2)}***${str.slice(-2)}`;
+  }
+
+  for (const key of Object.keys(entities)) {
+    if (!sensitiveKeys.includes(String(key).toLowerCase())) continue;
+    const entry = entities[key];
+    if (Array.isArray(entry)) {
+      entities[key] = entry.map((item) => ({
+        ...item,
+        value: maskValue(item?.value),
+      }));
+    } else if (entry && typeof entry === 'object') {
+      entities[key] = {
+        ...entry,
+        value: maskValue(entry.value),
+      };
+    }
+  }
+
+  context.entities = entities;
+  return context;
+}
+
 // ---------------------------------------------------------------------------
 // Hardening multi-tenant (STRICT_TENANT_MODE)
 // ---------------------------------------------------------------------------
@@ -1346,7 +1445,14 @@ async function requestHandler(req, res) {
   // Versão / ambiente
   if (method === 'GET' && pathname === '/version') {
     sendJson(res, 200, {
-      name: 'chatbot-engine-api',
+      name: API_VERSION_INFO.name,
+      version: API_VERSION_INFO.version,
+      serverVersion: API_VERSION_INFO.serverVersion,
+      packageVersion: API_VERSION_INFO.packageVersion,
+      versionMismatch: API_VERSION_INFO.versionMismatch,
+      baseVersion: API_VERSION_INFO.baseVersion,
+      commit: API_VERSION_INFO.commit,
+      build: API_VERSION_INFO.build,
       env: config.get('nodeEnv', 'development'),
     });
     return;
@@ -3676,6 +3782,568 @@ async function requestHandler(req, res) {
         httpStatus,
         retryable: httpStatus >= 500,
         details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/schedules - Lista agendamentos generalistas
+  if (method === 'GET' && pathname === '/api/schedules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const service = require('./services/schedulingService');
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const out = await service.listSchedules({
+        tenantId,
+        filters: {
+          contextType: urlObj.searchParams.get('contextType') || null,
+          contextId: urlObj.searchParams.get('contextId') || null,
+          contactId: urlObj.searchParams.get('contactId') || null,
+          conversationId: urlObj.searchParams.get('conversationId') || null,
+          channel: urlObj.searchParams.get('channel') || null,
+          mode: urlObj.searchParams.get('mode') || null,
+          status: urlObj.searchParams.get('status') || null,
+          confirmationStatus: urlObj.searchParams.get('confirmationStatus') || null,
+          ownerId: urlObj.searchParams.get('ownerId') || null,
+          teamId: urlObj.searchParams.get('teamId') || null,
+          purpose: urlObj.searchParams.get('purpose') || null,
+          startFrom: urlObj.searchParams.get('startFrom') || null,
+          startTo: urlObj.searchParams.get('startTo') || null,
+          limit: urlObj.searchParams.get('limit') || '100',
+          offset: urlObj.searchParams.get('offset') || '0',
+        },
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_list_error';
+      const httpStatus = 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao listar agendamentos',
+        httpStatus,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/schedules/availability - Consulta disponibilidade backend-first
+  if (method === 'GET' && pathname === '/api/schedules/availability') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const service = require('./services/schedulingService');
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const out = await service.getAvailability({
+        tenantId,
+        mode: urlObj.searchParams.get('mode') || 'free',
+        startAt: urlObj.searchParams.get('startAt'),
+        endAt: urlObj.searchParams.get('endAt'),
+        ownerId: urlObj.searchParams.get('ownerId') || null,
+        teamId: urlObj.searchParams.get('teamId') || null,
+        timezone: urlObj.searchParams.get('timezone') || 'UTC',
+        excludeScheduleId: urlObj.searchParams.get('excludeScheduleId') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_availability_error';
+      const httpStatus = ['start_at_invalid', 'end_at_invalid', 'invalid_time_range', 'mode_invalid', 'team_or_owner_required_for_team_based'].includes(code)
+        ? 400
+        : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao consultar disponibilidade',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/schedules - Cria agendamento generalista
+  if (method === 'POST' && pathname === '/api/schedules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const service = require('./services/schedulingService');
+      const body = await parseJsonBody(req);
+      const out = await service.createSchedule({
+        tenantId,
+        input: body,
+        actor: {
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          ipAddress: req.socket?.remoteAddress || 'unknown',
+          userAgent: req.headers?.['user-agent'] || 'unknown',
+          actorType: 'user',
+        },
+      });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || 'schedule_create_error';
+      const httpStatus = [
+        'context_type_invalid',
+        'context_id_required',
+        'channel_invalid',
+        'mode_invalid',
+        'origin_invalid',
+        'start_at_invalid',
+        'end_at_invalid',
+        'invalid_time_range',
+        'team_or_owner_required_for_team_based',
+      ].includes(code)
+        ? 400
+        : (code === 'schedule_unavailable' ? 409 : 500);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao criar agendamento',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/schedules/working-hours - Upsert de jornadas (team/owner)
+  if (method === 'POST' && pathname === '/api/schedules/working-hours') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const service = require('./services/schedulingService');
+      const body = await parseJsonBody(req);
+      const out = await service.upsertWorkingHours({
+        tenantId,
+        scopeType: body?.scopeType,
+        scopeId: body?.scopeId,
+        timezone: body?.timezone || 'UTC',
+        items: Array.isArray(body?.items) ? body.items : [],
+        actor: {
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          ipAddress: req.socket?.remoteAddress || 'unknown',
+          userAgent: req.headers?.['user-agent'] || 'unknown',
+          actorType: 'user',
+        },
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_working_hours_error';
+      const httpStatus = ['scope_type_invalid', 'scope_id_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar jornada',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/schedules/working-hours - Lista jornadas (team/owner)
+  if (method === 'GET' && pathname === '/api/schedules/working-hours') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/schedulingService');
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const out = await service.listWorkingHours({
+        tenantId,
+        scopeType: urlObj.searchParams.get('scopeType') || null,
+        scopeId: urlObj.searchParams.get('scopeId') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_working_hours_list_error';
+      const httpStatus = ['scope_type_invalid'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao listar jornada',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/schedules/blocks - Lista bloqueios
+  if (method === 'GET' && pathname === '/api/schedules/blocks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/schedulingService');
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const activeRaw = urlObj.searchParams.get('active');
+      const out = await service.listBlocks({
+        tenantId,
+        scopeType: urlObj.searchParams.get('scopeType') || null,
+        scopeId: urlObj.searchParams.get('scopeId') || null,
+        active: activeRaw === null ? null : activeRaw === 'true',
+        startFrom: urlObj.searchParams.get('startFrom') || null,
+        startTo: urlObj.searchParams.get('startTo') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_blocks_list_error';
+      const httpStatus = ['scope_type_invalid', 'start_from_invalid', 'start_to_invalid'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao listar bloqueios',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/schedules/blocks - Cria bloqueio
+  if (method === 'POST' && pathname === '/api/schedules/blocks') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const service = require('./services/schedulingService');
+      const body = await parseJsonBody(req);
+      const out = await service.createBlock({
+        tenantId,
+        scopeType: body?.scopeType,
+        scopeId: body?.scopeId,
+        startAt: body?.startAt,
+        endAt: body?.endAt,
+        reason: body?.reason || null,
+        metadata: body?.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+        actor: {
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          ipAddress: req.socket?.remoteAddress || 'unknown',
+          userAgent: req.headers?.['user-agent'] || 'unknown',
+          actorType: 'user',
+        },
+      });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || 'schedule_block_create_error';
+      const httpStatus = ['scope_type_invalid', 'scope_id_required', 'start_at_invalid', 'end_at_invalid', 'invalid_time_range'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao criar bloqueio',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/schedules/blocks/:id/deactivate - Desativa bloqueio
+  if (method === 'POST' && pathname.startsWith('/api/schedules/blocks/') && pathname.endsWith('/deactivate')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/schedulingService');
+      const id = decodeURIComponent(pathname.slice('/api/schedules/blocks/'.length, -'/deactivate'.length));
+      const out = await service.deactivateBlock({
+        tenantId,
+        blockId: id,
+        actor: {
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          ipAddress: req.socket?.remoteAddress || 'unknown',
+          userAgent: req.headers?.['user-agent'] || 'unknown',
+          actorType: 'user',
+        },
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_block_deactivate_error';
+      const httpStatus = code === 'schedule_block_not_found' ? 404 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao desativar bloqueio',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/schedules/reminders - Lista lembretes
+  if (method === 'GET' && pathname === '/api/schedules/reminders') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/schedulingService');
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const out = await service.listReminders({
+        tenantId,
+        scheduleId: urlObj.searchParams.get('scheduleId') || null,
+        status: urlObj.searchParams.get('status') || null,
+        limit: urlObj.searchParams.get('limit') || '200',
+        offset: urlObj.searchParams.get('offset') || '0',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_reminders_list_error';
+      const httpStatus = ['reminder_status_invalid'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao listar lembretes',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/schedules/:id/{confirm|decline|reschedule|cancel|in-progress|done|no-show}
+  if (method === 'POST' && pathname.startsWith('/api/schedules/') &&
+      (
+        pathname.endsWith('/confirm')
+        || pathname.endsWith('/decline')
+        || pathname.endsWith('/reschedule')
+        || pathname.endsWith('/cancel')
+        || pathname.endsWith('/in-progress')
+        || pathname.endsWith('/done')
+        || pathname.endsWith('/no-show')
+      )
+  ) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const service = require('./services/schedulingService');
+    const actor = {
+      agentId: req.agent?.id || null,
+      username: req.agent?.username || null,
+      ipAddress: req.socket?.remoteAddress || 'unknown',
+      userAgent: req.headers?.['user-agent'] || 'unknown',
+      actorType: 'user',
+    };
+    const scheduleBase = pathname.slice('/api/schedules/'.length);
+    const scheduleId = decodeURIComponent(scheduleBase.split('/')[0]);
+    const actionPath = scheduleBase.slice(scheduleId.length + 1);
+
+    try {
+      const hasBody = ['reschedule', 'cancel', 'confirm', 'decline'].includes(actionPath);
+      const body = hasBody && hasJsonContentType(req) ? await parseJsonBody(req) : {};
+
+      let out;
+      if (actionPath === 'confirm') {
+        out = await service.confirmSchedule({
+          tenantId,
+          scheduleId,
+          actor,
+          by: body?.by || 'ui',
+          idempotencyKey: body?.idempotencyKey || null,
+        });
+      } else if (actionPath === 'decline') {
+        out = await service.declineSchedule({
+          tenantId,
+          scheduleId,
+          actor,
+          by: body?.by || 'ui',
+          idempotencyKey: body?.idempotencyKey || null,
+        });
+      } else if (actionPath === 'reschedule') {
+        if (!hasJsonContentType(req)) {
+          badRequest(res, 'Content-Type deve ser application/json');
+          return;
+        }
+        out = await service.rescheduleSchedule({
+          tenantId,
+          scheduleId,
+          input: body,
+          actor,
+          idempotencyKey: body?.idempotencyKey || null,
+        });
+      } else if (actionPath === 'cancel') {
+        out = await service.cancelSchedule({
+          tenantId,
+          scheduleId,
+          actor,
+          reason: body?.reason || null,
+          idempotencyKey: body?.idempotencyKey || null,
+        });
+      } else if (actionPath === 'in-progress') {
+        out = await service.markInProgress({
+          tenantId,
+          scheduleId,
+          actor,
+        });
+      } else if (actionPath === 'done') {
+        out = await service.markDone({
+          tenantId,
+          scheduleId,
+          actor,
+        });
+      } else if (actionPath === 'no-show') {
+        out = await service.markNoShow({
+          tenantId,
+          scheduleId,
+          actor,
+        });
+      } else {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'schedule_transition_error';
+      const httpStatus =
+        ['schedule_not_found'].includes(code)
+          ? 404
+          : (
+            [
+              'invalid_schedule_transition',
+              'start_at_invalid',
+              'end_at_invalid',
+              'invalid_time_range',
+              'mode_invalid',
+              'origin_invalid',
+              'channel_invalid',
+              'team_or_owner_required_for_team_based',
+            ].includes(code)
+              ? 400
+              : (code === 'schedule_unavailable' ? 409 : 500)
+          );
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao atualizar agendamento',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
         req,
       }));
     }
@@ -11647,6 +12315,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const accountId = urlObj.searchParams.get('accountId');
       const phone = urlObj.searchParams.get('phone');
+      const query = urlObj.searchParams.get('q');
       const limit = urlObj.searchParams.get('limit');
       const offset = urlObj.searchParams.get('offset');
       const where = {};
@@ -11657,6 +12326,22 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         const digits = String(phone).replace(/\D/g, '');
         if (digits) {
           where.phone = `+${digits}`;
+        }
+      }
+      if (query && String(query).trim()) {
+        const q = String(query).trim();
+        const qDigits = q.replace(/\D/g, '');
+        const { getSequelize } = require('./db/sequelize');
+        const sequelize = getSequelize();
+        const Op = sequelize?.Sequelize?.Op;
+        const isPostgres = sequelize?.getDialect?.() === 'postgres';
+        const likeOp = Op ? (isPostgres ? Op.iLike : Op.like) : null;
+        if (likeOp && Op.or) {
+          where[Op.or] = [
+            { name: { [likeOp]: `%${q}%` } },
+            { email: { [likeOp]: `%${q}%` } },
+            ...(qDigits ? [{ phone: { [likeOp]: `%${qDigits}%` } }] : []),
+          ];
         }
       }
       const crm = require('./services/crm/crmService');
@@ -13082,6 +13767,380 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /debug/context/:tenant/:session - debug de contexto normalizado (sem dados sensíveis)
+  if (method === 'GET' && pathname.startsWith('/debug/context/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const raw = pathname.slice('/debug/context/'.length);
+      const parts = raw.split('/').filter(Boolean).map((p) => decodeURIComponent(p));
+      const tenantId = parts[0] ? String(parts[0]).trim() : '';
+      const sessionId = parts[1] ? String(parts[1]).trim() : '';
+      if (!tenantId || !sessionId) {
+        badRequest(res, 'tenant e session são obrigatórios');
+        return;
+      }
+
+      if (!isSuperAdmin(req.agent) && String(req.tenantId || '').trim() !== tenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenant_mismatch' });
+        return;
+      }
+
+      const context = await contextApi.getNormalizedContext(tenantId, sessionId);
+      sendJson(res, 200, { ok: true, context: sanitizeContextForDebug(context) });
+    } catch (err) {
+      logger.error('[DebugContext] Erro ao buscar contexto:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao buscar contexto' });
+    }
+    return;
+  }
+
+  // POST /debug/entities/extract (ou /api/debug/entities/extract) - debug de extração de entidades
+  if (
+    method === 'POST'
+    && (pathname === '/debug/entities/extract' || pathname === '/api/debug/entities/extract')
+  ) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const text = body && body.text ? String(body.text) : '';
+      if (!text.trim()) {
+        badRequest(res, 'Campo "text" é obrigatório');
+        return;
+      }
+
+      const actorTenantId = String(req.tenantId || '').trim();
+      const requestedTenantId = body && body.tenant_id
+        ? String(body.tenant_id).trim()
+        : actorTenantId;
+
+      if (!requestedTenantId) {
+        badRequest(res, 'tenant_id é obrigatório');
+        return;
+      }
+
+      if (!isSuperAdmin(req.agent) && requestedTenantId !== actorTenantId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenant_mismatch' });
+        return;
+      }
+
+      const channel = body && body.channel ? String(body.channel) : 'webchat';
+      const keywords = body && Array.isArray(body.keywords) ? body.keywords : undefined;
+      const tenantKeywords = body && Array.isArray(body.tenantKeywords) ? body.tenantKeywords : undefined;
+
+      const extraction = extractEntitiesFromText(text, {
+        tenant_id: requestedTenantId,
+        channel,
+        keywords,
+        tenantKeywords,
+      });
+
+      const entityReasonMap = {
+        email: 'regex_email_pattern',
+        phone: 'regex_phone_br_pattern',
+        cpf: 'regex_cpf_pattern',
+        cnpj: 'regex_cnpj_pattern',
+        money: 'regex_money_pattern',
+        date: 'regex_date_pattern',
+        time: 'regex_time_pattern',
+        order_id: 'regex_order_id_pattern',
+        ticket_id: 'regex_ticket_id_pattern',
+        invoice_id: 'regex_invoice_id_pattern',
+        contract_id: 'regex_contract_id_pattern',
+        http_status: 'regex_http_status_pattern',
+        error_code: 'regex_error_code_pattern',
+        product_or_plan: 'keyword_product_or_plan_match',
+      };
+
+      const nodeEnv = String(config.get('nodeEnv', process.env.NODE_ENV || 'development')).toLowerCase();
+      const isDebugMode = nodeEnv === 'development' || nodeEnv === 'debug';
+      const toList = (value) => {
+        if (Array.isArray(value)) return value;
+        if (value === undefined || value === null) return [];
+        return [value];
+      };
+      const entityKeys = Object.keys(extraction.entities || {});
+      const entityCount = entityKeys.reduce((total, key) => {
+        const value = extraction.entities[key];
+        if (Array.isArray(value)) return total + value.length;
+        return value !== undefined && value !== null ? total + 1 : total;
+      }, 0);
+      const entitySummary = entityKeys.map((key) => {
+        const list = toList(extraction.entities[key]);
+        const samples = list
+          .map((item) => (item && typeof item === 'object' ? item.value : item))
+          .filter((item) => item !== undefined && item !== null && item !== '')
+          .slice(0, 3);
+        const sources = Array.from(new Set(
+          list
+            .map((item) => (item && typeof item === 'object' ? item.source : null))
+            .filter(Boolean)
+        ));
+        const confidences = list
+          .map((item) => (item && typeof item === 'object' ? Number(item.confidence) : NaN))
+          .filter((value) => Number.isFinite(value));
+        return {
+          key,
+          count: list.length,
+          samples,
+          sources,
+          maxConfidence: confidences.length ? Math.max(...confidences) : null,
+        };
+      });
+      const entityReasons = entitySummary.map((item) => ({
+        key: item.key,
+        reason: entityReasonMap[item.key] || 'unknown_rule',
+        evidenceSamples: item.samples,
+      }));
+      const warnings = extraction.warnings || [];
+      const extractionOk = entityCount > 0 || warnings.length === 0;
+      const explanation = extractionOk
+        ? (entityCount > 0
+          ? `Extração OK: ${entityCount} entidade(s) detectada(s) em ${entityKeys.length} tipo(s) via regras regex/keywords.`
+          : 'Extração OK: nenhum padrão encontrado no texto, sem avisos de entrada.')
+        : `Extração com aviso: nenhuma entidade detectada e ${warnings.length} aviso(s) de contexto/entrada.`;
+      if (isDebugMode) {
+        logger.debug(
+          `[DebugEntitiesExtract] Extração concluída tenant=${requestedTenantId} channel=${channel} status=${extractionOk ? 'ok' : 'warning'} entityKeys=${entityKeys.length} entityCount=${entityCount} warnings=${warnings.length}`,
+          {
+            tenant_id: requestedTenantId,
+            channel,
+            textLength: text.length,
+            textPreview: text.slice(0, 160),
+            entityKeys,
+            entityCount,
+            entitySummary,
+            entityReasons,
+            warnings,
+            extractionStatus: extractionOk ? 'ok' : 'warning',
+            explanation,
+          }
+        );
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        source: 'debug',
+        tenant_id: requestedTenantId,
+        channel,
+        entities: extraction.entities,
+        entity_meta: extraction.meta,
+        warnings,
+        extractionStatus: extractionOk ? 'ok' : 'warning',
+        explanation,
+        entitySummary,
+        entityReasons,
+      });
+    } catch (err) {
+      logger.error('[DebugEntitiesExtract] Erro ao extrair entidades:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao extrair entidades' });
+    }
+    return;
+  }
+
+  // POST /api/support/tags/suggest - sugestão de tags por heurística
+  if (method === 'POST' && pathname === '/api/support/tags/suggest') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const text = body && body.text ? String(body.text) : '';
+      if (!text.trim()) {
+        badRequest(res, 'Campo "text" é obrigatório');
+        return;
+      }
+
+      const tenantKeywords = body && body.tenantKeywords && typeof body.tenantKeywords === 'object'
+        ? body.tenantKeywords
+        : undefined;
+      const suggestion = suggestTagsFromText(text, { tenantKeywords });
+      const nodeEnv = String(config.get('nodeEnv', process.env.NODE_ENV || 'development')).toLowerCase();
+      const isDebugMode = nodeEnv === 'development' || nodeEnv === 'debug';
+      const tags = suggestion.tags || [];
+      const namespaces = Array.from(new Set(
+        tags
+          .map((tag) => String(tag || '').split(':')[0])
+          .filter(Boolean)
+      ));
+      const intentTag = tags.find((tag) => String(tag).startsWith('intent:')) || null;
+      const severityTag = tags.find((tag) => String(tag).startsWith('severity:')) || null;
+      const requiredNamespaces = ['intent', 'severity'];
+      const missingRequired = requiredNamespaces.filter((ns) => !namespaces.includes(ns));
+      const warnings = suggestion.warnings || [];
+      const tagGenerationOk = tags.length > 0 && missingRequired.length === 0;
+      const reasons = suggestion.reasons && typeof suggestion.reasons === 'object'
+        ? suggestion.reasons
+        : {};
+      const matchedKeywordCount = Object.values((reasons && reasons.matchedKeywords) || {})
+        .reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
+      const explanation = tagGenerationOk
+        ? `Tags geradas com sucesso: intenção ${intentTag || 'indefinida'} e severidade ${severityTag || 'indefinida'}${matchedKeywordCount > 0 ? ` com ${matchedKeywordCount} keyword(s) correspondente(s)` : ''}.`
+        : `Geração com aviso: faltam namespaces obrigatórios (${missingRequired.join(', ') || 'n/a'}) ou não houve tags suficientes.`;
+      if (isDebugMode) {
+        logger.debug(
+          `[SupportTagsSuggest] Sugestão concluída status=${tagGenerationOk ? 'ok' : 'warning'} tags=${tags.length} intent=${intentTag || 'none'} severity=${severityTag || 'none'} missingRequired=${missingRequired.length} warnings=${warnings.length}`,
+          {
+            textLength: text.length,
+            textPreview: text.slice(0, 160),
+            tags,
+            namespaces,
+            intentTag,
+            severityTag,
+            missingRequiredNamespaces: missingRequired,
+            warnings,
+            reasons,
+            source: 'heuristic',
+            generationStatus: tagGenerationOk ? 'ok' : 'warning',
+            explanation,
+          }
+        );
+      }
+      sendJson(res, 200, {
+        ok: true,
+        tags,
+        warnings,
+        source: 'heuristic',
+        generationStatus: tagGenerationOk ? 'ok' : 'warning',
+        namespaces,
+        intentTag,
+        severityTag,
+        missingRequiredNamespaces: missingRequired,
+        reasons,
+        explanation,
+      });
+    } catch (err) {
+      logger.error('[SupportTagsSuggest] Erro ao sugerir tags:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao sugerir tags' });
+    }
+    return;
+  }
+
+  // POST /api/support/sentiment/suggest - sugestão de sentimento (IA + fallback)
+  if (method === 'POST' && pathname === '/api/support/sentiment/suggest') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const text = body && body.text ? String(body.text) : '';
+      if (!text.trim()) {
+        badRequest(res, 'Campo "text" é obrigatório');
+        return;
+      }
+
+      const normalizeSentiment = (value) => {
+        const raw = String(value || '').trim().toLowerCase();
+        if (raw === 'positive' || raw === 'pos' || raw === 'positivo') return 'positive';
+        if (raw === 'negative' || raw === 'neg' || raw === 'negativo') return 'negative';
+        if (raw === 'neutral' || raw === 'neutro' || raw === 'mixed' || raw === 'misto') return 'neutral';
+        return null;
+      };
+
+      const fallbackHeuristic = (input) => {
+        const t = String(input || '').toLowerCase();
+        const negativeWords = ['ruim', 'péssimo', 'pessimo', 'horrível', 'horrivel', 'insatisfeito', 'reclama', 'problema', 'erro', 'cancelar'];
+        const positiveWords = ['ótimo', 'otimo', 'excelente', 'satisfeito', 'obrigado', 'perfeito', 'bom', 'maravilhoso'];
+        const hasNegative = negativeWords.some((w) => t.includes(w));
+        const hasPositive = positiveWords.some((w) => t.includes(w));
+        if (hasNegative && !hasPositive) return { sentiment: 'negative', confidence: 0.7 };
+        if (hasPositive && !hasNegative) return { sentiment: 'positive', confidence: 0.7 };
+        return { sentiment: 'neutral', confidence: 0.5 };
+      };
+
+      let result = null;
+      let source = 'heuristic';
+      let explanation = 'Classificação via heurística local.';
+      try {
+        const { analyzeText } = require('./services/nlpService');
+        const nlp = await analyzeText(text, true);
+        const normalized = normalizeSentiment(nlp && nlp.sentiment);
+        if (normalized) {
+          result = {
+            sentiment: normalized,
+            confidence: Number.isFinite(Number(nlp?.confidence)) ? Number(nlp.confidence) : undefined,
+            intent: nlp && nlp.intent ? String(nlp.intent) : undefined,
+          };
+          source = 'nlp';
+          explanation = 'Classificação via serviço NLP.';
+        }
+      } catch (_) {
+        result = null;
+      }
+
+      if (!result) {
+        result = fallbackHeuristic(text);
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        sentiment: result.sentiment || 'neutral',
+        confidence: Number.isFinite(Number(result.confidence)) ? Number(result.confidence) : null,
+        intent: result.intent || null,
+        source,
+        explanation,
+      });
+    } catch (err) {
+      logger.error('[SupportSentimentSuggest] Erro ao sugerir sentimento:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao sugerir sentimento' });
+    }
+    return;
+  }
+
   // GET /api/support/dashboard - Dashboard de suporte com estatísticas de mensagens
   if (method === 'GET' && pathname === '/api/support/dashboard') {
     const authResult = requireAuth(req);
@@ -13595,6 +14654,22 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     try {
       const service = require('./services/whatsappQrService');
       const out = await service.listConnections(tenantId);
+      // LOG DETALHADO PARA RASTREAMENTO DE TENANT E CONEXÕES
+      if (typeof logger !== 'undefined' && logger.info) {
+        logger.info('[WhatsAppConnections] Listando conexões', {
+          agentId: req.agent && req.agent.id,
+          agentRole: req.agent && req.agent.role,
+          tenantId,
+          connections: (out.connections || []).map(c => ({ id: c.id, tenantId: c.tenantId, name: c.name }))
+        });
+      } else {
+        console.log('[WhatsAppConnections] Listando conexões', {
+          agentId: req.agent && req.agent.id,
+          agentRole: req.agent && req.agent.role,
+          tenantId,
+          connections: (out.connections || []).map(c => ({ id: c.id, tenantId: c.tenantId, name: c.name }))
+        });
+      }
       if (!out.ok) {
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
@@ -14452,6 +15527,138 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /public/support-media/:tenant/:filename - serve anexos do suporte
+  if (method === 'GET' && pathname.startsWith('/public/support-media/')) {
+    try {
+      const parts = pathname.split('/').filter(Boolean);
+      if (parts.length < 4) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      const tenantSegment = sanitizeMediaPathSegment(decodeURIComponent(parts[2] || ''), '');
+      const fileSegment = sanitizeMediaPathSegment(decodeURIComponent(parts.slice(3).join('/')), '');
+      if (!tenantSegment || !fileSegment) {
+        sendJson(res, 404, { error: 'not_found' });
+        return;
+      }
+
+      const dbAsset = await getSupportMediaByPath(tenantSegment, fileSegment);
+      if (dbAsset?.data) {
+        res.writeHead(200, {
+          'Content-Type': dbAsset.mimeType || 'application/octet-stream',
+          'Content-Length': String(dbAsset.data.length),
+          'Cache-Control': 'public, max-age=3600',
+          'Content-Disposition': `inline; filename="${String(dbAsset.originalName || dbAsset.storageName || 'arquivo').replace(/"/g, '_')}"`,
+        });
+        res.end(dbAsset.data);
+        return;
+      }
+
+      // Fallback legado para mídias antigas gravadas no filesystem.
+      const fullPath = path.join(SUPPORT_MEDIA_DIR, tenantSegment, fileSegment);
+      if (!fullPath.startsWith(path.join(SUPPORT_MEDIA_DIR, tenantSegment))) {
+        sendJson(res, 403, { error: 'forbidden' });
+        return;
+      }
+      if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+        sendJson(res, 404, { error: 'file_not_found' });
+        return;
+      }
+
+      const ext = path.extname(fullPath).toLowerCase();
+      const mimeByExt = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mp3': 'audio/mpeg',
+        '.ogg': 'audio/ogg',
+        '.wav': 'audio/wav',
+        '.pdf': 'application/pdf',
+      };
+      const contentType = mimeByExt[ext] || 'application/octet-stream';
+      const data = fs.readFileSync(fullPath);
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Content-Length': String(data.length),
+        'Cache-Control': 'public, max-age=3600',
+        'Content-Disposition': `inline; filename="${path.basename(fullPath).replace(/"/g, '_')}"`,
+      });
+      res.end(data);
+    } catch (err) {
+      logger.error('[SupportMedia] Erro ao servir arquivo público', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao servir arquivo' });
+    }
+    return;
+  }
+
+  // GET /public/whatsapp-media?url=... - proxy para mídia externa WhatsApp (MMG)
+  if (method === 'GET' && pathname === '/public/whatsapp-media') {
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const targetRaw = String(urlObj.searchParams.get('url') || '').trim();
+      if (!targetRaw) {
+        badRequest(res, 'Parâmetro "url" é obrigatório');
+        return;
+      }
+
+      let targetUrl;
+      try {
+        targetUrl = new URL(targetRaw);
+      } catch (_) {
+        badRequest(res, 'URL de mídia inválida');
+        return;
+      }
+
+      if (!/^https?:$/i.test(targetUrl.protocol) || !isWhitelistedWhatsAppMediaHost(targetUrl.hostname)) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Host de mídia não permitido' });
+        return;
+      }
+
+      const accessToken = String(config.get('whatsapp.accessToken', '') || '').trim();
+      if (!accessToken) {
+        sendJson(res, 503, { error: 'service_unavailable', message: 'Token WhatsApp não configurado' });
+        return;
+      }
+
+      const upstream = await fetch(targetUrl.toString(), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!upstream.ok) {
+        sendJson(res, upstream.status >= 400 && upstream.status < 600 ? upstream.status : 502, {
+          error: 'upstream_error',
+          message: `Falha ao obter mídia do WhatsApp (${upstream.status})`,
+        });
+        return;
+      }
+
+      const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+      const contentLength = upstream.headers.get('content-length');
+      const contentDisposition = upstream.headers.get('content-disposition') || 'inline';
+      const data = Buffer.from(await upstream.arrayBuffer());
+
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        ...(contentLength ? { 'Content-Length': contentLength } : {}),
+        'Cache-Control': 'private, max-age=60',
+        'Content-Disposition': contentDisposition,
+      });
+      res.end(data);
+    } catch (err) {
+      logger.error('[WhatsAppMediaProxy] Erro ao servir mídia', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter mídia do WhatsApp' });
+    }
+    return;
+  }
+
   // POST /public/* - endpoint público (API Keys)
   if (method === 'POST' && pathname.startsWith('/public/')) {
     if (!hasJsonContentType(req)) {
@@ -14649,9 +15856,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const tenantId = requireTenant(req, res);
     if (!tenantId) return;
     try {
+      let body = {};
+      if (hasJsonContentType(req)) {
+        body = await parseJsonBody(req);
+      }
       const id = decodeURIComponent(pathname.slice('/automations/'.length, -'/run'.length));
       const service = require('./services/automationService');
-      const out = await service.runAutomation(tenantId, id);
+      const out = await service.runAutomation(tenantId, id, {
+        session_id: body?.session_id || body?.sessionId || null,
+        text: body?.text || body?.message || body?.user_input || null,
+      });
       if (!out.ok) {
         if (out.error === 'not_found') {
           sendJson(res, 404, { error: 'not_found', message: 'Automação não encontrada' });
@@ -16422,6 +17636,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const body = await parseJsonBody(req);
       const phoneNumber = body && body.phoneNumber ? String(body.phoneNumber).trim() : null;
       const queue = body && body.queue ? String(body.queue).trim() : null;
+      const customerName = body && body.customerName ? String(body.customerName).trim() : null;
       const initialMessage = body && body.initialMessage ? String(body.initialMessage).trim() : null;
 
       if (!phoneNumber || phoneNumber === '') {
@@ -16470,17 +17685,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       }
 
       // Cria o ticket
-      const ticket = createTicket({
+      const createdTicket = createTicket({
         tenantId: req.tenantId, // Usa tenantId do agente autenticado
         sessionId,
         queue,
         lastUserMessage: null, // Não há mensagem do usuário ainda
         context: {
+          customerName: customerName || null,
           flowId: null,
           escalationReason: 'manual_agent_initiated',
           escalationAttempt: 0,
           botHistory: [], // Sem histórico do bot, pois foi iniciado por agente
-          variables: {},
+          variables: customerName ? { customerName } : {},
           allowReturnToBot: false, // Conversas iniciadas por agente não retornam ao bot
           safeReturnNode: null,
           metadata: {
@@ -16492,8 +17708,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         },
       });
 
-      // Auto-assign best-effort (se a fila estiver configurada com estratégia automática)
-      autoAssignTicket(ticket.id).catch(() => null);
+      // Conversa iniciada manualmente por agente:
+      // atribui imediatamente ao próprio agente que iniciou.
+      const ticket = assignTicket(createdTicket.id, req.agent.id) || createdTicket;
 
       // Se há mensagem inicial, envia e adiciona ao histórico
       if (initialMessage && initialMessage !== '') {
@@ -18760,6 +19977,68 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   }
 
   // POST /tickets/:id/message - Envia mensagem do atendente para o usuário
+  if (method === 'POST' && pathname === '/tickets/media/upload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const contentType = String(req.headers['content-type'] || '');
+    if (!contentType.toLowerCase().includes('multipart/form-data')) {
+      badRequest(res, 'Content-Type deve ser multipart/form-data');
+      return;
+    }
+
+    try {
+      const { files } = await parseMultipartFormData(req);
+      const file = Array.isArray(files) ? files.find((f) => f.fieldname === 'file') || files[0] : null;
+      if (!file) {
+        badRequest(res, 'Arquivo obrigatório (field "file")');
+        return;
+      }
+      if (Number(file.size || 0) <= 0) {
+        badRequest(res, 'Arquivo vazio');
+        return;
+      }
+      if (Number(file.size || 0) > 25 * 1024 * 1024) {
+        badRequest(res, 'Arquivo excede o limite de 25MB');
+        return;
+      }
+
+      const tenantId = req.tenantId || req.agent?.tenantId || 'system';
+      const safeOriginalName = sanitizeMediaPathSegment(file.filename || 'arquivo', 'arquivo');
+      const saved = await saveSupportMedia({
+        tenantId,
+        fileName: safeOriginalName,
+        mimeType: file.mimeType || 'application/octet-stream',
+        buffer: file.buffer,
+        source: 'ticket_upload',
+        fallbackPrefix: 'upload',
+      });
+
+      sendJson(res, 200, {
+        success: true,
+        url: saved.url,
+        fileName: safeOriginalName,
+        mimeType: file.mimeType || 'application/octet-stream',
+        sizeBytes: Number(file.size || 0),
+        mediaType: inferMediaTypeFromMime(file.mimeType),
+      });
+    } catch (err) {
+      logger.error('[SupportMedia] Erro ao processar upload', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao fazer upload' });
+    }
+    return;
+  }
+
+  // POST /tickets/:id/message - Envia mensagem do atendente para o usuário
   if (method === 'POST' && pathname.startsWith('/tickets/') && pathname.endsWith('/message')) {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
@@ -18782,10 +20061,34 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const message = body && body.message ? String(body.message) : null;
+      const message = body && body.message ? String(body.message) : '';
+      const media = body && body.media && typeof body.media === 'object' ? body.media : null;
+      const mediaTypeRaw = media?.type ? String(media.type).toLowerCase() : '';
+      const mediaType = (mediaTypeRaw === 'image' || mediaTypeRaw === 'video' || mediaTypeRaw === 'audio' || mediaTypeRaw === 'document')
+        ? mediaTypeRaw
+        : null;
+      const mediaUrl = media?.url ? String(media.url) : '';
+      const fileName = media?.fileName ? String(media.fileName) : null;
+      const mimeType = media?.mimeType ? String(media.mimeType) : null;
+      const hasText = message.trim() !== '';
+      const hasMedia = !!(mediaType && mediaUrl);
+      const forwardedProto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
+      const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+      const forwardedPrefixRaw = String(req.headers['x-forwarded-prefix'] || '').split(',')[0].trim();
+      const forwardedPrefix = forwardedPrefixRaw
+        ? `/${forwardedPrefixRaw.replace(/^\/+|\/+$/g, '')}`
+        : '';
+      const normalizedMediaPath = mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`;
+      const mediaUrlForOutbound = hasMedia && mediaUrl.startsWith('/') && forwardedHost
+        ? `${forwardedProto}://${forwardedHost}${forwardedPrefix}${normalizedMediaPath}`
+        : mediaUrl;
 
-      if (!message || message.trim() === '') {
-        badRequest(res, 'Campo "message" é obrigatório e não pode estar vazio');
+      if (!hasText && !hasMedia) {
+        badRequest(res, 'Campo "message" ou "media.url" é obrigatório');
+        return;
+      }
+      if (media && !hasMedia) {
+        badRequest(res, 'Quando "media" for informado, use media.type válido (image|video|audio|document) e media.url');
         return;
       }
 
@@ -18816,7 +20119,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const agentId = req.agent.id;
       try {
         const clientMessageId = `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-        const updatedTicket = addAgentMessage(id, message, agentId, { clientMessageId, deliveryStatus: 'pending' });
+        const timelineText = hasText
+          ? message
+          : `[${mediaType}] ${fileName || mediaUrl}`;
+        const updatedTicket = addAgentMessage(id, timelineText, agentId, {
+          clientMessageId,
+          deliveryStatus: 'pending',
+          messageType: hasMedia ? mediaType : 'text',
+          mediaUrl: hasMedia ? mediaUrl : null,
+          fileName: hasMedia ? fileName : null,
+          mimeType: hasMedia ? mimeType : null,
+        });
         if (!updatedTicket) {
           logger.warn('[Ticket] Não foi possível adicionar mensagem ao histórico (ticket não encontrado)', { ticketId: id });
           sendJson(res, 404, { error: 'ticket_not_found' });
@@ -18835,12 +20148,23 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      // Tenta enviar mensagem via WhatsApp
+      // Tenta enviar mensagem no mesmo canal/provedor de entrada do ticket
       const phoneNumber = ticket.phoneNumber;
       if (!phoneNumber) {
         logger.warn('[Ticket] Número de telefone não encontrado no ticket, mensagem salva apenas no histórico', { ticketId: id });
       } else {
         try {
+          const ticketChannelType = ticket.channelType
+            ? String(ticket.channelType).trim().toLowerCase()
+            : 'whatsapp';
+          const ticketMetadata = (ticket.context && ticket.context.metadata && typeof ticket.context.metadata === 'object')
+            ? ticket.context.metadata
+            : {};
+          const ticketChannelAccountId = ticketMetadata.connectionId
+            || ticketMetadata.channelAccountId
+            || ticketMetadata.channel_account_id
+            || null;
+
           // Recupera clientMessageId da última mensagem do agente para correlacionar com o worker
           const lastAgent = Array.isArray(ticket.messages)
             ? [...ticket.messages].reverse().find((m) => m && m.sender === 'agent' && m.deliveryStatus === 'pending')
@@ -18851,28 +20175,53 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
             updateOutboundMessageMeta(id, { clientMessageId, deliveryStatus: 'pending' });
           }
 
+          const outboundMessage = hasMedia
+            ? {
+              to: phoneNumber,
+              type: mediaType,
+              body: {
+                url: mediaUrlForOutbound,
+                caption: hasText ? message : '',
+                ...(fileName ? { fileName } : {}),
+                ...(mimeType ? { mimeType } : {}),
+              },
+              meta: { ticketId: id, clientMessageId, channelAccountId: ticketChannelAccountId },
+            }
+            : {
+              to: phoneNumber,
+              type: 'text',
+              body: { text: message },
+              meta: { ticketId: id, clientMessageId, channelAccountId: ticketChannelAccountId },
+            };
+
           await outboundQueueService.enqueueOutbound({
-            tenantId: req.tenantId,
-            channelType: 'whatsapp',
+            tenantId: ticket.tenantId || req.tenantId,
+            channelType: ticketChannelType || 'whatsapp',
+            channelAccountId: ticketChannelAccountId,
             conversationId: ticket.conversationId || null,
-            message: { to: phoneNumber, type: 'text', body: { text: message }, meta: { ticketId: id, clientMessageId } },
+            message: outboundMessage,
           });
-          logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', { ticketId: id, phoneNumber });
-        } catch (whatsappError) {
+          logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', {
+            ticketId: id,
+            phoneNumber,
+            channelType: ticketChannelType || 'whatsapp',
+            channelAccountId: ticketChannelAccountId,
+          });
+        } catch (outboundError) {
           // Se o erro for de credenciais inválidas, apenas loga um aviso e continua
           // Isso permite que o sistema funcione em modo de desenvolvimento/teste
-          if (whatsappError.message && whatsappError.message.includes('credentials')) {
-            logger.warn('[Ticket] Mensagem salva no histórico, mas não foi enviada via WhatsApp (credenciais inválidas)', {
+          if (outboundError.message && outboundError.message.includes('credentials')) {
+            logger.warn('[Ticket] Mensagem salva no histórico, mas não foi enviada no canal de saída (credenciais inválidas)', {
               ticketId: id,
               phoneNumber,
-              error: whatsappError.message,
+              error: outboundError.message,
             });
           } else {
-            // Para outros erros do WhatsApp, também loga mas continua
-            logger.warn('[Ticket] Mensagem salva no histórico, mas falha ao enviar via WhatsApp', {
+            // Para outros erros de outbound, também loga mas continua
+            logger.warn('[Ticket] Mensagem salva no histórico, mas falha ao enviar no canal de saída', {
               ticketId: id,
               phoneNumber,
-              error: whatsappError.message,
+              error: outboundError.message,
             });
           }
         }
@@ -18884,6 +20233,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ticketId: id,
         agentId: req.agent.id,
         message,
+        media: hasMedia ? { type: mediaType, url: mediaUrl, fileName, mimeType } : null,
       }).catch((err) => {
         logger.error('[Webhook] Erro ao disparar webhook para ticket.message.sent:', err);
       });
@@ -18893,6 +20243,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ticketId: id,
         agentId: req.agent.id,
         message,
+        media: hasMedia ? { type: mediaType, url: mediaUrl, fileName, mimeType } : null,
         ticket: ticket, // Ticket completo para atualização local sem requisição HTTP
       }, { tenantId, agentId: ticket.assignedTo });
 
@@ -18903,7 +20254,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         action: 'ticket_message',
         resource: 'ticket',
         resourceId: id,
-        details: { messageLength: message.length },
+        details: {
+          messageLength: message.length,
+          hasMedia,
+          mediaType: hasMedia ? mediaType : null,
+          fileName: hasMedia ? fileName : null,
+        },
         ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown',
       });
@@ -18912,6 +20268,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         success: true,
         ticketId: id,
         message,
+        media: hasMedia ? { type: mediaType, url: mediaUrl, fileName, mimeType } : null,
       });
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -21378,7 +22735,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      const replies = searchByContext(context, tenantId, limit);
+      const parsedLimit = Number(limit);
+      const safeLimit = Number.isFinite(parsedLimit)
+        ? Math.min(Math.max(Math.trunc(parsedLimit), 1), 20)
+        : 5;
+      const replies = searchByContext(context, tenantId, safeLimit);
       sendJson(res, 200, { quickReplies: replies });
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -25227,6 +26588,90 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /push/send - envia push para usuário (teste operacional)
+  if (method === 'POST' && pathname === '/push/send') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const currentTenantId = String(req.tenantId || req.agent?.tenantId || '').trim();
+      const currentUserId = String(req.agent?.id || '').trim();
+      const role = String(req.agent?.role || '').trim().toLowerCase();
+
+      const targetUserId = String(body?.userId || currentUserId).trim();
+      const targetTenantId = String(body?.tenantId || currentTenantId).trim();
+      const title = String(body?.notification?.title || '').trim();
+      const messageBody = String(body?.notification?.body || '').trim();
+      const data = (body?.data && typeof body.data === 'object' && !Array.isArray(body.data)) ? body.data : {};
+
+      if (!targetTenantId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId é obrigatório' });
+        return;
+      }
+      if (!targetUserId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'userId é obrigatório' });
+        return;
+      }
+      if (!title || !messageBody) {
+        sendJson(res, 400, { error: 'bad_request', message: 'notification.title e notification.body são obrigatórios' });
+        return;
+      }
+
+      const isAdmin =
+        role === 'admin'
+        || role === 'super-admin'
+        || role === 'superadmin'
+        || role === 'super_admin';
+      const isSelfSend = targetUserId === currentUserId;
+      if (!isAdmin && !isSelfSend) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Sem permissão para enviar push para outro usuário' });
+        return;
+      }
+
+      const result = await sendToUser({
+        tenantId: targetTenantId,
+        userId: targetUserId,
+        notification: {
+          title,
+          body: messageBody,
+        },
+        data,
+        context: {
+          senderUserId: currentUserId || null,
+          reason: 'manual_push_send',
+        },
+      });
+
+      sendJson(res, 200, {
+        ok: result.ok,
+        tenantId: targetTenantId,
+        userId: targetUserId,
+        sent: Number(result.sent || 0),
+        failed: Number(result.failed || 0),
+        invalidRemoved: Number(result.invalidRemoved || 0),
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+        return;
+      }
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: err?.message || 'Falha ao enviar push',
+      });
+    }
+    return;
+  }
+
   // GET /webhooks/events - Lista eventos disponíveis
   if (method === 'GET' && pathname === '/webhooks/events') {
     const authResult = requireAuth(req);
@@ -26905,6 +28350,7 @@ async function startInitialization() {
 process.on('SIGINT', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
+  try { scheduleRemindersWorker.stop(); } catch (_) {}
   try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
   try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
   try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
@@ -26915,6 +28361,7 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
+  try { scheduleRemindersWorker.stop(); } catch (_) {}
   try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
   try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
   try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
@@ -26949,6 +28396,23 @@ if (require.main === module) {
     server.listen(port, () => {
       console.log(`API server listening on http://0.0.0.0:${port}`);
       logger.info(`API server listening on http://0.0.0.0:${port}`);
+      logger.info('[Server] Version info', {
+        name: API_VERSION_INFO.name,
+        version: API_VERSION_INFO.version,
+        serverVersion: API_VERSION_INFO.serverVersion,
+        packageVersion: API_VERSION_INFO.packageVersion,
+        versionMismatch: API_VERSION_INFO.versionMismatch,
+        baseVersion: API_VERSION_INFO.baseVersion,
+        commit: API_VERSION_INFO.commit,
+        build: API_VERSION_INFO.build,
+        env: config.get('nodeEnv', 'development'),
+      });
+      if (API_VERSION_INFO.versionMismatch) {
+        logger.warn('[Server] ALERTA: divergência de versão detectada', {
+          serverVersion: API_VERSION_INFO.serverVersion,
+          packageVersion: API_VERSION_INFO.packageVersion,
+        });
+      }
     });
 
     // Worker outbound (best-effort) - inicia após DB + migrations
@@ -26957,6 +28421,16 @@ if (require.main === module) {
         outboundWorker.start({ intervalMs: 1500, batchSize: 25 });
       } catch (err) {
         logger.warn('[OutboundQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
+      }
+    }
+
+    if (String(process.env.ENABLE_SCHEDULE_REMINDERS_WORKER || 'false').toLowerCase() === 'true') {
+      try {
+        const intervalMs = parseInt(process.env.SCHEDULE_REMINDERS_WORKER_INTERVAL_MS || '60000', 10);
+        const batchSize = parseInt(process.env.SCHEDULE_REMINDERS_WORKER_BATCH_SIZE || '50', 10);
+        scheduleRemindersWorker.start({ intervalMs, batchSize });
+      } catch (err) {
+        logger.warn('[ScheduleRemindersWorker] Falha ao iniciar worker (ignorado)', { error: err.message });
       }
     }
 
@@ -27053,14 +28527,11 @@ if (require.main === module) {
   });
 } else {
   console.log('[Server] ⚠️  Bloco if (require.main === module) NÃO executado - servidor não será iniciado automaticamente');
-  // Mesmo assim, inicia a inicialização em background (exceto em testes)
-  const disableBackgroundInit = process.env.NODE_ENV === 'test' || process.env.DISABLE_BACKGROUND_INIT === 'true';
-  if (!disableBackgroundInit) {
-    startInitialization().catch(err => {
-      console.error('[Server] Erro na inicialização em background:', err);
-      logger.error('[Server] Erro na inicialização em background:', err);
-    });
-  }
+  // Sempre inicia a inicialização em background quando o módulo é importado.
+  startInitialization().catch(err => {
+    console.error('[Server] Erro na inicialização em background:', err);
+    logger.error('[Server] Erro na inicialização em background:', err);
+  });
 }
 
 module.exports = {
