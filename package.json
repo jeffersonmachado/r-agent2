@@ -1,6 +1,6 @@
 {
   "name": "chatbot-engine",
-  "version": "0.1.0",
+  "version": "0.1.27",
   "private": true,
   "description": "Engine de fluxo de chatbot (Node.js) com execução determinística e replay.",
   "scripts": {
@@ -21,17 +21,21 @@
     "test:whatsapp:qr:smoke": "node scripts/test-whatsapp-qr-smoke.js",
     "test:inbox:smoke": "node scripts/test-inbox-runtime-smoke.js",
     "test:funnel:generalista:smoke": "node scripts/test-funnel-generalista-smoke.js",
+    "test:scheduling:whatsapp:first:smoke:backend": "node scripts/test-scheduling-whatsapp-first-smoke.js",
+    "test:scheduling:whatsapp:first:smoke": "SMOKE_ALLOW_DB_WRITE=true node scripts/test-scheduling-whatsapp-first-smoke.js && cd frontend && npx vitest run --config vitest.config.mjs src/__tests__/SupportPage.waqr.test.jsx",
     "test:voice:generalista:smoke": "node scripts/test-voice-generalista-smoke.js",
-    "test:voice:generalista:jest": "jest --runInBand api/services/__tests__/voiceGeneralista.smoke.test.js",
+    "test:voice:generalista:jest": "RATE_LIMIT_REDIS_URL=redis://localhost:6379 jest --runInBand api/services/__tests__/voiceGeneralista.smoke.test.js",
+    "test:whatsapp:media:jest": "RATE_LIMIT_REDIS_URL=redis://localhost:6379 jest --runInBand api/services/__tests__/whatsappInboundService.media.test.js",
     "test:ai-governance": "jest tests/ai-governance",
     "test:contracts": "jest tests/contracts",
     "test:governance": "jest tests/governance",
-    "test:ci": "npm run test:websocket && npm run test:voice:generalista:jest && npm run test:voice:generalista:smoke && jest tests/ci",
+    "test:urls": "RATE_LIMIT_REDIS_URL=redis://localhost:6379 jest tests/frontend/url-usage-regression.test.js --runInBand",
+    "test:ci": "RATE_LIMIT_REDIS_URL=redis://localhost:6379 npm run test:urls && RATE_LIMIT_REDIS_URL=redis://localhost:6379 npm run test:websocket && RATE_LIMIT_REDIS_URL=redis://localhost:6379 npm run test:whatsapp:media:jest && RATE_LIMIT_REDIS_URL=redis://localhost:6379 npm run test:voice:generalista:jest && RATE_LIMIT_REDIS_URL=redis://localhost:6379 npm run test:voice:generalista:smoke && RATE_LIMIT_REDIS_URL=redis://localhost:6379 jest tests/ci",
     "test:runtime": "jest tests/runtime",
     "test:organizational": "jest tests/organizational",
     "test:stress": "jest tests/stress",
     "test:rate-limit": "jest tests/rate-limit",
-    "test:websocket": "jest api/services/__tests__/websocketService.test.js api/services/__tests__/websocketService.pingAuth.test.js --runInBand",
+    "test:websocket": "RATE_LIMIT_REDIS_URL=redis://localhost:6379 jest api/services/__tests__/websocketService.test.js api/services/__tests__/websocketService.pingAuth.test.js --runInBand",
     "test:system": "jest tests/contracts tests/governance tests/ci tests/runtime tests/organizational tests/stress tests/rate-limit",
     "qa": "node qa/qaRunner.js",
     "system:validate": "node tools/system/validate.js",
@@ -167,7 +171,13 @@
     "rag:fix-port": "sudo ./scripts/fix-rag-port.sh",
     "fix": "sudo ./scripts/clean-restart-services.sh",
     "reset:all": "./scripts/reset-all.sh",
-    "reset:all:yes": "./scripts/reset-all.sh $TENANT_ID --yes"
+    "reset:all:yes": "./scripts/reset-all.sh $TENANT_ID --yes",
+    "ssh:build-push-image": "bash scripts/build-and-push-image.sh",
+    "ssh:update-serverjs": "bash scripts/update-serverjs.sh",
+    "version:bump": "bash scripts/bump-version.sh",
+    "git:push": "bash scripts/git-push.sh",
+    "deploy:remote:ssh:build-push": "npm run ssh:build-push-image && npm run deploy:remote:ssh",
+    "deploy:remote:ssh:update-serverjs": "npm run ssh:update-serverjs"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",
@@ -197,6 +207,7 @@
     "tesseract.js": "^5.1.1",
     "umzug": "^3.2.1",
     "uuid": "^9.0.0",
+    "web-push": "^3.6.7",
     "ws": "^8.18.3"
   },
   "devDependencies": {
