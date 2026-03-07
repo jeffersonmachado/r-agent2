@@ -1,38 +1,123 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import logger from '../utils/logger';
+
+const MAX_TOASTS = 5;
+const toastListeners = new Set();
+const toastTimeouts = new Map();
+const toastContainerListeners = new Set();
+let idCounter = 0;
+let globalToasts = [];
+let activeContainerOwner = null;
+
+function notifyToastListeners() {
+  toastListeners.forEach((listener) => listener(globalToasts));
+}
+
+function subscribeToasts(listener) {
+  toastListeners.add(listener);
+  listener(globalToasts);
+  return () => {
+    toastListeners.delete(listener);
+  };
+}
+
+function notifyContainerListeners() {
+  toastContainerListeners.forEach((listener) => listener());
+}
+
+function clearToastTimeout(id) {
+  const timer = toastTimeouts.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    toastTimeouts.delete(id);
+  }
+}
+
+function removeToastGlobal(id) {
+  clearToastTimeout(id);
+  globalToasts = globalToasts.filter((toast) => toast.id !== id);
+  notifyToastListeners();
+}
+
+function clearAllToastsGlobal() {
+  toastTimeouts.forEach((timer) => clearTimeout(timer));
+  toastTimeouts.clear();
+  globalToasts = [];
+  notifyToastListeners();
+}
+
+function showToastGlobal(message, type = 'info', durationOrOptions = 6000, options = undefined) {
+  const id = `toast-${Date.now()}-${++idCounter}`;
+  const mergedOptions = (
+    durationOrOptions !== null
+    && typeof durationOrOptions === 'object'
+    && !Array.isArray(durationOrOptions)
+  )
+    ? durationOrOptions
+    : { ...(options || {}), duration: durationOrOptions };
+
+  const hasDuration = Object.prototype.hasOwnProperty.call(mergedOptions, 'duration');
+  const duration = hasDuration ? mergedOptions.duration : 6000;
+  const normalizedDuration = Number(duration);
+  const newToast = {
+    id,
+    message,
+    type,
+    duration,
+    actions: Array.isArray(mergedOptions.actions) ? mergedOptions.actions : [],
+    dismissLabel: typeof mergedOptions.dismissLabel === 'string' ? mergedOptions.dismissLabel : 'Fechar',
+    onDismiss: typeof mergedOptions.onDismiss === 'function' ? mergedOptions.onDismiss : null,
+  };
+
+  const isDuplicate = globalToasts.some(
+    (toast) => toast.message === message && toast.type === type
+  );
+
+  if (!isDuplicate) {
+    globalToasts = [...globalToasts, newToast];
+    if (globalToasts.length > MAX_TOASTS) {
+      const removed = globalToasts.slice(0, globalToasts.length - MAX_TOASTS);
+      removed.forEach((toast) => clearToastTimeout(toast.id));
+      globalToasts = globalToasts.slice(-MAX_TOASTS);
+    }
+    notifyToastListeners();
+  }
+
+  const logLevel = {
+    success: 'info',
+    error: 'error',
+    warning: 'warn',
+    info: 'info',
+  }[type] || 'info';
+
+  logger[logLevel](`Toast [${type}]: ${message}`, { type, duration });
+
+  if (normalizedDuration > 0 && !isDuplicate) {
+    const timer = setTimeout(() => {
+      removeToastGlobal(id);
+    }, normalizedDuration);
+    toastTimeouts.set(id, timer);
+  }
+
+  return id;
+}
 
 /**
  * Sistema de Toast/Notification usando Tailwind CSS puro
  * Baseado nos padrões do Tailwind UI
  */
-export function Toast({ message, type = 'info', duration = 6000, onClose }) {
-  const [isVisible, setIsVisible] = useState(true);
-  const [isExiting, setIsExiting] = useState(false);
-
-  useEffect(() => {
-    if (duration > 0) {
-      const timer = setTimeout(() => {
-        setIsExiting(true);
-        setTimeout(() => {
-          setIsVisible(false);
-          onClose?.();
-        }, 300); // Aguarda animação de saída
-      }, duration);
-
-      return () => clearTimeout(timer);
-    }
-  }, [duration, onClose]);
-
-  const handleClose = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      setIsVisible(false);
-      onClose?.();
-    }, 300);
-  };
-
-  if (!isVisible) return null;
+export function Toast({
+  message,
+  type = 'info',
+  duration = 6000,
+  onClose,
+  actions = [],
+  dismissLabel = 'Fechar',
+  onAction,
+}) {
+  const handleClose = () => onClose?.();
+  const hasActions = Array.isArray(actions) && actions.length > 0;
 
   // Estilos Tailwind CSS puros para cada tipo
   const typeStyles = {
@@ -96,8 +181,7 @@ export function Toast({ message, type = 'info', duration = 6000, onClose }) {
       className={`
         pointer-events-auto w-full min-w-[320px] max-w-md overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5
         ${styles.bg} ${styles.border}
-        transform transition-all duration-300 ease-in-out
-        ${isExiting ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
+        transform transition-all duration-300 ease-in-out translate-x-0 opacity-100
       `}
       role="alert"
     >
@@ -127,15 +211,37 @@ export function Toast({ message, type = 'info', duration = 6000, onClose }) {
                 type === 'warning' ? 'focus:ring-yellow-500' :
                 'focus:ring-blue-500'
               }`}
-              aria-label="Fechar"
+              aria-label={dismissLabel}
             >
-              <span className="sr-only">Fechar</span>
+              <span className="sr-only">{dismissLabel}</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
             </button>
           </div>
         </div>
+        {hasActions ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {actions.map((action, index) => {
+              const isPrimary = action?.variant === 'primary';
+              return (
+                <button
+                  key={`${action?.label || 'action'}-${index}`}
+                  type="button"
+                  onClick={() => onAction?.(action)}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isPrimary
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
+                      : 'bg-white/70 text-slate-800 hover:bg-white focus:ring-slate-400 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600'
+                  }`}
+                  aria-label={action?.label || `Ação ${index + 1}`}
+                >
+                  {action?.label || `Ação ${index + 1}`}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -145,60 +251,49 @@ export function Toast({ message, type = 'info', duration = 6000, onClose }) {
  * Hook para gerenciar toasts
  */
 export function useToast() {
-  const [toasts, setToasts] = useState([]);
-  const idCounterRef = useRef(0); // ✅ Contador para garantir IDs únicos
-  const MAX_TOASTS = 5; // Número máximo de toasts simultâneos
+  const [toasts, setToasts] = useState(globalToasts);
+  const ownerTokenRef = useRef(Symbol('toast-container-owner'));
 
-  const showToast = (message, type = 'info', duration = 6000) => {
-    // Evita toasts duplicados com a mesma mensagem e tipo
-    setToasts((prev) => {
-      const isDuplicate = prev.some(
-        (toast) => toast.message === message && toast.type === type
-      );
-      
-      if (isDuplicate) {
-        // Se já existe um toast igual, não adiciona outro
-        return prev;
-      }
-      
-      // ✅ Combina timestamp com contador para garantir unicidade
-      const id = `toast-${Date.now()}-${++idCounterRef.current}`;
-      const newToast = { id, message, type, duration };
-      
-      // Limita o número de toasts - remove os mais antigos se necessário
-      const updatedToasts = [...prev, newToast];
-      if (updatedToasts.length > MAX_TOASTS) {
-        // Remove os toasts mais antigos (primeiros da lista)
-        return updatedToasts.slice(-MAX_TOASTS);
-      }
-      
-      return updatedToasts;
-    });
-    
-    // ✅ Registra a mensagem do toast no sistema de logs
-    const logLevel = {
-      success: 'info',
-      error: 'error',
-      warning: 'warn',
-      info: 'info',
-    }[type] || 'info';
-    
-    logger[logLevel](`Toast [${type}]: ${message}`, { type, duration });
-    
-    // Retorna um ID aproximado (pode não ser exato devido ao estado assíncrono)
-    return `toast-${Date.now()}-${idCounterRef.current}`;
-  };
+  useEffect(() => subscribeToasts(setToasts), []);
 
-  const removeToast = (id) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-  
-  // Função para limpar todos os toasts
-  const clearAllToasts = () => {
-    setToasts([]);
-  };
+  const removeToast = useCallback((id) => {
+    removeToastGlobal(id);
+  }, []);
+
+  const showToast = useCallback((message, type = 'info', durationOrOptions = 6000, options = undefined) => {
+    return showToastGlobal(message, type, durationOrOptions, options);
+  }, []);
+
+  const clearAllToasts = useCallback(() => {
+    clearAllToastsGlobal();
+  }, []);
 
   const ToastContainer = () => {
+    const [isOwner, setIsOwner] = useState(false);
+
+    useEffect(() => {
+      const ensureOwnership = () => {
+        if (activeContainerOwner === null) {
+          activeContainerOwner = ownerTokenRef.current;
+          notifyContainerListeners();
+        }
+        setIsOwner(activeContainerOwner === ownerTokenRef.current);
+      };
+
+      toastContainerListeners.add(ensureOwnership);
+      ensureOwnership();
+
+      return () => {
+        toastContainerListeners.delete(ensureOwnership);
+        if (activeContainerOwner === ownerTokenRef.current) {
+          activeContainerOwner = null;
+          notifyContainerListeners();
+        }
+      };
+    }, []);
+
+    if (!isOwner) return null;
+
     const content = (
       <div
         className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
@@ -213,7 +308,31 @@ export function useToast() {
               message={toast.message}
               type={toast.type}
               duration={toast.duration}
-              onClose={() => removeToast(toast.id)}
+              actions={toast.actions}
+              dismissLabel={toast.dismissLabel}
+              onClose={() => {
+                removeToast(toast.id);
+                try {
+                  toast.onDismiss?.();
+                } catch (error) {
+                  logger.error('Erro ao executar onDismiss do toast', {
+                    error,
+                    toastId: toast.id,
+                  });
+                }
+              }}
+              onAction={(action) => {
+                removeToast(toast.id);
+                try {
+                  action?.onClick?.();
+                } catch (error) {
+                  logger.error('Erro ao executar ação do toast', {
+                    error,
+                    toastId: toast.id,
+                    actionLabel: action?.label,
+                  });
+                }
+              }}
             />
           </div>
         ))}
@@ -231,4 +350,3 @@ export function useToast() {
 
   return { showToast, removeToast, clearAllToasts, ToastContainer };
 }
-

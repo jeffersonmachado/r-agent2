@@ -15,11 +15,9 @@ function safeString(v) {
 
 function formatDateTime(iso) {
   if (!iso) return '-';
-  try {
-    return new Date(iso).toLocaleString('pt-BR');
-  } catch {
-    return safeString(iso);
-  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return safeString(iso);
+  return date.toLocaleString('pt-BR');
 }
 
 function makeExecutionId() {

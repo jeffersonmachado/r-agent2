@@ -18,6 +18,7 @@ logs/
 .env
 .env.local
 .env.*.local
+.token.env
 
 # Backups locais de config (não versionar)
 .config-backup*.json

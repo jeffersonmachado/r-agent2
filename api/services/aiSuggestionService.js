@@ -18,7 +18,7 @@ const logger = require('../utils/logger');
  * @param {Array} context.conversationHistory - Histórico da conversa
  * @param {string} [context.ticketId] - ID do ticket (opcional)
  * @param {string} [context.tenantId] - ID do tenant
- * @returns {Promise<{suggestions: string[], quickReplies: Array}>}
+ * @returns {Promise<{suggestions: string[], quickReplies: Array, confidence: number|null}>}
  */
 async function suggestResponse(context) {
   const { userMessage, conversationHistory = [], ticketId, tenantId } = context;
@@ -27,6 +27,7 @@ async function suggestResponse(context) {
     return {
       suggestions: [],
       quickReplies: [],
+      confidence: null,
     };
   }
 
@@ -85,6 +86,7 @@ Apenas as 3 sugestões, uma por linha:`;
         title: qr.title,
         message: qr.message,
       })),
+      confidence: Number.isFinite(Number(aiResponse?.confidence)) ? Number(aiResponse.confidence) : null,
     };
   } catch (error) {
     logger.error('[AISuggestion] Erro ao gerar sugestões:', error);
@@ -97,6 +99,7 @@ Apenas as 3 sugestões, uma por linha:`;
         title: qr.title,
         message: qr.message,
       })),
+      confidence: null,
     };
   }
 }
@@ -108,7 +111,7 @@ Apenas as 3 sugestões, uma por linha:`;
  * @param {string} [options.tone] - Tom desejado: 'professional', 'friendly', 'formal', 'casual'
  * @param {string} [options.context] - Contexto adicional
  * @param {string} [options.tenantId] - ID do tenant
- * @returns {Promise<{original: string, rewritten: string, improvements: string[]}>}
+ * @returns {Promise<{original: string, rewritten: string, improvements: string[], confidence: number|null}>}
  */
 async function rewriteMessage(options) {
   const { message, tone = 'professional', context = '', tenantId } = options;
@@ -118,6 +121,7 @@ async function rewriteMessage(options) {
       original: message || '',
       rewritten: message || '',
       improvements: [],
+      confidence: null,
     };
   }
 
@@ -172,6 +176,7 @@ Apenas a mensagem reescrita, sem explicações adicionais:`;
       original: message,
       rewritten,
       improvements,
+      confidence: Number.isFinite(Number(aiResponse?.confidence)) ? Number(aiResponse.confidence) : null,
     };
   } catch (error) {
     logger.error('[AISuggestion] Erro ao reescrever mensagem:', error);
@@ -179,6 +184,7 @@ Apenas a mensagem reescrita, sem explicações adicionais:`;
       original: message,
       rewritten: message,
       improvements: [],
+      confidence: null,
     };
   }
 }
@@ -228,4 +234,3 @@ module.exports = {
   rewriteMessage,
   rewriteMultipleMessages,
 };
-

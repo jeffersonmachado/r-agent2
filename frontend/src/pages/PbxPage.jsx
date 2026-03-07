@@ -81,6 +81,13 @@ function formatRemainingMs(ms) {
   return `${days}d`;
 }
 
+function formatDateTime(value, fallback = '—') {
+  if (value === null || value === undefined || value === '') return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString();
+}
+
 const LEGACY_CONTEXT_OPTIONS = [
   ['senha', 'Senha'],
   ['ramal', 'Ramal'],
@@ -2235,7 +2242,7 @@ export function PbxPage() {
           )}
           {lastUpdatedAt ? (
             <p style={{ marginTop: 8, marginBottom: 0, fontSize: 12, opacity: 0.8 }}>
-              Atualizado em: {new Date(lastUpdatedAt).toLocaleString()}
+              Atualizado em: {formatDateTime(lastUpdatedAt)}
             </p>
           ) : null}
         </div>
@@ -2602,10 +2609,10 @@ export function PbxPage() {
                   {tokenGovernance.remainingLabel ? ` (${tokenGovernance.remainingLabel})` : ''}
                 </span>
                 {provisioningTokenExpiresAt ? (
-                  <span style={{ opacity: 0.75 }}>expira: {new Date(provisioningTokenExpiresAt).toLocaleString()}</span>
+                  <span style={{ opacity: 0.75 }}>expira: {formatDateTime(provisioningTokenExpiresAt)}</span>
                 ) : null}
                 {provisioningTokenUpdatedAt ? (
-                  <span style={{ opacity: 0.7 }}>atualizado: {new Date(provisioningTokenUpdatedAt).toLocaleString()}</span>
+                  <span style={{ opacity: 0.7 }}>atualizado: {formatDateTime(provisioningTokenUpdatedAt)}</span>
                 ) : null}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
@@ -3251,7 +3258,7 @@ export function PbxPage() {
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v.status || '—'}</td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v?.summary?.dialplan?.signature || '—'}</td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {v.createdAt ? new Date(v.createdAt).toLocaleString() : '—'}
+                        {formatDateTime(v.createdAt)}
                       </td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <button
@@ -3788,7 +3795,7 @@ export function PbxPage() {
                   {filteredScheduled.map((it) => (
                     <tr key={it.id}>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {it.scheduledAt ? new Date(it.scheduledAt).toLocaleString() : '—'}
+                        {formatDateTime(it.scheduledAt)}
                       </td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         {it.ddd ? `${it.ddd} ` : ''}{it.phone}
@@ -3905,7 +3912,7 @@ export function PbxPage() {
                   {filteredC2c.map((it) => (
                     <tr key={it.id}>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {it.createdAt ? new Date(it.createdAt).toLocaleString() : '—'}
+                        {formatDateTime(it.createdAt)}
                       </td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.target}</td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.ddd ? `${it.ddd} ` : ''}{it.phone}</td>
@@ -4055,8 +4062,8 @@ export function PbxPage() {
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 <div><strong>Token:</strong> {provisioningToken || '—'}</div>
                 <div><strong>Status:</strong> {tokenGovernance.message}{tokenGovernance.remainingLabel ? ` (${tokenGovernance.remainingLabel})` : ''}</div>
-                <div><strong>Expira em:</strong> {provisioningTokenExpiresAt ? new Date(provisioningTokenExpiresAt).toLocaleString() : 'sem expiração'}</div>
-                <div><strong>Atualizado em:</strong> {provisioningTokenUpdatedAt ? new Date(provisioningTokenUpdatedAt).toLocaleString() : '—'}</div>
+                <div><strong>Expira em:</strong> {formatDateTime(provisioningTokenExpiresAt, 'sem expiração')}</div>
+                <div><strong>Atualizado em:</strong> {formatDateTime(provisioningTokenUpdatedAt)}</div>
               </div>
             </div>
 
@@ -4093,7 +4100,7 @@ export function PbxPage() {
                   {filteredAuditItems.map((item, idx) => (
                     <tr key={`${item.timestamp || 't'}-${item.action || 'a'}-${idx}`}>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {item.timestamp ? new Date(item.timestamp).toLocaleString() : '—'}
+                        {formatDateTime(item.timestamp)}
                       </td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.action || '—'}</td>
                       <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.username || item.agentId || '—'}</td>

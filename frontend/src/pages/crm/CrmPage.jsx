@@ -14,6 +14,8 @@ import { CampaignsPage } from './CampaignsPage';
 import { WebhooksPage } from './WebhooksPage';
 import { RbacPage } from './RbacPage';
 import { AuditPage } from './AuditPage';
+import { buildApiUrl } from '../../api/client';
+import { getAuthHeaders } from '../../api/auth';
 
 export function CrmPage() {
   const { currentPath, navigate } = useRouter();
@@ -63,11 +65,8 @@ function DashboardSection() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
-        const response = await fetch('/api/crm/analytics/dashboard', {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : undefined,
-          },
+        const response = await fetch(buildApiUrl('/api/crm/analytics/dashboard'), {
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {

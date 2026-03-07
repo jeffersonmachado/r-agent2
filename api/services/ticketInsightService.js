@@ -63,10 +63,12 @@ async function generateAiSummary({ ticketId, tenantId, agent }) {
   const messages = getTicketMessages(ticketId) || [];
 
   let text = '';
+  let confidence = null;
   try {
     const prompt = buildPrompt(ticket, messages);
     const result = await generateAiResponse(prompt, tenantId, { purpose: 'ticket_ai_summary', ticketId });
     text = result?.text || '';
+    confidence = Number.isFinite(Number(result?.confidence)) ? Number(result.confidence) : null;
   } catch (err) {
     const allowHeuristicFallback = config.get('fallbacks.ticketInsightHeuristic', false) === true;
     if (!allowHeuristicFallback) {
@@ -75,10 +77,12 @@ async function generateAiSummary({ ticketId, tenantId, agent }) {
     }
     logger.warn('[TicketInsight] Falha ao gerar resumo por IA (fallback heurístico)', { error: err.message });
     text = heuristicSummary(ticket, messages);
+    confidence = 0;
   }
 
   const summary = {
     text,
+    confidence,
     generatedAt: new Date().toISOString(),
     generatedBy: agent ? { id: agent.id, username: agent.username } : null,
   };
@@ -103,4 +107,3 @@ module.exports = {
   generateAiSummary,
   getAiSummary,
 };
-

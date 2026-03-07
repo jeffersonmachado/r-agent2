@@ -15,7 +15,7 @@ const crypto = require('crypto');
 const os = require('os');
 const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
-const { OutboundQueueItem, ChannelConversation, ChannelMessage } = require('../db/models');
+const { OutboundQueueItem, ChannelConversation, ChannelMessage, OperationalSchedule } = require('../db/models');
 const { TicketEvent } = require('../db/models');
 const { sendTextMessage } = require('./whatsappService');
 const { sendInstagramMessage, sendInstagramMedia } = require('./instagramService');
@@ -59,6 +59,54 @@ function getProcessingTimeoutMs() {
   const n = raw ? Number(raw) : NaN;
   if (Number.isFinite(n) && n > 1000) return n;
   return 2 * 60 * 1000; // 2 min (default)
+}
+
+async function syncScheduleOutboundCorrelationBestEffort({ row, externalMessageId }) {
+  try {
+    const scheduleId = row?.message?.meta?.scheduleId ? String(row.message.meta.scheduleId) : null;
+    if (!scheduleId || !externalMessageId) return;
+    const Model = typeof OperationalSchedule === 'function' ? OperationalSchedule() : OperationalSchedule;
+    if (!Model) return;
+
+    const schedule = await Model.findOne({
+      where: {
+        tenant_key: String(row.tenant_key),
+        id: scheduleId,
+      },
+    });
+    if (!schedule) return;
+
+    const json = schedule.toJSON ? schedule.toJSON() : schedule;
+    const currentMeta = json?.metadata && typeof json.metadata === 'object' ? json.metadata : {};
+    const currentLinks = Array.isArray(currentMeta.schedule_message_links) ? currentMeta.schedule_message_links : [];
+    const exists = currentLinks.some((link) => (
+      link
+      && typeof link === 'object'
+      && String(link.channel_message_id || link.channelMessageId || '') === String(externalMessageId)
+    ));
+    const nextLinks = exists
+      ? currentLinks
+      : [
+        ...currentLinks,
+        {
+          type: 'outbound_sent',
+          channel_message_id: String(externalMessageId),
+          outbound_queue_item_id: String(row.id),
+          createdAt: new Date().toISOString(),
+        },
+      ].slice(-20);
+
+    await schedule.update({
+      metadata: {
+        ...currentMeta,
+        confirmation_message_id: currentMeta.confirmation_message_id || String(externalMessageId),
+        schedule_message_links: nextLinks,
+      },
+      updated_at: new Date(),
+    });
+  } catch (_) {
+    // best-effort
+  }
 }
 
 async function enqueueOutbound({ tenantId, channelType, channelAccountId = null, conversationId = null, message }) {
@@ -386,6 +434,8 @@ function computeReasonCode(err) {
   const msg = String(err.message || '').toLowerCase();
   if (msg.includes('outside_window_24h')) return 'outside_window_24h';
   if (msg.includes('outside the allowed window') || msg.includes('24 hour') || msg.includes('requires a template')) return 'outside_window_24h';
+  if (msg.includes('qr não encontrada') || msg.includes('qr nao encontrada')) return 'qr_not_connected';
+  if (msg.includes('whatsapp qr') && (msg.includes('não iniciada') || msg.includes('nao iniciada') || msg.includes('não conectada') || msg.includes('nao conectada'))) return 'qr_not_connected';
   if (msg.includes('credentials')) return 'credentials_invalid';
   if (msg.includes('timeout')) return 'timeout';
   if (msg.includes('conflict') || msg.includes('outro dispositivo') || msg.includes('outro lugar')) return 'wa_conflict';
@@ -573,6 +623,11 @@ async function processDue({ limit = 25 } = {}) {
         updated_at: new Date(),
       });
 
+      await syncScheduleOutboundCorrelationBestEffort({
+        row,
+        externalMessageId: result.externalMessageId || row.external_message_id || null,
+      });
+
       // Best-effort: sincroniza status "sent" no histórico do ticket (UI atual)
       try {
         const meta = row.message?.meta || {};
@@ -730,4 +785,3 @@ module.exports = {
   // exporta para testes
   _computeBackoffSeconds: computeBackoffSeconds,
 };
-

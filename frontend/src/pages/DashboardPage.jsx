@@ -3,6 +3,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useAuth } from '../context/authContext';
 import { NavigationLink } from '../components/NavigationLink';
 import { getGeneralMetrics, getQueueMetrics } from '../api/analytics';
+import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
 
 /**
@@ -17,6 +18,8 @@ export function DashboardPage() {
   const [queuesKpis, setQueuesKpis] = useState(null);
   const [kpiError, setKpiError] = useState(null);
   const [kpiLoading, setKpiLoading] = useState(true);
+  const [versionInfo, setVersionInfo] = useState(null);
+  const [versionError, setVersionError] = useState(null);
 
   function formatSecondsCompact(sec) {
     if (sec === null || sec === undefined) return '-';
@@ -59,6 +62,26 @@ export function DashboardPage() {
         setQueuesKpis(null);
       } finally {
         if (mounted) setKpiLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await fetchJson('/version', { silent: true });
+        if (!mounted) return;
+        setVersionInfo(data || null);
+        setVersionError(null);
+      } catch (err) {
+        logger.error('[Dashboard] Erro ao carregar versão', err);
+        if (!mounted) return;
+        setVersionInfo(null);
+        setVersionError('Não foi possível carregar versão');
       }
     })();
     return () => {
@@ -502,7 +525,7 @@ export function DashboardPage() {
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Bem-vindo, {agent?.name || agent?.username}! Acesse todas as funcionalidades do sistema.
         </p>
-      
+
         <div className="support-controls">
           <button
             type="button"
@@ -511,6 +534,31 @@ export function DashboardPage() {
           >
             🔄 Atualizar
           </button>
+        </div>
+
+        <div
+          className="bg-bg-elevated rounded-lg border border-border-default p-3 mt-3"
+          style={{ fontSize: '0.85rem' }}
+        >
+          {versionError ? (
+            <span className="text-status-error">{versionError}</span>
+          ) : (
+            <>
+              <span className="text-text-secondary">Versões: </span>
+              <span className="text-text-primary">
+                server.js <strong>{versionInfo?.serverVersion || '-'}</strong>
+              </span>
+              <span className="text-text-secondary"> · package.json </span>
+              <span className="text-text-primary">
+                <strong>{versionInfo?.packageVersion || '-'}</strong>
+              </span>
+              {versionInfo?.versionMismatch ? (
+                <span className="text-status-warning" style={{ marginLeft: 10 }}>
+                  ⚠ divergentes
+                </span>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
 

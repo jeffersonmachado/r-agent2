@@ -3,6 +3,8 @@ function safeString(v) {
   return String(v);
 }
 
+const KNOWLEDGE_NOT_FOUND_RESPONSE = 'Não encontrei essa informação na base de conhecimento do r-agent2.';
+
 const STOPWORDS_PT = new Set([
   'a','o','os','as','um','uma','uns','umas',
   'de','do','da','dos','das','no','na','nos','nas',
@@ -182,7 +184,7 @@ function buildInitialFlowFromIntents(intents, options = {}) {
       type: 'message',
       // Inclui pergunta/exemplos/resposta no nó (conforme requisito) sem criar tipo novo
       config: {
-        text: it.answer || 'Essa informação não está disponível no material fornecido.',
+        text: it.answer || KNOWLEDGE_NOT_FOUND_RESPONSE,
         intentId: it.id,
         question: it.question,
         examples: it.examples,
@@ -227,4 +229,3 @@ function buildInitialFlowFromIntents(intents, options = {}) {
 module.exports = {
   buildInitialFlowFromIntents,
 };
-

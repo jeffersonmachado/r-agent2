@@ -4,6 +4,39 @@ import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
 import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmSelect, CrmBadge } from '../../components/crm/CrmComponents';
 
+const LEAD_STATUS_LABELS = {
+  new: 'Novo',
+  contacted: 'Contactado',
+  qualified: 'Qualificado',
+  lost: 'Perdido',
+};
+
+function normalizeLeadStatus(lead) {
+  const status = lead?.status || lead?.lead_status || '';
+  return String(status).trim().toLowerCase();
+}
+
+function getLeadCreatedAt(lead) {
+  return lead?.created_at || lead?.createdAt || lead?.createdAtMs || null;
+}
+
+function formatLeadDate(value) {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+
+  const date =
+    typeof value === 'number'
+      ? new Date(value < 1000000000000 ? value * 1000 : value)
+      : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+
+  return date.toLocaleDateString('pt-BR');
+}
+
 export function LeadsPage() {
   const { leads: allLeads, setLeads } = useCrm();
   const { showToast, ToastContainer } = useToast();
@@ -16,7 +49,8 @@ export function LeadsPage() {
           return false;
         }
       }
-      if (filters.status && l.status !== filters.status) {
+      const normalizedStatus = normalizeLeadStatus(l);
+      if (filters.status && normalizedStatus !== filters.status) {
         return false;
       }
       return true;
@@ -28,7 +62,7 @@ export function LeadsPage() {
   const clearFilters = () => {
     setFilters({ search: '', status: '' });
   };
-  const { listLeads, upsertLead, loading } = useCrmApi();
+  const { listLeads, upsertLead, deleteLead, loading } = useCrmApi();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     accountId: '',
@@ -84,9 +118,16 @@ export function LeadsPage() {
 
   const columns = [
     { key: 'source', label: 'Fonte' },
-    { key: 'status', label: 'Status', render: (s) => <CrmBadge label={s} /> },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (_, row) => {
+        const normalized = normalizeLeadStatus(row);
+        return <CrmBadge label={LEAD_STATUS_LABELS[normalized] || (normalized || '—')} />;
+      },
+    },
     { key: 'score', label: 'Score', render: (score) => <span className="font-bold">{score}</span> },
-    { key: 'created_at', label: 'Criado em', render: (d) => new Date(d).toLocaleDateString('pt-BR') },
+    { key: 'created_at', label: 'Criado em', render: (_, row) => formatLeadDate(getLeadCreatedAt(row)) },
   ];
 
   return (

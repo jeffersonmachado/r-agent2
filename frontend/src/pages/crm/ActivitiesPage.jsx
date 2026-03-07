@@ -4,6 +4,27 @@ import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
 import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea } from '../../components/crm/CrmComponents';
 
+function getActivityDate(activity) {
+  return activity?.created_at || activity?.createdAt || activity?.occurredAt || null;
+}
+
+function formatDateTime(value) {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+
+  const date =
+    typeof value === 'number'
+      ? new Date(value < 1000000000000 ? value * 1000 : value)
+      : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+
+  return date.toLocaleString('pt-BR');
+}
+
 export function ActivitiesPage() {
   const { activities, setActivities } = useCrm();
   const { listActivities, upsertActivity, loading } = useCrmApi();
@@ -71,7 +92,7 @@ export function ActivitiesPage() {
     { key: 'subject', label: 'Assunto' },
     { key: 'duration', label: 'Duração', render: (d) => d ? `${d} min` : '-' },
     { key: 'outcome', label: 'Resultado' },
-    { key: 'created_at', label: 'Data', render: (d) => new Date(d).toLocaleString('pt-BR') },
+    { key: 'created_at', label: 'Data', render: (_, row) => formatDateTime(getActivityDate(row)) },
   ];
 
   return (

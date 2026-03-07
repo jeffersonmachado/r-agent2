@@ -143,6 +143,27 @@ export const menuItems = [
     roles: ['admin', 'owner', 'manager', 'supervisor'],
   },
   {
+    label: 'Agenda Autônoma',
+    path: '/autonomous-scheduling',
+    icon: '🤖',
+    permission: { resource: 'autonomous_scheduling', action: 'read' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'Beauty',
+    path: '/beauty-dashboard',
+    icon: '💅',
+    permission: { resource: 'autonomous_scheduling', action: 'read' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
+    label: 'Fitness',
+    path: '/fitness-dashboard',
+    icon: '🏋️',
+    permission: { resource: 'autonomous_scheduling', action: 'read' },
+    roles: ['admin', 'owner', 'manager', 'supervisor'],
+  },
+  {
     label: 'SLA',
     path: '/sla-policies',
     icon: '⏱️',
@@ -255,6 +276,12 @@ export const menuItems = [
     roles: ['super_admin'],
   },
   {
+    label: 'OCC',
+    path: '/operational-control-center',
+    icon: '🛰️',
+    roles: ['super_admin'],
+  },
+  {
     label: 'Dev Dashboard',
     path: '/dev',
     icon: '🛠️',
@@ -327,6 +354,10 @@ const ROLE_PERMISSIONS = {
     { resource: 'crm', action: 'create' },
     { resource: 'crm', action: 'update' },
     { resource: 'crm', action: 'delete' },
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
   admin: [
     { resource: 'tickets', action: 'read' },
@@ -351,6 +382,10 @@ const ROLE_PERMISSIONS = {
     { resource: 'crm', action: 'create' },
     { resource: 'crm', action: 'update' },
     { resource: 'crm', action: 'delete' },
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
   manager: [
     { resource: 'tickets', action: 'read' },
@@ -369,6 +404,10 @@ const ROLE_PERMISSIONS = {
     { resource: 'crm', action: 'read' },
     { resource: 'crm', action: 'create' },
     { resource: 'crm', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
   operator: [
     { resource: 'tickets', action: 'read' },
@@ -377,6 +416,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'departments', action: 'read' },
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
+    { resource: 'autonomous_scheduling', action: 'read' },
   ],
   auditor: [
     { resource: 'tickets', action: 'read' },
@@ -384,6 +424,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'audit', action: 'read' },
     { resource: 'audit', action: 'export' },
     { resource: 'reports', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'read' },
   ],
   readonly: [
     { resource: 'tickets', action: 'read' },
@@ -392,6 +433,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'departments', action: 'read' },
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
+    { resource: 'autonomous_scheduling', action: 'read' },
   ],
   // Compatibilidade com roles antigos
   supervisor: [
@@ -411,6 +453,10 @@ const ROLE_PERMISSIONS = {
     { resource: 'crm', action: 'read' },
     { resource: 'crm', action: 'create' },
     { resource: 'crm', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
   agent: [
     { resource: 'tickets', action: 'read' },

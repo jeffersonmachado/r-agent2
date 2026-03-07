@@ -35,6 +35,8 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { shouldLockCanvas as shouldLockCanvasUtil } from '../utils/aiGenerationLock';
 import { FlowCurrentDisplay } from '../components/FlowCurrentDisplay';
 import { createTranslateOnlyApplier, cleanupInlineNodeSize } from '../editor/arrange/translateOnlyApplier';
+import { validateFlow as validateFlowLocal } from '../editor/flowValidator';
+import { applyBackendValidationErrors } from '../editor/validation/runFlowValidation';
 
 function summarizeValidationBySeverity(validationWarnings) {
   const errors = Array.isArray(validationWarnings?.errors) ? validationWarnings.errors : [];
@@ -360,10 +362,9 @@ export function FlowEditorPage() {
     // também apareçam no canvas/nós e no painel.
     const uiErrors = (validation.uiErrors || validation.errors || []);
 
-    (async () => {
-      const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+    Promise.resolve().then(() => {
       applyBackendValidationErrors(editor, area, uiErrors);
-    })().catch((err) => {
+    }).catch((err) => {
       logger.warn('Falha ao aplicar erros de validação no canvas (best-effort)', { error: err });
     });
   }, [validation, displayedFlow]);
@@ -389,12 +390,10 @@ export function FlowEditorPage() {
             });
             
             // ✅ Validação local de fallback (antes de chamar backend) - mesma lógica do handleValidate
-            const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
             const localValidation = validateFlowLocal(reteJson, { kind: flow?.kind || 'chat' });
             
             // Se validação local falhou, mostra erros e não chama backend
             if (!localValidation.valid && localValidation.errors.length > 0) {
-              const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
               // Converte erros do validador local para formato esperado
               const formattedErrors = localValidation.errors.map(err => ({
                 code: err.code,
@@ -439,7 +438,6 @@ export function FlowEditorPage() {
             
             // ✅ Sempre aplica (limpa erros antigos e aplica novos, ou limpa tudo se válido)
             // O validateCurrentFlow já atualiza o estado validation internamente
-            const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
             if (validationResult) {
               // Aplica erros/warnings aos nós do editor (mesmo se valid === true pode haver warnings/info)
               applyBackendValidationErrors(editor, area, validationResult.errors || []);
@@ -553,7 +551,6 @@ export function FlowEditorPage() {
           // (especialmente importante para ORPHAN_NODE / múltiplas entradas)
           let uiErrorsToApply = Array.isArray(generationWarnings.errors) ? generationWarnings.errors : [];
           try {
-            const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
             const localValidation = validateFlowLocal(reteJson, { kind: flow?.kind || 'chat' });
             const formattedLocalErrors = (localValidation?.errors || []).map((err) => ({
               code: err.code,
@@ -580,7 +577,6 @@ export function FlowEditorPage() {
           }
 
           // Aplica erros no canvas (com nodeIds) quando disponíveis
-          const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
           applyBackendValidationErrors(editor.editor?.current, editor.area, uiErrorsToApply);
 
           // Ao finalizar a geração, o editor NÃO pode ficar em read-only.
@@ -669,7 +665,6 @@ export function FlowEditorPage() {
           if (editor && area) {
             try {
               if (hasValidationWarnings) {
-                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
                 applyBackendValidationErrors(editor, area, savedFlow.validationWarnings.errors);
                 
                 setValidation({
@@ -688,7 +683,6 @@ export function FlowEditorPage() {
                 const reteJson = await editor.toJSON();
                 const validationResult = await validateCurrentFlow(reteJson);
                 
-                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
                 if (validationResult) {
                   applyBackendValidationErrors(editor, area, validationResult.errors || []);
                   
@@ -738,7 +732,6 @@ export function FlowEditorPage() {
             // Best-effort: se não temos lista estruturada de erros, valida no backend e aplica
             try {
               const validationResult = await validateCurrentFlow(reteJson);
-              const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
               if (validationResult) {
                 applyBackendValidationErrors(
                   editor.editor?.current,
@@ -824,7 +817,6 @@ export function FlowEditorPage() {
             try {
               // Se a resposta já incluiu erros de validação, aplica-os diretamente
               if (hasValidationWarnings) {
-                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
                 applyBackendValidationErrors(editor, area, savedFlow.validationWarnings.errors);
                 
                 // ✅ Atualiza estado de validação e expande painel
@@ -852,7 +844,6 @@ export function FlowEditorPage() {
                 const validationResult = await validateCurrentFlow(reteJson);
                 
                 // ✅ Aplica erros do backend (limpa se válido, aplica se inválido)
-                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
                 if (validationResult) {
                   applyBackendValidationErrors(editor, area, validationResult.errors || []);
                   
@@ -1089,12 +1080,10 @@ export function FlowEditorPage() {
       });
       
       // ✅ Validação local de fallback (antes de chamar backend)
-      const { validateFlow: validateFlowLocal } = await import('../editor/flowValidator');
       const localValidation = validateFlowLocal(reteJson, { kind: currentFlow?.kind || 'chat' });
       
       // Se validação local falhou, mostra erros e não chama backend
       if (!localValidation.valid && localValidation.errors.length > 0) {
-        const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
         // Converte erros do validador local para formato esperado
         const formattedErrors = localValidation.errors.map(err => ({
           code: err.code,
@@ -1158,7 +1147,6 @@ export function FlowEditorPage() {
       // Se válido, passa array vazio (limpa erros do backend)
       // Se inválido, passa os erros recebidos do servidor
       if (validationResult) {
-        const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
         applyBackendValidationErrors(editor, area, validationResult.errors || []);
         
         logger.info('Validação do backend concluída', {
@@ -1871,7 +1859,6 @@ export function FlowEditorPage() {
               const reteJson = await editor.editor?.current?.toJSON();
               if (reteJson) {
                 const validationResult = await validateCurrentFlow(reteJson);
-                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
                 if (validationResult) {
                   applyBackendValidationErrors(
                     editor.editor?.current,

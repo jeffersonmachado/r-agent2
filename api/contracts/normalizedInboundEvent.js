@@ -19,6 +19,8 @@ const DIRECTIONS = ['inbound', 'outbound'];
  * @property {string} timestamp
  * @property {any} payload
  * @property {Record<string, any>} metadata
+ * @property {string[]} [tags]
+ * @property {Record<string, any>} [entities]
  * @property {Record<string, any>} voice_metadata
  * @property {string} trace_id
  * @property {string} correlation_id
@@ -58,6 +60,13 @@ function randomId(prefix) {
 
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function ensureTags(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((tag) => ensureString(tag, '').toLowerCase())
+    .filter(Boolean);
 }
 
 function validateNormalizedInboundEvent(event) {
@@ -102,6 +111,8 @@ function createNormalizedInboundEvent(input = {}) {
     timestamp: ensureIso(input.timestamp),
     payload: input.payload !== undefined ? input.payload : null,
     metadata: ensureObject(input.metadata),
+    tags: ensureTags(input.tags),
+    entities: ensureObject(input.entities),
     voice_metadata: ensureObject(input.voice_metadata),
     trace_id: traceId,
     correlation_id: correlationId,
@@ -119,6 +130,8 @@ function createNormalizedInboundEvent(input = {}) {
     normalized.correlation_id = normalized.correlation_id || normalized.trace_id;
     normalized.voice_metadata = ensureObject(normalized.voice_metadata);
     normalized.metadata = ensureObject(normalized.metadata);
+    normalized.tags = ensureTags(normalized.tags);
+    normalized.entities = ensureObject(normalized.entities);
   }
 
   return normalized;

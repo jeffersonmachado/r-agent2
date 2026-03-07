@@ -125,6 +125,12 @@
 
 ## 🚀 Deployment Checklist
 
+### Rastreabilidade da Release (Contexto Normalizado)
+- [x] Changelog atualizado com rollout 1.1.0 em `CHANGELOG_MIGRACAO.md`
+- [x] Resumo técnico consolidado disponível em `RESUMO_IMPL_CONTEXTO_NORMALIZADO.md`
+- [x] Evidências de testes focados registradas em `RESUMO_IMPL_CONTEXTO_NORMALIZADO.md` e `RESULTADO_TESTES.md`
+- [x] Fluxo operacional de autenticação/token documentado (`scripts/set-token-env.sh` + `README.md`)
+
 ### Pre-Deployment
 - [ ] Review all code with team
 - [ ] Update API documentation

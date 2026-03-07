@@ -35,6 +35,19 @@ function normalizeTenantId(tenantId) {
   return tid || null;
 }
 
+function readEntityValue(entities, key) {
+  if (!entities || typeof entities !== 'object') return null;
+  const entry = entities[key];
+  if (!entry) return null;
+  if (Array.isArray(entry)) {
+    const first = entry[0];
+    if (first && typeof first === 'object' && Object.prototype.hasOwnProperty.call(first, 'value')) return first.value;
+    return first || null;
+  }
+  if (entry && typeof entry === 'object' && Object.prototype.hasOwnProperty.call(entry, 'value')) return entry.value;
+  return entry;
+}
+
 /**
  * Obtém a URL do serviço RAG para um tenant específico.
  * 
@@ -337,6 +350,10 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
   }
 
   try {
+    const normalizedContext = context?.normalizedContext && typeof context.normalizedContext === 'object'
+      ? context.normalizedContext
+      : (context?.normalized_context && typeof context.normalized_context === 'object' ? context.normalized_context : null);
+
     // Carrega tenant_context para injetar contexto cognitivo
     let tenantContext = null;
     try {
@@ -357,6 +374,25 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
 
     // Pré-processa query com NLP (opcional, não bloqueia se falhar)
     let processedQuery = query.trim();
+
+    if (normalizedContext) {
+      const funnel = normalizedContext.funnel_state || {};
+      const primaryTags = Array.isArray(normalizedContext.tags) ? normalizedContext.tags.slice(0, 4).join(', ') : '';
+      const product = readEntityValue(normalizedContext.entities, 'product_or_plan');
+      const orderId = readEntityValue(normalizedContext.entities, 'order_id');
+      const ticketId = readEntityValue(normalizedContext.entities, 'ticket_id');
+      const contextPrefixParts = [];
+      if (funnel.intent) contextPrefixParts.push(`intent:${funnel.intent}`);
+      if (funnel.severity) contextPrefixParts.push(`severity:${funnel.severity}`);
+      if (primaryTags) contextPrefixParts.push(`tags:${primaryTags}`);
+      if (product) contextPrefixParts.push(`produto:${product}`);
+      if (orderId) contextPrefixParts.push(`pedido:${orderId}`);
+      if (ticketId) contextPrefixParts.push(`ticket:${ticketId}`);
+
+      if (contextPrefixParts.length > 0) {
+        processedQuery = `[Contexto normalizado: ${contextPrefixParts.join(' | ')}] ${processedQuery}`;
+      }
+    }
     
     // Injeta contexto do tenant na query antes do NLP (se disponível)
     if (tenantContext && tenantContext.ramo_atividade) {
@@ -402,9 +438,11 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       filters: {
         roles: filters.roles || [],
         agentId: filters.agentId || null,
-        productId: filters.productId || null,
+        productId: filters.productId || readEntityValue(normalizedContext?.entities, 'product_or_plan') || null,
         clientId: filters.clientId || null,
-        category: filters.category || null,
+        category: filters.category || (Array.isArray(normalizedContext?.tags)
+          ? normalizedContext.tags.find((tag) => String(tag).startsWith('topic:')) || null
+          : null),
       },
       options: {
         topK: filters.topK || 6,  // Aumentado de 5 para 6 para melhor cobertura
@@ -555,9 +593,10 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
  *
  * @param {Object} document - Documento a indexar
  * @param {string} tenantId - ID do tenant
+ * @param {{ forceReindex?: boolean }} [options]
  * @returns {Promise<{success: boolean, documentId: string, chunksCreated: number, error?: string}>}
  */
-async function indexDocument(document, tenantId) {
+async function indexDocument(document, tenantId, options = {}) {
   if (!document || !document.id) {
     throw new Error('Documento deve ter id');
   }
@@ -572,6 +611,7 @@ async function indexDocument(document, tenantId) {
   }
 
   try {
+    const forceReindex = options && options.forceReindex === true;
     // ETAPA 1: Normalização de conteúdo
     const normalizedContent = ragDeduplicationService.normalizeContent(document.content);
     
@@ -580,9 +620,11 @@ async function indexDocument(document, tenantId) {
     
     // ETAPA 3: Verificação de duplicidade estrutural
     const sourceId = document.metadata?.source_id || document.id;
-    const structuralCheck = ragDeduplicationService.checkStructuralDuplicate(tenantId, contentHash, sourceId);
-    
-    if (structuralCheck.isDuplicate) {
+    const structuralCheck = forceReindex
+      ? { isDuplicate: false }
+      : ragDeduplicationService.checkStructuralDuplicate(tenantId, contentHash, sourceId);
+
+    if (!forceReindex && structuralCheck.isDuplicate) {
       logger.info('[RAGService] Documento duplicado estruturalmente detectado, descartando ingestão', {
         documentId: document.id,
         tenantId,
@@ -618,6 +660,8 @@ async function indexDocument(document, tenantId) {
       source_version: sourceVersion,
       content_hash: contentHash,
       tenant_id: tenantId,
+      forceReindex: forceReindex ? true : undefined,
+      force_reindex: forceReindex ? true : undefined,
     };
 
     const requestBody = {
@@ -640,6 +684,7 @@ async function indexDocument(document, tenantId) {
       contentHash: contentHash.substring(0, 16) + '...',
       sourceId,
       sourceVersion,
+      forceReindex,
     });
 
     const serviceUrl = getRagServiceUrl(tenantId);
@@ -1288,4 +1333,3 @@ module.exports = {
   cleanOrphanedDocuments,
   listVectorDocuments,
 };
-

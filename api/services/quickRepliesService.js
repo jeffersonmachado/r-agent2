@@ -315,7 +315,10 @@ function searchByContext(context, tenantIdOrLimit = 5, maybeLimit = 5) {
   }
 
   const tenantId = typeof tenantIdOrLimit === 'string' ? tenantIdOrLimit : null;
-  const limit = typeof tenantIdOrLimit === 'number' ? tenantIdOrLimit : (typeof maybeLimit === 'number' ? maybeLimit : 5);
+  const rawLimit = typeof tenantIdOrLimit === 'number' ? tenantIdOrLimit : (typeof maybeLimit === 'number' ? maybeLimit : 5);
+  const limit = Number.isFinite(Number(rawLimit))
+    ? Math.min(Math.max(Math.trunc(Number(rawLimit)), 1), 20)
+    : 5;
   if (!tenantId) {
     // Blindagem: sem tenant, não retorna nada (evita vazamento cross-tenant)
     return [];

@@ -1,0 +1,159 @@
+Implemente a integração do pacote de código da Agenda Autônoma no projeto r-agent2, sem quebrar funcionalidades existentes e reaproveitando ao máximo o que já está pronto no core, principalmente CRM, agenda generalista, /support e WhatsApp.
+
+OBJETIVO ARQUITETURAL
+- A Agenda Autônoma deve fazer parte do CORE da plataforma, no mesmo nível de WhatsApp, CRM, Support e Scheduling.
+- O módulo Beauty NÃO deve conter a lógica horizontal da Agenda Autônoma.
+- A solução deve ser multi-tenant e compatível com PostgreSQL, MySQL e Oracle, seguindo os padrões já usados no projeto.
+- O módulo deve servir tanto para a vertical Beauty quanto para Academia/Fitness, por meio de parametrização e presets, sem hardcode de manicure no core.
+
+ARQUIVOS A INTEGRAR
+- Copiar os arquivos do pacote para dentro do projeto preservando os caminhos:
+  - api/db/migrations/20260306010000-create-autonomous-scheduling-core.js
+  - api/db/models/AutonomousSchedulePolicy.js
+  - api/db/models/AutonomousWaitingList.js
+  - api/db/models/AutonomousGapCampaign.js
+  - api/db/models/AutonomousGapCandidate.js
+  - api/core/autonomous-scheduling/**
+
+PASSOS OBRIGATÓRIOS DE INTEGRAÇÃO
+1) MODELS / DB INDEX
+- Atualizar api/db/models/index.js para registrar e exportar os novos models lazy:
+  - getAutonomousSchedulePolicy
+  - getAutonomousWaitingList
+  - getAutonomousGapCampaign
+  - getAutonomousGapCandidate
+- Expor no module.exports final:
+  - AutonomousSchedulePolicy
+  - AutonomousWaitingList
+  - AutonomousGapCampaign
+  - AutonomousGapCandidate
+- Não alterar modelos existentes além do necessário.
+
+2) MIGRATION
+- Garantir que a migration nova siga o padrão do projeto e rode junto das já existentes.
+- Não remover nem alterar migrations existentes.
+
+3) API / SERVER
+- Integrar novas rotas diretamente no api/server.js, seguindo o padrão atual do projeto, sem criar servidor paralelo.
+- Criar endpoints backend-first, protegidos por requireAuth, requireTenant e permissões apropriadas.
+- Endpoints mínimos:
+  - GET  /api/autonomous-scheduling/policy
+  - PUT  /api/autonomous-scheduling/policy
+  - POST /api/autonomous-scheduling/waiting-list
+  - GET  /api/autonomous-scheduling/waiting-list
+  - POST /api/autonomous-scheduling/detect-gaps/run
+  - POST /api/autonomous-scheduling/campaigns/:id/run
+  - GET  /api/autonomous-scheduling/campaigns
+  - POST /api/autonomous-scheduling/campaigns/:campaignId/candidates/:candidateId/accept
+- Reaproveitar o padrão de buildApiError, sendJson, requirePermission e logging já existente no server.js.
+
+4) PERMISSÕES / RBAC
+- Reutilizar permissões existentes sempre que possível.
+- Sugestão pragmática:
+  - leitura: tickets.read ou crm.read
+  - operação: tickets.update
+  - configuração da policy: config.update ou tickets.update, conforme o padrão já usado no projeto
+- Não inventar sistema paralelo de RBAC.
+
+5) CRM
+- Usar crm_contacts como base principal de candidatos.
+- Registrar atividades no CRM com crmService.logActivity para:
+  - autonomous_schedule_invite_sent
+  - autonomous_schedule_filled
+- Não criar tabela paralela de clientes.
+- Quando houver campos específicos por vertical, usar attributes do contato ou tabelas verticais futuras.
+
+6) SCHEDULING
+- Reaproveitar api/services/schedulingService.js como engine oficial de agenda.
+- A Agenda Autônoma deve apenas:
+  - detectar gaps
+  - ranquear candidatos
+  - disparar convites
+  - criar agendamento chamando schedulingService.createSchedule ao aceitar
+- Não duplicar lógica de conflito, disponibilidade, working hours ou reminders.
+
+7) WHATSAPP
+- Integrar com a infraestrutura existente de WhatsApp do projeto.
+- Onde o pacote hoje retorna mode=integration_required, substituir pela chamada real de envio usada no projeto.
+- Reaproveitar templates e padrões existentes.
+- Na ausência de quick replies estruturadas, enviar texto com instruções claras.
+- Registrar outbound_message_id quando possível.
+- Se necessário, usar scheduleWhatsAppResponder.js ou whatsappService.js como base.
+
+8) SUPPORT
+- Integrar visualização mínima no /support sem reestruturar a tela toda.
+- Adicionar, de forma incremental e sem quebrar nada:
+  - card ou bloco com “Vagas livres hoje”
+  - card com “Campanhas abertas”
+  - ação para “Rodar agenda autônoma” no contexto atual
+- Não remover o fluxo atual de /agendar.
+- Se houver contexto de ticket, aproveitar contextType=ticket e contextId=ticket.id.
+
+9) FRONTEND
+- Criar uma página leve no core, por exemplo:
+  - frontend/src/pages/AutonomousSchedulingPage.jsx
+- Incluir rota protegida no frontend e entrada de navegação discreta.
+- Tela mínima deve permitir:
+  - ver policy
+  - editar policy
+  - listar campanhas abertas
+  - disparar detecção de gaps
+  - listar waiting list
+- Não criar design novo fora do padrão visual já usado.
+
+10) PRESETS DE VERTICAL
+- Não colocar lógica específica de Beauty no core.
+- Preparar o core para receber presets por vertical via policy.settings, por exemplo:
+  - verticalTemplate: 'beauty'
+  - verticalTemplate: 'fitness'
+- Exemplos de parametrização no core:
+  - serviceType
+  - recurrenceDays
+  - allowedChannels
+  - cooldowns
+  - preferredOwnerId
+  - preferredTimeWindows
+- Beauty e Fitness devem ser tratadas primeiro como configuração/preset, não como lógica hardcoded.
+
+11) JOBS / EXECUÇÃO
+- Integrar os jobs do pacote aos mecanismos existentes do projeto.
+- Se já houver scheduler/worker central, plugar nele.
+- Se não houver integração imediata, deixar endpoints manuais funcionando primeiro.
+- Prioridade inicial:
+  - detectGapsJob manual por endpoint
+  - fillGapCampaignsJob manual por endpoint
+- Somente depois ativar execução automática recorrente.
+
+12) LOGS E OBSERVABILIDADE
+- Adicionar logs com prefixo [AutonomousScheduling].
+- Registrar eventos importantes:
+  - gap detectado
+  - campanha criada
+  - convite enviado
+  - candidato aceitou
+  - campanha encerrada
+- Não poluir o log com payloads excessivos.
+
+13) TESTES
+- Criar testes focados no backend, sem tentar cobrir tudo de uma vez.
+- Casos mínimos:
+  - criar policy
+  - detectar gap entre agendamentos
+  - gerar ranking com waiting list priorizada
+  - aceitar candidato e criar schedule
+- Seguir o padrão de testes já existente no projeto.
+
+REGRAS IMPORTANTES
+- Não quebrar /support, CRM, WhatsApp QR ou agenda existente.
+- Não mover arquivos antigos sem necessidade.
+- Não criar abstrações excessivas nem refatorar o projeto inteiro.
+- Fazer integração incremental, segura e compatível com a arquitetura real encontrada no ZIP.
+- Reaproveitar o que já existe antes de criar qualquer serviço novo.
+
+ENTREGÁVEIS ESPERADOS
+- Código integrado no backend e frontend.
+- Endpoints funcionando.
+- Models registrados.
+- Migration pronta.
+- Página mínima do core funcionando.
+- Sem quebrar funcionalidades existentes.

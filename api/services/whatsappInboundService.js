@@ -7,15 +7,25 @@ const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = requir
 const { autoAssignTicket } = require('./routingService');
 const { emitEvent } = require('./websocketService');
 const { processNormalizedInboundEvent } = require('./messageProcessor');
-const { getTicket } = require('./queueService');
+const { getTicket, updateTicket } = require('./queueService');
+const outboundQueueService = require('./outboundQueueService');
 const whatsappQrService = require('./whatsappQrService');
+const { handleScheduleWhatsAppReply } = require('./scheduleWhatsAppResponder');
 const { checkFeature } = require('./planLimitsService');
 const { sendToUser, trimPreview } = require('./push');
+const whatsappIvrService = require('./whatsappIvrService');
+const {
+  resolveWhatsAppIvrRouting,
+  buildTicketPatchFromRouting,
+} = require('./whatsappIvrRoutingService');
+const whatsappIvrStateService = require('./whatsappIvrStateService');
+const aiIntentService = require('./aiIntentService');
 const {
   shouldNotifyTicketMessage,
   selectRecipientUserIdsForTicket,
   consumeMessageDedup,
 } = require('./push/notificationRules');
+const uraDecisionAuditService = require('./uraDecisionAuditService');
 
 function jsonSafe(obj) {
   try { return JSON.stringify(obj); } catch (_) { return '[unserializable]'; }
@@ -48,6 +58,320 @@ function buildInboundSessionId(payload = {}, message = {}, fallbackConversationI
 function buildPushBody({ from, text }) {
   const sender = String(from || 'Contato');
   return `${sender}: ${trimPreview(text || '', 100)}`;
+}
+
+function summarizeInboundByType(messageType, fallbackFileName = null) {
+  const mt = String(messageType || '').toLowerCase();
+  if (mt === 'image') return '[imagem]';
+  if (mt === 'audio' || mt === 'voice') return '[audio]';
+  if (mt === 'video') return '[video]';
+  if (mt === 'document' || mt === 'file') return fallbackFileName ? `[documento] ${fallbackFileName}` : '[documento]';
+  if (mt === 'sticker') return '[sticker]';
+  if (mt === 'location') return '[localizacao]';
+  if (mt === 'contacts') return '[contatos]';
+  if (mt === 'interactive') return '[interativo]';
+  return '[mensagem]';
+}
+
+function normalizeInboundMediaType(messageType) {
+  const mt = String(messageType || '').toLowerCase();
+  if (mt === 'image' || mt === 'audio' || mt === 'video') return mt;
+  if (mt === 'document' || mt === 'file') return 'document';
+  return 'text';
+}
+
+function isMenuResetCommand(text) {
+  return String(text || '').trim().toLowerCase() === 'menu';
+}
+
+function renderMenuMessage(config, menuOptions = [], { retry = false } = {}) {
+  const menu = config?.menu || {};
+  const header = retry
+    ? String(menu.retryTemplate || '').trim()
+    : String(menu.greetingTemplate || '').trim();
+  const lines = menuOptions.map((item) => {
+    const label = String(item.menuLabel || item.departmentName || item.departmentId || '').trim();
+    const description = String(item.menuDescription || '').trim();
+    return description
+      ? `${item.optionNumber}. ${label} - ${description}`
+      : `${item.optionNumber}. ${label}`;
+  });
+  return [header, ...lines].filter(Boolean).join('\n');
+}
+
+function renderMenuConfirmation(config, routingResult) {
+  const template = String(config?.menu?.confirmationTemplate || '').trim();
+  if (!template) return null;
+  return template.replace(/\{\{\s*department\s*\}\}/gi, String(routingResult?.departmentName || 'atendimento'));
+}
+
+async function sendWhatsAppTextOutbound({ tenantId, conversationId = null, to = null, text = '' }) {
+  const bodyText = String(text || '').trim();
+  if (!tenantId || !bodyText || !to) return null;
+  return outboundQueueService.enqueueOutbound({
+    tenantId: String(tenantId),
+    channelType: 'whatsapp',
+    conversationId: conversationId ? String(conversationId) : null,
+    message: {
+      to: String(to),
+      type: 'text',
+      body: { text: bodyText },
+    },
+  });
+}
+
+function minutesBetween(fromIso, now) {
+  if (!fromIso) return Number.POSITIVE_INFINITY;
+  const fromTs = new Date(fromIso).getTime();
+  const nowTs = now instanceof Date ? now.getTime() : Date.now();
+  if (!Number.isFinite(fromTs) || !Number.isFinite(nowTs)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, (nowTs - fromTs) / 60000);
+}
+
+async function applyWhatsAppIvr({
+  tenantId,
+  ticket,
+  conversationId = null,
+  sessionId,
+  messageId = null,
+  contactPhone = null,
+  text = '',
+  now = new Date(),
+}) {
+  if (!tenantId || !ticket?.id || !sessionId) {
+    return { handled: false, ticket };
+  }
+
+  const normalizedText = String(text || '').trim();
+  const resetRequested = isMenuResetCommand(normalizedText);
+  let state = await whatsappIvrStateService.getState({ tenantId, sessionId }).catch(() => null);
+
+  if (resetRequested) {
+    await whatsappIvrStateService.resetState({ tenantId, sessionId }).catch(() => null);
+    state = null;
+  } else if (state?.status === 'routed') {
+    return { handled: false, ticket, reason: 'already_routed' };
+  }
+
+  const ivrOut = await whatsappIvrService.getNormalizedWhatsAppIvrSetting({ tenantId }).catch(() => ({ ok: false }));
+  if (!ivrOut?.ok || ivrOut?.value?.enabled !== true) {
+    return { handled: false, ticket };
+  }
+
+  const config = ivrOut.value;
+  const menuOptions = Array.isArray(ivrOut.menuOptions) ? ivrOut.menuOptions : [];
+  const currentState = state && typeof state === 'object' ? state : null;
+  const throttledMenuPrompt = currentState?.status === 'awaiting_choice'
+    && minutesBetween(currentState.lastMenuSentAt, now) < 0.5;
+  const aiResult = config.aiEnabled === true
+    ? await aiIntentService.classifyIncomingMessage({
+      tenantId,
+      text: normalizedText,
+      config,
+      departments: Array.isArray(ivrOut.departments) ? ivrOut.departments : [],
+      ticket,
+      history: Array.isArray(ticket?.context?.metadata?.recentMessages) ? ticket.context.metadata.recentMessages : [],
+      channel: 'whatsapp',
+    }).catch((err) => {
+      logger.warn('[WhatsAppIVR] Falha ao classificar intencao; seguindo com fallback', {
+        tenantId,
+        ticketId: ticket?.id || null,
+        error: err?.message || String(err || 'unknown_error'),
+      });
+      return null;
+    })
+    : null;
+
+  const routingResult = resolveWhatsAppIvrRouting({
+    config,
+    departments: Array.isArray(ivrOut.departments) ? ivrOut.departments : [],
+    text: normalizedText,
+    aiResult,
+    now,
+    menuState: currentState,
+  });
+
+  if (!routingResult || routingResult.action === 'noop') {
+    return { handled: false, ticket };
+  }
+
+  let nextTicket = ticket;
+  const ticketPatch = buildTicketPatchFromRouting({ ticket, routingResult });
+  if (ticketPatch) {
+    if (aiResult) {
+      ticketPatch.context = {
+        ...(ticketPatch.context || {}),
+        metadata: {
+          ...((ticketPatch.context && ticketPatch.context.metadata) || {}),
+          whatsappIvrDecision: {
+            intent: aiResult.intent || null,
+            secondaryIntent: aiResult.secondaryIntent || null,
+            entities: aiResult.entities || {},
+            confidence: aiResult.confidence || 0,
+            explanation: aiResult.explanation || null,
+            reasoning: aiResult.reasoning || [],
+            ragUsed: aiResult.ragUsed === true,
+            providerStatus: aiResult.providerStatus || null,
+            contextUsed: aiResult.contextUsed || null,
+            departmentId: routingResult?.departmentId || null,
+            departmentName: routingResult?.departmentName || null,
+            queueName: routingResult?.queueName || null,
+            modeUsed: routingResult?.modeUsed || null,
+            selectedVia: routingResult?.selectedVia || null,
+          },
+        },
+      };
+    }
+    const updated = updateTicket(ticket.id, ticketPatch);
+    if (updated) nextTicket = updated;
+  }
+
+  if (aiResult) {
+    logger.info('[WhatsAppIVR] Decisao de roteamento', {
+      tenantId,
+      ticketId: ticket?.id || null,
+      sessionId,
+      intent: aiResult.intent || null,
+      secondaryIntent: aiResult.secondaryIntent || null,
+      confidence: aiResult.confidence || 0,
+      departmentId: routingResult?.departmentId || null,
+      action: routingResult?.action || null,
+      modeUsed: routingResult?.modeUsed || null,
+      selectedVia: routingResult?.selectedVia || null,
+      ragUsed: aiResult.ragUsed === true,
+      providerStatus: aiResult.providerStatus || null,
+      contextUsed: aiResult.contextUsed || null,
+      explanation: aiResult.explanation || null,
+    });
+  }
+
+  await uraDecisionAuditService.recordDecision({
+    tenantId,
+    ticketId: nextTicket?.id || ticket?.id || null,
+    messageId,
+    aiResult,
+    routingResult,
+  }).catch(() => null);
+
+  if (routingResult.action === 'route') {
+    const chosenViaMenu = routingResult.selectedVia === 'menu';
+    if (chosenViaMenu) {
+      const confirmationText = renderMenuConfirmation(config, routingResult);
+      if (confirmationText) {
+        await sendWhatsAppTextOutbound({
+          tenantId,
+          conversationId,
+          to: contactPhone,
+          text: confirmationText,
+        }).catch(() => null);
+      }
+      await whatsappIvrStateService.setState({
+        tenantId,
+        sessionId,
+        timeoutSeconds: Number(config?.menu?.timeoutSeconds || 600),
+        state: {
+          status: 'routed',
+          conversationId,
+          lastMenuSentAt: new Date(now).toISOString(),
+          attempts: Number(currentState?.attempts || 0),
+          selectedDepartmentId: routingResult.departmentId || null,
+          selectedVia: routingResult.selectedVia || null,
+          lastAction: routingResult.action || 'route',
+        },
+      }).catch(() => null);
+      return { handled: true, stopPipeline: true, ticket: nextTicket, routingResult };
+    }
+
+    if (currentState?.status === 'awaiting_choice') {
+      await whatsappIvrStateService.setState({
+        tenantId,
+        sessionId,
+        timeoutSeconds: Number(config?.menu?.timeoutSeconds || 600),
+        state: {
+          status: 'routed',
+          conversationId,
+          lastMenuSentAt: currentState.lastMenuSentAt || null,
+          attempts: Number(currentState.attempts || 0),
+          selectedDepartmentId: routingResult.departmentId || null,
+          selectedVia: routingResult.selectedVia || null,
+          lastAction: routingResult.action || 'route',
+        },
+      }).catch(() => null);
+    }
+
+    return { handled: false, ticket: nextTicket, routingResult };
+  }
+
+  if (routingResult.action === 'create_ticket' || routingResult.action === 'collect_info') {
+    const lastPromptAt = currentState?.lastMenuSentAt || null;
+    if (minutesBetween(lastPromptAt, now) >= 1) {
+      await sendWhatsAppTextOutbound({
+        tenantId,
+        conversationId,
+        to: contactPhone,
+        text: routingResult.offHoursMessage,
+      }).catch(() => null);
+    }
+    await whatsappIvrStateService.setState({
+      tenantId,
+      sessionId,
+      timeoutSeconds: Number(config?.menu?.timeoutSeconds || 600),
+      state: {
+        status: 'idle',
+        conversationId,
+        lastMenuSentAt: new Date(now).toISOString(),
+        attempts: 0,
+        selectedDepartmentId: routingResult.departmentId || null,
+        selectedVia: routingResult.selectedVia || null,
+        lastAction: routingResult.action || null,
+      },
+    }).catch(() => null);
+    return { handled: true, stopPipeline: true, ticket: nextTicket, routingResult };
+  }
+
+  if (routingResult.action === 'show_menu') {
+    if (menuOptions.length === 0) {
+      return { handled: false, ticket: nextTicket };
+    }
+
+    const attempts = currentState?.status === 'awaiting_choice'
+      ? Number(currentState.attempts || 0) + 1
+      : 1;
+    const maxAttempts = Number(config?.menu?.maxAttempts || 3);
+
+    if (attempts > maxAttempts) {
+      await whatsappIvrStateService.resetState({ tenantId, sessionId }).catch(() => null);
+      return { handled: false, ticket: nextTicket, reason: 'menu_max_attempts' };
+    }
+
+    if (!throttledMenuPrompt) {
+      await sendWhatsAppTextOutbound({
+        tenantId,
+        conversationId,
+        to: contactPhone,
+        text: renderMenuMessage(config, menuOptions, { retry: currentState?.status === 'awaiting_choice' }),
+      }).catch(() => null);
+    }
+
+    await whatsappIvrStateService.setState({
+      tenantId,
+      sessionId,
+      timeoutSeconds: Number(config?.menu?.timeoutSeconds || 600),
+      state: {
+        status: 'awaiting_choice',
+        conversationId,
+        lastMenuSentAt: new Date(now).toISOString(),
+        attempts,
+        selectedDepartmentId: null,
+        selectedVia: null,
+        lastAction: routingResult.action || 'show_menu',
+      },
+    }).catch(() => null);
+
+    return { handled: true, stopPipeline: true, ticket: nextTicket, routingResult };
+  }
+
+  return { handled: false, ticket: nextTicket, routingResult };
 }
 
 // Normaliza o identificador da conversa para evitar duplicação de ticket em cenários Baileys/MD
@@ -160,9 +484,46 @@ async function handleWhatsAppInbound({
     hasConnection: !!resolvedConnection,
   });
 
-  const messageText = typeof normalized?.text === 'string'
+  const inboundMessageType = String(
+    normalized?.messageType
+    || message?.type
+    || (message?.text?.body ? 'text' : 'unknown')
+  ).toLowerCase();
+  const inboundFileName = String(
+    normalized?.raw?.message?.document?.filename
+    || message?.document?.filename
+    || ''
+  ).trim() || null;
+  const inboundMimeType = String(
+    normalized?.media?.mimeType
+    || normalized?.raw?.message?.document?.mime_type
+    || normalized?.raw?.message?.image?.mime_type
+    || normalized?.raw?.message?.video?.mime_type
+    || normalized?.raw?.message?.audio?.mime_type
+    || message?.document?.mime_type
+    || message?.image?.mime_type
+    || message?.video?.mime_type
+    || message?.audio?.mime_type
+    || ''
+  ).trim() || null;
+  const inboundMediaUrl = String(
+    normalized?.media?.url
+    || normalized?.raw?.message?.document?.id
+    || normalized?.raw?.message?.image?.id
+    || normalized?.raw?.message?.video?.id
+    || normalized?.raw?.message?.audio?.id
+    || message?.document?.id
+    || message?.image?.id
+    || message?.video?.id
+    || message?.audio?.id
+    || ''
+  ).trim() || null;
+  const messageTextRaw = typeof normalized?.text === 'string'
     ? normalized.text
     : (message?.text?.body ? String(message.text.body) : '');
+  const messageText = messageTextRaw && String(messageTextRaw).trim()
+    ? String(messageTextRaw)
+    : summarizeInboundByType(inboundMessageType, inboundFileName);
 
   const iso = normalized?.timestamp || (() => {
     const ts = message?.timestamp ? Number(message.timestamp) : null;
@@ -180,7 +541,8 @@ async function handleWhatsAppInbound({
       phone: message?.from ? String(message.from) : null,
       // Fallback para __qr.contactName garante nome mesmo quando value.contacts não vier preenchido.
       name: normalized?.sender?.name || payload?.__qr?.contactName || null
-    }
+    },
+    { initialMode: modeFromConnection }
   ).catch((e) => {
     logger.error(`[WA_PIPE_TICKET_RESOLVE_ERR] traceId=${traceId || 'n/a'} ${jsonSafe({ tenantId: effectiveTenantId, externalConversationId, externalMessageId, errMessage: e?.message || String(e), errStack: e?.stack || null })}`);
     return null;
@@ -192,6 +554,11 @@ async function handleWhatsAppInbound({
     return { ok: false, reason: 'ticket_not_resolved' };
   }
 
+  // Ponto de integracao da URA WhatsApp:
+  // a resolucao operacional consolidada fica em `whatsappIvrRoutingService.resolveWhatsAppIvrRouting`.
+  // A ativacao direta no pipeline foi mantida separada para evitar regressao no fluxo atual de tickets/handoff
+  // ate a etapa dedicada de rollout controlado por tenant/canal.
+
   // 2.1) Ledger do ticket (idempotente por externalMessageId)
   let effectiveTicket = ticket;
   try {
@@ -200,10 +567,169 @@ async function handleWhatsAppInbound({
       text: messageText,
       externalMessageId,
       timestamp: iso,
+      messageType: normalizeInboundMediaType(inboundMessageType),
+      mediaUrl: inboundMediaUrl,
+      mimeType: inboundMimeType,
+      fileName: inboundFileName,
     });
     if (updated) effectiveTicket = updated;
   } catch (e) {
     logger.warn(`[WA_PIPE_APPEND_WARN] traceId=${traceId || 'n/a'} ${jsonSafe({ ticketId: ticket.id, externalMessageId, errMessage: e?.message || String(e) })}`);
+  }
+
+  // Mantém política de auto-retorno alinhada com o estado atual do canal.
+  // Canal sem bot ativo => ticket não pode retornar automaticamente para bot por inatividade.
+  if (effectiveTicket && effectiveTicket.status !== 'closed') {
+    const currentContext = effectiveTicket.context && typeof effectiveTicket.context === 'object'
+      ? effectiveTicket.context
+      : {};
+    const currentMetadata = currentContext.metadata && typeof currentContext.metadata === 'object'
+      ? currentContext.metadata
+      : {};
+    const desiredRouteMode = modeFromConnection;
+    const desiredAllowReturn = desiredRouteMode === 'bot'
+      ? (currentContext.allowReturnToBot !== false)
+      : false;
+    const desiredTicketOrigin = desiredRouteMode === 'human'
+      ? 'human_chat'
+      : (currentMetadata.ticketOrigin || 'bot_flow');
+
+    const needsPolicySync = (
+      currentContext.allowReturnToBot !== desiredAllowReturn ||
+      currentMetadata.channelBotEnabled !== resolvedBotEnabled ||
+      currentMetadata.connectionId !== resolvedConnectionId ||
+      currentMetadata.inboundRouteMode !== desiredRouteMode ||
+      currentMetadata.ticketOrigin !== desiredTicketOrigin
+    );
+
+    if (needsPolicySync) {
+      const patchedTicket = updateTicket(effectiveTicket.id, {
+        context: {
+          ...currentContext,
+          allowReturnToBot: desiredAllowReturn,
+          metadata: {
+            ...currentMetadata,
+            channelBotEnabled: resolvedBotEnabled,
+            connectionId: resolvedConnectionId,
+            inboundRouteMode: desiredRouteMode,
+            ticketOrigin: desiredTicketOrigin,
+          },
+        },
+      });
+      if (patchedTicket) effectiveTicket = patchedTicket;
+    }
+  }
+
+  // Garante consistência visual/operacional: conexão sem bot => ticket em modo humano.
+  if (effectiveTicket && effectiveTicket.status !== 'closed' && modeFromConnection === 'human' && (effectiveTicket.mode || 'bot') !== 'human') {
+    const forcedHuman = updateTicket(effectiveTicket.id, { mode: 'human', pauseReason: null });
+    if (forcedHuman) effectiveTicket = forcedHuman;
+    await link?.conversation?.update?.({
+      current_ticket_id: effectiveTicket.id,
+      status: 'human',
+      last_message_at: new Date(),
+      updated_at: new Date(),
+    }).catch(() => null);
+  }
+
+  // 2.2) Roteador operacional de respostas de agendamento (WhatsApp-first).
+  // Executa antes do gate bot↔humano e não depende do motor de IA.
+  try {
+    const scheduleReplyResult = await handleScheduleWhatsAppReply({
+      tenantId: effectiveTenantId,
+      messageText,
+      contactId: message?.from ? String(message.from) : null,
+      conversationId: effectiveTicket?.conversationId || ingest?.persist?.conversationId || null,
+      from: message?.from ? String(message.from) : null,
+      payload,
+      normalized,
+      inboundMessageId: externalMessageId || null,
+      traceId,
+    });
+    if (scheduleReplyResult?.handled) {
+      logger.info('[WA_PIPE_SCHEDULE_REPLY]', {
+        traceId: traceId || 'n/a',
+        tenantId: effectiveTenantId,
+        ticketId: effectiveTicket?.id || null,
+        scheduleId: scheduleReplyResult?.scheduleId || null,
+        action: scheduleReplyResult?.action || null,
+      });
+    }
+  } catch (scheduleErr) {
+    logger.warn('[WA_PIPE_SCHEDULE_REPLY_WARN]', {
+      traceId: traceId || 'n/a',
+      tenantId: effectiveTenantId,
+      ticketId: effectiveTicket?.id || null,
+      error: scheduleErr?.message || String(scheduleErr),
+    });
+  }
+
+  // 2.3) URA WhatsApp operacional.
+  // Executa apenas quando o canal segue em modo bot e o ticket ainda nao esta em handover humano.
+  try {
+    if (effectiveTicket && effectiveTicket.status !== 'closed' && !isHumanMode(effectiveTicket) && modeFromConnection === 'bot') {
+      const ivrResult = await applyWhatsAppIvr({
+        tenantId: effectiveTenantId,
+        ticket: effectiveTicket,
+        conversationId: effectiveTicket?.conversationId || ingest?.persist?.conversationId || null,
+        sessionId: inboundSessionId,
+        messageId: externalMessageId || null,
+        contactPhone: message?.from ? String(message.from) : null,
+        text: messageText,
+        now: new Date(),
+      });
+      if (ivrResult?.ticket) {
+        effectiveTicket = ivrResult.ticket;
+      }
+      const postIvrState = await whatsappIvrStateService.getState({
+        tenantId: effectiveTenantId,
+        sessionId: inboundSessionId,
+      }).catch(() => null);
+      const ticketIvrContext = effectiveTicket?.context?.whatsappIvr
+        || effectiveTicket?.context?.metadata?.whatsappIvr
+        || null;
+      if (ivrResult?.routingResult) {
+        logger.info('[WA_PIPE_IVR]', {
+          traceId: traceId || 'n/a',
+          tenantId: effectiveTenantId,
+          ticketId: effectiveTicket?.id || null,
+          action: ivrResult.routingResult.action || null,
+          modeUsed: ivrResult.routingResult.modeUsed || null,
+          departmentId: ivrResult.routingResult.departmentId || null,
+          queueName: ivrResult.routingResult.queueName || null,
+          selectedVia: ivrResult.routingResult.selectedVia || null,
+        });
+      }
+      const shouldStopForIvr = ivrResult?.stopPipeline === true
+        || ivrResult?.routingResult?.action === 'show_menu'
+        || ivrResult?.routingResult?.action === 'create_ticket'
+        || ivrResult?.routingResult?.action === 'collect_info'
+        || (ivrResult?.routingResult?.action === 'route' && ivrResult?.routingResult?.selectedVia === 'menu')
+        || postIvrState?.lastAction === 'show_menu'
+        || postIvrState?.lastAction === 'create_ticket'
+        || postIvrState?.lastAction === 'collect_info'
+        || (postIvrState?.lastAction === 'route' && postIvrState?.selectedVia === 'menu')
+        || ticketIvrContext?.modeUsed === 'off_hours'
+        || (postIvrState?.status === 'routed' && ticketIvrContext?.selectedVia === 'menu');
+      if (shouldStopForIvr) {
+        return {
+          ok: true,
+          mode: 'ivr',
+          ticketId: effectiveTicket?.id || null,
+          connectionId: resolvedConnectionId,
+          ivrAction: ivrResult?.routingResult?.action
+            || postIvrState?.lastAction
+            || (ticketIvrContext?.modeUsed === 'off_hours' ? 'create_ticket' : null),
+        };
+      }
+    }
+  } catch (ivrErr) {
+    logger.warn('[WA_PIPE_IVR_WARN]', {
+      traceId: traceId || 'n/a',
+      tenantId: effectiveTenantId,
+      ticketId: effectiveTicket?.id || null,
+      error: ivrErr?.message || String(ivrErr),
+    });
   }
 
   // 3) Modo humano/pausado: não roda bot
@@ -284,7 +810,7 @@ async function handleWhatsAppInbound({
     await processNormalizedInboundEvent({
       event_type: 'message',
       channel: 'whatsapp',
-      media: 'text',
+      media: normalizeInboundMediaType(inboundMessageType) === 'document' ? 'file' : normalizeInboundMediaType(inboundMessageType),
       direction: 'inbound',
       tenant_id: effectiveTenantId,
       lead_id: message?.from ? String(message.from) : null,
@@ -292,6 +818,12 @@ async function handleWhatsAppInbound({
       timestamp: iso || new Date().toISOString(),
       payload: {
         text: messageText,
+        media: {
+          type: normalizeInboundMediaType(inboundMessageType),
+          url: inboundMediaUrl,
+          mimeType: inboundMimeType,
+          fileName: inboundFileName,
+        },
         raw: message || null,
       },
       metadata: {
@@ -335,4 +867,5 @@ async function handleWhatsAppInbound({
 
 module.exports = {
   handleWhatsAppInbound,
+  applyWhatsAppIvr,
 };

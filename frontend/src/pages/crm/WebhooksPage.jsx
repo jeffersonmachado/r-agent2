@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CrmCard, CrmButton, CrmTable, CrmBadge } from '../../components/crm/CrmComponents';
+import { buildApiUrl } from '../../api/client';
 
 export function WebhooksPage() {
   const [webhooks, setWebhooks] = useState([]);
@@ -12,7 +13,7 @@ export function WebhooksPage() {
   const loadWebhooks = async () => {
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
-      const response = await fetch('/api/crm/webhooks', {
+      const response = await fetch(buildApiUrl('/api/crm/webhooks'), {
         headers: { Authorization: `Bearer ${token}` }
       });
       

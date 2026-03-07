@@ -146,30 +146,41 @@ afterEach(() => {
 const observers = new Set();
 
 const originalMutationObserver = window.MutationObserver;
-window.MutationObserver = class extends originalMutationObserver {
-  constructor(...args) {
-    super(...args);
-    observers.add(this);
-  }
-  
-  disconnect() {
-    observers.delete(this);
-    return super.disconnect();
-  }
-};
+if (typeof originalMutationObserver === 'function') {
+  window.MutationObserver = class extends originalMutationObserver {
+    constructor(...args) {
+      super(...args);
+      observers.add(this);
+    }
+    
+    disconnect() {
+      observers.delete(this);
+      return super.disconnect();
+    }
+  };
+}
 
 const originalIntersectionObserver = window.IntersectionObserver;
-window.IntersectionObserver = class extends originalIntersectionObserver {
-  constructor(...args) {
-    super(...args);
-    observers.add(this);
-  }
-  
-  disconnect() {
-    observers.delete(this);
-    return super.disconnect();
-  }
-};
+if (typeof originalIntersectionObserver === 'function') {
+  window.IntersectionObserver = class extends originalIntersectionObserver {
+    constructor(...args) {
+      super(...args);
+      observers.add(this);
+    }
+    
+    disconnect() {
+      observers.delete(this);
+      return super.disconnect();
+    }
+  };
+} else {
+  window.IntersectionObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() { return []; }
+  };
+}
 
 // Desconecta observadores após cada teste
 afterEach(() => {
@@ -186,7 +197,7 @@ afterEach(() => {
 // Proteção contra loops infinitos em useEffect (monitoramento passivo)
 // Não interceptamos React.useEffect diretamente para evitar quebrar funcionalidades
 // Em vez disso, monitoramos via console em modo de desenvolvimento
-if (process.env.NODE_ENV === 'test') {
+if (process.env.NODE_ENV === 'development') {
   console.log('⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)');
 }
 

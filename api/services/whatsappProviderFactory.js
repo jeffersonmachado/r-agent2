@@ -2,6 +2,18 @@ const WhatsAppProviderCloud = require('./whatsappProviderCloud');
 const WhatsAppProviderQr = require('./whatsappProviderQr');
 const tenantSettingsService = require('./tenantSettingsService');
 
+function normalizeProviderType(raw) {
+  const normalized = String(raw || '').toLowerCase().trim();
+  if (!normalized) return 'cloud';
+  if (normalized === 'qr' || normalized.includes('qr')) return 'qr';
+  if (normalized === 'cloud' || normalized.includes('cloud')) return 'cloud';
+  return normalized;
+}
+
+function hasAnyQrConfigured(connections) {
+  return (connections || []).some((c) => normalizeProviderType(c?.provider) === 'qr');
+}
+
 // Factory para obter o provider correto por tenant/channel
 class WhatsAppProviderFactory {
   static async get(tenantId, channelAccount) {
@@ -13,17 +25,19 @@ class WhatsAppProviderFactory {
       // fallback: buscar do tenantSettings
       const settings = await tenantSettingsService.getSetting({ tenantId, key: 'whatsapp_connections' });
       if (settings.ok && Array.isArray(settings.value?.connections)) {
-        const conn = settings.value.connections.find(c => c.status === 'connected');
-        if (conn && conn.provider) providerType = conn.provider;
+        const conns = settings.value.connections;
+        const connected = conns.find((c) => String(c?.status || '').toLowerCase() === 'connected');
+        if (connected?.provider) {
+          providerType = connected.provider;
+        } else if (hasAnyQrConfigured(conns)) {
+          // Não cair em Cloud por padrão quando o tenant usa QR,
+          // mesmo que temporariamente não haja sessão conectada.
+          providerType = 'qr';
+        }
       }
     }
 
-    // Normaliza providerType para evitar incompatibilidades (ex.: 'whatsapp-qr')
-    const normalized = String(providerType || '').toLowerCase().trim();
-    if (!normalized) providerType = 'cloud';
-    else if (normalized === 'qr' || normalized.includes('qr')) providerType = 'qr';
-    else if (normalized === 'cloud' || normalized.includes('cloud')) providerType = 'cloud';
-    else providerType = normalized;
+    providerType = normalizeProviderType(providerType);
 
     if (providerType === 'qr') return new WhatsAppProviderQr();
     return new WhatsAppProviderCloud();

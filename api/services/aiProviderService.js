@@ -11,6 +11,14 @@ const { registerAiProvider, setTenantAiConfig, getAiProviderForTenant } = requir
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 
+function normalizeConfidence(value, fallback = 0.5) {
+  const raw = Number(value);
+  if (Number.isFinite(raw)) {
+    return Math.max(0, Math.min(1, raw));
+  }
+  return Math.max(0, Math.min(1, Number(fallback) || 0.5));
+}
+
 /**
  * Extrai um "caller hint" do stack para debug (dev only).
  * Ajuda a identificar qual serviço/arquivo originou a chamada de IA.
@@ -175,6 +183,7 @@ function createOpenAIProvider() {
           return {
             text: data.choices[0]?.message?.content || '[Resposta vazia da OpenAI]',
             usage: data.usage || null,
+            confidence: normalizeConfidence(data?.confidence, 0.5),
           };
         }
 
@@ -200,6 +209,7 @@ function createOpenAIProvider() {
         return {
           text: completion.choices[0]?.message?.content || '[Resposta vazia da OpenAI]',
           usage: completion.usage || null,
+          confidence: normalizeConfidence(completion?.confidence, 0.5),
         };
       } catch (error) {
         logger.error('❌ OpenAI: Erro ao gerar resposta', {
@@ -320,6 +330,7 @@ function createAnthropicProvider() {
           return {
             text: data.content?.[0]?.text || '[Resposta vazia da Anthropic]',
             usage: data.usage || null,
+            confidence: normalizeConfidence(data?.confidence, 0.5),
           };
         }
 
@@ -345,6 +356,7 @@ function createAnthropicProvider() {
         return {
           text: message.content[0]?.text || '[Resposta vazia da Anthropic]',
           usage: message.usage || null,
+          confidence: normalizeConfidence(message?.confidence, 0.5),
         };
       } catch (error) {
         logger.error('❌ Anthropic: Erro ao gerar resposta', {
@@ -530,7 +542,7 @@ async function ensureTenantAiConfigLoaded(tenantId) {
  * @param {string} prompt - Prompt para a IA
  * @param {string} tenantId - ID do tenant
  * @param {Object} context - Contexto adicional (sessionId, flowId, nodeId)
- * @returns {Promise<{text: string, usage?: Object}>}
+ * @returns {Promise<{text: string, usage?: Object, confidence: number}>}
  */
 async function generateAiResponse(prompt, tenantId, context = {}) {
   logger.debug('🔍 generateAiResponse: Obtendo provider', { tenantId });
@@ -584,7 +596,15 @@ async function generateAiResponse(prompt, tenantId, context = {}) {
       hasUsage: !!result?.usage,
     });
     
-    return result;
+    const normalized = (typeof result === 'string')
+      ? { text: result, usage: null, confidence: normalizeConfidence(null, 0.5) }
+      : {
+          text: result?.text || '',
+          usage: result?.usage || null,
+          confidence: normalizeConfidence(result?.confidence, 0.5),
+        };
+
+    return normalized;
   } catch (error) {
     logger.error('❌ generateAiResponse: Erro ao gerar', {
       tenantId,
@@ -601,5 +621,5 @@ module.exports = {
   generateAiResponse,
   createOpenAIProvider,
   createAnthropicProvider,
+  normalizeConfidence,
 };
-

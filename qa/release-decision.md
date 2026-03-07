@@ -22,3 +22,6 @@
 ## Evidence
 - Go/No-Go report: qa/go-no-go-report.json (pass)
 
+- Normalized context rollout summary: RESUMO_IMPL_CONTEXTO_NORMALIZADO.md
+- Deployment traceability checklist: CRM_API_DEPLOYMENT_CHECKLIST.md
+

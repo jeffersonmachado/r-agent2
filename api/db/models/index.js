@@ -37,7 +37,42 @@ const getQueueAssignmentState = require('./QueueAssignmentState');
 const getEventLedger = require('./EventLedger');
 const getExecutionJob = require('./ExecutionJob');
 const getSchedule = require('./Schedule');
+const getOperationalSchedule = require('./OperationalSchedule');
+const getScheduleWorkingHour = require('./ScheduleWorkingHour');
+const getScheduleBlock = require('./ScheduleBlock');
+const getScheduleReminder = require('./ScheduleReminder');
+const getAutonomousSchedulePolicy = require('./AutonomousSchedulePolicy');
+const getAutonomousWaitingList = require('./AutonomousWaitingList');
+const getAutonomousGapCampaign = require('./AutonomousGapCampaign');
+const getAutonomousGapCandidate = require('./AutonomousGapCandidate');
+const getAutonomousRuntime = require('./AutonomousRuntime');
+const getRevenueOpportunity = require('./RevenueOpportunity');
+const getKioskSession = require('./KioskSession');
+const getOperationalMetricSnapshot = require('./OperationalMetricSnapshot');
+const getUraDecisionAudit = require('./UraDecisionAudit');
+const getOperationalAlert = require('./OperationalAlert');
+const getTenantFeatureFlag = require('./TenantFeatureFlag');
 const getPublicAccessToken = require('./PublicAccessToken');
+const getBeautyProfessional = require('./BeautyProfessional');
+const getBeautyService = require('./BeautyService');
+const getBeautyServiceProfessional = require('./BeautyServiceProfessional');
+const getBeautyServiceComposition = require('./BeautyServiceComposition');
+const getBeautyLoyalty = require('./BeautyLoyalty');
+const getBeautyClientPreference = require('./BeautyClientPreference');
+const getBeautyScheduleProfessional = require('./BeautyScheduleProfessional');
+const getBeautyScheduleService = require('./BeautyScheduleService');
+const getFitnessClass = require('./FitnessClass');
+const getFitnessClassSchedule = require('./FitnessClassSchedule');
+const getFitnessMembership = require('./FitnessMembership');
+const getFitnessAttendance = require('./FitnessAttendance');
+const getFitnessCheckin = require('./FitnessCheckin');
+const getFitnessMemberGoal = require('./FitnessMemberGoal');
+const getFitnessProfessional = require('./FitnessProfessional');
+const getFitnessResource = require('./FitnessResource');
+const getFitnessActivityProfessional = require('./FitnessActivityProfessional');
+const getFitnessActivityResource = require('./FitnessActivityResource');
+const getFitnessScheduleProfessional = require('./FitnessScheduleProfessional');
+const getFitnessScheduleResource = require('./FitnessScheduleResource');
 const getFlowExecution = require('./FlowExecution');
 const getNodeExecution = require('./NodeExecution');
 const getOrder = require('./Order');
@@ -140,7 +175,42 @@ const QueueAssignmentState = () => getQueueAssignmentState();
 const EventLedger = () => getEventLedger();
 const ExecutionJob = () => getExecutionJob();
 const Schedule = () => getSchedule();
+const OperationalSchedule = () => getOperationalSchedule();
+const ScheduleWorkingHour = () => getScheduleWorkingHour();
+const ScheduleBlock = () => getScheduleBlock();
+const ScheduleReminder = () => getScheduleReminder();
+const AutonomousSchedulePolicy = () => getAutonomousSchedulePolicy();
+const AutonomousWaitingList = () => getAutonomousWaitingList();
+const AutonomousGapCampaign = () => getAutonomousGapCampaign();
+const AutonomousGapCandidate = () => getAutonomousGapCandidate();
+const AutonomousRuntime = () => getAutonomousRuntime();
+const RevenueOpportunity = () => getRevenueOpportunity();
+const KioskSession = () => getKioskSession();
+const OperationalMetricSnapshot = () => getOperationalMetricSnapshot();
+const UraDecisionAudit = () => getUraDecisionAudit();
+const OperationalAlert = () => getOperationalAlert();
+const TenantFeatureFlag = () => getTenantFeatureFlag();
 const PublicAccessToken = () => getPublicAccessToken();
+const BeautyProfessional = () => getBeautyProfessional();
+const BeautyService = () => getBeautyService();
+const BeautyServiceProfessional = () => getBeautyServiceProfessional();
+const BeautyServiceComposition = () => getBeautyServiceComposition();
+const BeautyLoyalty = () => getBeautyLoyalty();
+const BeautyClientPreference = () => getBeautyClientPreference();
+const BeautyScheduleProfessional = () => getBeautyScheduleProfessional();
+const BeautyScheduleService = () => getBeautyScheduleService();
+const FitnessClass = () => getFitnessClass();
+const FitnessClassSchedule = () => getFitnessClassSchedule();
+const FitnessMembership = () => getFitnessMembership();
+const FitnessAttendance = () => getFitnessAttendance();
+const FitnessCheckin = () => getFitnessCheckin();
+const FitnessMemberGoal = () => getFitnessMemberGoal();
+const FitnessProfessional = () => getFitnessProfessional();
+const FitnessResource = () => getFitnessResource();
+const FitnessActivityProfessional = () => getFitnessActivityProfessional();
+const FitnessActivityResource = () => getFitnessActivityResource();
+const FitnessScheduleProfessional = () => getFitnessScheduleProfessional();
+const FitnessScheduleResource = () => getFitnessScheduleResource();
 const FlowExecution = () => getFlowExecution();
 const NodeExecution = () => getNodeExecution();
 const Order = () => getOrder();
@@ -404,7 +474,42 @@ module.exports = {
   EventLedger,
   ExecutionJob,
   Schedule,
+  OperationalSchedule,
+  ScheduleWorkingHour,
+  ScheduleBlock,
+  ScheduleReminder,
+  AutonomousSchedulePolicy,
+  AutonomousWaitingList,
+  AutonomousGapCampaign,
+  AutonomousGapCandidate,
+  AutonomousRuntime,
+  RevenueOpportunity,
+  KioskSession,
+  OperationalMetricSnapshot,
+  UraDecisionAudit,
+  OperationalAlert,
+  TenantFeatureFlag,
   PublicAccessToken,
+  BeautyProfessional,
+  BeautyService,
+  BeautyServiceProfessional,
+  BeautyServiceComposition,
+  BeautyLoyalty,
+  BeautyClientPreference,
+  BeautyScheduleProfessional,
+  BeautyScheduleService,
+  FitnessClass,
+  FitnessClassSchedule,
+  FitnessMembership,
+  FitnessAttendance,
+  FitnessCheckin,
+  FitnessMemberGoal,
+  FitnessProfessional,
+  FitnessResource,
+  FitnessActivityProfessional,
+  FitnessActivityResource,
+  FitnessScheduleProfessional,
+  FitnessScheduleResource,
   FlowExecution,
   NodeExecution,
   Order,
@@ -505,7 +610,40 @@ module.exports = {
   getEventLedger,
   getExecutionJob,
   getSchedule,
+  getOperationalSchedule,
+  getScheduleWorkingHour,
+  getScheduleBlock,
+  getScheduleReminder,
+  getAutonomousSchedulePolicy,
+  getAutonomousWaitingList,
+  getAutonomousGapCampaign,
+  getAutonomousGapCandidate,
+  getAutonomousRuntime,
+  getRevenueOpportunity,
+  getKioskSession,
+  getOperationalMetricSnapshot,
+  getUraDecisionAudit,
+  getOperationalAlert,
+  getTenantFeatureFlag,
   getPublicAccessToken,
+  getBeautyProfessional,
+  getBeautyService,
+  getBeautyServiceProfessional,
+  getBeautyServiceComposition,
+  getBeautyLoyalty,
+  getBeautyClientPreference,
+  getFitnessClass,
+  getFitnessClassSchedule,
+  getFitnessMembership,
+  getFitnessAttendance,
+  getFitnessCheckin,
+  getFitnessMemberGoal,
+  getFitnessProfessional,
+  getFitnessResource,
+  getFitnessActivityProfessional,
+  getFitnessActivityResource,
+  getFitnessScheduleProfessional,
+  getFitnessScheduleResource,
   getOrder,
   getDelivery,
   getPhysicalQueue,

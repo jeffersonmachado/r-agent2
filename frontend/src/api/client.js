@@ -98,6 +98,28 @@ export function buildApiUrl(path) {
   return buildUrl(path);
 }
 
+function summarizeHttpErrorBody(status, errorBody) {
+  if (Number(status) === 413) {
+    return 'Arquivo excede o limite de upload do proxy/gateway (HTTP 413).';
+  }
+
+  if (typeof errorBody === 'string') {
+    const compact = errorBody.replace(/\s+/g, ' ').trim();
+    if (!compact) return '';
+    if (compact.startsWith('<')) {
+      return 'Resposta HTML retornada pelo proxy/gateway.';
+    }
+    return compact.slice(0, 300);
+  }
+
+  if (errorBody && typeof errorBody === 'object') {
+    const msg = errorBody.message || errorBody.error?.message || errorBody.error || null;
+    if (msg) return String(msg);
+  }
+
+  return '';
+}
+
 /**
  * Executa um fetch com timeout.
  *
@@ -390,8 +412,10 @@ export async function fetchJson(path, init) {
 	        (envelopeCode && expectedErrorCodes.includes(envelopeCode));
 	      
 	      if (!isTicketNotFound && !isOptionalDevEndpoint && !isPipelineStatusNotFoundForLogs && !isExpectedError) {
+	        // 401 de sessão expirada/ausente é esperado em fluxo de autenticação.
+	        const logMethod = response.status === 401 ? logger.warn : logger.error;
 	        // Log estruturado com URL final resolvida
-	        logger.error(`HTTP Error ${response.status}`, { 
+	        logMethod(`HTTP Error ${response.status}`, { 
 	          method: init?.method || 'GET',
 	          url, 
           path,
@@ -410,7 +434,7 @@ export async function fetchJson(path, init) {
 	      }
 	      
 	      if (response.status === 401) {
-        console.log('[HTTP Client] 🚨 ERRO 401 DETECTADO! Iniciando tratamento...');
+        console.warn('[HTTP Client] ⚠️ 401 detectado. Iniciando tratamento...');
         
         const isAuthRoute = path.includes('/auth/') || path.includes('/login');
         const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -431,11 +455,11 @@ export async function fetchJson(path, init) {
           headers: responseHeadersObj,
         };
         
-        console.error('[HTTP Client] ⚠️⚠️⚠️ ERRO 401 (Unauthorized) DETECTADO ⚠️⚠️⚠️', logData);
-        console.error('[HTTP Client] Detalhes completos:', JSON.stringify(logData, null, 2));
+        console.warn('[HTTP Client] ⚠️ 401 (Unauthorized) detectado', logData);
+        console.warn('[HTTP Client] Detalhes completos:', JSON.stringify(logData, null, 2));
         
-        // Sempre loga erro 401 (independente do nível de log)
-        logger.error('Erro 401 (Unauthorized) detectado', logData);
+        // 401 é condição esperada de sessão inválida/expirada: log como warning.
+        logger.warn('Erro 401 (Unauthorized) detectado', logData);
         
         if (!isAuthRoute && typeof window !== 'undefined' && !isOnLoginPage) {
           // Remove o token inválido
@@ -463,7 +487,7 @@ export async function fetchJson(path, init) {
               // Promise que nunca resolve - o redirecionamento já foi feito
             });
           } catch (err) {
-            console.error('[HTTP Client] ❌ Erro ao chamar redirectToLogin():', err);
+            console.warn('[HTTP Client] ⚠️ Erro ao chamar redirectToLogin():', err);
             // Fallback: tenta redirecionar manualmente
             const basePath = typeof window !== 'undefined' && window.location.pathname.match(/^\/([^/]+)/) 
               ? window.location.pathname.match(/^\/([^/]+)/)[0] 
@@ -515,10 +539,9 @@ export async function fetchJson(path, init) {
         throw error;
       }
 
+      const summary = summarizeHttpErrorBody(response.status, errorBody);
       const error = new Error(
-        `Erro HTTP ${response.status} ao chamar ${url}${
-          errorBody ? ` - ${JSON.stringify(errorBody)}` : ''
-        }`,
+        `Erro HTTP ${response.status} ao chamar ${url}${summary ? ` - ${summary}` : ''}`,
       );
       // @ts-ignore
       error.status = response.status;
@@ -613,19 +636,30 @@ export async function fetchJson(path, init) {
 
     // Para polling do pipeline, evitamos spam de console no catch (timeouts/abort podem ocorrer sob carga).
     if (!silent && !isPipelineStatusRequest && !isExpectedError) {
-      console.error('[HTTP Client] 💥 Erro capturado no catch:', {
-        name: err?.name,
-        message: err?.message,
-        status: err?.status,
-        path,
-        url,
-        stack: err?.stack?.split('\n').slice(0, 10).join('\n'),
-      });
+      if (errStatus === 401) {
+        console.warn('[HTTP Client] ⚠️ Erro 401 capturado no catch:', {
+          name: err?.name,
+          message: err?.message,
+          status: err?.status,
+          path,
+          url,
+          stack: err?.stack?.split('\n').slice(0, 10).join('\n'),
+        });
+      } else {
+        console.error('[HTTP Client] 💥 Erro capturado no catch:', {
+          name: err?.name,
+          message: err?.message,
+          status: err?.status,
+          path,
+          url,
+          stack: err?.stack?.split('\n').slice(0, 10).join('\n'),
+        });
+      }
     }
     
     // Verifica se é erro 401 no catch também
     if (err?.status === 401) {
-      console.error('[HTTP Client] 🚨 ERRO 401 NO CATCH!', {
+      console.warn('[HTTP Client] ⚠️ 401 no catch', {
         path,
         url,
         errMessage: err.message,
@@ -707,7 +741,8 @@ export async function fetchJson(path, init) {
         err.status = 0;
       } else {
         if (!isExpectedError) {
-          logger.error('Request failed', { 
+          const requestFailedLogMethod = err.status === 401 ? logger.warn : logger.error;
+          requestFailedLogMethod('Request failed', { 
             method: init?.method || 'GET',
             url, 
             path,
@@ -779,10 +814,9 @@ export async function fetchBlob(path, init) {
         errorBody 
       });
 
+      const summary = summarizeHttpErrorBody(response.status, errorBody);
       const error = new Error(
-        `Erro HTTP ${response.status} ao chamar ${url}${
-          errorBody ? ` - ${JSON.stringify(errorBody)}` : ''
-        }`,
+        `Erro HTTP ${response.status} ao chamar ${url}${summary ? ` - ${summary}` : ''}`,
       );
       // @ts-ignore
       error.status = response.status;

@@ -98,7 +98,9 @@ export function FailedMessagesPage() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('pt-BR');
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('pt-BR');
   };
 
   const formatJson = (obj) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { listDocuments, getDocument, getDocumentsStats, getRagHealth, cleanOrphanedVectorDocuments, deleteDocument, reindexDocument, reindexAllNotIndexed, reindexAllTenant, queryRag, getRagDomains, getLearningMetrics, updateSynonymsFromDocuments, triggerLearning, getFullLearningData, updateSynonym, deleteSynonym, cleanInvalidQueries } from '../api/ragDocuments';
+import { listDocuments, getDocument, getDocumentsStats, getRagHealth, cleanOrphanedVectorDocuments, deleteDocument, reindexDocument, reindexAllNotIndexed, reindexAllTenant, queryRag, getRagDomains, getLearningMetrics, updateSynonymsFromDocuments, triggerLearning, getFullLearningData, updateSynonym, deleteSynonym, cleanInvalidQueries, uploadDocument } from '../api/ragDocuments';
 import { normalizeApiError, toastForApiErrorCode } from '../utils/apiErrorHandler';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
@@ -78,7 +78,9 @@ export function RAGDocumentsPage() {
   const [analysisResults, setAnalysisResults] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [showLearningModal, setShowLearningModal] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
   const deletingIdsRef = useRef(new Set());
+  const uploadInputRef = useRef(null);
   const [deletingById, setDeletingById] = useState({});
   const [learningData, setLearningData] = useState(null);
   const [loadingLearning, setLoadingLearning] = useState(false);
@@ -118,6 +120,20 @@ export function RAGDocumentsPage() {
     if (!doc || typeof doc.content !== 'string') return '';
     const trimmed = doc.content.trim();
     return trimmed ? trimmed : '';
+  };
+
+  const formatDateTime = (value, fallback = '—') => {
+    if (value === null || value === undefined || value === '') return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return date.toLocaleString('pt-BR');
+  };
+
+  const formatDateOnly = (value, fallback = '—') => {
+    if (value === null || value === undefined || value === '') return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return date.toLocaleDateString('pt-BR');
   };
 
   const downloadTextAsFile = (filename, text) => {
@@ -204,7 +220,7 @@ export function RAGDocumentsPage() {
               let rulesResponse = await fetch('/contracts/rag/question-generation.rules.json');
               // Fallback para o endpoint antigo
               if (!rulesResponse.ok) {
-                rulesResponse = await fetch('/api/data/rag_question_generation_rules.json');
+                rulesResponse = await fetch(buildApiUrl('/api/data/rag_question_generation_rules.json'));
               }
               
               if (rulesResponse.ok) {
@@ -380,6 +396,83 @@ export function RAGDocumentsPage() {
       setDocuments([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUploadDocumentFromUi = async (event) => {
+    const files = Array.from(event?.target?.files || []).filter(Boolean);
+    if (event?.target) {
+      event.target.value = '';
+    }
+    if (files.length === 0) return;
+
+    try {
+      setUploadingDocument(true);
+      const tenantId = agent?.tenantId || null;
+      const uploadResults = await Promise.allSettled(
+        files.map((file) => uploadDocument(file, {
+          ...(tenantId ? { tenantId } : {}),
+          metadata: {
+            uploadedFrom: 'rag-documents-ui',
+          },
+        }))
+      );
+
+      const fulfilled = uploadResults.filter((item) => item.status === 'fulfilled');
+      const successCount = fulfilled.length;
+      const failedCount = uploadResults.length - successCount;
+
+      const extractUploadedDoc = (payload) => {
+        if (!payload || typeof payload !== 'object') return null;
+        if (payload.document && typeof payload.document === 'object') return payload.document;
+        if (payload.data && typeof payload.data === 'object') return payload.data;
+        return payload;
+      };
+
+      const uploadedDocs = fulfilled
+        .map((item) => extractUploadedDoc(item.value))
+        .filter((doc) => doc && doc.id);
+
+      const docsNeedingIndex = uploadedDocs.filter((doc) => doc.indexed !== true);
+      let reindexSuccess = 0;
+      let reindexFailed = 0;
+      if (docsNeedingIndex.length > 0) {
+        const reindexResults = await Promise.allSettled(
+          docsNeedingIndex.map((doc) => reindexDocument(doc.id))
+        );
+        reindexSuccess = reindexResults.filter((item) => item.status === 'fulfilled' && item.value?.success).length;
+        reindexFailed = docsNeedingIndex.length - reindexSuccess;
+      }
+
+      if (successCount > 0) {
+        if (failedCount === 0 && reindexFailed === 0) {
+          showToast(
+            successCount === 1
+              ? `Upload concluído: ${files[0]?.name || 'documento'}`
+              : `${successCount} documentos enviados e indexados`,
+            'success'
+          );
+        } else {
+          const parts = [
+            `${successCount} enviados`,
+            reindexSuccess > 0 ? `${reindexSuccess} reindexados` : null,
+            failedCount > 0 ? `${failedCount} com falha no upload` : null,
+            reindexFailed > 0 ? `${reindexFailed} sem indexação` : null,
+          ].filter(Boolean);
+          showToast(parts.join(' • '), 'warning');
+        }
+        await loadData();
+      } else {
+        const firstError = uploadResults.find((item) => item.status === 'rejected');
+        const info = normalizeApiError(firstError?.reason);
+        showToast(info?.message || 'Erro ao fazer upload dos documentos', 'error');
+      }
+    } catch (error) {
+      const info = normalizeApiError(error);
+      logger.error('Erro ao fazer upload de documento RAG pela UI:', info);
+      showToast(info?.message || 'Erro ao fazer upload do documento', 'error');
+    } finally {
+      setUploadingDocument(false);
     }
   };
 
@@ -1048,7 +1141,6 @@ export function RAGDocumentsPage() {
           documentsCount: indexedDocs.length
         });
         
-        const { updateSynonymsFromDocuments, triggerLearning } = await import('../api/ragDocuments');
         const synonymsResult = await updateSynonymsFromDocuments(tenantId, indexedDocs);
         
         logger.debug('✅ [APRENDIZADO] Sinônimos atualizados', {
@@ -1203,7 +1295,7 @@ Não inclua explicações, apenas o JSON array.`;
         .replace(/\{\{documentContent\}\}/g, documentContent.substring(0, 500))
         .replace(/\{\{questionsList\}\}/g, questionsList);
 
-      const response = await fetch('/api/ai/generate', {
+      const response = await fetch(buildApiUrl('/api/ai/generate'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1312,7 +1404,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
         .replace(/\{\{documentContent\}\}/g, documentContent.substring(0, 500))
         .replace(/\{\{question\}\}/g, question);
 
-      const response = await fetch('/api/ai/generate', {
+      const response = await fetch(buildApiUrl('/api/ai/generate'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1980,7 +2072,32 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
           <p className="text-text-secondary" style={{ marginTop: '8px', marginBottom: '15px' }}>
             Gerencie todos os documentos indexados no sistema RAG
           </p>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            multiple
+            style={{ display: 'none' }}
+            accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.md,.rtf,.json,image/*"
+            onChange={handleUploadDocumentFromUi}
+          />
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <Button
+              onClick={() => uploadInputRef.current?.click()}
+              disabled={uploadingDocument || loading}
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: uploadingDocument || loading ? 'not-allowed' : 'pointer',
+                opacity: uploadingDocument || loading ? 0.6 : 1,
+                whiteSpace: 'nowrap',
+              }}
+              title="Enviar um ou mais documentos para o RAG"
+            >
+              {uploadingDocument ? 'Enviando...' : '⬆️ Upload de documentos'}
+            </Button>
             <Button
               onClick={() => setShowQueryModal(true)}
               style={{ 
@@ -3148,7 +3265,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
               </div>
               {selectedDocument.indexedAt && (
                 <p className="text-text-tertiary text-xs mt-1">
-                  Indexado em: {new Date(selectedDocument.indexedAt).toLocaleString('pt-BR')}
+                  Indexado em: {formatDateTime(selectedDocument.indexedAt)}
                 </p>
               )}
             </div>
@@ -3371,7 +3488,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1">Criado em</label>
                   <p className="text-text-primary text-sm">
-                    {new Date(selectedDocument.createdAt).toLocaleString('pt-BR')}
+                    {formatDateTime(selectedDocument.createdAt)}
                   </p>
                 </div>
               )}
@@ -3379,7 +3496,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1">Atualizado em</label>
                   <p className="text-text-primary text-sm">
-                    {new Date(selectedDocument.updatedAt).toLocaleString('pt-BR')}
+                    {formatDateTime(selectedDocument.updatedAt)}
                   </p>
                 </div>
               )}
@@ -4285,7 +4402,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                 {(learningData.learningCycles?.lastCycle || learningData.metrics?.lastCycle) && (
                   <div className="mt-4 pt-4 border-t border-border-default">
                     <div className="text-sm text-text-secondary">
-                      Último ciclo: {new Date(learningData.learningCycles?.lastCycle || learningData.metrics?.lastCycle).toLocaleString('pt-BR')}
+                      Último ciclo: {formatDateTime(learningData.learningCycles?.lastCycle || learningData.metrics?.lastCycle)}
                     </div>
                   </div>
                 )}
@@ -4444,7 +4561,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                           <span>Confiança: {Math.round((pattern.confidence || 0) * 100)}%</span>
                           <span>Chunks: {pattern.chunksFound || 0}</span>
                           {pattern.timestamp && (
-                            <span>{new Date(pattern.timestamp).toLocaleDateString('pt-BR')}</span>
+                            <span>{formatDateOnly(pattern.timestamp)}</span>
                           )}
                         </div>
                       </div>
@@ -4514,7 +4631,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                         <div className="flex gap-4 text-xs text-text-secondary">
                           <span>Chunks: {pattern.chunksFound || 0}</span>
                           {pattern.timestamp && (
-                            <span>{new Date(pattern.timestamp).toLocaleDateString('pt-BR')}</span>
+                            <span>{formatDateOnly(pattern.timestamp)}</span>
                           )}
                         </div>
                       </div>
@@ -4599,7 +4716,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                               Ciclo #{cycle.cycle} - {cycle.type === 'synonym_update' ? 'Atualização de Sinônimos' : 'Otimização de Config'}
                             </div>
                             <div className="text-xs text-text-secondary mt-1">
-                              {new Date(cycle.timestamp).toLocaleString('pt-BR')}
+                              {formatDateTime(cycle.timestamp)}
                             </div>
                           </div>
                         </div>

@@ -60,6 +60,13 @@ const EMPTY_FORM = {
   provisioningModel: '',
 };
 
+function formatDateTime(value, fallback = '—') {
+  if (value === null || value === undefined || value === '') return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString();
+}
+
 function parseExtensionToForm(row) {
   const opts = row?.endpointOptions || {};
   const prov = row?.endpointOptions?.provisioning || row?.provisioning || null;
@@ -418,7 +425,7 @@ export function PbxExtensionsPage() {
         <div className="text-sm text-text-secondary">
           <strong>Token de provisionamento:</strong> {provisioningToken || '—'}
           {provisioningTokenExpiresAt ? (
-            <span> · expira em {new Date(provisioningTokenExpiresAt).toLocaleString()}</span>
+            <span> · expira em {formatDateTime(provisioningTokenExpiresAt)}</span>
           ) : null}
         </div>
       </div>

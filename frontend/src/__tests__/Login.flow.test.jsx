@@ -101,7 +101,7 @@ describe('Login (via formulário) - seleção de tenant obrigatória', () => {
     vi.unstubAllGlobals();
   });
 
-  it('deve limpar auth_token/auth_agent ao submeter e exigir confirmação do tenant (usuário comum)', async () => {
+  it('deve limpar auth_token/auth_agent ao submeter e redirecionar direto para /support (usuário comum com tenantId)', async () => {
     const user = userEvent.setup();
     const { Login } = await loadLoginWithMocks();
 
@@ -126,24 +126,16 @@ describe('Login (via formulário) - seleção de tenant obrigatória', () => {
     expect(localStorage.getItem('auth_token')).toBe(null);
     expect(localStorage.getItem('auth_agent')).toBe(null);
 
-    // modal deve abrir sempre
-    expect(await screen.findByText('Selecione o Tenant')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /t1/i })).toBeInTheDocument();
-
     // não deve reaproveitar last tenant em login via formulário
     expect(localStorage.getItem('auth_last_tenant_id')).toBe(null);
 
-    // Em modo de seleção explícita, precisa clicar no tenant antes de “Acessar”
-    expect(screen.getByRole('button', { name: 'Acessar' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: /t1/i }));
-    await user.click(screen.getByRole('button', { name: 'Acessar' }));
-
     await waitFor(() => {
-      expect(mockValidateTenantAiCredentials).toHaveBeenCalledWith({ tenantId: 't1' });
-      expect(mockUpdateAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ tenantId: 't1', username: 'u1' })
-      );
+      expect(mockNavigate).toHaveBeenCalledWith('/support');
     });
+
+    // No fluxo atual, usuário comum com tenantId não passa pelo modal de seleção
+    expect(screen.queryByText(/Selecione o Tenant/i)).not.toBeInTheDocument();
+    expect(mockValidateTenantAiCredentials).not.toHaveBeenCalled();
   });
 
   it('deve listar tenants para super-admin e manter originalTenantId ao selecionar tenant diferente', async () => {
@@ -170,7 +162,7 @@ describe('Login (via formulário) - seleção de tenant obrigatória', () => {
     await user.type(await screen.findByPlaceholderText('Digite sua senha'), 'pw');
     await user.click(screen.getByRole('button', { name: /entrar/i }));
 
-    expect(await screen.findByText('Selecione o Tenant')).toBeInTheDocument();
+    expect(await screen.findByText(/Selecione o Tenant/i)).toBeInTheDocument();
 
     // Em modo explícito, começa desabilitado
     expect(screen.getByRole('button', { name: 'Acessar' })).toBeDisabled();

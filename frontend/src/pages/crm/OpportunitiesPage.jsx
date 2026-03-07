@@ -12,6 +12,7 @@ import {
   CrmTextarea,
   CrmBadge,
 } from '../../components/crm/CrmComponents';
+import { ScheduleModal } from '../../components/ScheduleModal';
 
 export function OpportunitiesPage() {
   const { opportunities, setOpportunities, pipelines, setPipelines } = useCrm();
@@ -20,6 +21,7 @@ export function OpportunitiesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' ou 'table'
   const [selectedPipeline, setSelectedPipeline] = useState(null);
+  const [scheduleOpportunity, setScheduleOpportunity] = useState(null);
   const [filters, setFilters] = useState({ search: '' });
   const [formData, setFormData] = useState({
     title: '',
@@ -270,6 +272,23 @@ export function OpportunitiesPage() {
                         {opp.value ? `R$ ${opp.value}` : '-'}
                       </span>
                     </div>
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setScheduleOpportunity(opp)}
+                        style={{
+                          border: '1px solid var(--color-border-default)',
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          fontSize: '11px',
+                          color: 'var(--color-text-secondary)',
+                          background: 'var(--color-bg-primary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Agendar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -306,6 +325,13 @@ export function OpportunitiesPage() {
                         title="Editar"
                       >
                         ✏️
+                      </button>
+                      <button
+                        onClick={() => setScheduleOpportunity(opp)}
+                        className="text-text-secondary hover:text-text-primary transition-colors"
+                        title="Agendar"
+                      >
+                        🗓️
                       </button>
                       <button
                         onClick={() => {
@@ -398,6 +424,19 @@ export function OpportunitiesPage() {
           />
         </CrmForm>
       </CrmModal>
+      {scheduleOpportunity?.id ? (
+        <ScheduleModal
+          isOpen={!!scheduleOpportunity}
+          onClose={() => setScheduleOpportunity(null)}
+          contextType="crm"
+          contextId={String(scheduleOpportunity.id)}
+          contactId={scheduleOpportunity.contact_id || ''}
+          defaultPurpose="follow-up comercial"
+          defaultChannel="internal"
+          title={`Agendar opportunity: ${scheduleOpportunity.title || scheduleOpportunity.id}`}
+          onCreated={() => showToast('Agendamento criado', 'success')}
+        />
+      ) : null}
       <ToastContainer />
     </div>
   );

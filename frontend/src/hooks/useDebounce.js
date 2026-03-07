@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 
 /**
  * Hook para debounce de funções.
@@ -15,6 +15,11 @@ import { useRef, useCallback } from 'react';
  */
 export function useDebounce(fn, delay = 500) {
   const timeoutRef = useRef(null);
+  const latestFnRef = useRef(fn);
+
+  useEffect(() => {
+    latestFnRef.current = fn;
+  }, [fn]);
 
   const debouncedFn = useCallback(
     (...args) => {
@@ -25,11 +30,11 @@ export function useDebounce(fn, delay = 500) {
 
       // Cria novo timeout
       timeoutRef.current = setTimeout(() => {
-        fn(...args);
+        latestFnRef.current(...args);
         timeoutRef.current = null;
       }, delay);
     },
-    [fn, delay]
+    [delay]
   );
 
   // Limpa timeout ao desmontar
@@ -42,4 +47,3 @@ export function useDebounce(fn, delay = 500) {
 
   return { debouncedFn, cancel };
 }
-

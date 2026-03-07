@@ -139,6 +139,7 @@ function fromDbRow(row) {
   return {
     id: row.id,
     tenantId: row.tenant_key,
+    contactId: getTicketContactId({ context }),
     sessionId: row.session_id,
     conversationId: row.conversation_id || null,
     channelType: row.channel_type || (row.session_id && String(row.session_id).startsWith('whatsapp_') ? 'whatsapp' : null),
@@ -327,9 +328,18 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
   const now = new Date().toISOString();
 
   const inputContext = context && typeof context === 'object' ? context : {};
+  const initialMode = inputContext.mode || 'human';
+  const normalizedContext = inputContext.normalized_context && typeof inputContext.normalized_context === 'object'
+    ? inputContext.normalized_context
+    : {};
   const inputMetadata = inputContext.metadata && typeof inputContext.metadata === 'object'
     ? inputContext.metadata
     : {};
+  const normalizedTags = Array.isArray(normalizedContext.tags) ? normalizedContext.tags : [];
+  const finalTags = Array.from(new Set([
+    ...(Array.isArray(tags) ? tags : []),
+    ...normalizedTags,
+  ].filter(Boolean)));
 
   const ticket = {
     id,
@@ -341,7 +351,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
     queue,
     status: 'waiting',
     // Compatibilidade: ticket implica atendimento humano por padrão
-    mode: context.mode || 'human',
+    mode: initialMode,
     pauseReason: context.pauseReason || null,
     takeoverAt: context.takeoverAt || null,
     returnToBotAt: context.returnToBotAt || null,
@@ -360,7 +370,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
       timestamp: now,
     }] : [],
     unreadCount: 0,
-    tags: Array.isArray(tags) ? tags : [],
+    tags: finalTags,
     category: category || null,
     // Contexto preservado para o atendente
     context: {
@@ -372,11 +382,16 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
       variables: inputContext.variables && typeof inputContext.variables === 'object'
         ? inputContext.variables
         : {},
-      allowReturnToBot: inputContext.allowReturnToBot !== false, // Default: true
+      // Tickets que já nascem em modo humano não devem retornar ao bot automaticamente,
+      // salvo quando explicitamente habilitado por fluxo.
+      allowReturnToBot: typeof inputContext.allowReturnToBot === 'boolean'
+        ? inputContext.allowReturnToBot
+        : (initialMode === 'bot'),
       safeReturnNode: inputContext.safeReturnNode || null,
       handoverHistory: Array.isArray(inputContext.handoverHistory) ? inputContext.handoverHistory : [],
       metadata: {
         ...inputMetadata,
+        normalized_context: Object.keys(normalizedContext).length > 0 ? normalizedContext : (inputMetadata.normalized_context || null),
       },
     },
   };
@@ -842,12 +857,41 @@ function updateLastMessage(ticketId, message) {
     }
   }
 
+  // Compatibilidade: aceita options como 5º argumento para mídia inbound
+  const options = arguments.length > 4 ? (arguments[4] || {}) : {};
+  const messageType = options && options.messageType ? String(options.messageType) : 'text';
+  const mediaUrl = options && options.mediaUrl ? String(options.mediaUrl) : null;
+  const mimeType = options && options.mimeType ? String(options.mimeType) : null;
+  const fileName = options && options.fileName ? String(options.fileName) : null;
+  const replyToRaw = options && options.replyTo && typeof options.replyTo === 'object' ? options.replyTo : null;
+  const replyTo = replyToRaw
+    ? {
+      messageId: replyToRaw?.messageId ? String(replyToRaw.messageId) : undefined,
+      externalMessageId: replyToRaw?.externalMessageId ? String(replyToRaw.externalMessageId) : undefined,
+      clientMessageId: replyToRaw?.clientMessageId ? String(replyToRaw.clientMessageId) : undefined,
+      sender: replyToRaw?.sender ? String(replyToRaw.sender) : undefined,
+      text: replyToRaw?.text ? String(replyToRaw.text) : undefined,
+      timestamp: replyToRaw?.timestamp ? String(replyToRaw.timestamp) : undefined,
+    }
+    : null;
+  const mediaKind = options && options.mediaKind ? String(options.mediaKind) : null;
+  const documentId = options && options.documentId ? String(options.documentId) : null;
+  const sizeBytes = Number.isFinite(options?.sizeBytes) ? Number(options.sizeBytes) : null;
+
   const messageObj = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     text: message,
     sender: 'user',
     timestamp: timestampOverride || new Date().toISOString(),
     externalMessageId: externalMessageId || undefined,
+    type: messageType || 'text',
+    mediaUrl: mediaUrl || undefined,
+    mimeType: mimeType || undefined,
+    fileName: fileName || undefined,
+    mediaKind: mediaKind || undefined,
+    documentId: documentId || undefined,
+    sizeBytes: Number.isFinite(sizeBytes) ? sizeBytes : undefined,
+    replyTo: replyTo || undefined,
   };
   
   ticket.messages.push(messageObj);
@@ -883,6 +927,21 @@ function addAgentMessage(ticketId, message, agentId = null) {
   const clientMessageId = options && options.clientMessageId ? String(options.clientMessageId) : null;
   const externalMessageId = options && options.externalMessageId ? String(options.externalMessageId) : null;
   const deliveryStatus = options && options.deliveryStatus ? String(options.deliveryStatus) : null;
+  const messageType = options && options.messageType ? String(options.messageType) : 'text';
+  const mediaUrl = options && options.mediaUrl ? String(options.mediaUrl) : null;
+  const mimeType = options && options.mimeType ? String(options.mimeType) : null;
+  const fileName = options && options.fileName ? String(options.fileName) : null;
+  const replyToRaw = options && options.replyTo && typeof options.replyTo === 'object' ? options.replyTo : null;
+  const replyTo = replyToRaw
+    ? {
+      messageId: replyToRaw?.messageId ? String(replyToRaw.messageId) : undefined,
+      externalMessageId: replyToRaw?.externalMessageId ? String(replyToRaw.externalMessageId) : undefined,
+      clientMessageId: replyToRaw?.clientMessageId ? String(replyToRaw.clientMessageId) : undefined,
+      sender: replyToRaw?.sender ? String(replyToRaw.sender) : undefined,
+      text: replyToRaw?.text ? String(replyToRaw.text) : undefined,
+      timestamp: replyToRaw?.timestamp ? String(replyToRaw.timestamp) : undefined,
+    }
+    : null;
 
   const messageObj = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -893,6 +952,11 @@ function addAgentMessage(ticketId, message, agentId = null) {
     clientMessageId: clientMessageId || undefined,
     externalMessageId: externalMessageId || undefined,
     deliveryStatus: deliveryStatus || undefined,
+    type: messageType || 'text',
+    mediaUrl: mediaUrl || undefined,
+    mimeType: mimeType || undefined,
+    fileName: fileName || undefined,
+    replyTo: replyTo || undefined,
   };
 
   ticket.messages.push(messageObj);
@@ -1157,6 +1221,236 @@ function getTicketMessages(ticketId) {
   return ticket.messages;
 }
 
+function normalizeText(str) {
+  if (!str) return '';
+  return String(str)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function normalizePhone(str) {
+  if (!str) return '';
+  return String(str).replace(/\D/g, '');
+}
+
+function getContactName(ticket) {
+  return (
+    ticket?.customerName
+    || ticket?.context?.metadata?.contactName
+    || ticket?.context?.variables?.customerName
+    || ticket?.context?.variables?.name
+    || ticket?.context?.variables?.nome
+    || 'Cliente'
+  );
+}
+
+function getTicketContactId(ticket) {
+  return String(
+    ticket?.contactId
+    || ticket?.context?.metadata?.contactId
+    || ticket?.context?.variables?.contactId
+    || ''
+  ).trim();
+}
+
+function buildTicketSearchIndex(ticket) {
+  const phoneDigits = normalizePhone(ticket?.phoneNumber);
+  const parts = [
+    ticket?.id,
+    getContactName(ticket),
+    ticket?.phoneNumber,
+    phoneDigits,
+    ticket?.lastUserMessage,
+    ticket?.queue,
+    (Array.isArray(ticket?.tags) ? ticket.tags : []).join(' '),
+  ];
+  return normalizeText(parts.join(' '));
+}
+
+function subseqMatchScore(text, query) {
+  let ti = 0;
+  let qi = 0;
+  let hits = 0;
+
+  while (ti < text.length && qi < query.length) {
+    if (text[ti] === query[qi]) {
+      hits++;
+      qi++;
+    }
+    ti++;
+  }
+
+  return qi === query.length ? hits : 0;
+}
+
+function scoreTicket(ticket, query) {
+  const q = normalizeText(query);
+  if (!q) return 1;
+
+  const qDigits = normalizePhone(query);
+  let score = 0;
+
+  if (qDigits.length >= 3) {
+    if (String(ticket?._phoneDigits || '').includes(qDigits)) score += 200;
+    if (String(ticket?._phoneDigits || '').endsWith(qDigits)) score += 60;
+  }
+
+  if (String(ticket?._nameNorm || '').includes(q)) score += 120;
+  if (String(ticket?._nameNorm || '').startsWith(q)) score += 40;
+  if (String(ticket?._searchIndex || '').includes(q)) score += 80;
+
+  if (score === 0) {
+    const fuzzy = subseqMatchScore(String(ticket?._searchIndex || ''), q);
+    if (fuzzy > 0) score += 30 + fuzzy;
+  }
+
+  return score;
+}
+
+function parseStatusesInput(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item || '').trim())
+      .filter(Boolean);
+  }
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function toTimeMs(ticket) {
+  const raw = ticket?.updatedAt || ticket?.createdAt || null;
+  if (!raw) return 0;
+  const ts = Date.parse(String(raw));
+  return Number.isFinite(ts) ? ts : 0;
+}
+
+function compareByUpdatedAtIdDesc(a, b) {
+  const at = toTimeMs(a);
+  const bt = toTimeMs(b);
+  if (bt !== at) return bt - at;
+  return String(b?.id || '').localeCompare(String(a?.id || ''));
+}
+
+function encodeCursor(ticket) {
+  const payload = {
+    updatedAt: String(ticket?.updatedAt || ticket?.createdAt || ''),
+    id: String(ticket?.id || ''),
+  };
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64');
+}
+
+function decodeCursor(cursor) {
+  if (!cursor) return null;
+  try {
+    const decoded = Buffer.from(String(cursor), 'base64').toString('utf8');
+    const data = JSON.parse(decoded);
+    if (!data || !data.updatedAt || !data.id) return null;
+    return {
+      updatedAt: String(data.updatedAt),
+      id: String(data.id),
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Lista tickets com paginação por cursor e pesquisa backend (compatível com filtro RBAC via callback).
+ *
+ * @param {Object} [options]
+ * @param {string} [options.tenantId]
+ * @param {string|string[]} [options.status]
+ * @param {string} [options.queue]
+ * @param {number} [options.limit]
+ * @param {string} [options.cursor]
+ * @param {string} [options.q]
+ * @param {(ticket: Ticket) => boolean} [options.accessFilter]
+ * @returns {{items: Ticket[], nextCursor: string|null, hasMore: boolean}}
+ */
+function listAllTicketsPaged(options = {}) {
+  const statuses = parseStatusesInput(options.status);
+  const query = String(options.q || '').trim();
+  const cursorData = decodeCursor(options.cursor);
+  const limit = Math.min(Math.max(1, parseInt(options.limit, 10) || 30), 100);
+  const accessFilter = typeof options.accessFilter === 'function' ? options.accessFilter : null;
+  const contactId = String(options.contactId || '').trim();
+  const phoneNumber = normalizePhone(options.phoneNumber);
+
+  let list = Array.from(tickets.values());
+
+  if (options.tenantId) {
+    list = list.filter((ticket) => ticket?.tenantId === options.tenantId);
+  }
+  if (statuses.length > 0) {
+    const statusSet = new Set(statuses);
+    list = list.filter((ticket) => statusSet.has(String(ticket?.status || '')));
+  }
+  if (options.queue) {
+    list = list.filter((ticket) => ticket?.queue === options.queue);
+  }
+  if (contactId) {
+    list = list.filter((ticket) => getTicketContactId(ticket) === contactId);
+  } else if (phoneNumber) {
+    list = list.filter((ticket) => normalizePhone(ticket?.phoneNumber) === phoneNumber);
+  }
+  if (accessFilter) {
+    list = list.filter((ticket) => accessFilter(ticket));
+  }
+
+  if (query) {
+    const scored = [];
+    for (const ticket of list) {
+      ticket._phoneDigits = normalizePhone(ticket?.phoneNumber);
+      ticket._nameNorm = normalizeText(getContactName(ticket));
+      ticket._searchIndex = buildTicketSearchIndex(ticket);
+      const score = scoreTicket(ticket, query);
+      if (score > 0) scored.push({ ticket, score });
+    }
+
+    scored.sort((a, b) => (b.score - a.score) || compareByUpdatedAtIdDesc(a.ticket, b.ticket));
+    list = scored.map((item) => item.ticket);
+
+    if (cursorData) {
+      const foundAt = list.findIndex((ticket) =>
+        String(ticket?.id || '') === cursorData.id
+        && String(ticket?.updatedAt || ticket?.createdAt || '') === cursorData.updatedAt
+      );
+      if (foundAt >= 0) {
+        list = list.slice(foundAt + 1);
+      }
+    }
+  } else {
+    list.sort(compareByUpdatedAtIdDesc);
+    if (cursorData) {
+      const cursorTime = Date.parse(cursorData.updatedAt);
+      const cursorTs = Number.isFinite(cursorTime) ? cursorTime : 0;
+      list = list.filter((ticket) => {
+        const tTs = toTimeMs(ticket);
+        if (tTs < cursorTs) return true;
+        if (tTs > cursorTs) return false;
+        return String(ticket?.id || '').localeCompare(cursorData.id) < 0;
+      });
+    }
+  }
+
+  const items = list.slice(0, limit);
+  const hasMore = list.length > limit;
+  const nextCursor = hasMore && items.length > 0
+    ? encodeCursor(items[items.length - 1])
+    : null;
+
+  return {
+    items,
+    nextCursor,
+    hasMore,
+  };
+}
+
 /**
  * Lista todos os tickets (para administração).
  *
@@ -1170,6 +1464,8 @@ function getTicketMessages(ticketId) {
  */
 function listAllTickets(options = {}) {
   let ticketList = Array.from(tickets.values());
+  const contactId = String(options.contactId || '').trim();
+  const phoneNumber = normalizePhone(options.phoneNumber);
 
   // Filtro por tenant (obrigatório para isolamento multi-tenant)
   if (options.tenantId) {
@@ -1187,6 +1483,11 @@ function listAllTickets(options = {}) {
 
   if (options.queue) {
     ticketList = ticketList.filter((t) => t.queue === options.queue);
+  }
+  if (contactId) {
+    ticketList = ticketList.filter((ticket) => getTicketContactId(ticket) === contactId);
+  } else if (phoneNumber) {
+    ticketList = ticketList.filter((ticket) => normalizePhone(ticket?.phoneNumber) === phoneNumber);
   }
 
   // Ordena por data de criação (mais recentes primeiro)
@@ -1397,6 +1698,7 @@ module.exports = {
   setTicketMode,
   getTicketMessages,
   listAllTickets,
+  listAllTicketsPaged,
   cleanupOldTickets,
   startAutoCleanup,
   getMetrics,

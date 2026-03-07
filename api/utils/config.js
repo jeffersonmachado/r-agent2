@@ -19,6 +19,10 @@ const configFile = path.join(__dirname, '..', 'data', 'config.json');
 // Cache da configuração carregada
 let cachedConfig = null;
 
+function shouldValidateRedisConfig() {
+  return process.env.NODE_ENV !== 'test';
+}
+
 /**
  * Mapeamento de variáveis de ambiente antigas para novos caminhos JSON.
  * Usado para compatibilidade durante a migração.
@@ -102,32 +106,36 @@ function loadConfig() {
     if (fs.existsSync(configFile)) {
       const data = fs.readFileSync(configFile, 'utf8');
       cachedConfig = JSON.parse(data);
-      // Usa console.log aqui pois logger pode depender de config
-      // eslint-disable-next-line no-console
-      console.log(`[Config] Configuração carregada de ${configFile}`);
+      if (process.env.NODE_ENV !== 'test') {
+        // Usa console.log aqui pois logger pode depender de config
+        // eslint-disable-next-line no-console
+        console.log(`[Config] Configuração carregada de ${configFile}`);
+      }
     } else {
       // eslint-disable-next-line no-console
       console.warn(`[Config] Arquivo de configuração não encontrado: ${configFile}. Usando valores padrão e process.env.`);
       cachedConfig = {};
     }
     
-    // Valida configuração do Redis após carregar
-    try {
-      const redisValidation = validateRedisConfig();
-      if (!redisValidation.valid) {
-        // eslint-disable-next-line no-console
-        console.warn('[Config] Avisos na configuração do Redis:');
-        redisValidation.errors.forEach(error => {
+    // Em testes, o Redis é opcional e não deve poluir a saída.
+    if (shouldValidateRedisConfig()) {
+      try {
+        const redisValidation = validateRedisConfig();
+        if (!redisValidation.valid) {
           // eslint-disable-next-line no-console
-          console.warn(`  - ${error}`);
-        });
-      } else if (redisValidation.config) {
+          console.warn('[Config] Avisos na configuração do Redis:');
+          redisValidation.errors.forEach(error => {
+            // eslint-disable-next-line no-console
+            console.warn(`  - ${error}`);
+          });
+        } else if (redisValidation.config) {
+          // eslint-disable-next-line no-console
+          console.log(`[Config] Configuração do Redis válida: ${redisValidation.config.url}`);
+        }
+      } catch (validationErr) {
         // eslint-disable-next-line no-console
-        console.log(`[Config] Configuração do Redis válida: ${redisValidation.config.url}`);
+        console.warn('[Config] Erro ao validar configuração do Redis:', validationErr.message);
       }
-    } catch (validationErr) {
-      // eslint-disable-next-line no-console
-      console.warn('[Config] Erro ao validar configuração do Redis:', validationErr.message);
     }
   } catch (err) {
     // eslint-disable-next-line no-console

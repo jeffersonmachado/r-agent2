@@ -83,6 +83,10 @@ async def index_document(request: IndexRequest):
         
         # ETAPA 1: Normalização de conteúdo
         normalized_content = normalize_content(doc_data['content'])
+        force_reindex = bool(
+            doc_data.get('metadata', {}).get('forceReindex')
+            or doc_data.get('metadata', {}).get('force_reindex')
+        )
         
         # ETAPA 2: Geração de content_hash
         content_hash = generate_content_hash(normalized_content)
@@ -91,9 +95,9 @@ async def index_document(request: IndexRequest):
         tenant_id = normalize_tenant_id(doc_data['tenantId'])
         document_id = doc_data['id']
         source_id = doc_data.get('metadata', {}).get('source_id') or document_id
-        structural_check = check_structural_duplicate(tenant_id, content_hash, source_id)
-        
-        if structural_check.get('is_duplicate'):
+        structural_check = {'is_duplicate': False} if force_reindex else check_structural_duplicate(tenant_id, content_hash, source_id)
+
+        if (not force_reindex) and structural_check.get('is_duplicate'):
             logger.info(
                 f"[INDEX] Documento duplicado estruturalmente detectado, descartando ingestão",
                 extra={
@@ -189,11 +193,15 @@ async def index_document(request: IndexRequest):
             semantic_hash = generate_semantic_hash(normalized_emb)
             
             # Verifica duplicidade semântica
-            semantic_check = check_semantic_duplicate(
-                tenant_id,
-                normalized_emb,
-                semantic_hash,
-                source_id
+            semantic_check = (
+                {'is_duplicate': False}
+                if force_reindex
+                else check_semantic_duplicate(
+                    tenant_id,
+                    normalized_emb,
+                    semantic_hash,
+                    source_id
+                )
             )
             
             if semantic_check.get('is_duplicate'):

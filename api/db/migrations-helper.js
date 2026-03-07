@@ -10,22 +10,16 @@
  */
 async function tableExists(queryInterface, tableName) {
   try {
-    const results = await queryInterface.sequelize.query(
-      `SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = '${tableName}'
-      ) AS exists`,
-      {
-        type: queryInterface.sequelize.constructor.QueryTypes.SELECT,
+    const allTables = await queryInterface.showAllTables();
+    const wanted = String(tableName).toLowerCase();
+    return (allTables || []).some((entry) => {
+      if (typeof entry === 'string') return entry.toLowerCase() === wanted;
+      if (entry && typeof entry === 'object') {
+        const maybeName = entry.tableName || entry.table_name || entry.TABLE_NAME || entry.name;
+        return maybeName ? String(maybeName).toLowerCase() === wanted : false;
       }
-    );
-    // Sequelize retorna array de objetos
-    if (Array.isArray(results) && results.length > 0) {
-      const result = results[0];
-      return result.exists === true || result.exists === 't';
-    }
-    return false;
+      return false;
+    });
   } catch (err) {
     console.error(`[Migration Helper] Erro ao verificar tabela ${tableName}:`, err.message);
     return false;
@@ -37,28 +31,9 @@ async function tableExists(queryInterface, tableName) {
  */
 async function indexExists(queryInterface, tableName, indexName) {
   try {
-    // Usa query direta com escape seguro dos nomes
-    const escapedTableName = tableName.replace(/'/g, "''");
-    const escapedIndexName = indexName.replace(/'/g, "''");
-    const [results] = await queryInterface.sequelize.query(
-      `SELECT EXISTS (
-        SELECT FROM pg_indexes 
-        WHERE schemaname = 'public' 
-        AND tablename = '${escapedTableName}' 
-        AND indexname = '${escapedIndexName}'
-      ) AS "exists"`,
-      {
-        type: queryInterface.sequelize.constructor.QueryTypes.SELECT,
-      }
-    );
-    // Sequelize retorna array de objetos
-    if (Array.isArray(results) && results.length > 0) {
-      const result = results[0];
-      // PostgreSQL retorna boolean como true/false ou 't'/'f'
-      const exists = result.exists || result['exists'];
-      return exists === true || exists === 't' || exists === true;
-    }
-    return false;
+    const indexes = await queryInterface.showIndex(tableName);
+    const wanted = String(indexName).toLowerCase();
+    return (indexes || []).some((idx) => String(idx?.name || '').toLowerCase() === wanted);
   } catch (err) {
     console.error(`[Migration Helper] Erro ao verificar índice ${indexName}:`, err.message);
     return false;
@@ -71,43 +46,15 @@ async function indexExists(queryInterface, tableName, indexName) {
  */
 async function uniqueIndexExistsOnColumn(queryInterface, tableName, columnName) {
   try {
-    const escapedTableName = tableName.replace(/'/g, "''");
-    const escapedColumnName = columnName.replace(/'/g, "''");
-    
-    // Verifica se existe um índice único na coluna
-    // Isso cobre índices criados automaticamente pelo PostgreSQL quando unique: true é definido
-    const results = await queryInterface.sequelize.query(
-      `SELECT EXISTS (
-        SELECT 1
-        FROM pg_index i
-        JOIN pg_class t ON t.oid = i.indrelid
-        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(i.indkey)
-        WHERE t.relname = '${escapedTableName}'
-          AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
-          AND a.attname = '${escapedColumnName}'
-          AND i.indisunique = true
-      ) AS "exists"`,
-      {
-        type: queryInterface.sequelize.constructor.QueryTypes.SELECT,
-        plain: false, // Garante que retorna array
-      }
-    );
-    
-    // Sequelize retorna [results, metadata] quando não usa plain: true
-    const resultArray = Array.isArray(results) && Array.isArray(results[0]) ? results[0] : results;
-    
-    if (Array.isArray(resultArray) && resultArray.length > 0) {
-      const result = resultArray[0];
-      const exists = result?.exists || result?.['exists'];
-      // PostgreSQL retorna boolean como true/false ou 't'/'f' como string
-      if (exists === true || exists === 't' || exists === 'true') {
-        return true;
-      }
-    }
-    return false;
+    const indexes = await queryInterface.showIndex(tableName);
+    const wanted = String(columnName).toLowerCase();
+    return (indexes || []).some((idx) => {
+      if (!idx?.unique) return false;
+      const fields = Array.isArray(idx.fields) ? idx.fields : [];
+      return fields.some((f) => String(f?.attribute || f?.name || '').toLowerCase() === wanted);
+    });
   } catch (err) {
     console.error(`[Migration Helper] Erro ao verificar índice único na coluna ${columnName}:`, err.message);
-    // Em caso de erro, retorna false para tentar criar (pode falhar, mas pelo menos tenta)
     return false;
   }
 }

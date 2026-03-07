@@ -14,13 +14,11 @@ Foi adicionado um módulo isolado em `apps/mobile` (Expo + EAS) para testar e us
 No backend (`api/server.js`), configure:
 
 ```bash
-PUSH_ENABLED=true
-
 # Android / FCM
-FCM_PROJECT_ID=seu-projeto
-FCM_SERVICE_ACCOUNT_JSON=... # JSON inline ou base64
+FCM_PROJECT_ID=seu-projeto # opcional se o JSON já tiver project_id
+FCM_SERVICE_ACCOUNT_JSON=... # JSON inline ou base64 (opcional se usar PATH)
 # ou
-FCM_SERVICE_ACCOUNT_PATH=/opt/keys/firebase-service-account.json
+FCM_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-service-account.json
 
 # iOS / APNs
 APNS_TEAM_ID=SEU_TEAM_ID
@@ -31,8 +29,14 @@ APNS_P8=... # conteúdo .p8 inline ou base64
 APNS_P8_PATH=/opt/keys/AuthKey_XXXXXX.p8
 APNS_ENV=sandbox # ou production
 ```
+O backend valida essas variáveis no startup.
 
-Com `PUSH_ENABLED=true`, o backend valida essas variáveis no startup.
+### Fluxo recomendado (produção)
+
+1. Baixe a **Service Account JSON** no Firebase Console.
+2. Monte esse arquivo no container da API em `/run/secrets/firebase-service-account.json`.
+3. Defina apenas `FCM_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-service-account.json`.
+4. `FCM_PROJECT_ID` fica opcional quando o JSON já contém `project_id`.
 
 ## 2) Android (FCM)
 
@@ -177,3 +181,14 @@ async function setupPush(apiClient: any, router: any) {
 ```
 
 Ao tocar na notificação, abra: `/support/ticket/:ticketId`.
+
+## 9) Teste rápido em produção
+
+```bash
+./scripts/test-push-mobile.sh \
+  --api-url http://127.0.0.1:3001 \
+  --tenant-id system \
+  --user-id <USER_ID_DESTINO> \
+  --title "Smoke Push" \
+  --body "Teste push"
+```

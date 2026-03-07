@@ -58,6 +58,17 @@ function formatStepTitle(step, index) {
   return `${index + 1}. ${base}`;
 }
 
+function formatAiAnalysisSummary(aiAnalysis) {
+  if (!aiAnalysis || typeof aiAnalysis !== 'object') return '-';
+  const sentiment = String(aiAnalysis.sentiment || '').trim();
+  const intent = String(aiAnalysis.intent || '').trim();
+  const parts = [];
+  if (sentiment) parts.push(`Sentimento: ${sentiment}`);
+  if (intent) parts.push(`Intenção: ${intent}`);
+  if (parts.length === 0) return 'Sem dados';
+  return parts.join(' • ');
+}
+
 export function AutomationsPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
@@ -466,6 +477,7 @@ export function AutomationsPage() {
                     <th>Status</th>
                     <th>Publicado em</th>
                     <th>Última execução</th>
+                    <th>Análise IA</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -476,6 +488,7 @@ export function AutomationsPage() {
                       <td>{a.status || 'draft'}</td>
                       <td>{a.publishedAt || '-'}</td>
                       <td>{a.lastRunAt || '-'}</td>
+                      <td>{formatAiAnalysisSummary(a.lastRunAiAnalysis)}</td>
                       <td>
                         <div className="flex gap-2">
                           <Button onClick={() => handleEdit(a)} style={{ width: 'auto' }}>Editar</Button>

@@ -83,3 +83,34 @@ export async function adjustTenantPlan(tenantId, plan, customLimits = null) {
     body: JSON.stringify({ plan, customLimits }),
   });
 }
+
+export async function getOccTenantsHealth() {
+  return fetchJson('/api/admin/tenants/health', {
+    method: 'GET',
+  });
+}
+
+export async function getOccTenantMetrics(tenantId) {
+  return fetchJson(`/api/admin/tenant/${encodeURIComponent(tenantId)}/metrics`, {
+    method: 'GET',
+  });
+}
+
+export async function getOccTenantAlerts(tenantId, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.includeResolved) params.set('includeResolved', 'true');
+  if (filters.limit) params.set('limit', String(filters.limit));
+  const query = params.toString();
+  return fetchJson(`/api/admin/tenant/${encodeURIComponent(tenantId)}/alerts${query ? `?${query}` : ''}`, {
+    method: 'GET',
+  });
+}
+
+export async function getOccTenantUraAudit(tenantId, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.limit) params.set('limit', String(filters.limit));
+  const query = params.toString();
+  return fetchJson(`/api/admin/tenant/${encodeURIComponent(tenantId)}/ura/audit${query ? `?${query}` : ''}`, {
+    method: 'GET',
+  });
+}

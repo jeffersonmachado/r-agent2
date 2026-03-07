@@ -1,5 +1,20 @@
 # Changelog da Migração para PostgreSQL
 
+## [1.1.0] - 2026-02-15
+
+### Adicionado
+
+#### Contexto Normalizado (tags + entidades + funil)
+- ✅ Contrato e utilitários de contexto normalizado (`api/contracts/normalizedContext.js`, `api/context/*`, `api/entities/*`, `api/support/tagRules.js`)
+- ✅ Persistência e propagação no pipeline de inbound (`messageProcessor`, `normalizeInboundEvent`, contrato de evento)
+- ✅ Consumo transversal em módulos de Support/CRM/RAG/Automação
+- ✅ Endpoints de apoio e diagnóstico: `GET /debug/context/:tenant/:session` e `POST /api/support/tags/suggest`
+- ✅ Cobertura de testes focados para os serviços integrados
+
+#### Operação e documentação
+- ✅ Script de reutilização de token: `scripts/set-token-env.sh`
+- ✅ Resumo consolidado da entrega: `RESUMO_IMPL_CONTEXTO_NORMALIZADO.md`
+
 ## [1.0.0] - 2025-01-11
 
 ### Adicionado

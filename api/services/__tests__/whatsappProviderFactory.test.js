@@ -1,32 +1,57 @@
-const WhatsAppProviderFactory = require('../whatsappProviderFactory');
+'use strict';
+
 const WhatsAppProviderCloud = require('../whatsappProviderCloud');
 const WhatsAppProviderQr = require('../whatsappProviderQr');
 
+const mockGetSetting = jest.fn();
+
+jest.mock('../tenantSettingsService', () => ({
+  getSetting: (...args) => mockGetSetting(...args),
+}));
+
+const WhatsAppProviderFactory = require('../whatsappProviderFactory');
+
 describe('WhatsAppProviderFactory', () => {
-  it('retorna WhatsAppProviderCloud por padrão', async () => {
-    const provider = await WhatsAppProviderFactory.get('tenant1', { provider: 'cloud' });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetSetting.mockResolvedValue({ ok: true, value: { connections: [] } });
+  });
+
+  test('retorna Cloud por padrão quando não há conexão configurada', async () => {
+    const provider = await WhatsAppProviderFactory.get('tenant-1', null);
     expect(provider).toBeInstanceOf(WhatsAppProviderCloud);
   });
-  it('retorna WhatsAppProviderQr se provider=qr', async () => {
-    const provider = await WhatsAppProviderFactory.get('tenant1', { provider: 'qr' });
+
+  test('retorna QR quando channelAccount.provider=qr', async () => {
+    const provider = await WhatsAppProviderFactory.get('tenant-1', { provider: 'qr' });
     expect(provider).toBeInstanceOf(WhatsAppProviderQr);
   });
-});
 
-describe('WhatsAppProviderCloud', () => {
-  it('chama métodos do whatsappService', async () => {
-    const provider = new WhatsAppProviderCloud();
-    expect(typeof provider.sendText).toBe('function');
-    expect(typeof provider.sendMedia).toBe('function');
-    expect(typeof provider.sendTemplate).toBe('function');
+  test('retorna QR quando há conexão QR conectada no tenant settings', async () => {
+    mockGetSetting.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        connections: [
+          { id: 'wa-1', provider: 'whatsapp-qr', status: 'connected' },
+        ],
+      },
+    });
+
+    const provider = await WhatsAppProviderFactory.get('tenant-1', null);
+    expect(provider).toBeInstanceOf(WhatsAppProviderQr);
   });
-});
 
-describe('WhatsAppProviderQr', () => {
-  it('stub lança erro', async () => {
-    const provider = new WhatsAppProviderQr();
-    await expect(provider.sendText('t','to','msg',{})).rejects.toThrow('TODO');
-    await expect(provider.sendMedia('t','to','img','url','cap',{})).rejects.toThrow('TODO');
-    await expect(provider.sendTemplate('t','to','tpl','pt',[])).rejects.toThrow('TODO');
+  test('prioriza QR (sem fallback cloud) quando há configuração QR mesmo desconectada', async () => {
+    mockGetSetting.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        connections: [
+          { id: 'wa-1', provider: 'whatsapp-qr', status: 'disconnected' },
+        ],
+      },
+    });
+
+    const provider = await WhatsAppProviderFactory.get('tenant-1', null);
+    expect(provider).toBeInstanceOf(WhatsAppProviderQr);
   });
 });

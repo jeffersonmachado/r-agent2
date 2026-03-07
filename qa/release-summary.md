@@ -22,4 +22,6 @@
 - Release window report: qa/release-window-report.json
 - Release manifest: qa/release-manifest.json
 - Release suite confirmation: qa/release-suite-confirmation.json
+- Normalized context rollout summary: RESUMO_IMPL_CONTEXTO_NORMALIZADO.md
+- Deployment traceability checklist: CRM_API_DEPLOYMENT_CHECKLIST.md
 

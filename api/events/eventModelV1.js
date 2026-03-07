@@ -31,6 +31,20 @@ const EVENT_TYPES_V1 = new Set([
 
   // Scheduler / Ops
   'ScheduledTriggerFired',
+  'ScheduleCreated',
+  'ScheduleConfirmed',
+  'ScheduleConfirmationSkipped',
+  'ScheduleDeclined',
+  'ScheduleRescheduled',
+  'ScheduleCanceled',
+  'ScheduleInProgress',
+  'ScheduleDone',
+  'ScheduleNoShow',
+  'ScheduleWorkingHoursUpdated',
+  'ScheduleBlockCreated',
+  'ScheduleBlockDeactivated',
+  'ScheduleReminderProcessed',
+  'ScheduleWhatsAppReplyHandled',
 
   // PBX
   'PbxCdrIngested',

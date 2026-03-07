@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from main import app
 
 client = TestClient(app)
+KNOWLEDGE_NOT_FOUND_RESPONSE = "Não encontrei essa informação na base de conhecimento do r-agent2."
 
 
 @pytest.fixture
@@ -89,6 +90,37 @@ def test_query_no_results(indexed_document):
     assert len(data["sources"]) == 0 or data["success"] is False
 
 
+def test_query_no_results_uses_official_knowledge_fallback(indexed_document):
+    """Quando não há chunks relevantes, deve usar a mensagem oficial de fallback."""
+    request = {
+        "query": "Pergunta completamente fora do escopo e sem relação com os documentos indexados.",
+        "tenantId": "query-test-tenant",
+        "options": {
+            "minScore": 0.99
+        }
+    }
+
+    response = client.post("/rag/query", json=request)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["response"] == KNOWLEDGE_NOT_FOUND_RESPONSE
+    assert data["success"] is False
+
+
+def test_query_uuid_invalid_uses_official_knowledge_fallback():
+    """Queries sem sentido semântico (UUID) devem usar a mensagem oficial de fallback."""
+    request = {
+        "query": "dc664ec2-7fa7-4f12-a457-6c1e35138939",
+        "tenantId": "query-test-tenant"
+    }
+
+    response = client.post("/rag/query", json=request)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["response"] == KNOWLEDGE_NOT_FOUND_RESPONSE
+    assert data["success"] is False
+
+
 def test_query_with_filters(indexed_document):
     """Testa consulta com filtros."""
     request = {
@@ -161,4 +193,3 @@ def test_query_sources_structure(indexed_document):
         assert "excerpt" in source
         assert isinstance(source["score"], (int, float))
         assert 0.0 <= source["score"] <= 1.0
-

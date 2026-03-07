@@ -1,0 +1,117 @@
+Analise profundamente o projeto r-agent2 atual e integre incrementalmente a nova visão de roadmap sem quebrar o que já existe.
+
+OBJETIVOS
+1. Preservar o core atual (CRM, Support, WhatsApp, Scheduling, Autonomous Scheduling).
+2. Adicionar a base técnica para a nova visão:
+   - runtime operacional por tenant
+   - métricas operacionais agregadas
+   - predictive insights v1 heurístico
+   - revenue engine v1
+   - channel kiosk v1
+   - vertical templates (beauty, fitness, food, services)
+3. NÃO ativar automação recorrente por padrão.
+4. NÃO criar domínio paralelo de agenda, CRM ou tickets.
+5. Fazer integração incremental e segura.
+
+ARQUIVOS DO PACOTE
+- docs/ROADMAP_VISAO_CONSOLIDADA_2026-03.md
+- docs/PILARES_E_BENCHMARKS_V2.md
+- api/core/autonomous-scheduling/AutonomousRuntimeService.js
+- api/core/autonomous-scheduling/OperationalMetricsAggregator.js
+- api/core/autonomous-scheduling/PredictiveInsightsService.js
+- api/core/autonomous-scheduling/VerticalTemplateRegistry.js
+- api/core/revenue/RevenueEngine.js
+- api/core/insights/OperationalInsightsService.js
+- api/channels/kiosk/KioskService.js
+- api/channels/kiosk/KioskSessionService.js
+- api/channels/kiosk/QueueService.js
+- api/db/migrations/*.js
+- api/db/models/*.js
+
+O QUE IMPLEMENTAR NO PROJETO
+
+PARTE 1 — Runtime operacional
+- Criar tabela/model `autonomous_runtime` por tenant.
+- Expor endpoints seguros para ler/editar runtime.
+- Campos mínimos:
+  - auto_detect_enabled
+  - auto_campaign_enabled
+  - auto_expire_enabled
+  - run_interval_minutes
+  - max_campaigns_per_run
+  - max_invites_per_run
+  - quiet_hours_start
+  - quiet_hours_end
+  - enabled_channels_json
+  - safety_mode
+- Integrar com RBAC do domínio de agenda autônoma.
+
+PARTE 2 — Métricas agregadas
+- Criar agregador simples a partir de campanhas/candidatos existentes.
+- Persistir ou calcular on-demand métricas por:
+  - tenant
+  - vertical_template
+  - service_type
+  - weekday
+  - hour_bucket
+- Métricas mínimas:
+  - fill_rate
+  - accept_rate
+  - expiration_rate
+  - avg_fill_minutes
+  - no_show_rate (quando houver dado)
+
+PARTE 3 — Predictive insights v1
+- Implementar heurísticas, sem ML.
+- Expor funções/endpoints para:
+  - idle risk
+  - no-show risk
+  - fill probability
+- Usar histórico agregado e policy/runtime.
+- Não ativar campanhas automáticas; só sugerir e preparar base.
+
+PARTE 4 — Revenue Engine v1
+- Detectar oportunidades de receita:
+  - fill_gap
+  - reactivation
+  - upsell
+  - retention
+- Expor serviço/endpoints para listar oportunidades.
+- Reutilizar CRM, agenda autônoma e métricas existentes.
+
+PARTE 5 — Kiosk channel v1
+- Tratar kiosk como canal, não vertical.
+- Implementar base para:
+  - criar sessão de kiosk
+  - check-in
+  - ticket/queue simple handoff
+  - lookup de disponibilidade para encaixe
+- Integrar com Support/Scheduling quando possível, sem duplicar lógica.
+
+PARTE 6 — Vertical templates
+- Registrar presets para:
+  - beauty
+  - fitness
+  - food
+  - services
+- O preset deve influenciar:
+  - policy defaults
+  - runtime defaults
+  - ranking weights
+  - predictive thresholds
+  - revenue opportunity defaults
+
+PARTE 7 — Frontend incremental
+- Adicionar no frontend páginas ou blocos mínimos para:
+  - runtime operacional
+  - predictive insights
+  - revenue opportunities
+  - kiosk operations
+- Manter UI enxuta e alinhada com o padrão existente.
+
+VALIDAÇÃO
+- atualizar/adicionar testes incrementais
+- build do frontend
+- manter endpoints existentes
+- informar arquivos alterados
+- informar limitações remanescentes

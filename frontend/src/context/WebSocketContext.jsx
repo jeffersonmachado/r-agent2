@@ -21,13 +21,19 @@ export function WebSocketProvider({ children }) {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const pingIntervalRef = useRef(null);
+  const authHandshakeTimeoutRef = useRef(null);
   const reconnectWatchdogRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const eventHandlersRef = useRef(new Map()); // Map<componentId, { onEvent, subscribeEvents }>
   const allSubscribedEventsRef = useRef(new Set()); // Set de todos os eventos inscritos
   const isIntentionalCloseRef = useRef(false); // Flag para evitar reconexão quando fechamos intencionalmente
   const isConnectingRef = useRef(false); // Flag para evitar múltiplas conexões simultâneas
+  const authenticatedRef = useRef(false);
   const checkServerHealthRef = useRef(null);
+
+  useEffect(() => {
+    authenticatedRef.current = authenticated;
+  }, [authenticated]);
 
   const logReconnectConsole = useCallback((message, data = null) => {
     const timestamp = new Date().toISOString();
@@ -162,16 +168,33 @@ export function WebSocketProvider({ children }) {
       return true;
     }
 
+    if (authHandshakeTimeoutRef.current) {
+      clearTimeout(authHandshakeTimeoutRef.current);
+      authHandshakeTimeoutRef.current = null;
+    }
+
     try {
       logger.debug('[WebSocketContext] Enviando autenticação...');
       wsRef.current.send(JSON.stringify({ type: 'auth', token }));
       logger.debug('[WebSocketContext] Mensagem de autenticação enviada');
+
+      // Evita ficar preso em "Autenticando..." quando não chega resposta de auth.
+      authHandshakeTimeoutRef.current = setTimeout(() => {
+        authHandshakeTimeoutRef.current = null;
+        const wsOpen = wsRef.current && wsRef.current.readyState === WebSocket.OPEN;
+        if (!wsOpen || authenticatedRef.current) {
+          return;
+        }
+        logger.warn('[WebSocketContext] Timeout aguardando resposta de autenticação; forçando reconexão');
+        setAuthFailed(true);
+        scheduleReconnect('auth_timeout', { timeoutMs: 8000 });
+      }, 8000);
       return true;
     } catch (err) {
       logger.error('[WebSocketContext] Erro ao enviar autenticação', err);
       return false;
     }
-  }, [authenticated]);
+  }, [authenticated, scheduleReconnect]);
 
   // Atualiza subscriptions quando handlers mudam
   const updateSubscriptions = useCallback(() => {
@@ -302,6 +325,7 @@ export function WebSocketProvider({ children }) {
         logReconnectConsole('Conectado com sucesso');
         isConnectingRef.current = false;
         setConnected(true);
+        setAuthenticated(false);
         setAuthFailed(false);
         reconnectAttemptsRef.current = 0;
 
@@ -344,6 +368,10 @@ export function WebSocketProvider({ children }) {
 
           // Trata autenticação
           if (data.type === 'auth') {
+            if (authHandshakeTimeoutRef.current) {
+              clearTimeout(authHandshakeTimeoutRef.current);
+              authHandshakeTimeoutRef.current = null;
+            }
             logger.debug('[WebSocketContext] Resposta de autenticação recebida', data);
             if (data.status === 'success') {
               logger.info('[WebSocketContext] Autenticado com sucesso', data.agent);
@@ -426,6 +454,10 @@ export function WebSocketProvider({ children }) {
           });
         }
         isConnectingRef.current = false;
+        if (authHandshakeTimeoutRef.current) {
+          clearTimeout(authHandshakeTimeoutRef.current);
+          authHandshakeTimeoutRef.current = null;
+        }
         setConnected(false);
         setAuthenticated(false);
         setAuthFailed(false);
@@ -474,6 +506,10 @@ export function WebSocketProvider({ children }) {
           wasClean: event.wasClean,
         });
         isConnectingRef.current = false;
+        if (authHandshakeTimeoutRef.current) {
+          clearTimeout(authHandshakeTimeoutRef.current);
+          authHandshakeTimeoutRef.current = null;
+        }
         setConnected(false);
         setAuthenticated(false);
         setAuthFailed(false);
@@ -603,6 +639,10 @@ export function WebSocketProvider({ children }) {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
       }
+      if (authHandshakeTimeoutRef.current) {
+        clearTimeout(authHandshakeTimeoutRef.current);
+        authHandshakeTimeoutRef.current = null;
+      }
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (wsRef.current) {
@@ -638,7 +678,7 @@ export function WebSocketProvider({ children }) {
 
   // Observa mudanças no token e tenta autenticar o WebSocket quando conectado
   useEffect(() => {
-    if (!connected || authenticated || authFailed) {
+    if (!connected || authenticated) {
       return;
     }
 
@@ -697,7 +737,7 @@ export function WebSocketProvider({ children }) {
     // Isso é necessário porque o evento 'storage' só dispara em outras abas
     // Nota: para de tentar se authFailed=true (tentativa anterior falhou - deve aguardar novo login)
     const checkTokenInterval = setInterval(() => {
-      if (!connected || authenticated || authFailed) {
+      if (!connected || authenticated) {
         return;
       }
       
@@ -765,4 +805,3 @@ export function useWebSocketContext({ enabled = true, onEvent, subscribeEvents =
     reconnect: context.reconnect,
   };
 }
-

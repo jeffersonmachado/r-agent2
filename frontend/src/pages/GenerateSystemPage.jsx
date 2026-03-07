@@ -3501,7 +3501,6 @@ export function GenerateSystemPage() {
       // Se não tiver replayPath, busca na lista de replays
       if (!replayFilename) {
         try {
-          const { listRpaReplays } = await import('../api/flows');
           const replaysList = await listRpaReplays();
           
           // Busca o arquivo de replay que contém o replayId
@@ -6274,4 +6273,3 @@ export function GenerateSystemPage() {
     </div>
   );
 }
-

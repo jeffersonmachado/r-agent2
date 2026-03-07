@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
 import { createTask, listTasks, completeTask, scheduleTaskReminder } from '../api/tasks';
+import { ScheduleModal } from '../components/ScheduleModal';
 import logger from '../utils/logger';
 
 const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
@@ -62,6 +63,7 @@ export function TasksPage() {
   const [form, setForm] = useState({ title: '', description: '', dueAt: '', priority: 'normal' });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDayKey, setSelectedDayKey] = useState(toDayKey(new Date()));
+  const [scheduleContextTask, setScheduleContextTask] = useState(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -364,6 +366,9 @@ export function TasksPage() {
                       <Button onClick={() => handleComplete(t.id)} style={{ width: 'auto' }} disabled={loading}>
                         Concluir
                       </Button>
+                      <Button onClick={() => setScheduleContextTask(t)} style={{ width: 'auto' }} disabled={loading}>
+                        Agendar
+                      </Button>
                     </div>
                   </div>
                   <div className="text-xs text-text-tertiary mt-2">
@@ -416,6 +421,18 @@ export function TasksPage() {
           )}
         </div>
       </div>
+      {scheduleContextTask ? (
+        <ScheduleModal
+          isOpen={!!scheduleContextTask}
+          onClose={() => setScheduleContextTask(null)}
+          contextType="task"
+          contextId={String(scheduleContextTask.id)}
+          defaultPurpose="tarefa futura"
+          defaultChannel="internal"
+          title={`Agendar tarefa: ${scheduleContextTask.title}`}
+          onCreated={() => showToast('Agendamento criado', 'success')}
+        />
+      ) : null}
     </div>
   );
 }

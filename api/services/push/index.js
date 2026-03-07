@@ -13,30 +13,15 @@ const {
 const TOKEN_EARLY_RENEW_MS = 60 * 1000;
 const RETRY_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 300;
+const DEFAULT_FCM_SERVICE_ACCOUNT_PATHS = [
+  '/run/secrets/firebase-service-account.json',
+  '/app/api/data/firebase-service-account.json',
+];
 
 let cachedFcmAccessToken = null;
 let cachedFcmAccessTokenExpAt = 0;
 let cachedApnsJwtToken = null;
 let cachedApnsJwtExpAt = 0;
-
-function isPushEnabled() {
-  const explicit = getBooleanEnv('PUSH_ENABLED');
-  if (explicit !== null) {
-    return explicit;
-  }
-  return hasFcmConfig() || hasApnsConfig();
-}
-
-function getBooleanEnv(name) {
-  const raw = process.env[name];
-  if (raw === undefined || raw === null || String(raw).trim() === '') {
-    return null;
-  }
-  const normalized = String(raw).trim().toLowerCase();
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
-  return null;
-}
 
 function base64UrlEncode(input) {
   return Buffer.from(input)
@@ -85,24 +70,33 @@ function getRequiredEnv(name) {
   return String(v);
 }
 
-function hasFcmConfig() {
-  return Boolean(
-    getRequiredEnv('FCM_PROJECT_ID')
-      && (getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON') || getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH'))
-  );
+function fileExists(pathValue) {
+  if (!pathValue) return false;
+  try {
+    return fs.existsSync(pathValue);
+  } catch {
+    return false;
+  }
+}
+
+function getFcmServiceAccountPath() {
+  const configuredPath = getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH');
+  if (configuredPath) return configuredPath;
+  const fallback = DEFAULT_FCM_SERVICE_ACCOUNT_PATHS.find((p) => fileExists(p));
+  return fallback || null;
 }
 
 function hasFcmHints() {
   return Boolean(
     getRequiredEnv('FCM_PROJECT_ID')
       || getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON')
-      || getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH')
+      || getFcmServiceAccountPath()
   );
 }
 
 function getFcmServiceAccount() {
   const inline = getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON');
-  const pathValue = getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH');
+  const pathValue = getFcmServiceAccountPath();
   let raw = null;
 
   if (inline) {
@@ -124,6 +118,14 @@ function getFcmServiceAccount() {
   return parsed;
 }
 
+function getFcmProjectId() {
+  const explicitProjectId = getRequiredEnv('FCM_PROJECT_ID');
+  if (explicitProjectId) return explicitProjectId;
+  const serviceAccount = getFcmServiceAccount();
+  if (serviceAccount?.project_id) return String(serviceAccount.project_id);
+  return null;
+}
+
 function getApnsPrivateKey() {
   const inline = getRequiredEnv('APNS_P8');
   if (inline) {
@@ -141,18 +143,6 @@ function getApnsHost() {
     : 'https://api.sandbox.push.apple.com';
 }
 
-function hasApnsConfig() {
-  const hasCore = Boolean(
-    getRequiredEnv('APNS_TEAM_ID')
-      && getRequiredEnv('APNS_KEY_ID')
-      && getRequiredEnv('APNS_BUNDLE_ID')
-      && (getRequiredEnv('APNS_P8') || getRequiredEnv('APNS_P8_PATH'))
-  );
-  if (!hasCore) return false;
-  const apnsEnv = String(process.env.APNS_ENV || 'sandbox').toLowerCase();
-  return ['sandbox', 'production'].includes(apnsEnv);
-}
-
 function hasApnsHints() {
   return Boolean(
     getRequiredEnv('APNS_TEAM_ID')
@@ -165,17 +155,18 @@ function hasApnsHints() {
 }
 
 function validatePushStartupConfig() {
-  if (!isPushEnabled()) return;
-
   const missing = [];
+  const checkFcm = hasFcmHints();
+  const checkApns = hasApnsHints();
 
-  const explicit = getBooleanEnv('PUSH_ENABLED');
-  const checkFcm = explicit === true || hasFcmHints();
-  const checkApns = explicit === true || hasApnsHints();
+  if (!checkFcm && !checkApns) {
+    logger.warn('[Push] Variáveis FCM/APNS não configuradas. Sistema sobe sem provider de push pronto.');
+    return;
+  }
 
   if (checkFcm) {
-    if (!getRequiredEnv('FCM_PROJECT_ID')) missing.push('FCM_PROJECT_ID');
-    if (!getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON') && !getRequiredEnv('FCM_SERVICE_ACCOUNT_PATH')) {
+    if (!getFcmProjectId()) missing.push('FCM_PROJECT_ID|service_account.project_id');
+    if (!getRequiredEnv('FCM_SERVICE_ACCOUNT_JSON') && !getFcmServiceAccountPath()) {
       missing.push('FCM_SERVICE_ACCOUNT_JSON|FCM_SERVICE_ACCOUNT_PATH');
     }
   }
@@ -192,10 +183,6 @@ function validatePushStartupConfig() {
     if (!['sandbox', 'production'].includes(apnsEnv)) {
       missing.push('APNS_ENV(sandbox|production)');
     }
-  }
-
-  if (!checkFcm && !checkApns) {
-    missing.push('FCM_* ou APNS_*');
   }
 
   if (missing.length > 0) {
@@ -267,9 +254,9 @@ function getApnsJwtToken() {
 
 async function sendFcmMessage({ token, notification, data }) {
   const accessToken = await getFcmAccessToken();
-  const projectId = getRequiredEnv('FCM_PROJECT_ID');
+  const projectId = getFcmProjectId();
   if (!projectId) {
-    throw new Error('FCM_PROJECT_ID ausente');
+    throw new Error('FCM project_id ausente (configure FCM_PROJECT_ID ou use service_account com project_id)');
   }
 
   const response = await fetch(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/messages:send`, {
@@ -411,10 +398,6 @@ async function sendToTokens({ platform, tokens, notification, data, context = {}
   const normalizedPlatform = assertPlatform(platform);
   const uniqueTokens = Array.from(new Set((tokens || []).map((t) => String(t || '').trim()).filter(Boolean)));
 
-  if (!isPushEnabled()) {
-    return { ok: true, disabled: true, sent: 0, failed: 0, invalidRemoved: 0 };
-  }
-
   logger.info('PUSH_SEND_START', {
     tenantId: context.tenantId || null,
     ticketId: context.ticketId || null,
@@ -479,10 +462,6 @@ async function sendToTokens({ platform, tokens, notification, data, context = {}
 }
 
 async function sendToUser({ tenantId, userId, notification, data, context = {} }) {
-  if (!isPushEnabled()) {
-    return { ok: true, disabled: true, sent: 0, failed: 0, invalidRemoved: 0 };
-  }
-
   const tokens = await listPushTokensForUser({ tenantId, userId });
   if (!tokens || tokens.length === 0) {
     return { ok: true, sent: 0, failed: 0, invalidRemoved: 0 };
@@ -531,6 +510,5 @@ module.exports = {
   sendToUser,
   sendToTokens,
   validatePushStartupConfig,
-  isPushEnabled,
   trimPreview,
 };

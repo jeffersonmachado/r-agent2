@@ -90,6 +90,13 @@ function rowMatchesSearch(row, search) {
   return text.includes(search);
 }
 
+function formatDateTime(value, fallback = '—') {
+  if (value === null || value === undefined || value === '') return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString();
+}
+
 export function PbxModulePage() {
   const { currentPath, navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
@@ -496,7 +503,7 @@ export function PbxModulePage() {
         {
           id: 'calldate',
           header: 'Calldate',
-          render: (r) => (r.calldate ? new Date(r.calldate).toLocaleString() : '—'),
+          render: (r) => formatDateTime(r.calldate),
         },
         { id: 'src', header: 'Src', accessor: (r) => r.src || '—' },
         { id: 'dst', header: 'Dst', accessor: (r) => r.dst || '—' },
@@ -511,7 +518,7 @@ export function PbxModulePage() {
         {
           id: 'createdAt',
           header: 'Quando',
-          render: (r) => (r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'),
+          render: (r) => formatDateTime(r.createdAt),
         },
         { id: 'action', header: 'Ação', accessor: (r) => r.action || '—' },
         { id: 'actor', header: 'Ator', accessor: (r) => r.actor || '—' },
@@ -551,7 +558,7 @@ export function PbxModulePage() {
         {
           id: 'scheduledTo',
           header: 'Agendado para',
-          render: (r) => (r.scheduledTo ? new Date(r.scheduledTo).toLocaleString() : '—'),
+          render: (r) => formatDateTime(r.scheduledTo),
         },
         { id: 'phone', header: 'Telefone', accessor: (r) => r.phone || '—' },
         { id: 'campaignId', header: 'Campanha', accessor: (r) => r.campaignId || '—' },
@@ -564,7 +571,7 @@ export function PbxModulePage() {
         {
           id: 'createdAt',
           header: 'Quando',
-          render: (r) => (r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'),
+          render: (r) => formatDateTime(r.createdAt),
         },
         { id: 'target', header: 'Target', accessor: (r) => r.target || '—' },
         { id: 'phone', header: 'Telefone', accessor: (r) => `${r.ddd ? `${r.ddd} ` : ''}${r.phone || ''}` || '—' },
@@ -710,7 +717,7 @@ export function PbxModulePage() {
         {moduleConfig.key === 'governance' ? (
           <div className="mt-4 pt-4 border-t border-border-default text-sm text-text-secondary">
             <strong>Token de provisionamento:</strong> {governanceMeta.token || '—'}
-            {governanceMeta.expiresAt ? ` · expira em ${new Date(governanceMeta.expiresAt).toLocaleString()}` : ''}
+            {governanceMeta.expiresAt ? ` · expira em ${formatDateTime(governanceMeta.expiresAt, '')}` : ''}
           </div>
         ) : null}
         {!canCreate ? (
@@ -746,7 +753,7 @@ export function PbxModulePage() {
               {
                 id: 'createdAt',
                 header: 'Criado em',
-                render: (r) => (r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'),
+                render: (r) => formatDateTime(r.createdAt),
               },
               { id: 'createdBy', header: 'Criado por', accessor: (r) => r.createdBy || '—' },
             ]}

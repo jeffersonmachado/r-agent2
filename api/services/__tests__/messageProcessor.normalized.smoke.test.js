@@ -77,6 +77,7 @@ describe('messageProcessor smoke (normalized event)', () => {
       ...base,
       timestamp: new Date().toISOString(),
       trace_id: 'trace-1',
+      tags: ['intent:sales'],
       payload: { text: 'Quero preço e planos' },
     }, deps);
 
@@ -84,14 +85,15 @@ describe('messageProcessor smoke (normalized event)', () => {
       ...base,
       timestamp: new Date().toISOString(),
       trace_id: 'trace-2',
-      payload: { text: 'Tenho interesse em contratar ainda hoje' },
+      payload: { text: 'Tenho interesse em contratar ainda hoje, meu email é ana@example.com' },
     }, deps);
 
     const r3 = await processNormalizedInboundEvent({
       ...base,
       timestamp: new Date().toISOString(),
       trace_id: 'trace-3',
-      payload: { text: 'Pode fechar, quero avançar na compra' },
+      tags: ['topic:orcamento'],
+      payload: { text: 'Pode fechar, pedido #XPTO123, quero avançar na compra' },
     }, deps);
 
     expect(r1.ok).toBe(true);
@@ -100,5 +102,10 @@ describe('messageProcessor smoke (normalized event)', () => {
     expect(r1.state.metadata.last_stage).toBe('interest');
     expect(r2.state.metadata.last_stage).toBe('consideration');
     expect(r3.state.metadata.last_stage).toBe('decision');
+    expect(r3.state.tags).toEqual(expect.arrayContaining(['intent:sales', 'severity:low']));
+    expect(r3.state.entities.email.value).toBe('ana@example.com');
+    expect(r3.state.entities.order_id.value).toBe('xpto123');
+    expect(r3.state.normalized_context.session_id).toBe('sess-smoke-1');
+    expect(r3.state.normalized_context.funnel_state.stage).toBe('decision');
   });
 });

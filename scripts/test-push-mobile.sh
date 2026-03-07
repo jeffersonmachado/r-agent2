@@ -1,9 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Script para testar Push Notifications no app mobile
-# Uso: ./scripts/test-push-mobile.sh --user-id USER_ID --title "Título" --body "Mensagem"
-
-set -e
+set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -16,175 +13,111 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 section() { echo -e "\n${BLUE}=== $1 ===${NC}\n"; }
 
-# Default values
-API_BASE_URL="${API_BASE_URL:-http://localhost:3000}"
+usage() {
+  cat <<'EOF'
+Uso:
+  ./scripts/test-push-mobile.sh --user-id USER_ID [opções]
+
+Opções:
+  --api-url URL            Base da API (padrão: API_BASE_URL env ou http://localhost:3001)
+  --user-id ID             Usuário destino (obrigatório)
+  --tenant-id ID           Tenant destino (opcional; usa "system" por padrão)
+  --title TITULO           Título da notificação
+  --body TEXTO             Corpo da notificação
+  --auth-token TOKEN       JWT já pronto (opcional)
+  --username USER          Usuário para gerar token automaticamente (padrão: systemadmin)
+  --password PASS          Senha para gerar token automaticamente (padrão: Admin123!)
+EOF
+}
+
+API_BASE_URL="${API_BASE_URL:-http://localhost:3001}"
 USER_ID=""
+TENANT_ID="${TENANT_ID:-system}"
 TITLE="Teste de Push"
 BODY="Notificação de teste do app mobile"
 AUTH_TOKEN="${AUTH_TOKEN:-}"
-TENANT_ID="${TENANT_ID:-}"
+LOGIN_USERNAME="${TEST_PUSH_USERNAME:-systemadmin}"
+LOGIN_PASSWORD="${TEST_PUSH_PASSWORD:-Admin123!}"
 
-# Parse arguments
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        --user-id)
-            USER_ID="$2"
-            shift 2
-            ;;
-        --title)
-            TITLE="$2"
-            shift 2
-            ;;
-        --body)
-            BODY="$2"
-            shift 2
-            ;;
-        --api-url)
-            API_BASE_URL="$2"
-            shift 2
-            ;;
-        --auth-token)
-            AUTH_TOKEN="$2"
-            shift 2
-            ;;
-        --tenant-id)
-            TENANT_ID="$2"
-            shift 2
-            ;;
-        *)
-            error "Argumento desconhecido: $1"
-            exit 1
-            ;;
-    esac
+  case "$1" in
+    --api-url) API_BASE_URL="$2"; shift 2 ;;
+    --user-id) USER_ID="$2"; shift 2 ;;
+    --tenant-id) TENANT_ID="$2"; shift 2 ;;
+    --title) TITLE="$2"; shift 2 ;;
+    --body) BODY="$2"; shift 2 ;;
+    --auth-token) AUTH_TOKEN="$2"; shift 2 ;;
+    --username) LOGIN_USERNAME="$2"; shift 2 ;;
+    --password) LOGIN_PASSWORD="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) error "Argumento desconhecido: $1"; usage; exit 1 ;;
+  esac
 done
 
-if [ -z "$USER_ID" ]; then
-    error "Uso: $0 --user-id USER_ID [--title TITULO] [--body MENSAGEM] [--auth-token TOKEN]"
-    exit 1
+if [[ -z "$USER_ID" ]]; then
+  error "--user-id é obrigatório"
+  usage
+  exit 1
 fi
 
-section "📱 Teste de Push Notifications"
-
-info "Configuração:"
-echo "  API Base URL:   $API_BASE_URL"
-echo "  Usuário:        $USER_ID"
-echo "  Título:         $TITLE"
-echo "  Mensagem:       $BODY"
-echo ""
-
-section "Passo 1: Verificar App está Rodando"
-
-# Verificar se app está rodando via ADB (opcional)
-if command -v adb &> /dev/null; then
-    if adb devices | grep -q "device$"; then
-        info "✓ Dispositivo Android conectado via ADB"
-        
-        # Verificar se app está rodando
-        if adb shell pidof com.results.ragent2 > /dev/null 2>&1; then
-            info "✓ App está rodando"
-        else
-            warn "App não está rodando no device, iniciando..."
-            adb shell am start -n com.results.ragent2/.MainActivity
-            sleep 3
-        fi
-    fi
+if [[ -z "$AUTH_TOKEN" ]]; then
+  if [[ -f "scripts/set-token-env.sh" ]]; then
+    # shellcheck disable=SC1091
+    source scripts/set-token-env.sh \
+      --base "$API_BASE_URL" \
+      --username "$LOGIN_USERNAME" \
+      --password "$LOGIN_PASSWORD" \
+      --no-save
+    AUTH_TOKEN="${TOKEN:-}"
+  fi
 fi
 
-section "Passo 2: Ver Tokens de Push Registrados"
+if [[ -z "$AUTH_TOKEN" ]]; then
+  error "Não foi possível obter token JWT (use --auth-token ou ajuste credenciais)"
+  exit 1
+fi
 
-info "Para ver quais tokens estão registrados, execute em environment de desenvolvimento:"
-echo ""
-echo "  curl -X GET \\
-  -H 'Authorization: Bearer \$AUTH_TOKEN' \\
-  $API_BASE_URL/api/push/tokens"
-echo ""
-
-section "Passo 3: Enviar Notificação de Push"
-
-# Montar payload
 PAYLOAD=$(cat <<EOF
 {
   "userId": "$USER_ID",
+  "tenantId": "$TENANT_ID",
   "notification": {
     "title": "$TITLE",
     "body": "$BODY"
   },
   "data": {
     "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-    "test": "true"
+    "test": "true",
+    "source": "scripts/test-push-mobile.sh"
   }
 }
 EOF
 )
 
-info "Payload:"
-echo "$PAYLOAD" | jq '.' || echo "$PAYLOAD"
-echo ""
+section "Teste Push Mobile"
+info "API:        $API_BASE_URL"
+info "Tenant:     $TENANT_ID"
+info "User:       $USER_ID"
+info "Titulo:     $TITLE"
 
-# Se tiver token de auth, tentar enviar para a API
-if [ -n "$AUTH_TOKEN" ]; then
-    info "Enviando para API..."
-    
-    RESPONSE=$(curl -s -X POST \
-        -H "Authorization: Bearer $AUTH_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "$PAYLOAD" \
-        "$API_BASE_URL/api/push/send" 2>&1 || true)
-    
-    if echo "$RESPONSE" | jq . > /dev/null 2>&1; then
-        info "✓ Resposta da API:"
-        echo "$RESPONSE" | jq '.'
-    else
-        warn "Resposta não é JSON válido:"
-        echo "$RESPONSE"
-    fi
-else
-    warn "AUTH_TOKEN não set. Para enviar de fato, defina:"
-    echo ""
-    echo "  export AUTH_TOKEN='seu-token-jwt'"
-    echo "  ./scripts/test-push-mobile.sh --user-id $USER_ID --auth-token \$AUTH_TOKEN"
-    echo ""
+section "Envio"
+RESPONSE="$(curl -sS -X POST \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Id: $TENANT_ID" \
+  -d "$PAYLOAD" \
+  "$API_BASE_URL/push/send")"
+
+echo "$RESPONSE"
+
+SENT="$(echo "$RESPONSE" | node -e "try{const j=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(String(j.sent ?? ''));}catch{process.stdout.write('');}")"
+FAILED="$(echo "$RESPONSE" | node -e "try{const j=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(String(j.failed ?? ''));}catch{process.stdout.write('');}")"
+OK="$(echo "$RESPONSE" | node -e "try{const j=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(String(j.ok ?? ''));}catch{process.stdout.write('');}")"
+
+if [[ "$OK" == "true" && "${SENT:-0}" != "0" && "${FAILED:-0}" == "0" ]]; then
+  info "Push enviado com sucesso (sent=$SENT, failed=$FAILED)"
+  exit 0
 fi
 
-section "Passo 4: Ver Logs no App"
-
-if command -v adb &> /dev/null; then
-    info "Para ver logs de push em tempo real:"
-    echo ""
-    echo "  adb logcat | grep -E 'push|notification|expo-notif'"
-    echo ""
-    info "Ou capturar logs para análise:"
-    echo ""
-    echo "  adb logcat > /tmp/push-logs.txt &"
-    echo "  # ... esperar notificação chegar ..."
-    echo "  kill %1"
-    echo "  cat /tmp/push-logs.txt | grep -i push"
-    echo ""
-fi
-
-section "✅ Teste de Push Configurado"
-
-info "Próximos passos:"
-echo "1. Certifique-se de que o app está rodando no smartphone"
-echo "2. Verifique se há tokens registrados para o usuário"
-echo "3. Envie a notificação de teste"
-echo "4. Verifique se a notificação aparece no device"
-echo "5. Veja os logs para troubleshooting"
-echo ""
-
-info "Troubleshooting:"
-echo ""
-echo "❌ Push não aparecer:"
-echo "  - Verificar se app está rodando: adb shell pidof com.results.ragent2"
-echo "  - Verificar permissões: adb shell pm dump com.results.ragent2"
-echo "  - Checar logs: adb logcat | grep -i push"
-echo "  - Verificar se há tokens registrados no DB"
-echo ""
-echo "❌ 'Firebase não inicializado':"
-echo "  - Garantir google-services.json está em apps/mobile/android/app/"
-echo "  - Fazer rebuild: npx expo run:android"
-echo ""
-echo "❌ Erro de autenticação:"
-echo "  - Verificar if AUTH_TOKEN é válido"
-echo "  - Verificar se endpoint da API existe"
-echo ""
+warn "Push sem envio efetivo ou com falha (ok=$OK, sent=${SENT:-?}, failed=${FAILED:-?})"
+exit 2

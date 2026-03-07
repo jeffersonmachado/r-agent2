@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from '../hooks/useRouter';
+import { buildApiUrl } from '../api/client';
 
 export function ChatHumanoDashboardPage() {
   const { navigate } = useRouter();
@@ -15,7 +16,7 @@ export function ChatHumanoDashboardPage() {
         const token = localStorage.getItem('authToken');
         if (!token) return;
         
-        const response = await fetch('/api/support/dashboard', {
+        const response = await fetch(buildApiUrl('/api/support/dashboard'), {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

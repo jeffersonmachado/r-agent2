@@ -6,13 +6,20 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { vitePluginCommonJS } from './vite-plugin-commonjs.js';
 
+function normalizeBasePath(input) {
+  const raw = String(input || '/').trim();
+  if (!raw || raw === '/') return '/';
+  const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+  return `${withLeadingSlash.replace(/\/+$/, '')}/`;
+}
+
 // Plugin para interceptar rotas de página do frontend antes do proxy
 function frontendRoutesPlugin() {
   return {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat', '/inbox', '/failed-messages'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda'];
       
       // IMPORTANTE: Este middleware deve ser executado ANTES do proxy do Vite
       // Para garantir que rotas de API sejam passadas adiante sem modificação
@@ -48,6 +55,7 @@ function frontendRoutesPlugin() {
         const isApiRoute = url.startsWith('/tickets') || 
                           url.startsWith('/queues') || 
                           url.startsWith('/inbox') ||
+                          url.startsWith('/public') ||
                           url.startsWith('/segmentation') ||
                           url.startsWith('/quick-replies') ||
                           url.startsWith('/close-reasons') ||
@@ -135,8 +143,9 @@ try {
 }
 
 // Configuração mínima do Vite para o frontend React.
+const pwaBasePath = normalizeBasePath(process.env.VITE_BASE_PATH || '/');
 const viteConfig = defineConfig({
-  base: process.env.VITE_BASE_PATH || '/',
+  base: pwaBasePath,
   cacheDir: process.env.VITE_CACHE_DIR || './.vite',
   plugins: [
     react({
@@ -151,19 +160,27 @@ const viteConfig = defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['favicon.ico'],
+      includeAssets: [
+        'favicon.ico',
+        'icons/apple-touch-icon.png',
+        'icons/icon-192.png',
+        'icons/icon-512.png',
+        'icons/icon-192-maskable.png',
+        'icons/icon-512-maskable.png',
+      ],
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        importScripts: ['pwa-webpush-sw.js'],
       },
       manifest: {
-        name: 'RIA Dashboard',
-        short_name: 'RIA',
+        name: 'R-Agent2',
+        short_name: 'R-Agent2',
         description: 'Dashboard de atendimento e operação',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
-        scope: process.env.VITE_BASE_PATH || '/',
-        start_url: process.env.VITE_BASE_PATH || '/',
+        scope: pwaBasePath,
+        start_url: pwaBasePath,
         icons: [
           {
             src: 'favicon.ico',
@@ -227,6 +244,11 @@ const viteConfig = defineConfig({
       // Rotas da API que devem ser proxyadas
       // Usa regex explícitas para garantir que rotas aninhadas sejam capturadas
       '^/tickets': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/public': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,

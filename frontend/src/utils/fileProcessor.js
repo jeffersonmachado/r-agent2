@@ -13,10 +13,11 @@ let imageCompression = null;
 async function loadPdfJs() {
   if (pdfjsLib) return pdfjsLib;
   try {
-    pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib = await import('pdfjs-dist/legacy/build/pdf');
     // Configura worker
     if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      const worker = await import('pdfjs-dist/legacy/build/pdf.worker?url');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = worker.default;
     }
     return pdfjsLib;
   } catch (error) {
@@ -388,4 +389,3 @@ export function getFileIcon(fileType) {
   if (fileType.includes('zip') || fileType.includes('archive')) return '📦';
   return '📎';
 }
-

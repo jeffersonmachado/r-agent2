@@ -1026,7 +1026,7 @@ async function reindexDocument(documentId) {
       });
     }
 
-    const indexResult = await ragServiceInstance.indexDocument(document, document.tenantId);
+    const indexResult = await ragServiceInstance.indexDocument(document, document.tenantId, { forceReindex: true });
     
     logger.info('[RAGDocuments] Resultado da indexação', {
       documentId: document.id,
@@ -1693,4 +1693,3 @@ module.exports = {
   getRagHealth,
   detectAndCleanOrphanedVectorDocuments,
 };
-

@@ -10,17 +10,3 @@ export function updateWhatsAppIvr(payload) {
     body: JSON.stringify(payload || {}),
   });
 }
-
-export function upsertWhatsAppIvrDepartment(payload) {
-  return fetchJson('/whatsapp/ivr/department', {
-    method: 'POST',
-    body: JSON.stringify(payload || {}),
-  });
-}
-
-export function upsertWhatsAppIvrRule(payload) {
-  return fetchJson('/whatsapp/ivr/rule', {
-    method: 'POST',
-    body: JSON.stringify(payload || {}),
-  });
-}

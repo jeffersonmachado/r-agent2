@@ -78,6 +78,17 @@ const { conversationSessionStore, buildConversationSessionKey } = require('./con
 const { transitionFunnelState, createDefaultFunnelState } = require('./funnelStateService');
 const { decideNextResponse } = require('./decisionOrchestrator');
 const { appendEventV1 } = require('./eventLedgerService');
+const { buildNormalizedContext } = require('../context/contextBuilder');
+const { extractEntitiesFromText } = require('../entities/entityExtractor');
+const { mergeEntities } = require('../entities/entityMerger');
+const {
+  normalizeTag,
+  splitTags,
+  ensureRequiredTags,
+  diffTags,
+  consolidateTags,
+  validateCoherence,
+} = require('../support/tagRules');
 const path = require('path');
 
 // Sessões em memória (para produção, ideal mover para Redis/DB)
@@ -475,6 +486,132 @@ async function processWhatsAppMessage(message, value, deps) {
     }
   }
 
+  const previousContextTags = Array.isArray(state?.tags)
+    ? state.tags
+    : (Array.isArray(state?.metadata?.tags) ? state.metadata.tags : []);
+  const previousContextEntities = (state?.entities && typeof state.entities === 'object')
+    ? state.entities
+    : (state?.metadata?.entities && typeof state.metadata.entities === 'object' ? state.metadata.entities : {});
+  const previousContextEntityMeta = (state?.entity_meta && typeof state.entity_meta === 'object')
+    ? state.entity_meta
+    : (state?.metadata?.entity_meta && typeof state.metadata.entity_meta === 'object' ? state.metadata.entity_meta : {});
+
+  const eventMetadata = normalizedEvent?.metadata && typeof normalizedEvent.metadata === 'object'
+    ? normalizedEvent.metadata
+    : {};
+  const extractionKeywords = Array.isArray(eventMetadata.keywords)
+    ? eventMetadata.keywords
+    : undefined;
+  const extractionTenantKeywords = Array.isArray(eventMetadata.tenantKeywords)
+    ? eventMetadata.tenantKeywords
+    : (Array.isArray(state?.metadata?.tenantKeywords) ? state.metadata.tenantKeywords : undefined);
+
+  const extractedEntities = extractEntitiesFromText(text, {
+    tenant_id: inboundTenantId,
+    channel: effectiveChannelType,
+    keywords: extractionKeywords,
+    tenantKeywords: extractionTenantKeywords,
+  });
+  const mergedEntities = mergeEntities(
+    previousContextEntities,
+    previousContextEntityMeta,
+    extractedEntities.entities,
+    extractedEntities.meta,
+  );
+
+  const inboundTagsRaw = splitTags(normalizedEvent.tags || (normalizedEvent.metadata && normalizedEvent.metadata.tags) || []);
+  const normalizedInboundTags = inboundTagsRaw.map(normalizeTag).filter(Boolean);
+  // Precedência explícita: inbound > state para namespaces críticos.
+  const consolidatedInitialTags = consolidateTags([], {
+    inboundTags: normalizedInboundTags,
+    stateTags: previousContextTags,
+    sourceOrder: ['manual', 'inbound', 'state', 'heuristic', 'default', 'unknown'],
+    singleNamespaces: ['intent', 'severity'],
+  });
+  const fallbackFunnel = (state?.metadata?.funnel_state && typeof state.metadata.funnel_state === 'object')
+    ? state.metadata.funnel_state
+    : createDefaultFunnelState();
+  const preparedTags = ensureRequiredTags(
+    consolidatedInitialTags.tags,
+    {
+      intent: `intent:${fallbackFunnel.intent || 'support'}`,
+      severity: `severity:${fallbackFunnel.severity || 'medium'}`,
+    },
+  );
+
+  const initialCoherence = validateCoherence(preparedTags.tags);
+  state.tags = preparedTags.tags;
+  state.entities = mergedEntities.entities;
+  state.entity_meta = mergedEntities.meta;
+  state.trace_id = traceId;
+  state.last_event = normalizedEvent;
+  if (!state.metadata || typeof state.metadata !== 'object') state.metadata = {};
+  state.metadata.tags = preparedTags.tags;
+  state.metadata.entities = mergedEntities.entities;
+  state.metadata.entity_meta = mergedEntities.meta;
+  state.metadata.trace_id = traceId;
+  state.metadata.last_event = normalizedEvent;
+
+  const nodeEnv = String(config.get('nodeEnv', process.env.NODE_ENV || 'development')).toLowerCase();
+  const isDebugMode = nodeEnv === 'development' || nodeEnv === 'debug';
+  if (isDebugMode) {
+    const tags = preparedTags.tags || [];
+    const namespaces = Array.from(new Set(
+      tags
+        .map((tag) => String(tag || '').split(':')[0])
+        .filter(Boolean)
+    ));
+    const requiredNamespaces = ['intent', 'severity'];
+    const missingRequiredNamespaces = requiredNamespaces.filter((ns) => !namespaces.includes(ns));
+    const intentTag = tags.find((tag) => String(tag).startsWith('intent:')) || null;
+    const severityTag = tags.find((tag) => String(tag).startsWith('severity:')) || null;
+    const entityKeys = Object.keys(mergedEntities.entities || {});
+    const entityCount = entityKeys.reduce((acc, key) => {
+      const value = mergedEntities.entities[key];
+      if (Array.isArray(value)) return acc + value.length;
+      return value !== undefined && value !== null ? acc + 1 : acc;
+    }, 0);
+    const extractionWarnings = extractedEntities.warnings || [];
+    const tagPreparationWarnings = [
+      ...(preparedTags.warnings || []),
+      ...(consolidatedInitialTags.warnings || []),
+      ...(initialCoherence.warnings || []),
+      ...(initialCoherence.ok ? [] : initialCoherence.errors || []),
+    ];
+    const generationStatus = (missingRequiredNamespaces.length === 0 && tags.length > 0) ? 'ok' : 'warning';
+    const explanation = generationStatus === 'ok'
+      ? `Contexto automático OK: intent=${intentTag || 'n/a'}, severity=${severityTag || 'n/a'}, entities=${entityCount}.`
+      : `Contexto automático com aviso: faltando namespaces obrigatórios (${missingRequiredNamespaces.join(', ') || 'n/a'}) ou sem tags suficientes.`;
+    logger.debug('[AutoContextGeneration] Contexto atualizado', {
+      traceId,
+      tenantId: inboundTenantId || null,
+      channel: effectiveChannelType,
+      sessionId,
+      textLength: text.length,
+      textPreview: String(text || '').slice(0, 160),
+      tags,
+      namespaces,
+      intentTag,
+      severityTag,
+      missingRequiredNamespaces,
+      entityKeys,
+      entityCount,
+      extractionWarnings,
+      tagPreparationWarnings,
+      generationStatus,
+      explanation,
+    });
+  }
+
+  const contextBeforeExecution = buildNormalizedContext({
+    event: normalizedEvent,
+    session: state,
+    funnel_state: fallbackFunnel,
+    tags: preparedTags.tags,
+    entities: mergedEntities.entities,
+    entity_meta: mergedEntities.meta,
+  });
+
   const flow = flows.get(state.flowId);
   if (!flow) {
     logger.error(`[ERROR] Flow "${state.flowId}" não encontrado. Verifique se o fluxo existe.`);
@@ -610,6 +747,7 @@ async function processWhatsAppMessage(message, value, deps) {
         channel: effectiveChannelType,
         raw: message,
         aiProvider, // Injeta provider de IA
+        normalizedContext: contextBeforeExecution,
       },
       deps: {
         persistence: persistenceServices,
@@ -667,9 +805,70 @@ async function processWhatsAppMessage(message, value, deps) {
   result.state.metadata.last_stage = funnelTransition.after.stage;
   result.state.metadata.last_intent = funnelTransition.after.intent;
 
+  const tagsBeforeGovernance = Array.isArray(result.state.tags) ? result.state.tags : (preparedTags.tags || []);
+  const preservedNonCoreTags = tagsBeforeGovernance.filter((tag) => {
+    const normalizedTag = normalizeTag(tag);
+    return normalizedTag && !normalizedTag.startsWith('intent:') && !normalizedTag.startsWith('severity:');
+  });
+  const governedTags = [
+    ...preservedNonCoreTags,
+    `intent:${funnelTransition.after.intent || 'support'}`,
+    `severity:${funnelTransition.after.severity || 'medium'}`,
+  ];
+
+  const consolidatedGovernedTags = consolidateTags(governedTags, {
+    sourceOrder: ['manual', 'inbound', 'state', 'heuristic', 'default', 'unknown'],
+    singleNamespaces: ['intent', 'severity'],
+    defaultSource: 'state',
+  });
+  const ensuredPostTags = ensureRequiredTags(consolidatedGovernedTags.tags, {
+    intent: `intent:${funnelTransition.after.intent || 'support'}`,
+    severity: `severity:${funnelTransition.after.severity || 'medium'}`,
+  });
+  const postCoherence = validateCoherence(ensuredPostTags.tags);
+  result.state.tags = ensuredPostTags.tags;
+  result.state.entities = (result.state.entities && typeof result.state.entities === 'object')
+    ? result.state.entities
+    : mergedEntities.entities;
+  result.state.entity_meta = (result.state.entity_meta && typeof result.state.entity_meta === 'object')
+    ? result.state.entity_meta
+    : mergedEntities.meta;
+  result.state.funnel_state = funnelTransition.after;
+  result.state.trace_id = traceId;
+  result.state.last_event = normalizedEvent;
+  result.state.metadata.tags = result.state.tags;
+  result.state.metadata.entities = result.state.entities;
+  result.state.metadata.entity_meta = result.state.entity_meta;
+  result.state.metadata.trace_id = traceId;
+
+  const normalizedContext = buildNormalizedContext({
+    event: normalizedEvent,
+    session: result.state,
+    funnel_state: funnelTransition.after,
+    tags: result.state.tags,
+    entities: result.state.entities,
+    entity_meta: result.state.entity_meta,
+  });
+  const contextWarnings = [
+    ...(Array.isArray(extractedEntities.warnings) ? extractedEntities.warnings : []),
+    ...(Array.isArray(preparedTags.warnings) ? preparedTags.warnings : []),
+    ...(Array.isArray(consolidatedGovernedTags.warnings) ? consolidatedGovernedTags.warnings : []),
+    ...(Array.isArray(ensuredPostTags.warnings) ? ensuredPostTags.warnings : []),
+    ...(Array.isArray(postCoherence.warnings) ? postCoherence.warnings : []),
+    ...(postCoherence.ok ? [] : (Array.isArray(postCoherence.errors) ? postCoherence.errors : [])),
+  ];
+  if (contextWarnings.length > 0) {
+    normalizedContext.debug = { warnings: contextWarnings };
+  }
+  result.state.normalized_context = normalizedContext;
+  result.state.metadata.normalized_context = normalizedContext;
+
   // Atualiza sessão (memory + store unificado)
   sessions.set(sessionId, result.state);
   await conversationSessionStore.set(sessionKey, result.state, Number(process.env.CONVERSATION_SESSION_TTL_SECONDS || 86400));
+
+  const tagsDelta = diffTags(previousContextTags, result.state.tags || []);
+  const entitiesChanged = JSON.stringify(previousContextEntities || {}) !== JSON.stringify(result.state.entities || {});
 
   try {
     await appendEventV1({
@@ -689,6 +888,9 @@ async function processWhatsAppMessage(message, value, deps) {
         stage_before: funnelTransition.before.stage,
         stage_after: funnelTransition.after.stage,
         reason: funnelTransition.reason,
+        tags_added: tagsDelta.added,
+        tags_removed: tagsDelta.removed,
+        entities_changed: entitiesChanged,
       },
     });
   } catch (_) {}
@@ -811,12 +1013,14 @@ async function processWhatsAppMessage(message, value, deps) {
           variables: result.state.variables || {},
           allowReturnToBot: result.output.allowReturnToBot !== false,
           safeReturnNode: escalationContext.safeReturnNode || null,
+          normalized_context: normalizedContext,
           metadata: {
             ...(existing.context?.metadata || {}),
             flowVersion: result.state.flowVersion,
             currentNodeId: result.state.currentNodeId,
             channel: result.state.metadata?.channel || 'whatsapp',
             contactName: result.state.metadata?.contactName || existing.context?.metadata?.contactName || null,
+            normalized_context: normalizedContext,
           },
         };
 
@@ -843,6 +1047,7 @@ async function processWhatsAppMessage(message, value, deps) {
           sessionId,
           queue,
           lastUserMessage: text,
+          tags: Array.isArray(result.state.tags) ? result.state.tags : [],
           context: {
             flowId: result.state.flowId,
             escalationReason: result.output.fallbackType || escalationContext.reason || 'unknown',
@@ -851,6 +1056,7 @@ async function processWhatsAppMessage(message, value, deps) {
             variables: result.state.variables || {},
             allowReturnToBot: result.output.allowReturnToBot !== false,
             safeReturnNode: escalationContext.safeReturnNode || null,
+            normalized_context: normalizedContext,
             // Link omnichannel quando disponível
             conversationId: conversationId || null,
             channelType: result.state.metadata?.channel || 'whatsapp',
@@ -860,6 +1066,7 @@ async function processWhatsAppMessage(message, value, deps) {
               currentNodeId: result.state.currentNodeId,
               channel: result.state.metadata?.channel || 'whatsapp',
               contactName: result.state.metadata?.contactName || null,
+              normalized_context: normalizedContext,
             },
           },
         });
@@ -1038,19 +1245,50 @@ async function processNormalizedInboundEvent(event, deps = {}) {
   const text = typeof ev?.payload === 'string'
     ? ev.payload
     : (ev?.payload && typeof ev.payload.text === 'string' ? ev.payload.text : '');
+  const payloadMedia = ev?.payload && typeof ev.payload === 'object' ? (ev.payload.media || null) : null;
+  const normalizedMedia = String(ev?.media || 'text').toLowerCase();
+  const compatibleType = (() => {
+    if (normalizedMedia === 'audio') return 'audio';
+    if (normalizedMedia === 'image') return 'image';
+    if (normalizedMedia === 'file') return 'document';
+    return 'text';
+  })();
 
   const compatibleMessage = {
     from: ev.lead_id || 'unknown',
     id: (ev.metadata && ev.metadata.message_id) || ev.trace_id || `evt-${Date.now()}`,
     text: { body: text || '' },
-    type: ev.media === 'audio' ? 'audio' : 'text',
+    type: compatibleType,
     timestamp: Math.floor(new Date(ev.timestamp).getTime() / 1000),
+    ...(compatibleType === 'image' ? {
+      image: {
+        id: payloadMedia?.url || null,
+        mime_type: payloadMedia?.mimeType || null,
+        caption: text || null,
+      },
+    } : {}),
+    ...(compatibleType === 'audio' ? {
+      audio: {
+        id: payloadMedia?.url || null,
+        mime_type: payloadMedia?.mimeType || null,
+      },
+    } : {}),
+    ...(compatibleType === 'document' ? {
+      document: {
+        id: payloadMedia?.url || null,
+        mime_type: payloadMedia?.mimeType || null,
+        filename: payloadMedia?.fileName || null,
+        caption: text || null,
+      },
+    } : {}),
   };
 
   const compatibleValue = {
     metadata: {
       phone_number_id: ev.metadata && ev.metadata.phone_number_id ? ev.metadata.phone_number_id : null,
       channel: ev.channel,
+      tags: Array.isArray(ev.tags) ? ev.tags : [],
+      entities: ev.entities && typeof ev.entities === 'object' ? ev.entities : {},
     },
     contacts: ev.metadata && ev.metadata.contact_name
       ? [{ profile: { name: String(ev.metadata.contact_name) }, wa_id: ev.lead_id || null }]
@@ -1064,6 +1302,8 @@ async function processNormalizedInboundEvent(event, deps = {}) {
     conversationId: ev.correlation_id,
     channelType: ev.channel,
     traceId: ev.trace_id,
+    tags: ev.tags,
+    entities: ev.entities,
   });
 }
 

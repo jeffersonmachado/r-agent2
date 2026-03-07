@@ -97,6 +97,7 @@ const {
   assignTicket,
   closeTicket,
   listAllTickets,
+  listAllTicketsPaged,
   startAutoCleanup,
   getMetrics,
   addAgentMessage,
@@ -120,7 +121,7 @@ const {
 const { generateFlowFromDescription } = require('./services/flowGeneratorService');
 
 // Versão explícita declarada localmente no server.js.
-const SERVER_API_VERSION = '0.1.17';
+const SERVER_API_VERSION = '0.1.28';
 
 function resolveApiVersionInfo() {
   const packagePath = path.resolve(__dirname, '..', 'package.json');
@@ -240,6 +241,7 @@ const channelNormalizationService = require('./services/channelNormalizationServ
 const channelGatewayService = require('./services/channelGatewayService');
 const outboundWorker = require('./services/outboundWorker');
 const scheduleRemindersWorker = require('./workers/scheduleRemindersWorker');
+const platformHealthCheckJob = require('./jobs/platformHealthCheckJob');
 const { listConversations: listChannelConversations, listConversationMessages } = require('./services/channelConversationService');
 const {
   takeOver: takeOverTicket,
@@ -289,6 +291,13 @@ const { parseMultipartFormData } = require('./utils/multipartParser');
 const { handleRegisterPushRoute, handleUnregisterPushRoute } = require('./services/push/pushRouteService');
 const { sendToUser, validatePushStartupConfig } = require('./services/push');
 const {
+  getVapidPublicKey,
+  subscribeWebPush,
+  unsubscribeWebPush,
+  sendWebPushToUser,
+  validateWebPushStartupConfig,
+} = require('./services/push/webPushService');
+const {
   sanitizeMediaPathSegment,
   saveSupportMedia,
   getSupportMediaByPath,
@@ -332,6 +341,124 @@ const port = Number(config.get('api.port', 3000));
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, 'data');
 const configFile = path.join(dataDir, 'config.json');
+const frontendDistDir = path.join(__dirname, '..', 'frontend', 'dist');
+const frontendSourceIndexPath = path.join(__dirname, '..', 'frontend', 'index.html');
+
+function normalizeFrontendBasePath(input) {
+  const raw = String(input || '/').trim();
+  if (!raw || raw === '/') return '/';
+  const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+  const withoutTrailingSlash = withLeadingSlash.replace(/\/+$/, '');
+  return `${withoutTrailingSlash}/`;
+}
+
+const FRONTEND_BASE_PATH = normalizeFrontendBasePath(process.env.VITE_BASE_PATH || '/');
+const FRONTEND_BASE_PATH_NO_TRAILING = FRONTEND_BASE_PATH === '/'
+  ? ''
+  : FRONTEND_BASE_PATH.slice(0, -1);
+
+function stripFrontendBasePath(pathname) {
+  const input = typeof pathname === 'string' && pathname ? pathname : '/';
+
+  // Base path configurável (ex.: /r-agent2/).
+  if (
+    FRONTEND_BASE_PATH_NO_TRAILING &&
+    (input === FRONTEND_BASE_PATH_NO_TRAILING || input.startsWith(`${FRONTEND_BASE_PATH_NO_TRAILING}/`))
+  ) {
+    const stripped = input.slice(FRONTEND_BASE_PATH_NO_TRAILING.length);
+    return stripped || '/';
+  }
+
+  // Compat legado já usado em produção.
+  if (input.startsWith('/r-agent2/api/')) {
+    return input.substring('/r-agent2/api'.length);
+  }
+  if (input.startsWith('/r-agent2/')) {
+    return input.substring('/r-agent2'.length);
+  }
+  if (input === '/r-agent2') {
+    return '/';
+  }
+
+  return input;
+}
+
+function inferFrontendContentType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const byExt = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.mjs': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.ico': 'image/x-icon',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.map': 'application/json; charset=utf-8',
+    '.txt': 'text/plain; charset=utf-8',
+    '.webmanifest': 'application/manifest+json; charset=utf-8',
+  };
+  return byExt[ext] || 'application/octet-stream';
+}
+
+function inferFrontendCacheControl(pathname) {
+  if (pathname === '/sw.js' || pathname === '/manifest.webmanifest') {
+    return 'no-cache, no-store, must-revalidate';
+  }
+  if (pathname.startsWith('/assets/')) {
+    return 'public, max-age=31536000, immutable';
+  }
+  return 'public, max-age=3600';
+}
+
+function tryServeFrontendBuildAsset(req, res, pathname) {
+  const isProd = process.env.NODE_ENV === 'production';
+  if (!isProd) return false;
+  if (!(req.method === 'GET' || req.method === 'HEAD')) return false;
+  if (!fs.existsSync(frontendDistDir)) return false;
+  if (!pathname || pathname === '/') return false;
+  if (pathname.includes('\0')) return false;
+
+  let decoded = pathname;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return false;
+  }
+  const normalized = path.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, '');
+  const relativePath = normalized.startsWith('/') ? normalized.slice(1) : normalized;
+  if (!relativePath || relativePath.includes('..')) return false;
+
+  const fullPath = path.join(frontendDistDir, relativePath);
+  const normalizedFullPath = path.normalize(fullPath);
+  if (!normalizedFullPath.startsWith(path.normalize(frontendDistDir + path.sep))) {
+    return false;
+  }
+  if (!fs.existsSync(normalizedFullPath)) return false;
+  const stat = fs.statSync(normalizedFullPath);
+  if (!stat.isFile()) return false;
+
+  setCorsHeaders(res);
+  res.writeHead(200, {
+    'Content-Type': inferFrontendContentType(normalizedFullPath),
+    'Content-Length': String(stat.size),
+    'Cache-Control': inferFrontendCacheControl(pathname),
+  });
+
+  if (req.method === 'HEAD') {
+    res.end();
+    return true;
+  }
+
+  fs.createReadStream(normalizedFullPath).pipe(res);
+  return true;
+}
 
 /**
  * Detecta qual gerenciador de processo está sendo usado (PM2, nodemon, ou nenhum).
@@ -1023,6 +1150,71 @@ function requireTenant(req, res) {
   return tenantId;
 }
 
+function requireAnyPermission(req, checks = []) {
+  for (const check of checks) {
+    if (!check || typeof check !== 'object') continue;
+    const result = requirePermission(req, check.resource, check.action);
+    if (result.allowed) return { allowed: true };
+  }
+
+  const first = checks.find((item) => item && typeof item === 'object') || null;
+  if (!first) {
+    return { allowed: false, error: 'Permissão negada' };
+  }
+  const fallback = requirePermission(req, first.resource, first.action);
+  return { allowed: false, error: fallback.error || 'Permissão negada' };
+}
+
+function requireAutonomousSchedulingPermission(req, action) {
+  const matrix = {
+    read: [
+      { resource: 'autonomous_scheduling', action: 'read' },
+      { resource: 'tickets', action: 'read' },
+      { resource: 'crm', action: 'read' },
+    ],
+    update: [
+      { resource: 'autonomous_scheduling', action: 'update' },
+      { resource: 'config', action: 'update' },
+      { resource: 'tickets', action: 'update' },
+    ],
+    run: [
+      { resource: 'autonomous_scheduling', action: 'run' },
+      { resource: 'tickets', action: 'update' },
+    ],
+    accept: [
+      { resource: 'autonomous_scheduling', action: 'accept' },
+      { resource: 'tickets', action: 'update' },
+    ],
+  };
+  return requireAnyPermission(req, matrix[String(action || '').toLowerCase()] || []);
+}
+
+function hasCalendarManagePermission(agent) {
+  const permissions = Array.isArray(agent?.permissions) ? agent.permissions : [];
+  return permissions.some((permission) => {
+    const value = String(permission || '').trim().toLowerCase();
+    return value === 'calendar_manage'
+      || value === 'calendar:manage'
+      || value === 'calendar:view:team'
+      || value === 'schedules:assign:any';
+  });
+}
+
+function canManageCalendarResource(req, resourceId) {
+  const actor = req?.agent || null;
+  const target = String(resourceId || '').trim();
+  if (!actor || !target) return false;
+
+  const actorId = String(actor?.id || '').trim();
+  if (actorId && actorId === target) return true;
+  if (isSuperAdmin(actor)) return true;
+
+  const role = String(actor?.role || '').trim().toLowerCase();
+  if (['owner', 'admin', 'manager', 'supervisor'].includes(role)) return true;
+
+  return hasCalendarManagePermission(actor);
+}
+
 // ---------------------------------------------------------------------------
 // Helpers de domínio (FlowDefinition)
 // ---------------------------------------------------------------------------
@@ -1148,20 +1340,7 @@ async function requestHandler(req, res) {
   // URL é relativa; usamos base fictícia apenas para parse
   const url = new URL(req.url || '/', 'http://localhost');
   let { pathname } = url;
-
-  // Remove prefixo /r-agent2/api se presente (quando servido via nginx/apache com URL rewrite)
-  // Exemplos:
-  // - /r-agent2/api/auth/login → /auth/login
-  // - /r-agent2/health → /health
-  // Isso permite que as verificações de rotas públicas/auth funcionem corretamente
-  // sem necessidade de duplicar todas as rotas com e sem prefixo
-  if (pathname.startsWith('/r-agent2/api/')) {
-    pathname = pathname.substring('/r-agent2/api'.length); // Remove "/r-agent2/api" deixando "/..."
-  } else if (pathname.startsWith('/r-agent2/')) {
-    pathname = pathname.substring('/r-agent2'.length); // Remove "/r-agent2" deixando "/..."
-  } else if (pathname === '/r-agent2') {
-    pathname = '/';
-  }
+  pathname = stripFrontendBasePath(pathname);
 
   // --- WhatsApp QR Endpoints ---
   // POST /whatsapp/connections/:id/start
@@ -1247,6 +1426,12 @@ async function requestHandler(req, res) {
     setCorsHeaders(res);
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  // Produção: serve arquivos estáticos do build do frontend (dist).
+  // Em desenvolvimento, o frontend continua no Vite (HMR/proxy).
+  if (tryServeFrontendBuildAsset(req, res, pathname)) {
     return;
   }
 
@@ -3788,6 +3973,411 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /api/calendar/me - Agenda do recurso autenticado
+  if (method === 'GET' && pathname === '/api/calendar/me') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const resourceId = String(req.agent?.id || '').trim();
+    if (!resourceId) {
+      sendJson(res, 400, { code: 'resource_id_required', message: 'Recurso inválido.' });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const startRaw = String(urlObj.searchParams.get('start') || '').trim();
+      const endRaw = String(urlObj.searchParams.get('end') || '').trim();
+      const start = startRaw ? new Date(startRaw) : new Date();
+      const end = endRaw ? new Date(endRaw) : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
+        sendJson(res, 400, { code: 'invalid_time_range', message: 'Período inválido.' });
+        return;
+      }
+
+      const { getSequelize } = require('./db/sequelize');
+      const { OperationalSchedule, ScheduleBlock } = require('./db/models');
+      const sequelize = getSequelize();
+      const Op = sequelize?.Sequelize?.Op;
+      if (!Op) {
+        sendJson(res, 500, { code: 'db_unavailable', message: 'Banco indisponível.' });
+        return;
+      }
+
+      const [scheduleRows, blockRows] = await Promise.all([
+        OperationalSchedule().findAll({
+          where: {
+            tenant_key: String(tenantId),
+            owner_id: resourceId,
+            start_at: { [Op.lt]: end },
+            end_at: { [Op.gt]: start },
+          },
+          order: [['start_at', 'ASC']],
+          limit: 2000,
+        }),
+        ScheduleBlock().findAll({
+          where: {
+            tenant_key: String(tenantId),
+            scope_type: 'owner',
+            scope_id: resourceId,
+            active: true,
+            start_at: { [Op.lt]: end },
+            end_at: { [Op.gt]: start },
+          },
+          order: [['start_at', 'ASC']],
+          limit: 2000,
+        }),
+      ]);
+
+      const items = [
+        ...(scheduleRows || []).map((row) => {
+          const json = row.toJSON ? row.toJSON() : row;
+          const title = String(json.purpose || '').trim() || 'Agendamento';
+          return {
+            id: json.id,
+            type: 'schedule',
+            title,
+            startAt: json.start_at ? new Date(json.start_at).toISOString() : null,
+            endAt: json.end_at ? new Date(json.end_at).toISOString() : null,
+            contextType: json.context_type,
+            contextId: json.context_id,
+            teamId: json.team_id || null,
+            ownerId: json.owner_id || null,
+            channel: json.channel || null,
+            purpose: json.purpose || null,
+            status: json.status || null,
+          };
+        }),
+        ...(blockRows || []).map((row) => {
+          const json = row.toJSON ? row.toJSON() : row;
+          return {
+            id: json.id,
+            type: 'block',
+            title: 'Indisponível',
+            startAt: json.start_at ? new Date(json.start_at).toISOString() : null,
+            endAt: json.end_at ? new Date(json.end_at).toISOString() : null,
+            reason: json.reason || null,
+          };
+        }),
+      ].sort((a, b) => {
+        const aTs = Date.parse(a.startAt || '') || 0;
+        const bTs = Date.parse(b.startAt || '') || 0;
+        return aTs - bTs;
+      });
+
+      sendJson(res, 200, { ok: true, resourceId, start: start.toISOString(), end: end.toISOString(), items });
+    } catch (err) {
+      const code = err.code || 'calendar_list_error';
+      sendJson(res, 500, buildApiError({
+        code,
+        message: err.message || 'Erro ao carregar agenda',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  if (
+    method === 'GET'
+    && pathname.startsWith('/api/calendar/resource/')
+    && !pathname.includes('/blocks/')
+    && !pathname.endsWith('/blocks')
+  ) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const resourceId = decodeURIComponent(pathname.slice('/api/calendar/resource/'.length)).trim();
+    if (!resourceId) {
+      sendJson(res, 400, { code: 'resource_id_required', message: 'Recurso inválido.' });
+      return;
+    }
+    if (!canManageCalendarResource(req, resourceId)) {
+      sendJson(res, 403, { code: 'calendar_forbidden', message: 'Permissão insuficiente para acessar esta agenda.' });
+      return;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const startRaw = String(urlObj.searchParams.get('start') || '').trim();
+      const endRaw = String(urlObj.searchParams.get('end') || '').trim();
+      const start = startRaw ? new Date(startRaw) : new Date();
+      const end = endRaw ? new Date(endRaw) : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
+        sendJson(res, 400, { code: 'invalid_time_range', message: 'Período inválido.' });
+        return;
+      }
+
+      const { getSequelize } = require('./db/sequelize');
+      const { OperationalSchedule, ScheduleBlock } = require('./db/models');
+      const sequelize = getSequelize();
+      const Op = sequelize?.Sequelize?.Op;
+      if (!Op) {
+        sendJson(res, 500, { code: 'db_unavailable', message: 'Banco indisponível.' });
+        return;
+      }
+
+      const [scheduleRows, blockRows] = await Promise.all([
+        OperationalSchedule().findAll({
+          where: {
+            tenant_key: String(tenantId),
+            owner_id: resourceId,
+            start_at: { [Op.lt]: end },
+            end_at: { [Op.gt]: start },
+          },
+          order: [['start_at', 'ASC']],
+          limit: 2000,
+        }),
+        ScheduleBlock().findAll({
+          where: {
+            tenant_key: String(tenantId),
+            scope_type: 'owner',
+            scope_id: resourceId,
+            active: true,
+            start_at: { [Op.lt]: end },
+            end_at: { [Op.gt]: start },
+          },
+          order: [['start_at', 'ASC']],
+          limit: 2000,
+        }),
+      ]);
+
+      const items = [
+        ...(scheduleRows || []).map((row) => {
+          const json = row.toJSON ? row.toJSON() : row;
+          const title = String(json.purpose || '').trim() || 'Agendamento';
+          return {
+            id: json.id,
+            type: 'schedule',
+            title,
+            startAt: json.start_at ? new Date(json.start_at).toISOString() : null,
+            endAt: json.end_at ? new Date(json.end_at).toISOString() : null,
+            contextType: json.context_type,
+            contextId: json.context_id,
+            teamId: json.team_id || null,
+            ownerId: json.owner_id || null,
+            channel: json.channel || null,
+            purpose: json.purpose || null,
+            status: json.status || null,
+          };
+        }),
+        ...(blockRows || []).map((row) => {
+          const json = row.toJSON ? row.toJSON() : row;
+          return {
+            id: json.id,
+            type: 'block',
+            title: 'Indisponível',
+            startAt: json.start_at ? new Date(json.start_at).toISOString() : null,
+            endAt: json.end_at ? new Date(json.end_at).toISOString() : null,
+            reason: json.reason || null,
+          };
+        }),
+      ].sort((a, b) => {
+        const aTs = Date.parse(a.startAt || '') || 0;
+        const bTs = Date.parse(b.startAt || '') || 0;
+        return aTs - bTs;
+      });
+
+      sendJson(res, 200, { ok: true, resourceId, start: start.toISOString(), end: end.toISOString(), items });
+    } catch (err) {
+      const code = err.code || 'calendar_list_error';
+      sendJson(res, 500, buildApiError({
+        code,
+        message: err.message || 'Erro ao carregar agenda',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  if (method === 'POST' && pathname.startsWith('/api/calendar/resource/') && pathname.endsWith('/blocks')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const resourceId = decodeURIComponent(pathname.slice('/api/calendar/resource/'.length, -'/blocks'.length)).trim();
+    if (!resourceId) {
+      sendJson(res, 400, { code: 'resource_id_required', message: 'Recurso inválido.' });
+      return;
+    }
+    if (!canManageCalendarResource(req, resourceId)) {
+      sendJson(res, 403, { code: 'calendar_forbidden', message: 'Permissão insuficiente para gerir esta agenda.' });
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const start = new Date(String(body?.startAt || ''));
+      const end = new Date(String(body?.endAt || ''));
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
+        sendJson(res, 400, { code: 'invalid_time_range', message: 'Período inválido.' });
+        return;
+      }
+
+      const { getSequelize } = require('./db/sequelize');
+      const { OperationalSchedule, ScheduleBlock } = require('./db/models');
+      const sequelize = getSequelize();
+      const Op = sequelize?.Sequelize?.Op;
+      if (!Op) {
+        sendJson(res, 500, { code: 'db_unavailable', message: 'Banco indisponível.' });
+        return;
+      }
+
+      const overlapWhere = {
+        tenant_key: String(tenantId),
+        start_at: { [Op.lt]: end },
+        end_at: { [Op.gt]: start },
+      };
+
+      const [existingBlock, existingSchedule] = await Promise.all([
+        ScheduleBlock().findOne({
+          where: {
+            ...overlapWhere,
+            scope_type: 'owner',
+            scope_id: resourceId,
+            active: true,
+          },
+        }),
+        OperationalSchedule().findOne({
+          where: {
+            ...overlapWhere,
+            owner_id: resourceId,
+            status: { [Op.in]: ['scheduled', 'in_progress'] },
+          },
+        }),
+      ]);
+
+      if (existingBlock) {
+        sendJson(res, 409, { code: 'block_conflict', message: 'Já existe bloqueio no período informado.' });
+        return;
+      }
+      if (existingSchedule) {
+        sendJson(res, 409, { code: 'schedule_conflict', message: 'Há agendamento no período informado.' });
+        return;
+      }
+
+      const service = require('./services/schedulingService');
+      const out = await service.createBlock({
+        tenantId,
+        scopeType: 'owner',
+        scopeId: resourceId,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
+        reason: body?.reason || null,
+        metadata: body?.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+        actor: {
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          ipAddress: req.socket?.remoteAddress || 'unknown',
+          userAgent: req.headers?.['user-agent'] || 'unknown',
+          actorType: 'user',
+        },
+      });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || 'calendar_block_create_error';
+      const httpStatus = ['invalid_time_range', 'start_at_invalid', 'end_at_invalid'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao criar bloqueio',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  if (method === 'DELETE' && pathname.startsWith('/api/calendar/resource/') && pathname.includes('/blocks/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const blockToken = '/blocks/';
+    const blockIdx = pathname.indexOf(blockToken);
+    const resourceId = decodeURIComponent(pathname.slice('/api/calendar/resource/'.length, blockIdx)).trim();
+    const blockId = decodeURIComponent(pathname.slice(blockIdx + blockToken.length)).trim();
+    if (!resourceId || !blockId) {
+      sendJson(res, 400, { code: 'resource_or_block_required', message: 'Parâmetros inválidos.' });
+      return;
+    }
+    if (!canManageCalendarResource(req, resourceId)) {
+      sendJson(res, 403, { code: 'calendar_forbidden', message: 'Permissão insuficiente para gerir esta agenda.' });
+      return;
+    }
+
+    try {
+      const { ScheduleBlock } = require('./db/models');
+      const row = await ScheduleBlock().findOne({
+        where: {
+          tenant_key: String(tenantId),
+          id: blockId,
+          scope_type: 'owner',
+          scope_id: resourceId,
+          active: true,
+        },
+      });
+      if (!row) {
+        sendJson(res, 404, { code: 'block_not_found', message: 'Bloqueio não encontrado.' });
+        return;
+      }
+
+      const service = require('./services/schedulingService');
+      const out = await service.deactivateBlock({
+        tenantId,
+        blockId: row.id,
+        actor: {
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          ipAddress: req.socket?.remoteAddress || 'unknown',
+          userAgent: req.headers?.['user-agent'] || 'unknown',
+          actorType: 'user',
+        },
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'calendar_block_delete_error';
+      const httpStatus = code === 'schedule_block_not_found' ? 404 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao remover bloqueio',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
   // GET /api/schedules - Lista agendamentos generalistas
   if (method === 'GET' && pathname === '/api/schedules') {
     const authResult = requireAuth(req);
@@ -3888,6 +4478,166 @@ async function requestHandler(req, res) {
     return;
   }
 
+  // GET /api/users/search - Typeahead de responsáveis
+  if (method === 'GET' && pathname === '/api/users/search') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'agents', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const q = String(urlObj.searchParams.get('q') || '').trim().toLowerCase();
+      const limit = Math.min(Math.max(Number(urlObj.searchParams.get('limit') || 10), 1), 20);
+      const agents = await listAgents(tenantId);
+      const filtered = (Array.isArray(agents) ? agents : [])
+        .filter((item) => {
+          if (!q) return true;
+          const hay = `${item?.name || ''} ${item?.email || ''} ${item?.username || ''}`.toLowerCase();
+          return hay.includes(q);
+        })
+        .slice(0, limit)
+        .map((item) => ({
+          id: String(item?.id || ''),
+          name: String(item?.name || item?.username || ''),
+          email: item?.email ? String(item.email) : null,
+          status: item?.status ? String(item.status) : null,
+        }));
+      sendJson(res, 200, { items: filtered });
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: 'users_search_error',
+        message: err?.message || 'Erro ao buscar usuários',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/teams - Lista equipes
+  if (method === 'GET' && pathname === '/api/teams') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'departments', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const limit = Math.min(Math.max(Number(urlObj.searchParams.get('limit') || 50), 1), 100);
+    const items = listDepartments({ tenantId, activeOnly: true })
+      .slice(0, limit)
+      .map((team) => ({
+        id: String(team?.id || ''),
+        name: String(team?.name || ''),
+        description: team?.description ? String(team.description) : null,
+        active: team?.active !== false,
+      }));
+    sendJson(res, 200, { items });
+    return;
+  }
+
+  // GET /api/teams/search - Typeahead de equipes
+  if (method === 'GET' && pathname === '/api/teams/search') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'departments', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const q = String(urlObj.searchParams.get('q') || '').trim().toLowerCase();
+    const limit = Math.min(Math.max(Number(urlObj.searchParams.get('limit') || 20), 1), 50);
+    const items = listDepartments({ tenantId, activeOnly: true })
+      .filter((team) => {
+        if (!q) return true;
+        const hay = `${team?.name || ''} ${team?.description || ''}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, limit)
+      .map((team) => ({
+        id: String(team?.id || ''),
+        name: String(team?.name || ''),
+        description: team?.description ? String(team.description) : null,
+        active: team?.active !== false,
+      }));
+    sendJson(res, 200, { items });
+    return;
+  }
+
+  // GET /api/schedule-purposes - Sugestões de finalidade por tenant
+  if (method === 'GET' && pathname === '/api/schedule-purposes') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const defaults = ['retorno', 'reunião', 'follow-up', 'SLA', 'cobrança', 'suporte técnico'];
+      const settingsService = require('./services/tenantSettingsService');
+      const settingOut = await settingsService.getSetting({ tenantId, key: 'schedulePurposes' });
+      const configuredRaw = Array.isArray(settingOut?.value)
+        ? settingOut.value
+        : (Array.isArray(settingOut?.value?.items) ? settingOut.value.items : []);
+      const configured = configuredRaw
+        .map((item) => (typeof item === 'string' ? item : String(item?.label || item?.value || '')))
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const all = Array.from(new Set([...configured, ...defaults]));
+
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const search = String(urlObj.searchParams.get('search') || '').trim().toLowerCase();
+      const limit = Math.min(Math.max(Number(urlObj.searchParams.get('limit') || 20), 1), 50);
+      const items = all
+        .filter((item) => (!search ? true : item.toLowerCase().includes(search)))
+        .slice(0, limit)
+        .map((value) => ({ value, label: value }));
+      sendJson(res, 200, { items });
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: 'schedule_purposes_error',
+        message: err?.message || 'Erro ao carregar finalidades',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return;
+  }
+
   // POST /api/schedules - Cria agendamento generalista
   if (method === 'POST' && pathname === '/api/schedules') {
     const authResult = requireAuth(req);
@@ -3916,6 +4666,7 @@ async function requestHandler(req, res) {
         actor: {
           agentId: req.agent?.id || null,
           username: req.agent?.username || null,
+          requestUser: req.agent || null,
           ipAddress: req.socket?.remoteAddress || 'unknown',
           userAgent: req.headers?.['user-agent'] || 'unknown',
           actorType: 'user',
@@ -3934,9 +4685,15 @@ async function requestHandler(req, res) {
         'end_at_invalid',
         'invalid_time_range',
         'team_or_owner_required_for_team_based',
+        'team_or_owner_required',
+        'owner_invalid',
+        'team_invalid',
+        'owner_not_found',
+        'team_not_found',
+        'owner_not_allowed_for_bot',
       ].includes(code)
         ? 400
-        : (code === 'schedule_unavailable' ? 409 : 500);
+        : (['owner_not_allowed', 'team_not_allowed'].includes(code) ? 403 : (code === 'schedule_unavailable' ? 409 : 500));
       sendJson(res, httpStatus, buildApiError({
         code,
         message: err.message || 'Erro ao criar agendamento',
@@ -4341,6 +5098,2674 @@ async function requestHandler(req, res) {
       sendJson(res, httpStatus, buildApiError({
         code,
         message: err.message || 'Erro ao atualizar agendamento',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/policy
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/policy') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const service = require('./core/autonomous-scheduling').policyService;
+      const policy = await service.getPolicy(tenantId);
+      sendJson(res, 200, { ok: true, policy });
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_policy_get_error',
+        message: err.message || 'Erro ao carregar policy da Agenda Autônoma',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/autonomous-scheduling/policy
+  if (method === 'PUT' && pathname === '/api/autonomous-scheduling/policy') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const service = require('./core/autonomous-scheduling').policyService;
+      const body = await parseJsonBody(req);
+      const out = await service.upsertPolicy({ tenantId, patch: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_policy_update_error',
+        message: err.message || 'Erro ao salvar policy da Agenda Autônoma',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/runtime
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/runtime') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const service = require('./core/autonomous-scheduling').runtimeService;
+      const out = await service.getRuntime(tenantId);
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_runtime_get_error',
+        message: err.message || 'Erro ao carregar runtime operacional',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/autonomous-scheduling/runtime
+  if (method === 'PUT' && pathname === '/api/autonomous-scheduling/runtime') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./core/autonomous-scheduling').runtimeService;
+      const out = await service.upsertRuntime({
+        tenantId,
+        patch: body && typeof body === 'object' ? body : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_runtime_update_error',
+        message: err.message || 'Erro ao salvar runtime operacional',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/templates
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/templates') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    try {
+      const registry = require('./core/autonomous-scheduling').verticalTemplateRegistry;
+      sendJson(res, 200, { ok: true, items: registry.listPresets() });
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_templates_error',
+        message: err.message || 'Erro ao listar templates verticais',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/waiting-list
+  if (method === 'POST' && pathname === '/api/autonomous-scheduling/waiting-list') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const service = require('./core/autonomous-scheduling').waitingListService;
+      const body = await parseJsonBody(req);
+      const out = await service.addWaitingEntry({
+        tenantId,
+        contactId: body?.contactId,
+        contextType: body?.contextType || null,
+        contextId: body?.contextId || null,
+        desiredChannel: body?.desiredChannel || null,
+        serviceType: body?.serviceType || null,
+        ownerId: body?.ownerId || null,
+        teamId: body?.teamId || null,
+        preferredWeekdays: Array.isArray(body?.preferredWeekdays) ? body.preferredWeekdays : [],
+        preferredTimeWindows: Array.isArray(body?.preferredTimeWindows) ? body.preferredTimeWindows : [],
+        notes: body?.notes || null,
+        priority: body?.priority,
+        expiresAt: body?.expiresAt || null,
+        metadata: body?.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+      });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || 'autonomous_waiting_list_create_error';
+      const httpStatus = ['contact_id_required', 'crm_contact_not_found'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao adicionar contato na lista de espera',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/waiting-list
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/waiting-list') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./core/autonomous-scheduling').waitingListService;
+      const activeOnly = urlObj.searchParams.get('activeOnly');
+      const out = await service.listEligibleWaitingEntries({
+        tenantId,
+        serviceType: urlObj.searchParams.get('serviceType') || null,
+        ownerId: urlObj.searchParams.get('ownerId') || null,
+        teamId: urlObj.searchParams.get('teamId') || null,
+        activeOnly: activeOnly === null ? true : activeOnly !== 'false',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_waiting_list_list_error',
+        message: err.message || 'Erro ao listar waiting list',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/detect-gaps/run
+  if (method === 'POST' && pathname === '/api/autonomous-scheduling/detect-gaps/run') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'run');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const body = hasJsonContentType(req) ? await parseJsonBody(req) : {};
+      const job = require('./core/autonomous-scheduling').jobs.detectGapsJob;
+      const out = await job.runDetectGapsJob({
+        tenantId,
+        ownerId: body?.ownerId || null,
+        teamId: body?.teamId || null,
+        gapPatch: {
+          contextType: body?.contextType || undefined,
+          contextId: body?.contextId || undefined,
+          serviceType: body?.serviceType || undefined,
+          channel: body?.channel || undefined,
+          metadata: body?.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+        },
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_detect_gaps_error',
+        message: err.message || 'Erro ao rodar detecção de gaps',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/campaigns
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/campaigns') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./core/autonomous-scheduling').campaignService;
+      const statuses = urlObj.searchParams.getAll('status');
+      const out = await service.listCampaigns({
+        tenantId,
+        limit: urlObj.searchParams.get('limit') || '50',
+        statuses: statuses.length > 0 ? statuses : null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_campaigns_list_error',
+        message: err.message || 'Erro ao listar campanhas abertas',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/campaigns/:id/run
+  if (method === 'POST' && pathname.startsWith('/api/autonomous-scheduling/campaigns/') && pathname.endsWith('/run')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'run');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const campaignId = decodeURIComponent(pathname.slice('/api/autonomous-scheduling/campaigns/'.length, -'/run'.length));
+      const service = require('./core/autonomous-scheduling').campaignService;
+      const out = await service.runCampaign({ tenantId, campaignId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'autonomous_campaign_run_error';
+      const httpStatus = code === 'autonomous_campaign_not_found' ? 404 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao rodar campanha da Agenda Autônoma',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/campaigns/:campaignId/candidates/:candidateId/accept
+  if (
+    method === 'POST'
+    && pathname.startsWith('/api/autonomous-scheduling/campaigns/')
+    && pathname.includes('/candidates/')
+    && pathname.endsWith('/accept')
+  ) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'accept');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const suffix = pathname.slice('/api/autonomous-scheduling/campaigns/'.length, -'/accept'.length);
+      const parts = suffix.split('/candidates/');
+      const campaignId = decodeURIComponent(parts[0] || '');
+      const candidateId = decodeURIComponent(parts[1] || '');
+      const service = require('./core/autonomous-scheduling').campaignService;
+      const out = await service.acceptCandidate({
+        tenantId,
+        campaignId,
+        candidateId,
+        actor: {
+          agentId: req.agent?.id || null,
+          username: req.agent?.username || null,
+          ipAddress: req.socket?.remoteAddress || 'unknown',
+          userAgent: req.headers?.['user-agent'] || 'unknown',
+          actorType: 'user',
+        },
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'autonomous_campaign_accept_error';
+      const httpStatus = ['autonomous_campaign_or_candidate_not_found'].includes(code)
+        ? 404
+        : (['gap_no_longer_available'].includes(code) ? 409 : (['candidate_not_acceptable', 'campaign_not_open'].includes(code) ? 400 : 500));
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao aceitar candidato da Agenda Autônoma',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/autonomous-scheduling/waiting-list/:id
+  if (method === 'PUT' && pathname.startsWith('/api/autonomous-scheduling/waiting-list/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const waitingListId = decodeURIComponent(pathname.slice('/api/autonomous-scheduling/waiting-list/'.length));
+      const body = await parseJsonBody(req);
+      const service = require('./core/autonomous-scheduling').waitingListService;
+      const out = await service.updateWaitingEntry({
+        tenantId,
+        waitingListId,
+        patch: body && typeof body === 'object' ? body : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'autonomous_waiting_list_update_error';
+      const httpStatus = ['autonomous_waiting_list_not_found'].includes(code) ? 404 : (['autonomous_waiting_list_duplicate', 'crm_contact_not_found'].includes(code) ? 409 : 500);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao atualizar waiting list',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/waiting-list/:id/deactivate
+  if (method === 'POST' && pathname.startsWith('/api/autonomous-scheduling/waiting-list/') && pathname.endsWith('/deactivate')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const waitingListId = decodeURIComponent(pathname.slice('/api/autonomous-scheduling/waiting-list/'.length, -'/deactivate'.length));
+      const service = require('./core/autonomous-scheduling').waitingListService;
+      const out = await service.deactivateWaitingEntry({ tenantId, waitingListId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'autonomous_waiting_list_deactivate_error';
+      const httpStatus = code === 'autonomous_waiting_list_not_found' ? 404 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao desativar waiting list',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/metrics
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/metrics') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const service = require('./core/autonomous-scheduling').metricsService;
+      const out = await service.getMetrics({ tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_metrics_error',
+        message: err.message || 'Erro ao carregar métricas da Agenda Autônoma',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/metrics/aggregated
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/metrics/aggregated') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./core/autonomous-scheduling').operationalMetricsAggregator;
+      const out = await service.getAggregatedMetrics({
+        tenantId,
+        verticalTemplate: urlObj.searchParams.get('verticalTemplate') || null,
+        serviceType: urlObj.searchParams.get('serviceType') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_aggregated_metrics_error',
+        message: err.message || 'Erro ao carregar métricas agregadas',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/metrics/snapshots/run
+  if (method === 'POST' && pathname === '/api/autonomous-scheduling/metrics/snapshots/run') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'run');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const body = hasJsonContentType(req) ? await parseJsonBody(req) : {};
+      const service = require('./core/autonomous-scheduling').snapshotService;
+      const out = await service.createSnapshots({
+        tenantId,
+        snapshotDate: body?.snapshotDate || null,
+        verticalTemplate: body?.verticalTemplate || null,
+        serviceType: body?.serviceType || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_snapshot_run_error',
+        message: err.message || 'Erro ao gerar snapshot operacional',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/metrics/snapshots
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/metrics/snapshots') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./core/autonomous-scheduling').snapshotService;
+      const out = await service.listSnapshots({
+        tenantId,
+        verticalTemplate: urlObj.searchParams.get('verticalTemplate') || null,
+        serviceType: urlObj.searchParams.get('serviceType') || null,
+        snapshotDate: urlObj.searchParams.get('snapshotDate') || null,
+        limit: urlObj.searchParams.get('limit') || '50',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_snapshot_list_error',
+        message: err.message || 'Erro ao listar snapshots operacionais',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/insights
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/insights') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./core/autonomous-scheduling').predictiveInsightsService;
+      const out = await service.getInsights({
+        tenantId,
+        verticalTemplate: urlObj.searchParams.get('verticalTemplate') || null,
+        serviceType: urlObj.searchParams.get('serviceType') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_insights_error',
+        message: err.message || 'Erro ao carregar predictive insights',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/recommendations
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/recommendations') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./core/insights/RecommendationEngine');
+      const out = await service.listRecommendations({
+        tenantId,
+        serviceType: urlObj.searchParams.get('serviceType') || null,
+        relatedEntityType: urlObj.searchParams.get('relatedEntityType') || null,
+        relatedEntityId: urlObj.searchParams.get('relatedEntityId') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_recommendations_error',
+        message: err.message || 'Erro ao listar recomendações operacionais',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/preview-run
+  if (method === 'POST' && pathname === '/api/autonomous-scheduling/preview-run') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'run');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const body = hasJsonContentType(req) ? await parseJsonBody(req) : {};
+      const service = require('./core/autonomous-scheduling').previewRunService;
+      const out = await service.previewRun({
+        tenantId,
+        ownerId: body?.ownerId || null,
+        teamId: body?.teamId || null,
+        serviceType: body?.serviceType || null,
+        contextType: body?.contextType || null,
+        contextId: body?.contextId || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_preview_run_error',
+        message: err.message || 'Erro ao gerar preview do core',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/revenue/detect
+  if (method === 'POST' && pathname === '/api/autonomous-scheduling/revenue/detect') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'run');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const engine = require('./core/revenue/RevenueEngine');
+      const out = await engine.detectOpportunities({ tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'revenue_detect_error',
+        message: err.message || 'Erro ao detectar oportunidades de receita',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/revenue/opportunities
+  if (method === 'GET' && pathname === '/api/autonomous-scheduling/revenue/opportunities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const engine = require('./core/revenue/RevenueEngine');
+      const out = await engine.listOpportunities({ tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'revenue_list_error',
+        message: err.message || 'Erro ao listar oportunidades de receita',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/autonomous-scheduling/campaigns/:id/candidates
+  if (method === 'GET' && pathname.startsWith('/api/autonomous-scheduling/campaigns/') && pathname.endsWith('/candidates')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const campaignId = decodeURIComponent(pathname.slice('/api/autonomous-scheduling/campaigns/'.length, -'/candidates'.length));
+      const service = require('./core/autonomous-scheduling').campaignService;
+      const out = await service.listCampaignCandidates({ tenantId, campaignId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'autonomous_campaign_candidates_error',
+        message: err.message || 'Erro ao listar candidatos da campanha',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/autonomous-scheduling/campaigns/:campaignId/candidates/:candidateId/reject
+  if (
+    method === 'POST'
+    && pathname.startsWith('/api/autonomous-scheduling/campaigns/')
+    && pathname.includes('/candidates/')
+    && pathname.endsWith('/reject')
+  ) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'accept');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const suffix = pathname.slice('/api/autonomous-scheduling/campaigns/'.length, -'/reject'.length);
+      const parts = suffix.split('/candidates/');
+      const campaignId = decodeURIComponent(parts[0] || '');
+      const candidateId = decodeURIComponent(parts[1] || '');
+      const service = require('./core/autonomous-scheduling').campaignService;
+      const out = await service.rejectCandidate({ tenantId, campaignId, candidateId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'autonomous_campaign_reject_error';
+      const httpStatus = code === 'autonomous_campaign_or_candidate_not_found' ? 404 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao rejeitar candidato da Agenda Autônoma',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/kiosk/sessions
+  if (method === 'POST' && pathname === '/api/kiosk/sessions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./channels/kiosk/KioskService');
+      const out = await service.createSession({
+        tenantId,
+        kioskCode: body?.kioskCode || 'default',
+        contactId: body?.contactId || null,
+        ticketId: body?.ticketId || null,
+        metadata: body?.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+        contextPayload: body?.contextPayload && typeof body.contextPayload === 'object' ? body.contextPayload : {},
+      });
+      sendJson(res, 201, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'kiosk_session_create_error',
+        message: err.message || 'Erro ao criar sessão de kiosk',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/kiosk/checkin
+  if (method === 'POST' && pathname === '/api/kiosk/checkin') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./channels/kiosk/KioskService');
+      const out = await service.checkin({
+        tenantId,
+        kioskCode: body?.kioskCode || 'default',
+        contactId: body?.contactId || null,
+        reason: body?.reason || 'checkin',
+        contextPayload: body?.contextPayload && typeof body.contextPayload === 'object' ? body.contextPayload : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'kiosk_checkin_error',
+        message: err.message || 'Erro no check-in do kiosk',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/kiosk/sessions
+  if (method === 'GET' && pathname === '/api/kiosk/sessions') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./channels/kiosk/KioskService');
+      const out = await service.listRecentSessions({
+        tenantId,
+        limit: urlObj.searchParams.get('limit') || '20',
+        status: urlObj.searchParams.get('status') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'kiosk_sessions_list_error',
+        message: err.message || 'Erro ao listar sessões de kiosk',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/kiosk/sessions/:id/close
+  if (method === 'POST' && pathname.startsWith('/api/kiosk/sessions/') && pathname.endsWith('/close')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const body = hasJsonContentType(req) ? await parseJsonBody(req) : {};
+      const sessionId = decodeURIComponent(pathname.slice('/api/kiosk/sessions/'.length, -'/close'.length));
+      const service = require('./channels/kiosk/KioskService');
+      const out = await service.closeSession({
+        tenantId,
+        sessionId,
+        statusReason: body?.statusReason || 'closed',
+        contextPayload: body?.contextPayload && typeof body.contextPayload === 'object' ? body.contextPayload : {},
+      });
+      sendJson(res, out?.ok ? 200 : 404, out?.ok ? out : buildApiError({
+        code: 'kiosk_session_not_found',
+        message: 'Sessão de kiosk não encontrada',
+        httpStatus: 404,
+        retryable: false,
+        details: null,
+        req,
+      }));
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'kiosk_session_close_error',
+        message: err.message || 'Erro ao encerrar sessão de kiosk',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/kiosk/availability
+  if (method === 'POST' && pathname === '/api/kiosk/availability') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./channels/kiosk/KioskService');
+      const out = await service.availabilityLookup({
+        tenantId,
+        ownerId: body?.ownerId || null,
+        teamId: body?.teamId || null,
+        startAt: body?.startAt,
+        endAt: body?.endAt,
+        timezone: body?.timezone || 'UTC',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || 'kiosk_availability_error';
+      const httpStatus = ['start_at_required', 'end_at_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao consultar disponibilidade do kiosk',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/beauty/dashboard
+  if (method === 'GET' && pathname === '/api/beauty/dashboard') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/beautyService');
+      const out = await service.getDashboard({ tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'beauty_dashboard_error',
+        message: err.message || 'Erro ao carregar dashboard Beauty',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/beauty/professionals
+  if (method === 'GET' && pathname === '/api/beauty/professionals') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/beautyService');
+      const out = await service.listProfessionals({
+        tenantId,
+        activeOnly: urlObj.searchParams.get('activeOnly') === 'true',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'beauty_professionals_list_error',
+        message: err.message || 'Erro ao listar profissionais Beauty',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/beauty/agenda
+  if (method === 'GET' && pathname === '/api/beauty/agenda') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/beautyService');
+      const out = await service.listProfessionalAgenda({
+        tenantId,
+        professionalId: urlObj.searchParams.get('professionalId') || null,
+        daysAhead: Number(urlObj.searchParams.get('daysAhead') || 7),
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'beauty_agenda_error',
+        message: err.message || 'Erro ao carregar agenda Beauty',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/beauty/professionals
+  if (method === 'POST' && pathname === '/api/beauty/professionals') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/beautyService');
+      const out = await service.saveProfessional({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_professional_save_error';
+      const httpStatus = ['beauty_professional_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar profissional Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/beauty/professionals/:id
+  if (method === 'PUT' && pathname.startsWith('/api/beauty/professionals/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const id = decodeURIComponent(pathname.slice('/api/beauty/professionals/'.length));
+      const service = require('./services/beautyService');
+      const out = await service.saveProfessional({ tenantId, id, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_professional_update_error';
+      const httpStatus = ['beauty_professional_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao atualizar profissional Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/beauty/services
+  if (method === 'GET' && pathname === '/api/beauty/services') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/beautyService');
+      const out = await service.listServices({
+        tenantId,
+        activeOnly: urlObj.searchParams.get('activeOnly') === 'true',
+        includeAssignments: urlObj.searchParams.get('includeAssignments') === 'true',
+        includeCompositions: urlObj.searchParams.get('includeCompositions') === 'true',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'beauty_services_list_error',
+        message: err.message || 'Erro ao listar servicos Beauty',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/beauty/services
+  if (method === 'POST' && pathname === '/api/beauty/services') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/beautyService');
+      const out = await service.saveService({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_service_save_error';
+      const httpStatus = ['beauty_service_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar servico Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/beauty/services/:id
+  if (method === 'PUT' && pathname.startsWith('/api/beauty/services/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const id = decodeURIComponent(pathname.slice('/api/beauty/services/'.length));
+      const service = require('./services/beautyService');
+      const out = await service.saveService({ tenantId, id, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_service_update_error';
+      const httpStatus = ['beauty_service_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao atualizar servico Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/beauty/assignments
+  if (method === 'GET' && pathname === '/api/beauty/assignments') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/beautyService');
+      const out = await service.listAssignments({
+        tenantId,
+        serviceId: urlObj.searchParams.get('serviceId') || null,
+        professionalId: urlObj.searchParams.get('professionalId') || null,
+        activeOnly: urlObj.searchParams.get('activeOnly') === 'true',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'beauty_assignments_list_error',
+        message: err.message || 'Erro ao listar vinculos Beauty',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/beauty/assignments
+  if (method === 'POST' && pathname === '/api/beauty/assignments') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/beautyService');
+      const out = await service.saveAssignment({
+        tenantId,
+        serviceId: body?.serviceId || body?.service_id,
+        professionalId: body?.professionalId || body?.professional_id,
+        payload: body && typeof body === 'object' ? body : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_assignment_save_error';
+      const httpStatus = ['beauty_assignment_ids_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar vinculo Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/beauty/compositions/:serviceId
+  if (method === 'GET' && pathname.startsWith('/api/beauty/compositions/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const parentServiceId = decodeURIComponent(pathname.slice('/api/beauty/compositions/'.length));
+      const service = require('./services/beautyService');
+      const out = await service.listCompositions({ tenantId, parentServiceId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'beauty_compositions_list_error',
+        message: err.message || 'Erro ao listar composicoes Beauty',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/beauty/compositions/:serviceId
+  if (method === 'PUT' && pathname.startsWith('/api/beauty/compositions/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const parentServiceId = decodeURIComponent(pathname.slice('/api/beauty/compositions/'.length));
+      const service = require('./services/beautyService');
+      const out = await service.replaceCompositions({
+        tenantId,
+        parentServiceId,
+        items: Array.isArray(body?.items) ? body.items : [],
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_compositions_save_error';
+      const httpStatus = ['beauty_parent_service_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar composicao Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/beauty/resolve-bundle
+  if (method === 'POST' && pathname === '/api/beauty/resolve-bundle') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/beautyService');
+      const out = await service.resolveBundle({
+        tenantId,
+        serviceIds: Array.isArray(body?.serviceIds) ? body.serviceIds : [],
+        professionalId: body?.professionalId || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'beauty_bundle_error',
+        message: err.message || 'Erro ao resolver bundle Beauty',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/beauty/bookings
+  if (method === 'POST' && pathname === '/api/beauty/bookings') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/beautyService');
+      const out = await service.createBeautyBooking({
+        tenantId,
+        contactId: body?.contactId || body?.contact_id,
+        serviceId: body?.serviceId || body?.service_id,
+        professionalId: body?.professionalId || body?.professional_id,
+        startAt: body?.startAt || body?.start_at,
+        endAt: body?.endAt || body?.end_at || null,
+        timezone: body?.timezone || 'UTC',
+        channel: body?.channel || 'whatsapp',
+        notes: body?.notes || null,
+        conversationId: body?.conversationId || body?.conversation_id || null,
+        metadata: body?.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+      });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_booking_create_error';
+      const httpStatus = [
+        'beauty_contact_id_required',
+        'beauty_service_required',
+        'beauty_professional_required',
+        'beauty_service_not_found',
+        'beauty_professional_not_found',
+        'beauty_booking_start_invalid',
+        'beauty_booking_time_invalid',
+        'beauty_schedule_unavailable',
+        'professional_conflict',
+      ].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao criar booking Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/beauty/bookings/:scheduleId
+  if (method === 'GET'
+    && pathname.startsWith('/api/beauty/bookings/')
+    && !pathname.endsWith('/cancel')
+    && !pathname.endsWith('/reschedule')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const scheduleId = decodeURIComponent(pathname.slice('/api/beauty/bookings/'.length));
+      const service = require('./services/beautyService');
+      const out = await service.getBeautyBookingByScheduleId({ tenantId, scheduleId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_booking_load_error';
+      const httpStatus = ['beauty_booking_not_found'].includes(code) ? 404 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao carregar booking Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/beauty/bookings/:scheduleId/cancel
+  if (method === 'POST' && pathname.startsWith('/api/beauty/bookings/') && pathname.endsWith('/cancel')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const scheduleId = decodeURIComponent(pathname.slice('/api/beauty/bookings/'.length, -'/cancel'.length));
+      const service = require('./services/beautyService');
+      const out = await service.cancelBeautyBooking({
+        tenantId,
+        scheduleId,
+        actor: {},
+        reason: body?.reason || null,
+        idempotencyKey: body?.idempotencyKey || body?.idempotency_key || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_booking_cancel_error';
+      const httpStatus = ['beauty_booking_not_found', 'schedule_not_found'].includes(code)
+        ? 404
+        : ['invalid_schedule_transition'].includes(code)
+          ? 400
+          : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao cancelar booking Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/beauty/bookings/:scheduleId/reschedule
+  if (method === 'POST' && pathname.startsWith('/api/beauty/bookings/') && pathname.endsWith('/reschedule')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const scheduleId = decodeURIComponent(pathname.slice('/api/beauty/bookings/'.length, -'/reschedule'.length));
+      const service = require('./services/beautyService');
+      const out = await service.rescheduleBeautyBooking({
+        tenantId,
+        scheduleId,
+        startAt: body?.startAt || body?.start_at,
+        endAt: body?.endAt || body?.end_at || null,
+        timezone: body?.timezone || null,
+        notes: body?.notes,
+        actor: {},
+        idempotencyKey: body?.idempotencyKey || body?.idempotency_key || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_booking_reschedule_error';
+      const httpStatus = ['beauty_booking_not_found', 'schedule_not_found'].includes(code)
+        ? 404
+        : [
+          'beauty_booking_start_invalid',
+          'beauty_booking_time_invalid',
+          'beauty_schedule_unavailable',
+          'invalid_schedule_transition',
+          'schedule_unavailable',
+          'professional_conflict',
+        ].includes(code)
+          ? 400
+          : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao reagendar booking Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/beauty/loyalty/:contactId
+  if (method === 'PUT' && pathname.startsWith('/api/beauty/loyalty/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const contactId = decodeURIComponent(pathname.slice('/api/beauty/loyalty/'.length));
+      const service = require('./services/beautyService');
+      const out = await service.upsertLoyalty({ tenantId, contactId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_loyalty_save_error';
+      const httpStatus = ['beauty_contact_id_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar fidelidade Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/beauty/preferences/:contactId
+  if (method === 'PUT' && pathname.startsWith('/api/beauty/preferences/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const contactId = decodeURIComponent(pathname.slice('/api/beauty/preferences/'.length));
+      const service = require('./services/beautyService');
+      const out = await service.upsertPreference({ tenantId, contactId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'beauty_preference_save_error';
+      const httpStatus = ['beauty_contact_id_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar preferencia Beauty',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/dashboard
+  if (method === 'GET' && pathname === '/api/fitness/dashboard') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('./services/fitnessService');
+      const out = await service.getDashboard({ tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_dashboard_error',
+        message: err.message || 'Erro ao carregar dashboard Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/classes
+  if (method === 'GET' && pathname === '/api/fitness/classes') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listClasses({
+        tenantId,
+        activeOnly: urlObj.searchParams.get('activeOnly') === 'true',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_classes_list_error',
+        message: err.message || 'Erro ao listar turmas Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/professionals
+  if (method === 'GET' && pathname === '/api/fitness/professionals') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listProfessionals({
+        tenantId,
+        activeOnly: urlObj.searchParams.get('activeOnly') === 'true',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_professionals_list_error',
+        message: err.message || 'Erro ao listar profissionais Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/professionals
+  if (method === 'POST' && pathname === '/api/fitness/professionals') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveProfessional({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_professional_save_error';
+      const httpStatus = ['fitness_professional_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar profissional Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/resources
+  if (method === 'GET' && pathname === '/api/fitness/resources') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listResources({
+        tenantId,
+        activeOnly: urlObj.searchParams.get('activeOnly') === 'true',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_resources_list_error',
+        message: err.message || 'Erro ao listar recursos Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/resources
+  if (method === 'POST' && pathname === '/api/fitness/resources') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveResource({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_resource_save_error';
+      const httpStatus = ['fitness_resource_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar recurso Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/activity-professionals
+  if (method === 'GET' && pathname === '/api/fitness/activity-professionals') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listActivityProfessionals({
+        tenantId,
+        activityId: urlObj.searchParams.get('activityId') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_activity_professionals_list_error',
+        message: err.message || 'Erro ao listar profissionais por atividade Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/activity-professionals
+  if (method === 'POST' && pathname === '/api/fitness/activity-professionals') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveActivityProfessional({
+        tenantId,
+        activityId: body?.activityId || body?.activity_id,
+        professionalId: body?.professionalId || body?.professional_id,
+        payload: body && typeof body === 'object' ? body : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_activity_professional_save_error';
+      const httpStatus = ['fitness_activity_professional_ids_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar relacao atividade x profissional Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/activity-resources
+  if (method === 'GET' && pathname === '/api/fitness/activity-resources') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listActivityResources({
+        tenantId,
+        activityId: urlObj.searchParams.get('activityId') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_activity_resources_list_error',
+        message: err.message || 'Erro ao listar recursos por atividade Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/activity-resources
+  if (method === 'POST' && pathname === '/api/fitness/activity-resources') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveActivityResource({
+        tenantId,
+        activityId: body?.activityId || body?.activity_id,
+        resourceId: body?.resourceId || body?.resource_id,
+        payload: body && typeof body === 'object' ? body : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_activity_resource_save_error';
+      const httpStatus = ['fitness_activity_resource_ids_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar relacao atividade x recurso Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/classes
+  if (method === 'POST' && pathname === '/api/fitness/classes') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveClass({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_class_save_error';
+      const httpStatus = ['fitness_class_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar turma Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // PUT /api/fitness/classes/:id
+  if (method === 'PUT' && pathname.startsWith('/api/fitness/classes/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const id = decodeURIComponent(pathname.slice('/api/fitness/classes/'.length));
+      const service = require('./services/fitnessService');
+      const out = await service.saveClass({ tenantId, id, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_class_update_error';
+      const httpStatus = ['fitness_class_name_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao atualizar turma Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/schedules
+  if (method === 'GET' && pathname === '/api/fitness/schedules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listSchedules({
+        tenantId,
+        classId: urlObj.searchParams.get('classId') || null,
+        status: urlObj.searchParams.get('status') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_schedules_list_error',
+        message: err.message || 'Erro ao listar agenda Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/schedules
+  if (method === 'POST' && pathname === '/api/fitness/schedules') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveSchedule({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_schedule_save_error';
+      const httpStatus = ['fitness_schedule_class_required', 'fitness_schedule_time_invalid', 'fitness_class_not_found', 'professional_conflict', 'resource_conflict'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar agenda Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/memberships
+  if (method === 'POST' && pathname === '/api/fitness/memberships') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveMembership({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_membership_save_error';
+      const httpStatus = ['fitness_membership_member_required', 'fitness_membership_plan_required', 'fitness_membership_start_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar plano Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/memberships
+  if (method === 'GET' && pathname === '/api/fitness/memberships') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listMemberships({
+        tenantId,
+        activeOnly: urlObj.searchParams.get('activeOnly') === 'true',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_memberships_list_error',
+        message: err.message || 'Erro ao listar planos Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/attendance
+  if (method === 'POST' && pathname === '/api/fitness/attendance') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveAttendance({
+        tenantId,
+        classScheduleId: body?.classScheduleId || body?.class_schedule_id,
+        memberId: body?.memberId || body?.member_id,
+        payload: body && typeof body === 'object' ? body : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_attendance_save_error';
+      const httpStatus = [
+        'fitness_attendance_ids_required',
+        'fitness_schedule_not_found',
+        'membership_missing',
+        'membership_class_not_allowed',
+        'membership_category_not_allowed',
+        'membership_weekly_limit_reached',
+        'schedule_full',
+      ].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar presença Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // GET /api/fitness/attendance
+  if (method === 'GET' && pathname === '/api/fitness/attendance') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const service = require('./services/fitnessService');
+      const out = await service.listAttendance({
+        tenantId,
+        classScheduleId: urlObj.searchParams.get('classScheduleId') || null,
+        memberId: urlObj.searchParams.get('memberId') || null,
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      sendJson(res, 500, buildApiError({
+        code: err.code || 'fitness_attendance_list_error',
+        message: err.message || 'Erro ao listar presença Fitness',
+        httpStatus: 500,
+        retryable: true,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/goals
+  if (method === 'POST' && pathname === '/api/fitness/goals') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.saveGoal({ tenantId, payload: body && typeof body === 'object' ? body : {} });
+      sendJson(res, 201, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_goal_save_error';
+      const httpStatus = ['fitness_goal_member_required', 'fitness_goal_type_required'].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao salvar meta Fitness',
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: err.details || null,
+        req,
+      }));
+    }
+    return;
+  }
+
+  // POST /api/fitness/checkins
+  if (method === 'POST' && pathname === '/api/fitness/checkins') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const permResult = requireAutonomousSchedulingPermission(req, 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await parseJsonBody(req);
+      const service = require('./services/fitnessService');
+      const out = await service.recordCheckin({
+        tenantId,
+        memberId: body?.memberId || body?.member_id,
+        classScheduleId: body?.classScheduleId || body?.class_schedule_id || null,
+        source: body?.source || 'manual',
+        kioskCode: body?.kioskCode || 'default',
+        payload: body && typeof body === 'object' ? body : {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      const code = err.code || err.message || 'fitness_checkin_error';
+      const httpStatus = [
+        'fitness_checkin_member_required',
+        'fitness_schedule_not_found',
+        'membership_missing',
+        'membership_class_not_allowed',
+        'membership_category_not_allowed',
+        'membership_weekly_limit_reached',
+        'schedule_full',
+      ].includes(code) ? 400 : 500;
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: err.message || 'Erro ao registrar check-in Fitness',
         httpStatus,
         retryable: httpStatus >= 500,
         details: err.details || null,
@@ -8213,6 +11638,106 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, 200, { tenants });
     } catch (err) {
       logger.error('Erro ao listar tenants (Super Admin):', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /api/admin/tenants/health - Resumo operacional OCC por tenant
+  if (method === 'GET' && pathname === '/api/admin/tenants/health') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar o OCC' });
+      return;
+    }
+    try {
+      const operationalMetricsService = require('./services/operationalMetricsService');
+      const out = await operationalMetricsService.getTenantsHealthSummary();
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao carregar health summary OCC:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /api/admin/tenant/:id/metrics - Snapshot operacional OCC do tenant
+  if (method === 'GET' && pathname.startsWith('/api/admin/tenant/') && pathname.endsWith('/metrics')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar o OCC' });
+      return;
+    }
+    try {
+      const tenantId = decodeURIComponent(pathname.slice('/api/admin/tenant/'.length).replace('/metrics', ''));
+      const operationalMetricsService = require('./services/operationalMetricsService');
+      const out = await operationalMetricsService.getLatestTenantSnapshot({ tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao carregar snapshot OCC:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /api/admin/tenant/:id/alerts - Alertas operacionais do tenant
+  if (method === 'GET' && pathname.startsWith('/api/admin/tenant/') && pathname.endsWith('/alerts')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar o OCC' });
+      return;
+    }
+    try {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const tenantId = decodeURIComponent(pathname.slice('/api/admin/tenant/'.length).replace('/alerts', ''));
+      const schedulingHealthService = require('./services/schedulingHealthService');
+      const out = await schedulingHealthService.listAlerts({
+        tenantId,
+        includeResolved: url.searchParams.get('includeResolved') === 'true',
+        limit: Number(url.searchParams.get('limit') || 100),
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao listar alertas OCC:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /api/admin/tenant/:id/ura/audit - Auditoria recente da URA
+  if (method === 'GET' && pathname.startsWith('/api/admin/tenant/') && pathname.endsWith('/ura/audit')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar o OCC' });
+      return;
+    }
+    try {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const tenantId = decodeURIComponent(pathname.slice('/api/admin/tenant/'.length).replace('/ura/audit', ''));
+      const uraDecisionAuditService = require('./services/uraDecisionAuditService');
+      const out = await uraDecisionAuditService.listRecentAudits({
+        tenantId,
+        limit: Number(url.searchParams.get('limit') || 50),
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao listar auditoria URA OCC:', err);
       sendJson(res, 500, { error: 'internal_error' });
     }
     return;
@@ -14395,21 +17920,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const tenantId = requireTenant(req, res);
     if (!tenantId) return;
     try {
-      const service = require('./services/tenantSettingsService');
-      const out = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
+      const whatsappIvrService = require('./services/whatsappIvrService');
+      const out = await whatsappIvrService.getNormalizedWhatsAppIvrSetting({ tenantId });
       if (!out.ok) {
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
       }
-      const value = out.value && typeof out.value === 'object' ? out.value : {};
-      sendJson(res, 200, {
-        ok: true,
-        value: {
-          enabled: value.enabled === true,
-          departments: Array.isArray(value.departments) ? value.departments : [],
-          rules: Array.isArray(value.rules) ? value.rules : [],
-        },
-      });
+      sendJson(res, 200, out);
     } catch (err) {
       logger.error('[WhatsAppIVR] Erro ao obter setting:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter setting' });
@@ -14437,24 +17954,25 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
     try {
       const body = await parseJsonBody(req);
-      const value = {
-        enabled: body && body.enabled === true,
-        departments: Array.isArray(body?.departments) ? body.departments : [],
-        rules: Array.isArray(body?.rules) ? body.rules : [],
-      };
-      const service = require('./services/tenantSettingsService');
-      const out = await service.upsertSetting({ tenantId, key: 'whatsapp_ivr', value });
+      const whatsappIvrService = require('./services/whatsappIvrService');
+      const out = await whatsappIvrService.saveWhatsAppIvrSetting({ tenantId, payload: body || {} });
       if (!out.ok) {
-        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        const status = out.error === 'validation_error' ? 400 : 503;
+        sendJson(res, status, {
+          error: out.error || 'service_unavailable',
+          message: out.error === 'validation_error' ? 'Configuracao invalida' : (out.error || 'settings_unavailable'),
+          details: out.details || [],
+          warnings: out.warnings || [],
+        });
         return;
       }
       try {
         const WebSocketService = require('./services/websocketService');
-        WebSocketService.emitEvent('whatsapp.ivr.updated', { value: out.value }, { tenantId });
+        WebSocketService.emitEvent('whatsapp.ivr.updated', out, { tenantId });
       } catch (_) {
         // Não deve quebrar fluxo de persistência
       }
-      sendJson(res, 200, { ok: true, value: out.value });
+      sendJson(res, 200, out);
     } catch (err) {
       logger.error('[WhatsAppIVR] Erro ao salvar setting:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar setting' });
@@ -14482,46 +18000,69 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
     try {
       const body = await parseJsonBody(req);
-      const name = body && body.name ? String(body.name).trim() : '';
-      const queue = body && body.queue ? String(body.queue).trim() : '';
-      if (!name || !queue) {
-        badRequest(res, 'name e queue são obrigatórios');
+      const whatsappIvrService = require('./services/whatsappIvrService');
+      const current = await whatsappIvrService.getNormalizedWhatsAppIvrSetting({ tenantId });
+      if (!current.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: current.error || 'settings_unavailable' });
         return;
       }
-      const id = body && body.id ? String(body.id).trim() : `wivr-dept-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-      const enabled = body && body.enabled !== undefined ? body.enabled === true : true;
 
-      const service = require('./services/tenantSettingsService');
-      const current = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
-      const value = current.value && typeof current.value === 'object' ? current.value : {};
-      const departments = Array.isArray(value.departments) ? value.departments : [];
-      const existingIndex = departments.findIndex((d) => d && d.id === id);
-      const next = { id, name, queue, enabled };
-      if (existingIndex >= 0) {
-        departments[existingIndex] = { ...departments[existingIndex], ...next };
-      } else {
-        departments.push(next);
+      const availableDepartments = Array.isArray(current.departments) ? current.departments : [];
+      const bindingDepartmentId = body && body.departmentId ? String(body.departmentId).trim() : '';
+      const byId = new Map(availableDepartments.map((item) => [String(item.id), item]));
+      let targetDepartment = bindingDepartmentId ? byId.get(bindingDepartmentId) : null;
+      if (!targetDepartment && body?.id) targetDepartment = byId.get(String(body.id).trim()) || null;
+      if (!targetDepartment && body?.name) {
+        const normalizedName = String(body.name).trim().toLowerCase();
+        targetDepartment = availableDepartments.find((item) => String(item.name || '').trim().toLowerCase() === normalizedName) || null;
       }
-      const out = await service.upsertSetting({
-        tenantId,
-        key: 'whatsapp_ivr',
-        value: {
-          enabled: value.enabled === true,
-          departments,
-          rules: Array.isArray(value.rules) ? value.rules : [],
-        },
-      });
+      if (!targetDepartment) {
+        badRequest(res, 'departmentId oficial invalido');
+        return;
+      }
+
+      const nextConfig = {
+        ...current.value,
+        departmentBindings: Array.isArray(current.value?.departmentBindings) ? current.value.departmentBindings.slice() : [],
+      };
+      const index = nextConfig.departmentBindings.findIndex((item) => item && item.departmentId === targetDepartment.id);
+      const nextBinding = {
+        departmentId: targetDepartment.id,
+        enabled: body?.enabled !== false,
+        defaultQueueName: body?.defaultQueueName ? String(body.defaultQueueName).trim() : (body?.queue ? String(body.queue).trim() : null),
+        queueStrategy: body?.queueStrategy ? String(body.queueStrategy).trim() : 'default',
+        menuLabel: body?.menuLabel ? String(body.menuLabel).trim() : targetDepartment.name,
+        menuDescription: body?.menuDescription ? String(body.menuDescription).trim() : '',
+        menuOrder: body?.menuOrder != null ? Number(body.menuOrder) : (index >= 0 ? nextConfig.departmentBindings[index].menuOrder : (nextConfig.departmentBindings.length + 1)),
+        aliases: Array.isArray(body?.aliases) ? body.aliases : [],
+        businessHoursOverride: body?.businessHoursOverride || null,
+      };
+      if (index >= 0) nextConfig.departmentBindings[index] = { ...nextConfig.departmentBindings[index], ...nextBinding };
+      else nextConfig.departmentBindings.push(nextBinding);
+
+      const out = await whatsappIvrService.saveWhatsAppIvrSetting({ tenantId, payload: nextConfig });
       if (!out.ok) {
-        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        const status = out.error === 'validation_error' ? 400 : 503;
+        sendJson(res, status, {
+          error: out.error || 'service_unavailable',
+          message: out.error === 'validation_error' ? 'Binding invalido' : (out.error || 'settings_unavailable'),
+          details: out.details || [],
+          warnings: out.warnings || [],
+        });
         return;
       }
       try {
         const WebSocketService = require('./services/websocketService');
-        WebSocketService.emitEvent('whatsapp.ivr.updated', { value: out.value }, { tenantId });
+        WebSocketService.emitEvent('whatsapp.ivr.updated', out, { tenantId });
       } catch (_) {
         // Não deve quebrar fluxo de persistência
       }
-      sendJson(res, 200, { ok: true, department: next, value: out.value });
+      sendJson(res, 200, {
+        ok: true,
+        binding: out.value.departmentBindings.find((item) => item.departmentId === targetDepartment.id) || null,
+        value: out.value,
+        warnings: out.warnings || [],
+      });
     } catch (err) {
       logger.error('[WhatsAppIVR] Erro ao salvar departamento:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar departamento' });
@@ -14558,38 +18099,40 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const id = body && body.id ? String(body.id).trim() : `wivr-rule-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
       const enabled = body && body.enabled !== undefined ? body.enabled === true : true;
       const priority = body && body.priority != null ? Number(body.priority) : 0;
-
-      const service = require('./services/tenantSettingsService');
-      const current = await service.getSetting({ tenantId, key: 'whatsapp_ivr' });
-      const value = current.value && typeof current.value === 'object' ? current.value : {};
-      const rules = Array.isArray(value.rules) ? value.rules : [];
-      const existingIndex = rules.findIndex((r) => r && r.id === id);
-      const next = { id, keyword, departmentId, priority, enabled };
-      if (existingIndex >= 0) {
-        rules[existingIndex] = { ...rules[existingIndex], ...next };
-      } else {
-        rules.push(next);
+      const whatsappIvrService = require('./services/whatsappIvrService');
+      const current = await whatsappIvrService.getNormalizedWhatsAppIvrSetting({ tenantId });
+      if (!current.ok) {
+        sendJson(res, 503, { error: 'service_unavailable', message: current.error || 'settings_unavailable' });
+        return;
       }
-      const out = await service.upsertSetting({
-        tenantId,
-        key: 'whatsapp_ivr',
-        value: {
-          enabled: value.enabled === true,
-          departments: Array.isArray(value.departments) ? value.departments : [],
-          rules,
-        },
-      });
+
+      const nextConfig = {
+        ...current.value,
+        rules: Array.isArray(current.value?.rules) ? current.value.rules.slice() : [],
+      };
+      const existingIndex = nextConfig.rules.findIndex((r) => r && r.id === id);
+      const next = { id, keyword, departmentId, priority, enabled };
+      if (existingIndex >= 0) nextConfig.rules[existingIndex] = { ...nextConfig.rules[existingIndex], ...next };
+      else nextConfig.rules.push(next);
+
+      const out = await whatsappIvrService.saveWhatsAppIvrSetting({ tenantId, payload: nextConfig });
       if (!out.ok) {
-        sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        const status = out.error === 'validation_error' ? 400 : 503;
+        sendJson(res, status, {
+          error: out.error || 'service_unavailable',
+          message: out.error === 'validation_error' ? 'Regra invalida' : (out.error || 'settings_unavailable'),
+          details: out.details || [],
+          warnings: out.warnings || [],
+        });
         return;
       }
       try {
         const WebSocketService = require('./services/websocketService');
-        WebSocketService.emitEvent('whatsapp.ivr.updated', { value: out.value }, { tenantId });
+        WebSocketService.emitEvent('whatsapp.ivr.updated', out, { tenantId });
       } catch (_) {
         // Não deve quebrar fluxo de persistência
       }
-      sendJson(res, 200, { ok: true, rule: next, value: out.value });
+      sendJson(res, 200, { ok: true, rule: next, value: out.value, warnings: out.warnings || [] });
     } catch (err) {
       logger.error('[WhatsAppIVR] Erro ao salvar regra:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar regra' });
@@ -18829,7 +22372,19 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const status = urlObj.searchParams.get('status');
     const queue = urlObj.searchParams.get('queue');
     const limit = urlObj.searchParams.get('limit');
+    const cursor = urlObj.searchParams.get('cursor');
+    const q = urlObj.searchParams.get('q');
     const offset = urlObj.searchParams.get('offset');
+    const contactId = urlObj.searchParams.get('contactId');
+    const phoneNumber = urlObj.searchParams.get('phoneNumber');
+    const hasNewPaginationOrSearch = Boolean(limit || cursor || q);
+
+    const statuses = String(status || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const statusForLegacy = statuses.length > 0 ? statuses[0] : null;
+    const accessFilter = (ticket) => canAccessTicket(req.agent, ticket);
 
     // Log para identificar origem das requisições
     logger.debug('[Server] GET /tickets chamado', {
@@ -18838,37 +22393,63 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       status,
       queue,
       limit,
+      cursor,
+      q,
       offset,
+      contactId,
+      phoneNumber: phoneNumber ? '[present]' : null,
       userAgent: req.headers['user-agent']?.substring(0, 50),
       referer: req.headers['referer']?.substring(0, 50),
     });
 
-    const result = listAllTickets({ 
-      tenantId: req.tenantId, // Filtro por tenant
-      status, 
-      queue,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined,
-    });
-    
-    // Filtra tickets por permissão (agent só vê próprios ou não atribuídos)
-    if (req.agent.role === 'agent') {
-      result.tickets = result.tickets.filter((ticket) => 
-        canAccessTicket(req.agent, ticket)
-      );
-      result.total = result.tickets.length;
+    if (!hasNewPaginationOrSearch) {
+      // Compatibilidade obrigatória: sem limit/cursor/q retorna array simples.
+      const result = listAllTickets({
+        tenantId: req.tenantId,
+        status: statusForLegacy || undefined,
+        queue,
+        contactId: contactId || undefined,
+        phoneNumber: phoneNumber || undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
+
+      let legacyTickets = Array.isArray(result?.tickets) ? result.tickets : [];
+      if (statuses.length > 1) {
+        const statusSet = new Set(statuses);
+        legacyTickets = legacyTickets.filter((ticket) => statusSet.has(String(ticket?.status || '')));
+      }
+      legacyTickets = legacyTickets.filter((ticket) => accessFilter(ticket));
+
+      logger.info('Tickets retornados (legacy array)', {
+        total: legacyTickets.length,
+        agentRole: req.agent.role,
+      });
+
+      sendJson(res, 200, legacyTickets);
+      return;
     }
-    
-    // Log para debug
-    logger.info('Tickets retornados', {
-      total: result.total,
-      ticketsCount: result.tickets?.length || 0,
-      limit: result.limit,
-      offset: result.offset,
+
+    const paged = listAllTicketsPaged({
+      tenantId: req.tenantId,
+      status: statuses.length > 0 ? statuses : undefined,
+      queue: queue || undefined,
+      limit: limit ? parseInt(limit, 10) : 30,
+      cursor: cursor || undefined,
+      q: q || undefined,
+      contactId: contactId || undefined,
+      phoneNumber: phoneNumber || undefined,
+      accessFilter,
+    });
+
+    logger.info('Tickets retornados (paged)', {
+      items: paged.items?.length || 0,
+      hasMore: paged.hasMore,
+      nextCursor: paged.nextCursor ? 'present' : 'null',
       agentRole: req.agent.role,
     });
-    
-    sendJson(res, 200, result);
+
+    sendJson(res, 200, paged);
     return;
   }
 
@@ -20063,34 +23644,32 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const body = await parseJsonBody(req);
       const message = body && body.message ? String(body.message) : '';
       const media = body && body.media && typeof body.media === 'object' ? body.media : null;
+      const replyToRaw = body && body.replyTo && typeof body.replyTo === 'object' ? body.replyTo : null;
+      const mediaKind = media?.kind ? String(media.kind).trim().toLowerCase() : 'standard';
+      const isRagMedia = mediaKind === 'rag';
       const mediaTypeRaw = media?.type ? String(media.type).toLowerCase() : '';
-      const mediaType = (mediaTypeRaw === 'image' || mediaTypeRaw === 'video' || mediaTypeRaw === 'audio' || mediaTypeRaw === 'document')
+      let mediaType = (mediaTypeRaw === 'image' || mediaTypeRaw === 'video' || mediaTypeRaw === 'audio' || mediaTypeRaw === 'document')
         ? mediaTypeRaw
         : null;
-      const mediaUrl = media?.url ? String(media.url) : '';
-      const fileName = media?.fileName ? String(media.fileName) : null;
-      const mimeType = media?.mimeType ? String(media.mimeType) : null;
+      let mediaUrl = media?.url ? String(media.url) : '';
+      let fileName = media?.fileName ? String(media.fileName) : null;
+      let mimeType = media?.mimeType ? String(media.mimeType) : null;
+      const mediaDocumentId = media?.documentId ? String(media.documentId).trim() : null;
+      let sizeBytes = Number.isFinite(media?.sizeBytes) ? Number(media.sizeBytes) : null;
       const hasText = message.trim() !== '';
-      const hasMedia = !!(mediaType && mediaUrl);
-      const forwardedProto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
-      const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
-      const forwardedPrefixRaw = String(req.headers['x-forwarded-prefix'] || '').split(',')[0].trim();
-      const forwardedPrefix = forwardedPrefixRaw
-        ? `/${forwardedPrefixRaw.replace(/^\/+|\/+$/g, '')}`
-        : '';
-      const normalizedMediaPath = mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`;
-      const mediaUrlForOutbound = hasMedia && mediaUrl.startsWith('/') && forwardedHost
-        ? `${forwardedProto}://${forwardedHost}${forwardedPrefix}${normalizedMediaPath}`
-        : mediaUrl;
-
-      if (!hasText && !hasMedia) {
-        badRequest(res, 'Campo "message" ou "media.url" é obrigatório');
-        return;
-      }
-      if (media && !hasMedia) {
-        badRequest(res, 'Quando "media" for informado, use media.type válido (image|video|audio|document) e media.url');
-        return;
-      }
+      const replyTo = replyToRaw
+        ? {
+          messageId: replyToRaw?.messageId ? String(replyToRaw.messageId).trim() : undefined,
+          externalMessageId: replyToRaw?.externalMessageId ? String(replyToRaw.externalMessageId).trim() : undefined,
+          clientMessageId: replyToRaw?.clientMessageId ? String(replyToRaw.clientMessageId).trim() : undefined,
+          sender: replyToRaw?.sender ? String(replyToRaw.sender).trim().toLowerCase() : undefined,
+          text: replyToRaw?.text ? String(replyToRaw.text).trim().slice(0, 500) : undefined,
+          timestamp: replyToRaw?.timestamp ? String(replyToRaw.timestamp).trim() : undefined,
+        }
+        : null;
+      const hasReplyTo = !!(replyTo && (replyTo.messageId || replyTo.externalMessageId || replyTo.clientMessageId || replyTo.text));
+      let hasMedia = false;
+      let mediaUrlForOutbound = '';
 
       const ticket = getTicket(id);
       if (!ticket) {
@@ -20115,6 +23694,56 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      if (isRagMedia) {
+        if (!mediaDocumentId) {
+          badRequest(res, 'Quando media.kind="rag", o campo media.documentId é obrigatório');
+          return;
+        }
+
+        const ragPermResult = requirePermission(req, 'rag', 'read');
+        if (!ragPermResult.allowed) {
+          sendJson(res, 403, { error: 'forbidden', message: ragPermResult.error });
+          return;
+        }
+
+        const { getDocumentFileFromDb } = require('./services/ragDocumentsService');
+        const fileRow = await getDocumentFileFromDb(mediaDocumentId, ticket.tenantId || req.tenantId || null);
+        if (!fileRow || !fileRow.data) {
+          badRequest(res, 'Documento RAG sem binário original disponível');
+          return;
+        }
+
+        fileName = fileName || fileRow.filename || null;
+        mimeType = mimeType || fileRow.mimeType || null;
+        sizeBytes = Number.isFinite(sizeBytes) ? sizeBytes : (Number.isFinite(fileRow.sizeBytes) ? Number(fileRow.sizeBytes) : null);
+        mediaType = mediaType || inferMediaTypeFromMime(mimeType) || 'document';
+        if (!['image', 'video', 'audio', 'document'].includes(mediaType)) {
+          mediaType = 'document';
+        }
+
+        mediaUrl = `/rag/documents/${encodeURIComponent(mediaDocumentId)}/file`;
+        mediaUrlForOutbound = mediaUrl;
+        hasMedia = true;
+      } else {
+        hasMedia = !!(mediaType && mediaUrl);
+        const normalizedMediaPath = mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`;
+        mediaUrlForOutbound = hasMedia ? normalizedMediaPath : mediaUrl;
+
+        if (media && !hasMedia) {
+          badRequest(res, 'Quando "media" for informado, use media.type válido (image|video|audio|document) e media.url');
+          return;
+        }
+        if (hasMedia && !/^\/public\/support-media\/[^/]+\/[^/?#]+/i.test(mediaUrlForOutbound)) {
+          badRequest(res, 'Mídia deve usar URL interna /public/support-media/<tenant>/<arquivo>');
+          return;
+        }
+      }
+
+      if (!hasText && !hasMedia) {
+        badRequest(res, 'Campo "message" ou "media.url" é obrigatório');
+        return;
+      }
+
       // Usa agentId do agente autenticado
       const agentId = req.agent.id;
       try {
@@ -20129,6 +23758,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           mediaUrl: hasMedia ? mediaUrl : null,
           fileName: hasMedia ? fileName : null,
           mimeType: hasMedia ? mimeType : null,
+          mediaKind: hasMedia ? mediaKind : null,
+          documentId: hasMedia && isRagMedia ? mediaDocumentId : null,
+          sizeBytes: hasMedia ? sizeBytes : null,
+          replyTo: hasReplyTo ? replyTo : null,
         });
         if (!updatedTicket) {
           logger.warn('[Ticket] Não foi possível adicionar mensagem ao histórico (ticket não encontrado)', { ticketId: id });
@@ -20185,13 +23818,24 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
                 ...(fileName ? { fileName } : {}),
                 ...(mimeType ? { mimeType } : {}),
               },
-              meta: { ticketId: id, clientMessageId, channelAccountId: ticketChannelAccountId },
+              meta: {
+                ticketId: id,
+                clientMessageId,
+                channelAccountId: ticketChannelAccountId,
+                ...(hasReplyTo ? { replyTo } : {}),
+                ...(isRagMedia ? { media: { kind: 'rag', documentId: mediaDocumentId } } : {}),
+              },
             }
             : {
               to: phoneNumber,
               type: 'text',
               body: { text: message },
-              meta: { ticketId: id, clientMessageId, channelAccountId: ticketChannelAccountId },
+              meta: {
+                ticketId: id,
+                clientMessageId,
+                channelAccountId: ticketChannelAccountId,
+                ...(hasReplyTo ? { replyTo } : {}),
+              },
             };
 
           await outboundQueueService.enqueueOutbound({
@@ -20233,7 +23877,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ticketId: id,
         agentId: req.agent.id,
         message,
-        media: hasMedia ? { type: mediaType, url: mediaUrl, fileName, mimeType } : null,
+        media: hasMedia ? {
+          kind: mediaKind,
+          type: mediaType,
+          url: mediaUrl,
+          fileName,
+          mimeType,
+          ...(isRagMedia ? { documentId: mediaDocumentId } : {}),
+          ...(Number.isFinite(sizeBytes) ? { sizeBytes } : {}),
+        } : null,
+        replyTo: hasReplyTo ? replyTo : null,
       }).catch((err) => {
         logger.error('[Webhook] Erro ao disparar webhook para ticket.message.sent:', err);
       });
@@ -20243,7 +23896,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ticketId: id,
         agentId: req.agent.id,
         message,
-        media: hasMedia ? { type: mediaType, url: mediaUrl, fileName, mimeType } : null,
+        media: hasMedia ? {
+          kind: mediaKind,
+          type: mediaType,
+          url: mediaUrl,
+          fileName,
+          mimeType,
+          ...(isRagMedia ? { documentId: mediaDocumentId } : {}),
+          ...(Number.isFinite(sizeBytes) ? { sizeBytes } : {}),
+        } : null,
+        replyTo: hasReplyTo ? replyTo : null,
         ticket: ticket, // Ticket completo para atualização local sem requisição HTTP
       }, { tenantId, agentId: ticket.assignedTo });
 
@@ -20259,6 +23921,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           hasMedia,
           mediaType: hasMedia ? mediaType : null,
           fileName: hasMedia ? fileName : null,
+          mediaKind: hasMedia ? mediaKind : null,
+          documentId: hasMedia && isRagMedia ? mediaDocumentId : null,
+          hasReplyTo,
         },
         ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown',
@@ -20268,7 +23933,16 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         success: true,
         ticketId: id,
         message,
-        media: hasMedia ? { type: mediaType, url: mediaUrl, fileName, mimeType } : null,
+        media: hasMedia ? {
+          kind: mediaKind,
+          type: mediaType,
+          url: mediaUrl,
+          fileName,
+          mimeType,
+          ...(isRagMedia ? { documentId: mediaDocumentId } : {}),
+          ...(Number.isFinite(sizeBytes) ? { sizeBytes } : {}),
+        } : null,
+        replyTo: hasReplyTo ? replyTo : null,
       });
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -20519,6 +24193,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sendJson(res, 200, {
           text: typeof result === 'string' ? result : result.text,
           usage: result.usage || null,
+          confidence: Number.isFinite(Number(result?.confidence)) ? Number(result.confidence) : null,
         });
       } catch (aiError) {
         logger.error('Erro ao gerar resposta de IA', {
@@ -24351,7 +28026,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         tenantId: effectiveTenantId,
       });
 
-      sendJson(res, 200, { results: result });
+      const confidenceValues = Array.isArray(result)
+        ? result
+            .map((item) => Number(item?.confidence))
+            .filter((v) => Number.isFinite(v))
+        : [];
+      const avgConfidence = confidenceValues.length > 0
+        ? (confidenceValues.reduce((acc, v) => acc + v, 0) / confidenceValues.length)
+        : null;
+      sendJson(res, 200, { results: result, confidence: avgConfidence });
     } catch (err) {
       logger.error('Erro ao reescrever múltiplas mensagens:', err);
       sendJson(res, 500, {
@@ -25025,7 +28708,32 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     }
 
     try {
-      // GET /rag/documents/:id/download - Download do binário original (quando existir)
+      // GET /rag/documents/:id/file - Acesso direto ao binário original (quando existir)
+      if (pathname.endsWith('/file')) {
+        const tenantId = requireTenant(req, res);
+        if (!tenantId) return;
+
+        const rawId = decodeURIComponent(pathname.slice('/rag/documents/'.length).replace(/\/file$/, ''));
+        const { getDocumentFileFromDb } = require('./services/ragDocumentsService');
+        const fileRow = await getDocumentFileFromDb(rawId, tenantId);
+        if (!fileRow || !fileRow.data) {
+          sendJson(res, 404, { error: 'file_not_found', message: 'Arquivo original não encontrado no banco de dados' });
+          return;
+        }
+
+        const filename = (fileRow.filename || `documento-${rawId}`).replace(/[\r\n"]/g, '_');
+        const mimeType = fileRow.mimeType || 'application/octet-stream';
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        if (Number.isFinite(fileRow.sizeBytes)) {
+          res.setHeader('Content-Length', String(fileRow.sizeBytes));
+        }
+        res.writeHead(200);
+        res.end(fileRow.data);
+        return;
+      }
+
+      // GET /rag/documents/:id/download - compat: mantém download como attachment
       if (pathname.endsWith('/download')) {
         const tenantId = requireTenant(req, res);
         if (!tenantId) return;
@@ -25257,7 +28965,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       const extractedText = extractionResult.extractedText;
       const warnings = extractionResult.warnings;
-      const finalText = extractedText || 'Sem texto extraído. Indexando metadados do arquivo.';
+      const safeFileName = String(file.filename || 'arquivo').replace(/\s+/g, ' ').trim();
+      const fallbackMetadataText = [
+        'Documento de arquivo sem texto extraído automaticamente.',
+        `file_name: ${safeFileName}`,
+        `mime_type: ${String(file.mimeType || 'application/octet-stream')}`,
+        `size_bytes: ${Number(file.size || 0)}`,
+        `uploaded_at: ${new Date().toISOString()}`,
+      ].join('\n');
+      const finalText = extractedText || fallbackMetadataText;
       if (!extractedText) {
         warnings.push({
           code: 'NO_TEXT_EXTRACTED',
@@ -26557,6 +30273,167 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   // -----------------------------------------------------------------------
   // Webhooks Customizados
   // -----------------------------------------------------------------------
+
+  const isPushPath = (basePath) => pathname === basePath || pathname === `/api${basePath}`;
+
+  // GET /api/push/public-key - chave pública VAPID para inscrição no navegador
+  if (method === 'GET' && isPushPath('/push/public-key')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const publicKey = getVapidPublicKey();
+    if (!publicKey) {
+      sendJson(res, 503, {
+        error: 'service_unavailable',
+        message: 'Web Push não configurado no servidor',
+      });
+      return;
+    }
+
+    sendJson(res, 200, { ok: true, publicKey });
+    return;
+  }
+
+  // POST /api/push/subscribe - salva subscription Web Push do usuário autenticado
+  if (method === 'POST' && isPushPath('/push/subscribe')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const tenantId = req.tenantId || req.agent?.tenantId;
+      const userId = req.agent?.id;
+      if (!tenantId || !userId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId ou userId ausente no contexto autenticado' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const subscription = body?.subscription && typeof body.subscription === 'object'
+        ? body.subscription
+        : body;
+
+      await subscribeWebPush({
+        tenantId,
+        userId,
+        subscription,
+        userAgent: req.headers['user-agent'] || null,
+        deviceName: body?.deviceName || body?.device_name || null,
+      });
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+        return;
+      }
+      sendJson(res, 400, {
+        error: 'validation_error',
+        message: err?.message || 'Falha ao salvar subscription Web Push',
+      });
+    }
+    return;
+  }
+
+  // POST /api/push/unsubscribe - remove subscription Web Push do usuário autenticado
+  if (method === 'POST' && isPushPath('/push/unsubscribe')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const tenantId = req.tenantId || req.agent?.tenantId;
+      const userId = req.agent?.id;
+      if (!tenantId || !userId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId ou userId ausente no contexto autenticado' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const endpoint = String(body?.endpoint || body?.subscription?.endpoint || '').trim();
+      if (!endpoint) {
+        sendJson(res, 400, { error: 'bad_request', message: 'endpoint é obrigatório' });
+        return;
+      }
+
+      await unsubscribeWebPush({ tenantId, userId, endpoint });
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+        return;
+      }
+      sendJson(res, 400, {
+        error: 'validation_error',
+        message: err?.message || 'Falha ao remover subscription Web Push',
+      });
+    }
+    return;
+  }
+
+  // POST /api/push/test - envio de teste para o usuário logado (apenas DEV)
+  if (method === 'POST' && isPushPath('/push/test')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) {
+      sendJson(res, 404, { error: 'not_found' });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const tenantId = req.tenantId || req.agent?.tenantId;
+      const userId = req.agent?.id;
+      if (!tenantId || !userId) {
+        sendJson(res, 403, { error: 'forbidden', message: 'tenantId ou userId ausente no contexto autenticado' });
+        return;
+      }
+
+      const result = await sendWebPushToUser({
+        tenantId,
+        userId,
+        title: String(body?.title || 'Teste de notificação'),
+        body: String(body?.body || 'Web Push ativo no r-agent2'),
+        data: (body?.data && typeof body.data === 'object' && !Array.isArray(body.data))
+          ? body.data
+          : { path: '/support' },
+      });
+
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+        return;
+      }
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: err?.message || 'Falha ao enviar Web Push de teste',
+      });
+    }
+    return;
+  }
 
   // POST /push/register - registra/atualiza token de push do usuário autenticado
   if (method === 'POST' && pathname === '/push/register') {
@@ -28051,7 +31928,9 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           return;
         }
 
-        const frontendIndexPath = path.join(__dirname, '..', 'frontend', 'index.html');
+        const frontendIndexPath = process.env.NODE_ENV === 'production'
+          ? path.join(frontendDistDir, 'index.html')
+          : frontendSourceIndexPath;
         
         // Verifica se o arquivo existe
         if (fs.existsSync(frontendIndexPath)) {
@@ -28059,6 +31938,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           const html = fs.readFileSync(frontendIndexPath, 'utf8');
           res.writeHead(200, {
             'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
           });
           res.end(html);
           return;
@@ -28341,6 +32221,17 @@ async function startInitialization() {
         logger.error(`[Init] ❌ ${error}`);
         throw new Error(error);
       }
+
+      try {
+        validateWebPushStartupConfig();
+        console.log('[Init] ✅ Web Push config validada');
+        logger.info('[Init] ✅ Web Push config validada');
+      } catch (webPushCfgErr) {
+        const error = `Falha ao validar WEB PUSH config: ${webPushCfgErr.message}`;
+        console.error(`[Init] ❌ ${error}`);
+        logger.error(`[Init] ❌ ${error}`);
+        throw new Error(error);
+      }
   })();
   
   return initializationPromise;
@@ -28351,6 +32242,7 @@ process.on('SIGINT', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
   try { scheduleRemindersWorker.stop(); } catch (_) {}
+  try { platformHealthCheckJob.stop(); } catch (_) {}
   try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
   try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
   try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
@@ -28362,6 +32254,7 @@ process.on('SIGTERM', () => {
   logger.info('[Conversations] Encerrando servidor, salvando conversas...');
   try { outboundWorker.stop(); } catch (_) {}
   try { scheduleRemindersWorker.stop(); } catch (_) {}
+  try { platformHealthCheckJob.stop(); } catch (_) {}
   try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
   try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
   try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
@@ -28431,6 +32324,15 @@ if (require.main === module) {
         scheduleRemindersWorker.start({ intervalMs, batchSize });
       } catch (err) {
         logger.warn('[ScheduleRemindersWorker] Falha ao iniciar worker (ignorado)', { error: err.message });
+      }
+    }
+
+    if (String(process.env.ENABLE_OCC_HEALTH_JOB || 'false').toLowerCase() === 'true') {
+      try {
+        const intervalMs = parseInt(process.env.OCC_HEALTH_INTERVAL_MS || '300000', 10);
+        platformHealthCheckJob.start({ intervalMs });
+      } catch (err) {
+        logger.warn('[PlatformHealthCheckJob] Falha ao iniciar worker (ignorado)', { error: err.message });
       }
     }
 
@@ -28546,6 +32448,8 @@ module.exports = {
     badRequest,
     ensureFlowHasMeta,
     validateFlowStructure,
+    hasCalendarManagePermission,
+    canManageCalendarResource,
     flows,
     sessionEvents,
   },

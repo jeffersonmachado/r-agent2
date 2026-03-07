@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
 import './index.css';
 import { EditorProvider } from './state/editorStore';
 import { ThemeProvider } from './styles/themeContext';
@@ -15,6 +14,7 @@ import { ConfigPage } from './pages/ConfigPage';
 import { AgentsPage } from './pages/AgentsPage';
 import { TenantsPage } from './pages/TenantsPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
+import { OperationalControlCenter } from './pages/OperationalControlCenter';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { AuditPage } from './pages/AuditPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -31,6 +31,8 @@ import { WhatsAppConnectionsPage } from './pages/WhatsAppConnectionsPage';
 import { DeveloperKeysPage } from './pages/DeveloperKeysPage';
 import { AutomationsPage } from './pages/AutomationsPage';
 import { TasksPage } from './pages/TasksPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { AutonomousSchedulingPage } from './pages/AutonomousSchedulingPage';
 import { SlaPoliciesPage } from './pages/SlaPoliciesPage';
 import { ExportPage } from './pages/ExportPage';
 import { AIToolsPage } from './pages/AIToolsPage';
@@ -76,9 +78,87 @@ import { CrmDashboardPage } from './pages/crm/CrmDashboardPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
+import { PwaUpdateManager } from './components/PwaUpdateManager';
 import { useRouter } from './hooks/useRouter';
 import { useWebSocketAuthGuard } from './hooks/useWebSocketAuthGuard';
 import { canAccessPath, isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
+
+const BeautyDashboard = lazy(() => import('./pages/BeautyDashboard').then((mod) => ({ default: mod.BeautyDashboard })));
+const FitnessDashboard = lazy(() => import('./pages/FitnessDashboard').then((mod) => ({ default: mod.FitnessDashboard })));
+
+function isFilterTitle(text = '') {
+  const normalized = String(text || '').trim().toLowerCase();
+  return normalized === 'filtros'
+    || normalized.startsWith('filtros ')
+    || normalized.startsWith('filtros da ')
+    || normalized.startsWith('filtros e ');
+}
+
+function collectFilterSections(root) {
+  const sections = [];
+  const candidates = Array.from(root.querySelectorAll('div'));
+  for (const container of candidates) {
+    if (!(container instanceof HTMLElement)) continue;
+    if (container.dataset.autoFilterIgnore === '1') continue;
+    if (!container.className || !String(container.className).includes('bg-bg-elevated')) continue;
+    if (!container.firstElementChild || container.children.length < 2) continue;
+
+    const titleNodes = container.querySelectorAll('h1, h2, h3, h4, h5, h6, span, strong');
+    let titleNode = null;
+    for (const node of titleNodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (isFilterTitle(node.textContent || '')) {
+        titleNode = node;
+        break;
+      }
+    }
+    if (!titleNode) continue;
+    if (titleNode.closest('button')) continue;
+    container.classList.add('auto-filter-section');
+    sections.push(container);
+  }
+  return sections;
+}
+
+function applyGlobalFilterToggleState(root, sections, expanded) {
+  root.dataset.autoFilterExpanded = expanded ? '1' : '0';
+  for (const container of sections) {
+    container.classList.toggle('auto-filter-collapsed', !expanded);
+  }
+  const controls = root.querySelector('.support-controls');
+  if (controls instanceof HTMLElement) {
+    const btn = controls.querySelector('.auto-filter-toggle-btn');
+    if (btn instanceof HTMLButtonElement) {
+      btn.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+      btn.title = expanded ? 'Ocultar filtros' : 'Mostrar filtros';
+    }
+  }
+}
+
+function setupAutoCollapsibleFilters(root) {
+  if (!root) return;
+  const sections = collectFilterSections(root);
+  const controls = root.querySelector('.support-controls');
+  if (!(controls instanceof HTMLElement) || sections.length === 0) return;
+
+  let toggleButton = controls.querySelector('.auto-filter-toggle-btn');
+  if (!(toggleButton instanceof HTMLButtonElement)) {
+    toggleButton = document.createElement('button');
+    toggleButton.type = 'button';
+    toggleButton.className = 'btn-default px-4 py-2 text-sm auto-filter-toggle-btn';
+    toggleButton.textContent = '🔍';
+    toggleButton.setAttribute('aria-label', 'Mostrar ou ocultar filtros');
+    controls.prepend(toggleButton);
+    toggleButton.addEventListener('click', () => {
+      const expanded = root.dataset.autoFilterExpanded === '1';
+      const liveSections = collectFilterSections(root);
+      applyGlobalFilterToggleState(root, liveSections, !expanded);
+    });
+  }
+
+  const shouldExpand = root.dataset.autoFilterExpanded === '1';
+  applyGlobalFilterToggleState(root, sections, shouldExpand);
+}
 
 /**
  * Suprime aviso conhecido do React sobre prop 'hasSubitems' do rete-context-menu-plugin.
@@ -151,6 +231,7 @@ function App() {
       <AuthProvider>
         <WebSocketProvider>
           <FileUploadProvider>
+            <PwaUpdateManager />
             <AppWithAuth />
           </FileUploadProvider>
         </WebSocketProvider>
@@ -186,6 +267,7 @@ function AppWithAuth() {
   const isAgents = isRoute('/agents');
   const isTenants = isRoute('/tenants');
   const isSuperAdminPage = isRoute('/super-admin');
+  const isOperationalControlCenter = isRoute('/operational-control-center');
   const isOnboarding = isRoute('/onboarding');
   const isAudit = isRoute('/audit');
   const isQuickReplies = isRoute('/quick-replies');
@@ -201,6 +283,10 @@ function AppWithAuth() {
   const isDeveloperKeys = isRoute('/developer-keys');
   const isAutomations = isRoute('/automations');
   const isTasks = isRoute('/tasks');
+  const isAgenda = isRoute('/agenda');
+  const isAutonomousScheduling = isRoute('/autonomous-scheduling');
+  const isBeautyDashboard = isRoute('/beauty-dashboard');
+  const isFitnessDashboard = isRoute('/fitness-dashboard');
   const isSlaPolicies = isRoute('/sla-policies');
   const isExport = isRoute('/export');
   const isAITools = isRoute('/ai-tools');
@@ -256,8 +342,8 @@ function AppWithAuth() {
     const allRoutes = [
       isStorefrontOrder, isStorefrontOrderStatus,
       isKiosk, isPanel, isStation,
-      isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
+      isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOperationalControlCenter, isOnboarding, isAudit,
+      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isAutonomousScheduling, isBeautyDashboard, isFitnessDashboard, isSlaPolicies, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOrders, isKitchen, isDispatch,
@@ -272,8 +358,8 @@ function AppWithAuth() {
       }
     }
   }, [
-    isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isSlaPolicies, isExport,
+    isDashboard, isEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOperationalControlCenter, isOnboarding, isAudit,
+    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isAutonomousScheduling, isBeautyDashboard, isFitnessDashboard, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
     isOrders, isKitchen, isDispatch, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
@@ -309,6 +395,11 @@ function AppWithAuth() {
       '/developer-keys': '🔑 API Keys',
       '/automations': '🧩 Automações',
       '/tasks': '✅ Tarefas',
+      '/agenda': '📅 Agenda',
+      '/autonomous-scheduling': '🤖 Agenda Autônoma',
+      '/beauty-dashboard': 'Beauty Dashboard',
+      '/fitness-dashboard': 'Fitness Dashboard',
+      '/operational-control-center': 'Operational Control Center',
       '/sla-policies': '⏱️ SLA',
       '/export': '📤 Exportação de Dados',
       '/ai-tools': '🤖 Ferramentas de IA',
@@ -350,6 +441,20 @@ function AppWithAuth() {
       '/pbx/cc/click2call': '📱 PBX • Click2Call',
       '/pbx/referencia/xml': '🗄️ PBX • Referência XML',
       '/chat-humano': '💬 Dashboard Chat Humano',
+      '/crm': '📊 CRM • Dashboard',
+      '/crm/dashboard': '📊 CRM • Dashboard',
+      '/crm/accounts': '🏢 CRM • Contas',
+      '/crm/contacts': '👥 CRM • Contatos',
+      '/crm/leads': '🎯 CRM • Leads',
+      '/crm/pipelines': '🛣️ CRM • Pipelines',
+      '/crm/opportunities': '💼 CRM • Oportunidades',
+      '/crm/activities': '📝 CRM • Atividades',
+      '/crm/analytics': '📈 CRM • Analytics',
+      '/crm/reports': '📋 CRM • Relatórios',
+      '/crm/campaigns': '📣 CRM • Campanhas',
+      '/crm/webhooks': '🪝 CRM • Webhooks',
+      '/crm/rbac': '🔐 CRM • RBAC',
+      '/crm/audit': '🔍 CRM • Auditoria',
       '/failed-messages': '🚨 Mensagens Falhadas',
       '/fila-fisica': '🎫 Dashboard Fila Física',
       '/marketing': '🧲 Marketing',
@@ -366,8 +471,12 @@ function AppWithAuth() {
     let pageTitle = 'Chatbot Flow Editor';
     let bestMatchLength = -1;
 
+    const normalizedPath = currentPath.startsWith('/r-agent2')
+      ? (currentPath.replace(/^\/r-agent2/, '') || '/')
+      : currentPath;
+
     for (const [route, title] of Object.entries(pageTitles)) {
-      const matches = currentPath === route || (route !== '/' && currentPath.startsWith(route));
+      const matches = normalizedPath === route || (route !== '/' && normalizedPath.startsWith(route));
       if (!matches) continue;
       if (route.length > bestMatchLength) {
         pageTitle = title;
@@ -377,6 +486,19 @@ function AppWithAuth() {
 
     document.title = pageTitle;
   }, [currentPath]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const root = document.querySelector('.support-content-wrapper');
+    if (!(root instanceof HTMLElement)) return;
+
+    setupAutoCollapsibleFilters(root);
+    const observer = new MutationObserver(() => {
+      setupAutoCollapsibleFilters(root);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [isAuthenticated, currentPath]);
 
   // Mostra loading enquanto verifica autenticação
   if (loading) {
@@ -393,7 +515,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/sla-policies'];
+  const protectedRoutes = ['/', '/editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/autonomous-scheduling', '/beauty-dashboard', '/fitness-dashboard', '/operational-control-center', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -471,6 +593,8 @@ function AppWithAuth() {
         <TenantsPage />
       ) : isSuperAdminPage ? (
         <SuperAdminPage />
+      ) : isOperationalControlCenter ? (
+        <OperationalControlCenter />
       ) : isOnboarding ? (
         <OnboardingPage />
       ) : isAudit ? (
@@ -501,6 +625,18 @@ function AppWithAuth() {
         <AutomationsPage />
       ) : isTasks ? (
         <TasksPage />
+      ) : isAgenda ? (
+        <CalendarPage />
+      ) : isAutonomousScheduling ? (
+        <AutonomousSchedulingPage />
+      ) : isBeautyDashboard ? (
+        <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Carregando Beauty...</div>}>
+          <BeautyDashboard />
+        </Suspense>
+      ) : isFitnessDashboard ? (
+        <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Carregando Fitness...</div>}>
+          <FitnessDashboard />
+        </Suspense>
       ) : isSlaPolicies ? (
         <SlaPoliciesPage />
       ) : isExport ? (
@@ -614,19 +750,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 );
-
-const shouldRegisterPwa = import.meta.env.PROD || import.meta.env.VITE_ENABLE_PWA_DEV === 'true';
-
-if ('serviceWorker' in navigator && shouldRegisterPwa) {
-  registerSW({
-    immediate: true,
-    onRegistered(registration) {
-      if (registration) {
-        console.log('PWA service worker registrado com sucesso.');
-      }
-    },
-    onRegisterError(error) {
-      console.error('Falha ao registrar PWA service worker:', error);
-    },
-  });
-}

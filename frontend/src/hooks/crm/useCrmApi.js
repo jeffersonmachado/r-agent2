@@ -1,26 +1,25 @@
 import { useState, useCallback } from 'react';
+import { buildApiUrl } from '../../api/client';
+import { getAuthHeaders } from '../../api/auth';
 
 export function useCrmApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const getAuthHeader = useCallback(() => {
-    const token = localStorage.getItem('auth_token');
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
-  }, []);
+  const getRequestHeaders = useCallback(() => ({
+    'Content-Type': 'application/json',
+    ...getAuthHeaders(),
+  }), []);
 
   const request = useCallback(
     async (endpoint, options = {}) => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(endpoint, {
+        const response = await fetch(buildApiUrl(endpoint), {
           ...options,
           headers: {
-            ...getAuthHeader(),
+            ...getRequestHeaders(),
             ...options.headers,
           },
         });
@@ -39,7 +38,7 @@ export function useCrmApi() {
         setLoading(false);
       }
     },
-    [getAuthHeader]
+    [getRequestHeaders]
   );
 
   // Accounts
@@ -68,8 +67,11 @@ export function useCrmApi() {
 
   // Contacts
   const listContacts = useCallback(
-    (limit = 20, offset = 0) =>
-      request(`/api/crm/contacts?limit=${limit}&offset=${offset}`),
+    (limit = 20, offset = 0, query = '') => {
+      const q = String(query || '').trim();
+      const qParam = q ? `&q=${encodeURIComponent(q)}` : '';
+      return request(`/api/crm/contacts?limit=${limit}&offset=${offset}${qParam}`);
+    },
     [request]
   );
 

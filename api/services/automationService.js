@@ -7,6 +7,7 @@
 
 const crypto = require('crypto');
 const tenantSettingsService = require('./tenantSettingsService');
+const nlpService = require('./nlpService');
 
 const SETTINGS_KEY = 'automations';
 
@@ -31,6 +32,7 @@ function normalizeAutomation(item) {
     lastRunAt: item.lastRunAt || null,
     lastRunId: item.lastRunId || null,
     lastRunStatus: item.lastRunStatus || null,
+    lastRunAiAnalysis: item.lastRunAiAnalysis || item.last_run_ai_analysis || null,
   };
 }
 
@@ -103,24 +105,110 @@ async function publishAutomation(tenantId, automationId) {
   return { ok: true, automation: next };
 }
 
-async function runAutomation(tenantId, automationId) {
+async function runAutomation(tenantId, automationId, runContext = {}) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
   const idx = out.store.automations.findIndex((a) => a && String(a.id) === String(automationId));
   if (idx < 0) return { ok: false, error: 'not_found' };
   const now = new Date().toISOString();
   const runId = `run-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  let normalizedContext = null;
+  const sessionId = runContext && runContext.session_id ? String(runContext.session_id).trim() : '';
+  if (sessionId) {
+    try {
+      const contextApi = require('../context');
+      normalizedContext = await contextApi.getNormalizedContext(tenantId, sessionId);
+    } catch (_) {
+      normalizedContext = null;
+    }
+  }
+
+  const extractTextForAiAnalysis = () => {
+    const contextInput = runContext && typeof runContext === 'object' ? runContext : {};
+    const fromContext = [
+      contextInput.text,
+      contextInput.message,
+      contextInput.user_input,
+      contextInput.input,
+      contextInput.inputText,
+    ];
+    for (const value of fromContext) {
+      const text = String(value || '').trim();
+      if (text) return text;
+    }
+
+    const lastEvent = normalizedContext && normalizedContext.last_event && typeof normalizedContext.last_event === 'object'
+      ? normalizedContext.last_event
+      : {};
+    const body = lastEvent && lastEvent.body && typeof lastEvent.body === 'object'
+      ? lastEvent.body
+      : {};
+    const payload = lastEvent && lastEvent.payload && typeof lastEvent.payload === 'object'
+      ? lastEvent.payload
+      : {};
+
+    const fromEvent = [
+      lastEvent.text,
+      lastEvent.message,
+      body.text,
+      body.caption,
+      payload.text,
+      payload.message,
+    ];
+    for (const value of fromEvent) {
+      const text = String(value || '').trim();
+      if (text) return text;
+    }
+    return '';
+  };
+
+  let aiAnalysis = null;
+  const analysisText = extractTextForAiAnalysis();
+  if (analysisText) {
+    try {
+      const nlp = await nlpService.analyzeText(analysisText, true);
+      aiAnalysis = {
+        text: analysisText,
+        intent: nlp && nlp.intent ? String(nlp.intent) : null,
+        sentiment: nlp && nlp.sentiment ? String(nlp.sentiment) : null,
+        entities_count: nlp && nlp.entities && typeof nlp.entities === 'object'
+          ? Object.keys(nlp.entities).length
+          : 0,
+      };
+    } catch (_) {
+      aiAnalysis = {
+        text: analysisText,
+        intent: null,
+        sentiment: null,
+        entities_count: 0,
+        error: 'nlp_analysis_failed',
+      };
+    }
+  }
+
   const next = normalizeAutomation({
     ...out.store.automations[idx],
     lastRunAt: now,
     lastRunId: runId,
     lastRunStatus: 'queued',
+    lastRunAiAnalysis: aiAnalysis,
     updatedAt: now,
   });
   out.store.automations[idx] = next;
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
-  return { ok: true, automation: next, run: { id: runId, status: 'queued', queuedAt: now } };
+  return {
+    ok: true,
+    automation: next,
+    run: {
+      id: runId,
+      status: 'queued',
+      queuedAt: now,
+      session_id: sessionId || null,
+      normalized_context: normalizedContext || null,
+      ai_analysis: aiAnalysis,
+    },
+  };
 }
 
 module.exports = {

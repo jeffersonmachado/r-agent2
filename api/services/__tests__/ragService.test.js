@@ -178,6 +178,47 @@ describe('ragService', () => {
       expect(body.options.minScore).toBe(0.7);
     });
 
+    it('deve usar normalized_context para enriquecer query e preencher filtros padrão', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          response: 'Resposta',
+          sources: [],
+          confidence: 0.7,
+        }),
+        text: async () => '{}',
+        status: 200,
+      });
+
+      await ragService.queryRag(
+        'preciso de ajuda com meu pedido',
+        'tenant-001',
+        {
+          normalized_context: {
+            funnel_state: { intent: 'support', severity: 'high' },
+            tags: ['topic:billing', 'intent:support'],
+            entities: {
+              product_or_plan: { value: 'plano_pro' },
+              order_id: { value: 'ord-99' },
+            },
+          },
+        },
+        {}
+      );
+
+      const callArgs = fetch.mock.calls[fetch.mock.calls.length - 1];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body.query).toContain('[Contexto normalizado:');
+      expect(body.query).toContain('intent:support');
+      expect(body.query).toContain('severity:high');
+      expect(body.query).toContain('produto:plano_pro');
+      expect(body.query).toContain('pedido:ord-99');
+      expect(body.filters.productId).toBe('plano_pro');
+      expect(body.filters.category).toBe('topic:billing');
+    });
+
     it('deve tratar erro do serviço RAG', async () => {
       fetch.mockResolvedValueOnce({
         ok: false,

@@ -3,7 +3,6 @@
  */
 
 process.env.NODE_ENV = 'test';
-process.env.DISABLE_BACKGROUND_INIT = 'true';
 
 // Mock global para @whiskeysockets/baileys (ESM não compatível com Jest)
 jest.mock('@whiskeysockets/baileys', () => ({
@@ -131,4 +130,6 @@ afterEach(() => {
   timeouts.clear();
 });
 
-console.log('✅ Proteções contra travamentos ativadas nos testes Jest');
+if (process.env.NODE_ENV !== 'test') {
+  console.log('✅ Proteções contra travamentos ativadas nos testes Jest');
+}

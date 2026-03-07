@@ -18,8 +18,9 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 - `npm run test:ci` executa a sequência:
   - `npm run test:websocket`
+  - `npm run test:whatsapp:media:jest`
   - `jest tests/ci`
-- Objetivo: garantir regressão de WebSocket (auth/reconnect/session) antes da suíte de CI focada.
+- Objetivo: garantir regressão de WebSocket (auth/reconnect/session) e inbound de mídia WhatsApp antes da suíte de CI focada.
 - Observação: esse script local **não substitui** o workflow de CI principal; no GitHub Actions, o gate oficial continua sendo `npm run system:validate`.
 
 ## Detalhe por workflow
@@ -115,4 +116,3 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 - **Comportamento**:
   - Só roda o job `notify` quando a conclusão **não** é `success`
   - Slack/email são placeholders e rodam com `continue-on-error: true`
-

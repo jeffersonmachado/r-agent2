@@ -2,6 +2,7 @@ const logger = require('../utils/logger');
 const { generateAiResponse } = require('./aiProviderService');
 const { updateTenant, getTenant } = require('./tenantService');
 const faqGeneratorService = require('./faqGeneratorService');
+const KNOWLEDGE_NOT_FOUND_RESPONSE = 'Não encontrei essa informação na base de conhecimento do r-agent2.';
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
@@ -307,10 +308,10 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
       '</termos_proibidos>',
       '',
       'Se não houver resposta no contexto, diga:',
-      '"Essa informação não está disponível no material fornecido."',
+      `"${KNOWLEDGE_NOT_FOUND_RESPONSE}"`,
     ].join('\n');
     const ai = await generateAiResponse(p, tenantIdForAI, {});
-    return safeString(ai?.text || '').trim() || 'Essa informação não está disponível no material fornecido.';
+    return safeString(ai?.text || '').trim() || KNOWLEDGE_NOT_FOUND_RESPONSE;
   }
 
   const cleaned = normalized
@@ -552,4 +553,3 @@ async function generateInitialGraph(input) {
 module.exports = {
   generateInitialGraph,
 };
-

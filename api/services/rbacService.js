@@ -113,6 +113,11 @@ const ROLE_PERMISSIONS = {
     { resource: 'ai', action: 'train' },
     { resource: 'ai', action: 'execute' },
     { resource: 'ai', action: 'configure' },
+    // Agenda Autônoma
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
 
   admin: [
@@ -178,6 +183,11 @@ const ROLE_PERMISSIONS = {
     // Desenvolvimento
     { resource: 'dev', action: 'read' },
     { resource: 'dev', action: 'write' },
+    // Agenda Autônoma
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
 
   supervisor: [
@@ -221,6 +231,11 @@ const ROLE_PERMISSIONS = {
     // Desenvolvimento
     { resource: 'dev', action: 'read' },
     { resource: 'dev', action: 'write' },
+    // Agenda Autônoma
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
 
   manager: [
@@ -267,6 +282,11 @@ const ROLE_PERMISSIONS = {
     { resource: 'rpa', action: 'execute' },
     // IA
     { resource: 'ai', action: 'execute' },
+    // Agenda Autônoma
+    { resource: 'autonomous_scheduling', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'update' },
+    { resource: 'autonomous_scheduling', action: 'run' },
+    { resource: 'autonomous_scheduling', action: 'accept' },
   ],
 
   operator: [
@@ -294,6 +314,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'rpa', action: 'execute' },
     // IA (apenas execução)
     { resource: 'ai', action: 'execute' },
+    // Agenda Autônoma
+    { resource: 'autonomous_scheduling', action: 'read' },
   ],
 
   auditor: [
@@ -315,6 +337,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'bulk_messaging', action: 'read' },
     { resource: 'rag', action: 'read' },
     { resource: 'rpa', action: 'read' },
+    { resource: 'autonomous_scheduling', action: 'read' },
   ],
 
   readonly: [
@@ -329,6 +352,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'departments', action: 'read' },
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
+    { resource: 'autonomous_scheduling', action: 'read' },
   ],
 };
 

@@ -66,12 +66,83 @@ export function listAllTickets(options = {}) {
   if (options.offset !== undefined) {
     params.append('offset', String(options.offset));
   }
+  if (options.contactId) {
+    params.append('contactId', String(options.contactId));
+  }
+  if (options.phoneNumber) {
+    params.append('phoneNumber', String(options.phoneNumber));
+  }
 
   const query = params.toString();
   const url = `/tickets${query ? `?${query}` : ''}`;
 
   return fetchJson(url, {
     method: 'GET',
+  }).then((response) => {
+    if (Array.isArray(response)) {
+      return {
+        tickets: response,
+        total: response.length,
+        limit: response.length,
+        offset: 0,
+      };
+    }
+    return response;
+  });
+}
+
+/**
+ * Lista tickets com paginação por cursor e busca backend.
+ * Compatível com retorno legado em array.
+ *
+ * @param {Object} [options]
+ * @param {string|string[]} [options.status]
+ * @param {number} [options.limit]
+ * @param {string} [options.cursor]
+ * @param {string} [options.q]
+ * @returns {Promise<{items: any[], nextCursor: string|null, hasMore: boolean}>}
+ */
+export function listTicketsPaged(options = {}) {
+  const params = new URLSearchParams();
+  const status = Array.isArray(options.status)
+    ? options.status.join(',')
+    : options.status;
+  if (status) params.append('status', status);
+  if (options.limit !== undefined && options.limit !== null) {
+    params.append('limit', String(options.limit));
+  }
+  if (options.cursor) {
+    params.append('cursor', String(options.cursor));
+  }
+  if (options.q) {
+    params.append('q', String(options.q));
+  }
+  if (options.queue) {
+    params.append('queue', String(options.queue));
+  }
+  if (options.contactId) {
+    params.append('contactId', String(options.contactId));
+  }
+  if (options.phoneNumber) {
+    params.append('phoneNumber', String(options.phoneNumber));
+  }
+
+  const query = params.toString();
+  const url = `/tickets${query ? `?${query}` : ''}`;
+
+  return fetchJson(url, { method: 'GET' }).then((response) => {
+    if (Array.isArray(response)) {
+      return {
+        items: response,
+        nextCursor: null,
+        hasMore: false,
+      };
+    }
+    return {
+      items: Array.isArray(response?.items) ? response.items : [],
+      nextCursor: response?.nextCursor || null,
+      hasMore: Boolean(response?.hasMore),
+    };
   });
 }
 
@@ -262,25 +333,135 @@ export function getTicketDeliveryFailures(ticketId) {
 }
 
 /**
+ * Debug: extrai entidades usando o backend (mesmas regras do runtime).
+ *
+ * @param {string} text
+ * @param {Object} [options]
+ * @param {string} [options.tenantId]
+ * @param {string} [options.channel]
+ * @param {string[]} [options.keywords]
+ * @param {string[]} [options.tenantKeywords]
+ * @returns {Promise<any>}
+ */
+export function debugExtractEntities(text, options = {}) {
+  const payload = {
+    text: String(text || ''),
+    tenant_id: options.tenantId ? String(options.tenantId) : undefined,
+    channel: options.channel ? String(options.channel) : 'whatsapp',
+    keywords: Array.isArray(options.keywords) ? options.keywords : undefined,
+    tenantKeywords: Array.isArray(options.tenantKeywords) ? options.tenantKeywords : undefined,
+  };
+  return fetchJson('/api/debug/entities/extract', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Debug: sugere tags usando o backend (mesmas regras do runtime).
+ *
+ * @param {string} text
+ * @param {Object} [options]
+ * @param {Record<string, string[]>} [options.tenantKeywords]
+ * @returns {Promise<any>}
+ */
+export function suggestSupportTags(text, options = {}) {
+  const payload = {
+    text: String(text || ''),
+    tenantKeywords: (options.tenantKeywords && typeof options.tenantKeywords === 'object')
+      ? options.tenantKeywords
+      : undefined,
+  };
+  return fetchJson('/api/support/tags/suggest', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Debug: sugere sentimento/intenção usando IA (NLP) com fallback heurístico.
+ *
+ * @param {string} text
+ * @returns {Promise<any>}
+ */
+export function suggestSupportSentiment(text) {
+  const payload = { text: String(text || '') };
+  return fetchJson('/api/support/sentiment/suggest', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * Envia mensagem do atendente para o usuário via WhatsApp.
  *
  * @param {string} ticketId
  * @param {string} message - Texto da mensagem
+ * @param {{mediaType?: 'image'|'video'|'audio'|'document', mediaUrl?: string, fileName?: string, mimeType?: string}} [options]
  * @returns {Promise<any>}
  */
-export function sendTicketMessage(ticketId, message) {
+export function sendTicketMessage(ticketId, message, options = {}) {
   if (!ticketId) {
     return Promise.reject(new Error('sendTicketMessage: ticketId é obrigatório'));
   }
-  if (!message || message.trim() === '') {
-    return Promise.reject(new Error('sendTicketMessage: message é obrigatório'));
+  const text = typeof message === 'string' ? message : '';
+  const hasText = text.trim() !== '';
+  const mediaKind = options?.mediaKind ? String(options.mediaKind).trim().toLowerCase() : '';
+  const isRagMedia = mediaKind === 'rag';
+  const hasMediaUrl = !!(options && typeof options.mediaUrl === 'string' && options.mediaUrl.trim() !== '');
+  const hasRagMedia = isRagMedia && !!String(options?.documentId || '').trim();
+  const hasMedia = hasMediaUrl || hasRagMedia;
+  if (!hasText && !hasMedia) {
+    return Promise.reject(new Error('sendTicketMessage: message ou media é obrigatório'));
   }
 
-  logger.info('Enviando mensagem do atendente', { ticketId, messageLength: message.length });
+  logger.info('Enviando mensagem do atendente', {
+    ticketId,
+    messageLength: text.length,
+    hasMedia,
+    mediaType: options?.mediaType || null,
+  });
+
+  const body = {
+    message: hasText ? text : '',
+  };
+  if (hasMedia) {
+    if (isRagMedia) {
+      body.media = {
+        kind: 'rag',
+        documentId: String(options.documentId || '').trim(),
+        fileName: options.fileName ? String(options.fileName) : null,
+        mimeType: options.mimeType ? String(options.mimeType) : null,
+        sizeBytes: Number.isFinite(options?.sizeBytes) ? Number(options.sizeBytes) : null,
+        type: String(options.mediaType || 'document'),
+      };
+    } else {
+      body.media = {
+        type: String(options.mediaType || 'document'),
+        url: String(options.mediaUrl || ''),
+        fileName: options.fileName ? String(options.fileName) : null,
+        mimeType: options.mimeType ? String(options.mimeType) : null,
+      };
+    }
+  }
+  if (options?.replyTo && typeof options.replyTo === 'object') {
+    const raw = options.replyTo;
+    const replyTo = {
+      messageId: raw?.messageId ? String(raw.messageId).trim() : undefined,
+      externalMessageId: raw?.externalMessageId ? String(raw.externalMessageId).trim() : undefined,
+      clientMessageId: raw?.clientMessageId ? String(raw.clientMessageId).trim() : undefined,
+      sender: raw?.sender ? String(raw.sender).trim().toLowerCase() : undefined,
+      text: raw?.text ? String(raw.text).trim().slice(0, 500) : undefined,
+      timestamp: raw?.timestamp ? String(raw.timestamp).trim() : undefined,
+    };
+    if (replyTo.messageId || replyTo.externalMessageId || replyTo.clientMessageId || replyTo.text) {
+      body.replyTo = replyTo;
+    }
+  }
 
   return fetchJson(`/tickets/${encodeURIComponent(ticketId)}/message`, {
     method: 'POST',
-    body: JSON.stringify({ message }),
+    body: JSON.stringify(body),
   }).then(
     (result) => {
       logger.info('Mensagem enviada com sucesso', { ticketId });
@@ -291,6 +472,25 @@ export function sendTicketMessage(ticketId, message) {
       throw error;
     }
   );
+}
+
+/**
+ * Faz upload de mídia/arquivo para envio no chat de suporte.
+ *
+ * @param {File} file
+ * @returns {Promise<{url: string, fileName: string, mimeType: string, sizeBytes: number}>}
+ */
+export function uploadSupportMedia(file) {
+  if (!file) {
+    return Promise.reject(new Error('uploadSupportMedia: file é obrigatório'));
+  }
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return fetchJson('/tickets/media/upload', {
+    method: 'POST',
+    body: formData,
+  });
 }
 
 /**
@@ -443,9 +643,10 @@ export function markTicketAsRead(ticketId) {
  * @param {string} params.phoneNumber - Número de telefone do usuário (formato: +5511999999999 ou 5511999999999)
  * @param {string} params.queue - Nome da fila
  * @param {string} [params.initialMessage] - Mensagem inicial opcional
+ * @param {string} [params.customerName] - Nome do cliente opcional
  * @returns {Promise<any>}
  */
-export function createTicket({ phoneNumber, queue, initialMessage }) {
+export function createTicket({ phoneNumber, queue, initialMessage, customerName }) {
   if (!phoneNumber || phoneNumber.trim() === '') {
     return Promise.reject(new Error('createTicket: phoneNumber é obrigatório'));
   }
@@ -463,6 +664,9 @@ export function createTicket({ phoneNumber, queue, initialMessage }) {
   if (initialMessage && initialMessage.trim() !== '') {
     body.initialMessage = initialMessage.trim();
   }
+  if (customerName && customerName.trim() !== '') {
+    body.customerName = customerName.trim();
+  }
 
   return fetchJson('/tickets', {
     method: 'POST',
@@ -478,4 +682,3 @@ export function createTicket({ phoneNumber, queue, initialMessage }) {
     }
   );
 }
-

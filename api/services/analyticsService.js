@@ -41,7 +41,8 @@ function dbAvailable() {
 async function getGeneralMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
   
-  const allTickets = listAllTickets({ tenantId });
+  // Sempre paginar para evitar OOM
+  const allTickets = listAllTickets({ tenantId, limit: 10000, offset: 0 });
   let tickets = allTickets.tickets || [];
   
   // Filtra por período se fornecido

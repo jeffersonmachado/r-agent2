@@ -1,6 +1,6 @@
 {
   "name": "chatbot-engine",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "private": true,
   "description": "Engine de fluxo de chatbot (Node.js) com execução determinística e replay.",
   "scripts": {
@@ -8,7 +8,7 @@
     "test:unit": "jest tests/unit",
     "test:flow": "jest tests/flow --passWithNoTests",
     "test:data": "jest tests/data",
-    "test:scripts": "jest tests/scripts",
+    "test:scripts": "jest scripts/__tests__ --runInBand",
     "test:rpa": "node tools/rpa/run-all.js",
     "test:full": "npm run test && npm run test:rpa",
     "test:rpa:jest": "jest tests/rpa",

@@ -91,6 +91,10 @@ function normalizeWhatsAppIncoming(payload) {
     } else if (waType === 'audio') {
       nm.messageType = 'audio';
       nm.media = { url: safeString(msg?.audio?.id) || null, mimeType: safeString(msg?.audio?.mime_type) || null, size: null };
+    } else if (waType === 'video') {
+      nm.messageType = 'video';
+      nm.text = safeString(msg?.video?.caption) || null;
+      nm.media = { url: safeString(msg?.video?.id) || null, mimeType: safeString(msg?.video?.mime_type) || null, size: null };
     } else if (waType === 'document') {
       nm.messageType = 'document';
       nm.text = safeString(msg?.document?.caption) || safeString(msg?.document?.filename) || null;
@@ -201,4 +205,3 @@ module.exports = {
   normalizeWhatsAppIncoming,
   normalizeInstagramIncoming,
 };
-

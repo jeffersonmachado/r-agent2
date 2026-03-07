@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CrmCard } from '../../components/crm/CrmComponents';
+import { buildApiUrl } from '../../api/client';
+import { getAuthHeaders } from '../../api/auth';
 
 export function AnalyticsDashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -11,9 +13,8 @@ export function AnalyticsDashboard() {
 
   const loadDashboard = async () => {
     try {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
-      const response = await fetch('/api/crm/analytics/dashboard', {
-        headers: { Authorization: token ? `Bearer ${token}` : undefined },
+      const response = await fetch(buildApiUrl('/api/crm/analytics/dashboard'), {
+        headers: getAuthHeaders(),
       });
       const data = await response.json();
       setDashboard(data.dashboard);

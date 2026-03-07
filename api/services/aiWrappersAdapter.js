@@ -226,7 +226,7 @@ async function callModel(prompt, meta) {
   };
   try {
     const res = await generateAiResponse(prompt, tenantId, context);
-    return { text: res?.text || '', usage: res?.usage || null };
+    return { text: res?.text || '', usage: res?.usage || null, confidence: res?.confidence ?? 0.5 };
   } catch (err) {
     const msg = err?.message || String(err);
     const overflow = isProviderContextOverflowError(err);
@@ -297,7 +297,7 @@ async function callModel(prompt, meta) {
         ...context,
         source: 'aiWrappersAdapter:retry_summarized',
       });
-      return { text: retryRes?.text || '', usage: retryRes?.usage || null };
+      return { text: retryRes?.text || '', usage: retryRes?.usage || null, confidence: retryRes?.confidence ?? 0.5 };
     } catch (retryErr) {
       logger.error('[aiWrappersAdapter] Retry com prompt sumarizado falhou', {
         tenantId,
@@ -490,4 +490,3 @@ module.exports = {
   generateRpaViaCore,
   buildChatbotFinalPrompt,
 };
-

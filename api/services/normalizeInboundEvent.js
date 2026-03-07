@@ -48,6 +48,12 @@ function normalizeFromLegacyWhatsApp({ message, value, deps = {} }) {
       value: value || null,
       channel_type: channel,
     },
+    tags: Array.isArray(deps.tags)
+      ? deps.tags
+      : (Array.isArray(value?.metadata?.tags) ? value.metadata.tags : []),
+    entities: deps.entities && typeof deps.entities === 'object'
+      ? deps.entities
+      : (value?.metadata?.entities && typeof value.metadata.entities === 'object' ? value.metadata.entities : {}),
     voice_metadata: {},
     trace_id: safeString(deps.traceId, '') || messageId || `${sessionId}-${Date.now()}`,
     correlation_id: correlationId,

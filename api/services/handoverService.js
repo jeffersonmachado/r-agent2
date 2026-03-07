@@ -265,6 +265,10 @@ function startAutoReturnToBot({ inactivityMinutes = 30, intervalMs = 15000 } = {
       for (const t of tickets) {
         if (!t || t.status === 'closed') continue;
         if ((t.mode || 'bot') !== 'human') continue;
+        if (t.context?.allowReturnToBot === false) continue;
+        if (t.context?.metadata?.channelBotEnabled === false) continue;
+        if (t.context?.metadata?.inboundRouteMode === 'human') continue;
+        if (t.context?.metadata?.ticketOrigin === 'human_chat') continue;
 
         const last = new Date(t.updatedAt || t.createdAt || 0).getTime();
         if (!last) continue;
@@ -297,4 +301,3 @@ module.exports = {
   startAutoReturnToBot,
   stopAutoReturnToBot,
 };
-

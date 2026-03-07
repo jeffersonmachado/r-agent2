@@ -95,6 +95,12 @@ export function AIToolsPage() {
     showToast('Copiado para a área de transferência!', 'success');
   };
 
+  const formatConfidence = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    return `${Math.round(Math.max(0, Math.min(1, n)) * 100)}%`;
+  };
+
   if (authLoading) {
     return (
       <div className="support-page">
@@ -207,9 +213,16 @@ export function AIToolsPage() {
               <div className="mt-6 space-y-4">
                 {suggestions.suggestions && suggestions.suggestions.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-text-primary mb-3">
-                      Sugestões de IA
-                    </h3>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <h3 className="text-lg font-semibold text-text-primary">
+                        Sugestões de IA
+                      </h3>
+                      {formatConfidence(suggestions?.confidence) && (
+                        <span className="text-xs px-2 py-1 rounded-full border border-border-default bg-bg-secondary text-text-secondary">
+                          Confiança: {formatConfidence(suggestions.confidence)}
+                        </span>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       {suggestions.suggestions.map((suggestion, index) => (
                         <div
@@ -324,6 +337,11 @@ export function AIToolsPage() {
 
             {rewritten && (
               <div className="mt-6 space-y-4">
+                {formatConfidence(rewritten?.confidence) && (
+                  <div className="text-xs text-text-secondary">
+                    Confiança da IA: <strong>{formatConfidence(rewritten.confidence)}</strong>
+                  </div>
+                )}
                 <div>
                   <h3 className="text-lg font-semibold text-text-primary mb-2">
                     Mensagem Original

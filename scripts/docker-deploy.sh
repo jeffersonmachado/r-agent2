@@ -446,8 +446,14 @@ fi
 echo ""
 
 section "Validações Obrigatórias (env + disco)"
-info "Validando variáveis obrigatórias no .env e espaço em disco no servidor..."
-REMOTE_PREFLIGHT_SCRIPT="REMOTE_DIR=\"${REMOTE_DIR}\""$'\n'"$(cat <<'EOF'
+if [ "$BUILD_SERVICE" = "frontend" ]; then
+    info "Validando pré-requisitos para frontend-only (disco + .env)..."
+    DEPLOY_SCOPE="frontend-only"
+else
+    info "Validando variáveis obrigatórias no .env e espaço em disco no servidor..."
+    DEPLOY_SCOPE="full"
+fi
+REMOTE_PREFLIGHT_SCRIPT="REMOTE_DIR=\"${REMOTE_DIR}\""$'\n'"DEPLOY_SCOPE=\"${DEPLOY_SCOPE}\""$'\n'"$(cat <<'EOF'
 set -e
 
 cd "${REMOTE_DIR}"
@@ -477,6 +483,11 @@ fi
 if [ ! -f .env ]; then
   echo "ERRO: .env não encontrado em ${REMOTE_DIR}"
   exit 1
+fi
+
+if [ "${DEPLOY_SCOPE}" = "frontend-only" ]; then
+    echo "OK: preflight frontend-only passou (sem validações de API/DB/segredos)."
+    exit 0
 fi
 
 # Lê valores do .env sem "source" (mais resiliente a linhas inválidas)
@@ -685,7 +696,7 @@ if [ "$BUILD" = true ]; then
                 # A API depende de uma base pre-aquecida (Playwright/ffmpeg) para reduzir tempo e evitar falhas.
                 BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base . && docker build -t r-agent2-api:latest -f api/Dockerfile ."
             elif [ "$BUILD_SERVICE" = "rag-service" ]; then
-                BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
+                BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile ."
             else
                 BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build --no-cache $BUILD_SERVICE"
             fi
@@ -719,7 +730,7 @@ if [ "$BUILD" = true ]; then
             
             # Build RAG Service
             info "Construindo imagem do RAG Service..."
-            RAG_BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
+            RAG_BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile ."
             echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $RAG_BUILD_CMD"
             $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $RAG_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
             RAG_BUILD_EXIT=${PIPESTATUS[0]}
@@ -825,7 +836,7 @@ if [ -n "$BUILD_SERVICE" ]; then
     # não derrubamos todo o cluster, apenas recriamos o serviço alto.
     section "Recriando Serviço $BUILD_SERVICE"
     info "Recriando apenas o serviço '$BUILD_SERVICE' (os demais permanecem em execução)..."
-    UP_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE up -d $BUILD_SERVICE"
+    UP_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE up -d --no-deps $BUILD_SERVICE"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Recriando serviço $BUILD_SERVICE"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$UP_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $UP_CMD"
@@ -1009,12 +1020,12 @@ if [ -n "$BUILD_SERVICE" ]; then
         echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$HEALTH_CMD\""
         echo -e "${YELLOW}[COMANDO REMOTO]${NC} $HEALTH_CMD"
         echo ""
-        if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_CMD" 2>&1 | grep -vE "(Warning|Permanently)" > /dev/null; then
-            HEALTH_EXIT=${PIPESTATUS[0]}
+        if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_CMD" >/dev/null 2>&1; then
+            HEALTH_EXIT=0
             echo -e "${GREEN}[RESULTADO]${NC} Frontend está respondendo (exit code: $HEALTH_EXIT)"
             info "✓ Frontend está respondendo"
         else
-            HEALTH_EXIT=${PIPESTATUS[0]}
+            HEALTH_EXIT=$?
             echo -e "${YELLOW}[RESULTADO]${NC} Frontend não está respondendo ainda (exit code: $HEALTH_EXIT)"
             warn "⚠ Frontend não está respondendo ainda (pode estar iniciando)"
         fi

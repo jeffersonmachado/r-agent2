@@ -137,6 +137,11 @@ function executeQA() {
       description: 'Executando testes de stress...'
     },
     {
+      name: 'Teste WhatsApp Inbound Mídia (Jest)',
+      command: 'npm run test:whatsapp:media:jest',
+      description: 'Executando regressão de inbound WhatsApp para mídia/arquivo...'
+    },
+    {
       name: 'Seed RPA',
       command: 'node scripts/seed-rpa-flows.js',
       description: 'Preparando flows mínimos para testes RPA...'

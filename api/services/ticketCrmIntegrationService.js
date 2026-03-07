@@ -16,6 +16,28 @@ function newId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
 
+function readEntityValue(entities, key) {
+  if (!entities || typeof entities !== 'object') return null;
+  const entry = entities[key];
+  if (!entry) return null;
+  if (Array.isArray(entry)) {
+    const first = entry[0];
+    if (first && typeof first === 'object' && Object.prototype.hasOwnProperty.call(first, 'value')) return first.value;
+    return first || null;
+  }
+  if (entry && typeof entry === 'object' && Object.prototype.hasOwnProperty.call(entry, 'value')) return entry.value;
+  return entry;
+}
+
+function pickFirstNonEmpty(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    const str = String(value).trim();
+    if (str) return str;
+  }
+  return null;
+}
+
 class TicketCrmIntegrationService {
   constructor() {
     this.sequelize = null;
@@ -49,21 +71,43 @@ class TicketCrmIntegrationService {
 
     try {
       // Extrai informações do cliente do ticket
-      const phoneNumber = ticket.phone_number;
+      const normalizedContext = ticket?.context?.normalized_context
+        || ticket?.context?.metadata?.normalized_context
+        || null;
+      const contextEntities = normalizedContext?.entities || {};
+      const phoneNumber = pickFirstNonEmpty(
+        ticket.phone_number,
+        ticket.phoneNumber,
+        ticket?.context?.phoneNumber,
+        ticket?.context?.phone_number,
+        ticket?.context?.metadata?.phoneNumber,
+        ticket?.context?.metadata?.phone_number,
+      )
+        || readEntityValue(contextEntities, 'phone')
+        || null;
       
       // Prioriza o nome do perfil do WhatsApp quando disponível
-      const customerName = ticket.context?.customer_name ||  // Nome do WhatsApp/perfil do canal
-                          ticket.context?.name ||            // Nome fornecido pelo usuário
-                          ticket.context?.userName ||        // Nome alternativo
-                          null;
+      const customerName = pickFirstNonEmpty(
+        ticket.context?.customer_name,                 // Nome do WhatsApp/perfil do canal
+        ticket.context?.customerName,                  // Variante camelCase
+        ticket.customer_name,                          // Campo direto snake_case
+        ticket.customerName,                           // Campo direto camelCase
+        ticket.context?.metadata?.contactName,         // Nome em metadata
+        ticket.context?.variables?.customerName,       // Nome em variáveis de contexto
+        ticket.context?.name,                          // Nome fornecido pelo usuário
+        ticket.context?.userName,                      // Nome alternativo
+      );
       
-      const email = ticket.context?.email || ticket.context?.userEmail;
+      const email = readEntityValue(contextEntities, 'email')
+        || ticket.context?.email
+        || ticket.context?.userEmail
+        || null;
 
       // Se não temos telefone ou email, não podemos criar contato
       if (!phoneNumber && !email) {
         logger.info('[TicketCRM] Ticket sem telefone/email, pulando sincronização', {
           ticketId: ticket.id,
-          tenantId: ticket.tenant_key,
+          tenantId: ticket.tenant_key || ticket.tenantId,
         });
         return null;
       }
@@ -80,24 +124,27 @@ class TicketCrmIntegrationService {
       // Busca ou cria contato CRM
       const [contact, created] = await CrmContact.findOrCreate({
         where: { 
-          tenant_key: ticket.tenant_key,
+          tenant_key: ticket.tenant_key || ticket.tenantId,
           ...(phoneNumber ? { phone: phoneNumber } : { email })
         },
         defaults: {
           id: newId('crmctt'),
-          tenantId: ticket.tenant_key,
-          tenant_key: ticket.tenant_key,
+          tenantId: ticket.tenant_key || ticket.tenantId,
+          tenant_key: ticket.tenant_key || ticket.tenantId,
           name: finalName,
           phone: phoneNumber,
           email: email,
           status: 'active',
           attributes: {
             source: 'ticket',
-            tags: ['atendimento'],
+            tags: Array.isArray(normalizedContext?.tags) ? normalizedContext.tags : ['atendimento'],
             customFields: {
-              first_contact_channel: ticket.channel_type,
-              first_contact_date: ticket.created_at,
+              first_contact_channel: ticket.channel_type || ticket.channelType,
+              first_contact_date: ticket.created_at || ticket.createdAt,
               origin_ticket_id: ticket.id,
+              funnel_stage: normalizedContext?.funnel_state?.stage || null,
+              funnel_intent: normalizedContext?.funnel_state?.intent || null,
+              funnel_severity: normalizedContext?.funnel_state?.severity || null,
             },
           },
         },
@@ -109,7 +156,7 @@ class TicketCrmIntegrationService {
           contactId: contact.id,
           contactName: finalName,
           ticketId: ticket.id,
-          tenantId: ticket.tenant_key,
+          tenantId: ticket.tenant_key || ticket.tenantId,
           phone: phoneNumber,
           email: email,
           source: 'auto_from_ticket',
@@ -140,7 +187,7 @@ class TicketCrmIntegrationService {
           logger.info('[TicketCRM] Contato CRM atualizado', {
             contactId: contact.id,
             ticketId: ticket.id,
-            tenantId: ticket.tenant_key,
+            tenantId: ticket.tenant_key || ticket.tenantId,
             updates,
           });
         }
@@ -155,20 +202,20 @@ class TicketCrmIntegrationService {
         logger.info('[TicketCRM] Ticket vinculado ao contato', {
           ticketId: ticket.id,
           contactId: contact.id,
-          tenantId: ticket.tenant_key,
+          tenantId: ticket.tenant_key || ticket.tenantId,
         });
       }
 
       // Registra atividade no CRM
       await CrmActivity.create({
         id: newId('crmact'),
-        tenantId: ticket.tenant_key,
-        tenant_key: ticket.tenant_key,
+        tenantId: ticket.tenant_key || ticket.tenantId,
+        tenant_key: ticket.tenant_key || ticket.tenantId,
         contactId: contact.id,
         accountId: contact.accountId,
         type: 'ticket',
         subject: `Ticket de Atendimento #${ticket.id}`,
-        description: ticket.last_user_message || 'Ticket criado',
+        description: ticket.last_user_message || ticket.lastUserMessage || 'Ticket criado',
         status: 'completed',
         dueDate: new Date(),
         completedAt: new Date(),
@@ -176,7 +223,7 @@ class TicketCrmIntegrationService {
           ticket_id: ticket.id,
           ticket_status: ticket.status,
           ticket_queue: ticket.queue,
-          ticket_channel: ticket.channel_type
+          ticket_channel: ticket.channel_type || ticket.channelType
         }
       }, { transaction });
 

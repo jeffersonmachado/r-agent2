@@ -10,12 +10,14 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
 } = require('@whiskeysockets/baileys');
 
 const channelGatewayService = require('./channelGatewayService');
 const { handleWhatsAppInbound } = require('./whatsappInboundService');
 const channelNormalizationService = require('./channelNormalizationService');
 const whatsappQrService = require('./whatsappQrService');
+const { saveSupportMedia } = require('./supportMediaService');
 const logger = require('../utils/logger');
 
 function jsonSafe(obj) {
@@ -42,6 +44,52 @@ function normalizePhoneFromJid(jidOrPhone) {
   const base = raw.includes('@') ? raw.split('@')[0] : raw;
   const digits = String(base).replace(/\D/g, '');
   return digits || null;
+}
+
+async function persistInboundQrMedia({
+  sock,
+  msg,
+  tenantId,
+  connectionId,
+  messageId,
+  inboundType,
+  mimeType,
+  fileName,
+}) {
+  if (!sock || !msg || !tenantId || !connectionId || !messageId || !inboundType || !downloadMediaMessage) {
+    return null;
+  }
+  try {
+    const mediaBuffer = await downloadMediaMessage(
+      msg,
+      'buffer',
+      {},
+      { reuploadRequest: sock.updateMediaMessage }
+    );
+    if (!mediaBuffer || !Buffer.isBuffer(mediaBuffer) || mediaBuffer.length === 0) {
+      return null;
+    }
+
+    const saved = await saveSupportMedia({
+      tenantId,
+      fileName: fileName || `${inboundType}_${connectionId}_${messageId}`,
+      mimeType: mimeType || 'application/octet-stream',
+      buffer: mediaBuffer,
+      source: 'whatsapp_qr_inbound',
+      fallbackPrefix: `${inboundType}_${messageId}`,
+    });
+    return saved?.url || null;
+  } catch (err) {
+    logger.warn('[WA_QR_MEDIA_DOWNLOAD_FAIL]', {
+      tenantId,
+      connectionId,
+      messageId,
+      inboundType,
+      mimeType: mimeType || null,
+      error: err?.message || String(err),
+    });
+    return null;
+  }
 }
 
 function resolveBaileysContactName(msg, sock, remoteJid, fallbackFrom) {
@@ -100,6 +148,69 @@ function extractTextFromBaileysMessage(messageObj) {
     m.interactiveResponseMessage?.body?.text ||
     null
   );
+}
+
+function buildInboundMessageFromBaileys(messageObj, fallbackMessageId = null) {
+  const m = unwrapMessageContainer(messageObj);
+  const text = extractTextFromBaileysMessage(messageObj);
+  if (text && String(text).trim()) {
+    return {
+      type: 'text',
+      text: String(text),
+      media: null,
+    };
+  }
+
+  if (m.imageMessage) {
+    return {
+      type: 'image',
+      text: safeString(m.imageMessage.caption) || '',
+      media: {
+        id: safeString(m.imageMessage.url) || safeString(m.imageMessage.directPath) || safeString(fallbackMessageId),
+        mime_type: safeString(m.imageMessage.mimetype),
+      },
+    };
+  }
+
+  if (m.videoMessage) {
+    return {
+      type: 'video',
+      text: safeString(m.videoMessage.caption) || '',
+      media: {
+        id: safeString(m.videoMessage.url) || safeString(m.videoMessage.directPath) || safeString(fallbackMessageId),
+        mime_type: safeString(m.videoMessage.mimetype),
+      },
+    };
+  }
+
+  if (m.audioMessage) {
+    return {
+      type: 'audio',
+      text: '',
+      media: {
+        id: safeString(m.audioMessage.url) || safeString(m.audioMessage.directPath) || safeString(fallbackMessageId),
+        mime_type: safeString(m.audioMessage.mimetype),
+      },
+    };
+  }
+
+  if (m.documentMessage) {
+    return {
+      type: 'document',
+      text: safeString(m.documentMessage.caption) || safeString(m.documentMessage.fileName) || '',
+      media: {
+        id: safeString(m.documentMessage.url) || safeString(m.documentMessage.directPath) || safeString(fallbackMessageId),
+        mime_type: safeString(m.documentMessage.mimetype),
+        filename: safeString(m.documentMessage.fileName),
+      },
+    };
+  }
+
+  return {
+    type: null,
+    text: '',
+    media: null,
+  };
 }
 
 class WhatsAppQrRunner extends EventEmitter {
@@ -788,20 +899,40 @@ class WhatsAppQrRunner extends EventEmitter {
 	              continue;
 	            }
 
-	            // Extrair texto (mais completo: texto, legendas, respostas de lista/botão etc.)
+	            // Extrair conteúdo (texto e mídia) da mensagem.
 	            const mmRaw = msg?.message || {};
 	            const mm = unwrapMessageContainer(mmRaw);
-	            const text = extractTextFromBaileysMessage(mmRaw);
+	            const messageId = msg?.key?.id || null;
+	            const inbound = buildInboundMessageFromBaileys(mmRaw, messageId);
+	            const text = inbound.text;
 
-	            // Mesmo quando não houver texto, logamos um resumo do tipo/estrutura pra diagnosticar
-	            if (!text) {
+	            // Mesmo quando não houver conteúdo tratável, logamos um resumo do tipo/estrutura.
+	            if (!inbound.type) {
 	              const messageKeys = mm ? Object.keys(mm) : [];
-	              logger.info(`[WA_QR_MSG_NO_TEXT] ${jsonSafe({ traceId, tenantId, connectionId, remoteJid, from, messageId: msg?.key?.id || null, messageKeys, hasStub: !!msg?.messageStubType, stubType: msg?.messageStubType || null })}`);
+	              logger.info(`[WA_QR_MSG_NO_TEXT] ${jsonSafe({ traceId, tenantId, connectionId, remoteJid, from, messageId, messageKeys, hasStub: !!msg?.messageStubType, stubType: msg?.messageStubType || null })}`);
 	              continue;
 	            }
 
 	            // Log explícito no arquivo da API (sem "[object Object]")
-	            logger.info(`[WA_QR_MSG_TEXT] traceId=${traceId} ${jsonSafe({ tenantId, connectionId, from, remoteJid, remoteJidRaw, remoteJidAlt, messageId: msg?.key?.id || null, textPreview: String(text).slice(0, 300) })}`);
+	            logger.info(`[WA_QR_MSG_TEXT] traceId=${traceId} ${jsonSafe({ tenantId, connectionId, from, remoteJid, remoteJidRaw, remoteJidAlt, messageId, messageType: inbound.type, textPreview: String(text || '').slice(0, 300) })}`);
+
+              // Para mídia inbound via QR, baixa/decripta o conteúdo e persiste localmente.
+              // Isso evita usar links ".enc" do WhatsApp Web que quebram no browser.
+              if (inbound.media && inbound.type && inbound.type !== 'text') {
+                const downloadedUrl = await persistInboundQrMedia({
+                  sock,
+                  msg,
+                  tenantId,
+                  connectionId,
+                  messageId,
+                  inboundType: inbound.type,
+                  mimeType: inbound.media?.mime_type || null,
+                  fileName: inbound.media?.filename || null,
+                });
+                if (downloadedUrl) {
+                  inbound.media.id = downloadedUrl;
+                }
+              }
 
               const contactName = resolveBaileysContactName(msg, sock, remoteJid, from)
                 || this._getSessionContactName(sessionKeyLocal, from);
@@ -810,13 +941,47 @@ class WhatsAppQrRunner extends EventEmitter {
               }
 
               // Adaptar para o formato de webhook que o ChannelGateway já entende (whatsapp)
+		            const payloadMessage = {
+	                from,
+	                id: messageId,
+	                type: inbound.type,
+	                timestamp: msg?.messageTimestamp ? String(Number(msg.messageTimestamp)) : undefined,
+	              };
+	              if (inbound.type === 'text') {
+	                payloadMessage.text = { body: String(text || '') };
+	              }
+	              if (inbound.type === 'image') {
+	                payloadMessage.image = {
+	                  id: inbound.media?.id || messageId || undefined,
+	                  mime_type: inbound.media?.mime_type || undefined,
+	                  caption: text || undefined,
+	                };
+	              }
+	              if (inbound.type === 'video') {
+	                payloadMessage.video = {
+	                  id: inbound.media?.id || messageId || undefined,
+	                  mime_type: inbound.media?.mime_type || undefined,
+	                  caption: text || undefined,
+	                };
+	              }
+	              if (inbound.type === 'audio') {
+	                payloadMessage.audio = {
+	                  id: inbound.media?.id || messageId || undefined,
+	                  mime_type: inbound.media?.mime_type || undefined,
+	                };
+	              }
+	              if (inbound.type === 'document') {
+	                payloadMessage.document = {
+	                  id: inbound.media?.id || messageId || undefined,
+	                  mime_type: inbound.media?.mime_type || undefined,
+	                  filename: inbound.media?.filename || undefined,
+	                  caption: text || undefined,
+	                };
+	              }
+
 		            const payload = {
 	              message: {
-	                from,
-	                id: msg?.key?.id,
-	                type: 'text',
-	                text: { body: text },
-	                timestamp: msg?.messageTimestamp ? String(Number(msg.messageTimestamp)) : undefined,
+	                ...payloadMessage,
 	              },
 	              value: {
 	                metadata: {

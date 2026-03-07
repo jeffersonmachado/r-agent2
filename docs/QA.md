@@ -13,6 +13,7 @@ Este documento consolida **o que existe hoje** de QA no repositório: **testes**
     - `npm run test:unit`
     - `npm run test:flow`
     - `npm run test:stress`
+    - `npm run test:whatsapp:media:jest`
     - `npm run test:rpa`
 
 ## Testes Node.js (Jest) — engine/api/tests/qa/lib
@@ -25,7 +26,7 @@ Este documento consolida **o que existe hoje** de QA no repositório: **testes**
   - **Unit**: `npm run test:unit` → `tests/unit`
   - **Flow (validação estrutural)**: `npm run test:flow` → `tests/flow`
   - **Stress**: `npm run test:stress` → `tests/stress`
-  - **CI local (focado)**: `npm run test:ci` → `npm run test:websocket` + `jest tests/ci`
+  - **CI local (focado)**: `npm run test:ci` → `npm run test:websocket` + `npm run test:whatsapp:media:jest` + `jest tests/ci`
     - Observação: este comando é complementar e não substitui o gate oficial de CI (`npm run system:validate`).
   - **Rate limit**: `npm run test:rate-limit` → `tests/rate-limit`
   - **Sistêmicos (contratos/governança/anti-bypass/runtime/organizacional/stress/rate-limit)**: `npm run test:system`
@@ -123,4 +124,3 @@ cd rag-service && pip install -r requirements.txt && pytest
 
 - Cobertura e lacunas mapeadas: [`ANALISE_COBERTURA_TESTES.md`](ANALISE_COBERTURA_TESTES.md)
 - Pós-teste e evidências organizadas: [`qa/POS_TESTE_COMPLETO.md`](qa/POS_TESTE_COMPLETO.md)
-

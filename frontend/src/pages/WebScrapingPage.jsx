@@ -74,6 +74,13 @@ export function WebScrapingPage() {
     return `${minutes}m ${secs}s`;
   };
 
+  const formatDateTime = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('pt-BR');
+  };
+
   // Atualiza tempo decorrido
   useEffect(() => {
     if (loading && startTimeRef.current) {
@@ -753,7 +760,7 @@ export function WebScrapingPage() {
                         <span className="flex items-center gap-1">
                           <span>🕐</span>
                           <span>
-                            {new Date(result.metadata.scrapedAt).toLocaleString('pt-BR')}
+                            {formatDateTime(result.metadata.scrapedAt)}
                           </span>
                         </span>
                       )}

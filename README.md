@@ -1,134 +1,103 @@
-## Visão geral
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+# Pacote inicial da Agenda Autônoma para o r-agent2
 
-Este repositório evolui para uma **plataforma unificada** que converte processos e operações em **fluxos visuais (DAG)** com **nodes plugáveis**, reunindo oito pilares em um único produto SaaS multi-tenant:
+Este pacote traz uma base de código para integrar a **Agenda Autônoma** ao core do r-agent2.
 
-1) **Automação** (inspirado em **n8n**)  
-2) **Marketing automation** (inspirado em **RD Station**)  
-3) **CRM Operacional Integrado** (benchmark conceitual: **Sistema Operacional do Relacionamento com o Cliente**, inspirado em **HubSpot / Zendesk / RD Station / n8n / CCaaS**)  
-4) **Atendimento omnichannel** (inspirado em **BLIP / Huggy / Zenvia**)  
-5) **Voz / Contact Center** (inspirado em **Twilio Flex / Talkdesk / Five9**)  
-6) **Orquestração de IA** (inspirado em **LangFlow / Flowise**)  
-7) **Filas físicas / Fast service** (inspirado em **Qminder / QLess / Waitwhile / Skiplino**)  
-8) **Delivery / Marketplace de pedidos** (inspirado em **iFood / Uber Eats / Rappi / DoorDash**)  
+## O que está incluído
+- migration do core de Agenda Autônoma
+- 4 models Sequelize no padrão do projeto
+- serviços centrais de:
+  - policy
+  - waiting list
+  - detecção de gaps
+  - ranking de candidatos
+  - campanhas
+- jobs manuais para detectar gaps e rodar campanhas
+- prompt de integração detalhado
 
-**Tese do produto**: no nosso sistema, *tudo vira node* dentro do DAG — desde “gerar senha no totem” até “enviar WhatsApp”, “acionar URA”, “atualizar CRM”, “disparar jornada”, “medir ROI” e “replay da execução”.
+## O que ainda precisa ser feito
+- registrar os models em `api/db/models/index.js`
+- expor endpoints no `api/server.js`
+- conectar envio real de WhatsApp
+- criar tela mínima no frontend
+- adicionar testes
 
-## Problema que resolvemos
+## Observação importante
+O código foi preparado para **reaproveitar CRM e agenda já existentes**. Ele não substitui `schedulingService.js`; ele orquestra por cima dele.
+=======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+# r-vpn-manager-backend
 
-Organizações crescem usando ferramentas isoladas (automação, marketing, atendimento, voz, IA, operação física e delivery). O resultado é:
+Backend server for managing SoftEther VPN hubs and users.
 
-- **Dados fragmentados** (identidade do cliente espalhada; difícil reconciliar histórico)
-- **Operação cara e frágil** (integrações pontuais; baixa rastreabilidade ponta a ponta)
-- **Dificuldade de escala** (SLA, filas, produtividade, voz e atendimento físico)
-- **Operação de delivery fragmentada** (pedido, preparo, despacho, tracking e pós-venda em sistemas distintos)
-- **ROI obscuro** (atribuição e custo total por canal e jornada)
+## Installation
 
-## Documentação (comece por aqui)
+<<<<<<< ours
+1. Install the dependencies:
+=======
+1. Go to the repository root (`r-vpn-manager-backend`) and install dependencies:
+>>>>>>> theirs
+   ```bash
+   npm install
+   ```
 
-- **Índice da documentação**: `docs/00_DOCUMENTACAO_INDEX.md`
-- **Objetivo final / visão**: `docs/OBJETIVO_FINAL_PLATAFORMA.md`
-- **Roadmap (atalho)**: `docs/ROADMAP.md`
-- **Roadmap 3–5 anos**: `docs/ROADMAP_3A5_ANOS.md`
-- **Pilar CRM Operacional Integrado**: `docs/CRM_OPERACIONAL_INTEGRADO.md`
-- **O que falta (fonte única)**: `docs/O_QUE_FALTA.md`
-- (Histórico) **Gaps vs benchmarks**: `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md`
+<<<<<<< ours
+=======
+### Why `npm install` is needed
 
-## Operações rápidas (tickets)
+This project depends on packages listed in `package.json` (for example, `express`, `dotenv`, and `jsonwebtoken`).
+Running `npm install` downloads these packages into the local `node_modules/` folder, which is required before running `npm start` or `npm run dev`.
 
-Recarregar o cache de tickets após backfill ou ajustes no backend:
+### Where `npm install` should be run
 
+Run it in the project root directory, where `package.json` is located.
+
+Example:
 ```bash
-API_URL=http://localhost:3000 \
-AUTH_TOKEN=seu_token \
-TENANT_ID=tenant_key \
-npm run tickets:reload-cache
+cd /workspace/r-vpn-manager-backend
+npm install
 ```
 
-Variáveis:
-- `API_URL` (opcional) base do backend. Padrão: `http://localhost:3000`.
-- `AUTH_TOKEN` (obrigatório) token do usuário autenticado.
-- `TENANT_ID` (obrigatório) tenant alvo.
+>>>>>>> theirs
+## Configuration
 
-Backfill de nomes de contato (CRM) para tickets antigos:
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and fill in the variables:
+   - `SE_HOST` - SoftEther server host (e.g. `127.0.0.1`)
+   - `SE_PORT` - SoftEther server port (e.g. `5555`)
+   - `SE_SECURE` - set to `true` to use HTTPS or `false` for HTTP
+   - `SE_ADMIN_HUB` - name of the hub to manage
+   - `SE_ADMIN_USER` - SoftEther administrator user
+   - `SE_ADMIN_PASS` - SoftEther administrator password
+   - `JWT_SECRET` - secret key used to sign JWT tokens
+   - `JWT_EXPIRATION` - token expiration time (e.g. `1h`)
+   - `PORT` - port for this backend (defaults to `3000`)
 
+## Running the server
+
+Start the API server with:
 ```bash
-TENANT_ID=tenant_key \
-npm run tickets:backfill-contact-names -- --dry-run
+npm start
 ```
 
-Opções úteis:
-- `--tenant <tenant_key>` sobrescreve o tenant do env.
-- `--include-closed` inclui tickets fechados.
-- `--limit <n>` limita a quantidade processada.
+During development you can use nodemon to reload on changes:
+```bash
+npm run dev
+```
 
-## Pilares do produto (com benchmarks)
-
-### 1) Automação (n8n)
-- DAG runtime, execuções por nó, histórico e **replay**
-- Queue distribuída, scheduler, retries/idempotência
-- Credentials vault, versionamento, subflows
-- Marketplace de nodes e templates reutilizáveis
-
-### 2) Marketing automation (RD Station)
-- Leads, formulários, landing pages e tracker JS (UTM/pageview)
-- Scoring, segmentação e jornadas
-- Email marketing, funil visual, analytics e ROI
-
-### 3) CRM Operacional Integrado (benchmark conceitual)
-- **É** a camada operacional que unifica conta, contato, lead, oportunidade, pipeline, atividades e eventos em torno do cliente
-- **É** orientado a eventos reais do negócio (atendimento, voz, tickets, bots, marketing e operação)
-- **NÃO é** CRM puramente comercial de cadastro estático
-- **NÃO é** cópia literal de Salesforce ou suíte comercial monolítica
-
-### 4) Atendimento omnichannel (BLIP / Huggy / Zenvia)
-- Inbox omnichannel unificado (bot + humano)
-- Filas, SLA, roteamento e operação humana
-- Histórico completo do cliente (timeline)
-
-### 5) Voz / Contact Center (Twilio Flex / Talkdesk / Five9)
-- URA visual, filas de voz, transferências e gravação
-- Click-to-call, discagem, disposition codes
-- Eventos de chamada como triggers/ações no DAG
-
-### 6) IA (LangFlow / Flowise)
-- Nodes reutilizáveis de IA (classificação, priorização, enriquecimento, sugestão)
-- Contexto unificado + governança (custo, privacidade, auditoria)
-
-### 7) Filas físicas / Fast service (Qminder / QLess / Waitwhile / Skiplino)
-- Emissão de senha (totem/kiosk), tipos de fila e prioridades
-- Painel de chamada (TV), estações/guichês e “chamar próximo”
-- Métricas: tempo de espera, throughput, abandono e produtividade
-- Integração com fluxos: **Totem → Fila → DAG → Atendimento/Voz/CRM/Marketing**
-
-### 8) Delivery / Marketplace de pedidos (iFood / Uber Eats / Rappi / DoorDash)
-- Criação de pedido, pagamento e antifraude (quando aplicável)
-- Status em tempo real (pedido → preparo → despacho → entrega)
-- Despacho de entregador e tracking
-- Notificações (WhatsApp/SMS/push), avaliação e suporte
-- SLA de entrega e métricas de operação
-- Integração com fluxos: **Pedido → Cozinha → Entrega → CRM → Marketing**
-
-## Estado atual (o que já existe neste repo)
-
-Além do editor de fluxos e execução básica, o repositório já contém entregas importantes para SaaS e operação:
-
-- **SaaS multi-tenant, RBAC, planos/limites, auditoria, super-admin e onboarding**: ver `IMPLEMENTACAO_SAAS_COMPLETA.md`.
-- **Atendimento omnichannel com filas/roteamento/SLA (parcial) e handover bot↔humano**: ver `docs/BLIP_GAP_ANALYSIS.md` e `docs/ARCHITECTURE_QUEUES_ROUTING_SLA.md`.
-- **Templates de flows (marketplace) e onboarding por segmento**: ver `docs/ARCHITECTURE_TEMPLATE_MARKETPLACE_PHASE5.md`.
-- **Replay (simulação e visualização por sessionId)**: ver `docs/COMO_USAR_REPLAY.md`.
-- **Pipeline de IA/RAG (scraping, upload PDF, OCR) e contratos de resposta**: detalhes abaixo e em `docs/` (RAG).
-
-## IA/RAG (visão rápida)
-
-O sistema atual também inclui um pipeline RAG que indexa fontes do tenant (site + arquivos) e gera sugestões baseadas em contexto.
-
-- **Vector store**: PostgreSQL + `pgvector` (fonte única)
-- **Scraping**: fetch + fallback Playwright (opcional)
-- **Uploads**: PDF + imagens com OCR (opcional)
-
-Documentos detalhados (RAG):
-- `docs/COMO_TESTAR_RAG.md`
-- `docs/RAG_POR_TENANT.md`
-- `docs/CONFIGURACAO_IA.md`
-
-
+The server will listen on the port defined in the `PORT` environment variable.
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs

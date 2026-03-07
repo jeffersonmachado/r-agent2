@@ -9,6 +9,7 @@
 
 import { getFeature, getFeaturesConfig, setFeature } from './featuresConfig';
 import { getFallbackFlag } from './fallbacksConfig';
+import { fetchJson } from '../api/client';
 
 // Importa do módulo compartilhado via alias configurado no Vite
 // O Vite está configurado para resolver '@shared/aiTaskExecutor' para engine/utils/aiTaskExecutor.js
@@ -87,8 +88,6 @@ export async function execute(task, input, config = {}, context = {}) {
   if (useRealApi && task === 'intent_classification') {
     // Faz chamada HTTP real à API de IA
     try {
-      const { fetchJson } = await import('../api/client');
-      
       // Constrói prompt para classificação de intenção
       const allowedOutputs = Array.isArray(config.allowedOutputs) ? config.allowedOutputs : [];
       const keywords = config.keywords || {};
@@ -155,4 +154,3 @@ export async function execute(task, input, config = {}, context = {}) {
 export function validateResponse(response, task, config) {
   return sharedValidateResponse(response, task, config);
 }
-

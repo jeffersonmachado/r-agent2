@@ -119,6 +119,17 @@ function isGenericContactName(name, phoneDigits = null) {
   return false;
 }
 
+async function loadNormalizedContextSnapshot(tenantId, sessionId) {
+  if (!tenantId || !sessionId) return null;
+  try {
+    const contextApi = require('../context');
+    const context = await contextApi.getNormalizedContext(String(tenantId), String(sessionId));
+    return context && typeof context === 'object' ? context : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function shouldPromoteContactName({ incomingName, existingName, phoneDigits }) {
   const nextName = normalizeContactName(incomingName);
   if (!nextName) return false;
@@ -188,9 +199,17 @@ async function touchConversation({ tenantId, conversationId, status = null } = {
  * @param {'whatsapp'|'instagram'|'webchat'} channelType
  * @param {string} externalConversationId - ID externo da conversa/contato no canal (ex: phone/userId)
  * @param {object} contactRef - referência do contato (ex: { phone, contactId })
+ * @param {object} [options]
+ * @param {'bot'|'human'} [options.initialMode='bot'] - modo inicial desejado para ticket/conversa recém-criados
  * @returns {Promise<{conversation: any, ticket: any, createdTicket: boolean}>}
  */
-async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, externalConversationId, contactRef = {}) {
+async function resolveOrCreateTicketFromIncomingMessage(
+  tenantId,
+  channelType,
+  externalConversationId,
+  contactRef = {},
+  options = {},
+) {
   // Serializa chamadas concorrentes para a mesma conversa.
   // Isso evita criação dupla em race conditions (ex.: webhook retry + QR runner + UI).
   const lockKey = _convKey(tenantId, channelType, externalConversationId);
@@ -198,6 +217,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     const effectiveTenantId = ensureTenantId(tenantId);
     if (!channelType || typeof channelType !== 'string') throw new Error('channelType é obrigatório');
     if (!externalConversationId || typeof externalConversationId !== 'string') throw new Error('externalConversationId é obrigatório');
+    const initialMode = options?.initialMode === 'human' ? 'human' : 'bot';
 
   // Compatibilidade / rollout seguro:
   // - por padrão, NÃO cria ticket automaticamente para todo inbound (evita inundar a UI atual)
@@ -224,6 +244,9 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   const normalizedPhone = normalizePhone(contactRef.phone || externalConversationId);
   const contactId = contactRef.contactId ? String(contactRef.contactId) : (normalizedPhone ? normalizedPhone.replace(/^\+/, '') : null);
   const contactName = normalizeContactName(contactRef.name);
+  const sessionId = channelType === 'whatsapp'
+    ? `whatsapp_${String(externalConversationId).replace(/^\+/, '')}`
+    : `${channelType}_${String(externalConversationId).replace(/^\+/, '')}`;
 
   if (!conversation && dbAvailable()) {
     conversation = await ConversationModel.create({
@@ -232,7 +255,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
       channel_type: String(channelType),
       external_id: String(externalConversationId),
       contact_id: contactId,
-      status: 'bot',
+      status: initialMode,
       current_ticket_id: null,
       last_message_at: now,
       created_at: now,
@@ -245,10 +268,6 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     if (!createOnInbound) {
       return { conversation: null, ticket: null, createdTicket: false };
     }
-
-    const sessionId = channelType === 'whatsapp'
-      ? `whatsapp_${String(externalConversationId).replace(/^\+/, '')}`
-      : `${channelType}_${String(externalConversationId).replace(/^\+/, '')}`;
 
     const existing = queueService.getTicketBySession(sessionId, effectiveTenantId);
     if (existing && existing.status !== 'closed') {
@@ -270,18 +289,22 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     } catch (_) {}
 
     const defaultQueue = config.get('flows.defaultQueue', 'default');
+    const normalizedContext = await loadNormalizedContextSnapshot(effectiveTenantId, sessionId);
     const ticket = queueService.createTicket({
       tenantId: effectiveTenantId,
       sessionId,
       queue: defaultQueue,
       lastUserMessage: null,
+      tags: Array.isArray(normalizedContext?.tags) ? normalizedContext.tags : [],
       context: {
         channelType,
         conversationId: null,
-        mode: 'bot',
+        mode: initialMode,
+        normalized_context: normalizedContext || undefined,
         metadata: {
           externalConversationId,
           contactId,
+          normalized_context: normalizedContext || undefined,
         },
         // Nome do contato para integração CRM
         customer_name: contactName,
@@ -342,6 +365,42 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     return { conversation, ticket: updatedTicket, createdTicket: false };
   }
 
+  // 2.5) Fallback por sessão:
+  // quando o ticket foi iniciado manualmente (sem conversationId), reutiliza o ticket
+  // existente em vez de criar um novo ao chegar inbound do canal.
+  const existingBySession = queueService.getTicketBySession(sessionId, effectiveTenantId);
+  if (existingBySession && existingBySession.status !== 'closed') {
+    const currentContext = existingBySession.context && typeof existingBySession.context === 'object'
+      ? existingBySession.context
+      : {};
+    const currentMetadata = currentContext.metadata && typeof currentContext.metadata === 'object'
+      ? currentContext.metadata
+      : {};
+    const patched = queueService.updateTicket(existingBySession.id, {
+      conversationId: existingBySession.conversationId || conversation.id,
+      channelType: existingBySession.channelType || String(channelType),
+      context: {
+        ...currentContext,
+        metadata: {
+          ...currentMetadata,
+          externalConversationId,
+          contactId: contactId || currentMetadata.contactId || null,
+          contactName: contactName || currentMetadata.contactName || null,
+        },
+      },
+    }) || existingBySession;
+
+    await conversation.update({
+      current_ticket_id: patched.id,
+      status: patched.mode === 'human' ? 'human' : 'bot',
+      last_message_at: now,
+      updated_at: now,
+    }).catch(() => null);
+
+    const updatedTicket = maybeUpdateTicketContactName(patched, contactName, normalizedPhone || externalConversationId);
+    return { conversation, ticket: updatedTicket, createdTicket: false };
+  }
+
   // 3) Cria ticket novo (modo BOT por padrão)
   if (!createOnInbound) {
     return { conversation, ticket: null, createdTicket: false };
@@ -362,23 +421,24 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   } catch (_) {}
 
   const defaultQueue = config.get('flows.defaultQueue', 'default');
-  const sessionId = channelType === 'whatsapp'
-    ? `whatsapp_${String(externalConversationId).replace(/^\+/, '')}`
-    : `${channelType}_${String(externalConversationId).replace(/^\+/, '')}`;
+  const normalizedContext = await loadNormalizedContextSnapshot(effectiveTenantId, sessionId);
 
   const ticket = queueService.createTicket({
     tenantId: effectiveTenantId,
     sessionId,
     queue: defaultQueue,
     lastUserMessage: null,
-    context: {
-      channelType,
-      conversationId: conversation.id,
-      mode: 'bot',
+    tags: Array.isArray(normalizedContext?.tags) ? normalizedContext.tags : [],
+      context: {
+        channelType,
+        conversationId: conversation.id,
+      mode: initialMode,
+      normalized_context: normalizedContext || undefined,
       metadata: {
         externalConversationId,
         contactId,
         contactName,
+        normalized_context: normalizedContext || undefined,
       },
       // Nome do contato para integração CRM
       customer_name: contactName,
@@ -389,7 +449,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   // Best-effort: aponta conversa para o ticket atual
   await conversation.update({
     current_ticket_id: ticket.id,
-    status: 'bot',
+    status: initialMode,
     last_message_at: now,
     updated_at: now,
   }).catch(() => null);
@@ -406,7 +466,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
  * - A persistência omnichannel e idempotência forte por externalMessageId permanece em channel_messages.
  *
  * @param {string} ticketId
- * @param {{direction:'in'|'out', text?:string, externalMessageId?:string|null, timestamp?:string|null}} normalizedMessage
+ * @param {{direction:'in'|'out', text?:string, externalMessageId?:string|null, timestamp?:string|null, messageType?:string|null, mediaUrl?:string|null, mimeType?:string|null, fileName?:string|null}} normalizedMessage
  * @returns {any|null} ticket atualizado (runtime)
  */
 function appendTicketMessage(ticketId, normalizedMessage = {}) {
@@ -415,6 +475,10 @@ function appendTicketMessage(ticketId, normalizedMessage = {}) {
   const text = normalizedMessage.text ? String(normalizedMessage.text) : '';
   const externalMessageId = normalizedMessage.externalMessageId ? String(normalizedMessage.externalMessageId) : null;
   const timestamp = normalizedMessage.timestamp ? String(normalizedMessage.timestamp) : null;
+  const messageType = normalizedMessage.messageType ? String(normalizedMessage.messageType) : 'text';
+  const mediaUrl = normalizedMessage.mediaUrl ? String(normalizedMessage.mediaUrl) : null;
+  const mimeType = normalizedMessage.mimeType ? String(normalizedMessage.mimeType) : null;
+  const fileName = normalizedMessage.fileName ? String(normalizedMessage.fileName) : null;
 
   const ticket = queueService.getTicket(ticketId);
   if (!ticket) return null;
@@ -426,7 +490,12 @@ function appendTicketMessage(ticketId, normalizedMessage = {}) {
   }
 
   if (dir === 'in') {
-    const updated = queueService.updateLastMessage(ticketId, text, externalMessageId, timestamp);
+    const updated = queueService.updateLastMessage(ticketId, text, externalMessageId, timestamp, {
+      messageType,
+      mediaUrl,
+      mimeType,
+      fileName,
+    });
     touchConversation({ tenantId: ticket.tenantId, conversationId: ticket.conversationId }).catch(() => {});
     return updated;
   }

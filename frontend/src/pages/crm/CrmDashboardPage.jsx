@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from '../../hooks/useRouter';
 import { CrmPage } from './CrmPage';
+import { buildApiUrl } from '../../api/client';
+import { getAuthHeaders } from '../../api/auth';
 
 export function CrmDashboardPage() {
   const { currentPath } = useRouter();
@@ -45,16 +47,16 @@ function CrmDashboardContent() {
   useEffect(() => {
     const fetchCrmMetrics = async () => {
       try {
-        const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
-        if (!token) {
+        const headers = getAuthHeaders();
+        if (!headers.Authorization) {
           setLoadingMetrics(false);
           return;
         }
         
-        const response = await fetch('/api/crm/analytics/dashboard', {
+        const response = await fetch(buildApiUrl('/api/crm/analytics/dashboard'), {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
+            ...headers,
           }
         });
         

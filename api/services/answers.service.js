@@ -1,5 +1,6 @@
 const { generateAiResponse } = require('./aiProviderService');
 const logger = require('../utils/logger');
+const KNOWLEDGE_NOT_FOUND_RESPONSE = 'Não encontrei essa informação na base de conhecimento do r-agent2.';
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
@@ -95,11 +96,11 @@ async function generateAnswers(tenantId, questions, ragContext, executionContext
       question,
       '',
       'Se não houver resposta no contexto, diga:',
-      '"Essa informação não está disponível no material fornecido."',
+      `"${KNOWLEDGE_NOT_FOUND_RESPONSE}"`,
     ].join('\n');
 
     let ai = await generateAiResponse(basePrompt, tenantId, {});
-    let answer = safeString(ai?.text || '').trim() || 'Essa informação não está disponível no material fornecido.';
+    let answer = safeString(ai?.text || '').trim() || KNOWLEDGE_NOT_FOUND_RESPONSE;
 
     // Garantir limpeza também nas respostas: se contiver termo excluído, regenerar (máx 2 tentativas)
     const matched0 = findMatchedExclusionTerm(answer, loweredTerms);
@@ -128,7 +129,7 @@ async function generateAnswers(tenantId, questions, ragContext, executionContext
         ].join('\n');
 
         ai = await generateAiResponse(regenPrompt, tenantId, {});
-        answer = safeString(ai?.text || '').trim() || 'Essa informação não está disponível no material fornecido.';
+        answer = safeString(ai?.text || '').trim() || KNOWLEDGE_NOT_FOUND_RESPONSE;
         hadRegen = true;
 
         const matched = findMatchedExclusionTerm(answer, loweredTerms);
@@ -158,4 +159,3 @@ async function generateAnswers(tenantId, questions, ragContext, executionContext
 module.exports = {
   generateAnswers,
 };
-

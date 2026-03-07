@@ -98,7 +98,41 @@ async function findFlows(criteria = {}) {
  * @returns {Promise<Object>} Dados de filas e tickets
  */
 async function getQueuesData() {
-  const tickets = await getAllTickets();
+  // NOVA VERSÃO: Nunca carregue todos os tickets! Apenas tickets ativos/recentes.
+  if (typeof logger !== 'undefined' && logger.warn) {
+    logger.warn('[PersistenceServices] getQueuesData: chamada sem paginação bloqueada. Retornando apenas tickets ativos/recentes.');
+  } else {
+    console.warn('[PersistenceServices] getQueuesData: chamada sem paginação bloqueada. Retornando apenas tickets ativos/recentes.');
+  }
+  // Exemplo: buscar apenas tickets não fechados criados nos últimos 7 dias
+  const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const rows = await TicketModel.findAll({
+    where: {
+      status: { [Op.ne]: 'closed' },
+      created_at: { [Op.gte]: sevenDaysAgo }
+    },
+    limit: 1000,
+    order: [['created_at', 'DESC']]
+  });
+  const tickets = rows.map((row) => ({
+    id: row.id,
+    tenantId: row.tenant_key,
+    sessionId: row.session_id,
+    queue: row.queue,
+    status: row.status,
+    assignedTo: row.assigned_to || null,
+    phoneNumber: row.phone_number || null,
+    lastUserMessage: row.last_user_message || null,
+    unreadCount: Number.isFinite(row.unread_count) ? row.unread_count : 0,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    category: row.category || null,
+    messages: Array.isArray(row.messages) ? row.messages : [],
+    context: row.context || {},
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+  }));
   const queues = {};
   for (const t of tickets) {
     if (!queues[t.queue]) queues[t.queue] = [];
@@ -107,11 +141,30 @@ async function getQueuesData() {
   return { tickets, queues };
 }
 
-async function getAllTickets() {
+/**
+ * Obtém tickets com paginação obrigatória.
+ *
+ * ATENÇÃO: Nunca use para buscar todos os tickets sem paginação! Pode causar OOM e travar o serviço.
+ * Sempre utilize limit/offset e nunca retorne mais de 10.000 tickets em uma chamada.
+ *
+ * @param {Object} options
+ * @param {number} [options.limit=1000] - Máximo de tickets a retornar (default 1000, max 10000)
+ * @param {number} [options.offset=0] - Offset para paginação
+ * @returns {Promise<Array>} Lista de tickets
+ */
+async function getAllTickets(options = {}) {
   try {
     if (!getSequelize()) return [];
     const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
-    const rows = await TicketModel.findAll();
+    const limit = Math.min(Math.max(1, parseInt(options.limit, 10) || 1000), 10000);
+    const offset = Math.max(0, parseInt(options.offset, 10) || 0);
+    if (limit === 10000) {
+      console.warn('[PersistenceServices] getAllTickets: limite máximo de 10000 tickets aplicado. Use paginação!');
+      if (typeof logger !== 'undefined' && logger.warn) {
+        logger.warn('[PersistenceServices] getAllTickets: tentativa de buscar 10.000 tickets. Isso pode causar problemas de memória.');
+      }
+    }
+    const rows = await TicketModel.findAll({ limit, offset, order: [['created_at', 'DESC']] });
     return rows.map((row) => ({
       id: row.id,
       tenantId: row.tenant_key,
@@ -144,20 +197,26 @@ async function getAllTickets() {
  * @param {string} [options.status] - Filtrar por status
  * @returns {Promise<Array>} Lista de tickets
  */
+/**
+ * Obtém tickets de uma fila específica com paginação.
+ * @param {string} queueName
+ * @param {Object} options
+ * @param {string} [options.status]
+ * @param {number} [options.limit]
+ * @param {number} [options.offset]
+ * @returns {Promise<Array>}
+ */
 async function getQueueTickets(queueName, options = {}) {
   if (!queueName || typeof queueName !== 'string') {
     return [];
   }
-  
   try {
-    const allTickets = await getAllTickets();
+    // Busca apenas tickets da fila desejada, já paginados
+    const allTickets = await getAllTickets({ limit: options.limit, offset: options.offset });
     let result = allTickets.filter((t) => t.queue === queueName);
-    
-    // Filtra por status se especificado
     if (options.status) {
       result = result.filter(t => t.status === options.status);
     }
-    
     return result;
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -178,12 +237,26 @@ async function getQueueInfo(queueName) {
   }
   
   try {
-    const tickets = await getQueueTickets(queueName);
+    // Busca apenas tickets ativos/recentes da fila
+    const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const rows = await TicketModel.findAll({
+      where: {
+        queue: queueName,
+        created_at: { [Op.gte]: sevenDaysAgo }
+      },
+      limit: 1000,
+      order: [['created_at', 'DESC']]
+    });
+    const tickets = rows.map((row) => ({
+      id: row.id,
+      status: row.status
+    }));
     const activeTickets = tickets.filter(t => t.status !== 'closed').length;
     const closedTickets = tickets.filter(t => t.status === 'closed').length;
-    
     return {
-      exists: tickets.length > 0 || (await getQueuesData()).queues[queueName] !== undefined,
+      exists: tickets.length > 0,
       ticketCount: tickets.length,
       activeTickets,
       closedTickets,
@@ -202,8 +275,9 @@ async function getQueueInfo(queueName) {
  */
 async function listQueues() {
   try {
-    const data = await getQueuesData();
-    return Object.keys(data.queues || {});
+    // Retorna apenas filas com tickets ativos/recentes
+    const { queues } = await getQueuesData();
+    return Object.keys(queues || {});
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[PersistenceServices] Erro ao listar filas:', err.message);
