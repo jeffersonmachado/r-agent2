@@ -1,0 +1,1 @@
+export { PlatformHubPage } from '../PlatformHubPage';

@@ -2,9 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
+import { PlatformGrid, usePlatformGridState } from '../../modules/platform-grid';
 import {
   CrmCard,
-  CrmTable,
   CrmButton,
   CrmModal,
   CrmForm,
@@ -115,20 +115,56 @@ export function AccountsPage() {
   };
 
   const columns = [
-    { key: 'name', label: 'Nome' },
-    { key: 'email', label: 'Email' },
-    { key: 'phone', label: 'Telefone' },
-    { key: 'industry', label: 'Indústria' },
     {
-      key: 'status',
-      label: 'Status',
-      render: (status) => (
-        <span className={status === 'active' ? 'text-green-600' : 'text-gray-500'}>
-          {status}
+      id: 'name',
+      header: 'Nome',
+      accessor: (account) => account.name || '—',
+      sortValue: (account) => account.name || '',
+    },
+    {
+      id: 'email',
+      header: 'Email',
+      accessor: (account) => account.email || '—',
+      sortValue: (account) => account.email || '',
+    },
+    {
+      id: 'phone',
+      header: 'Telefone',
+      accessor: (account) => account.phone || '—',
+      sortValue: (account) => account.phone || '',
+    },
+    {
+      id: 'industry',
+      header: 'Indústria',
+      accessor: (account) => account.industry || '—',
+      sortValue: (account) => account.industry || '',
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      render: (account) => (
+        <span className={account.status === 'active' ? 'text-green-600' : 'text-gray-500'}>
+          {account.status || '—'}
         </span>
       ),
+      sortValue: (account) => account.status || '',
+      width: '120px',
     },
   ];
+
+  const grid = usePlatformGridState({
+    rows: accounts,
+    columns,
+    persistenceKey: 'crm-accounts-grid-v1',
+    initialSort: { columnId: 'name', direction: 'asc' },
+    getSearchText: (account) => [
+      account.name,
+      account.email,
+      account.phone,
+      account.industry,
+      account.status,
+    ].filter(Boolean).join(' '),
+  });
 
   return (
     <div className="support-page">
@@ -204,12 +240,37 @@ export function AccountsPage() {
       </div>
 
       <CrmCard>
-        <CrmTable
+        <PlatformGrid
           columns={columns}
-          data={accounts}
+          rows={grid.rows}
+          loading={loading}
+          sort={grid.sort}
+          onSortChange={grid.handleSortChange}
           onRowClick={handleOpenModal}
-          onDelete={handleDelete}
-          isLoading={loading}
+          pagination={{
+            page: grid.page,
+            totalPages: grid.totalPages,
+            pageSize: grid.pageSize,
+            totalItems: grid.totalItems,
+            pageSizeOptions: grid.pageSizeOptions,
+            onPageChange: grid.setPage,
+            onPageSizeChange: grid.setPageSize,
+          }}
+          rowActions={(account) => ([
+            {
+              label: 'Editar',
+              onClick: () => handleOpenModal(account),
+            },
+            {
+              label: 'Excluir',
+              variant: 'danger',
+              onClick: () => handleDelete(account.id),
+            },
+          ])}
+          emptyState={{
+            title: 'Nenhuma conta encontrada',
+            description: 'Ajuste os filtros para localizar contas.',
+          }}
         />
       </CrmCard>
 

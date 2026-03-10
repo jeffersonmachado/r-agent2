@@ -3,6 +3,11 @@ import { useRouter } from '../../hooks/useRouter';
 import { CrmPage } from './CrmPage';
 import { buildApiUrl } from '../../api/client';
 import { getAuthHeaders } from '../../api/auth';
+import {
+  PlatformHubCard,
+  PlatformHubPage,
+  PlatformHubSection,
+} from '../../modules/platform-hub';
 
 export function CrmDashboardPage() {
   const { currentPath } = useRouter();
@@ -221,7 +226,7 @@ function CrmDashboardContent() {
   };
 
   return (
-    <div className="support-page">
+    <PlatformHubPage>
       <div className="support-header">
         <h1>🚀 Dashboard CRM</h1>
         <p>Pilar de Relacionamento com Cliente: gestão comercial end-to-end.</p>
@@ -340,11 +345,7 @@ function CrmDashboardContent() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
-        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-          <span>🔍</span>
-          <span>Navegação do CRM</span>
-        </h3>
+      <PlatformHubSection title="Navegação do CRM" icon="🔍">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block mb-2 text-sm font-medium text-text-primary">Buscar módulo</label>
@@ -370,34 +371,25 @@ function CrmDashboardContent() {
             </select>
           </div>
         </div>
-      </div>
+      </PlatformHubSection>
 
-      {/* Grid de Módulos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredFeatures.map((feature) => (
-          <button key={feature.id} onClick={() => navigate(feature.path)} className="block text-left">
-            <div className="bg-bg-elevated rounded-xl border border-border-default hover:shadow-lg transition-shadow p-6 cursor-pointer h-full">
-              <div className="flex items-start justify-between mb-3">
-                <div className={`${feature.color} w-12 h-12 rounded-lg flex items-center justify-center text-2xl`}>
-                  {feature.icon}
-                </div>
-                <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-1 rounded">
-                  {feature.category}
-                </span>
-              </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">{feature.title}</h3>
-              <p className="text-sm text-text-secondary">{feature.description}</p>
-            </div>
-          </button>
-        ))}
-      </div>
+      <PlatformHubSection title="Módulos do CRM" icon="🧭">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredFeatures.map((feature) => (
+            <PlatformHubCard
+              key={feature.id}
+              title={feature.title}
+              description={feature.description}
+              icon={feature.icon}
+              badge={feature.category}
+              accentClassName={feature.color}
+              onClick={() => navigate(feature.path)}
+            />
+          ))}
+        </div>
+      </PlatformHubSection>
 
-      {/* Footer Info */}
-      <div className="mt-8 bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-          <span>💡</span>
-          <span>Sobre o CRM</span>
-        </h3>
+      <PlatformHubSection title="Sobre o CRM" icon="💡" className="mt-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-text-secondary">
           <div>
             <div className="font-semibold text-text-primary mb-2">Core CRM</div>
@@ -424,7 +416,7 @@ function CrmDashboardContent() {
             </ul>
           </div>
         </div>
-      </div>
-    </div>
+      </PlatformHubSection>
+    </PlatformHubPage>
   );
 }

@@ -1,5 +1,5 @@
 // --- WhatsApp QR Runner ---
-const qrRunner = require('./services/whatsappQrRunnerInstance');
+let qrRunner = null;
 
 // ...existing code...
 
@@ -99,6 +99,7 @@ const {
   listAllTickets,
   listAllTicketsPaged,
   startAutoCleanup,
+  stopAutoCleanup,
   getMetrics,
   addAgentMessage,
   addTicketNote,
@@ -133,7 +134,6 @@ function resolveApiVersionInfo() {
   const packageVersion = String(packageJson?.version || '0.0.0');
   const name = String(
     process.env.API_NAME
-    || packageJson?.name
     || 'chatbot-engine-api'
   );
   const baseVersion = String(SERVER_API_VERSION || '0.0.0');
@@ -249,9 +249,10 @@ const {
   setPaused: pauseTicket,
   resumeHuman: resumeHumanTicket,
   startAutoReturnToBot,
+  stopAutoReturnToBot,
 } = require('./services/handoverService');
 const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = require('./services/conversationTicketLinkService');
-const { autoAssign: autoAssignTicket, startAssignmentWorker } = require('./services/assignmentService');
+const { autoAssign: autoAssignTicket, startAssignmentWorker, stopAssignmentWorker } = require('./services/assignmentService');
 const queueDefinitionService = require('./services/queueDefinitionService');
 const closeReasonsService = require('./services/closeReasonsService');
 const ticketInsightService = require('./services/ticketInsightService');
@@ -289,6 +290,8 @@ const ragService = require('./services/ragService');
 const { buildDiverseRagContext } = require('./services/ragContextBuilder');
 const { parseMultipartFormData } = require('./utils/multipartParser');
 const { handleRegisterPushRoute, handleUnregisterPushRoute } = require('./services/push/pushRouteService');
+const { registerRouteLoaders, handleRegisteredRoutes } = require('./routes');
+const registeredDomainGroups = registerRouteLoaders();
 const { sendToUser, validatePushStartupConfig } = require('./services/push');
 const {
   getVapidPublicKey,
@@ -556,6 +559,7 @@ const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 horas
 // Debounce para evitar muitas escritas em disco
 let saveSessionEventsTimeout = null;
 const SAVE_DEBOUNCE_MS = 2000; // Salva após 2 segundos de inatividade
+let cleanupSessionsTimer = null;
 
 /**
  * Salva conversas (sessionEvents).
@@ -566,11 +570,17 @@ function saveSessionEventsToFile() {
   logger.debug('[Conversations] saveSessionEventsToFile chamado mas ignorado (dados estão no banco de dados)');
 }
 
-qrRunner.setInboundDepsProvider(() => ({
-  flows,
-  sessionEvents,
-  saveSessionEvents: saveSessionEventsToFile,
-}));
+function getQrRunner() {
+  if (!qrRunner) {
+    qrRunner = require('./services/whatsappQrRunnerInstance');
+    qrRunner.setInboundDepsProvider(() => ({
+      flows,
+      sessionEvents,
+      saveSessionEvents: saveSessionEventsToFile,
+    }));
+  }
+  return qrRunner;
+}
 
 /**
  * Salva conversas imediatamente.
@@ -621,16 +631,26 @@ function cleanupOldSessions() {
   }
 }
 
-// Inicia limpeza periódica de sessões
-const _cleanupSessionsTimer = setInterval(cleanupOldSessions, SESSION_CLEANUP_INTERVAL);
-// Não manter o processo vivo apenas por timers (ajuda testes/Jest e shutdown limpo)
-if (typeof _cleanupSessionsTimer.unref === 'function') _cleanupSessionsTimer.unref();
+function startMaintenanceTasks() {
+  if (!cleanupSessionsTimer) {
+    cleanupSessionsTimer = setInterval(cleanupOldSessions, SESSION_CLEANUP_INTERVAL);
+    if (typeof cleanupSessionsTimer.unref === 'function') cleanupSessionsTimer.unref();
+  }
 
-// Inicia limpeza periódica de tickets fechados antigos
-// Remove tickets fechados com mais de 7 dias, a cada 1 hora
-const TICKET_CLEANUP_INTERVAL_HOURS = Number(config.get('api.ticketCleanup.intervalHours', 1));
-const TICKET_MAX_AGE_DAYS = Number(config.get('api.ticketCleanup.maxAgeDays', 7));
-startAutoCleanup(TICKET_CLEANUP_INTERVAL_HOURS, TICKET_MAX_AGE_DAYS);
+  const ticketCleanupIntervalHours = Number(config.get('api.ticketCleanup.intervalHours', 1));
+  const ticketMaxAgeDays = Number(config.get('api.ticketCleanup.maxAgeDays', 7));
+  startAutoCleanup(ticketCleanupIntervalHours, ticketMaxAgeDays);
+}
+
+function stopMaintenanceTasks() {
+  if (cleanupSessionsTimer) {
+    clearInterval(cleanupSessionsTimer);
+    cleanupSessionsTimer = null;
+  }
+  try {
+    stopAutoCleanup();
+  } catch (_) {}
+}
 
 // Inicialização de providers de IA movida para startInitialization()
 // para garantir que o banco de dados esteja conectado antes de carregar configurações
@@ -1264,6 +1284,7 @@ function validateFlowStructure(rawFlow) {
  */
 function ensureFlowHasMeta(rawFlow, tenantId = null) {
   const flow = rawFlow && typeof rawFlow === 'object' ? { ...rawFlow } : {};
+  const metadata = flow.metadata && typeof flow.metadata === 'object' ? { ...flow.metadata } : {};
 
   if (!flow.tenantId || typeof flow.tenantId !== 'string' || flow.tenantId.trim() === '') {
     // Tenant deve ser fornecido - não há fallback padrão em produção
@@ -1310,6 +1331,56 @@ function ensureFlowHasMeta(rawFlow, tenantId = null) {
     || (flow.metadata && typeof flow.metadata === 'object' && typeof flow.metadata.kind === 'string' ? flow.metadata.kind : null);
   const kind = String(rawKind || 'chat').trim().toLowerCase();
   flow.kind = (kind === 'voice') ? 'voice' : 'chat';
+  flow.metadata = metadata;
+
+  const rawStatus = String(metadata.status || '').trim().toLowerCase();
+  if (rawStatus === 'published' || rawStatus === 'archived' || rawStatus === 'draft') {
+    flow.metadata.status = rawStatus;
+  } else if (rawStatus === 'active') {
+    flow.metadata.status = 'published';
+  } else {
+    flow.metadata.status = 'draft';
+  }
+
+  const rawEditorMode = String(metadata.editorMode || '').trim().toLowerCase();
+  flow.metadata.editorMode = ['simple', 'advanced', 'process'].includes(rawEditorMode) ? rawEditorMode : 'advanced';
+
+  const globalContext = metadata.globalContext && typeof metadata.globalContext === 'object'
+    ? metadata.globalContext
+    : {};
+  flow.metadata.globalContext = {
+    contact: globalContext.contact && typeof globalContext.contact === 'object' ? globalContext.contact : {},
+    ticket: globalContext.ticket && typeof globalContext.ticket === 'object' ? globalContext.ticket : {},
+    intent: globalContext.intent && typeof globalContext.intent === 'object' ? globalContext.intent : {},
+    entities: globalContext.entities && typeof globalContext.entities === 'object' ? globalContext.entities : {},
+    channel: globalContext.channel && typeof globalContext.channel === 'object' ? globalContext.channel : {},
+    metadata: globalContext.metadata && typeof globalContext.metadata === 'object' ? globalContext.metadata : {},
+  };
+
+  const debug = metadata.debug && typeof metadata.debug === 'object' ? metadata.debug : {};
+  flow.metadata.debug = {
+    enabled: debug.enabled === true,
+    showCurrentNode: debug.showCurrentNode !== false,
+    showExecutedPath: debug.showExecutedPath !== false,
+    showContext: debug.showContext !== false,
+    showAiResponses: debug.showAiResponses !== false,
+    showErrors: debug.showErrors !== false,
+    ...debug,
+  };
+
+  const bpmn = metadata.bpmn && typeof metadata.bpmn === 'object' ? metadata.bpmn : {};
+  flow.metadata.bpmn = {
+    enabled: bpmn.enabled === true,
+    mappings: bpmn.mappings && typeof bpmn.mappings === 'object' ? bpmn.mappings : {},
+    version: bpmn.version || '2026-03-10',
+  };
+
+  if (!Array.isArray(flow.metadata.reusableSubflows)) {
+    flow.metadata.reusableSubflows = [];
+  }
+  if (!Array.isArray(flow.metadata.templateLibrary)) {
+    flow.metadata.templateLibrary = [];
+  }
 
   return flow;
 }
@@ -1368,7 +1439,7 @@ async function requestHandler(req, res) {
       path: pathname,
     });
 
-    await qrRunner.ensureSession(tenantId, channelAccountId, (qr) => { lastQr = qr; }, { qrCacheMs: 15000 });
+    await getQrRunner().ensureSession(tenantId, channelAccountId, (qr) => { lastQr = qr; }, { qrCacheMs: 15000 });
 
     logger.info('WA_QR_HTTP', 'start done', {
       tenantId,
@@ -1403,7 +1474,7 @@ async function requestHandler(req, res) {
       path: pathname,
     });
 
-    await qrRunner.stopSession(tenantId, channelAccountId);
+    await getQrRunner().stopSession(tenantId, channelAccountId);
 
     logger.info('WA_QR_HTTP', 'stop done', {
       tenantId,
@@ -11643,50 +11714,30 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
-  // GET /api/admin/tenants/health - Resumo operacional OCC por tenant
-  if (method === 'GET' && pathname === '/api/admin/tenants/health') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    if (!isSuperAdmin(req.agent)) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar o OCC' });
-      return;
-    }
-    try {
-      const operationalMetricsService = require('./services/operationalMetricsService');
-      const out = await operationalMetricsService.getTenantsHealthSummary();
-      sendJson(res, 200, out);
-    } catch (err) {
-      logger.error('Erro ao carregar health summary OCC:', err);
-      sendJson(res, 500, { error: 'internal_error' });
-    }
-    return;
-  }
-
-  // GET /api/admin/tenant/:id/metrics - Snapshot operacional OCC do tenant
-  if (method === 'GET' && pathname.startsWith('/api/admin/tenant/') && pathname.endsWith('/metrics')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    if (!isSuperAdmin(req.agent)) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar o OCC' });
-      return;
-    }
-    try {
-      const tenantId = decodeURIComponent(pathname.slice('/api/admin/tenant/'.length).replace('/metrics', ''));
-      const operationalMetricsService = require('./services/operationalMetricsService');
-      const out = await operationalMetricsService.getLatestTenantSnapshot({ tenantId });
-      sendJson(res, 200, out);
-    } catch (err) {
-      logger.error('Erro ao carregar snapshot OCC:', err);
-      sendJson(res, 500, { error: 'internal_error' });
-    }
-    return;
-  }
+  const registeredRouteHandled = await handleRegisteredRoutes({
+    groups: [
+      registeredDomainGroups.operational,
+      registeredDomainGroups.support,
+      registeredDomainGroups.crm,
+    ],
+    context: {
+      req,
+      res,
+      method,
+      pathname,
+      deps: {
+        requireAuth,
+        requirePermission,
+        requireAnyPermission,
+        isSuperAdmin,
+        sendJson,
+        hasJsonContentType,
+        parseJsonBody,
+        logger,
+      },
+    },
+  });
+  if (registeredRouteHandled) return;
 
   // GET /api/admin/tenant/:id/alerts - Alertas operacionais do tenant
   if (method === 'GET' && pathname.startsWith('/api/admin/tenant/') && pathname.endsWith('/alerts')) {
@@ -11738,6 +11789,98 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, 200, out);
     } catch (err) {
       logger.error('Erro ao listar auditoria URA OCC:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /api/admin/tenant/:id/feature-flags - Flags por tenant
+  if (method === 'GET' && pathname.startsWith('/api/admin/tenant/') && pathname.endsWith('/feature-flags')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode acessar feature flags do OCC' });
+      return;
+    }
+    try {
+      const tenantId = decodeURIComponent(pathname.slice('/api/admin/tenant/'.length).replace('/feature-flags', ''));
+      const tenantFeatureService = require('./services/tenantFeatureService');
+      const out = await tenantFeatureService.listFlags({ tenantId });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao listar feature flags OCC:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // GET /api/tenant/feature-flags/:featureKey - leitura de flag do tenant autenticado (não super-admin)
+  if (method === 'GET' && pathname.startsWith('/api/tenant/feature-flags/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    try {
+      const featureKey = decodeURIComponent(pathname.slice('/api/tenant/feature-flags/'.length)).trim();
+      if (!featureKey) {
+        sendJson(res, 400, { error: 'bad_request', message: 'featureKey é obrigatório' });
+        return;
+      }
+      const tenantFeatureService = require('./services/tenantFeatureService');
+      const out = await tenantFeatureService.getFlag({ tenantId, featureKey });
+      sendJson(res, 200, {
+        ok: true,
+        item: out?.item || {
+          id: null,
+          tenantId,
+          featureKey,
+          enabled: false,
+          config: {},
+          createdAt: null,
+          updatedAt: null,
+        },
+      });
+    } catch (err) {
+      logger.error('Erro ao ler feature flag do tenant autenticado:', err);
+      sendJson(res, 500, { error: 'internal_error' });
+    }
+    return;
+  }
+
+  // PUT /api/admin/tenant/:id/feature-flags/:featureKey - Atualiza flag do tenant
+  if (method === 'PUT' && pathname.startsWith('/api/admin/tenant/') && pathname.includes('/feature-flags/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    if (!isSuperAdmin(req.agent)) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Apenas Super Admin pode alterar feature flags do OCC' });
+      return;
+    }
+    try {
+      const body = await readJsonBody(req).catch(() => ({}));
+      const afterPrefix = pathname.slice('/api/admin/tenant/'.length);
+      const [encodedTenantId, encodedFeatureKey] = afterPrefix.split('/feature-flags/');
+      const tenantId = decodeURIComponent(encodedTenantId || '');
+      const featureKey = decodeURIComponent(encodedFeatureKey || '');
+      const tenantFeatureService = require('./services/tenantFeatureService');
+      const out = await tenantFeatureService.upsertFlag({
+        tenantId,
+        featureKey,
+        enabled: body?.enabled === true,
+        config: body?.config_json || body?.config || {},
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('Erro ao atualizar feature flag OCC:', err);
       sendJson(res, 500, { error: 'internal_error' });
     }
     return;
@@ -13470,7 +13613,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
           ...(merged.metadata && typeof merged.metadata === 'object' ? merged.metadata : {}),
           generatedBy: 'ai',
           generated: true,
-          status: keepRequiresReview ? 'draft' : 'active',
+          status: keepRequiresReview ? 'draft' : 'published',
           requiresReview: keepRequiresReview,
         };
         // Não persistir flag de aprovação no fluxo
@@ -16402,6 +16545,43 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /api/crm/contacts/:contactId/timeline - timeline operacional consolidada do contato
+  if (method === 'GET' && pathname.match(/^\/api\/crm\/contacts\/[^/]+\/timeline$/)) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const ticketPerm = requirePermission(req, 'tickets', 'read');
+    const analyticsPerm = requirePermission(req, 'analytics', 'read');
+    if (!ticketPerm.allowed && !analyticsPerm.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: ticketPerm.error || analyticsPerm.error || 'Sem permissão para timeline CRM' });
+      return;
+    }
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const limit = urlObj.searchParams.get('limit');
+      const offset = urlObj.searchParams.get('offset');
+      const contactId = decodeURIComponent(pathname.slice('/api/crm/contacts/'.length, -'/timeline'.length)).trim();
+      const { CRMEventService } = require('./core/crm');
+      const out = await CRMEventService.listContactTimeline({
+        tenantId: req.tenantId,
+        contactId,
+        limit: limit != null ? Number(limit) : 40,
+        offset: offset != null ? Number(offset) : 0,
+      });
+      if (!out.ok) {
+        sendJson(res, 400, out);
+        return;
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[CRM] Erro ao carregar timeline operacional do contato:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao carregar timeline operacional do contato' });
+    }
+    return;
+  }
+
   // =========================================================================
   // INTEGRAÇÃO TICKET ↔ CRM - Rotas de sincronização automática
   // =========================================================================
@@ -18017,7 +18197,55 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         targetDepartment = availableDepartments.find((item) => String(item.name || '').trim().toLowerCase() === normalizedName) || null;
       }
       if (!targetDepartment) {
-        badRequest(res, 'departmentId oficial invalido');
+        const legacyId = body?.departmentId
+          ? String(body.departmentId).trim()
+          : (body?.id
+            ? String(body.id).trim()
+            : `wivr-legacy-dept-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`);
+        const legacyName = body?.name ? String(body.name).trim() : '';
+        if (!legacyId || !legacyName) {
+          badRequest(res, 'departmentId oficial invalido');
+          return;
+        }
+
+        const nextConfig = {
+          ...current.value,
+          departments: Array.isArray(current.value?.departments) ? current.value.departments.slice() : [],
+        };
+        const legacyIndex = nextConfig.departments.findIndex((item) => item && String(item.id || '') === legacyId);
+        const legacyDepartment = {
+          id: legacyId,
+          name: legacyName,
+          queue: body?.queue ? String(body.queue).trim() : (body?.defaultQueueName ? String(body.defaultQueueName).trim() : null),
+          enabled: body?.enabled !== false,
+        };
+        if (legacyIndex >= 0) nextConfig.departments[legacyIndex] = { ...nextConfig.departments[legacyIndex], ...legacyDepartment };
+        else nextConfig.departments.push(legacyDepartment);
+
+        const out = await whatsappIvrService.saveWhatsAppIvrSetting({ tenantId, payload: nextConfig });
+        if (!out.ok) {
+          const status = out.error === 'validation_error' ? 400 : 503;
+          sendJson(res, status, {
+            error: out.error || 'service_unavailable',
+            message: out.error === 'validation_error' ? 'Binding invalido' : (out.error || 'settings_unavailable'),
+            details: out.details || [],
+            warnings: out.warnings || [],
+          });
+          return;
+        }
+        try {
+          const WebSocketService = require('./services/websocketService');
+          WebSocketService.emitEvent('whatsapp.ivr.updated', out, { tenantId });
+        } catch (_) {
+          // Não deve quebrar fluxo de persistência
+        }
+        sendJson(res, 200, {
+          ok: true,
+          binding: null,
+          department: out.value?.departments?.find((item) => item && String(item.id || '') === legacyId) || legacyDepartment,
+          value: out.value,
+          warnings: out.warnings || [],
+        });
         return;
       }
 
@@ -18106,10 +18334,27 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
+      const hasOfficialDepartment = Array.isArray(current.departments)
+        && current.departments.some((item) => item && String(item.id || '') === departmentId);
+
       const nextConfig = {
         ...current.value,
         rules: Array.isArray(current.value?.rules) ? current.value.rules.slice() : [],
       };
+
+      if (!hasOfficialDepartment) {
+        nextConfig.departments = Array.isArray(current.value?.departments) ? current.value.departments.slice() : [];
+        const hasLegacy = nextConfig.departments.some((item) => item && String(item.id || '') === departmentId);
+        if (!hasLegacy) {
+          nextConfig.departments.push({
+            id: departmentId,
+            name: departmentId,
+            queue: null,
+            enabled: true,
+          });
+        }
+      }
+
       const existingIndex = nextConfig.rules.findIndex((r) => r && r.id === id);
       const next = { id, keyword, departmentId, priority, enabled };
       if (existingIndex >= 0) nextConfig.rules[existingIndex] = { ...nextConfig.rules[existingIndex], ...next };
@@ -18218,7 +18463,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
       const connections = (out.connections || []).map((conn) => {
-        const runtime = qrRunner.getStatus(tenantId, conn.id);
+        const runtime = getQrRunner().getStatus(tenantId, conn.id);
         const runtimeStatus = String(runtime?.status || 'disconnected').toLowerCase();
         const runtimeDisconnectCode = Number(runtime?.lastDisconnectCode || 0) || null;
         const runtimeDisconnectReason =
@@ -18390,7 +18635,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
       // Se já existe um QR recente em cache, devolve imediatamente (evita churn sob carga)
       try {
-        const cached = qrRunner.getCachedQr?.(tenantId, id, 15000);
+        const cached = getQrRunner().getCachedQr?.(tenantId, id, 15000);
         if (cached) {
           sendJson(res, 200, { ok: true, qr: { text: cached, cached: true } });
           return;
@@ -18414,7 +18659,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }, 60000);
 
 	        // Não derruba sessão existente: apenas garante que ela está rodando e aguarda o próximo QR.
-	        qrRunner.ensureSession(tenantId, id, (qr) => {
+          getQrRunner().ensureSession(tenantId, id, (qr) => {
           if (done) return;
           done = true;
           clearTimeout(t);
@@ -18472,7 +18717,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const id = decodeURIComponent(pathname.slice('/whatsapp/connections/'.length, -'/disconnect'.length));
       // Para evitar "falso conectado": derruba sessão runtime antes de persistir status.
       try {
-        await qrRunner.stopSession(tenantId, id);
+        await getQrRunner().stopSession(tenantId, id);
       } catch (_) {}
 
       const service = require('./services/whatsappQrService');
@@ -18616,7 +18861,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return;
       }
-      const runtime = qrRunner.getStatus(tenantId, id);
+      const runtime = getQrRunner().getStatus(tenantId, id);
       const runtimeStatus = String(runtime?.status || 'disconnected').toLowerCase();
       let effectiveStatus = out.status;
 
@@ -31963,482 +32208,195 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
  * @returns {http.Server}
  */
 function createServer() {
-  const server = http.createServer((req, res) => {
-    // Garante que erros não derrubem o processo.
-    requestHandler(req, res).catch((err) => {
-      logger.error('Erro inesperado ao processar requisição', err);
-      try {
-        const { buildApiError, sendApiError } = require('./utils/apiError');
-        sendApiError(res, buildApiError({
-          code: 'INTERNAL_ERROR',
-          message: 'Erro interno',
-          httpStatus: 500,
-          retryable: false,
-          details: { message: err?.message },
-          req,
-        }), setCorsHeaders);
-      } catch {
-        sendJson(res, 500, { error: 'internal_error' });
-      }
-    });
+  const { buildApiError, sendApiError } = require('./utils/apiError');
+  const { buildRequestErrorBoundary } = require('./bootstrap/registerErrorHandling');
+  const { registerRoutes } = require('./bootstrap/registerRoutes');
+  const { registerMiddlewares } = require('./bootstrap/registerMiddlewares');
+  const { createRealtimeRegistrar } = require('./bootstrap/registerRealtime');
+
+  const routeRegistry = registerRoutes({ requestHandler });
+  const middlewareRegistry = registerMiddlewares({ requestHandler: routeRegistry.requestHandler });
+  const realtimeRegistrar = createRealtimeRegistrar({
+    http,
+    logger,
+    initializeWebSocket,
+    disableWebSocket: process.env.DISABLE_WEBSOCKET === 'true',
   });
 
-  // Inicializa WebSocket (pode ser desabilitado por env)
-  if (process.env.DISABLE_WEBSOCKET !== 'true') {
-    initializeWebSocket(server);
-  }
-
-  return server;
+  return realtimeRegistrar.createHttpServer(
+    buildRequestErrorBoundary({
+      requestHandler: middlewareRegistry.apply,
+      logger,
+      buildApiError,
+      sendApiError,
+      setCorsHeaders,
+      sendJson,
+    }),
+  );
 }
 
-const server = createServer();
+let serverInstance = null;
+let bootstrapPromise = null;
+let shutdownInProgress = false;
+const { createProviderRegistrar } = require('./bootstrap/registerProviders');
+const { createJobRegistrar } = require('./bootstrap/registerJobs');
+const { createObservabilityRegistrar } = require('./bootstrap/registerObservability');
 
-// Inicialização automática do systemadmin quando o módulo é carregado
-// Isso garante que o systemadmin seja criado mesmo se o servidor for iniciado de outra forma
-let initializationPromise = null;
-async function startInitialization() {
-  if (initializationPromise) {
-    return initializationPromise;
+const providerRegistrar = createProviderRegistrar({
+  logger,
+  initializeSystemAdmin,
+  initializeAiProviders,
+  validatePushStartupConfig,
+  validateWebPushStartupConfig,
+  loadFlowsFromDb,
+  flowTemplateMarketplaceService,
+  queueDefinitionService,
+  closeReasonsService,
+});
+
+const jobRegistrar = createJobRegistrar({
+  logger,
+  config,
+  outboundWorker,
+  scheduleRemindersWorker,
+  platformHealthCheckJob,
+  startMaintenanceTasks,
+  stopMaintenanceTasks,
+  startAutoReturnToBot,
+  stopAutoReturnToBot,
+  startAssignmentWorker,
+  stopAssignmentWorker,
+  getQrRunner,
+});
+
+const startInitialization = providerRegistrar.startInitialization;
+
+function getActiveServer() {
+  if (!serverInstance) {
+    serverInstance = createServer();
   }
-  
-  initializationPromise = (async () => {
-    console.log('[Init] Iniciando inicialização automática...');
-    logger.info('[Init] Iniciando inicialização automática...');
-    
-    // Aguarda um pouco para garantir que todos os módulos foram carregados
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Inicializa banco de dados PostgreSQL (OBRIGATÓRIO)
-    console.log('[Init] Conectando ao PostgreSQL...');
-    logger.info('[Init] Conectando ao PostgreSQL...');
-    
-    try {
-      // Inicializa conexão Sequelize com retry
-      // Usa config.js como fonte principal (config.json > env vars)
-      const { connect } = require('./db/sequelize');
-      await connect(30, 1000); // 30 tentativas, delay inicial 1s
-      console.log('[Init] ✅ PostgreSQL conectado (Sequelize)');
-      logger.info('[Init] ✅ PostgreSQL conectado (Sequelize)');
-    } catch (dbErr) {
-      const error = `Falha ao conectar ao PostgreSQL: ${dbErr.message}`;
-      console.error(`[Init] ❌ ${error}`);
-      logger.error(`[Init] ❌ ${error}`);
-      throw new Error(error);
-    }
-    
-    try {
-      // Executa migrations Sequelize
-      console.log('[Init] Executando migrations Sequelize...');
-      logger.info('[Init] Executando migrations Sequelize...');
-      const { runMigrations } = require('./db/migrate');
-      await runMigrations();
-      console.log('[Init] ✅ Migrations concluídas');
-      logger.info('[Init] ✅ Migrations concluídas');
-    } catch (migrationErr) {
-      const error = `Falha ao executar migrations: ${migrationErr.message}`;
-      console.error(`[Init] ❌ ${error}`);
-      logger.error(`[Init] ❌ ${error}`);
-      throw new Error(error);
-    }
-    
-    try {
-      // Executa seed
-      console.log('[Init] Executando seed...');
-      logger.info('[Init] Executando seed...');
-      const { runSeed } = require('./db/seed');
-      await runSeed();
-      console.log('[Init] ✅ Seed concluído');
-      logger.info('[Init] ✅ Seed concluído');
-    } catch (seedErr) {
-      const error = `Falha ao executar seed: ${seedErr.message}`;
-      console.error(`[Init] ❌ ${error}`);
-      logger.error(`[Init] ❌ ${error}`);
-      throw new Error(error);
-    }
-    
-      try {
-        // Define relacionamentos dos models
-        const { defineRelationships } = require('./db/models');
-        defineRelationships();
-        console.log('[Init] ✅ Relacionamentos definidos');
-        logger.info('[Init] ✅ Relacionamentos definidos');
-      } catch (relErr) {
-        console.warn('[Init] ⚠️  Aviso ao definir relacionamentos:', relErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao definir relacionamentos:', relErr.message);
-      }
+  return serverInstance;
+}
 
-      // Em DEV, garantimos um super-admin padrão para facilitar bootstrap.
-      // Em produção, NÃO criamos usuário automaticamente (hardening).
-      try {
-        const isProd = process.env.NODE_ENV === 'production';
-        const disabled = process.env.DISABLE_SYSTEMADMIN_BOOTSTRAP === 'true';
-        if (!isProd && !disabled) {
-          await initializeSystemAdmin();
+async function bootstrapServer({ listen = true } = {}) {
+  if (bootstrapPromise) return bootstrapPromise;
+
+  bootstrapPromise = (async () => {
+    clearLimitersCache();
+    await startInitialization();
+    await jobRegistrar.startJobs();
+
+    let activeServer = null;
+
+    if (listen) {
+      activeServer = getActiveServer();
+    }
+
+    if (listen && !activeServer.listening) {
+      await new Promise((resolve, reject) => {
+        activeServer.once('error', reject);
+        activeServer.listen(port, () => {
+          activeServer.off('error', reject);
+          console.log(`API server listening on http://0.0.0.0:${port}`);
+          logger.info(`API server listening on http://0.0.0.0:${port}`);
+          logger.info('[Server] Version info', {
+            name: API_VERSION_INFO.name,
+            version: API_VERSION_INFO.version,
+            serverVersion: API_VERSION_INFO.serverVersion,
+            packageVersion: API_VERSION_INFO.packageVersion,
+            versionMismatch: API_VERSION_INFO.versionMismatch,
+            baseVersion: API_VERSION_INFO.baseVersion,
+            commit: API_VERSION_INFO.commit,
+            build: API_VERSION_INFO.build,
+            env: config.get('nodeEnv', 'development'),
+          });
+          if (API_VERSION_INFO.versionMismatch) {
+            logger.warn('[Server] ALERTA: divergência de versão detectada', {
+              serverVersion: API_VERSION_INFO.serverVersion,
+              packageVersion: API_VERSION_INFO.packageVersion,
+            });
+          }
+          resolve();
+        });
+      });
+    }
+
+    return activeServer;
+  })().catch((error) => {
+    bootstrapPromise = null;
+    throw error;
+  });
+
+  return bootstrapPromise;
+}
+
+async function shutdownServer({ closeHttpServer = true } = {}) {
+  if (shutdownInProgress) return;
+  shutdownInProgress = true;
+
+  try {
+    await jobRegistrar.stopJobs();
+
+    try {
+      const { shutdownWebSocket } = require('./services/websocketService');
+      await shutdownWebSocket();
+    } catch (_) {}
+
+    if (closeHttpServer && serverInstance) {
+      await new Promise((resolve) => {
+        try {
+          serverInstance.closeAllConnections?.();
+        } catch (_) {}
+
+        try {
+          if (!serverInstance.listening) {
+            resolve();
+            return;
+          }
+          serverInstance.close(() => resolve());
+        } catch (_) {
+          resolve();
         }
-      } catch (sysAdminErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar systemadmin (ignorado):', sysAdminErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar systemadmin (ignorado):', sysAdminErr.message);
-      }
-      
-      // Blindagem produção: não cria/seed de tenant automaticamente (multi-tenant obrigatório).
+      });
+    }
 
-      // Inicializa tenant_contexts (best-effort)
-      try {
-        const { initializeTenantContexts } = require('./services/tenantService');
-        await initializeTenantContexts();
-        console.log('[Init] ✅ Tenant contexts inicializados');
-        logger.info('[Init] ✅ Tenant contexts inicializados');
-      } catch (ctxErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar tenant contexts:', ctxErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar tenant contexts:', ctxErr.message);
-      }
-
-      // Carrega fluxos persistidos no PostgreSQL (best-effort)
-      try {
-        await loadFlowsFromDb();
-        console.log('[Init] ✅ Fluxos carregados');
-        logger.info('[Init] ✅ Fluxos carregados');
-      } catch (flowInitErr) {
-        console.warn('[Init] ⚠️  Aviso ao carregar fluxos:', flowInitErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao carregar fluxos:', flowInitErr.message);
-      }
-
-      try {
-        // Inicializa cache do AuthService (necessário para validateToken síncrono)
-        const { initialize: initializeAuthService } = require('./services/authService');
-        await initializeAuthService();
-        console.log('[Init] ✅ AuthService inicializado');
-        logger.info('[Init] ✅ AuthService inicializado');
-      } catch (authInitErr) {
-        const error = `Falha ao inicializar AuthService: ${authInitErr.message}`;
-        console.error(`[Init] ❌ ${error}`);
-        logger.error(`[Init] ❌ ${error}`);
-        throw new Error(error);
-      }
-      
-      // Inicializa cache de tickets/queues (best-effort)
-      try {
-        const { initialize: initializeQueueService } = require('./services/queueService');
-        await initializeQueueService();
-        console.log('[Init] ✅ QueueService inicializado');
-        logger.info('[Init] ✅ QueueService inicializado');
-      } catch (queueInitErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar QueueService:', queueInitErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar QueueService:', queueInitErr.message);
-      }
-
-      // Inicializa caches DB-only (best-effort): departments, quick replies, webhooks, rag documents
-      try {
-        const { initialize: initializeDepartments } = require('./services/departmentsService');
-        await initializeDepartments();
-        console.log('[Init] ✅ DepartmentsService inicializado');
-        logger.info('[Init] ✅ DepartmentsService inicializado');
-      } catch (deptErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar DepartmentsService:', deptErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar DepartmentsService:', deptErr.message);
-      }
-
-      // Inicializa cache de definições de filas (best-effort)
-      try {
-        await queueDefinitionService.initialize();
-        console.log('[Init] ✅ QueueDefinitionService inicializado');
-        logger.info('[Init] ✅ QueueDefinitionService inicializado');
-      } catch (qDefErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar QueueDefinitionService:', qDefErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar QueueDefinitionService:', qDefErr.message);
-      }
-
-      try {
-        const { initialize: initializeQuickReplies } = require('./services/quickRepliesService');
-        await initializeQuickReplies();
-        console.log('[Init] ✅ QuickRepliesService inicializado');
-        logger.info('[Init] ✅ QuickRepliesService inicializado');
-      } catch (qrErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar QuickRepliesService:', qrErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar QuickRepliesService:', qrErr.message);
-      }
-
-      // Inicializa close reasons (best-effort)
-      try {
-        await closeReasonsService.initialize();
-        console.log('[Init] ✅ CloseReasonsService inicializado');
-        logger.info('[Init] ✅ CloseReasonsService inicializado');
-      } catch (crErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar CloseReasonsService:', crErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar CloseReasonsService:', crErr.message);
-      }
-
-      // Inicializa marketplace de templates de fluxo (best-effort)
-      try {
-        await flowTemplateMarketplaceService.initialize();
-        console.log('[Init] ✅ FlowTemplateMarketplaceService inicializado');
-        logger.info('[Init] ✅ FlowTemplateMarketplaceService inicializado');
-      } catch (ftErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar FlowTemplateMarketplaceService:', ftErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar FlowTemplateMarketplaceService:', ftErr.message);
-      }
-
-      try {
-        const { initialize: initializeWebhooks } = require('./services/webhookService');
-        await initializeWebhooks();
-        console.log('[Init] ✅ WebhookService inicializado');
-        logger.info('[Init] ✅ WebhookService inicializado');
-      } catch (whErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar WebhookService:', whErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar WebhookService:', whErr.message);
-      }
-
-      try {
-        const { initialize: initializeRagDocuments } = require('./services/ragDocumentsService');
-        await initializeRagDocuments();
-        console.log('[Init] ✅ RAGDocumentsService inicializado');
-        logger.info('[Init] ✅ RAGDocumentsService inicializado');
-      } catch (ragDocsErr) {
-        console.warn('[Init] ⚠️  Aviso ao inicializar RAGDocumentsService:', ragDocsErr.message);
-        logger.warn('[Init] ⚠️  Aviso ao inicializar RAGDocumentsService:', ragDocsErr.message);
-      }
-
-      // Inicializa providers de IA do banco de dados (após banco estar conectado)
-      try {
-        console.log('[Init] Inicializando providers de IA do banco de dados...');
-        logger.info('[Init] Inicializando providers de IA do banco de dados...');
-        await initializeAiProviders();
-        console.log('[Init] ✅ Providers de IA inicializados');
-        logger.info('[Init] ✅ Providers de IA inicializados');
-      } catch (aiErr) {
-        // Não falha a inicialização se houver erro nos providers
-        console.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
-        logger.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
-      }
-
-      try {
-        validatePushStartupConfig();
-        console.log('[Init] ✅ Push config validada');
-        logger.info('[Init] ✅ Push config validada');
-      } catch (pushCfgErr) {
-        const error = `Falha ao validar PUSH config: ${pushCfgErr.message}`;
-        console.error(`[Init] ❌ ${error}`);
-        logger.error(`[Init] ❌ ${error}`);
-        throw new Error(error);
-      }
-
-      try {
-        validateWebPushStartupConfig();
-        console.log('[Init] ✅ Web Push config validada');
-        logger.info('[Init] ✅ Web Push config validada');
-      } catch (webPushCfgErr) {
-        const error = `Falha ao validar WEB PUSH config: ${webPushCfgErr.message}`;
-        console.error(`[Init] ❌ ${error}`);
-        logger.error(`[Init] ❌ ${error}`);
-        throw new Error(error);
-      }
-  })();
-  
-  return initializationPromise;
+    saveSessionEventsToFileImmediate();
+  } finally {
+    shutdownInProgress = false;
+    bootstrapPromise = null;
+  }
 }
 
-// Salva conversas antes de encerrar o servidor
-process.on('SIGINT', () => {
-  logger.info('[Conversations] Encerrando servidor, salvando conversas...');
-  try { outboundWorker.stop(); } catch (_) {}
-  try { scheduleRemindersWorker.stop(); } catch (_) {}
-  try { platformHealthCheckJob.stop(); } catch (_) {}
-  try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
-  try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
-  try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
-  saveSessionEventsToFileImmediate();
-  process.exit(0);
+const observabilityRegistrar = createObservabilityRegistrar({
+  logger,
+  saveSessionEventsToFileImmediate,
+  shutdownServer,
 });
-
-process.on('SIGTERM', () => {
-  logger.info('[Conversations] Encerrando servidor, salvando conversas...');
-  try { outboundWorker.stop(); } catch (_) {}
-  try { scheduleRemindersWorker.stop(); } catch (_) {}
-  try { platformHealthCheckJob.stop(); } catch (_) {}
-  try { require('./services/executionQueueService').stopExecutionQueueWorker(); } catch (_) {}
-  try { require('./services/schedulerService').stopScheduler(); } catch (_) {}
-  try { require('./services/whatsappQrBridgeService').stopWhatsAppQrBridge(); } catch (_) {}
-  saveSessionEventsToFileImmediate();
-  process.exit(0);
-});
-
-process.on('beforeExit', () => {
-  saveSessionEventsToFileImmediate();
-});
-
-// Log para debug - verificar se o módulo está sendo executado como main
-console.log('[Server] server.js carregado, require.main === module:', require.main === module);
-console.log('[Server] require.main:', require.main?.filename);
-console.log('[Server] __filename:', __filename);
+const registerProcessHandlers = observabilityRegistrar.registerProcessHandlers;
 
 if (require.main === module) {
-  console.log('[Server] ✅ Bloco if (require.main === module) executado');
-  // Limpa cache de limiters na inicialização para garantir que novas políticas sejam aplicadas
-  clearLimitersCache();
-  
-  // Inicializa o systemadmin automaticamente na primeira inicialização
-  // Usa a função startInitialization() que garante que só executa uma vez
-  console.log('[Server] Iniciando servidor...');
-  logger.info('[Server] Iniciando servidor...');
-  console.log('[Server] Aguardando inicialização do systemadmin...');
-  logger.info('[Server] Aguardando inicialização do systemadmin...');
-  
-  startInitialization().then(() => {
-    console.log('[Server] ✅ Inicialização concluída, iniciando servidor...');
-    logger.info('[Server] ✅ Inicialização concluída, iniciando servidor...');
-    server.listen(port, () => {
-      console.log(`API server listening on http://0.0.0.0:${port}`);
-      logger.info(`API server listening on http://0.0.0.0:${port}`);
-      logger.info('[Server] Version info', {
-        name: API_VERSION_INFO.name,
-        version: API_VERSION_INFO.version,
-        serverVersion: API_VERSION_INFO.serverVersion,
-        packageVersion: API_VERSION_INFO.packageVersion,
-        versionMismatch: API_VERSION_INFO.versionMismatch,
-        baseVersion: API_VERSION_INFO.baseVersion,
-        commit: API_VERSION_INFO.commit,
-        build: API_VERSION_INFO.build,
-        env: config.get('nodeEnv', 'development'),
-      });
-      if (API_VERSION_INFO.versionMismatch) {
-        logger.warn('[Server] ALERTA: divergência de versão detectada', {
-          serverVersion: API_VERSION_INFO.serverVersion,
-          packageVersion: API_VERSION_INFO.packageVersion,
-        });
-      }
-    });
-
-    // Worker outbound (best-effort) - inicia após DB + migrations
-    if (process.env.ENABLE_OUTBOUND_WORKER !== 'false') {
-      try {
-        outboundWorker.start({ intervalMs: 1500, batchSize: 25 });
-      } catch (err) {
-        logger.warn('[OutboundQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
-      }
-    }
-
-    if (String(process.env.ENABLE_SCHEDULE_REMINDERS_WORKER || 'false').toLowerCase() === 'true') {
-      try {
-        const intervalMs = parseInt(process.env.SCHEDULE_REMINDERS_WORKER_INTERVAL_MS || '60000', 10);
-        const batchSize = parseInt(process.env.SCHEDULE_REMINDERS_WORKER_BATCH_SIZE || '50', 10);
-        scheduleRemindersWorker.start({ intervalMs, batchSize });
-      } catch (err) {
-        logger.warn('[ScheduleRemindersWorker] Falha ao iniciar worker (ignorado)', { error: err.message });
-      }
-    }
-
-    if (String(process.env.ENABLE_OCC_HEALTH_JOB || 'false').toLowerCase() === 'true') {
-      try {
-        const intervalMs = parseInt(process.env.OCC_HEALTH_INTERVAL_MS || '300000', 10);
-        platformHealthCheckJob.start({ intervalMs });
-      } catch (err) {
-        logger.warn('[PlatformHealthCheckJob] Falha ao iniciar worker (ignorado)', { error: err.message });
-      }
-    }
-
-    // Reconciliação automática de consistência RAG (BD <-> Vector Store) - best-effort
-    // Objetivo: evitar que inconsistências persistam (órfãos no vector store / BD à frente)
-    try {
-      const { startRagConsistencyWorker } = require('./services/ragConsistencyWorker');
-      startRagConsistencyWorker();
-    } catch (err) {
-      logger.warn('[RAGReconcile] Falha ao iniciar worker (ignorado)', { error: err.message });
-    }
-
-    // Auto-return-to-bot (best-effort)
-    if (process.env.ENABLE_AUTO_RETURN_TO_BOT !== 'false') {
-      const inactivityMinutes = parseInt(process.env.AUTO_RETURN_TO_BOT_MINUTES || '30', 10);
-      try {
-        startAutoReturnToBot({ inactivityMinutes, intervalMs: 15000 });
-      } catch (err) {
-        logger.warn('[Handover] Falha ao iniciar autoReturnToBot (ignorado)', { error: err.message });
-      }
-    }
-
-    // Assignment worker (reassign offline) - best-effort
-    if (process.env.ENABLE_ASSIGNMENT_WORKER !== 'false') {
-      try {
-        startAssignmentWorker({ intervalMs: 15000 });
-      } catch (err) {
-        logger.warn('[Assignment] Falha ao iniciar worker (ignorado)', { error: err.message });
-      }
-    }
-
-    // Channel Health monitor (best-effort)
-    if (process.env.ENABLE_CHANNEL_HEALTH_MONITOR !== 'false') {
-      try {
-        const { startChannelHealthMonitor } = require('./services/channelHealthService');
-        const intervalMs = parseInt(process.env.CHANNEL_HEALTH_MONITOR_INTERVAL_MS || '60000', 10);
-        const windowMinutes = parseInt(process.env.CHANNEL_HEALTH_WINDOW_MINUTES || '10', 10);
-        const failRateThreshold = parseFloat(process.env.CHANNEL_HEALTH_FAIL_RATE_THRESHOLD || '0.15');
-        const minSamples = parseInt(process.env.CHANNEL_HEALTH_MIN_SAMPLES || '20', 10);
-        const cooldownMinutes = parseInt(process.env.CHANNEL_HEALTH_COOLDOWN_MINUTES || '10', 10);
-        startChannelHealthMonitor({ intervalMs, windowMinutes, failRateThreshold, minSamples, cooldownMinutes });
-      } catch (err) {
-        logger.warn('[ChannelHealth] Falha ao iniciar monitor (ignorado)', { error: err.message });
-      }
-    }
-
-    // Execution Queue + Scheduler (best-effort) - internal ops jobs
-    if (process.env.ENABLE_EXECUTION_WORKER !== 'false') {
-      try {
-        const { startExecutionQueueWorker } = require('./services/executionQueueService');
-        const intervalMs = parseInt(process.env.EXECUTION_WORKER_INTERVAL_MS || '800', 10);
-        startExecutionQueueWorker({ intervalMs });
-      } catch (err) {
-        logger.warn('[ExecutionQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
-      }
-    }
-    if (process.env.ENABLE_SCHEDULER_WORKER !== 'false') {
-      try {
-        const { startScheduler } = require('./services/schedulerService');
-        const intervalMs = parseInt(process.env.SCHEDULER_INTERVAL_MS || '2000', 10);
-        startScheduler({ intervalMs, batchSize: 10 });
-      } catch (err) {
-        logger.warn('[Scheduler] Falha ao iniciar scheduler (ignorado)', { error: err.message });
-      }
-    }
-
-    // WhatsApp QR bridge (opcional): integra provider QR real (ex.: whatsapp-web.js)
-    try {
-      const { restoreWhatsAppQrSessions } = require('./services/whatsappQrRunnerBootstrapService');
-      restoreWhatsAppQrSessions().catch((err) => {
-        logger.warn('[WhatsAppQR] Falha ao restaurar sessões do runner (ignorado)', { error: err?.message || String(err) });
-      });
-    } catch (err) {
-      logger.warn('[WhatsAppQR] Bootstrap de restore indisponível (ignorado)', { error: err?.message || String(err) });
-    }
-
-    try {
-      const { startWhatsAppQrBridge } = require('./services/whatsappQrBridgeService');
-      startWhatsAppQrBridge().catch((err) => {
-        logger.warn('[WhatsAppQRBridge] Falha ao iniciar bridge (ignorado)', { error: err?.message || String(err) });
-      });
-    } catch (err) {
-      logger.warn('[WhatsAppQRBridge] Bridge indisponível (ignorado)', { error: err?.message || String(err) });
-    }
-  }).catch((error) => {
-    console.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
+  registerProcessHandlers();
+  bootstrapServer({ listen: true }).catch((error) => {
+    console.error('[Server] ❌ Erro crítico ao inicializar server');
     console.error('[Server] Erro:', error);
-    console.error('[Server] Stack:', error.stack);
-    logger.error('[Server] ❌ Erro crítico ao inicializar systemadmin - servidor não será iniciado');
+    console.error('[Server] Stack:', error?.stack);
+    logger.error('[Server] ❌ Erro crítico ao inicializar server');
     logger.error('[Server] Erro:', error);
-    logger.error('[Server] Stack:', error.stack);
-    console.error('[Server] Encerrando processo...');
+    logger.error('[Server] Stack:', error?.stack);
     process.exit(1);
-  });
-} else {
-  console.log('[Server] ⚠️  Bloco if (require.main === module) NÃO executado - servidor não será iniciado automaticamente');
-  // Sempre inicia a inicialização em background quando o módulo é importado.
-  startInitialization().catch(err => {
-    console.error('[Server] Erro na inicialização em background:', err);
-    logger.error('[Server] Erro na inicialização em background:', err);
   });
 }
 
 module.exports = {
   createServer,
-  server,
+  startInitialization,
+  bootstrapServer,
+  shutdownServer,
+  startMaintenanceTasks,
+  stopMaintenanceTasks,
+  get server() {
+    return serverInstance;
+  },
   // também exportamos helpers principais para facilitar testes isolados, se preciso
   _internal: {
     requestHandler,

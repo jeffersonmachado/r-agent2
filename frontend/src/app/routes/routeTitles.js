@@ -1,0 +1,115 @@
+const pageTitles = {
+  '/': '📊 Dashboard',
+  '/dashboard': '📊 Dashboard',
+  '/editor': '📝 Editor de Fluxos',
+  '/support': '💬 Atendimento',
+  '/inbox': '📥 Inbox',
+  '/maintenance': '🔧 Manutenção de Tickets',
+  '/config': '⚙️ Configuração do Sistema',
+  '/agents': '👥 Gerenciamento de Agentes',
+  '/tenants': '🏢 Gerenciamento de Tenants',
+  '/audit': '🔍 Auditoria',
+  '/quick-replies': '⚡ Respostas Rápidas',
+  '/faq': '❓ FAQ',
+  '/departments': '🏢 Departamentos',
+  '/bulk-messaging': '📢 Disparos em Massa',
+  '/analytics': '📈 Analytics & Métricas',
+  '/supervisor': '🧭 Painel Supervisor',
+  '/rbac': '🔐 RBAC',
+  '/mfa': '🔐 MFA',
+  '/whatsapp-ivr': '💬 URA WhatsApp',
+  '/whatsapp-connections': '📱 WhatsApp QR',
+  '/developer-keys': '🔑 API Keys',
+  '/automations': '🧩 Automações',
+  '/tasks': '✅ Tarefas',
+  '/agenda': '📅 Agenda',
+  '/autonomous-scheduling': '🤖 Agenda Autônoma',
+  '/beauty-dashboard': 'Beauty Dashboard',
+  '/fitness-dashboard': 'Fitness Dashboard',
+  '/operational-control-center': 'Operational Control Center',
+  '/sla-policies': '⏱️ SLA',
+  '/export': '📤 Exportação de Dados',
+  '/ai-tools': '🤖 Ferramentas de IA',
+  '/segmentation': '🎯 Segmentação',
+  '/whatsapp-templates': '💬 Templates WhatsApp Business API',
+  '/knowledge-base': '🧠 Base de Conhecimento',
+  '/product-docs': '📖 Documentação de Produtos',
+  '/rag-documents': '📚 Gerenciamento de Documentos RAG',
+  '/web-scraping': '🕷️ Raspagem de Sites',
+  '/rpa-test': '🚀 Execução de Testes RPA',
+  '/rpa-replays': '📋 Replays RPA',
+  '/rpa-seeds': '🌱 Seeds RPA',
+  '/chat': '💬 Chat de Teste',
+  '/qa': '✅ Painel de Qualidade (QA)',
+  '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
+  '/system-status': '📊 Status dos Serviços',
+  '/channel-health': '📡 Saúde de Canais',
+  '/channel-accounts': '🔌 Canais',
+  '/plan-usage': '📦 Plano e Uso',
+  '/pbx': '📞 PBX',
+  '/pbx/extensions': '📞 PBX • Ramais',
+  '/pbx/trunks': '🌐 PBX • Troncos',
+  '/pbx/routes': '🧭 PBX • Rotas',
+  '/pbx/acls': '🛡️ PBX • ACLs',
+  '/pbx/dids': '📥 PBX • DIDs',
+  '/pbx/ivr': '🎛️ PBX • IVR',
+  '/pbx/queues': '📞 PBX • Filas',
+  '/pbx/queue-members': '👥 PBX • Membros de Filas',
+  '/pbx/dialplan': '🔀 PBX • Dialplan',
+  '/pbx/media': '🎵 PBX • Mídia',
+  '/pbx/recordings': '🎙️ PBX • Gravações',
+  '/pbx/cdr': '📄 PBX • CDR',
+  '/pbx/governance': '🏢 PBX • Governança',
+  '/pbx/cc/pause-reasons': '⏸️ PBX • Motivos de Pausa',
+  '/pbx/cc/contact-reasons': '🏷️ PBX • Motivos de Contato',
+  '/pbx/cc/campaigns': '📢 PBX • Campanhas',
+  '/pbx/cc/campaign-list': '📋 PBX • Lista de Campanha',
+  '/pbx/cc/callbacks': '📅 PBX • Callbacks',
+  '/pbx/cc/click2call': '📱 PBX • Click2Call',
+  '/pbx/referencia/xml': '🗄️ PBX • Referência XML',
+  '/chat-humano': '💬 Dashboard Chat Humano',
+  '/crm': '📊 CRM • Dashboard',
+  '/crm/dashboard': '📊 CRM • Dashboard',
+  '/crm/accounts': '🏢 CRM • Contas',
+  '/crm/contacts': '👥 CRM • Contatos',
+  '/crm/leads': '🎯 CRM • Leads',
+  '/crm/pipelines': '🛣️ CRM • Pipelines',
+  '/crm/opportunities': '💼 CRM • Oportunidades',
+  '/crm/activities': '📝 CRM • Atividades',
+  '/crm/analytics': '📈 CRM • Analytics',
+  '/crm/reports': '📋 CRM • Relatórios',
+  '/crm/campaigns': '📣 CRM • Campanhas',
+  '/crm/webhooks': '🪝 CRM • Webhooks',
+  '/crm/rbac': '🔐 CRM • RBAC',
+  '/crm/audit': '🔍 CRM • Auditoria',
+  '/failed-messages': '🚨 Mensagens Falhadas',
+  '/fila-fisica': '🎫 Dashboard Fila Física',
+  '/marketing': '🧲 Marketing',
+  '/solutions': '📦 Solutions Packs',
+  '/node-marketplace': '🧩 Node Marketplace',
+  '/sso-scim': '🔐 SSO / SCIM',
+  '/backup': '🗄️ Backup / DR',
+  '/dev': '🛠️ Dashboard de Desenvolvimento',
+  '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
+  '/login': '🔐 Login',
+};
+
+export function resolveDocumentTitle(currentPath) {
+  const normalizedPath = currentPath.startsWith('/r-agent2')
+    ? (currentPath.replace(/^\/r-agent2/, '') || '/')
+    : currentPath;
+
+  let pageTitle = 'Chatbot Flow Editor';
+  let bestMatchLength = -1;
+
+  for (const [route, title] of Object.entries(pageTitles)) {
+    const matches = normalizedPath === route || (route !== '/' && normalizedPath.startsWith(route));
+    if (!matches) continue;
+    if (route.length > bestMatchLength) {
+      pageTitle = title;
+      bestMatchLength = route.length;
+    }
+  }
+
+  return pageTitle;
+}

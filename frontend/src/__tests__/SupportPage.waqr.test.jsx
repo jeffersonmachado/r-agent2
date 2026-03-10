@@ -10,7 +10,7 @@ import * as autonomousSchedulingApi from '../api/autonomousScheduling';
 const { scheduleModalMock } = vi.hoisted(() => ({
   scheduleModalMock: vi.fn(),
 }));
-const { listQuickRepliesMock, searchQuickRepliesMock, useQuickReplyMock } = vi.hoisted(() => ({
+const { listQuickRepliesMock, searchQuickRepliesMock, useQuickReplyMock, getQuickReplyCategoriesMock } = vi.hoisted(() => ({
   listQuickRepliesMock: vi.fn(() => Promise.resolve({
     quickReplies: [
       { id: 'qr-1', title: 'Saudação', message: 'Olá! Como posso ajudar?' },
@@ -18,6 +18,7 @@ const { listQuickRepliesMock, searchQuickRepliesMock, useQuickReplyMock } = vi.h
     ],
   })),
   searchQuickRepliesMock: vi.fn(() => Promise.resolve({ quickReplies: [] })),
+  getQuickReplyCategoriesMock: vi.fn(() => Promise.resolve({ categories: [] })),
   useQuickReplyMock: vi.fn(() => Promise.resolve({ ok: true })),
 }));
 const { listSchedulesMock } = vi.hoisted(() => ({
@@ -83,6 +84,7 @@ vi.mock('../api/tickets', () => ({
 vi.mock('../api/quickReplies', () => ({
   listQuickReplies: (...args) => listQuickRepliesMock(...args),
   searchQuickReplies: (...args) => searchQuickRepliesMock(...args),
+  getCategories: (...args) => getQuickReplyCategoriesMock(...args),
   useQuickReply: (...args) => useQuickReplyMock(...args),
 }));
 vi.mock('../api/scheduling', () => ({
@@ -101,6 +103,21 @@ vi.mock('../api/segmentation', () => ({
 vi.mock('../api/audit', () => ({
   queryAuditLogs: vi.fn(() => Promise.resolve({ items: [] })),
 }));
+vi.mock('../api/crm', () => ({
+  searchCrmContacts: vi.fn(() => Promise.resolve({ items: [] })),
+  getCrmContactOperationalProfile: vi.fn(() => Promise.resolve({
+    profile: {
+      relationships: {
+        opportunitiesCount: 0,
+        revenueOpportunitiesCount: 0,
+      },
+    },
+    timeline: { items: [] },
+  })),
+  getCrmContactOperationalSignals: vi.fn(() => Promise.resolve({ ok: true, items: [] })),
+  getCrmContactOperationalRecommendations: vi.fn(() => Promise.resolve({ ok: true, items: [] })),
+  getCrmContactPlaybooks: vi.fn(() => Promise.resolve({ ok: true, items: [] })),
+}));
 vi.mock('../api/conversations', () => ({
   getConversationMessages: vi.fn(() => Promise.resolve({ messages: [] })),
 }));
@@ -115,6 +132,10 @@ vi.mock('../api/autonomousScheduling', () => ({
   listAutonomousCampaigns: vi.fn(() => Promise.resolve({ items: [] })),
   listAutonomousRecommendations: vi.fn(() => Promise.resolve({ items: [] })),
   runAutonomousGapDetection: vi.fn(() => Promise.resolve({ created: 0 })),
+}));
+vi.mock('../api/featureFlags', () => ({
+  isTenantFeatureEnabled: vi.fn(() => Promise.resolve(true)),
+  getTenantFeatureFlag: vi.fn(() => Promise.resolve({ ok: true, item: { enabled: true } })),
 }));
 
 const mockAgent = { id: 'agent1', username: 'agent1', tenantId: 'tenant1', role: 'manager' };
@@ -132,7 +153,16 @@ async function setup({ wsEvents = [] } = {}) {
 
   // Aguarda o estado inicial assíncrono para evitar updates fora de act
   await screen.findByRole('heading', { name: /Atendimento/i });
-  await screen.findByRole('listitem');
+  await waitFor(() => {
+    expect(ticketsApi.listTicketsPaged).toHaveBeenCalled();
+  });
+}
+
+function getTicketEntry() {
+  return screen.queryByLabelText(/Chamado t1/i)
+    || screen.queryByText(/Cliente Teste/i)
+    || screen.queryByText(/5511999999999/i)
+    || screen.queryByText(/^Olá$/i);
 }
 
 describe('SupportPage WhatsApp QR message flow', () => {
@@ -142,6 +172,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     scheduleModalMock.mockClear();
     listQuickRepliesMock.mockClear();
     searchQuickRepliesMock.mockClear();
+    getQuickReplyCategoriesMock.mockClear();
     useQuickReplyMock.mockClear();
     listSchedulesMock.mockReset();
     listSchedulesMock.mockResolvedValue({ items: [] });
@@ -156,7 +187,8 @@ describe('SupportPage WhatsApp QR message flow', () => {
   it('displays incoming WhatsApp QR message in timeline', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
     // Simula clique no ticket para exibir detalhes
-    const ticketCard = screen.getByRole('listitem');
+    const ticketCard = getTicketEntry();
+    expect(ticketCard).toBeTruthy();
     fireEvent.click(ticketCard);
     // Aguarda renderização do histórico
     await waitFor(() => {
@@ -166,7 +198,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
   it('abre ScheduleModal com contexto do ticket via comando /agendar', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     const composer = await screen.findByLabelText(/Campo para digitar mensagem/i);
     fireEvent.change(composer, { target: { value: '/agendar' } });
@@ -185,7 +217,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
   it('abre ScheduleModal pelo botão Agendar no ticket (ou fallback por comando)', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     const button = screen.queryByRole('button', { name: /Agendar contato para este ticket/i });
     if (button) {
@@ -207,7 +239,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
   it('abre lista de respostas rápidas com comando /resposta-rapida', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     const composer = await screen.findByLabelText(/Campo para digitar mensagem/i);
     fireEvent.change(composer, { target: { value: '/resposta-rapida' } });
@@ -222,7 +254,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
   it('abre lista de respostas rápidas ao clicar no comando /resposta-rapida no menu slash', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     const composer = await screen.findByLabelText(/Campo para digitar mensagem/i);
     fireEvent.change(composer, { target: { value: '/re' } });
@@ -253,7 +285,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     });
 
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     await waitFor(() => {
       expect(screen.getByText(/Agendamentos/i)).toBeInTheDocument();
@@ -264,7 +296,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
   it('anexa imagem via Ctrl+V (print screen) no composer', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     const composer = await screen.findByLabelText(/Campo para digitar mensagem/i);
     const imageFile = new File(['fake-image'], 'print.png', { type: 'image/png' });
@@ -286,7 +318,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
   it('envia mensagem em modo resposta com metadados replyTo', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     const replyButton = await screen.findByRole('button', { name: /Responder esta mensagem/i });
     fireEvent.click(replyButton);
@@ -314,7 +346,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
   it('permite filtrar todos os históricos do contato selecionado', async () => {
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByRole('listitem'));
+    fireEvent.click(getTicketEntry());
 
     const toggle = screen.getByRole('switch', { name: /alternar filtro para listar todos os históricos do contato selecionado/i });
     fireEvent.click(toggle);
@@ -342,7 +374,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     });
 
     await setup({ wsEvents: ['ticket.message.received'] });
-    fireEvent.click(screen.getByLabelText(/Chamado t1/i));
+    fireEvent.click(getTicketEntry());
 
     expect(await screen.findByText(/Recommendations relevantes/i)).toBeInTheDocument();
     expect(await screen.findByText(/Rodar campanha preventiva/i)).toBeInTheDocument();

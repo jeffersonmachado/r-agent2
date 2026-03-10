@@ -7,12 +7,20 @@ const http = require('http');
  * @param {string} method
  * @param {string} path
  * @param {any} [body]
+ * @param {Record<string, string>} [extraHeaders]
  * @returns {Promise<{ status: number, headers: http.IncomingHttpHeaders, body: any }>}
  */
-function request(port, method, path, body) {
+function request(port, method, path, body, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
     const payload =
       body === undefined ? null : typeof body === 'string' ? body : JSON.stringify(body);
+
+    const baseHeaders = payload != null
+      ? {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+        }
+      : {};
 
     const req = http.request(
       {
@@ -20,13 +28,10 @@ function request(port, method, path, body) {
         port,
         path,
         method,
-        headers:
-          payload != null
-            ? {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload),
-              }
-            : {},
+        headers: {
+          ...baseHeaders,
+          ...(extraHeaders || {}),
+        },
       },
       (res) => {
         let data = '';
@@ -613,5 +618,773 @@ describe('API server (api/server.js)', () => {
     expect(res.body).toHaveProperty('errors');
     expect(Array.isArray(res.body.errors)).toBe(true);
     expect(res.body.errors.length).toBeGreaterThan(0);
+  });
+
+  describe('Quick actions routes (HTTP matcher + auth guard)', () => {
+    async function issueAgentToken({ tenantId, role = 'operator' }) {
+      const authService = require('./services/authService');
+      const { createTenant } = require('./services/tenantService');
+      const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const username = `qa-${role}-${stamp}`;
+      const password = 'Secr3t!123';
+
+      let createOut = await authService.createAgent({
+        tenantId,
+        username,
+        email: `${username}@example.com`,
+        password,
+        role,
+        name: `QA ${role}`,
+      });
+
+      if (!createOut.success) {
+        const ensureTenantOut = await createTenant({
+          tenant_key: tenantId,
+          name: `Tenant QA ${tenantId}`,
+          site: `https://${tenantId}.example.com`,
+          ramo_atividade: 'qa',
+          objetivo: 'server-test-quick-actions-auth',
+          plan: 'trial',
+        });
+
+        if (ensureTenantOut.success) {
+          createOut = await authService.createAgent({
+            tenantId,
+            username,
+            email: `${username}@example.com`,
+            password,
+            role,
+            name: `QA ${role}`,
+          });
+        }
+      }
+
+      expect(createOut.success).toBe(true);
+
+      const loginOut = await authService.login(username, password, '127.0.0.1', 'jest-server-test');
+      expect(loginOut.success).toBe(true);
+      expect(typeof loginOut.token).toBe('string');
+      expect(loginOut.token.length).toBeGreaterThan(8);
+      return loginOut.token;
+    }
+
+    test('GET /api/crm/contacts/:contactId/operational-signals/:signalId/quick-actions sem token retorna 401', async () => {
+      if (skipServerTests) return;
+      const res = await request(
+        port,
+        'GET',
+        '/api/crm/contacts/contact-test/operational-signals/sig-test/quick-actions',
+      );
+
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error', 'unauthorized');
+    });
+
+    test('POST /api/crm/contacts/:contactId/operational-signals/:signalId/quick-actions/:actionId sem token retorna 401', async () => {
+      if (skipServerTests) return;
+      const res = await request(
+        port,
+        'POST',
+        '/api/crm/contacts/contact-test/operational-signals/sig-test/quick-actions/action-test',
+        { input: { note: 'hello' } },
+      );
+
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error', 'unauthorized');
+    });
+
+    test('GET /api/admin/tenant/:id/operational-recommendations/:recommendationId/quick-actions sem token retorna 401', async () => {
+      if (skipServerTests) return;
+      const res = await request(
+        port,
+        'GET',
+        '/api/admin/tenant/tenant-test/operational-recommendations/rec-test/quick-actions',
+      );
+
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error', 'unauthorized');
+    });
+
+    test('GET admin quick-actions com operador autenticado retorna 403', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-quick-actions-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const operatorToken = await issueAgentToken({ tenantId: tenantKey, role: 'operator' });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-signals/${encodeURIComponent('sig-any')}/quick-actions`,
+        undefined,
+        { Authorization: `Bearer ${operatorToken}` },
+      );
+
+      expect(res.status).toBe(403);
+      expect(res.body).toHaveProperty('ok', false);
+      expect(typeof res.body.error).toBe('string');
+    });
+
+    test('POST admin quick-action com super-admin e action inválida retorna 422', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-quick-actions-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const superAdminToken = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+      const { quickActionAccess } = require('./core/operational-quick-actions');
+      const scopeSpy = jest.spyOn(quickActionAccess, 'resolveScope').mockResolvedValueOnce({
+        ok: true,
+        tenantId: tenantKey,
+        source: { id: 'sig-synthetic', status: 'open' },
+        actions: [{ id: 'open_followup' }],
+        supportContext: null,
+      });
+
+      const res = await request(
+        port,
+        'POST',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-signals/${encodeURIComponent('sig-synthetic')}/quick-actions/${encodeURIComponent('non_existing_action')}`,
+        { input: { note: 'qa' } },
+        { Authorization: `Bearer ${superAdminToken}` },
+      );
+
+      scopeSpy.mockRestore();
+      expect(res.status).toBe(422);
+      expect(res.body).toHaveProperty('ok', false);
+      expect(res.body).toHaveProperty('error.code', 'ACTION_NOT_FOUND');
+    });
+  });
+
+  describe('Operational canonical routes (HTTP integration)', () => {
+    async function issueAgentToken({ tenantId, role = 'operator' }) {
+      const authService = require('./services/authService');
+      const { createTenant } = require('./services/tenantService');
+      const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const username = `qa-operational-${role}-${stamp}`;
+      const password = 'Secr3t!123';
+
+      let createOut = await authService.createAgent({
+        tenantId,
+        username,
+        email: `${username}@example.com`,
+        password,
+        role,
+        name: `QA ${role}`,
+      });
+
+      if (!createOut.success) {
+        const ensureTenantOut = await createTenant({
+          tenant_key: tenantId,
+          name: `Tenant QA ${tenantId}`,
+          site: `https://${tenantId}.example.com`,
+          ramo_atividade: 'qa',
+          objetivo: 'server-test-operational-canonical-routes',
+          plan: 'trial',
+        });
+
+        if (ensureTenantOut.success) {
+          createOut = await authService.createAgent({
+            tenantId,
+            username,
+            email: `${username}@example.com`,
+            password,
+            role,
+            name: `QA ${role}`,
+          });
+        }
+      }
+
+      expect(createOut.success).toBe(true);
+
+      const loginOut = await authService.login(username, password, '127.0.0.1', 'jest-server-test');
+      expect(loginOut.success).toBe(true);
+      expect(typeof loginOut.token).toBe('string');
+      expect(loginOut.token.length).toBeGreaterThan(8);
+      return loginOut.token;
+    }
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('Fluxo OCC centralizado por contato: gerar sinais e recomendações', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalAgentService } = require('./core/operational-agent');
+      const signalSpy = jest.spyOn(OperationalAgentService.prototype, 'generateContactSignals').mockResolvedValueOnce({
+        ok: true,
+        opened: [{ id: 'sig-1', signal_type: 'followup_due' }],
+      });
+      const recommendationSpy = jest.spyOn(OperationalAgentService.prototype, 'generateContactRecommendations').mockResolvedValueOnce({
+        ok: true,
+        generated: [{ id: 'rec-1', recommendation_type: 'schedule_contact', source_signal_id: 'sig-1' }],
+      });
+
+      const signalRes = await request(
+        port,
+        'POST',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-signals/generate`,
+        { contactId: 'contact-1' },
+        { Authorization: `Bearer ${token}` },
+      );
+
+      const recommendationRes = await request(
+        port,
+        'POST',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-recommendations/generate`,
+        { contactId: 'contact-1' },
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(signalRes.status).toBe(200);
+      expect(signalRes.body).toHaveProperty('ok', true);
+      expect(recommendationRes.status).toBe(200);
+      expect(recommendationRes.body).toHaveProperty('ok', true);
+      expect(signalSpy).toHaveBeenCalledWith({ tenantId: tenantKey, contactId: 'contact-1' });
+      expect(recommendationSpy).toHaveBeenCalledWith({
+        tenantId: tenantKey,
+        contactId: 'contact-1',
+        includeSignalGeneration: true,
+      });
+    });
+
+    test('GET OCC /operational-signals com super-admin usa consulta canônica v2', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalOccQueryService } = require('./core/operational-agent');
+      const listSpy = jest.spyOn(OperationalOccQueryService.prototype, 'listTenantSignals').mockResolvedValueOnce({
+        ok: true,
+        items: [{ id: 'sig-occ-1', signal_type: 'ticket_escalation' }],
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-signals?activeOnly=true&limit=5`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(listSpy).toHaveBeenCalledWith({
+        tenantId: tenantKey,
+        activeOnly: true,
+        limit: 5,
+        contactId: null,
+        status: null,
+        severity: null,
+        type: null,
+        from: null,
+        to: null,
+      });
+    });
+
+    test('GET OCC /operational-kpis com super-admin retorna KPIs operacionais', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalOccQueryService } = require('./core/operational-agent');
+      const kpiSpy = jest.spyOn(OperationalOccQueryService.prototype, 'getOperationalKPIs').mockResolvedValueOnce({
+        ok: true,
+        kpis: {
+          openSignals: 4,
+          criticalSignals: 1,
+          openRecommendations: 3,
+          activePlaybooks: 2,
+          signalsToday: 2,
+          recommendationsToday: 1,
+          severitySummary: { critical: 1, high: 1, medium: 1, low: 1 },
+        },
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-kpis`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(res.body).toHaveProperty('kpis.openSignals', 4);
+      expect(kpiSpy).toHaveBeenCalledWith({ tenantId: tenantKey });
+    });
+
+    test('GET OCC /operational-signals/top-types retorna agregação de tipos', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalOccQueryService } = require('./core/operational-agent');
+      const topSpy = jest.spyOn(OperationalOccQueryService.prototype, 'getTopOperationalSignals').mockResolvedValueOnce({
+        ok: true,
+        items: [
+          { type: 'low_occupancy', count: 3 },
+          { type: 'support_backlog_risk', count: 2 },
+        ],
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-signals/top-types?limit=2`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items[0]).toHaveProperty('type', 'low_occupancy');
+      expect(topSpy).toHaveBeenCalledWith({
+        tenantId: tenantKey,
+        from: null,
+        to: null,
+        limit: 2,
+      });
+    });
+
+    test('GET OCC /operational-playbook-executions retorna execuções ativas', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalOccQueryService } = require('./core/operational-agent');
+      const playbookSpy = jest.spyOn(OperationalOccQueryService.prototype, 'listTenantActivePlaybooks').mockResolvedValueOnce({
+        ok: true,
+        items: [{ id: 'run-1', playbook_id: 'followup_recovery', status: 'in_progress' }],
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-playbook-executions?limit=5`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items[0]).toHaveProperty('id', 'run-1');
+      expect(playbookSpy).toHaveBeenCalledWith({
+        tenantId: tenantKey,
+        limit: 5,
+        status: null,
+        contactId: null,
+        from: null,
+        to: null,
+      });
+    });
+
+    test('GET OCC /operational-outcomes/signal retorna outcomes do sinal', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalOccQueryService } = require('./core/operational-agent');
+      const outSpy = jest.spyOn(OperationalOccQueryService.prototype, 'listTenantOutcomes').mockResolvedValueOnce({
+        ok: true,
+        items: [{ id: 'out-sig-1', signal_id: 'sig-occ-1', outcome_type: 'manual_resolution' }],
+        total: 1,
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-outcomes/signals/${encodeURIComponent('sig-occ-1')}?limit=7`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items[0]).toHaveProperty('id', 'out-sig-1');
+      expect(outSpy).toHaveBeenCalledWith({
+        tenantId: tenantKey,
+        signalId: 'sig-occ-1',
+        sourceType: 'signal',
+        sourceId: 'sig-occ-1',
+        status: null,
+        limit: 7,
+      });
+    });
+
+    test('GET OCC /operational-decisions/signals com feature desabilitada retorna lista vazia sem erro', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const tenantFeatureService = require('./services/tenantFeatureService');
+      const flagSpy = jest.spyOn(tenantFeatureService, 'isEnabled').mockResolvedValueOnce(false);
+
+      const { OperationalDecisionEngine } = require('./core/operational-decision');
+      const listSpy = jest.spyOn(OperationalDecisionEngine.prototype, 'listSignalDecisions');
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-decisions/signals?limit=10`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        ok: true,
+        enabled: false,
+        reason: 'feature_disabled',
+        total: 0,
+      });
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items).toHaveLength(0);
+      expect(flagSpy).toHaveBeenCalledWith(
+        tenantKey,
+        'operational_decision_engine_enabled',
+        false,
+      );
+      expect(listSpy).not.toHaveBeenCalled();
+    });
+
+    test('GET OCC /operational-decisions/recommendations com feature habilitada retorna metadados de decisão', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const tenantFeatureService = require('./services/tenantFeatureService');
+      jest.spyOn(tenantFeatureService, 'isEnabled').mockResolvedValueOnce(true);
+
+      const { OperationalDecisionEngine } = require('./core/operational-decision');
+      const decisionSpy = jest.spyOn(OperationalDecisionEngine.prototype, 'listRecommendationDecisions').mockResolvedValueOnce({
+        ok: true,
+        items: [
+          {
+            sourceType: 'recommendation',
+            sourceId: 'rec-1',
+            priorityScore: 87,
+            decisionType: 'playbook',
+            actionMode: 'human_confirm_required',
+            expectedOutcome: 'recover_revenue',
+            reason: 'High revenue/operational risk and no active action; playbook recommended.',
+            scoreBreakdown: {
+              severity: 30,
+              urgency: 18,
+              impact: 23,
+              revenueRisk: 20,
+              existingActionPenalty: 0,
+            },
+          },
+        ],
+        total: 1,
+        source: 'decision_engine',
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-decisions/recommendations?status=open&limit=5`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(res.body).toHaveProperty('enabled', true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items[0]).toHaveProperty('priorityScore', 87);
+      expect(res.body.items[0]).toHaveProperty('decisionType', 'playbook');
+      expect(res.body.items[0]).toHaveProperty('actionMode', 'human_confirm_required');
+      expect(res.body.items[0]).toHaveProperty('expectedOutcome', 'recover_revenue');
+      expect(res.body.items[0]).toHaveProperty('reason');
+      expect(res.body.items[0]).toHaveProperty('scoreBreakdown');
+      expect(decisionSpy).toHaveBeenCalledWith({
+        tenantId: tenantKey,
+        limit: 5,
+        contactId: null,
+        status: 'open',
+        priority: null,
+        type: null,
+        from: null,
+        to: null,
+      });
+    });
+
+    test('POST OCC status de recomendação com operador autenticado retorna 403', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-occ-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'operator' });
+
+      const res = await request(
+        port,
+        'POST',
+        `/api/admin/tenant/${encodeURIComponent(tenantKey)}/operational-recommendations/${encodeURIComponent('rec-1')}/status`,
+        { status: 'completed' },
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(403);
+      expect(res.body).toHaveProperty('error', 'forbidden');
+    });
+
+    test('GET /api/operational/actions/available sem token retorna 401', async () => {
+      if (skipServerTests) return;
+      const res = await request(
+        port,
+        'GET',
+        '/api/operational/actions/available?sourceType=signal&sourceId=sig-1&tenantId=tenant-qa',
+      );
+
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error', 'unauthorized');
+    });
+
+    test('GET /api/operational/actions/available com super-admin retorna lista de ações', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { quickActionAccess } = require('./core/operational-quick-actions');
+      jest.spyOn(quickActionAccess, 'resolveScope').mockResolvedValueOnce({
+        ok: true,
+        tenantId: tenantKey,
+        source: { id: 'sig-1', status: 'open' },
+        actions: [{ id: 'open_followup', label: 'Abrir follow-up' }],
+        supportContext: null,
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/operational/actions/available?sourceType=signal&sourceId=sig-1&tenantId=${encodeURIComponent(tenantKey)}`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(res.body).toHaveProperty('tenantId', tenantKey);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items.length).toBe(1);
+      expect(res.body.items[0]).toHaveProperty('id', 'open_followup');
+    });
+
+    test('GET /api/operational/actions/available com source inválido retorna 400', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/operational/actions/available?sourceType=invalid&sourceId=sig-1&tenantId=${encodeURIComponent(tenantKey)}`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('ok', false);
+      expect(res.body).toHaveProperty('error', 'invalid_source');
+    });
+
+    test('GET /api/operational/actions/available retorna 403 quando escopo nega acesso', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { quickActionAccess } = require('./core/operational-quick-actions');
+      jest.spyOn(quickActionAccess, 'resolveScope').mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        error: {
+          code: 'forbidden',
+          message: 'Sem permissão para quick actions',
+        },
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/operational/actions/available?sourceType=signal&sourceId=sig-1&tenantId=${encodeURIComponent(tenantKey)}`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(403);
+      expect(res.body).toHaveProperty('ok', false);
+      expect(res.body).toHaveProperty('error', 'forbidden');
+    });
+
+    test('GET /api/operational/actions/available retorna 422 quando escopo inválido', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { quickActionAccess } = require('./core/operational-quick-actions');
+      jest.spyOn(quickActionAccess, 'resolveScope').mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        error: {
+          code: 'source_required',
+          message: 'sourceType/sourceId inválidos',
+        },
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/operational/actions/available?sourceType=signal&sourceId=sig-1&tenantId=${encodeURIComponent(tenantKey)}`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(422);
+      expect(res.body).toHaveProperty('ok', false);
+      expect(res.body).toHaveProperty('error', 'source_required');
+    });
+
+    test('GET /api/operational/context/:entityType/:entityId sem token retorna 401', async () => {
+      if (skipServerTests) return;
+      const res = await request(port, 'GET', '/api/operational/context/ticket/tkt-1');
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error', 'unauthorized');
+    });
+
+    test('GET /api/operational/context/:entityType/:entityId com super-admin retorna payload canônico', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalContextQueryService } = require('./core/operational-agent');
+      jest.spyOn(OperationalContextQueryService.prototype, 'getEntityContext').mockResolvedValueOnce({
+        ok: true,
+        entity: {
+          entityType: 'ticket',
+          entityId: 'tkt-1',
+          tenantId: tenantKey,
+          contactId: null,
+        },
+        signals: [{ id: 'sig-1', signal_type: 'followup_due' }],
+        recommendations: [{ id: 'rec-1', recommendation_type: 'open_followup' }],
+        actions: [],
+        playbooks: [],
+        outcomes: [{ id: 'out-1', status: 'executed' }],
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/operational/context/ticket/tkt-1?tenantId=${encodeURIComponent(tenantKey)}&limit=5`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(res.body).toHaveProperty('entity.tenantId', tenantKey);
+      expect(Array.isArray(res.body.signals)).toBe(true);
+      expect(Array.isArray(res.body.recommendations)).toBe(true);
+      expect(Array.isArray(res.body.outcomes)).toBe(true);
+      expect(res.body.signals[0]).toHaveProperty('id', 'sig-1');
+      expect(res.body.recommendations[0]).toHaveProperty('id', 'rec-1');
+      expect(res.body.outcomes[0]).toHaveProperty('id', 'out-1');
+    });
+
+    test('GET /api/operational/context/:entityType/:entityId sem permissão retorna 403', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'no_access' });
+
+      const res = await request(
+        port,
+        'GET',
+        '/api/operational/context/ticket/tkt-1',
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(403);
+      expect(res.body).toHaveProperty('error', 'forbidden');
+    });
+
+    test('GET /api/operational/outcomes com super-admin retorna lista de outcomes', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { OperationalOccQueryService } = require('./core/operational-agent');
+      jest.spyOn(OperationalOccQueryService.prototype, 'listTenantOutcomes').mockResolvedValueOnce({
+        ok: true,
+        items: [{ id: 'out-2', action_id: 'open_followup', status: 'executed' }],
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        `/api/operational/outcomes?tenantId=${encodeURIComponent(tenantKey)}&sourceType=signal&sourceId=sig-1`,
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items[0]).toHaveProperty('id', 'out-2');
+    });
+
+    test('GET /api/crm/contacts/:contactId/operational-outcomes retorna outcomes por contato', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'super_admin' });
+
+      const { operationalOutcomeEngine } = require('./core/operational-outcomes');
+      const listSpy = jest.spyOn(operationalOutcomeEngine, 'listContactOutcomes').mockResolvedValueOnce({
+        ok: true,
+        items: [{ id: 'out-contact-1', contact_id: 'contact-1', outcome_type: 'booking_created_after_recommendation' }],
+        total: 1,
+      });
+
+      const res = await request(
+        port,
+        'GET',
+        '/api/crm/contacts/contact-1/operational-outcomes?limit=3',
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('ok', true);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items[0]).toHaveProperty('id', 'out-contact-1');
+      expect(listSpy).toHaveBeenCalledWith({
+        tenantId: tenantKey,
+        contactId: 'contact-1',
+        limit: 3,
+        status: null,
+        sourceType: null,
+        sourceId: null,
+      });
+    });
+
+    test('GET /api/operational/outcomes sem permissão retorna 403', async () => {
+      if (skipServerTests) return;
+      const tenantKey = `tenant-qa-operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = await issueAgentToken({ tenantId: tenantKey, role: 'no_access' });
+
+      const res = await request(
+        port,
+        'GET',
+        '/api/operational/outcomes',
+        undefined,
+        { Authorization: `Bearer ${token}` },
+      );
+
+      expect(res.status).toBe(403);
+      expect(res.body).toHaveProperty('error', 'forbidden');
+    });
   });
 });

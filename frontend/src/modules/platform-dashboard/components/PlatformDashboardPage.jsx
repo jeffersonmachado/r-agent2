@@ -1,0 +1,1 @@
+export { PlatformDashboardPage } from '../PlatformDashboardPage';

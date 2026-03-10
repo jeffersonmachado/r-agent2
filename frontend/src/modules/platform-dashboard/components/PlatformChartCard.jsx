@@ -1,0 +1,1 @@
+export { PlatformChartCard } from '../PlatformChartCard';

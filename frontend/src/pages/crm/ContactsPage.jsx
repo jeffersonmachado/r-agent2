@@ -2,7 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
-import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput } from '../../components/crm/CrmComponents';
+import { PlatformGrid } from '../../modules/platform-grid';
+import { CrmCard, CrmButton, CrmModal, CrmForm, CrmInput } from '../../components/crm/CrmComponents';
 import { ScheduleModal } from '../../components/ScheduleModal';
 
 export function ContactsPage() {
@@ -98,11 +99,36 @@ export function ContactsPage() {
   };
 
   const columns = [
-    { key: 'name', label: 'Nome' },
-    { key: 'email', label: 'Email' },
-    { key: 'phone', label: 'Telefone' },
-    { key: 'role', label: 'Cargo' },
-    { key: 'department', label: 'Departamento' },
+    {
+      id: 'name',
+      header: 'Nome',
+      accessor: (contact) => contact.name || '—',
+      sortValue: (contact) => contact.name || '',
+    },
+    {
+      id: 'email',
+      header: 'Email',
+      accessor: (contact) => contact.email || '—',
+      sortValue: (contact) => contact.email || '',
+    },
+    {
+      id: 'phone',
+      header: 'Telefone',
+      accessor: (contact) => contact.phone || '—',
+      sortValue: (contact) => contact.phone || '',
+    },
+    {
+      id: 'role',
+      header: 'Cargo',
+      accessor: (contact) => contact.role || '—',
+      sortValue: (contact) => contact.role || '',
+    },
+    {
+      id: 'department',
+      header: 'Departamento',
+      accessor: (contact) => contact.department || '—',
+      sortValue: (contact) => contact.department || '',
+    },
   ];
   const totalPages = Math.max(1, Math.ceil(totalContacts / pageSize));
   const currentPageCount = contacts.length;
@@ -174,28 +200,36 @@ export function ContactsPage() {
       </div>
 
       <CrmCard>
-        <CrmTable columns={columns} data={contacts} onRowClick={handleOpenModal} onDelete={handleDelete} isLoading={loading} />
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-text-secondary">
-            Página <strong>{page}</strong> de <strong>{totalPages}</strong>
-          </p>
-          <div className="flex items-center gap-2">
-            <CrmButton
-              variant="secondary"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </CrmButton>
-            <CrmButton
-              variant="secondary"
-              disabled={page >= totalPages || loading}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Próxima
-            </CrmButton>
-          </div>
-        </div>
+        <PlatformGrid
+          columns={columns}
+          rows={contacts}
+          loading={loading}
+          onRowClick={handleOpenModal}
+          pagination={{
+            page,
+            totalPages,
+            pageSize,
+            totalItems: totalContacts,
+            pageSizeOptions: [20, 50, 100],
+            onPageChange: setPage,
+            onPageSizeChange: (nextPageSize) => setPageSize(Number(nextPageSize) || 20),
+          }}
+          rowActions={(contact) => ([
+            {
+              label: 'Editar',
+              onClick: () => handleOpenModal(contact),
+            },
+            {
+              label: 'Excluir',
+              variant: 'danger',
+              onClick: () => handleDelete(contact.id),
+            },
+          ])}
+          emptyState={{
+            title: 'Nenhum contato encontrado',
+            description: 'Ajuste a busca para localizar contatos.',
+          }}
+        />
       </CrmCard>
       <CrmModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Contato" size="md">
         {editingContact?.id ? (

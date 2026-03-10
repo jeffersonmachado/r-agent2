@@ -2,7 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
-import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmSelect, CrmBadge } from '../../components/crm/CrmComponents';
+import { PlatformGrid, usePlatformGridState } from '../../modules/platform-grid';
+import { SharedSearchFilter, SharedSelectFilter } from '../../modules/shared-filters';
+import { CrmCard, CrmButton, CrmModal, CrmForm, CrmInput, CrmSelect, CrmBadge } from '../../components/crm/CrmComponents';
 
 const LEAD_STATUS_LABELS = {
   new: 'Novo',
@@ -117,18 +119,50 @@ export function LeadsPage() {
   };
 
   const columns = [
-    { key: 'source', label: 'Fonte' },
     {
-      key: 'status',
-      label: 'Status',
-      render: (_, row) => {
-        const normalized = normalizeLeadStatus(row);
+      id: 'source',
+      header: 'Fonte',
+      accessor: (lead) => lead.source || '—',
+      sortValue: (lead) => lead.source || '',
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      render: (lead) => {
+        const normalized = normalizeLeadStatus(lead);
         return <CrmBadge label={LEAD_STATUS_LABELS[normalized] || (normalized || '—')} />;
       },
+      sortValue: (lead) => normalizeLeadStatus(lead),
+      width: '140px',
     },
-    { key: 'score', label: 'Score', render: (score) => <span className="font-bold">{score}</span> },
-    { key: 'created_at', label: 'Criado em', render: (_, row) => formatLeadDate(getLeadCreatedAt(row)) },
+    {
+      id: 'score',
+      header: 'Score',
+      render: (lead) => <span className="font-bold">{lead.score ?? 0}</span>,
+      sortValue: (lead) => Number(lead.score || 0),
+      width: '90px',
+    },
+    {
+      id: 'createdAt',
+      header: 'Criado em',
+      render: (lead) => formatLeadDate(getLeadCreatedAt(lead)),
+      sortValue: (lead) => getLeadCreatedAt(lead) || '',
+      width: '150px',
+    },
   ];
+
+  const grid = usePlatformGridState({
+    rows: leads,
+    columns,
+    persistenceKey: 'crm-leads-grid-v1',
+    initialSort: { columnId: 'createdAt', direction: 'desc' },
+    getSearchText: (lead) => [
+      lead.source,
+      normalizeLeadStatus(lead),
+      lead.notes,
+      String(lead.score ?? ''),
+    ].filter(Boolean).join(' '),
+  });
 
   return (
     <div className="support-page">
@@ -147,35 +181,25 @@ export function LeadsPage() {
           <span>Filtros</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label className="block mb-2 text-sm font-medium text-text-primary">
-              Buscar Fonte
-            </label>
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              placeholder="Ex: website, email..."
-              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
-            />
-          </div>
+          <SharedSearchFilter
+            label="Buscar Fonte"
+            value={filters.search}
+            placeholder="Ex: website, email..."
+            onChange={(value) => handleFilterChange('search', value)}
+          />
 
-          <div>
-            <label className="block mb-2 text-sm font-medium text-text-primary">
-              Status
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer"
-            >
-              <option value="">Todos</option>
-              <option value="new">Novo</option>
-              <option value="contacted">Contactado</option>
-              <option value="qualified">Qualificado</option>
-              <option value="lost">Perdido</option>
-            </select>
-          </div>
+          <SharedSelectFilter
+            label="Status"
+            value={filters.status}
+            placeholder="Todos"
+            onChange={(value) => handleFilterChange('status', value)}
+            options={[
+              { label: 'Novo', value: 'new' },
+              { label: 'Contactado', value: 'contacted' },
+              { label: 'Qualificado', value: 'qualified' },
+              { label: 'Perdido', value: 'lost' },
+            ]}
+          />
 
           <div className="flex items-end">
             <CrmButton
@@ -202,7 +226,38 @@ export function LeadsPage() {
       </div>
 
       <CrmCard>
-        <CrmTable columns={columns} data={leads} onRowClick={handleOpenModal} onDelete={handleDelete} isLoading={loading} />
+        <PlatformGrid
+          columns={columns}
+          rows={grid.rows}
+          loading={loading}
+          sort={grid.sort}
+          onSortChange={grid.handleSortChange}
+          onRowClick={handleOpenModal}
+          pagination={{
+            page: grid.page,
+            totalPages: grid.totalPages,
+            pageSize: grid.pageSize,
+            totalItems: grid.totalItems,
+            pageSizeOptions: grid.pageSizeOptions,
+            onPageChange: grid.setPage,
+            onPageSizeChange: grid.setPageSize,
+          }}
+          rowActions={(lead) => ([
+            {
+              label: 'Editar',
+              onClick: () => handleOpenModal(lead),
+            },
+            {
+              label: 'Excluir',
+              variant: 'danger',
+              onClick: () => handleDelete(lead.id),
+            },
+          ])}
+          emptyState={{
+            title: 'Nenhum lead encontrado',
+            description: 'Ajuste os filtros para localizar leads.',
+          }}
+        />
       </CrmCard>
       <CrmModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Lead" size="md">
         <CrmForm onSubmit={handleSubmit} isLoading={loading}>

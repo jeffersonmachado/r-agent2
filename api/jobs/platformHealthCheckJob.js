@@ -2,10 +2,11 @@
 
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
-const { Tenant } = require('../db/models');
+const { Tenant, OperationalAlert } = require('../db/models');
 const collectOperationalMetricsJob = require('./collectOperationalMetricsJob');
 const schedulingHealthService = require('../services/schedulingHealthService');
 const { cleanupOldAudits } = require('../services/uraDecisionAuditService');
+const operationalMetricsService = require('../services/operationalMetricsService');
 
 let timer = null;
 let running = false;
@@ -14,6 +15,49 @@ function parseIntervalMs() {
   const raw = Number(process.env.OCC_HEALTH_INTERVAL_MS || 5 * 60 * 1000);
   if (Number.isFinite(raw) && raw >= 60000) return Math.trunc(raw);
   return 5 * 60 * 1000;
+}
+
+async function syncAiProviderAlert({ tenantId }) {
+  const latest = await operationalMetricsService.getLatestTenantSnapshot({ tenantId });
+  const snapshot = latest?.item?.snapshot_payload_json || null;
+  const providerFailures = Number(snapshot?.ai?.providerFailures || 0);
+  const aiStatus = String(snapshot?.health?.aiStatus || '').toLowerCase();
+  const existing = await OperationalAlert().findOne({
+    where: {
+      tenant_key: String(tenantId),
+      alert_type: 'ai_provider_failures',
+      entity_type: 'tenant',
+      entity_id: String(tenantId),
+      resolved_at: null,
+    },
+  });
+
+  if (providerFailures >= 3 || aiStatus === 'red') {
+    const severity = providerFailures >= 8 || aiStatus === 'red' ? 'high' : 'medium';
+    const description = `Tenant ${tenantId} acumulou ${providerFailures} falha(s) recentes de provider IA no snapshot OCC.`;
+    if (existing) {
+      await existing.update({ severity, description, resolved_at: null });
+      return { ok: true, status: 'updated' };
+    }
+    await OperationalAlert().create({
+      id: `opalert-${Date.now()}-${String(tenantId)}`,
+      tenant_key: String(tenantId),
+      alert_type: 'ai_provider_failures',
+      severity,
+      entity_type: 'tenant',
+      entity_id: String(tenantId),
+      description,
+      resolved_at: null,
+    });
+    return { ok: true, status: 'created' };
+  }
+
+  if (existing) {
+    await existing.update({ resolved_at: new Date() });
+    return { ok: true, status: 'resolved' };
+  }
+
+  return { ok: true, status: 'noop' };
 }
 
 async function run({ tenantId = null } = {}) {
@@ -26,6 +70,7 @@ async function run({ tenantId = null } = {}) {
   for (const tenant of tenants) {
     try {
       const out = await schedulingHealthService.scanTenant({ tenantId: tenant.tenant_key, persist: true });
+      await syncAiProviderAlert({ tenantId: tenant.tenant_key }).catch(() => null);
       health.push({ tenantId: tenant.tenant_key, alerts: out.alerts.length });
     } catch (err) {
       logger.warn('[PlatformHealthCheckJob] falha no health check do tenant', {
@@ -78,4 +123,5 @@ module.exports = {
   run,
   start,
   stop,
+  syncAiProviderAlert,
 };
