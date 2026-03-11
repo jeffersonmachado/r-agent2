@@ -17,7 +17,6 @@ import {
   generateOperationalMetricSnapshot,
   kioskAvailabilityLookup,
   kioskCheckin,
-  listAutonomousRecommendations,
   listAutonomousCampaignCandidates,
   listAutonomousCampaigns,
   listKioskSessions,
@@ -25,7 +24,8 @@ import {
   listAutonomousTemplates,
   listAutonomousWaitingList,
   listRevenueOpportunities,
-  previewAutonomousCoreRun,
+  listOperationalRecommendations,
+  previewOperationalRun,
   rejectAutonomousCampaignCandidate,
   runAutonomousGapDetection,
   updateAutonomousSchedulingPolicy,
@@ -90,6 +90,8 @@ const DEFAULT_RUNTIME = {
   runtimeNotes: '',
 };
 
+const DEFAULT_VERTICAL_TEMPLATES = ['bakery', 'pizzeria', 'clinic', 'market', 'beauty', 'fitness', 'food', 'services'];
+
 function formatDateTime(value) {
   if (!value) return '-';
   const date = new Date(value);
@@ -116,6 +118,28 @@ function parseTimeWindows(value) {
     const [start, end] = item.split('-').map((entry) => String(entry || '').trim());
     return { start, end };
   }).filter((item) => item.start && item.end);
+}
+
+function normalizeVerticalTemplate(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized || null;
+}
+
+function matchesVerticalTemplate(item, selectedVerticalTemplate) {
+  if (!selectedVerticalTemplate || selectedVerticalTemplate === 'all') return true;
+  const inferred = normalizeVerticalTemplate(
+    item?.verticalTemplate
+    || item?.vertical_template
+    || item?.template
+    || item?.metadata?.verticalTemplate
+    || item?.context?.verticalTemplate
+  );
+  if (!inferred) return true;
+  return inferred === selectedVerticalTemplate;
+}
+
+function uniqueStrings(values = []) {
+  return Array.from(new Set(values.filter(Boolean).map((entry) => String(entry).trim()).filter(Boolean)));
 }
 
 function MetricCard({ label, value }) {
@@ -151,6 +175,7 @@ export function AutonomousSchedulingPage() {
   const [kioskSessions, setKioskSessions] = useState([]);
   const [campaignCandidates, setCampaignCandidates] = useState({});
   const [waitingList, setWaitingList] = useState([]);
+  const [selectedVerticalDashboard, setSelectedVerticalDashboard] = useState('all');
   const [waitingForm, setWaitingForm] = useState(EMPTY_WAITING_FORM);
   const [editingWaitingId, setEditingWaitingId] = useState(null);
   const [kioskForm, setKioskForm] = useState({
@@ -178,7 +203,7 @@ export function AutonomousSchedulingPage() {
         listAutonomousTemplates(),
       ]);
       const [recommendationsRes, snapshotsRes, kioskSessionsRes] = await Promise.all([
-        listAutonomousRecommendations(),
+        listOperationalRecommendations(),
         listOperationalMetricSnapshots({ limit: 8 }),
         listKioskSessions({ limit: 8 }),
       ]);
@@ -207,6 +232,13 @@ export function AutonomousSchedulingPage() {
   useEffect(() => {
     loadData();
   }, [canRead]);
+
+  useEffect(() => {
+    const templateFromPolicy = normalizeVerticalTemplate(policy.settings?.verticalTemplate);
+    if (templateFromPolicy && selectedVerticalDashboard === 'all') {
+      setSelectedVerticalDashboard(templateFromPolicy);
+    }
+  }, [policy.settings?.verticalTemplate, selectedVerticalDashboard]);
 
   async function handleSave() {
     if (!canUpdate) {
@@ -372,7 +404,7 @@ export function AutonomousSchedulingPage() {
       return;
     }
     try {
-      const out = await previewAutonomousCoreRun({
+      const out = await previewOperationalRun({
         serviceType: policy.settings?.serviceType || null,
       });
       setPreviewRun(out?.preview || null);
@@ -421,6 +453,42 @@ export function AutonomousSchedulingPage() {
     );
   }
 
+  const templateOptions = uniqueStrings([
+    ...DEFAULT_VERTICAL_TEMPLATES,
+    ...((templates || []).map((item) => item?.key || item?.name || item)),
+  ]);
+  const scopedAggregatedMetrics = (aggregatedMetrics || []).filter((item) => matchesVerticalTemplate(item, selectedVerticalDashboard));
+  const scopedRecommendations = (recommendations || []).filter((item) => matchesVerticalTemplate(item, selectedVerticalDashboard));
+  const scopedRevenueOpportunities = (revenueOpportunities || []).filter((item) => matchesVerticalTemplate(item, selectedVerticalDashboard));
+  const scopedSnapshots = (snapshots || []).filter((item) => matchesVerticalTemplate(item, selectedVerticalDashboard));
+
+  const averageFillRate = scopedAggregatedMetrics.length > 0
+    ? Math.round(scopedAggregatedMetrics.reduce((sum, item) => sum + Number(item.fillRate || item.fill_rate || 0), 0) / scopedAggregatedMetrics.length)
+    : Number(metrics?.fillRate || 0);
+  const averageAcceptRate = scopedAggregatedMetrics.length > 0
+    ? Math.round(scopedAggregatedMetrics.reduce((sum, item) => sum + Number(item.acceptRate || item.accept_rate || 0), 0) / scopedAggregatedMetrics.length)
+    : 0;
+
+  const verticalSignals = uniqueStrings([
+    ...(insights?.reasonCodes || []),
+    ...scopedRecommendations.flatMap((item) => item.reasonCodes || []),
+  ]).slice(0, 8);
+
+  const verticalQuickActions = uniqueStrings(
+    scopedRecommendations.map((item) => item.recommendedAction || item.actionType || item.type || item.title)
+  ).slice(0, 6);
+
+  const previewPlaybooks = uniqueStrings(
+    (previewRun?.recommendations || []).map((item, index) => (
+      item?.playbookId
+      || item?.playbookKey
+      || item?.playbook
+      || item?.type
+      || item?.title
+      || `recommendation_${index + 1}`
+    ))
+  ).slice(0, 6);
+
   return (
     <div className="support-page">
       <div className="support-header">
@@ -450,6 +518,76 @@ export function AutonomousSchedulingPage() {
         <MetricCard label="Aceites" value={metrics?.accepts || 0} />
         <MetricCard label="Expiradas" value={metrics?.campaignsExpired || 0} />
         <MetricCard label="Fill rate" value={`${metrics?.fillRate || 0}%`} />
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
+          <div style={{ fontWeight: 700 }}>Dashboard por vertical</div>
+          <label className="support-form-group" style={{ margin: 0, minWidth: '220px' }}>
+            <span className="support-form-label">Vertical</span>
+            <select
+              className="support-form-select"
+              value={selectedVerticalDashboard}
+              onChange={(e) => setSelectedVerticalDashboard(e.target.value)}
+            >
+              <option value="all">all</option>
+              {templateOptions.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="support-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px', marginBottom: '12px' }}>
+          <MetricCard label="Fill rate (médio)" value={`${averageFillRate}%`} />
+          <MetricCard label="Accept rate (médio)" value={`${averageAcceptRate}%`} />
+          <MetricCard label="Recommendations" value={scopedRecommendations.length} />
+          <MetricCard label="Revenue opportunities" value={scopedRevenueOpportunities.length} />
+        </div>
+
+        <div className="support-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
+          <div style={{ border: '1px solid var(--color-border-default)', borderRadius: '10px', padding: '12px' }}>
+            <div style={{ fontWeight: 700, marginBottom: '8px' }}>Sinais do vertical</div>
+            {verticalSignals.length === 0 ? (
+              <div className="text-sm text-text-secondary">Sem sinais detectados.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {verticalSignals.map((item) => (
+                  <div key={item} className="text-sm text-text-secondary">• {item}</div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ border: '1px solid var(--color-border-default)', borderRadius: '10px', padding: '12px' }}>
+            <div style={{ fontWeight: 700, marginBottom: '8px' }}>Ações rápidas</div>
+            {verticalQuickActions.length === 0 ? (
+              <div className="text-sm text-text-secondary">Sem ações rápidas sugeridas.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {verticalQuickActions.map((item) => (
+                  <div key={item} className="text-sm text-text-secondary">• {item}</div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ border: '1px solid var(--color-border-default)', borderRadius: '10px', padding: '12px' }}>
+            <div style={{ fontWeight: 700, marginBottom: '8px' }}>Playbooks (preview)</div>
+            <div className="text-xs text-text-tertiary" style={{ marginBottom: '6px' }}>
+              {scopedSnapshots.length} snapshot(s) • {previewPlaybooks.length} playbook(s) em preview
+            </div>
+            {previewPlaybooks.length === 0 ? (
+              <div className="text-sm text-text-secondary">Use “Preview run” para listar playbooks sugeridos.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {previewPlaybooks.map((item) => (
+                  <div key={item} className="text-sm text-text-secondary">• {item}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="support-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>

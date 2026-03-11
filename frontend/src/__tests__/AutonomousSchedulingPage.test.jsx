@@ -53,7 +53,9 @@ vi.mock('../api/autonomousScheduling', () => ({
   listOperationalMetricSnapshots: (...args) => snapshotsMock(...args),
   generateOperationalMetricSnapshot: (...args) => snapshotRunMock(...args),
   listAutonomousRecommendations: (...args) => recommendationsMock(...args),
+  listOperationalRecommendations: (...args) => recommendationsMock(...args),
   previewAutonomousCoreRun: (...args) => previewRunMock(...args),
+  previewOperationalRun: (...args) => previewRunMock(...args),
   listAutonomousTemplates: (...args) => templatesMock(...args),
   listRevenueOpportunities: (...args) => revenueListMock(...args),
   detectRevenueOpportunities: (...args) => revenueDetectMock(...args),
@@ -116,6 +118,7 @@ describe('AutonomousSchedulingPage', () => {
   it('renderiza métricas e campanhas sem quebrar', async () => {
     render(<AutonomousSchedulingPage />);
     await screen.findByText(/Agenda Autônoma/i);
+    expect(await screen.findByText(/Dashboard por vertical/i)).toBeInTheDocument();
     expect(await screen.findByText(/Campanhas abertas/i)).toBeInTheDocument();
     expect((await screen.findAllByText(/Cliente 1/i)).length).toBeGreaterThan(0);
     expect(await screen.findByText(/Runtime operacional/i)).toBeInTheDocument();
