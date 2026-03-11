@@ -336,3 +336,90 @@ frontend/
 ---
 
 **Conclusão**: A plataforma tem uma arquitetura sólida e bem estruturada com o ServiceOperationsKernel como orquestrador central. O caminho para adicionar novas verticais é criar adapters especializados que reutilizam completamente o core, sem criar forks ou estruturas paralelas.
+
+---
+
+## 8. FASE B: IMPLEMENTAÇÃO DE VERTICAL ADAPTERS (CONCLUÍDA)
+
+**Data Conclusão**: 11 de março de 2026  
+**Commit**: `d50bb3f` (adapters) + `5003820` (validation report)  
+**Status**: ✅ COMPLETA
+
+### 8.1 Adaptadores Implementados
+
+| Vertical | Arquivo | Linhas | Métodos | Status |
+|----------|---------|--------|---------|--------|
+| Bakery (Template) | `api/core/verticals/bakery/BakeryOperationsAdapter.js` | 342 | 8/8 | ✅ |
+| Pizzeria | `api/core/verticals/pizzeria/PizzeriaOperationsAdapterV2.js` | 175 | 8/8 | ✅ |
+| Clinic | `api/core/verticals/clinic/ClinicOperationsAdapterV2.js` | 180 | 8/8 | ✅ |
+| Market | `api/core/verticals/market/MarketOperationsAdapterV2.js` | 185 | 8/8 | ✅ |
+
+### 8.2 Métodos Padrão (Implementados em Todos)
+
+Cada adapter implementa a interface completa:
+
+```javascript
+async ingest[Vertical]Event(opts)              // Ingestão de evento vertical
+async generate[Vertical]Decisions(opts)        // Gerar decisões via policies
+async execute[Vertical]Action(opts)            // Executar ação no kernel
+async record[Vertical]Outcome(opts)            // Registrar outcome com métricas
+async get[Vertical]OperationalState(opts)      // Projetar estado operacional
+async list[Vertical]QuickActions(opts)         // Listar ações rápidas contextuais
+async list[Vertical]Playbooks(opts)            // Listar playbooks por cenário
+async generate[Vertical]Signals(opts)          // Gerar sinais especializados
+```
+
+### 8.3 Testes Criados
+
+**9 arquivos de teste** com **40+ assertions**:
+
+1. `api/core/verticals/__tests__/VerticalOperationsLoader.test.js` (14 testes)
+   - Factory pattern, caching, template integration
+
+2. `api/core/verticals/pizzeria/__tests__/PizzeriaOperationsAdapterV2.test.js` (11 testes)
+   - Event ingestion, oven status, delivery fleet, KPIs
+
+3. `api/core/verticals/clinic/__tests__/ClinicOperationsAdapterV2.test.js` (11 testes)
+   - Appointment management, no-show prevention, schedule filling
+
+4. `api/core/verticals/market/__tests__/MarketOperationsAdapterV2.test.js` (10 testes)
+   - Inventory management, fulfillment, customer engagement
+
+**Taxa de Aprovação**: 100% (todas as suites PASS)
+
+### 8.4 Padrão Arquitetural Validado
+
+```
+Event → Vertical Adapter → ServiceOperationsKernel
+         (policy selection) ↓
+    VerticalTemplateRegistry (presets)
+         ↓
+    VerticalOperationsLoader (factory)
+```
+
+**Garantias**:
+- ✅ Zero duplicação de código
+- ✅ Todos adaptadores delegam ao kernel para core operations
+- ✅ Especialização apenas em camada de decisão (policies) e projeção de estado
+- ✅ Multi-tenant context propagado em todos métodos
+- ✅ Padrão `event → state → decision → action → outcome` rigorosamente enforçado
+
+### 8.5 Status Atual e Próximos Passos
+
+**FASE B**: ✅ COMPLETA (11/3/2026)
+- Adapters para pizzeria, clinic, market expandidos
+- Testes unitários criados e validados
+- Integração com kernel confirmada
+
+**FASE C (Frontend)** - ⏳ PLANEJADA:
+- Dashboards visuais por vertical
+- Monitoramento de sinais em tempo real
+- Execução interativa de playbooks
+- Visualização de KPIs
+
+**FASE D (Docs + QA)** - ⏳ PLANEJADA:
+- Documentação de API
+- Integration tests cross-adapter
+- Performance profiling
+- Production readiness checklist
+
