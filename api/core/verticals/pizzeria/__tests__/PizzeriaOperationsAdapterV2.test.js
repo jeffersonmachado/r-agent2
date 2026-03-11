@@ -50,14 +50,14 @@ describe('PizzeriaOperationsAdapterV2', () => {
   describe('ingestPizzeriaEvent', () => {
     it('should ingest valid pizzeria event', async () => {
       const result = await adapter.ingestPizzeriaEvent({
-        type: 'pizza_order.created',
+        type: 'pizzeria:pizza_order.created',
         payload: { orderId: 'order-1' },
         tenantId: 'tenant-1',
       });
 
       expect(mockKernel.ingestEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'pizza_order.created',
+          type: 'pizzeria:pizza_order.created',
           payload: expect.objectContaining({ vertical: 'pizzeria' }),
         })
       );
@@ -79,7 +79,7 @@ describe('PizzeriaOperationsAdapterV2', () => {
       const result = await adapter.generatePizzeriaDecisions({
         tenantId: 'tenant-1',
         eventId: 'evt_1',
-        eventType: 'pizza_order.created',
+        eventType: 'pizzeria:oven.overload',
         eventPayload: { orderId: 'order-1' },
       });
 
@@ -98,7 +98,7 @@ describe('PizzeriaOperationsAdapterV2', () => {
 
       expect(mockKernel.actionsService.execute).toHaveBeenCalledWith(
         expect.objectContaining({
-          vertical: 'pizzeria',
+          parameters: expect.objectContaining({ vertical: 'pizzeria' }),
         })
       );
       expect(result.actionId).toBe('act_1');
@@ -118,8 +118,7 @@ describe('PizzeriaOperationsAdapterV2', () => {
 
       expect(mockKernel.outcomesService.recordOutcome).toHaveBeenCalledWith(
         expect.objectContaining({
-          vertical: 'pizzeria',
-          metrics: expect.objectContaining({ deliveryTime: 30 }),
+          metrics: expect.objectContaining({ deliveryTime: 30, vertical: 'pizzeria' }),
         })
       );
       expect(result.outcomeId).toBe('out_1');

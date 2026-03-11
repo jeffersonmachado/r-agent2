@@ -50,14 +50,14 @@ describe('ClinicOperationsAdapterV2', () => {
   describe('ingestClinicEvent', () => {
     it('should ingest valid clinic event', async () => {
       const result = await adapter.ingestClinicEvent({
-        type: 'appointment.scheduled',
+        type: 'clinic:appointment.created',
         payload: { appointmentId: 'appt-1' },
         tenantId: 'tenant-1',
       });
 
       expect(mockKernel.ingestEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'appointment.scheduled',
+          type: 'clinic:appointment.created',
           payload: expect.objectContaining({ vertical: 'clinic' }),
         })
       );
@@ -98,7 +98,7 @@ describe('ClinicOperationsAdapterV2', () => {
 
       expect(mockKernel.actionsService.execute).toHaveBeenCalledWith(
         expect.objectContaining({
-          vertical: 'clinic',
+          parameters: expect.objectContaining({ vertical: 'clinic' }),
         })
       );
       expect(result.actionId).toBe('act_1');
@@ -118,8 +118,7 @@ describe('ClinicOperationsAdapterV2', () => {
 
       expect(mockKernel.outcomesService.recordOutcome).toHaveBeenCalledWith(
         expect.objectContaining({
-          vertical: 'clinic',
-          metrics: expect.objectContaining({ reschedulingTime: 2 }),
+          metrics: expect.objectContaining({ reschedulingTime: 2, vertical: 'clinic' }),
         })
       );
       expect(result.outcomeId).toBe('out_1');

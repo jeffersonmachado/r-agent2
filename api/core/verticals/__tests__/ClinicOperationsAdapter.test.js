@@ -57,7 +57,7 @@ describe('ClinicOperationsAdapter', () => {
       adapter._classifyEvent = jest.fn().mockReturnValue('appointment_management');
 
       await adapter.ingestClinicEvent({
-        type: 'clinic:appointment.scheduled',
+        type: 'clinic:appointment.created',
         payload: { patientId: 'patient1', doctorId: 'doctor1' },
         tenantId: 'tenant1',
       });
@@ -76,7 +76,7 @@ describe('ClinicOperationsAdapter', () => {
       });
 
       await adapter.ingestClinicEvent({
-        type: 'clinic:appointment.scheduled',
+        type: 'clinic:appointment.created',
         payload: { patientId: 'patient1' },
         tenantId: 'tenant1',
       });
@@ -107,7 +107,7 @@ describe('ClinicOperationsAdapter', () => {
     });
 
     it('classifies appointment events', () => {
-      expect(adapter._classifyEvent('clinic:appointment.scheduled')).toBe('appointment_management');
+      expect(adapter._classifyEvent('clinic:appointment.created')).toBe('appointment_management');
     });
 
     it('classifies no-show events', () => {

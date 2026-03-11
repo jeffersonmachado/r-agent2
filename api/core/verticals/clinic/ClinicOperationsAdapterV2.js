@@ -155,8 +155,8 @@ class ClinicOperationsAdapterV2 {
   // ========== HELPERS ==========
 
   _classifyEvent(eventType) {
-    if (eventType.includes('appointment')) return 'appointment_management';
     if (eventType.includes('no_show')) return 'no_show_management';
+    if (eventType.includes('appointment')) return 'appointment_management';
     if (eventType.includes('patient')) return 'patient_lifecycle';
     if (eventType.includes('followup')) return 'followup_management';
     return 'unknown';

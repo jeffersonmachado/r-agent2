@@ -50,14 +50,14 @@ describe('MarketOperationsAdapterV2', () => {
   describe('ingestMarketEvent', () => {
     it('should ingest valid market event', async () => {
       const result = await adapter.ingestMarketEvent({
-        type: 'market_order.created',
+        type: 'market:order.created',
         payload: { orderId: 'order-1' },
         tenantId: 'tenant-1',
       });
 
       expect(mockKernel.ingestEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'market_order.created',
+          type: 'market:order.created',
           payload: expect.objectContaining({ vertical: 'market' }),
         })
       );
@@ -98,7 +98,7 @@ describe('MarketOperationsAdapterV2', () => {
 
       expect(mockKernel.actionsService.execute).toHaveBeenCalledWith(
         expect.objectContaining({
-          vertical: 'market',
+          parameters: expect.objectContaining({ vertical: 'market' }),
         })
       );
       expect(result.actionId).toBe('act_1');
@@ -118,8 +118,7 @@ describe('MarketOperationsAdapterV2', () => {
 
       expect(mockKernel.outcomesService.recordOutcome).toHaveBeenCalledWith(
         expect.objectContaining({
-          vertical: 'market',
-          metrics: expect.objectContaining({ fulfillmentTime: 24 }),
+          metrics: expect.objectContaining({ fulfillmentTime: 24, vertical: 'market' }),
         })
       );
       expect(result.outcomeId).toBe('out_1');

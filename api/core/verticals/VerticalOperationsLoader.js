@@ -14,8 +14,11 @@
  * await bakeryAdapter.ingestBakeryEvent({ type: 'bakery:order.created', ... });
  */
 
-const { createVerticalAdapter } = require('./verticals');
-const VerticalTemplateRegistry = require('./autonomous-scheduling/VerticalTemplateRegistry');
+const { createVerticalAdapter: createVerticalAdapterFactory } = require('./index');
+const VerticalTemplateRegistry = require('../autonomous-scheduling/VerticalTemplateRegistry');
+const { PizzeriaOperationsAdapterV2 } = require('./pizzeria/PizzeriaOperationsAdapterV2');
+const { ClinicOperationsAdapterV2 } = require('./clinic/ClinicOperationsAdapterV2');
+const { MarketOperationsAdapterV2 } = require('./market/MarketOperationsAdapterV2');
 
 class VerticalOperationsLoader {
   constructor(kernel) {
@@ -24,7 +27,7 @@ class VerticalOperationsLoader {
     }
     this.kernel = kernel;
     this.adapterCache = {};
-    this.supportedVerticals = ['bakery', 'pizzeria', 'clinic', 'market', 'beauty', 'fitness', 'food', 'services'];
+    this.supportedVerticals = ['bakery', 'pizzeria', 'clinic', 'market'];
   }
 
   /**
@@ -36,16 +39,26 @@ class VerticalOperationsLoader {
     }
 
     if (!this.supportedVerticals.includes(verticalName)) {
-      throw new Error(
-        `Unsupported vertical: ${verticalName}. Supported: ${this.supportedVerticals.join(', ')}`
-      );
+      throw new Error(`Unknown vertical: ${verticalName}`);
     }
 
     if (!this.adapterCache[verticalName]) {
-      this.adapterCache[verticalName] = createVerticalAdapter(verticalName, this.kernel);
+      if (verticalName === 'pizzeria') {
+        this.adapterCache[verticalName] = new PizzeriaOperationsAdapterV2(this.kernel);
+      } else if (verticalName === 'clinic') {
+        this.adapterCache[verticalName] = new ClinicOperationsAdapterV2(this.kernel);
+      } else if (verticalName === 'market') {
+        this.adapterCache[verticalName] = new MarketOperationsAdapterV2(this.kernel);
+      } else {
+        this.adapterCache[verticalName] = createVerticalAdapterFactory(verticalName, this.kernel);
+      }
     }
 
     return this.adapterCache[verticalName];
+  }
+
+  async createVerticalAdapter(verticalName) {
+    return this.getAdapter(verticalName);
   }
 
   /**
@@ -129,6 +142,13 @@ class VerticalOperationsLoader {
    */
   getVerticalTemplate(verticalName) {
     return VerticalTemplateRegistry.getPreset(verticalName);
+  }
+
+  getVerticalPreset(verticalName) {
+    return {
+      name: verticalName,
+      ...this.getVerticalTemplate(verticalName),
+    };
   }
 
   /**
