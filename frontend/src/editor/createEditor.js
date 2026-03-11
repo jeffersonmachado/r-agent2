@@ -9,6 +9,7 @@ import { runFlowValidation } from './validation/runFlowValidation';
 import { canCreateNode, canCreateConnection } from './validation/preventiveValidation';
 import { createNode } from './nodeFactory';
 import { DEFAULT_SOCKET_NAME, getNodeInputs, getNodeOutputs } from './nodeSchemas';
+import { getNodeBpmnMapping, requiresExtension } from '../bpmn/bpmnNodeMapping';
 import logger from '../utils/logger';
 
 /**
@@ -21,10 +22,11 @@ import logger from '../utils/logger';
  * @returns {Promise<{ destroy: () => void, editor: NodeEditor, area: AreaPlugin }>}
  */
 export async function createEditor(container, options = {}) {
-  const { onFlowChanged, onNodeSelected, showToast } = options;
+  const { onFlowChanged, onNodeSelected, showToast, bpmnVisualMode = false } = options;
 
   // ✅ Flag para desabilitar validações preventivas durante carregamento de fluxo
   let isLoadingFromJson = false;
+  let isBpmnVisualMode = Boolean(bpmnVisualMode);
 
   // Verifica se o container tem dimensões
   const containerRect = container.getBoundingClientRect();
@@ -96,6 +98,114 @@ export async function createEditor(container, options = {}) {
 
   // Ordenação simples de nós (seguindo padrão do reference)
   AreaExtensions.simpleNodesOrder(area);
+
+  // =========================
+  // VISUAL BPMN PROGRESSIVO
+  // =========================
+  function applyBpmnVisualMetadata(node) {
+    if (!node) return;
+
+    const nodeType = node.data?.type;
+    const mapping = nodeType ? getNodeBpmnMapping(nodeType) : null;
+    const currentUi = node.data?.ui || {};
+
+    if (!isBpmnVisualMode) {
+      node.data = {
+        ...node.data,
+        ui: {
+          ...currentUi,
+          bpmnVisualMode: false,
+          bpmnElement: null,
+          bpmnStatus: null,
+          bpmnRequiresExtension: false,
+        },
+      };
+      return;
+    }
+
+    node.data = {
+      ...node.data,
+      ui: {
+        ...currentUi,
+        bpmnVisualMode: true,
+        bpmnElement: mapping?.bpmnElement || null,
+        bpmnStatus: mapping?.status || 'nao mapeado',
+        bpmnRequiresExtension: mapping ? requiresExtension(nodeType) : false,
+      },
+    };
+  }
+
+  function getNodeBpmnVisualCategory(node) {
+    const nodeType = node?.data?.type;
+    const mapping = nodeType ? getNodeBpmnMapping(nodeType) : null;
+    if (!mapping) return 'unmapped';
+    if (requiresExtension(nodeType)) return 'extension';
+    if (String(mapping.status || '').includes('degradacao')) return 'degraded';
+    return 'supported';
+  }
+
+  function resolveConnectionBpmnCategory(connection) {
+    const sourceNode = editor.getNode(connection?.source);
+    const targetNode = editor.getNode(connection?.target);
+    const categories = [
+      getNodeBpmnVisualCategory(sourceNode),
+      getNodeBpmnVisualCategory(targetNode),
+    ];
+
+    if (categories.includes('unmapped')) return 'unmapped';
+    if (categories.includes('extension')) return 'extension';
+    if (categories.includes('degraded')) return 'degraded';
+    return 'supported';
+  }
+
+  function applyBpmnConnectionMetadata(connection) {
+    if (!connection) return;
+
+    if (!isBpmnVisualMode) {
+      connection.bpmnVisualMode = false;
+      connection.bpmnVisualCategory = null;
+      return;
+    }
+
+    connection.bpmnVisualMode = true;
+    connection.bpmnVisualCategory = resolveConnectionBpmnCategory(connection);
+  }
+
+  function applyBpmnVisualModeToAllConnections() {
+    const connections = editor.getConnections();
+    connections.forEach((connection) => {
+      applyBpmnConnectionMetadata(connection);
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('connection', connection.id);
+        } catch (updateErr) {
+          logger.debug('Erro ao atualizar conexao apos alternar modo visual BPMN', {
+            connectionId: connection.id,
+            error: updateErr,
+          });
+        }
+      }
+    });
+  }
+
+  function applyBpmnVisualModeToAllNodes() {
+    const nodes = editor.getNodes();
+    nodes.forEach((node) => {
+      applyBpmnVisualMetadata(node);
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('node', node.id);
+        } catch (updateErr) {
+          logger.debug('Erro ao atualizar no apos alternar modo visual BPMN', {
+            nodeId: node.id,
+            error: updateErr,
+          });
+        }
+      }
+    });
+
+    applyBpmnVisualModeToAllConnections();
+  }
 
   // =========================
   // EXPORTAÇÃO DO EDITOR PARA JSON
@@ -369,6 +479,7 @@ export async function createEditor(container, options = {}) {
         const node = createNode(type, { config });
         
         await editor.addNode(node);
+        applyBpmnVisualMetadata(node);
 
         // Aplica posição se existir
         const position = Array.isArray(nodeJson.position)
@@ -411,6 +522,7 @@ export async function createEditor(container, options = {}) {
                 targetInputKey,
               );
               editor.addConnection(conn);
+              applyBpmnConnectionMetadata(conn);
             } catch (connErr) {
               logger.warn('loadFromJson - erro ao criar conexão', {
                 fromJsonId: jsonId,
@@ -440,6 +552,8 @@ export async function createEditor(container, options = {}) {
         invalidNodesCount: invalidNodes.length,
         invalidNodeIds: invalidNodes.map(n => n.id),
       });
+
+      applyBpmnVisualModeToAllNodes();
       
       // ✅ Atualiza números sequenciais dos nós após carregar
       updateNodeNumbers();
@@ -545,6 +659,41 @@ export async function createEditor(container, options = {}) {
           
           // Bloqueia a conexão retornando sem valor (padrão da documentação)
           return;
+        }
+      }
+    }
+    return context;
+  });
+
+  // Garante metadados visuais BPMN em qualquer caminho de criação de nó.
+  editor.addPipe((context) => {
+    if (context.type === 'nodecreated' && context.data) {
+      applyBpmnVisualMetadata(context.data);
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('node', context.data.id);
+        } catch (updateErr) {
+          logger.debug('Erro ao aplicar metadados BPMN em nodecreated', {
+            nodeId: context.data.id,
+            error: updateErr,
+          });
+        }
+      }
+    }
+    return context;
+  });
+
+  editor.addPipe((context) => {
+    if (context.type === 'connectioncreated' && context.data) {
+      applyBpmnConnectionMetadata(context.data);
+      if (area && typeof area.update === 'function') {
+        try {
+          area.update('connection', context.data.id);
+        } catch (updateErr) {
+          logger.debug('Erro ao aplicar metadados BPMN em connectioncreated', {
+            connectionId: context.data.id,
+            error: updateErr,
+          });
         }
       }
     }
@@ -676,6 +825,7 @@ export async function createEditor(container, options = {}) {
       
       // Adiciona o nó ao editor
       await editor.addNode(node);
+      applyBpmnVisualMetadata(node);
       
       // Posiciona o nó na posição do drop
       await area.translate(node.id, { x: canvasX, y: canvasY });
@@ -1310,6 +1460,10 @@ export async function createEditor(container, options = {}) {
     toJSON,
     clearEditor,
     updateNodeIO,
+    setBpmnVisualMode: (enabled) => {
+      isBpmnVisualMode = Boolean(enabled);
+      applyBpmnVisualModeToAllNodes();
+    },
   };
 }
 

@@ -9,6 +9,7 @@
 
 const { executeStep } = require('../../engine/executeStep');
 const { NodeRegistry } = require('../../engine/nodeRegistry');
+const { ProcessRuntimeService } = require('../core/process-runtime');
 const {
   startNodeHandler,
   messageNodeHandler,
@@ -61,6 +62,29 @@ const path = require('path');
 // Sessões em memória (para produção, ideal mover para Redis/DB)
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
 const sessions = new Map();
+
+// Singleton para ProcessRuntimeService (inicializado sob demanda)
+/** @type {ProcessRuntimeService|null} */
+let runtimeServiceInstance = null;
+
+/**
+ * Obtém a instância singleton do ProcessRuntimeService.
+ * Inicializa sob demanda se feature flag CANONICAL_RUNTIME estiver ativa.
+ *
+ * @returns {ProcessRuntimeService|null}
+ */
+function getRuntimeService() {
+  if (!process.env.CANONICAL_RUNTIME || process.env.CANONICAL_RUNTIME !== 'true') {
+    return null;
+  }
+  if (!runtimeServiceInstance) {
+    runtimeServiceInstance = new ProcessRuntimeService({
+      logger,
+      enableTelemetry: process.env.ENABLE_RUNTIME_TELEMETRY !== 'false',
+    });
+  }
+  return runtimeServiceInstance;
+}
 
 /**
  * Cria um NodeRegistry completo com todos os handlers padrão.
@@ -389,23 +413,50 @@ async function processWhatsAppMessage(message, value, deps) {
   
   const stepStartTime = new Date().toISOString();
   let result;
+  const runtimeService = getRuntimeService();
+  const useCanonicalRuntime = runtimeService !== null;
+
   try {
     // eslint-disable-next-line no-await-in-loop
-    result = await executeStep(state, compiledFlow, {
-      registry,
-      input: {
-        text,
-        messageId,
-        channel: effectiveChannelType,
-        raw: message,
-        aiProvider, // Injeta provider de IA
-      },
-      deps: {
-        persistence: persistenceServices,
-        registry, // Passa registry para handlers que precisam (ex: subflow)
-        replay, // Passa replay para o executeStep registrar ações
-      },
-    });
+    if (useCanonicalRuntime) {
+      // Usa novo ProcessRuntimeService com suporte a formatos canônicos
+      logger.debug('[MessageProcessor] Usando ProcessRuntimeService (CANONICAL_RUNTIME=true)', {
+        flowId: state.flowId,
+        sessionId,
+      });
+      result = await runtimeService.executeStep(state, compiledFlow, {
+        registry,
+        input: {
+          text,
+          messageId,
+          channel: effectiveChannelType,
+          raw: message,
+          aiProvider,
+        },
+        deps: {
+          persistence: persistenceServices,
+          registry,
+          replay,
+        },
+      });
+    } else {
+      // Usa legacy executeStep (backward compatibility)
+      result = await executeStep(state, compiledFlow, {
+        registry,
+        input: {
+          text,
+          messageId,
+          channel: effectiveChannelType,
+          raw: message,
+          aiProvider, // Injeta provider de IA
+        },
+        deps: {
+          persistence: persistenceServices,
+          registry, // Passa registry para handlers que precisam (ex: subflow)
+          replay, // Passa replay para o executeStep registrar ações
+        },
+      });
+    }
   } catch (err) {
     const code = err && (err.code || err?.message);
     if (code === 'FLOW_REQUIRES_REVIEW' || (err?.code === 'FLOW_REQUIRES_REVIEW')) {

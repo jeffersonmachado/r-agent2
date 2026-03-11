@@ -1,5 +1,8 @@
 # Dados de desenvolvimento
 api/data/config.json
+.token.env
+api/data/wa_sessions/
+test-results/
 
 # Node modules
 node_modules/
@@ -50,6 +53,9 @@ coverage/
 dist/
 build/
 *.tsbuildinfo
+frontend/.vite/
+remote-dumps/
+remote-dumps2/
 
 # IDEs
 .vscode/
@@ -61,4 +67,3 @@ build/
 # OS
 .DS_Store
 Thumbs.db
-

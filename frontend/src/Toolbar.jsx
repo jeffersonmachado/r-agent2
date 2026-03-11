@@ -9,6 +9,9 @@ import { useTheme } from './styles/themeContext';
 export function Toolbar({
   onImportJson,
   onExportJson,
+  onImportBpmn,
+  onExportBpmn,
+  onExportBpmnWithExtensions,
   onSimulate,
   onTest,
   onSave,
@@ -307,13 +310,16 @@ export function Toolbar({
       // Removido: resizeObserverInstance não é mais necessário
       window.removeEventListener('resize', handleWindowResize);
     };
-    }, [onSave, onSaveAsTemplate, onValidate, onSimulate, onTest, onOpen, onArrange, onZoomOut, onZoomIn, onZoomFit, onResetZoom, onUndo, onRedo, onCopy, onPaste, onSearchNode, onImportJson, onExportJson, onImportTemplate, onDuplicate]);
+    }, [onSave, onSaveAsTemplate, onValidate, onSimulate, onTest, onOpen, onArrange, onZoomOut, onZoomIn, onZoomFit, onResetZoom, onUndo, onRedo, onCopy, onPaste, onSearchNode, onImportJson, onExportJson, onImportBpmn, onExportBpmn, onExportBpmnWithExtensions, onImportTemplate, onDuplicate]);
 
   // Função helper para obter ícone e texto baseado na key
   const getIconAndText = (key) => {
     const iconMap = {
       'import': { icon: 'icon-import', text: 'Importar' },
       'export': { icon: 'icon-export', text: 'Exportar' },
+      'bpmnImport': { icon: 'icon-import', text: 'Importar BPMN' },
+      'bpmnExport': { icon: 'icon-export', text: 'Exportar BPMN' },
+      'bpmnExportExt': { icon: 'icon-export', text: 'BPMN + Extensoes' },
       'template': { icon: 'icon-template', text: 'Template' },
       'open': { icon: 'icon-folder-open', text: 'Abrir' },
       'save': { icon: 'icon-save', text: 'Salvar' },
@@ -367,6 +373,9 @@ export function Toolbar({
     if (!visibleItems.extra) {
       if (onImportJson) groups.extra.push({ key: 'import', action: onImportJson });
       if (onExportJson) groups.extra.push({ key: 'export', action: onExportJson });
+      if (onImportBpmn) groups.extra.push({ key: 'bpmnImport', action: onImportBpmn });
+      if (onExportBpmn) groups.extra.push({ key: 'bpmnExport', action: onExportBpmn });
+      if (onExportBpmnWithExtensions) groups.extra.push({ key: 'bpmnExportExt', action: onExportBpmnWithExtensions });
       if (onImportTemplate) groups.extra.push({ key: 'template', action: onImportTemplate });
     }
     
@@ -729,6 +738,24 @@ export function Toolbar({
             <button className="btn-base" onClick={onExportJson} title="Exportar JSON">
               <span className="icon icon-export"></span>
               <span>Exportar</span>
+            </button>
+          )}
+          {onImportBpmn && (
+            <button className="btn-base" onClick={onImportBpmn} title="Importar BPMN XML">
+              <span className="icon icon-import"></span>
+              <span>Imp. BPMN</span>
+            </button>
+          )}
+          {onExportBpmn && (
+            <button className="btn-base" onClick={onExportBpmn} title="Exportar BPMN simples">
+              <span className="icon icon-export"></span>
+              <span>BPMN</span>
+            </button>
+          )}
+          {onExportBpmnWithExtensions && (
+            <button className="btn-base" onClick={onExportBpmnWithExtensions} title="Exportar BPMN com extensoes r-agent2">
+              <span className="icon icon-export"></span>
+              <span>BPMN+</span>
             </button>
           )}
           {onImportTemplate && (

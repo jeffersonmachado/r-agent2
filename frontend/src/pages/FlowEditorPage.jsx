@@ -26,8 +26,10 @@ import { useTheme } from '../styles/themeContext';
 import { Dialog } from '../components/Dialog';
 import { FlowTestChat } from '../components/FlowTestChat';
 import { reteJsonToEngineFlow, engineFlowToReteJson } from '../engine-mapper/engineMapper';
+import { BPMN_EXPORT_MODE, bpmnXmlToEngineFlow, engineFlowToBpmnXml } from '../bpmn';
 import { NavigationLink } from '../components/NavigationLink';
 import { FallbackEventsViewer } from '../components/FallbackEventsViewer';
+import { CanonicalAnalysisPanel } from '../components/CanonicalAnalysisPanel';
 import { getNodeSchema } from '../editor/nodeSchemas';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -83,6 +85,11 @@ export function FlowEditorPage() {
 
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  const bpmnFileInputRef = useRef(null);
+  const [bpmnVisualMode, setBpmnVisualMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('bpmnVisualMode') === '1';
+  });
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showFlowGenerator, setShowFlowGenerator] = useState(false);
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false);
@@ -217,6 +224,10 @@ export function FlowEditorPage() {
     if (typeof window === 'undefined') return true;
     return window.innerWidth < 768;
   }); // Em mobile, inicia colapsada
+  const [analyticsCollapsed, setAnalyticsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth < 768;
+  }); // Em mobile, inicia colapsada
   
   const [paletteWidth, setPaletteWidth] = useState(() => {
     const saved = localStorage.getItem('paletteWidth');
@@ -234,6 +245,10 @@ export function FlowEditorPage() {
   useEffect(() => {
     localStorage.setItem('rightPanelWidth', rightPanelWidth.toString());
   }, [rightPanelWidth]);
+
+  useEffect(() => {
+    localStorage.setItem('bpmnVisualMode', bpmnVisualMode ? '1' : '0');
+  }, [bpmnVisualMode]);
 
   // Funções de toggle EXATAMENTE como no modelo
   const togglePalette = useCallback(() => {
@@ -1099,30 +1114,133 @@ export function FlowEditorPage() {
   const handleOptimizeLayout = () => handleArrange();
   const handleSimplifyGraph = () => showToast('Simplify não implementado', 'warning', 2000);
   const handleToggleMinimap = () => showToast('Minimap não implementado', 'warning', 2000);
+
+  const runValidationAfterImport = (editor) => {
+    setTimeout(async () => {
+      try {
+        const importedReteJson = await editor.editor?.current?.toJSON();
+        if (!importedReteJson) return;
+
+        const validationResult = await validateCurrentFlow(importedReteJson);
+        const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
+
+        if (!validationResult) return;
+
+        applyBackendValidationErrors(
+          editor.editor?.current,
+          editor.area,
+          validationResult.valid ? [] : (validationResult.errors || [])
+        );
+
+        if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
+          setValidationCollapsed(false);
+        }
+      } catch (validationErr) {
+        logger.debug('Erro ao validar fluxo importado (não crítico)', { error: validationErr });
+      }
+    }, 500);
+  };
+
+  const loadImportedReteJson = async (reteJson, successMessage = 'Fluxo importado com sucesso') => {
+    if (!reteJson || !reteJson.nodes || typeof reteJson.nodes !== 'object' || Object.keys(reteJson.nodes).length === 0) {
+      showToast('Fluxo inválido: nenhum nó válido encontrado', 'error', 3000);
+      return false;
+    }
+
+    const editor = editorRef.current;
+    if (!editor || !editor.loadFromJson) {
+      showToast('Editor não está pronto', 'warning', 2000);
+      return false;
+    }
+
+    try {
+      await editor.loadFromJson(reteJson);
+      clearCurrentFlow();
+      setSelectedNode(null);
+      showToast(successMessage, 'success', 2000);
+      runValidationAfterImport(editor);
+      return true;
+    } catch (loadErr) {
+      logger.error('Erro ao carregar fluxo no editor', loadErr);
+      showToast('Erro ao carregar fluxo no editor', 'error', 3000);
+      return false;
+    }
+  };
+
+  const getExportFileBaseName = () => {
+    if (!currentFlow?.name) return 'flow';
+    return currentFlow.name.replace(/[^a-z0-9]/gi, '_');
+  };
+
+  const downloadTextFile = (content, fileName, mimeType) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleImportJson = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
+
+  const handleImportBpmn = () => {
+    if (bpmnFileInputRef.current) bpmnFileInputRef.current.click();
+  };
+
   const handleExportJson = async () => {
     const editor = editorRef.current?.editor?.current;
     if (!editor) {
       showToast('Editor não está pronto', 'warning', 2000);
       return;
     }
+
     try {
       const reteJson = await editor.toJSON();
-      const blob = new Blob([JSON.stringify(reteJson, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = currentFlow?.name ? `${currentFlow.name.replace(/[^a-z0-9]/gi, '_')}.json` : 'flow.json';
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadTextFile(
+        JSON.stringify(reteJson, null, 2),
+        `${getExportFileBaseName()}.json`,
+        'application/json'
+      );
       showToast('Fluxo exportado com sucesso', 'success', 2000);
     } catch (err) {
       logger.error('Erro ao exportar JSON', err);
       showToast('Erro ao exportar fluxo', 'error', 3000);
     }
   };
+
+  const exportFlowAsBpmn = async (includeExtensions) => {
+    const editor = editorRef.current?.editor?.current;
+    if (!editor) {
+      showToast('Editor não está pronto', 'warning', 2000);
+      return;
+    }
+
+    try {
+      const reteJson = await editor.toJSON();
+      const flowDefinition = reteJsonToEngineFlow(reteJson, currentFlow || undefined);
+      const mode = includeExtensions ? BPMN_EXPORT_MODE.EXTENSIONS : BPMN_EXPORT_MODE.SIMPLE;
+      const { xml, report } = engineFlowToBpmnXml(flowDefinition, { mode });
+
+      const suffix = includeExtensions ? '_ext' : '';
+      downloadTextFile(xml, `${getExportFileBaseName()}${suffix}.bpmn`, 'application/xml');
+
+      const warningCount = (report?.warnings?.length || 0) + (report?.degradedNodes?.length || 0);
+      if (warningCount > 0) {
+        showToast(`BPMN exportado com ${warningCount} aviso(s)`, 'warning', 4000);
+      } else {
+        showToast('BPMN exportado com sucesso', 'success', 2500);
+      }
+    } catch (err) {
+      logger.error('Erro ao exportar BPMN', err);
+      showToast('Erro ao exportar BPMN', 'error', 3000);
+    }
+  };
+
+  const handleExportBpmn = () => exportFlowAsBpmn(false);
+  const handleExportBpmnWithExtensions = () => exportFlowAsBpmn(true);
 
   const handleFileChange = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -1196,56 +1314,7 @@ export function FlowEditorPage() {
           return;
         }
         
-        // Valida se o JSON convertido tem nós válidos
-        if (!reteJson.nodes || typeof reteJson.nodes !== 'object' || Object.keys(reteJson.nodes).length === 0) {
-          showToast('JSON inválido: nenhum nó válido encontrado', 'error', 3000);
-          return;
-        }
-        
-        // Carrega o JSON no editor
-        const editor = editorRef.current;
-        if (!editor || !editor.loadFromJson) {
-          showToast('Editor não está pronto', 'warning', 2000);
-          return;
-        }
-        
-        try {
-          await editor.loadFromJson(reteJson);
-          showToast('Fluxo importado com sucesso', 'success', 2000);
-          
-          // Limpa o fluxo atual do estado para permitir trabalhar com o importado
-          clearCurrentFlow();
-          setSelectedNode(null);
-          
-          // Opcional: valida o fluxo importado após um pequeno delay
-          // O validateCurrentFlow já atualiza o estado validation internamente
-          setTimeout(async () => {
-            try {
-              const reteJson = await editor.editor?.current?.toJSON();
-              if (reteJson) {
-                const validationResult = await validateCurrentFlow(reteJson);
-                const { applyBackendValidationErrors } = await import('../editor/validation/runFlowValidation');
-                if (validationResult) {
-                  applyBackendValidationErrors(
-                    editor.editor?.current,
-                    editor.area,
-                    validationResult.valid ? [] : (validationResult.errors || [])
-                  );
-                  
-                  // ✅ Expande painel de validação se houver erros
-                  if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
-                    setValidationCollapsed(false);
-                  }
-                }
-              }
-            } catch (validationErr) {
-              logger.debug('Erro ao validar fluxo importado (não crítico)', { error: validationErr });
-            }
-          }, 500);
-        } catch (loadErr) {
-          logger.error('Erro ao carregar JSON no editor', loadErr);
-          showToast('Erro ao carregar fluxo no editor', 'error', 3000);
-        }
+        await loadImportedReteJson(reteJson);
       } catch (err) {
         logger.error('Erro ao importar JSON', err);
         if (err instanceof SyntaxError) {
@@ -1259,11 +1328,53 @@ export function FlowEditorPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleBpmnFileChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const xmlContent = String(reader.result || '');
+        if (!xmlContent.trim()) {
+          showToast('Arquivo BPMN vazio', 'error', 3000);
+          return;
+        }
+
+        const { flowDefinition, report } = bpmnXmlToEngineFlow(xmlContent, {
+          tenantId: currentFlow?.tenantId || 'demo-tenant',
+        });
+
+        const reteJson = engineFlowToReteJson(flowDefinition);
+        const imported = await loadImportedReteJson(reteJson, 'BPMN importado com sucesso');
+        if (!imported) return;
+
+        const warningCount =
+          (report?.warnings?.length || 0) +
+          (report?.unsupportedElements?.length || 0) +
+          (report?.degradedNodes?.length || 0);
+
+        if (warningCount > 0) {
+          showToast(`BPMN importado com ${warningCount} aviso(s)`, 'warning', 4500);
+        }
+      } catch (err) {
+        logger.error('Erro ao importar BPMN', err);
+        showToast('Erro ao importar BPMN XML', 'error', 3000);
+      }
+    };
+
+    reader.readAsText(file);
+    if (bpmnFileInputRef.current) bpmnFileInputRef.current.value = '';
+  };
+
   return (
     <div className="flow-editor-page">
       <Toolbar
         onImportJson={handleImportJson}
         onExportJson={handleExportJson}
+        onImportBpmn={handleImportBpmn}
+        onExportBpmn={handleExportBpmn}
+        onExportBpmnWithExtensions={handleExportBpmnWithExtensions}
         onSimulate={handleSimulate}
         onTest={handleTest}
         onSave={handleSave}
@@ -1345,6 +1456,13 @@ export function FlowEditorPage() {
         <button className="btn-base" onClick={() => setShowLogViewer(true)}>
           <span className="icon icon-logs"></span>
           <span>Logs</span>
+        </button>
+        <button
+          className={`btn-base ${bpmnVisualMode ? 'btn-base--active' : ''}`}
+          onClick={() => setBpmnVisualMode((prev) => !prev)}
+          title="Alterna metadados BPMN nos nos do editor"
+        >
+          <span>BPMN</span>
         </button>
         <ThemeSelector />
       </Toolbar>
@@ -1429,6 +1547,7 @@ export function FlowEditorPage() {
                 onFlowChanged={handleFlowChanged}
                 onNodeSelected={handleNodeSelected}
                 showToast={showToast}
+                bpmnVisualMode={bpmnVisualMode}
               />
           </div>
         </div>
@@ -1593,12 +1712,13 @@ export function FlowEditorPage() {
                                 return Array.from(errorsByNode.entries()).map(([nodeId, errors]) => (
                                   <div key={nodeId} className="mb-3">
                                     <div className="font-semibold mb-1">
-                                      {nodeId !== '_global' ? `Nó: ${nodeId}` : 'Erros Gerais'}
+                                      {nodeId !== '_global' ? `No: ${nodeId}` : 'Mensagens Gerais'}
                                     </div>
                                     <ul className="list-disc list-inside space-y-1">
                                       {errors.map((err, idx) => (
                                         <li key={`${err.code}-${idx}`}>
                                           <span className="text-gray-600 dark:text-gray-400">[{err.code}]</span>
+                                          <span className="text-gray-500 dark:text-gray-400"> ({(err.severity || 'error').toUpperCase()})</span>
                                           <span> {err.messageUi || err.message}</span>
                                         </li>
                                       ))}
@@ -1610,6 +1730,27 @@ export function FlowEditorPage() {
                           )}
                         </>
                       )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Análise Canônica - com colapso vertical */}
+                <div className={`flex flex-col ${analyticsCollapsed ? 'section-collapsed' : 'section-expanded'} section-container`}>
+                  <div className="section-header">
+                    <span className="section-header-title">Análise Canônica</span>
+                    <button
+                      className={`collapse-btn-vertical ${analyticsCollapsed ? 'collapsed' : ''}`}
+                      onClick={() => setAnalyticsCollapsed(!analyticsCollapsed)}
+                      title={analyticsCollapsed ? 'Expandir' : 'Recolher'}
+                    >
+                    </button>
+                  </div>
+                  {!analyticsCollapsed && (
+                    <div className="section-content">
+                      <CanonicalAnalysisPanel
+                        canonical={validation?.canonical}
+                        currentFlow={currentFlow}
+                      />
                     </div>
                   )}
                 </div>
@@ -1755,6 +1896,13 @@ export function FlowEditorPage() {
         ref={fileInputRef}
         className="hidden"
         onChange={handleFileChange}
+      />
+      <input
+        type="file"
+        accept=".bpmn,.xml,text/xml,application/xml"
+        ref={bpmnFileInputRef}
+        className="hidden"
+        onChange={handleBpmnFileChange}
       />
     </div>
   );

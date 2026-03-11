@@ -10,6 +10,10 @@ import {
   engineFlowToReteJson,
   reteJsonToEngineFlow,
 } from '../engine-mapper/engineMapper';
+import { validateBpmnCompatibility } from '../bpmn/validateBpmnCompatibility';
+import { engineFlowToCanonical } from '../process-adapters/engineFlowToCanonical';
+import { validateCanonicalProcess } from '../process-canonical/canonicalValidator';
+import { compileCanonicalProcess } from '../process-canonical/canonicalCompiler';
 import logger from '../utils/logger';
 
 /**
@@ -22,6 +26,20 @@ import logger from '../utils/logger';
  */
 
 const EditorContext = createContext(null);
+
+function toUiIssue(issue, source = 'canonical') {
+  return {
+    code: issue?.code || `${source}_issue`,
+    message: issue?.message || 'Issue',
+    messageUi: issue?.message || 'Issue',
+    severity: issue?.severity || 'warning',
+    nodeIds: Array.isArray(issue?.nodeIds) ? issue.nodeIds : [],
+    details: {
+      source,
+      ...(issue?.details && typeof issue.details === 'object' ? issue.details : {}),
+    },
+  };
+}
 
 // Nota: Este arquivo exporta tanto um componente (EditorProvider) quanto um hook (useEditor).
 // O Vite Fast Refresh pode mostrar um aviso, mas o código funciona corretamente.
@@ -195,21 +213,70 @@ export function EditorProvider({ children }) {
     try {
       const flowDefinition = reteJsonToEngineFlow(reteJson, currentFlow || undefined);
       const result = await flowsApi.validateFlow(flowDefinition);
+      const bpmnCompatibility = validateBpmnCompatibility(reteJson);
+      const canonicalMapped = engineFlowToCanonical(flowDefinition, {
+        defaultProcessId: flowDefinition?.id || 'canonical_from_editor',
+      });
+      const canonicalValidation = validateCanonicalProcess(canonicalMapped.canonicalProcessDefinition);
+      const canonicalCompilation = compileCanonicalProcess(
+        canonicalMapped.canonicalProcessDefinition,
+        { strict: false }
+      );
+
+      const backendErrors = Array.isArray(result?.errors) ? result.errors : [];
+      const bpmnWarnings = Array.isArray(bpmnCompatibility?.warnings)
+        ? bpmnCompatibility.warnings
+        : [];
+
+      const canonicalWarnings = [
+        ...(Array.isArray(canonicalMapped?.report?.warnings) ? canonicalMapped.report.warnings : []),
+        ...(Array.isArray(canonicalValidation?.warnings) ? canonicalValidation.warnings : []),
+      ].map((issue) => toUiIssue(issue, 'canonical'));
+
+      const canonicalErrors = Array.isArray(canonicalValidation?.errors)
+        ? canonicalValidation.errors.map((issue) => toUiIssue(issue, 'canonical'))
+        : [];
+
+      const canonicalSuggestions = Array.isArray(canonicalValidation?.suggestions)
+        ? canonicalValidation.suggestions.map((issue) => toUiIssue(issue, 'canonical'))
+        : [];
+
+      const uiErrors = [
+        ...backendErrors,
+        ...bpmnWarnings,
+        ...canonicalErrors,
+        ...canonicalWarnings,
+        ...canonicalSuggestions,
+      ];
       
-      // ✅ Remove mapeamento duplicado - erros já vêm mapeados e amigáveis do backend
+      // Mantem errors apenas do backend para nao impactar a pintura de erros por no no editor.
       const validationResult = {
         ...result,
-        uiErrors: result.errors || [], // ✅ Usa diretamente (já são amigáveis)
+        errors: backendErrors,
+        uiErrors,
+        bpmnCompatibility,
+        canonical: {
+          mappedReport: canonicalMapped.report,
+          validationReport: canonicalValidation,
+          compilationReport: canonicalCompilation.report,
+          compiledProcessDefinition: canonicalCompilation.compiledProcessDefinition,
+        },
       };
       
-      // Debug: log dos erros (já mapeados)
+      // Debug: log de erros backend + warnings de compatibilidade BPMN
       logger.debug('Validação concluída', {
         valid: validationResult.valid,
         errorCount: validationResult.uiErrors.length,
+        backendErrorCount: backendErrors.length,
+        bpmnWarningCount: bpmnWarnings.length,
+        canonicalErrorCount: canonicalErrors.length,
+        canonicalWarningCount: canonicalWarnings.length,
+        canonicalSuggestionCount: canonicalSuggestions.length,
         errors: validationResult.uiErrors.map(e => ({
           code: e.code,
           message: e.message,
           nodeIds: e.nodeIds,
+          severity: e.severity,
         })),
       });
       

@@ -38,6 +38,7 @@ zip -r "$ZIP_FILE" "$PROJECT_NAME" \
     -x "*/.idea/*" \
     -x "*/dist/*" \
     -x "*/frontend/dist/*" \
+    -x "*/frontend/.vite/*" \
     -x "*/build/*" \
     -x "*/logs/*" \
     -x "*/.pm2/*" \
@@ -56,7 +57,13 @@ zip -r "$ZIP_FILE" "$PROJECT_NAME" \
     -x "*/venv/*" \
     -x "*/env/*" \
     -x "*/.venv/*" \
+    -x "*/replays/*" \
+    -x "*/recordings/*" \
+    -x "*/api/data/*" \
+    -x "*/remote-dumps2/*" \
+    -x "*/remote-dumps/*" \
     -x "*/rag-service/venv/*" \
+    -x "*/rag-service/data/*" \
     -x "*/rag-service/.venv/*" \
     -x "*/rag-service/__pycache__/*" \
     -x "*/rag-service/*.index" \
@@ -67,7 +74,9 @@ zip -r "$ZIP_FILE" "$PROJECT_NAME" \
     -x "*/tests/recordings/*" \
     -x "*/tests/screenshots/*" \
     -x "*/tests/videos/*" \
-    -x "*/tests/rpa/replay/*"
+    -x "*/tests/rpa/replay/*" \
+    -x "*/tests/rpa/reports/*" \
+    -x "*/tests/rpa/screenshots/*"
 
 # Verifica se o arquivo foi criado
 if [ -f "$ZIP_FILE" ]; then

@@ -32,6 +32,14 @@ function getNodeLabel(type) {
   return schema?.label || type;
 }
 
+function getBpmnStatusClass(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized.includes('degradacao')) return 'degraded';
+  if (normalized.includes('extensao')) return 'extension';
+  if (normalized.includes('nao')) return 'unmapped';
+  return 'supported';
+}
+
 /**
  * Componente editável que só se torna editável com duplo clique
  */
@@ -146,7 +154,17 @@ function DefaultNodeComponent(props) {
   const errors = validation.errors || [];
   const isActive = node?.data?.ui?.isActive;
   const isExecuted = node?.data?.ui?.isExecuted;
+  const isBpmnVisualMode = !!node?.data?.ui?.bpmnVisualMode;
+  const bpmnElement = node?.data?.ui?.bpmnElement;
+  const bpmnStatus = node?.data?.ui?.bpmnStatus;
+  const bpmnRequiresExtension = !!node?.data?.ui?.bpmnRequiresExtension;
   const isSelected = !!node?.selected;
+
+  const bpmnElementLabel = bpmnElement
+    ? String(bpmnElement).replace(/^bpmn:/, '')
+    : 'nao mapeado';
+  const bpmnStatusClass = getBpmnStatusClass(bpmnStatus);
+  const showBpmnChip = isBpmnVisualMode;
 
   // ✅ Formata mensagens de erro para o tooltip
   const errorTooltip = hasErrors && errors.length > 0
@@ -193,6 +211,14 @@ function DefaultNodeComponent(props) {
         </div>
       </div>
       <div className="flow-node__content">
+        {showBpmnChip && (
+          <div
+            className={`flow-node__bpmn-chip flow-node__bpmn-chip--${bpmnStatusClass}`}
+            title={`Mapeamento BPMN: ${bpmnElementLabel}${bpmnRequiresExtension ? ' (usa extensao)' : ''}`}
+          >
+            BPMN: {bpmnElementLabel}
+          </div>
+        )}
         {nodeType === 'message' && config.text && (
           <div className="flow-node__preview">
             <div className="flow-node__preview-label">Texto:</div>

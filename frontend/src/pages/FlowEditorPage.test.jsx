@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '../styles/themeContext';
 import { WebSocketProvider } from '../context/WebSocketContext';
@@ -17,6 +17,7 @@ const setSelectedNode = vi.fn();
 const mockSetValidation = vi.fn();
 const mockDeleteFlow = vi.fn();
 const mockClearCurrentFlow = vi.fn();
+let mockValidationState = null;
 
 vi.mock('../state/editorStore', async () => {
   const actual = await vi.importActual('../state/editorStore');
@@ -27,7 +28,7 @@ vi.mock('../state/editorStore', async () => {
     useEditor: () => ({
       currentFlow: stableCurrentFlow,
       selectedNode: null,
-      validation: null,
+      validation: mockValidationState,
       simulation: null,
       loading: false,
       error: null, // Sempre null para evitar que o useEffect de erros seja executado
@@ -216,6 +217,9 @@ describe('pages/FlowEditorPage', () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     localStorage.clear();
+    // Force desktop width so collapsible panels start expanded.
+    // isolate:false means window is shared across test files, so this must be reset here.
+    Object.defineProperty(window, 'innerWidth', { value: 1280, writable: true, configurable: true });
     // Define valores padrão no localStorage para evitar mudanças durante o teste
     localStorage.setItem('paletteWidth', '224');
     localStorage.setItem('rightPanelWidth', '288');
@@ -225,6 +229,7 @@ describe('pages/FlowEditorPage', () => {
     mockSetValidation.mockClear();
     mockDeleteFlow.mockClear();
     mockClearCurrentFlow.mockClear();
+    mockValidationState = null;
   });
 
   afterEach(() => {
@@ -301,6 +306,115 @@ describe('pages/FlowEditorPage', () => {
       // Sempre limpa o timeout, mesmo se o teste falhar
       clearTimeout(timeoutId);
     }
+  }, TEST_TIMEOUT);
+
+  it('exibe warnings BPMN no painel de validacao', async () => {
+    mockValidationState = {
+      valid: false,
+      errors: [
+        {
+          code: 'BPMN_EXTENSION_REQUIRED',
+          message: 'Node requires extension',
+          messageUi: 'No "api" requer extensao BPMN do r-agent2.',
+          severity: 'warning',
+          nodeIds: ['17'],
+        },
+      ],
+      uiErrors: [
+        {
+          code: 'BPMN_EXTENSION_REQUIRED',
+          message: 'Node requires extension',
+          messageUi: 'No "api" requer extensao BPMN do r-agent2.',
+          severity: 'warning',
+          nodeIds: ['17'],
+        },
+        {
+          code: 'BPMN_MISSING_END',
+          message: 'Missing end node',
+          messageUi: 'Fluxo sem no de fim para exportacao BPMN.',
+          severity: 'warning',
+          nodeIds: [],
+        },
+      ],
+    };
+
+    const { container } = render(
+      <ThemeProvider>
+        <WebSocketProvider>
+          <FlowEditorPage />
+        </WebSocketProvider>
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // If the validation section is collapsed (happens when window.innerWidth < 768 in happy-dom),
+    // expand it by clicking its toggle button before asserting content.
+    const validacaoLabel = screen.queryByText('Validação');
+    if (validacaoLabel) {
+      const sectionHeader = validacaoLabel.closest('.section-header');
+      const toggleBtn = sectionHeader?.querySelector('button[title="Expandir"]');
+      if (toggleBtn) {
+        await act(async () => {
+          toggleBtn.click();
+          vi.advanceTimersByTime(50);
+        });
+      }
+    }
+
+    // Use within(container) so we search inside the render container directly,
+    // avoiding any document.body detachment issues with isolate:false + threads.
+    const scope = within(container);
+    expect(scope.getByText('Mensagens Gerais')).toBeTruthy();
+    expect(scope.getByText('No: 17')).toBeTruthy();
+    expect(scope.getByText(/\[BPMN_MISSING_END\]/)).toBeTruthy();
+    expect(scope.getAllByText(/\(WARNING\)/).length).toBeGreaterThan(0);
+    expect(scope.getByText('Fluxo sem no de fim para exportacao BPMN.')).toBeTruthy();
+  }, TEST_TIMEOUT);
+
+  it('toggle BPMN persiste estado no localStorage', async () => {
+    localStorage.removeItem('bpmnVisualMode');
+
+    const { container } = render(
+      <ThemeProvider>
+        <WebSocketProvider>
+          <FlowEditorPage />
+        </WebSocketProvider>
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Botão BPMN renderizado como children do Toolbar mock
+    const bpmnBtn = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.textContent.trim() === 'BPMN',
+    );
+    expect(bpmnBtn).toBeTruthy();
+
+    // Estado inicial: desligado (localStorage vazio = off)
+    expect(bpmnBtn).not.toHaveClass('btn-base--active');
+
+    // Clica para ligar
+    await act(async () => {
+      bpmnBtn.click();
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(bpmnBtn).toHaveClass('btn-base--active');
+    expect(localStorage.getItem('bpmnVisualMode')).toBe('1');
+
+    // Clica novamente para desligar
+    await act(async () => {
+      bpmnBtn.click();
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(bpmnBtn).not.toHaveClass('btn-base--active');
+    expect(localStorage.getItem('bpmnVisualMode')).toBe('0');
   }, TEST_TIMEOUT);
 });
 

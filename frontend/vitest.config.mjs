@@ -17,8 +17,11 @@ export default defineConfig({
     },
   },
   test: {
-    // Ambiente de teste - usa happy-dom para evitar problemas de compatibilidade ESM
-    environment: 'happy-dom',
+    // Ambiente de teste - jsdom tem suporte a DOMParser nativo
+    environment: 'jsdom',
+    
+    // Setup files para polyfills
+    setupFiles: ['./vitest.setup.js'],
     
     // Timeouts globais para evitar travamentos
     testTimeout: 10000, // 10 segundos por teste

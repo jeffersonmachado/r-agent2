@@ -261,6 +261,25 @@
     pointer-events: auto;
     cursor: pointer;
   }
+
+  .rete-connection-path--supported {
+    stroke: #22c55e;
+  }
+
+  .rete-connection-path--degraded {
+    stroke: #f59e0b;
+    stroke-dasharray: 12 6;
+  }
+
+  .rete-connection-path--extension {
+    stroke: #3b82f6;
+    stroke-dasharray: 8 6;
+  }
+
+  .rete-connection-path--unmapped {
+    stroke: #ef4444;
+    stroke-dasharray: 5 5;
+  }
   
   /* Path selecionado (amarelo) */
   .rete-connection-path-selected {
@@ -523,6 +542,43 @@
   .flow-node__content {
     padding: 18px;
     cursor: pointer; /* Cursor de clique no corpo do nó */
+  }
+
+  .flow-node__bpmn-chip {
+    margin-bottom: 10px;
+    padding: 4px 8px;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .flow-node__bpmn-chip--supported {
+    background-color: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #6ee7b7;
+  }
+
+  .flow-node__bpmn-chip--degraded {
+    background-color: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+  }
+
+  .flow-node__bpmn-chip--extension {
+    background-color: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+  }
+
+  .flow-node__bpmn-chip--unmapped {
+    background-color: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
   }
 
   .flow-node__preview {
@@ -2002,6 +2058,12 @@
 
 .btn-base:active {
   transform: scale(0.98);
+}
+
+.btn-base--active {
+  background-color: var(--color-accent-light);
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-hover);
 }
 
 /* Headers de seções */
