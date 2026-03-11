@@ -53,3 +53,41 @@ jobs:
         name: rpa-reports-${{ matrix.node-version }}
         path: tests/rpa/reports/
         retention-days: 7
+
+  operational-agent-shim-strict:
+    name: Operational Agent Shim Strict (staging rollout)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
+    continue-on-error: ${{ vars.OPERATIONAL_AGENT_SHIM_STRICT_ENFORCE != '1' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js 20.19.0
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.19.0'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run strict shim compatibility checks
+      env:
+        OPERATIONAL_AGENT_SHIM_STRICT: '1'
+        REDIS_URL: redis://localhost:6379
+        SEQUELIZE_LOGGING: 'false'
+      run: |
+        npx jest --runInBand \
+          api/core/operational-agent/__tests__/OperationalAgentShimDeprecation.test.js \
+          api/core/operational-agent/__tests__/OperationalAgentIndex.test.js
+
+    - name: Add rollout summary
+      if: always()
+      run: |
+        echo "### Operational-agent strict shim rollout" >> $GITHUB_STEP_SUMMARY
+        echo "- Scope: develop + pull_request" >> $GITHUB_STEP_SUMMARY
+        echo "- Mode: OPERATIONAL_AGENT_SHIM_STRICT=1" >> $GITHUB_STEP_SUMMARY
+        echo "- Enforcement var: OPERATIONAL_AGENT_SHIM_STRICT_ENFORCE=${{ vars.OPERATIONAL_AGENT_SHIM_STRICT_ENFORCE || '0' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Policy: continue-on-error=${{ vars.OPERATIONAL_AGENT_SHIM_STRICT_ENFORCE != '1' }}" >> $GITHUB_STEP_SUMMARY
