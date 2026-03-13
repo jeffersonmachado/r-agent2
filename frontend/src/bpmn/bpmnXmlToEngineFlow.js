@@ -21,6 +21,8 @@ const FLOW_NODE_LOCAL_NAMES = new Set([
   'receiveTask',
   'sendTask',
   'exclusiveGateway',
+  'inclusiveGateway',
+  'eventBasedGateway',
   'parallelGateway',
   'boundaryEvent',
   'intermediateCatchEvent',
@@ -298,6 +300,14 @@ function resolveGatewayType(extensionMetadata) {
   return 'router';
 }
 
+function warnGatewayDegradation(report, elementId, gatewayLocalName) {
+  report.warnings.push({
+    code: 'bpmn_gateway_degraded',
+    elementId,
+    message: `${gatewayLocalName} is not natively supported in engine nodes. Imported as router.`,
+  });
+}
+
 function resolveNodeDescriptor(element, report, registry, options = {}) {
   const localName = element.localName;
   const bpmnElementId =
@@ -384,6 +394,20 @@ function resolveNodeDescriptor(element, report, registry, options = {}) {
 
     case 'exclusiveGateway':
       descriptor.nodeType = resolveGatewayType(extensionMetadata);
+      break;
+
+    case 'inclusiveGateway':
+      descriptor.nodeType = resolveGatewayType(extensionMetadata);
+      descriptor.config.bpmnGatewayType = 'inclusive';
+      descriptor.degraded = true;
+      warnGatewayDegradation(report, bpmnElementId, 'inclusiveGateway');
+      break;
+
+    case 'eventBasedGateway':
+      descriptor.nodeType = resolveGatewayType(extensionMetadata);
+      descriptor.config.bpmnGatewayType = 'event_based';
+      descriptor.degraded = true;
+      warnGatewayDegradation(report, bpmnElementId, 'eventBasedGateway');
       break;
 
     case 'intermediateCatchEvent': {

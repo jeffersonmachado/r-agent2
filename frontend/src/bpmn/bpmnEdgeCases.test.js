@@ -295,6 +295,34 @@ describe('bpmnXmlToEngineFlow – edge cases', () => {
     });
   });
 
+  describe('gateway de degradacao (inclusiveGateway)', () => {
+    it('importa como router e preserva sequence flows sem orphan', () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" targetNamespace="http://x">
+  <bpmn:process id="Process_1" isExecutable="true">
+    <bpmn:startEvent id="Start_1" />
+    <bpmn:task id="Task_A" />
+    <bpmn:task id="Task_B" />
+    <bpmn:inclusiveGateway id="Gate_1" />
+    <bpmn:endEvent id="End_1" />
+    <bpmn:sequenceFlow id="SF_1" sourceRef="Start_1" targetRef="Task_A" />
+    <bpmn:sequenceFlow id="SF_2" sourceRef="Task_A" targetRef="Gate_1" />
+    <bpmn:sequenceFlow id="SF_3" sourceRef="Task_B" targetRef="Gate_1" />
+    <bpmn:sequenceFlow id="SF_4" sourceRef="Gate_1" targetRef="End_1" />
+  </bpmn:process>
+</bpmn:definitions>`;
+
+      const { flowDefinition, report } = bpmnXmlToEngineFlow(xml);
+      const gatewayNode = flowDefinition.nodes.find((n) => n.config?.bpmnElementId === 'Gate_1');
+
+      expect(gatewayNode).toBeTruthy();
+      expect(gatewayNode.type).toBe('router');
+      expect(gatewayNode.config?.bpmnGatewayType).toBe('inclusive');
+      expect(report.warnings.some((w) => w.code === 'bpmn_gateway_degraded')).toBe(true);
+      expect(report.warnings.some((w) => w.code === 'bpmn_sequence_flow_orphan')).toBe(false);
+    });
+  });
+
   describe('sequenceFlow sem sourceRef ou targetRef', () => {
     it('ignora e emite warning bpmn_sequence_flow_incomplete', () => {
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
