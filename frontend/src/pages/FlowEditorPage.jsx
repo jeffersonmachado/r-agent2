@@ -349,6 +349,7 @@ export function FlowEditorPage() {
     captureTimer: null,
   });
   const lastBpmnSourceSignatureRef = useRef(null);
+  const bpmnImportSessionRef = useRef(0);
 
   useEffect(() => {
     bpmnZoomRef.current = bpmnZoom;
@@ -3441,28 +3442,35 @@ export function FlowEditorPage() {
       throw new Error('JSON_UNKNOWN_FORMAT');
     };
 
+    const inferFlowNameFromFile = (fileName) => {
+      const raw = String(fileName || '').trim();
+      const stripped = raw.replace(/\.(bpmn|xml)$/i, '').trim();
+      return stripped || 'Fluxo BPMN importado';
+    };
+
+    const buildBpmnDraftFlow = (rawText) => ({
+      tenantId: currentFlow?.tenantId || agent?.tenantId || 'demo-tenant',
+      id: currentFlow?.id || `bpmn-import-${Date.now()}`,
+      name: currentFlow?.name || inferFlowNameFromFile(file?.name),
+      version: Number.isFinite(Number(currentFlow?.version)) ? Number(currentFlow.version) : 1,
+      nodes: [],
+      metadata: {
+        ...(currentFlow?.metadata && typeof currentFlow.metadata === 'object' ? currentFlow.metadata : {}),
+        sourceName: file?.name || null,
+        diagramType: 'bpmn',
+        editorMode: 'bpmn',
+        sourceXml: String(rawText || ''),
+      },
+    });
+
     const importBpmnFile = (rawText) => {
       const viewModel = bpmnXmlToViewModel(rawText, {
         name: file?.name || currentFlow?.name,
       });
-      const { flowDefinition, report } = bpmnXmlToEngineFlow(rawText, {
-        id: currentFlow?.id,
-        name: currentFlow?.name,
-        metadata: {
-          sourceName: file?.name || null,
-        },
-      });
-      const converted = engineFlowToReteJson(flowDefinition);
-      if (!converted || !converted.nodes || Object.keys(converted.nodes).length === 0) {
-        throw new Error('BPMN_CONVERSION_FAILED');
-      }
       return {
-        flowDefinition,
         viewModel,
-        reteJson: converted,
+        sourceXml: String(rawText || ''),
         format: 'bpmn',
-        warnings: Array.isArray(report?.warnings) ? report.warnings : [],
-        warningCount: Array.isArray(report?.warnings) ? report.warnings.length : 0,
       };
     };
 
@@ -3474,6 +3482,7 @@ export function FlowEditorPage() {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
+        const importSessionId = ++bpmnImportSessionRef.current;
         const rawText = String(reader.result || '');
         const lowerName = String(file.name || '').toLowerCase();
         const isBpmnByExtension = lowerName.endsWith('.bpmn') || lowerName.endsWith('.xml');
@@ -3492,18 +3501,116 @@ export function FlowEditorPage() {
           }
         })();
 
+        // Carrega o JSON no editor
+        const editor = editorRef.current;
+        if (!editor || !editor.loadFromJson) {
+          showToast('Editor não está pronto', 'warning', 2000);
+          return;
+        }
+
+        if (importResult.format === 'bpmn') {
+          const importedDraftFlow = buildBpmnDraftFlow(importResult.sourceXml);
+
+          setDraftFlow(importedDraftFlow);
+          setDraftMeta({
+            id: importedDraftFlow?.id,
+            name: importedDraftFlow?.name,
+            kind: importedDraftFlow?.kind,
+            tenantId: importedDraftFlow?.tenantId || currentFlow?.tenantId || agent?.tenantId || 'demo-tenant',
+            metadata: importedDraftFlow?.metadata || {},
+          });
+          setBpmnViewModel(importResult.viewModel || null);
+          setBpmnSelection(null);
+          setBpmnSourceDirty(false);
+          setEditorMode('bpmn');
+          setCanvasLocked(false);
+          setCanvasLockReason(null);
+
+          // Limpa o fluxo atual do estado para permitir trabalhar com o importado
+          clearCurrentFlow();
+          setSelectedNode(null);
+
+          showToast('BPMN importado no modo visual', 'success', 2000);
+
+          // Permite que o React pinte o modo visual antes da conversão para engine.
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (importSessionId !== bpmnImportSessionRef.current) return;
+
+          const { flowDefinition, report } = bpmnXmlToEngineFlow(importResult.sourceXml, {
+            id: currentFlow?.id,
+            name: currentFlow?.name,
+            metadata: {
+              sourceName: file?.name || null,
+            },
+          });
+
+          const converted = engineFlowToReteJson(flowDefinition);
+          if (!converted || !converted.nodes || Object.keys(converted.nodes).length === 0) {
+            throw new Error('BPMN_CONVERSION_FAILED');
+          }
+
+          await editor.loadFromJson(converted);
+          if (importSessionId !== bpmnImportSessionRef.current) return;
+
+          const warnings = Array.isArray(report?.warnings) ? report.warnings : [];
+          const warningCount = warnings.length;
+
+          if (warningCount > 0) {
+            logger.info('BPMN importado com avisos', {
+              warningCount,
+              warnings,
+              fileName: file.name,
+            });
+            showToast(
+              buildBpmnWarningToastMessage(warnings) || `BPMN importado com ${warningCount} aviso(s)`,
+              'warning',
+              { duration: 7000, log: false }
+            );
+          }
+
+          setDraftFlow(flowDefinition);
+          setDraftMeta({
+            id: flowDefinition?.id,
+            name: flowDefinition?.name,
+            kind: flowDefinition?.kind,
+            tenantId: flowDefinition?.tenantId || currentFlow?.tenantId || agent?.tenantId || 'demo-tenant',
+            metadata: flowDefinition?.metadata || {},
+          });
+
+          // Opcional: valida o fluxo importado após um pequeno delay
+          // O validateCurrentFlow já atualiza o estado validation internamente
+          setTimeout(async () => {
+            if (importSessionId !== bpmnImportSessionRef.current) return;
+            try {
+              const reteJson = await editor.editor?.current?.toJSON();
+              if (reteJson) {
+                const validationResult = await validateCurrentFlow(reteJson);
+                if (validationResult) {
+                  applyBackendValidationErrors(
+                    editor.editor?.current,
+                    editor.area,
+                    validationResult.errors || []
+                  );
+
+                  // ✅ Expande painel de validação se houver erros
+                  if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
+                    setValidationCollapsed(false);
+                  }
+                }
+              }
+            } catch (validationErr) {
+              logger.debug('Erro ao validar fluxo importado (não crítico)', { error: validationErr });
+            }
+          }, 500);
+
+          return;
+        }
+
         const reteJson = importResult.reteJson;
 
         // Valida se o JSON convertido tem nós válidos
         if (!reteJson.nodes || typeof reteJson.nodes !== 'object' || Object.keys(reteJson.nodes).length === 0) {
           showToast('Arquivo inválido: nenhum nó válido encontrado', 'error', 3000);
-          return;
-        }
-
-        // Carrega o JSON no editor
-        const editor = editorRef.current;
-        if (!editor || !editor.loadFromJson) {
-          showToast('Editor não está pronto', 'warning', 2000);
           return;
         }
         
