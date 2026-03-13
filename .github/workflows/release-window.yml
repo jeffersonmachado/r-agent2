@@ -1,0 +1,124 @@
+name: Release Window (Prewarm)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_window_fast:
+        description: 'Executar janela em modo rápido (RELEASE_WINDOW_FAST=1)'
+        required: false
+        default: '1'
+      release_window_run_backup:
+        description: 'Executar backup no release-window full (RELEASE_WINDOW_RUN_BACKUP=1)'
+        required: false
+        default: '0'
+      enable_trace:
+        description: 'Habilitar Playwright tracing no stack (RPA_TRACE=1)'
+        required: false
+        default: '0'
+      capture_http_errors:
+        description: 'Capturar respostas HTTP>=400 no RPA (RPA_CAPTURE_HTTP_ERRORS=1)'
+        required: false
+        default: '1'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  prewarm-images:
+    name: Prewarm imagens de teste (GHCR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      test_image_prefix: ${{ steps.vars.outputs.test_image_prefix }}
+      test_image_tag: ${{ steps.vars.outputs.test_image_tag }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Definir prefix/tag de imagens
+        id: vars
+        run: |
+          SHORT_SHA="${GITHUB_SHA::12}"
+          TEST_IMAGE_PREFIX="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-test"
+          TEST_IMAGE_TAG="ci-${SHORT_SHA}"
+          echo "test_image_prefix=${TEST_IMAGE_PREFIX}" >> "$GITHUB_OUTPUT"
+          echo "test_image_tag=${TEST_IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "TEST_IMAGE_PREFIX=${TEST_IMAGE_PREFIX}" >> "$GITHUB_ENV"
+          echo "TEST_IMAGE_TAG=${TEST_IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build imagens pré-aquecidas
+        run: |
+          TEST_IMAGE_PREFIX="${TEST_IMAGE_PREFIX}" TEST_IMAGE_TAG="${TEST_IMAGE_TAG}" bash ./scripts/prewarm-test-images.sh build
+
+      - name: Push imagens pré-aquecidas
+        run: |
+          TEST_IMAGE_PREFIX="${TEST_IMAGE_PREFIX}" TEST_IMAGE_TAG="${TEST_IMAGE_TAG}" bash ./scripts/prewarm-test-images.sh push
+
+  release-window:
+    name: Release Window com prewarm
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: [prewarm-images]
+    if: |
+      always() &&
+      (needs.prewarm-images.result == 'success' || needs.prewarm-images.result == 'skipped')
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: 'npm'
+
+      - name: Instalar dependências (root)
+        run: npm ci
+
+      - name: Login no GHCR (release-window)
+        if: needs.prewarm-images.result == 'success'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rodar release-window
+        env:
+          RELEASE_WINDOW_FAST: ${{ inputs.release_window_fast }}
+          RELEASE_WINDOW_RUN_BACKUP: ${{ inputs.release_window_run_backup }}
+          RPA_TRACE: ${{ inputs.enable_trace }}
+          RPA_CAPTURE_HTTP_ERRORS: ${{ inputs.capture_http_errors }}
+          TEST_IMAGE_PREFIX: ${{ needs.prewarm-images.outputs.test_image_prefix || 'r-agent2' }}
+          TEST_IMAGE_TAG: ${{ needs.prewarm-images.outputs.test_image_tag || 'test' }}
+          STACK_PULL_IMAGES: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
+          STACK_NO_BUILD: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
+        run: |
+          npm run system:release-window
+
+      - name: Upload release artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-window-artifacts
+          path: |
+            qa/release-window-report.json
+            qa/go-no-go-report.json
+            qa/release-gate-report.json
+            qa/launch-plan-status.json
+            qa/launch-plan-status.md
+            qa/release-summary.md
+            qa/release-manifest.json
+            qa/smoke-evidence.json
+          retention-days: 7
+          if-no-files-found: ignore

@@ -42,6 +42,10 @@ jobs:
 
       - name: Iniciar Frontend (Vite) e executar validação oficial
         run: |
+          cleanup() {
+            kill "${VITE_PID:-}" 2>/dev/null || true
+          }
+          trap cleanup EXIT
           cd frontend
           npm ci
           npm run start -- --host 0.0.0.0 --port 5173 --strictPort &
@@ -49,7 +53,6 @@ jobs:
           cd ..
           node -e "const http=require('http'); const url='http://127.0.0.1:5173'; let tries=60; (function ping(){ http.get(url,res=>{process.exit(0)}).on('error',()=>{ if(--tries<=0) process.exit(1); setTimeout(ping,1000); });})();"
           npm run system:validate
-          kill $VITE_PID || true
       
       - name: Verificar build
         run: |
@@ -144,4 +147,3 @@ jobs:
           echo "**Ambiente:** ${{ inputs.environment || 'staging' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-

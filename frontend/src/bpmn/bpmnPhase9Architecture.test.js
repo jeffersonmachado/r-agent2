@@ -1,41 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  BPMN_FEATURE_FLAGS,
-  getBpmnFeatureFlags,
-  isBpmnFeatureEnabled,
-} from './bpmnFeatureFlags';
-
-import {
   createBpmnElementRegistry,
   defaultBpmnElementRegistry,
 } from './bpmnElementRegistry';
 
 describe('Phase 9 architecture prep', () => {
-  describe('bpmnFeatureFlags', () => {
-    it('starts with all advanced features disabled by default', () => {
-      expect(Object.values(BPMN_FEATURE_FLAGS).every((flag) => flag === false)).toBe(true);
-    });
-
-    it('supports safe overrides without mutating defaults', () => {
-      const merged = getBpmnFeatureFlags({ ADVANCED_GATEWAYS: true });
-      expect(merged.ADVANCED_GATEWAYS).toBe(true);
-      expect(BPMN_FEATURE_FLAGS.ADVANCED_GATEWAYS).toBe(false);
-    });
-
-    it('evaluates feature enablement by key', () => {
-      expect(isBpmnFeatureEnabled('ADVANCED_GATEWAYS')).toBe(false);
-      expect(isBpmnFeatureEnabled('ADVANCED_GATEWAYS', { ADVANCED_GATEWAYS: true })).toBe(true);
-    });
-  });
-
   describe('bpmnElementRegistry', () => {
     it('allows registering export/import handlers and executing them', () => {
-      const registry = createBpmnElementRegistry({ flags: { ADVANCED_GATEWAYS: true } });
+      const registry = createBpmnElementRegistry();
 
       registry.register('bpmn:parallelGateway', {
-        onExport: ({ flags }) => ({ mode: 'export', enabled: flags.ADVANCED_GATEWAYS }),
-        onImport: ({ flags }) => ({ mode: 'import', enabled: flags.ADVANCED_GATEWAYS }),
+        onExport: () => ({ mode: 'export', enabled: true }),
+        onImport: () => ({ mode: 'import', enabled: true }),
       });
 
       expect(registry.has('bpmn:parallelGateway')).toBe(true);

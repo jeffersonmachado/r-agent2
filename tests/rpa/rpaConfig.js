@@ -95,7 +95,7 @@ const defaultConfig = {
     base: process.env.TEST_BASE_URL || 
           mainConfig.get('tests.rpa.apiUrl') ||
           mainConfig.get('api.baseUrl') ||
-          'http://localhost:3000',
+          `http://localhost:${Number(mainConfig.get('api.port', 3001))}`,
     frontend: process.env.TEST_FRONTEND_URL || 
               mainConfig.get('tests.rpa.frontendUrl') ||
               mainConfig.get('frontend.url') ||
@@ -103,7 +103,7 @@ const defaultConfig = {
     api: process.env.TEST_API_URL || 
          mainConfig.get('tests.rpa.apiUrl') ||
          mainConfig.get('api.baseUrl') ||
-         'http://localhost:3000',
+         `http://localhost:${Number(mainConfig.get('api.port', 3001))}`,
   },
   credentials: {
     testUser: {

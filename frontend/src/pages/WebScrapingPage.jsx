@@ -3,6 +3,7 @@ import { scrapeUrl, scrapeUrls } from '../api/webScraping';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
+import { toastError, toastWarn } from '../utils/toastHelpers';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
 
@@ -73,6 +74,13 @@ export function WebScrapingPage() {
     return `${minutes}m ${secs}s`;
   };
 
+  const formatDateTime = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('pt-BR');
+  };
+
   // Atualiza tempo decorrido
   useEffect(() => {
     if (loading && startTimeRef.current) {
@@ -138,6 +146,14 @@ export function WebScrapingPage() {
         }));
 
         showToast(`URL raspada com sucesso! ${result.indexed ? `${result.chunksCreated} chunks criados.` : ''}`, 'success');
+        if (Array.isArray(result?.warnings) && result.warnings.length > 0) {
+          toastWarn(
+            showToast,
+            'Extração parcial no web scraping',
+            'Houve avisos durante a extração. Continuamos com o melhor conteúdo disponível.',
+            { warnings: result.warnings, url: result.url }
+          );
+        }
         setResults([result]);
         setUrl('');
       } catch (error) {
@@ -148,7 +164,7 @@ export function WebScrapingPage() {
           failed: 1,
           current: null,
         }));
-        showToast(`Erro ao raspar URL: ${error.message}`, 'error');
+        toastError(showToast, 'Erro ao raspar URL', error.message, { error });
         setResults([{
           success: false,
           url: url.trim(),
@@ -256,10 +272,23 @@ export function WebScrapingPage() {
           `Raspagem concluída! ${successCount} sucesso, ${failCount} falhas.`,
           successCount > 0 ? 'success' : 'error'
         );
+        try {
+          const allWarnings = allResults.flatMap(r => (Array.isArray(r?.warnings) ? r.warnings : []));
+          if (allWarnings.length > 0) {
+            toastWarn(
+              showToast,
+              'Extração parcial no web scraping',
+              'Algumas URLs retornaram avisos durante a extração. Continuamos com o melhor conteúdo disponível.',
+              { warnings: allWarnings.slice(0, 30) }
+            );
+          }
+        } catch {
+          // ignora
+        }
         setUrls('');
       } catch (error) {
         logger.error('Erro ao raspar URLs:', error);
-        showToast(`Erro ao raspar URLs: ${error.message}`, 'error');
+        toastError(showToast, 'Erro ao raspar URLs', error.message, { error });
         setProgress(prev => ({
           ...prev,
           current: null,
@@ -280,6 +309,24 @@ export function WebScrapingPage() {
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Extraia conteúdo de sites e indexe automaticamente no RAG
         </p>
+      
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
       </div>
 
       {/* Modo de raspagem */}
@@ -713,7 +760,7 @@ export function WebScrapingPage() {
                         <span className="flex items-center gap-1">
                           <span>🕐</span>
                           <span>
-                            {new Date(result.metadata.scrapedAt).toLocaleString('pt-BR')}
+                            {formatDateTime(result.metadata.scrapedAt)}
                           </span>
                         </span>
                       )}
@@ -735,7 +782,11 @@ export function WebScrapingPage() {
                     {result.error && (
                       <div className="mt-3 p-3 bg-status-error/10 border border-status-error/30 rounded">
                         <p className="text-sm text-status-error font-medium">Erro:</p>
-                        <p className="text-xs text-status-error mt-1">{result.error}</p>
+                        <p className="text-xs text-status-error mt-1">
+                          {typeof result.error === 'string'
+                            ? result.error
+                            : (result.error?.message || 'Erro desconhecido')}
+                        </p>
                       </div>
                     )}
                   </div>

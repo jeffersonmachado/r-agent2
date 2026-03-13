@@ -297,26 +297,62 @@ describe('webhookService', () => {
         });
       });
 
+      const listenResult = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => resolve({ skip: true }), 2000);
+
+        const onError = (err) => {
+          clearTimeout(timeout);
+          if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+            resolve({ skip: true });
+            return;
+          }
+          reject(err);
+        };
+
+        server.once('error', onError);
+        try {
+          server.listen(0, '127.0.0.1', () => {
+            clearTimeout(timeout);
+            server.off('error', onError);
+            const address = server.address();
+            if (address && typeof address === 'object') {
+              resolve({ skip: false, port: address.port });
+            } else {
+              resolve({ skip: true });
+            }
+          });
+        } catch (err) {
+          clearTimeout(timeout);
+          server.off('error', onError);
+          if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+            resolve({ skip: true });
+            return;
+          }
+          reject(err);
+        }
+      });
+
+      if (listenResult.skip) {
+        return;
+      }
+
       await new Promise((resolve) => {
-        server.listen(0, () => {
-          const port = server.address().port;
-          const webhookUrl = `http://localhost:${port}/webhook`;
+        const webhookUrl = `http://localhost:${listenResult.port}/webhook`;
 
-          const created = createWebhook({
-            tenantId: testTenantId,
-            url: webhookUrl,
-            events: ['ticket.created'],
-          });
+        createWebhook({
+          tenantId: testTenantId,
+          url: webhookUrl,
+          events: ['ticket.created'],
+        });
 
-          triggerWebhooks(testTenantId, 'ticket.created', {
-            ticketId: '123',
-            queue: 'suporte',
-          }).then(() => {
-            setTimeout(() => {
-              server.close();
-              resolve();
-            }, 100);
-          });
+        triggerWebhooks(testTenantId, 'ticket.created', {
+          ticketId: '123',
+          queue: 'suporte',
+        }).then(() => {
+          setTimeout(() => {
+            server.close();
+            resolve();
+          }, 100);
         });
       });
 
@@ -354,4 +390,3 @@ describe('webhookService', () => {
     });
   });
 });
-

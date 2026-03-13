@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { listDocuments, getDocument, getDocumentsStats, deleteDocument, reindexDocument, reindexAllNotIndexed, queryRag, getRagDomains, getLearningMetrics, updateSynonymsFromDocuments, triggerLearning, getFullLearningData, updateSynonym, deleteSynonym, cleanInvalidQueries } from '../api/ragDocuments';
+import React, { useState, useEffect, useRef } from 'react';
+import { listDocuments, getDocument, getDocumentsStats, getRagHealth, cleanOrphanedVectorDocuments, deleteDocument, reindexDocument, reindexAllNotIndexed, reindexAllTenant, queryRag, getRagDomains, getLearningMetrics, updateSynonymsFromDocuments, triggerLearning, getFullLearningData, updateSynonym, deleteSynonym, cleanInvalidQueries, uploadDocument } from '../api/ragDocuments';
+import { normalizeApiError, toastForApiErrorCode } from '../utils/apiErrorHandler';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Dialog } from '../components/Dialog';
 import { Button } from '../styles/Button';
+import { buildApiUrl } from '../api/client';
+import { getAuthHeaders } from '../api/auth';
 import logger from '../utils/logger';
 
 export function RAGDocumentsPage() {
@@ -75,6 +78,10 @@ export function RAGDocumentsPage() {
   const [analysisResults, setAnalysisResults] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [showLearningModal, setShowLearningModal] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const deletingIdsRef = useRef(new Set());
+  const uploadInputRef = useRef(null);
+  const [deletingById, setDeletingById] = useState({});
   const [learningData, setLearningData] = useState(null);
   const [loadingLearning, setLoadingLearning] = useState(false);
   const [editingSynonym, setEditingSynonym] = useState(null);
@@ -92,6 +99,102 @@ export function RAGDocumentsPage() {
     failedQuestions: 0,
     documentsAnalyzed: 0,
   });
+
+  const getExtractedText = (doc) => {
+    if (!doc) return '';
+    const meta = doc.metadata || {};
+    const candidate =
+      meta.extractedContent ??
+      meta.extractedText ??
+      meta.extracted_text ??
+      meta.textoExtraido ??
+      meta.texto_extraido;
+    if (typeof candidate !== 'string') return '';
+    const trimmed = candidate.trim();
+    return trimmed ? trimmed : '';
+  };
+
+  const getDetailsText = (doc) => {
+    const extracted = getExtractedText(doc);
+    if (extracted) return extracted;
+    if (!doc || typeof doc.content !== 'string') return '';
+    const trimmed = doc.content.trim();
+    return trimmed ? trimmed : '';
+  };
+
+  const formatDateTime = (value, fallback = '—') => {
+    if (value === null || value === undefined || value === '') return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return date.toLocaleString('pt-BR');
+  };
+
+  const formatDateOnly = (value, fallback = '—') => {
+    if (value === null || value === undefined || value === '') return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const downloadTextAsFile = (filename, text) => {
+    try {
+      const safeName = (filename || 'documento.txt')
+        .toString()
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '_');
+      const blob = new Blob([text || ''], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = safeName.endsWith('.txt') ? safeName : `${safeName}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      showToast('Não foi possível fazer download do texto', 'error');
+    }
+  };
+
+  const downloadFromUrlBestEffort = async (url, filenameHint = null, options = {}) => {
+    const rawUrl = String(url || '').trim();
+    if (!rawUrl) return;
+    const finalUrl = rawUrl.startsWith('/') ? buildApiUrl(rawUrl) : rawUrl;
+
+    // Para caminhos internos (ex.: /rag/documents/:id/download) precisamos usar fetch com Authorization.
+    // Só usa window.open() quando for um esquema/caminho não-http(s) e não for path relativo "/...".
+    const isHttp = finalUrl.startsWith('http://') || finalUrl.startsWith('https://');
+    const isInternalPath = rawUrl.startsWith('/');
+    if (!isHttp && !isInternalPath) {
+      window.open(finalUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    try {
+      const res = await fetch(finalUrl, {
+        method: 'GET',
+        headers: options.headers || undefined,
+      });
+      if (!res.ok) {
+        if (res.status === 404) {
+          showToast('Arquivo original não encontrado (404).', 'warning', 6000);
+          return;
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filenameHint || 'documento';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      // CORS costuma bloquear fetch de sites externos; fallback orienta usuário
+      showToast('Não foi possível baixar automaticamente (CORS). Abra o link e faça o download pelo navegador.', 'warning', 9000);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -117,7 +220,7 @@ export function RAGDocumentsPage() {
               let rulesResponse = await fetch('/contracts/rag/question-generation.rules.json');
               // Fallback para o endpoint antigo
               if (!rulesResponse.ok) {
-                rulesResponse = await fetch('/api/data/rag_question_generation_rules.json');
+                rulesResponse = await fetch(buildApiUrl('/api/data/rag_question_generation_rules.json'));
               }
               
               if (rulesResponse.ok) {
@@ -241,9 +344,10 @@ export function RAGDocumentsPage() {
         ...(tenantId && { tenantId }),
       };
       
-      const [docs, statsData] = await Promise.all([
+      const [docs, statsData, healthData] = await Promise.all([
         listDocuments(apiFilters),
         getDocumentsStats(tenantId),
+        getRagHealth(tenantId).catch((e) => ({ __error: e })),
       ]);
       // Garante que docs seja sempre um array
       const documentsArray = Array.isArray(docs) ? docs : [];
@@ -274,6 +378,18 @@ export function RAGDocumentsPage() {
       
       setDocuments(documentsArray);
       setStats(statsData);
+
+      // Health (Postgres = fonte única): warnings vêm em array
+      if (healthData && healthData.ok && Array.isArray(healthData.warnings) && healthData.warnings.length > 0) {
+        const first = healthData.warnings[0];
+        const warningMessage = first?.message || '⚠️ Inconsistência detectada no RAG.';
+        showToast(warningMessage, 'warning', 9000);
+      } else if (healthData && healthData.ok === false && healthData.error) {
+        showToast(healthData.error.message || 'Erro ao verificar health do RAG', 'error', 7000);
+      } else if (healthData && healthData.__error) {
+        // Não bloqueia a tela; apenas informa em dev/observabilidade
+        logger.warn('[RAGDocumentsPage] Falha ao consultar /rag/health (ignorado)', { error: healthData.__error?.message });
+      }
     } catch (error) {
       logger.error('Erro ao carregar dados:', error);
       showToast('Erro ao carregar dados', 'error');
@@ -283,7 +399,90 @@ export function RAGDocumentsPage() {
     }
   };
 
+  const handleUploadDocumentFromUi = async (event) => {
+    const files = Array.from(event?.target?.files || []).filter(Boolean);
+    if (event?.target) {
+      event.target.value = '';
+    }
+    if (files.length === 0) return;
+
+    try {
+      setUploadingDocument(true);
+      const tenantId = agent?.tenantId || null;
+      const uploadResults = await Promise.allSettled(
+        files.map((file) => uploadDocument(file, {
+          ...(tenantId ? { tenantId } : {}),
+          metadata: {
+            uploadedFrom: 'rag-documents-ui',
+          },
+        }))
+      );
+
+      const fulfilled = uploadResults.filter((item) => item.status === 'fulfilled');
+      const successCount = fulfilled.length;
+      const failedCount = uploadResults.length - successCount;
+
+      const extractUploadedDoc = (payload) => {
+        if (!payload || typeof payload !== 'object') return null;
+        if (payload.document && typeof payload.document === 'object') return payload.document;
+        if (payload.data && typeof payload.data === 'object') return payload.data;
+        return payload;
+      };
+
+      const uploadedDocs = fulfilled
+        .map((item) => extractUploadedDoc(item.value))
+        .filter((doc) => doc && doc.id);
+
+      const docsNeedingIndex = uploadedDocs.filter((doc) => doc.indexed !== true);
+      let reindexSuccess = 0;
+      let reindexFailed = 0;
+      if (docsNeedingIndex.length > 0) {
+        const reindexResults = await Promise.allSettled(
+          docsNeedingIndex.map((doc) => reindexDocument(doc.id))
+        );
+        reindexSuccess = reindexResults.filter((item) => item.status === 'fulfilled' && item.value?.success).length;
+        reindexFailed = docsNeedingIndex.length - reindexSuccess;
+      }
+
+      if (successCount > 0) {
+        if (failedCount === 0 && reindexFailed === 0) {
+          showToast(
+            successCount === 1
+              ? `Upload concluído: ${files[0]?.name || 'documento'}`
+              : `${successCount} documentos enviados e indexados`,
+            'success'
+          );
+        } else {
+          const parts = [
+            `${successCount} enviados`,
+            reindexSuccess > 0 ? `${reindexSuccess} reindexados` : null,
+            failedCount > 0 ? `${failedCount} com falha no upload` : null,
+            reindexFailed > 0 ? `${reindexFailed} sem indexação` : null,
+          ].filter(Boolean);
+          showToast(parts.join(' • '), 'warning');
+        }
+        await loadData();
+      } else {
+        const firstError = uploadResults.find((item) => item.status === 'rejected');
+        const info = normalizeApiError(firstError?.reason);
+        showToast(info?.message || 'Erro ao fazer upload dos documentos', 'error');
+      }
+    } catch (error) {
+      const info = normalizeApiError(error);
+      logger.error('Erro ao fazer upload de documento RAG pela UI:', info);
+      showToast(info?.message || 'Erro ao fazer upload do documento', 'error');
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
   const handleDelete = async (doc, closeModal = false) => {
+    const docId = doc?.id ? String(doc.id) : '';
+    if (!docId) return;
+
+    // Evita duplicidade (ex.: clique duplo / modal + lista)
+    if (deletingIdsRef.current.has(docId)) return;
+
     const confirmed = await confirm({
       title: 'Confirmar exclusão',
       message: `Tem certeza que deseja excluir o documento "${doc.title}"?`,
@@ -291,8 +490,14 @@ export function RAGDocumentsPage() {
 
     if (!confirmed) return;
 
+    // Revalida lock após o confirm (pode ter sido excluído em paralelo)
+    if (deletingIdsRef.current.has(docId)) return;
+    deletingIdsRef.current.add(docId);
+    setDeletingById((prev) => ({ ...prev, [docId]: true }));
+
     try {
-      await deleteDocument(doc.id);
+      setLoading(true);
+      await deleteDocument(docId);
       showToast('Documento excluído com sucesso!', 'success');
       if (closeModal) {
         setShowDetailsModal(false);
@@ -302,8 +507,30 @@ export function RAGDocumentsPage() {
       }
       loadData();
     } catch (error) {
-      logger.error('Erro ao excluir documento:', error);
-      showToast('Erro ao excluir documento', 'error');
+      // Delete é idempotente: se a API indicar "não encontrado", trata como já-excluído.
+      const msg = error?.body?.message || error?.message || '';
+      if (error?.status === 404 || (error?.status === 400 && String(msg).toLowerCase().includes('não encontrado'))) {
+        logger.warn('[RAGDocumentsPage] Delete idempotente: documento já não existe', { documentId: docId, status: error?.status });
+        showToast('Documento já havia sido excluído.', 'warning', 7000);
+        if (closeModal) {
+          setShowDetailsModal(false);
+          setTimeout(() => {
+            setSelectedDocument(null);
+          }, 300);
+        }
+        loadData();
+      } else {
+        logger.error('Erro ao excluir documento:', error);
+        showToast('Erro ao excluir documento', 'error');
+      }
+    } finally {
+      deletingIdsRef.current.delete(docId);
+      setDeletingById((prev) => {
+        const next = { ...prev };
+        delete next[docId];
+        return next;
+      });
+      setLoading(false);
     }
   };
 
@@ -320,16 +547,51 @@ export function RAGDocumentsPage() {
       }
       loadData();
     } catch (error) {
-      logger.error('Erro ao reindexar:', error);
-      showToast('Erro ao reindexar documento', 'error');
+      const info = normalizeApiError(error);
+      const toast = toastForApiErrorCode(info.code);
+      logger.error('Erro ao reindexar:', { error: info });
+      showToast(toast.message || info.message || 'Erro ao reindexar documento', toast.type || 'error', toast.durationMs || 10000);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleShowDetails = (doc) => {
+  const handleCleanOrphans = async () => {
+    const confirmed = await confirm({
+      title: 'Limpar dados órfãos do Vector Store',
+      message: 'Isso remove do vector store (Postgres/pgvector) documentos/chunks que não existem mais no banco de dados deste tenant. Continuar?',
+    });
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      const tenantId = agent?.tenantId || null;
+      const result = await cleanOrphanedVectorDocuments(tenantId);
+      if (result.success) {
+        showToast(`Órfãos removidos do vector store: ${result.removedDocuments} documentos, ${result.removedChunks} chunks.`, 'success', 9000);
+      } else {
+        showToast(result.error || 'Falha ao limpar órfãos do vector store', 'error', 10000);
+      }
+      await loadData();
+    } catch (error) {
+      const info = normalizeApiError(error);
+      const toast = toastForApiErrorCode(info.code);
+      showToast(toast.message || info.message || 'Erro ao limpar órfãos do vector store', toast.type || 'error', toast.durationMs || 10000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShowDetails = async (doc) => {
+    // Abre rápido com o dado atual e tenta enriquecer com o detalhe completo (best-effort)
     setSelectedDocument(doc);
     setShowDetailsModal(true);
+    try {
+      const full = await getDocument(doc?.id);
+      if (full) setSelectedDocument(full);
+    } catch (error) {
+      logger.warn('[RAGDocumentsPage] Falha ao buscar detalhes completos do documento', { error: error?.message, documentId: doc?.id });
+    }
   };
 
   const analyzeDocuments = async (maxDocuments = null) => {
@@ -879,7 +1141,6 @@ export function RAGDocumentsPage() {
           documentsCount: indexedDocs.length
         });
         
-        const { updateSynonymsFromDocuments, triggerLearning } = await import('../api/ragDocuments');
         const synonymsResult = await updateSynonymsFromDocuments(tenantId, indexedDocs);
         
         logger.debug('✅ [APRENDIZADO] Sinônimos atualizados', {
@@ -1034,7 +1295,7 @@ Não inclua explicações, apenas o JSON array.`;
         .replace(/\{\{documentContent\}\}/g, documentContent.substring(0, 500))
         .replace(/\{\{questionsList\}\}/g, questionsList);
 
-      const response = await fetch('/api/ai/generate', {
+      const response = await fetch(buildApiUrl('/api/ai/generate'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1042,6 +1303,7 @@ Não inclua explicações, apenas o JSON array.`;
         body: JSON.stringify({
           prompt,
           tenantId,
+          executionId: `exec-${Date.now()}-${Math.random().toString(16).slice(2)}`,
           sessionId: 'rag-question-validation',
           flowId: 'rag-analysis',
           nodeId: 'question-validator',
@@ -1142,7 +1404,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
         .replace(/\{\{documentContent\}\}/g, documentContent.substring(0, 500))
         .replace(/\{\{question\}\}/g, question);
 
-      const response = await fetch('/api/ai/generate', {
+      const response = await fetch(buildApiUrl('/api/ai/generate'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1150,6 +1412,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
         body: JSON.stringify({
           prompt,
           tenantId,
+          executionId: `exec-${Date.now()}-${Math.random().toString(16).slice(2)}`,
           sessionId: 'rag-question-validation',
           flowId: 'rag-analysis',
           nodeId: 'question-validator',
@@ -1597,16 +1860,14 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
   };
 
   const handleReindexAll = async () => {
-    // Verifica se há inconsistência (documentos marcados como indexados mas não no vector store)
+    // Se há "db_ahead", preferimos um reindex completo do tenant (zera chunks e reprocessa)
     const hasInconsistency = stats?.syncStatus === 'db_ahead' && stats?.syncDifference > 0;
-    const totalToReindex = hasInconsistency 
-      ? (stats?.notIndexed || 0) + stats.syncDifference
-      : (stats?.notIndexed || 0);
+    const totalToReindex = hasInconsistency ? (stats?.total || 0) : (stats?.notIndexed || 0);
     
     const confirmed = await confirm({
-      title: hasInconsistency ? 'Confirmar sincronização' : 'Confirmar reindexação em lote',
+      title: hasInconsistency ? 'Confirmar reindexação completa' : 'Confirmar reindexação em lote',
       message: hasInconsistency
-        ? `Há ${stats.syncDifference} documento(s) marcado(s) como indexado(s) mas não encontrado(s) no vector store. Deseja sincronizar todos os documentos (incluindo os inconsistentes)? Esta operação pode demorar alguns minutos.`
+        ? `Há inconsistência detectada. Deseja reindexar TODOS os documentos do tenant (isso apaga todos os chunks/embeddings do tenant e recria do zero)? Esta operação pode demorar alguns minutos.`
         : `Tem certeza que deseja reindexar todos os documentos não indexados? Esta operação pode demorar alguns minutos.`,
     });
 
@@ -1625,8 +1886,10 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
 
     try {
       setLoading(true);
-      // Passa includeInconsistent=true se houver inconsistência
-      const result = await reindexAllNotIndexed(agent?.tenantId || null, hasInconsistency);
+      const tenantId = agent?.tenantId || null;
+      const result = hasInconsistency
+        ? await reindexAllTenant(tenantId)
+        : await reindexAllNotIndexed(tenantId, false);
       
       if (result.success) {
         if (result.total === 0) {
@@ -1809,7 +2072,32 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
           <p className="text-text-secondary" style={{ marginTop: '8px', marginBottom: '15px' }}>
             Gerencie todos os documentos indexados no sistema RAG
           </p>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            multiple
+            style={{ display: 'none' }}
+            accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.md,.rtf,.json,image/*"
+            onChange={handleUploadDocumentFromUi}
+          />
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <Button
+              onClick={() => uploadInputRef.current?.click()}
+              disabled={uploadingDocument || loading}
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: uploadingDocument || loading ? 'not-allowed' : 'pointer',
+                opacity: uploadingDocument || loading ? 0.6 : 1,
+                whiteSpace: 'nowrap',
+              }}
+              title="Enviar um ou mais documentos para o RAG"
+            >
+              {uploadingDocument ? 'Enviando...' : '⬆️ Upload de documentos'}
+            </Button>
             <Button
               onClick={() => setShowQueryModal(true)}
               style={{ 
@@ -2024,10 +2312,11 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
               // Verifica condições para exibir o botão
               const hasNotIndexed = stats.notIndexed > 0;
               const hasInconsistency = stats.syncStatus === 'db_ahead' && stats.syncDifference > 0;
+              const hasOrphans = stats.syncStatus === 'vector_ahead' && stats.syncDifference > 0;
               // Se não há stats do vector store mas há docs indexados, pode haver inconsistência
               const possibleInconsistency = !stats.vectorStoreStats && stats.indexed > 0;
               
-              const shouldShow = hasNotIndexed || hasInconsistency || possibleInconsistency;
+              const shouldShow = hasNotIndexed || hasInconsistency || hasOrphans || possibleInconsistency;
               
               logger.info('[RAGDocumentsPage] Condições do botão - RENDER', {
                 hasNotIndexed,
@@ -2051,9 +2340,10 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
               
               // Determina texto e cor do botão
               const isSync = hasInconsistency || (possibleInconsistency && stats.indexed > 0);
-              const count = hasInconsistency 
-                ? stats.syncDifference 
-                : (possibleInconsistency ? stats.indexed : stats.notIndexed);
+              const isCleanOrphans = hasOrphans;
+              const count = hasInconsistency
+                ? stats.syncDifference
+                : (hasOrphans ? stats.syncDifference : (possibleInconsistency ? stats.indexed : stats.notIndexed));
               
               logger.info('[RAGDocumentsPage] Botão SERÁ renderizado', {
                 isSync,
@@ -2064,11 +2354,11 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
               
               const buttonElement = (
                 <Button
-                  key={`reindex-button-${count}-${isSync}`}
-                  onClick={handleReindexAll}
+                  key={`reindex-button-${count}-${isSync}-${isCleanOrphans}`}
+                  onClick={isCleanOrphans ? handleCleanOrphans : handleReindexAll}
                   disabled={loading}
                   style={{ 
-                    backgroundColor: isSync ? 'var(--status-warning)' : 'var(--accent-primary)', 
+                    backgroundColor: (isCleanOrphans || isSync) ? 'var(--status-warning)' : 'var(--accent-primary)', 
                     color: 'white',
                     padding: '10px 20px',
                     borderRadius: '8px',
@@ -2081,15 +2371,20 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                     display: 'inline-block',
                     minWidth: '150px',
                   }}
-                  title={isSync
-                    ? `Sincronizar ${count} documento(s) marcado(s) como indexado(s) mas não encontrado(s) no vector store`
-                    : `Reindexar ${count} documento(s) não indexado(s)`
+                  title={
+                    isCleanOrphans
+                      ? `Limpar documentos órfãos do vector store (${count})`
+                      : (isSync
+                        ? `Sincronizar ${count} documento(s) marcado(s) como indexado(s) mas não encontrado(s) no vector store`
+                        : `Reindexar ${count} documento(s) não indexado(s)`)
                   }
                 >
                   {loading ? 'Reindexando...' : (
-                    isSync
-                      ? `🔄 Sincronizar (${count})`
-                      : `🔄 Reindexar Todos (${count})`
+                    isCleanOrphans
+                      ? `🧹 Limpar Órfãos (${count})`
+                      : (isSync
+                        ? `🔄 Sincronizar (${count})`
+                        : `🔄 Reindexar Todos (${count})`)
                   )}
                 </Button>
               );
@@ -2129,6 +2424,16 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
             )}
           </div>
         </div>
+      
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Estatísticas Gerais */}
@@ -2141,12 +2446,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
             </div>
             <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
               <div className="text-3xl font-bold text-status-success mb-2">{stats.indexed || 0}</div>
-              <div className="text-sm text-text-secondary">Indexados (BD)</div>
-              {stats.vectorStoreStats && stats.vectorStoreStats.indexedDocuments !== stats.indexed && (
-                <div className="text-xs text-status-warning mt-1">
-                  ⚠️ Vector Store: {stats.vectorStoreStats.indexedDocuments}
-                </div>
-              )}
+              <div className="text-sm text-text-secondary">Indexados</div>
             </div>
             <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
               <div className="text-3xl font-bold text-status-error mb-2">{stats.notIndexed || 0}</div>
@@ -2154,12 +2454,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
             </div>
             <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
               <div className="text-3xl font-bold text-text-primary mb-2">{stats.totalChunks || 0}</div>
-              <div className="text-sm text-text-secondary">Total de Chunks (BD)</div>
-              {stats.vectorStoreStats && stats.vectorStoreStats.indexedChunks !== stats.totalChunks && (
-                <div className="text-xs text-status-warning mt-1">
-                  ⚠️ Vector Store: {stats.vectorStoreStats.indexedChunks}
-                </div>
-              )}
+              <div className="text-sm text-text-secondary">Total de Chunks</div>
             </div>
           </div>
           
@@ -2188,11 +2483,52 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                         <div className="mt-2">
                           <strong>Solução:</strong> Use o botão "Reindexar Todos" para sincronizar os documentos.
                         </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            onClick={handleReindexAll}
+                            disabled={loading}
+                            style={{
+                              backgroundColor: 'var(--accent-primary)',
+                              color: 'white',
+                              padding: '8px 14px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              cursor: loading ? 'not-allowed' : 'pointer',
+                              opacity: loading ? 0.65 : 1,
+                              whiteSpace: 'nowrap',
+                            }}
+                            title="Reindexar/sincronizar documentos para alinhar BD e vector store"
+                          >
+                            {loading ? 'Processando...' : `🔄 Reindexar Todos (${(stats.notIndexed || 0) + (stats.syncDifference || 0)})`}
+                          </Button>
+                        </div>
                       </>
                     ) : (
                       <>
-                        O vector store tem {stats.syncDifference} documento(s) a mais que o banco de dados.
-                        Isso pode indicar dados órfãos no vector store.
+                        O vector store tem {stats.syncDifference} documento(s) a mais que o banco de dados (indexados no BD).
+                        Isso pode indicar dados órfãos no vector store <strong>ou</strong> estado de indexação desatualizado no BD.
+                        <div className="mt-2">
+                          <strong>Solução:</strong> Use o botão abaixo para tentar limpar órfãos e/ou reconciliar o estado do BD.
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            onClick={handleCleanOrphans}
+                            disabled={loading}
+                            style={{
+                              backgroundColor: 'var(--status-warning)',
+                              color: 'white',
+                              padding: '8px 14px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              cursor: loading ? 'not-allowed' : 'pointer',
+                              opacity: loading ? 0.65 : 1,
+                              whiteSpace: 'nowrap',
+                            }}
+                            title="Remover do vector store documentos/chunks que não existem mais no BD"
+                          >
+                            {loading ? 'Processando...' : `🧹 Limpar Órfãos (${stats.syncDifference || 0})`}
+                          </Button>
+                        </div>
                       </>
                     )}
                   </div>
@@ -2529,9 +2865,9 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                       {doc.status}
                     </span>
                   </div>
-                  {doc.content ? (
+                  {getDetailsText(doc) ? (
                     <p className="text-sm text-text-secondary mb-3 line-clamp-3">
-                      {doc.content.length > 200 ? `${doc.content.substring(0, 200)}...` : doc.content}
+                      {getDetailsText(doc).length > 200 ? `${getDetailsText(doc).substring(0, 200)}...` : getDetailsText(doc)}
                     </p>
                   ) : (
                     <div className="mb-3">
@@ -2604,6 +2940,28 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                     🔗
                   </button>
                 )}
+                {(doc.metadata?.source === 'file' || doc.metadata?.fileName || doc.metadata?.filename || doc.metadata?.originalBinary?.stored) && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const filenameHint =
+                        doc.metadata?.originalBinary?.filename ||
+                        doc.metadata?.fileName ||
+                        doc.metadata?.filename ||
+                        doc.title ||
+                        doc.id;
+                      await downloadFromUrlBestEffort(
+                        `/rag/documents/${encodeURIComponent(doc.id)}/download`,
+                        filenameHint,
+                        { headers: getAuthHeaders() }
+                      );
+                    }}
+                    className="text-text-secondary hover:text-text-primary"
+                    title="Baixar arquivo original (DB)"
+                  >
+                    ⬇️
+                  </button>
+                )}
                 {!doc.indexed && (
                   <button
                     onClick={() => handleReindex(doc)}
@@ -2624,7 +2982,8 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                 )}
                 <button
                   onClick={() => handleDelete(doc)}
-                  className="text-status-error hover:opacity-80"
+                  disabled={loading || !!deletingById[String(doc.id)]}
+                  className="text-status-error hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Excluir"
                 >
                   🗑️
@@ -2906,7 +3265,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
               </div>
               {selectedDocument.indexedAt && (
                 <p className="text-text-tertiary text-xs mt-1">
-                  Indexado em: {new Date(selectedDocument.indexedAt).toLocaleString('pt-BR')}
+                  Indexado em: {formatDateTime(selectedDocument.indexedAt)}
                 </p>
               )}
             </div>
@@ -2969,40 +3328,158 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
               </div>
             )}
 
-            {/* Link para Documento Original */}
-            {(selectedDocument.metadata?.url || selectedDocument.metadata?.filePath || selectedDocument.metadata?.file || selectedDocument.metadata?.sourceUrl) && (
+            {/* Documento original (URL) */}
+            {(selectedDocument.metadata?.url ||
+              selectedDocument.metadata?.filePath ||
+              selectedDocument.metadata?.file ||
+              selectedDocument.metadata?.sourceUrl) && (
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1">Documento Original</label>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={selectedDocument.metadata?.url || selectedDocument.metadata?.sourceUrl || selectedDocument.metadata?.filePath || selectedDocument.metadata?.file}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent-primary hover:text-accent-hover underline flex items-center gap-2 break-all"
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(() => {
+                    const raw =
+                      selectedDocument.metadata?.url ||
+                      selectedDocument.metadata?.sourceUrl ||
+                      selectedDocument.metadata?.filePath ||
+                      selectedDocument.metadata?.file ||
+                      '';
+                    const href = raw && raw.startsWith('/') ? buildApiUrl(raw) : raw;
+                    if (href) {
+                      return (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent-primary hover:text-accent-hover underline flex items-center gap-2 break-all"
+                        >
+                          <span>🔗</span>
+                          <span>{href}</span>
+                          <span className="text-xs text-text-tertiary">(abrir em nova aba)</span>
+                        </a>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <button
+                    type="button"
+                    className="text-xs px-2 py-1 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary"
+                    onClick={async () => {
+                      const originalUrl =
+                        selectedDocument.metadata?.url ||
+                        selectedDocument.metadata?.sourceUrl ||
+                        selectedDocument.metadata?.filePath ||
+                        selectedDocument.metadata?.file;
+                      const filenameHint =
+                        selectedDocument.metadata?.fileName ||
+                        selectedDocument.metadata?.filename ||
+                        selectedDocument.title ||
+                        selectedDocument.id;
+                      await downloadFromUrlBestEffort(originalUrl, filenameHint);
+                    }}
+                    title="Tentar baixar o documento original"
                   >
-                    <span>🔗</span>
-                    <span>
-                      {selectedDocument.metadata?.url || selectedDocument.metadata?.sourceUrl || selectedDocument.metadata?.filePath || selectedDocument.metadata?.file}
-                    </span>
-                    <span className="text-xs text-text-tertiary">(abrir em nova aba)</span>
-                  </a>
+                    ⬇️ Download
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Conteúdo */}
+            {/* Binário original (armazenado no BD) - para uploads */}
+            {(selectedDocument?.metadata?.fileName || selectedDocument?.metadata?.filename || selectedDocument?.metadata?.originalBinary?.stored) && (
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Arquivo Original (binário)</label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    className="text-xs px-2 py-1 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary"
+                    onClick={async () => {
+                      const filenameHint =
+                        selectedDocument.metadata?.originalBinary?.filename ||
+                        selectedDocument.metadata?.fileName ||
+                        selectedDocument.metadata?.filename ||
+                        selectedDocument.title ||
+                        selectedDocument.id;
+                      await downloadFromUrlBestEffort(
+                        `/rag/documents/${encodeURIComponent(selectedDocument.id)}/download`,
+                        filenameHint,
+                        { headers: getAuthHeaders() }
+                      );
+                    }}
+                    title="Baixar o arquivo original salvo no banco"
+                  >
+                    ⬇️ Baixar arquivo (DB)
+                  </button>
+                  {selectedDocument.metadata?.originalBinary?.mimeType && (
+                    <span className="text-xs text-text-tertiary">
+                      {selectedDocument.metadata.originalBinary.mimeType}
+                    </span>
+                  )}
+                  {!selectedDocument?.metadata?.originalBinary?.stored && (
+                    <span className="text-xs text-text-tertiary">
+                      (Obs.: este documento não tem a flag `originalBinary.stored`; se o download acima retornar 404, o binário não está salvo no BD.)
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Texto extraído (preferencial) */}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">Conteúdo</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Texto extraído</label>
               <div className="bg-bg-secondary rounded-lg p-4 max-h-96 overflow-y-auto">
                 <p className="text-text-primary text-sm whitespace-pre-wrap break-words">
-                  {selectedDocument.content || 'Sem conteúdo'}
+                  {getDetailsText(selectedDocument) || 'Sem texto extraído'}
                 </p>
               </div>
-              {selectedDocument.content && (
+              {getDetailsText(selectedDocument) && (
                 <p className="text-text-tertiary text-xs mt-1">
-                  {selectedDocument.content.length} caractere{selectedDocument.content.length !== 1 ? 's' : ''}
+                  {getDetailsText(selectedDocument).length} caractere{getDetailsText(selectedDocument).length !== 1 ? 's' : ''}
                 </p>
               )}
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  className="text-xs px-2 py-1 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary"
+                  onClick={() => {
+                    const filename =
+                      selectedDocument.metadata?.fileName ||
+                      selectedDocument.metadata?.filename ||
+                      selectedDocument.title ||
+                      selectedDocument.id ||
+                      'texto-extraido';
+                    downloadTextAsFile(filename, getDetailsText(selectedDocument));
+                  }}
+                  title="Baixar o texto extraído como .txt"
+                >
+                  ⬇️ Baixar texto (.txt)
+                </button>
+                {selectedDocument.metadata?.fileName && (
+                  <span className="text-xs text-text-tertiary">
+                    (Obs.: este download é do texto extraído; quando disponível, o binário original pode ser baixado acima)
+                  </span>
+                )}
+              </div>
+
+              {(() => {
+                const extracted = getExtractedText(selectedDocument);
+                const indexable = (selectedDocument?.content && typeof selectedDocument.content === 'string')
+                  ? selectedDocument.content
+                  : '';
+                const showIndexable = extracted && indexable && extracted.trim() !== indexable.trim();
+                if (!showIndexable) return null;
+                return (
+                  <details className="mt-3 cursor-pointer">
+                    <summary className="text-xs text-text-tertiary select-none">
+                      Ver conteúdo indexável (o que vai para o vector store)
+                    </summary>
+                    <div className="bg-bg-secondary rounded-lg p-3 mt-2 max-h-64 overflow-y-auto">
+                      <p className="text-text-secondary text-xs whitespace-pre-wrap break-words">
+                        {indexable}
+                      </p>
+                    </div>
+                  </details>
+                );
+              })()}
             </div>
 
             {/* Datas */}
@@ -3011,7 +3488,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1">Criado em</label>
                   <p className="text-text-primary text-sm">
-                    {new Date(selectedDocument.createdAt).toLocaleString('pt-BR')}
+                    {formatDateTime(selectedDocument.createdAt)}
                   </p>
                 </div>
               )}
@@ -3019,7 +3496,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1">Atualizado em</label>
                   <p className="text-text-primary text-sm">
-                    {new Date(selectedDocument.updatedAt).toLocaleString('pt-BR')}
+                    {formatDateTime(selectedDocument.updatedAt)}
                   </p>
                 </div>
               )}
@@ -3060,15 +3537,15 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                     handleDelete(selectedDocument, true);
                   }
                 }}
-                disabled={loading}
+                disabled={loading || (selectedDocument?.id && !!deletingById[String(selectedDocument.id)])}
                 style={{
                   backgroundColor: 'var(--status-error)',
                   color: 'white',
                   padding: '8px 16px',
                   borderRadius: '6px',
                   border: 'none',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.6 : 1,
+                  cursor: (loading || (selectedDocument?.id && !!deletingById[String(selectedDocument.id)])) ? 'not-allowed' : 'pointer',
+                  opacity: (loading || (selectedDocument?.id && !!deletingById[String(selectedDocument.id)])) ? 0.6 : 1,
                 }}
               >
                 🗑️ Excluir
@@ -3925,7 +4402,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                 {(learningData.learningCycles?.lastCycle || learningData.metrics?.lastCycle) && (
                   <div className="mt-4 pt-4 border-t border-border-default">
                     <div className="text-sm text-text-secondary">
-                      Último ciclo: {new Date(learningData.learningCycles?.lastCycle || learningData.metrics?.lastCycle).toLocaleString('pt-BR')}
+                      Último ciclo: {formatDateTime(learningData.learningCycles?.lastCycle || learningData.metrics?.lastCycle)}
                     </div>
                   </div>
                 )}
@@ -4084,7 +4561,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                           <span>Confiança: {Math.round((pattern.confidence || 0) * 100)}%</span>
                           <span>Chunks: {pattern.chunksFound || 0}</span>
                           {pattern.timestamp && (
-                            <span>{new Date(pattern.timestamp).toLocaleDateString('pt-BR')}</span>
+                            <span>{formatDateOnly(pattern.timestamp)}</span>
                           )}
                         </div>
                       </div>
@@ -4154,7 +4631,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                         <div className="flex gap-4 text-xs text-text-secondary">
                           <span>Chunks: {pattern.chunksFound || 0}</span>
                           {pattern.timestamp && (
-                            <span>{new Date(pattern.timestamp).toLocaleDateString('pt-BR')}</span>
+                            <span>{formatDateOnly(pattern.timestamp)}</span>
                           )}
                         </div>
                       </div>
@@ -4239,7 +4716,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                               Ciclo #{cycle.cycle} - {cycle.type === 'synonym_update' ? 'Atualização de Sinônimos' : 'Otimização de Config'}
                             </div>
                             <div className="text-xs text-text-secondary mt-1">
-                              {new Date(cycle.timestamp).toLocaleString('pt-BR')}
+                              {formatDateTime(cycle.timestamp)}
                             </div>
                           </div>
                         </div>

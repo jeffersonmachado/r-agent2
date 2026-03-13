@@ -515,6 +515,7 @@ export function useFlowRunner(flow) {
         context: {
           ...(state.context || {}),
           ai: { ...(state.context?.ai || {}) },
+          fallback: { ...(state.context?.fallback || {}) },
         },
       };
 
@@ -573,6 +574,84 @@ export function useFlowRunner(flow) {
           });
           // Remove ROUTE_SELECTED - não é um router
           break;
+
+        case 'fallback': {
+          // Nó de fallback: espera input, conta tentativas e encerra/escalona ao exceder maxAttempts.
+          const maxAttemptsRaw = node.config?.maxAttempts;
+          const maxAttempts =
+            typeof maxAttemptsRaw === 'number' && Number.isFinite(maxAttemptsRaw) && maxAttemptsRaw > 0
+              ? Math.floor(maxAttemptsRaw)
+              : 3;
+          const escalationMode = node.config?.escalationMode || null;
+
+          // Sem input: fica aguardando (mesmo comportamento de user_input)
+          if (!input || (!input.text && (!Array.isArray(input.files) || input.files.length === 0))) {
+            return {
+              state: newState,
+              output: { type: 'waiting_input' },
+            };
+          }
+
+          const prevAttempts =
+            typeof newState.context?.fallback?.[node.id]?.attempts === 'number'
+              ? newState.context.fallback[node.id].attempts
+              : 0;
+          const attempts = prevAttempts + 1;
+
+          newState.context.fallback[node.id] = {
+            ...(newState.context.fallback[node.id] || {}),
+            attempts,
+            maxAttempts,
+            escalationMode,
+          };
+
+          // Log: tentativa de fallback (registrando input do usuário)
+          addLogEvent(LOG_EVENTS.USER_INPUT, {
+            nodeId: node.id,
+            nodeType: node.type,
+            action: 'fallback_attempt',
+            input: input.text || '',
+            attempt: attempts,
+            maxAttempts,
+          });
+
+          // Enquanto não exceder tentativas, mantém o usuário no fallback e envia uma mensagem padrão
+          if (attempts < maxAttempts) {
+            nextNodeId = node.id; // permanece no fallback
+            // Importante para seeds RPA: quando escalationMode='ticket', a UI deve dar
+            // algum indício textual de ticket/escalonamento (mesmo antes de atingir maxAttempts).
+            const msg =
+              escalationMode === 'ticket'
+                ? `Não entendi. Pode reformular? (${attempts}/${maxAttempts}) Se continuar, abriremos um ticket.`
+                : `Não entendi. Pode reformular? (${attempts}/${maxAttempts})`;
+            output = { type: 'message', text: msg };
+            addLogEvent(LOG_EVENTS.BOT_MESSAGE, {
+              nodeId: node.id,
+              nodeType: node.type,
+              action: 'fallback_prompt',
+              message: msg,
+            });
+            break;
+          }
+
+          // Excedeu/atingiu maxAttempts: segue para o próximo nó (normalmente end_1)
+          nextNodeId = normalizeNext(node.next);
+          // Em vez de retornar um output "silencioso", emitimos uma mensagem do bot para
+          // que o UI (e o RPA) consiga observar o escalonamento.
+          const escalatedMsg =
+            escalationMode === 'ticket'
+              ? 'Limite de tentativas atingido. Abrindo ticket para atendimento.'
+              : 'Limite de tentativas atingido. Encerrando conversa.';
+          output = { type: 'message', text: escalatedMsg };
+          addLogEvent(LOG_EVENTS.BOT_MESSAGE, {
+            nodeId: node.id,
+            nodeType: node.type,
+            action: 'fallback_escalated',
+            message: escalatedMsg,
+            escalationMode,
+          });
+          break;
+        }
 
         case 'router': {
           const rules = node.config?.rules || [];
@@ -1138,7 +1217,7 @@ export function useFlowRunner(flow) {
           if (!node) break;
 
           // Se é um nó que precisa de input, para aqui
-          if (node.type === 'user_input' || node.type === 'options') {
+          if (node.type === 'user_input' || node.type === 'options' || node.type === 'fallback') {
             break;
           }
 
@@ -1316,7 +1395,7 @@ export function useFlowRunner(flow) {
           if (!node) break;
 
           // Se é um nó que precisa de input, para aqui
-          if (node.type === 'user_input' || node.type === 'options') {
+          if (node.type === 'user_input' || node.type === 'options' || node.type === 'fallback') {
             break;
           }
 

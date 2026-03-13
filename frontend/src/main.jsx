@@ -5,8 +5,11 @@ import { EditorProvider } from './state/editorStore';
 import { ThemeProvider } from './styles/themeContext';
 import { AuthProvider, useAuth } from './context/authContext';
 import { WebSocketProvider } from './context/WebSocketContext';
+import { FileUploadProvider } from './context/FileUploadContext';
 import { FlowEditorPage } from './pages/FlowEditorPage';
+import { BpmnEditorPage } from './pages/BpmnEditorPage';
 import { SupportPage } from './pages/SupportPage';
+import { InboxPage } from './pages/InboxPage';
 import { TicketMaintenancePage } from './pages/TicketMaintenancePage';
 import { ConfigPage } from './pages/ConfigPage';
 import { AgentsPage } from './pages/AgentsPage';
@@ -16,9 +19,20 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { AuditPage } from './pages/AuditPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { QuickRepliesPage } from './pages/QuickRepliesPage';
+import { FaqManagementPage } from './pages/FaqManagementPage';
 import { DepartmentsPage } from './pages/DepartmentsPage';
 import { BulkMessagingPage } from './pages/BulkMessagingPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SupervisorPage } from './pages/SupervisorPage';
+import { RbacPage } from './pages/RbacPage';
+import { MfaPage } from './pages/MfaPage';
+import { WhatsAppIvrPage } from './pages/WhatsAppIvrPage';
+import { WhatsAppConnectionsPage } from './pages/WhatsAppConnectionsPage';
+import { DeveloperKeysPage } from './pages/DeveloperKeysPage';
+import { AutomationsPage } from './pages/AutomationsPage';
+import { TasksPage } from './pages/TasksPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { SlaPoliciesPage } from './pages/SlaPoliciesPage';
 import { ExportPage } from './pages/ExportPage';
 import { AIToolsPage } from './pages/AIToolsPage';
 import { SegmentationPage } from './pages/SegmentationPage';
@@ -38,10 +52,109 @@ import { ChannelHealthPage } from './pages/ChannelHealthPage';
 import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
 import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
+import { PbxPage } from './pages/PbxPage';
+import { PbxRoutesPage } from './pages/PbxRoutesPage';
+import { PbxExtensionsPage } from './pages/PbxExtensionsPage';
+import { PbxTrunksPage } from './pages/PbxTrunksPage';
+import { PbxModulePage } from './pages/PbxModulePage';
+import { ChatHumanoDashboardPage } from './pages/ChatHumanoDashboardPage';
+import { FailedMessagesPage } from './pages/FailedMessagesPage';
+import { QueuePhysicalDashboardPage } from './pages/QueuePhysicalDashboardPage';
+import { MarketingPage } from './pages/MarketingPage';
+import { SolutionsPage } from './pages/SolutionsPage';
+import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
+import { SsoScimPage } from './pages/SsoScimPage';
+import { BackupPage } from './pages/BackupPage';
+import { StorefrontOrderPage } from './pages/StorefrontOrderPage';
+import { StorefrontOrderStatusPage } from './pages/StorefrontOrderStatusPage';
+import { OrdersPage } from './pages/OrdersPage';
+import { KitchenPage } from './pages/KitchenPage';
+import { DispatchPage } from './pages/DispatchPage';
+import { KioskPage } from './pages/KioskPage';
+import { PanelPage } from './pages/PanelPage';
+import { StationPage } from './pages/StationPage';
+import { CrmDashboardPage } from './pages/crm/CrmDashboardPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
+import { TenantGate } from './components/TenantGate';
+import { PwaUpdateManager } from './components/PwaUpdateManager';
 import { useRouter } from './hooks/useRouter';
-import { isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
+import { useWebSocketAuthGuard } from './hooks/useWebSocketAuthGuard';
+import { canAccessPath, isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
+
+function isFilterTitle(text = '') {
+  const normalized = String(text || '').trim().toLowerCase();
+  return normalized === 'filtros'
+    || normalized.startsWith('filtros ')
+    || normalized.startsWith('filtros da ')
+    || normalized.startsWith('filtros e ');
+}
+
+function collectFilterSections(root) {
+  const sections = [];
+  const candidates = Array.from(root.querySelectorAll('div'));
+  for (const container of candidates) {
+    if (!(container instanceof HTMLElement)) continue;
+    if (container.dataset.autoFilterIgnore === '1') continue;
+    if (!container.className || !String(container.className).includes('bg-bg-elevated')) continue;
+    if (!container.firstElementChild || container.children.length < 2) continue;
+
+    const titleNodes = container.querySelectorAll('h1, h2, h3, h4, h5, h6, span, strong');
+    let titleNode = null;
+    for (const node of titleNodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (isFilterTitle(node.textContent || '')) {
+        titleNode = node;
+        break;
+      }
+    }
+    if (!titleNode) continue;
+    if (titleNode.closest('button')) continue;
+    container.classList.add('auto-filter-section');
+    sections.push(container);
+  }
+  return sections;
+}
+
+function applyGlobalFilterToggleState(root, sections, expanded) {
+  root.dataset.autoFilterExpanded = expanded ? '1' : '0';
+  for (const container of sections) {
+    container.classList.toggle('auto-filter-collapsed', !expanded);
+  }
+  const controls = root.querySelector('.support-controls');
+  if (controls instanceof HTMLElement) {
+    const btn = controls.querySelector('.auto-filter-toggle-btn');
+    if (btn instanceof HTMLButtonElement) {
+      btn.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+      btn.title = expanded ? 'Ocultar filtros' : 'Mostrar filtros';
+    }
+  }
+}
+
+function setupAutoCollapsibleFilters(root) {
+  if (!root) return;
+  const sections = collectFilterSections(root);
+  const controls = root.querySelector('.support-controls');
+  if (!(controls instanceof HTMLElement) || sections.length === 0) return;
+
+  let toggleButton = controls.querySelector('.auto-filter-toggle-btn');
+  if (!(toggleButton instanceof HTMLButtonElement)) {
+    toggleButton = document.createElement('button');
+    toggleButton.type = 'button';
+    toggleButton.className = 'btn-default px-4 py-2 text-sm auto-filter-toggle-btn';
+    toggleButton.textContent = '🔍';
+    toggleButton.setAttribute('aria-label', 'Mostrar ou ocultar filtros');
+    controls.prepend(toggleButton);
+    toggleButton.addEventListener('click', () => {
+      const expanded = root.dataset.autoFilterExpanded === '1';
+      const liveSections = collectFilterSections(root);
+      applyGlobalFilterToggleState(root, liveSections, !expanded);
+    });
+  }
+
+  const shouldExpand = root.dataset.autoFilterExpanded === '1';
+  applyGlobalFilterToggleState(root, sections, shouldExpand);
+}
 
 /**
  * Suprime aviso conhecido do React sobre prop 'hasSubitems' do rete-context-menu-plugin.
@@ -113,7 +226,10 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <WebSocketProvider>
-          <AppWithAuth />
+          <FileUploadProvider>
+            <PwaUpdateManager />
+            <AppWithAuth />
+          </FileUploadProvider>
         </WebSocketProvider>
       </AuthProvider>
     </ThemeProvider>
@@ -123,48 +239,93 @@ function App() {
 function AppWithAuth() {
   const { currentPath, navigate } = useRouter();
   const { isAuthenticated, loading, agent } = useAuth();
+  
+  // Monitora falhas de autenticação do WebSocket e redireciona para login
+  useWebSocketAuthGuard();
+  
+  const isRoute = (basePath) =>
+    currentPath === basePath ||
+    currentPath.startsWith(`${basePath}/`) ||
+    currentPath.startsWith(`${basePath}?`);
 
   // Determina qual página renderizar baseado na URL
+  const isStorefrontOrder = currentPath === '/storefront/order' || currentPath.startsWith('/storefront/order?');
+  const isStorefrontOrderStatus = currentPath.startsWith('/storefront/order/');
+  const isKiosk = isRoute('/kiosk');
+  const isPanel = isRoute('/panel');
+  const isStation = isRoute('/station');
   const isDashboard = currentPath === '/' || currentPath === '/dashboard';
-  const isEditor = currentPath === '/editor' || currentPath.startsWith('/editor');
-  const isSupport = currentPath === '/support' || currentPath.startsWith('/support');
-  const isMaintenance = currentPath === '/maintenance' || currentPath.startsWith('/maintenance');
-  const isConfig = currentPath === '/config' || currentPath.startsWith('/config');
-  const isAgents = currentPath === '/agents' || currentPath.startsWith('/agents');
-  const isTenants = currentPath === '/tenants' || currentPath.startsWith('/tenants');
-  const isSuperAdminPage = currentPath === '/super-admin' || currentPath.startsWith('/super-admin');
-  const isOnboarding = currentPath === '/onboarding' || currentPath.startsWith('/onboarding');
-  const isAudit = currentPath === '/audit' || currentPath.startsWith('/audit');
-  const isQuickReplies = currentPath === '/quick-replies' || currentPath.startsWith('/quick-replies');
-  const isDepartments = currentPath === '/departments' || currentPath.startsWith('/departments');
-  const isBulkMessaging = currentPath === '/bulk-messaging' || currentPath.startsWith('/bulk-messaging');
-  const isAnalytics = currentPath === '/analytics' || currentPath.startsWith('/analytics');
-  const isExport = currentPath === '/export' || currentPath.startsWith('/export');
-  const isAITools = currentPath === '/ai-tools' || currentPath.startsWith('/ai-tools');
-  const isSegmentation = currentPath === '/segmentation' || currentPath.startsWith('/segmentation');
-  const isWhatsAppTemplates = currentPath === '/whatsapp-templates' || currentPath.startsWith('/whatsapp-templates');
-  const isKnowledgeBase = currentPath === '/knowledge-base' || currentPath.startsWith('/knowledge-base');
-  const isProductDocs = currentPath === '/product-docs' || currentPath.startsWith('/product-docs');
-  const isRAGDocuments = currentPath === '/rag-documents' || currentPath.startsWith('/rag-documents');
-  const isWebScraping = currentPath === '/web-scraping' || currentPath.startsWith('/web-scraping');
-  const isRpaTest = currentPath === '/rpa-test' || currentPath.startsWith('/rpa-test');
-  const isRpaReplays = currentPath === '/rpa-replays' || currentPath.startsWith('/rpa-replays');
-  const isRpaSeeds = currentPath === '/rpa-seeds' || currentPath.startsWith('/rpa-seeds');
-  const isChat = currentPath === '/chat' || currentPath.startsWith('/chat');
-  const isQa = currentPath === '/qa' || currentPath.startsWith('/qa');
-  const isGenerateSystem = currentPath === '/generate-system' || currentPath.startsWith('/generate-system');
-  const isSystemStatus = currentPath === '/system-status' || currentPath.startsWith('/system-status');
-  const isChannelHealth = currentPath === '/channel-health' || currentPath.startsWith('/channel-health');
-  const isChannelAccounts = currentPath === '/channel-accounts' || currentPath.startsWith('/channel-accounts');
-  const isPlanUsage = currentPath === '/plan-usage' || currentPath.startsWith('/plan-usage');
-  const isDevDashboard = currentPath === '/dev' || currentPath === '/dev-dashboard' || currentPath.startsWith('/dev');
-  const isLogin = currentPath === '/login' || currentPath.startsWith('/login');
+  const isEditor = isRoute('/editor');
+  const isBpmnEditor = isRoute('/bpmn-editor');
+  const isSupport = isRoute('/support');
+  const isInbox = isRoute('/inbox');
+  const isMaintenance = isRoute('/maintenance');
+  const isConfig = isRoute('/config');
+  const isAgents = isRoute('/agents');
+  const isTenants = isRoute('/tenants');
+  const isSuperAdminPage = isRoute('/super-admin');
+  const isOnboarding = isRoute('/onboarding');
+  const isAudit = isRoute('/audit');
+  const isQuickReplies = isRoute('/quick-replies');
+  const isFaq = isRoute('/faq');
+  const isDepartments = isRoute('/departments');
+  const isBulkMessaging = isRoute('/bulk-messaging');
+  const isAnalytics = isRoute('/analytics');
+  const isSupervisor = isRoute('/supervisor');
+  const isRbac = isRoute('/rbac');
+  const isMfa = isRoute('/mfa');
+  const isWhatsAppIvr = isRoute('/whatsapp-ivr');
+  const isWhatsAppConnections = isRoute('/whatsapp-connections');
+  const isDeveloperKeys = isRoute('/developer-keys');
+  const isAutomations = isRoute('/automations');
+  const isTasks = isRoute('/tasks');
+  const isAgenda = isRoute('/agenda');
+  const isSlaPolicies = isRoute('/sla-policies');
+  const isExport = isRoute('/export');
+  const isAITools = isRoute('/ai-tools');
+  const isSegmentation = isRoute('/segmentation');
+  const isWhatsAppTemplates = isRoute('/whatsapp-templates');
+  const isKnowledgeBase = isRoute('/knowledge-base');
+  const isProductDocs = isRoute('/product-docs');
+  const isRAGDocuments = isRoute('/rag-documents');
+  const isWebScraping = isRoute('/web-scraping');
+  const isRpaTest = isRoute('/rpa-test');
+  const isRpaReplays = isRoute('/rpa-replays');
+  const isRpaSeeds = isRoute('/rpa-seeds');
+  const isChat = isRoute('/chat');
+  const isQa = isRoute('/qa');
+  const isGenerateSystem = isRoute('/generate-system');
+  const isSystemStatus = isRoute('/system-status');
+  const isChannelHealth = isRoute('/channel-health');
+  const isChannelAccounts = isRoute('/channel-accounts');
+  const isPlanUsage = isRoute('/plan-usage');
+  const isPbxExtensions = isRoute('/pbx/extensions');
+  const isPbxTrunks = isRoute('/pbx/trunks');
+  const isPbxRoutes = isRoute('/pbx/routes');
+  const isPbxBulkProvisioning = isRoute('/pbx/provisioning-lote');
+  const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxBulkProvisioning;
+  const isPbx = isRoute('/pbx');
+  const isChatHumanoDashboard = isRoute('/chat-humano');
+  // Suporta CRM com ou sem prefixo /r-agent2 em produção
+  const isCrmDashboard = currentPath.startsWith('/crm') || currentPath.startsWith('/r-agent2/crm');
+  const isFailedMessages = isRoute('/failed-messages');
+  const isQueuePhysicalDashboard = isRoute('/fila-fisica');
+  const isDevDashboard = isRoute('/dev') || isRoute('/dev-dashboard');
+  const isOrders = isRoute('/orders');
+  const isKitchen = isRoute('/kitchen');
+  const isDispatch = isRoute('/dispatch');
+  const isMarketing = isRoute('/marketing');
+  const isSolutions = isRoute('/solutions');
+  const isNodeMarketplace = isRoute('/node-marketplace');
+  const isSsoScim = isRoute('/sso-scim');
+  const isBackup = isRoute('/backup');
+  const isLogin = isRoute('/login');
 
   // Verifica se é Super Admin usando a função completa que considera originalTenantId
   const isSuperAdmin = checkIsSuperAdmin(agent);
 
-  // Todas as rotas requerem autenticação, exceto /login
-  const publicRoutes = []; // Nenhuma rota pública além de /login
+  // Rotas públicas (sem login): Storefront v1
+  const publicRoutes = ['/storefront', '/kiosk', '/panel', '/station']; // além de /login
 
   // Se a rota não for reconhecida, redireciona para login se não autenticado, ou /dashboard se autenticado
   useEffect(() => {
@@ -172,9 +333,14 @@ function AppWithAuth() {
     if (loading) return;
     
     const allRoutes = [
-      isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-      isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isDevDashboard, isLogin
+      isStorefrontOrder, isStorefrontOrderStatus,
+      isKiosk, isPanel, isStation,
+      isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
+      isOrders, isKitchen, isDispatch,
+      isLogin
     ];
     
     if (!allRoutes.some(route => route)) {
@@ -185,9 +351,10 @@ function AppWithAuth() {
       }
     }
   }, [
-    isDashboard, isEditor, isSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-    isQuickReplies, isDepartments, isBulkMessaging, isAnalytics, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isDevDashboard, isLogin, isAuthenticated, navigate, loading, currentPath
+    isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+    isOrders, isKitchen, isDispatch, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -201,16 +368,29 @@ function AppWithAuth() {
       '/': '📊 Dashboard',
       '/dashboard': '📊 Dashboard',
       '/editor': '📝 Editor de Fluxos',
+      '/bpmn-editor': '📐 Editor BPMN',
       '/support': '💬 Atendimento',
+      '/inbox': '📥 Inbox',
       '/maintenance': '🔧 Manutenção de Tickets',
       '/config': '⚙️ Configuração do Sistema',
       '/agents': '👥 Gerenciamento de Agentes',
       '/tenants': '🏢 Gerenciamento de Tenants',
       '/audit': '🔍 Auditoria',
       '/quick-replies': '⚡ Respostas Rápidas',
+      '/faq': '❓ FAQ',
       '/departments': '🏢 Departamentos',
       '/bulk-messaging': '📢 Disparos em Massa',
       '/analytics': '📈 Analytics & Métricas',
+      '/supervisor': '🧭 Painel Supervisor',
+      '/rbac': '🔐 RBAC',
+      '/mfa': '🔐 MFA',
+      '/whatsapp-ivr': '💬 URA WhatsApp',
+      '/whatsapp-connections': '📱 WhatsApp QR',
+      '/developer-keys': '🔑 API Keys',
+      '/automations': '🧩 Automações',
+      '/tasks': '✅ Tarefas',
+      '/agenda': '📅 Agenda',
+      '/sla-policies': '⏱️ SLA',
       '/export': '📤 Exportação de Dados',
       '/ai-tools': '🤖 Ferramentas de IA',
       '/segmentation': '🎯 Segmentação',
@@ -229,23 +409,86 @@ function AppWithAuth() {
       '/channel-health': '📡 Saúde de Canais',
       '/channel-accounts': '🔌 Canais',
       '/plan-usage': '📦 Plano e Uso',
+      '/pbx': '📞 PBX',
+      '/pbx/extensions': '📞 PBX • Ramais',
+      '/pbx/trunks': '🌐 PBX • Troncos',
+      '/pbx/routes': '🧭 PBX • Rotas',
+      '/pbx/acls': '🛡️ PBX • ACLs',
+      '/pbx/dids': '📥 PBX • DIDs',
+      '/pbx/ivr': '🎛️ PBX • IVR',
+      '/pbx/queues': '📞 PBX • Filas',
+      '/pbx/queue-members': '👥 PBX • Membros de Filas',
+      '/pbx/dialplan': '🔀 PBX • Dialplan',
+      '/pbx/media': '🎵 PBX • Mídia',
+      '/pbx/recordings': '🎙️ PBX • Gravações',
+      '/pbx/cdr': '📄 PBX • CDR',
+      '/pbx/governance': '🏢 PBX • Governança',
+      '/pbx/cc/pause-reasons': '⏸️ PBX • Motivos de Pausa',
+      '/pbx/cc/contact-reasons': '🏷️ PBX • Motivos de Contato',
+      '/pbx/cc/campaigns': '📢 PBX • Campanhas',
+      '/pbx/cc/campaign-list': '📋 PBX • Lista de Campanha',
+      '/pbx/cc/callbacks': '📅 PBX • Callbacks',
+      '/pbx/cc/click2call': '📱 PBX • Click2Call',
+      '/pbx/referencia/xml': '🗄️ PBX • Referência XML',
+      '/chat-humano': '💬 Dashboard Chat Humano',
+      '/crm': '📊 CRM • Dashboard',
+      '/crm/dashboard': '📊 CRM • Dashboard',
+      '/crm/accounts': '🏢 CRM • Contas',
+      '/crm/contacts': '👥 CRM • Contatos',
+      '/crm/leads': '🎯 CRM • Leads',
+      '/crm/pipelines': '🛣️ CRM • Pipelines',
+      '/crm/opportunities': '💼 CRM • Oportunidades',
+      '/crm/activities': '📝 CRM • Atividades',
+      '/crm/analytics': '📈 CRM • Analytics',
+      '/crm/reports': '📋 CRM • Relatórios',
+      '/crm/campaigns': '📣 CRM • Campanhas',
+      '/crm/webhooks': '🪝 CRM • Webhooks',
+      '/crm/rbac': '🔐 CRM • RBAC',
+      '/crm/audit': '🔍 CRM • Auditoria',
+      '/failed-messages': '🚨 Mensagens Falhadas',
+      '/fila-fisica': '🎫 Dashboard Fila Física',
+      '/marketing': '🧲 Marketing',
+      '/solutions': '📦 Solutions Packs',
+      '/node-marketplace': '🧩 Node Marketplace',
+      '/sso-scim': '🔐 SSO / SCIM',
+      '/backup': '🗄️ Backup / DR',
       '/dev': '🛠️ Dashboard de Desenvolvimento',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/login': '🔐 Login',
     };
 
-    // Encontra o título correspondente à rota atual
-    let pageTitle = 'Chatbot Flow Editor'; // Título padrão
-    
+    // Encontra o título mais específico correspondente à rota atual
+    let pageTitle = 'Chatbot Flow Editor';
+    let bestMatchLength = -1;
+
+    const normalizedPath = currentPath.startsWith('/r-agent2')
+      ? (currentPath.replace(/^\/r-agent2/, '') || '/')
+      : currentPath;
+
     for (const [route, title] of Object.entries(pageTitles)) {
-      if (currentPath === route || (route !== '/' && currentPath.startsWith(route))) {
+      const matches = normalizedPath === route || (route !== '/' && normalizedPath.startsWith(route));
+      if (!matches) continue;
+      if (route.length > bestMatchLength) {
         pageTitle = title;
-        break;
+        bestMatchLength = route.length;
       }
     }
 
     document.title = pageTitle;
   }, [currentPath]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const root = document.querySelector('.support-content-wrapper');
+    if (!(root instanceof HTMLElement)) return;
+
+    setupAutoCollapsibleFilters(root);
+    const observer = new MutationObserver(() => {
+      setupAutoCollapsibleFilters(root);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [isAuthenticated, currentPath]);
 
   // Mostra loading enquanto verifica autenticação
   if (loading) {
@@ -262,7 +505,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/support', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage'];
+  const protectedRoutes = ['/', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -273,23 +516,65 @@ function AppWithAuth() {
     return <Login />;
   }
 
-  // Se não está autenticado, mostra login (todas as outras rotas requerem autenticação)
-  if (!isAuthenticated) {
+  // Rotas públicas (storefront) não exigem autenticação
+  if (!isAuthenticated && !isPublicRoute) {
     return <Login />;
+  }
+
+  // Render público (sem menu/gate)
+  if (isPublicRoute) {
+    if (isStorefrontOrder) return <StorefrontOrderPage />;
+    if (isStorefrontOrderStatus) return <StorefrontOrderStatusPage />;
+    if (isKiosk) return <KioskPage />;
+    if (isPanel) return <PanelPage />;
+    if (isStation) return <StationPage />;
+    // fallback
+    return <StorefrontOrderPage />;
+  }
+
+  // Guardas de acesso por módulo/ação (RBAC) para evitar bypass por URL direta.
+  const hasRouteAccess = canAccessPath(agent, currentPath);
+  if (!hasRouteAccess) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Acesso Negado</h2>
+        <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+          Seu perfil não possui permissão para acessar este módulo.
+        </p>
+        <button
+          onClick={() => navigate('/support')}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#3b82f6',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '0.375rem',
+            cursor: 'pointer',
+          }}
+        >
+          Voltar para Atendimento
+        </button>
+      </div>
+    );
   }
 
   // Se chegou aqui, está autenticado OU é rota pública
   return (
     <div className="support-content-wrapper">
       <UserMenu />
+      <TenantGate />
       {isDashboard ? (
         <DashboardPage />
       ) : isEditor ? (
         <EditorProvider>
           <FlowEditorPage />
         </EditorProvider>
+      ) : isBpmnEditor ? (
+        <BpmnEditorPage />
       ) : isSupport ? (
         <SupportPage />
+      ) : isInbox ? (
+        <InboxPage />
       ) : isMaintenance ? (
         <TicketMaintenancePage />
       ) : isConfig ? (
@@ -306,12 +591,34 @@ function AppWithAuth() {
         <AuditPage />
       ) : isQuickReplies ? (
         <QuickRepliesPage />
+      ) : isFaq ? (
+        <FaqManagementPage />
       ) : isDepartments ? (
         <DepartmentsPage />
       ) : isBulkMessaging ? (
         <BulkMessagingPage />
       ) : isAnalytics ? (
         <AnalyticsPage />
+      ) : isSupervisor ? (
+        <SupervisorPage />
+      ) : isRbac ? (
+        <RbacPage />
+      ) : isMfa ? (
+        <MfaPage />
+      ) : isWhatsAppIvr ? (
+        <WhatsAppIvrPage />
+      ) : isWhatsAppConnections ? (
+        <WhatsAppConnectionsPage />
+      ) : isDeveloperKeys ? (
+        <DeveloperKeysPage />
+      ) : isAutomations ? (
+        <AutomationsPage />
+      ) : isTasks ? (
+        <TasksPage />
+      ) : isAgenda ? (
+        <CalendarPage />
+      ) : isSlaPolicies ? (
+        <SlaPoliciesPage />
       ) : isExport ? (
         <ExportPage />
       ) : isAITools ? (
@@ -348,6 +655,40 @@ function AppWithAuth() {
         <ChannelAccountsPage />
       ) : isPlanUsage ? (
         <PlanUsagePage />
+      ) : isPbxExtensions ? (
+        <PbxExtensionsPage />
+      ) : isPbxTrunks ? (
+        <PbxTrunksPage />
+      ) : isPbxRoutes ? (
+        <PbxRoutesPage />
+      ) : isPbxModule ? (
+        <PbxModulePage />
+      ) : isPbx ? (
+        <PbxPage />
+      ) : isChatHumanoDashboard ? (
+        <ChatHumanoDashboardPage />
+      ) : isCrmDashboard ? (
+        <CrmDashboardPage />
+      ) : isFailedMessages ? (
+        <FailedMessagesPage />
+      ) : isQueuePhysicalDashboard ? (
+        <QueuePhysicalDashboardPage />
+      ) : isOrders ? (
+        <OrdersPage />
+      ) : isKitchen ? (
+        <KitchenPage />
+      ) : isDispatch ? (
+        <DispatchPage />
+      ) : isMarketing ? (
+        <MarketingPage />
+      ) : isSolutions ? (
+        <SolutionsPage />
+      ) : isNodeMarketplace ? (
+        <NodeMarketplacePage />
+      ) : isSsoScim ? (
+        <SsoScimPage />
+      ) : isBackup ? (
+        <BackupPage />
       ) : isDevDashboard ? (
         // Rota /dev só é acessível por super-admin
         isSuperAdmin ? (
@@ -389,4 +730,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 );
-

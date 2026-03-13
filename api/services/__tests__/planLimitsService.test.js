@@ -55,16 +55,16 @@ describe('planLimitsService', () => {
   });
 
   describe('checkLimit', () => {
-    test('deve retornar erro quando tenant não existe', () => {
+    test('deve retornar erro quando tenant não existe', async () => {
       getTenant.mockReturnValue(null);
       
-      const result = checkLimit('tenant-inexistente', 'usuarios', 1);
+      const result = await checkLimit('tenant-inexistente', 'usuarios', 1);
       
       expect(result.allowed).toBe(false);
       expect(result.error).toContain('Tenant não encontrado');
     });
 
-    test('deve permitir quando plano é enterprise (ilimitado)', () => {
+    test('deve permitir quando plano é enterprise (ilimitado)', async () => {
       const mockTenant = {
         id: 'tenant-1',
         plan: 'enterprise',
@@ -73,13 +73,13 @@ describe('planLimitsService', () => {
       getTenant.mockReturnValue(mockTenant);
       getTenantUsage.mockReturnValue({ usuarios: 0 });
       
-      const result = checkLimit('tenant-1', 'usuarios', 1000);
+      const result = await checkLimit('tenant-1', 'usuarios', 1000);
       
       expect(result.allowed).toBe(true);
       expect(result.limit).toBe(-1);
     });
 
-    test('deve permitir quando está dentro do limite', () => {
+    test('deve permitir quando está dentro do limite', async () => {
       const mockTenant = {
         id: 'tenant-1',
         plan: 'pro',
@@ -88,14 +88,14 @@ describe('planLimitsService', () => {
       getTenant.mockReturnValue(mockTenant);
       getTenantUsage.mockReturnValue({ usuarios: 5 });
       
-      const result = checkLimit('tenant-1', 'usuarios', 1);
+      const result = await checkLimit('tenant-1', 'usuarios', 1);
       
       expect(result.allowed).toBe(true);
       expect(result.limit).toBe(10);
       expect(result.current).toBe(5);
     });
 
-    test('deve negar quando excede o limite', () => {
+    test('deve negar quando excede o limite', async () => {
       const mockTenant = {
         id: 'tenant-1',
         plan: 'free',
@@ -104,7 +104,7 @@ describe('planLimitsService', () => {
       getTenant.mockReturnValue(mockTenant);
       getTenantUsage.mockReturnValue({ usuarios: 1 });
       
-      const result = checkLimit('tenant-1', 'usuarios', 1);
+      const result = await checkLimit('tenant-1', 'usuarios', 1);
       
       expect(result.allowed).toBe(false);
       expect(result.error).toContain('Limite');
@@ -112,7 +112,7 @@ describe('planLimitsService', () => {
       expect(result.current).toBe(1);
     });
 
-    test('deve usar limites customizados do tenant', () => {
+    test('deve usar limites customizados do tenant', async () => {
       const mockTenant = {
         id: 'tenant-1',
         plan: 'pro',
@@ -128,7 +128,7 @@ describe('planLimitsService', () => {
       getTenant.mockReturnValue(mockTenant);
       getTenantUsage.mockReturnValue({ usuarios: 15 });
       
-      const result = checkLimit('tenant-1', 'usuarios', 1);
+      const result = await checkLimit('tenant-1', 'usuarios', 1);
       
       expect(result.allowed).toBe(true);
       expect(result.limit).toBe(20);

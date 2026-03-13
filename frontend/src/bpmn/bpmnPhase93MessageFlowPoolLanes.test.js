@@ -73,25 +73,12 @@ function buildMessageFlowXml() {
 }
 
 describe('Phase 9.3 message flow & pools/lanes', () => {
-  it('test 1: Flag OFF - messageFlow exports as default (not as bpmn:messageFlow)', () => {
-    const flow = buildMessageFlowFlow();
-    const { xml, report } = engineFlowToBpmnXml(flow, {
-      mode: BPMN_EXPORT_MODE.SIMPLE,
-    });
-
-    // When flag is OFF, degradedMessageFlow should export as scriptTask (default)
-    expect(xml).not.toContain('bpmn:messageFlow');
-    expect(xml).toContain('bpmn:scriptTask');
-  });
-
-  it('test 2: Flag ON - messageFlow exports as bpmn:messageFlow + sourceRef/targetRef', () => {
+  it('test 1: messageFlow exports as bpmn:messageFlow by default', () => {
     const flow = buildMessageFlowFlow();
     const { xml } = engineFlowToBpmnXml(flow, {
       mode: BPMN_EXPORT_MODE.SIMPLE,
-      flags: { MESSAGE_FLOW: true },
     });
 
-    // When flag is ON with MESSAGE_FLOW, should export as bpmn:messageFlow
     expect(xml).toContain('bpmn:messageFlow');
 
     // The messageFlow refs must target BPMN participant IDs, not internal engine node IDs.
@@ -106,7 +93,7 @@ describe('Phase 9.3 message flow & pools/lanes', () => {
     expect(messageFlowMatch?.[2]).toBe(participantIds[1]);
   });
 
-  it('test 2b: Flag ON - lane exports as bpmn:lane with parentPoolRef resolved from internal node id', () => {
+  it('test 2: lane exports as bpmn:lane with parentPoolRef resolved from internal node id', () => {
     const flow = {
       id: 'flow-lane-export',
       nodes: [
@@ -136,7 +123,6 @@ describe('Phase 9.3 message flow & pools/lanes', () => {
 
     const { xml } = engineFlowToBpmnXml(flow, {
       mode: BPMN_EXPORT_MODE.SIMPLE,
-      flags: { MESSAGE_FLOW: true },
     });
 
     const participantId = xml.match(/<bpmn:participant[^>]*id="([^"]+)"/)?.[1];
@@ -146,7 +132,7 @@ describe('Phase 9.3 message flow & pools/lanes', () => {
     expect(laneParentPoolRef).toBe(participantId);
   });
 
-  it('test 2c: Flag ON - lane without parent pool emits bpmn_lane_missing_parent_pool warning', () => {
+  it('test 3: lane without parent pool emits bpmn_lane_missing_parent_pool warning', () => {
     const flow = {
       id: 'flow-lane-without-parent',
       nodes: [
@@ -166,7 +152,6 @@ describe('Phase 9.3 message flow & pools/lanes', () => {
 
     const { xml, report } = engineFlowToBpmnXml(flow, {
       mode: BPMN_EXPORT_MODE.SIMPLE,
-      flags: { MESSAGE_FLOW: true },
     });
 
     expect(xml).toContain('<bpmn:lane');
@@ -174,25 +159,8 @@ describe('Phase 9.3 message flow & pools/lanes', () => {
     expect(report.warnings.some((w) => w.code === 'bpmn_lane_missing_parent_pool')).toBe(true);
   });
 
-  it('test 3: Flag OFF - participant/lane XML ignored on import', () => {
+  it('test 4: participant imports as degradedPool + lanes as degradedLane by default', () => {
     const { flowDefinition, report } = bpmnXmlToEngineFlow(buildParticipantPoolXml());
-
-    // When flag is OFF, participants and lanes should not be imported
-    const hasParticipants = flowDefinition.nodes.some((n) => n.type === 'degradedPool');
-    const hasLanes = flowDefinition.nodes.some((n) => n.type === 'degradedLane');
-
-    expect(hasParticipants).toBe(false);
-    expect(hasLanes).toBe(false);
-
-    // Should have marked them as unsupported
-    const unsupportedParticipants = report.unsupportedElements.filter((e) => e.elementName === 'participant');
-    expect(unsupportedParticipants.length).toBeGreaterThan(0);
-  });
-
-  it('test 4: Flag ON - participant imports as degradedPool + lanes as degradedLane', () => {
-    const { flowDefinition, report } = bpmnXmlToEngineFlow(buildParticipantPoolXml(), {
-      flags: { MESSAGE_FLOW: true },
-    });
 
     // Should have degraded pool nodes
     const poolNodes = flowDefinition.nodes.filter((n) => n.type === 'degradedPool');
@@ -217,10 +185,8 @@ describe('Phase 9.3 message flow & pools/lanes', () => {
     expect(degradationWarnings.length).toBeGreaterThan(0);
   });
 
-  it('test 5: Flag ON - messageFlow imports as degradedMessageFlow with cross-ref resolution', () => {
-    const { flowDefinition, report } = bpmnXmlToEngineFlow(buildMessageFlowXml(), {
-      flags: { MESSAGE_FLOW: true },
-    });
+  it('test 5: messageFlow imports as degradedMessageFlow with cross-ref resolution by default', () => {
+    const { flowDefinition, report } = bpmnXmlToEngineFlow(buildMessageFlowXml());
 
     // Should have degraded pool nodes for participants
     const poolNodes = flowDefinition.nodes.filter((n) => n.type === 'degradedPool');
@@ -253,19 +219,10 @@ describe('Phase 9.3 message flow & pools/lanes', () => {
     expect(messageFlowWarnings.length).toBeGreaterThan(0);
   });
 
-  it('test 6: Round-trip with flag ON - messageFlow survives export→import', () => {
-    // Start with a flow that has messageFlow nodes
+  it('test 6: round-trip keeps messageFlow active by default', () => {
     const originalFlow = buildMessageFlowFlow();
-
-    // Export with MESSAGE_FLOW flag ON
-    const { xml: exportedXml } = engineFlowToBpmnXml(originalFlow, {
-      flags: { MESSAGE_FLOW: true },
-    });
-
-    // Import the exported XML
-    const { flowDefinition: reimportedFlow, report } = bpmnXmlToEngineFlow(exportedXml, {
-      flags: { MESSAGE_FLOW: true },
-    });
+    const { xml: exportedXml } = engineFlowToBpmnXml(originalFlow);
+    const { flowDefinition: reimportedFlow, report } = bpmnXmlToEngineFlow(exportedXml);
 
     // Should have messageFlow node
     const messageFlowNode = reimportedFlow.nodes.find((n) => n.type === 'degradedMessageFlow');

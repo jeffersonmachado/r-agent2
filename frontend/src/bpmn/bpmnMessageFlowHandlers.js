@@ -1,5 +1,3 @@
-import { isBpmnFeatureEnabled } from './bpmnFeatureFlags';
-
 function asTrimmedString(value) {
   const out = String(value ?? '').trim();
   return out || null;
@@ -9,9 +7,7 @@ export function registerMessageFlowHandlers(registry) {
   if (!registry || typeof registry.register !== 'function') return registry;
 
   registry.register('bpmn:messageFlow', {
-    onExport: ({ node, flags }) => {
-      if (!isBpmnFeatureEnabled('MESSAGE_FLOW', flags)) return null;
-
+    onExport: ({ node }) => {
       const messageFlowType = asTrimmedString(node?.config?.bpmnMessageFlowType);
       if (messageFlowType !== 'messageFlow') return null;
 
@@ -28,8 +24,7 @@ export function registerMessageFlowHandlers(registry) {
       };
     },
 
-    onImport: ({ element, flags, report, elementId }) => {
-      if (!isBpmnFeatureEnabled('MESSAGE_FLOW', flags)) return null;
+    onImport: ({ element, report, elementId }) => {
       if (!element || element.localName !== 'messageFlow') return null;
 
       const sourceRef = asTrimmedString(element.getAttribute('sourceRef'));

@@ -9,7 +9,6 @@
 
 const { executeStep } = require('../../engine/executeStep');
 const { NodeRegistry } = require('../../engine/nodeRegistry');
-const { ProcessRuntimeService } = require('../core/process-runtime');
 const {
   startNodeHandler,
   messageNodeHandler,
@@ -24,6 +23,9 @@ const {
 } = require('../../engine/nodes/basicNodes');
 const { aiNodeHandler } = require('../../engine/nodes/aiNode');
 const { aiTaskNodeHandler } = require('../../engine/nodes/aiTaskNode');
+const { semanticRouterNodeHandler } = require('../../engine/nodes/semanticRouterNode');
+const { ragAnswerNodeHandler } = require('../../engine/nodes/ragAnswerNode');
+const { businessEntryNodeHandler } = require('../../engine/nodes/businessEntryNode');
 const {
   getFlowInfoNodeHandler,
   getQueueStatusNodeHandler,
@@ -40,6 +42,17 @@ const {
 } = require('../../engine/nodes/systemNodes');
 const { apiNodeHandler } = require('../../engine/nodes/apiNode');
 const { fallbackNodeHandler } = require('../../engine/nodes/fallbackNode');
+const { mergeNodeHandler } = require('../../engine/nodes/mergeNode');
+const {
+  voicePromptListenNodeHandler,
+  voiceListenAsrNodeHandler,
+  voiceGatherDtmfNodeHandler,
+  voiceBranchNodeHandler,
+  voiceTransferRamalNodeHandler,
+  voiceTransferFilaNodeHandler,
+  voiceTransferUtilsNodeHandler,
+  voiceHangupNodeHandler,
+} = require('../../engine/nodes/voiceNodes');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const outboundQueueService = require('./outboundQueueService');
 const logger = require('../utils/logger');
@@ -63,29 +76,6 @@ const path = require('path');
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
 const sessions = new Map();
 
-// Singleton para ProcessRuntimeService (inicializado sob demanda)
-/** @type {ProcessRuntimeService|null} */
-let runtimeServiceInstance = null;
-
-/**
- * Obtém a instância singleton do ProcessRuntimeService.
- * Inicializa sob demanda se feature flag CANONICAL_RUNTIME estiver ativa.
- *
- * @returns {ProcessRuntimeService|null}
- */
-function getRuntimeService() {
-  if (!process.env.CANONICAL_RUNTIME || process.env.CANONICAL_RUNTIME !== 'true') {
-    return null;
-  }
-  if (!runtimeServiceInstance) {
-    runtimeServiceInstance = new ProcessRuntimeService({
-      logger,
-      enableTelemetry: process.env.ENABLE_RUNTIME_TELEMETRY !== 'false',
-    });
-  }
-  return runtimeServiceInstance;
-}
-
 /**
  * Cria um NodeRegistry completo com todos os handlers padrão.
  *
@@ -97,13 +87,17 @@ function createNodeRegistry() {
   registry.register('message', messageNodeHandler);
   registry.register('user_input', userInputNodeHandler);
   registry.register('options', optionsNodeHandler);
+  registry.register('merge', mergeNodeHandler);
   registry.register('router', routerNodeHandler);
   registry.register('schedule_router', scheduleRouterNodeHandler);
+  registry.register('semantic_router', semanticRouterNodeHandler);
+  registry.register('business_entry', businessEntryNodeHandler);
   registry.register('set_variable', setVariableNodeHandler);
   registry.register('handoff', handoffNodeHandler);
   registry.register('end', endNodeHandler);
   registry.register('ai', aiNodeHandler);
   registry.register('ai_task', aiTaskNodeHandler);
+  registry.register('rag_answer', ragAnswerNodeHandler);
   // Nós de persistência
   registry.register('get_flow_info', getFlowInfoNodeHandler);
   registry.register('get_queue_status', getQueueStatusNodeHandler);
@@ -122,6 +116,15 @@ function createNodeRegistry() {
   registry.register('fallback', fallbackNodeHandler);
   // Nó de subfluxo
   registry.register('subflow', subflowNodeHandler);
+  // Nós de voz/URA (kind=voice)
+  registry.register('voice_prompt_listen', voicePromptListenNodeHandler);
+  registry.register('voice_listen_asr', voiceListenAsrNodeHandler);
+  registry.register('voice_gather_dtmf', voiceGatherDtmfNodeHandler);
+  registry.register('voice_branch', voiceBranchNodeHandler);
+  registry.register('voice_transfer_ramal', voiceTransferRamalNodeHandler);
+  registry.register('voice_transfer_fila', voiceTransferFilaNodeHandler);
+  registry.register('voice_transfer_utils', voiceTransferUtilsNodeHandler);
+  registry.register('voice_hangup', voiceHangupNodeHandler);
   return registry;
 }
 
@@ -204,14 +207,18 @@ async function processWhatsAppMessage(message, value, deps) {
   let recordingId = null;
   
   if (shouldRecordReplay) {
+    const tenantId = inboundTenantId || null;
     replay = new ReplaySystem({
       storagePath: path.join(process.cwd(), 'replays', 'message'),
+      tenantId,
       context: 'message',
       enableScreenshots: false,
     });
     
-    replayId = `message-${sessionId}-${Date.now()}`;
+    const prefix = tenantId ? `${tenantId}-` : '';
+    replayId = `${prefix}message-${sessionId}-${Date.now()}`;
     replay.start(replayId, {
+      tenantId,
       sessionId,
       messageId,
       from,
@@ -219,16 +226,20 @@ async function processWhatsAppMessage(message, value, deps) {
   }
 
   if (shouldRecord) {
+    const tenantId = inboundTenantId || null;
     recording = new RecordingSystem({
       storagePath: path.join(process.cwd(), 'recordings', 'message'),
+      tenantId,
       context: 'message',
       enableTimestamps: true,
     });
     
-    recordingId = `message-${sessionId}-${Date.now()}`;
+    const prefix = tenantId ? `${tenantId}-` : '';
+    recordingId = `${prefix}message-${sessionId}-${Date.now()}`;
     recording.start(recordingId, {
       name: 'Processamento de Mensagem WhatsApp',
       description: 'Processamento de mensagem do WhatsApp',
+      tenantId,
       sessionId,
       messageId,
       from,
@@ -317,11 +328,45 @@ async function processWhatsAppMessage(message, value, deps) {
       recording.save(recordingId);
     }
     
-    // Durante atendimento humano síncrono, mensagens são roteadas para o humano
-    // A implementação real de WebSocket/API deve ser feita na camada de API
-    // Por enquanto, apenas logamos
+    // Durante atendimento humano síncrono, mensagens são roteadas para o humano via WebSocket
+    // (best-effort). Se existir ticket associado à sessão, atualiza o histórico também.
+    const ts = message?.timestamp ? Number(message.timestamp) : null;
+    const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+    const humanSession = getHumanSession(sessionId);
+    let ticket = null;
+
+    try {
+      const ticketFromSession = getTicketBySession(sessionId, inboundTenantId);
+      if (ticketFromSession && ticketFromSession.status !== 'closed') {
+        updateLastMessage(ticketFromSession.id, text, messageId ? String(messageId) : null, iso);
+        ticket = getTicket(ticketFromSession.id);
+        if (ticket) {
+          emitEvent('ticket.message.received', {
+            ticketId: ticket.id,
+            message: text,
+            sender: 'user',
+            ticket,
+          }, { tenantId: ticket.tenantId, agentId: ticket.assignedTo });
+        }
+      }
+    } catch (_) {}
+
+    try {
+      emitEvent('human.live.message.received', {
+        sessionId,
+        humanSessionId: humanSession?.humanSessionId || null,
+        tenantId: inboundTenantId || null,
+        message: text,
+        sender: 'user',
+        channel: effectiveChannelType,
+        phoneNumber: from,
+        conversationId: conversationId || null,
+        ticketId: ticket?.id || null,
+        timestamp: iso || new Date().toISOString(),
+      }, { tenantId: inboundTenantId || ticket?.tenantId || null });
+    } catch (_) {}
+
     logger.debug(`[MessageProcessor] Mensagem recebida durante atendimento humano síncrono: ${sessionId}`);
-    // TODO: Roteamento para humano via WebSocket/API
     return;
   }
 
@@ -389,12 +434,67 @@ async function processWhatsAppMessage(message, value, deps) {
   }
   const registry = createNodeRegistry();
 
+  // Execution ledger (DB-first) - best-effort
+  // Mantém um executionId por sessão (em memória) para anexar node_executions por mensagem.
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      const existingExecutionId = state?.metadata?.executionId || null;
+      if (!existingExecutionId) {
+        // eslint-disable-next-line global-require
+        const { startFlowExecution } = require('./flowExecutionLedgerService');
+        const started = await startFlowExecution({
+          tenantId: inboundTenantId,
+          flowId: state.flowId,
+          flowVersion: state.flowVersion,
+          sessionId,
+          correlationId: conversationId ? String(conversationId) : `channel:${effectiveChannelType}:${sessionId}`,
+          subjectType: 'channel_session',
+          subjectId: sessionId,
+          meta: {
+            mode: 'message',
+            channelType: effectiveChannelType,
+            phoneNumber: from,
+            conversationId: conversationId || null,
+          },
+        });
+        if (started && started.ok) {
+          if (!state.metadata) state.metadata = {};
+          state.metadata.executionId = started.executionId;
+        }
+      }
+    }
+  } catch (_) {}
+
   // Executa UM passo com input do usuário
   const persistenceServices = require('../../engine/services/persistenceServices');
   
   // Obtém provider de IA para o tenant (para nós AI)
   const tenantId = state.tenantId; // Tenant deve ser fornecido no state
   const aiProvider = getAiProviderForTenant(tenantId);
+
+  // Adapter do execution ledger para a engine (best-effort).
+  // Importante: sanitiza input/output para evitar JSON inválido (ex.: funções como aiProvider).
+  let executionLedgerAdapter = null;
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      const executionId = state?.metadata?.executionId || null;
+      if (executionId) {
+        // eslint-disable-next-line global-require
+        const { buildExecutionLedgerAdapter } = require('./flowExecutionLedgerService');
+        executionLedgerAdapter = buildExecutionLedgerAdapter({
+          tenantId: inboundTenantId,
+          executionId,
+          sanitizeInput: () => ({
+            text,
+            messageId,
+            channel: effectiveChannelType,
+            // Mantemos raw fora do ledger (pode ser grande/variável)
+          }),
+          sanitizeOutput: (outObj) => (outObj && typeof outObj === 'object' ? outObj : {}),
+        });
+      }
+    }
+  } catch (_) {}
   
   // Registra início do processamento
   if (replay) {
@@ -413,50 +513,24 @@ async function processWhatsAppMessage(message, value, deps) {
   
   const stepStartTime = new Date().toISOString();
   let result;
-  const runtimeService = getRuntimeService();
-  const useCanonicalRuntime = runtimeService !== null;
-
   try {
     // eslint-disable-next-line no-await-in-loop
-    if (useCanonicalRuntime) {
-      // Usa novo ProcessRuntimeService com suporte a formatos canônicos
-      logger.debug('[MessageProcessor] Usando ProcessRuntimeService (CANONICAL_RUNTIME=true)', {
-        flowId: state.flowId,
-        sessionId,
-      });
-      result = await runtimeService.executeStep(state, compiledFlow, {
-        registry,
-        input: {
-          text,
-          messageId,
-          channel: effectiveChannelType,
-          raw: message,
-          aiProvider,
-        },
-        deps: {
-          persistence: persistenceServices,
-          registry,
-          replay,
-        },
-      });
-    } else {
-      // Usa legacy executeStep (backward compatibility)
-      result = await executeStep(state, compiledFlow, {
-        registry,
-        input: {
-          text,
-          messageId,
-          channel: effectiveChannelType,
-          raw: message,
-          aiProvider, // Injeta provider de IA
-        },
-        deps: {
-          persistence: persistenceServices,
-          registry, // Passa registry para handlers que precisam (ex: subflow)
-          replay, // Passa replay para o executeStep registrar ações
-        },
-      });
-    }
+    result = await executeStep(state, compiledFlow, {
+      registry,
+      input: {
+        text,
+        messageId,
+        channel: effectiveChannelType,
+        raw: message,
+        aiProvider, // Injeta provider de IA
+      },
+      deps: {
+        persistence: persistenceServices,
+        registry, // Passa registry para handlers que precisam (ex: subflow)
+        replay, // Passa replay para o executeStep registrar ações
+        executionLedger: executionLedgerAdapter,
+      },
+    });
   } catch (err) {
     const code = err && (err.code || err?.message);
     if (code === 'FLOW_REQUIRES_REVIEW' || (err?.code === 'FLOW_REQUIRES_REVIEW')) {
@@ -498,6 +572,45 @@ async function processWhatsAppMessage(message, value, deps) {
 
   // Atualiza sessão
   sessions.set(sessionId, result.state);
+
+  // Execution ledger: marca execução como concluída quando conversa termina (best-effort)
+  try {
+    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+      const executionId = result?.state?.metadata?.executionId || state?.metadata?.executionId || null;
+      const finished = !result?.state?.currentNodeId;
+      const isTicketHandoffOutput = !!(result?.output && (
+        result.output.type === 'handoff' ||
+        (result.output.type === 'fallback_human' && result.output.escalationMode === ESCALATION_MODES.TICKET)
+      ));
+      const isHumanLiveOutput = !!(result?.output && (
+        result.output.type === 'fallback_human_live' ||
+        (result.output.type === 'fallback_human' && result.output.escalationMode === ESCALATION_MODES.HUMAN)
+      ));
+      const isInHumanHandoffState = !!(result?.state?.metadata && result.state.metadata.status === 'waiting_human');
+      const shouldFinishExecution = finished || isTicketHandoffOutput || isHumanLiveOutput || isInHumanHandoffState;
+
+      if (executionId && shouldFinishExecution) {
+        let finishedBy = 'end_node_or_no_current_node';
+        if (isTicketHandoffOutput) finishedBy = 'handoff_ticket';
+        else if (isHumanLiveOutput) finishedBy = 'handoff_human_live';
+        else if (isInHumanHandoffState) finishedBy = 'waiting_human';
+
+        // eslint-disable-next-line global-require
+        const { finishFlowExecutionSafe } = require('./flowExecutionLedgerService');
+        await finishFlowExecutionSafe({
+          tenantId: inboundTenantId,
+          executionId,
+          status: 'done',
+          metaPatch: { finishedBy, finishedAt: new Date().toISOString() },
+        }).catch(() => {});
+
+        // Evita manter execução "aberta" em sessões que migraram para humano.
+        if (result?.state?.metadata?.executionId) {
+          delete result.state.metadata.executionId;
+        }
+      }
+    }
+  } catch (_) {}
 
   // Guarda eventos para replay
   const existingEvents = sessionEvents.get(sessionId) || [];
@@ -674,7 +787,22 @@ async function processWhatsAppMessage(message, value, deps) {
       logger.info(`[HUMAN_LIVE] Sessão humana criada: ${humanSession.humanSessionId} para sessão ${sessionId}`);
       
       // Suspende processamento do bot - humano assume
-      // TODO: Implementar roteamento de mensagens para humano via WebSocket/API
+      try {
+        emitEvent('human.live.started', {
+          sessionId,
+          humanSessionId: humanSession.humanSessionId,
+          tenantId: inboundTenantId || result.state.tenantId || null,
+          channel: result.state.metadata?.channel || effectiveChannelType,
+          phoneNumber: from,
+          conversationId: conversationId || null,
+          context: {
+            flowId: humanSession.context?.flowId || result.state.flowId,
+            variables: humanSession.context?.variables || {},
+            metadata: humanSession.context?.metadata || {},
+          },
+          startedAt: humanSession.createdAt,
+        }, { tenantId: inboundTenantId || result.state.tenantId || null });
+      } catch (_) {}
       return; // Não continua processando como mensagem normal
     }
 
@@ -739,5 +867,3 @@ async function processWhatsAppMessage(message, value, deps) {
 module.exports = {
   processWhatsAppMessage,
 };
-
-

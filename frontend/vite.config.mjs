@@ -1,9 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { vitePluginCommonJS } from './vite-plugin-commonjs.js';
+
+function normalizeBasePath(input) {
+  const raw = String(input || '/').trim();
+  if (!raw || raw === '/') return '/';
+  const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+  return `${withLeadingSlash.replace(/\/+$/, '')}/`;
+}
 
 // Plugin para interceptar rotas de página do frontend antes do proxy
 function frontendRoutesPlugin() {
@@ -11,18 +19,24 @@ function frontendRoutesPlugin() {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda'];
       
       // IMPORTANTE: Este middleware deve ser executado ANTES do proxy do Vite
       // Para garantir que rotas de API sejam passadas adiante sem modificação
       server.middlewares.use((req, res, next) => {
-        const url = req.url?.split('?')[0] || '';
+        const requestUrl = req.url || '';
+        const url = requestUrl.split('?')[0] || '';
         
         // CRÍTICO: Ignora requisições do Vite (HMR, WebSocket, etc)
         // O Vite usa rotas que começam com /@ para HMR e WebSocket para hot reload
-        if (url.startsWith('/@') || 
-            req.headers.upgrade === 'websocket' ||
-            url.includes('?token=')) {
+        if (
+          url.startsWith('/@') ||
+          // Para websockets, não aplicamos rewrites/proxy decisions aqui.
+          // Isso evita interferência tanto com o HMR do Vite quanto com eventuais sockets proxied.
+          req.headers.upgrade === 'websocket' ||
+          // Alguns clientes (ex.: HMR) usam token na querystring.
+          requestUrl.includes('token=')
+        ) {
           // Deixa o Vite lidar com suas próprias requisições
           return next();
         }
@@ -40,13 +54,14 @@ function frontendRoutesPlugin() {
         // - /config pode ser tanto API quanto página (depende do Accept header)
         const isApiRoute = url.startsWith('/tickets') || 
                           url.startsWith('/queues') || 
+                          url.startsWith('/inbox') ||
+                          url.startsWith('/public') ||
                           url.startsWith('/segmentation') ||
                           url.startsWith('/quick-replies') ||
                           url.startsWith('/close-reasons') ||
-                          url.startsWith('/departments') ||
                           url.startsWith('/bulk-campaigns') ||
                           url.startsWith('/channel-accounts') ||
-                          url.startsWith('/whatsapp') ||
+                          (url === '/whatsapp' || url.startsWith('/whatsapp/')) ||
                           url.startsWith('/ai') ||
                           url.startsWith('/flow-templates') ||
                           url.startsWith('/flows') || 
@@ -60,7 +75,9 @@ function frontendRoutesPlugin() {
                           url.startsWith('/auth') ||
                           url.startsWith('/system') ||
                           url.startsWith('/tenants') ||
-                          url.startsWith('/rag') ||
+                          // IMPORTANTE: endpoints de API são /rag e /rag/*.
+                          // A página do frontend é /rag-documents (não deve ser proxyada).
+                          (url === '/rag' || url.startsWith('/rag/')) ||
                           url.startsWith('/super-admin') ||
                           url.startsWith('/onboarding') ||
                           url.startsWith('/admin') ||
@@ -74,6 +91,9 @@ function frontendRoutesPlugin() {
                           (url.startsWith('/rpa/') && url !== '/rpa-test') || // /rpa/recordings é API, mas /rpa-test é página
                           (url.startsWith('/web-scraping/') && url !== '/web-scraping') || // /web-scraping/scrape é API
                           (url.startsWith('/audit/') && url !== '/audit') || // /audit/logs, /audit/stats são API
+                          // /departments é página quando navegação (text/html), mas API quando Accept: application/json
+                          (url === '/departments' && isApiRequest) ||
+                          (url.startsWith('/departments/') && url !== '/departments') ||
                           (url === '/config' && isApiRequest) || // /config é API quando Accept: application/json
                           (url.startsWith('/config/') && url !== '/config'); // /config/validate-* são API
         
@@ -123,8 +143,13 @@ try {
 }
 
 // Configuração mínima do Vite para o frontend React.
-const viteConfig = defineConfig({
-  base: process.env.VITE_BASE_PATH || '/',
+const pwaBasePath = normalizeBasePath(process.env.VITE_BASE_PATH || '/');
+const viteConfig = defineConfig(({ mode }) => {
+  const isProduction = mode === 'production';
+
+  return {
+  base: pwaBasePath,
+  cacheDir: process.env.VITE_CACHE_DIR || './.vite',
   plugins: [
     react({
       // Permite Fast Refresh para arquivos que exportam hooks customizados
@@ -134,6 +159,64 @@ const viteConfig = defineConfig({
       jsxRuntime: 'automatic',
       // Garante que todas as exportações do React sejam incluídas
       include: '**/*.{jsx,tsx}',
+    }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: false,
+      includeAssets: [
+        'favicon.ico',
+        'icons/apple-touch-icon.png',
+        'icons/icon-192.png',
+        'icons/icon-512.png',
+        'icons/icon-192-maskable.png',
+        'icons/icon-512-maskable.png',
+      ],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        importScripts: ['pwa-webpush-sw.js'],
+      },
+      manifest: {
+        name: 'R-Agent2',
+        short_name: 'R-Agent2',
+        description: 'Dashboard de atendimento e operação',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        scope: pwaBasePath,
+        start_url: pwaBasePath,
+        icons: [
+          {
+            src: 'favicon.ico',
+            sizes: '64x64 32x32 24x24 16x16',
+            type: 'image/x-icon',
+          },
+          {
+            src: 'icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: 'icons/icon-192-maskable.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+          {
+            src: 'icons/icon-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ],
+      },
+      devOptions: {
+        enabled: true,
+      },
     }),
     // Plugin customizado para processar CommonJS do backend
     vitePluginCommonJS(),
@@ -160,10 +243,15 @@ const viteConfig = defineConfig({
     // Proxy para API em desenvolvimento
     // Em desenvolvimento, sempre usamos proxy para garantir que funcione corretamente
     // mesmo se VITE_API_BASE_URL estiver definido (pode estar vindo de config.json)
-    proxy: process.env.NODE_ENV === 'production' && process.env.VITE_API_BASE_URL ? {} : {
+    proxy: isProduction && process.env.VITE_API_BASE_URL ? {} : {
       // Rotas da API que devem ser proxyadas
       // Usa regex explícitas para garantir que rotas aninhadas sejam capturadas
       '^/tickets': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/public': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
@@ -172,6 +260,26 @@ const viteConfig = defineConfig({
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
+      },
+      '^/inbox': {
+        target: `http://localhost:${config.api?.port || 3000}`,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // /inbox é rota de página do frontend (SPA) quando é GET para /inbox (sem subcaminho) + navegação
+          // Subrotas como /inbox/conversations são APIs
+          if (req.method === 'GET' && req.url === '/inbox') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') && 
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              // Não faz proxy - deixa o plugin frontend-routes servir index.html
+              return false;
+            }
+          }
+          // Para /inbox/conversations e outros métodos, faz proxy para API
+          return undefined;
+        },
       },
       '^/segmentation': {
         target: `http://localhost:${config.api?.port || 3000}`,
@@ -192,6 +300,19 @@ const viteConfig = defineConfig({
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
+        bypass(req, res, options) {
+          // /departments é rota de página do frontend (SPA) quando é navegação (text/html)
+          // e é rota de API quando Accept: application/json
+          if (req.method === 'GET') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') && 
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              return false;
+            }
+          }
+          return undefined;
+        },
       },
       '^/bulk-campaigns': {
         target: `http://localhost:${config.api?.port || 3000}`,
@@ -305,7 +426,10 @@ const viteConfig = defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '^/rag': {
+      // IMPORTANTE:
+      // - /rag-documents é rota de página do frontend (SPA)
+      // - /rag e /rag/* são endpoints da API (RAG)
+      '^/rag(/|$)': {
         target: `http://localhost:${config.api?.port || 3000}`,
         changeOrigin: true,
         secure: false,
@@ -460,12 +584,13 @@ const viteConfig = defineConfig({
       process.env.VITE_BASE_PATH || ''
     ),
     // Garante que DEV e MODE estejam definidos corretamente
-    'import.meta.env.DEV': JSON.stringify(process.env.NODE_ENV !== 'production'),
-    'import.meta.env.MODE': JSON.stringify(process.env.NODE_ENV === 'production' ? 'production' : 'development'),
+    'import.meta.env.DEV': JSON.stringify(!isProduction),
+    'import.meta.env.MODE': JSON.stringify(mode),
   },
   // Configuração para SPA routing - todas as rotas devem retornar index.html
   // E para tratar arquivos CommonJS do backend
   build: {
+    chunkSizeWarningLimit: 5000,
     rollupOptions: {
       output: {
         manualChunks: undefined,
@@ -525,6 +650,7 @@ const viteConfig = defineConfig({
     // Força re-processamento quando os arquivos mudarem
     force: false,
   },
+  };
 });
 
 export default viteConfig;

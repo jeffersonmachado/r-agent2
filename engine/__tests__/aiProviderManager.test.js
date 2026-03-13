@@ -1,3 +1,9 @@
+jest.mock('../../api/utils/config', () => ({
+  get: jest.fn(() => true),
+}));
+
+const config = require('../../api/utils/config');
+
 const {
   registerAiProvider,
   setTenantAiConfig,
@@ -8,6 +14,7 @@ const {
 describe('aiProviderManager', () => {
   beforeEach(() => {
     clearAiProviderConfig();
+    config.get.mockReturnValue(true);
   });
 
   test('seleciona provider primário por tenant', async () => {
@@ -37,7 +44,7 @@ describe('aiProviderManager', () => {
     registerAiProvider('openai', primary);
     registerAiProvider('local', fallback);
 
-    setTenantAiConfig('tenant-1', { primary: 'openai', fallback: 'local' });
+    setTenantAiConfig('tenant-1', { primary: 'openai', secondary: 'local' });
 
     const provider = getAiProviderForTenant('tenant-1');
     const result = await provider.generate('hi', {});

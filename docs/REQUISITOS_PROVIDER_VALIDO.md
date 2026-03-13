@@ -4,10 +4,9 @@ Este documento explica exatamente o que é necessário para que `hasValidProvide
 
 ## Resumo Executivo
 
-`hasValidProvider` será `true` se **pelo menos uma** das seguintes condições for verdadeira**:
+`hasValidProvider` será `true` quando:
 
-1. ✅ **Provider Específico do Tenant** - O tenant tem configuração específica E o provider está registrado
-2. ✅ **Provider Global Disponível** - Há pelo menos um provider global (OpenAI ou Anthropic) com API key configurada
+1. ✅ **Provider do Tenant** - O tenant tem configuração específica (DB) E o provider está registrado no runtime
 
 ---
 
@@ -15,22 +14,9 @@ Este documento explica exatamente o que é necessário para que `hasValidProvide
 
 ### O que é necessário:
 
-#### 1. Configuração no `config.json`
+#### 1. Configuração no banco (tenant_ai_settings)
 
-```json
-{
-  "ai": {
-    "openai": {
-      "apiKey": "sk-..."  // ← OBRIGATÓRIO: API key do OpenAI
-    },
-    "tenants": {
-      "tenant-acme": {    // ← ID do tenant
-        "primary": "openai"  // ← OBRIGATÓRIO: Provider primário
-      }
-    }
-  }
-}
-```
+O tenant precisa ter `primary` configurado e credenciais salvas (criptografadas) para o provider.
 
 #### 2. Provider deve estar registrado
 
@@ -58,8 +44,8 @@ const hasTenantProvider = provider !== null &&
 
 ### Checklist para Provider Específico:
 
-- [ ] `config.json` tem `ai.openai.apiKey` (ou `ai.anthropic.apiKey`)
-- [ ] `config.json` tem `ai.tenants[tenantId].primary` configurado
+- [ ] Tenant tem `primary` configurado (DB)
+- [ ] Tenant tem credenciais salvas (DB) para o provider primário
 - [ ] O provider especificado em `primary` está registrado no `providerRegistry`
 - [ ] O provider tem método `generate` implementado
 
@@ -69,54 +55,7 @@ const hasTenantProvider = provider !== null &&
 
 ## Cenário 2: Provider Global (Fallback)
 
-### O que é necessário:
-
-#### 1. Configuração no `config.json`
-
-```json
-{
-  "ai": {
-    "openai": {
-      "apiKey": "sk-..."  // ← OBRIGATÓRIO: Pelo menos um provider com API key
-    }
-    // NÃO precisa de ai.tenants[tenantId]
-  }
-}
-```
-
-**OU**
-
-```json
-{
-  "ai": {
-    "anthropic": {
-      "apiKey": "sk-ant-..."  // ← OBRIGATÓRIO: Pelo menos um provider com API key
-    }
-  }
-}
-```
-
-#### 2. Verificação no código
-
-```javascript
-// Se não tiver provider específico do tenant
-if (!hasTenantProvider) {
-  const aiConfig = config.get('ai', {});
-  
-  // Verifica se há pelo menos um provider com API key
-  const hasOpenAI = !!(aiConfig.openai && aiConfig.openai.apiKey);
-  const hasAnthropic = !!(aiConfig.anthropic && aiConfig.anthropic.apiKey);
-  
-  hasValidProvider = hasOpenAI || hasAnthropic;
-}
-```
-
-### Checklist para Provider Global:
-
-- [ ] `config.json` tem `ai.openai.apiKey` **OU** `ai.anthropic.apiKey`
-- [ ] A API key não está vazia (`apiKey !== ''` e `apiKey !== null`)
-
-**Resultado:** Se pelo menos uma API key existir → `hasValidProvider = true`
+**Removido.** Não há mais provider/credencial global; a configuração é sempre por tenant (DB).
 
 ---
 
@@ -166,22 +105,9 @@ if (!hasTenantProvider) {
 
 ## Exemplos Práticos
 
-### ✅ Exemplo 1: Provider Específico Válido
+### ✅ Exemplo: Provider do tenant válido
 
-```json
-{
-  "ai": {
-    "openai": {
-      "apiKey": "sk-proj-abc123..."
-    },
-    "tenants": {
-      "tenant-acme": {
-        "primary": "openai"
-      }
-    }
-  }
-}
-```
+Tenant com `primary` configurado e credenciais salvas para esse provider (DB).
 
 **Resultado:** `hasValidProvider = true`
 - ✅ API key do OpenAI existe
@@ -191,21 +117,9 @@ if (!hasTenantProvider) {
 
 ---
 
-### ✅ Exemplo 2: Provider Global Válido
+### ✅ Exemplo 2: (Removido) Provider global
 
-```json
-{
-  "ai": {
-    "openai": {
-      "apiKey": "sk-proj-abc123..."
-    }
-  }
-}
-```
-
-**Resultado:** `hasValidProvider = true`
-- ✅ API key do OpenAI existe
-- ✅ Não há configuração específica do tenant, mas há provider global
+Não se aplica mais.
 
 ---
 
@@ -266,9 +180,8 @@ let hasValidProvider = hasTenantProvider;
 
 if (!hasTenantProvider) {
   const aiConfig = config.get('ai', {});
-  const hasOpenAI = !!(aiConfig.openai && aiConfig.openai.apiKey);
-  const hasAnthropic = !!(aiConfig.anthropic && aiConfig.anthropic.apiKey);
-  hasValidProvider = hasOpenAI || hasAnthropic;
+  // Fallback global removido: credenciais/configuração são por tenant (DB).
+  hasValidProvider = false;
 }
 
 // 3. Retorna resultado
@@ -279,14 +192,8 @@ return { hasValidProvider, tenantId };
 
 ## Resumo Final
 
-Para `hasValidProvider = true`, você precisa de **UMA** das seguintes opções:
+Para `hasValidProvider = true`, o tenant precisa ter:
 
-### Opção A: Provider Específico
-1. `ai.openai.apiKey` ou `ai.anthropic.apiKey` no `config.json`
-2. `ai.tenants[tenantId].primary` configurado
-3. Provider especificado está registrado
-
-### Opção B: Provider Global
-1. `ai.openai.apiKey` **OU** `ai.anthropic.apiKey` no `config.json` (não vazio)
-
-**Nota:** A API key deve ser válida e não vazia para que o provider seja registrado durante a inicialização.
+- `primary` configurado (DB)
+- credenciais salvas para o provider primário (DB)
+- provider registrado no runtime

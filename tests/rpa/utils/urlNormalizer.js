@@ -40,28 +40,34 @@ function normalizeRpaTestUrls(test) {
     
     // Se já é uma URL absoluta válida (http:// ou https://), verifica se é inválida
     if (url.match(/^https?:\/\//)) {
-      // Verifica se é um domínio inválido conhecido
-      const invalidDomains = ['rpa.local', 'localhost.local', '.local'];
-      const isInvalid = invalidDomains.some(domain => url.includes(domain));
-      
-      if (isInvalid) {
-        // Extrai o caminho e query string
-        try {
-          const urlObj = new URL(url);
-          const path = urlObj.pathname + urlObj.search;
-          return baseUrl + path;
-        } catch (e) {
-          // Se falhar ao parsear, tenta extrair caminho manualmente
-          const match = url.match(/https?:\/\/[^\/]+(\/.*)?$/);
-          if (match && match[1]) {
-            return baseUrl + match[1];
-          }
-          return baseUrl;
+      try {
+        const urlObj = new URL(url);
+
+        // Reescreve URLs locais (ex.: localhost:3000) para a base atual do frontend.
+        // Isso permite replay de seeds gravados em portas diferentes (3000 vs 5173, etc).
+        const localHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
+        if (localHosts.has(urlObj.hostname)) {
+          return baseUrl + urlObj.pathname + urlObj.search + urlObj.hash;
         }
+
+        // Verifica se é um domínio inválido conhecido
+        const invalidDomains = ['rpa.local', 'localhost.local', '.local'];
+        const isInvalid = invalidDomains.some(domain => urlObj.hostname.includes(domain));
+
+        if (isInvalid) {
+          return baseUrl + urlObj.pathname + urlObj.search + urlObj.hash;
+        }
+
+        // URL absoluta válida e não-local, mantém
+        return url;
+      } catch (e) {
+        // Se falhar ao parsear, tenta extrair caminho manualmente
+        const match = url.match(/https?:\/\/[^\/]+(\/.*)?$/);
+        if (match && match[1]) {
+          return baseUrl + match[1];
+        }
+        return baseUrl;
       }
-      
-      // URL absoluta válida, mantém
-      return url;
     }
     
     // URL relativa, adiciona base
@@ -72,9 +78,48 @@ function normalizeRpaTestUrls(test) {
     // URL relativa sem barra inicial
     return baseUrl + '/' + url;
   }
+
+  function findNearestFlowNavigateUrl(stepIndex) {
+    if (!test.steps || !Array.isArray(test.steps)) return null;
+    for (let i = stepIndex - 1; i >= 0; i -= 1) {
+      const candidateStep = test.steps[i];
+      if (!candidateStep || candidateStep.type !== 'navigate') continue;
+      const candidateUrl = candidateStep.url || candidateStep.value;
+      if (typeof candidateUrl !== 'string') continue;
+      const normalized = normalizeUrl(candidateUrl);
+      if (typeof normalized === 'string' && normalized.includes('flowId=')) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  function normalizeExpectedUrl(expected, stepIndex) {
+    if (typeof expected !== 'string' || !expected.trim()) return expected;
+    const normalizedExpected = normalizeUrl(expected);
+    const isBaseOnly =
+      normalizedExpected === baseUrl ||
+      normalizedExpected === `${baseUrl}/`;
+    if (!isBaseOnly) return normalizedExpected;
+
+    const nearestFlowUrl = findNearestFlowNavigateUrl(stepIndex);
+    return nearestFlowUrl || normalizedExpected;
+  }
   
   // Normaliza URLs nos steps
   if (test.steps && Array.isArray(test.steps)) {
+    const hasFlowIdInSteps = test.steps.some((step) => {
+      const candidate = step?.url || step?.value || step?.selector || '';
+      return typeof candidate === 'string' && candidate.includes('flowId=');
+    });
+    const hasChatGreetingAssert = test.steps.some((step) => {
+      const expected = step?.assert?.expected || step?.expected || '';
+      return typeof expected === 'string' && expected.includes('Como posso ajudar');
+    });
+    const derivedFlowId = typeof test.id === 'string'
+      ? (test.id.match(/^test-flow-([^-]+)/) ? `flow-${test.id.match(/^test-flow-([^-]+)/)[1]}` : null)
+      : null;
+
     test.steps.forEach((step, index) => {
       if (step.type === 'navigate') {
         // Garante que há uma URL válida (url ou value)
@@ -96,6 +141,39 @@ function normalizeRpaTestUrls(test) {
         if (step.value) {
           step.value = normalizeUrl(step.value);
         }
+
+        if (!hasFlowIdInSteps && hasChatGreetingAssert && derivedFlowId) {
+          const maybeBase = step.url || step.value;
+          if (typeof maybeBase === 'string') {
+            const normalized = normalizeUrl(maybeBase);
+            const isBaseOnly = normalized === baseUrl || normalized === `${baseUrl}/`;
+            if (isBaseOnly) {
+              const chatUrl = `${baseUrl}/chat?flowId=${encodeURIComponent(derivedFlowId)}`;
+              if (step.url) step.url = chatUrl;
+              if (step.value) step.value = chatUrl;
+            }
+          }
+        }
+      }
+
+      // Wrapper: { type: 'assert', assert: { type: 'url', expected } }
+      if (step.type === 'assert' && step.assert && step.assert.type === 'url') {
+        if (typeof step.assert.expected === 'string') {
+          step.assert.expected = normalizeExpectedUrl(step.assert.expected, index);
+        }
+      }
+
+      // Formato legado: { action: 'assert', type: 'url', expected|value|title }
+      if (step.action === 'assert' && step.type === 'url') {
+        if (typeof step.expected === 'string') {
+          step.expected = normalizeExpectedUrl(step.expected, index);
+        }
+        if (typeof step.value === 'string' && /^https?:\/\//.test(step.value)) {
+          step.value = normalizeExpectedUrl(step.value, index);
+        }
+        if (typeof step.title === 'string' && /^https?:\/\//.test(step.title)) {
+          step.title = normalizeExpectedUrl(step.title, index);
+        }
       }
     });
   }
@@ -113,4 +191,3 @@ function normalizeRpaTestUrls(test) {
 module.exports = {
   normalizeRpaTestUrls,
 };
-

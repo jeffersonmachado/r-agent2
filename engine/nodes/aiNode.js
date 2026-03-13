@@ -151,7 +151,9 @@ async function aiNodeHandler(node, state, input, deps = null) {
   // Verifica se RAG está habilitado e deve ser usado
   const useRag = config.useRag !== false && ragService && configService;
   const ragMinConfidence = config.ragMinConfidence || 0.45;  // Reduzido de 0.5 para 0.45 para melhorar taxa de sucesso
-  const ragFallbackToDirect = config.ragFallbackToDirect !== false;
+  // Fallback RAG → IA direta deve ser explícito e configurável (default: false).
+  const globalRagFallbackToDirect = !!(configService && configService.get && configService.get('fallbacks.ragFallbackToDirect', false));
+  const ragFallbackToDirect = globalRagFallbackToDirect && (config.ragFallbackToDirect !== false);
   const ragEnabled = configService && configService.get('rag.enabled', false);
 
   let rawResponse = '';

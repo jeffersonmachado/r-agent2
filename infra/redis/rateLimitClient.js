@@ -243,7 +243,17 @@ async function isRedisAvailable() {
  */
 async function closeRateLimitClient() {
   if (redisClient) {
-    await redisClient.quit();
+    try {
+      const status = redisClient.status;
+      if (status === 'ready' || status === 'connect' || status === 'connecting') {
+        await redisClient.quit();
+      } else {
+        redisClient.disconnect();
+      }
+    } catch (err) {
+      // Em testes/dev, falhas de fechamento não devem quebrar execução
+      logger.debug('[RateLimit] Erro ao fechar cliente Redis (ignorado)', { error: err.message });
+    }
     redisClient = null;
     connectionAttempts = 0; // Reset contador ao fechar
     logger.info('[RateLimit] Cliente Redis fechado');
@@ -264,4 +274,3 @@ module.exports = {
   closeRateLimitClient,
   resetConnectionAttempts,
 };
-

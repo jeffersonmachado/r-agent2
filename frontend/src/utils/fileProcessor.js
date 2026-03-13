@@ -3,6 +3,7 @@
  */
 
 import logger from './logger';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 // Importações dinâmicas para bibliotecas opcionais
 let pdfjsLib = null;
@@ -13,10 +14,10 @@ let imageCompression = null;
 async function loadPdfJs() {
   if (pdfjsLib) return pdfjsLib;
   try {
-    pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
     // Configura worker
     if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     }
     return pdfjsLib;
   } catch (error) {

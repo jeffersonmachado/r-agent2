@@ -1,5 +1,3 @@
-import { isBpmnFeatureEnabled } from './bpmnFeatureFlags';
-
 const DEFAULT_BOUNDS = Object.freeze({
   x: 0,
   y: 0,
@@ -66,8 +64,7 @@ export function registerDiagramInterchangeHandlers(registry) {
   if (!registry || typeof registry.register !== 'function') return registry;
 
   registry.register('bpmn:diagramInterchange', {
-    onExport: ({ node, nodeId, flags }) => {
-      if (!isBpmnFeatureEnabled('BPMN_DI', flags)) return null;
+    onExport: ({ node, nodeId }) => {
       if (!node || typeof node !== 'object') return null;
 
       const hasShapeInfo = !!node.layout || !!node?.config?.bpmnDiShape;
@@ -109,9 +106,7 @@ export function registerDiagramInterchangeHandlers(registry) {
       };
     },
 
-    onImport: ({ flags, nodeType, diShape, diEdges, elementId }) => {
-      if (!isBpmnFeatureEnabled('BPMN_DI', flags)) return null;
-
+    onImport: ({ nodeType, diShape, diEdges, elementId }) => {
       const configPatch = {};
 
       if (diShape) {

@@ -134,6 +134,11 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-accent-hover', theme.colors.accent.hover);
     root.style.setProperty('--color-accent-pressed', theme.colors.accent.pressed);
     root.style.setProperty('--color-accent-light', theme.colors.accent.light);
+
+    root.style.setProperty('--color-status-success', theme.colors.status.success);
+    root.style.setProperty('--color-status-error', theme.colors.status.error);
+    root.style.setProperty('--color-status-warning', theme.colors.status.warning);
+    root.style.setProperty('--color-status-info', theme.colors.status.info);
     
     // Canvas background colors
     if (themeName === 'dark') {

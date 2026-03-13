@@ -4,14 +4,16 @@
   "private": true,
   "description": "Editor visual de fluxo de chatbot baseado em React + Rete.js",
   "scripts": {
-    "start": "vite",
-    "test": "vitest",
-    "build": "vite build",
-    "preview": "vite preview"
+    "start": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite --config vite.config.mjs",
+    "test": "VITE_CACHE_DIR=/tmp/r-agent2-vite vitest --config vitest.config.mjs",
+    "build": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite build --config vite.config.mjs",
+    "preview": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite preview --config vite.config.mjs"
   },
   "dependencies": {
+    "bpmn-js": "^18.13.1",
+    "bpmn-moddle": "^10.0.0",
     "browser-image-compression": "^2.0.2",
-    "pdfjs-dist": "^3.11.174",
+    "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "rete": "^2.0.6",
@@ -25,19 +27,26 @@
     "tesseract.js": "^5.1.1"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.28.5",
     "@rollup/plugin-commonjs": "^29.0.0",
     "@tailwindcss/postcss": "^4.1.18",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.0.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^2.1.9",
     "autoprefixer": "^10.4.23",
+    "babel-jest": "^30.2.0",
+    "cypress": "^15.10.0",
     "esbuild": "^0.27.2",
     "happy-dom": "^20.0.11",
+    "jest-environment-jsdom": "^30.2.0",
     "jsdom": "^27.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.0",
+    "vite-plugin-pwa": "^1.0.3",
     "vitest": "^2.1.4"
   }
 }

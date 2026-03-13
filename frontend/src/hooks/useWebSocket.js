@@ -25,6 +25,7 @@ import logger from '../utils/logger';
 export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } = {}) {
   const [connected, setConnected] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [authFailed, setAuthFailed] = useState(false);
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const pingIntervalRef = useRef(null);
@@ -161,6 +162,7 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
         logger.info('[WebSocket] Conectado');
         isConnectingRef.current = false;
         setConnected(true);
+        setAuthFailed(false);
         reconnectAttemptsRef.current = 0; // Reset contador de tentativas
 
         // Autentica com token
@@ -197,6 +199,7 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
             if (data.status === 'success') {
               logger.info('[WebSocket] Autenticado com sucesso', data.agent);
               setAuthenticated(true);
+              setAuthFailed(false);
 
               // Se inscreve em eventos
               if (subscribeEventsRef.current.length > 0) {
@@ -205,6 +208,7 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
             } else {
               logger.error('[WebSocket] Falha na autenticação', data.message);
               setAuthenticated(false);
+              setAuthFailed(true);
             }
             return;
           }
@@ -239,6 +243,7 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
         isConnectingRef.current = false;
         setConnected(false);
         setAuthenticated(false);
+        setAuthFailed(false);
       };
 
       ws.onclose = (event) => {
@@ -246,6 +251,7 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
         isConnectingRef.current = false;
         setConnected(false);
         setAuthenticated(false);
+        setAuthFailed(false);
 
         // Limpa ping interval
         if (pingIntervalRef.current) {
@@ -277,6 +283,7 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
       isConnectingRef.current = false;
       setConnected(false);
       setAuthenticated(false);
+      setAuthFailed(false);
       if (enabled) {
         // Backoff exponencial
         const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
@@ -359,6 +366,7 @@ export function useWebSocket({ enabled = true, onEvent, subscribeEvents = [] } =
   return {
     connected,
     authenticated,
+    authFailed,
     send,
     reconnect,
   };

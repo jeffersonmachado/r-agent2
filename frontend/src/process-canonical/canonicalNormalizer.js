@@ -1,224 +1,80 @@
 import {
-  isCanonicalNodeType,
-  createCanonicalIssue,
-  ISSUE_SEVERITY,
-} from './canonicalTypes';
-import {
-  cloneDefaultProcessPolicies,
-  defaultNodeLabel,
-  resolveNodePolicies,
-  buildDefaultMetadata,
+  DEFAULT_AI_CONFIG,
+  DEFAULT_CANONICAL_VERSION,
+  DEFAULT_OPERATIONAL_CONFIG,
+  DEFAULT_PROCESS_POLICIES,
+  cloneDefault,
+  createDefaultNodePolicies,
 } from './canonicalDefaults';
 
-function asString(value, fallback = null) {
-  const out = String(value ?? '').trim();
-  return out || fallback;
+function normalizeObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
 }
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
+function normalizeArray(value) {
+  return Array.isArray(value) ? value.slice() : [];
 }
 
-function toPredictableId(prefix, value, index) {
-  const candidate = asString(value, null);
-  if (candidate) return candidate;
-  return `${prefix}_${index + 1}`;
-}
-
-function buildEdgeId(source, target, index) {
-  return `edge_${source}_to_${target}_${index + 1}`;
-}
-
-function normalizeEdge(edge, index, warnings) {
-  const source = asString(edge?.source, null);
-  const target = asString(edge?.target, null);
-  if (!source || !target) {
-    warnings.push(createCanonicalIssue({
-      code: 'canonical_edge_missing_endpoint',
-      message: 'Edge without source or target was ignored during normalization.',
-      severity: ISSUE_SEVERITY.WARNING,
-      details: { edge },
-    }));
-    return null;
-  }
-
+function normalizeNode(node, index) {
+  const defaults = createDefaultNodePolicies();
+  const metadata = normalizeObject(node?.metadata);
   return {
-    id: asString(edge?.id, buildEdgeId(source, target, index)),
+    id: String(node?.id || `canonical-node-${index + 1}`),
+    type: String(node?.type || 'utility.transform'),
+    subtype: typeof node?.subtype === 'string' ? node.subtype : null,
+    label: typeof node?.label === 'string' && node.label.trim() ? node.label : String(node?.id || `Node ${index + 1}`),
+    config: normalizeObject(node?.config),
+    inputSchema: normalizeObject(node?.inputSchema),
+    outputSchema: normalizeObject(node?.outputSchema),
+    retryPolicy: { ...defaults.retryPolicy, ...normalizeObject(node?.retryPolicy) },
+    timeoutPolicy: { ...defaults.timeoutPolicy, ...normalizeObject(node?.timeoutPolicy) },
+    fallbackPolicy: { ...defaults.fallbackPolicy, ...normalizeObject(node?.fallbackPolicy) },
+    humanHandoffPolicy: { ...defaults.humanHandoffPolicy, ...normalizeObject(node?.humanHandoffPolicy) },
+    aiPolicy: { ...defaults.aiPolicy, ...normalizeObject(node?.aiPolicy) },
+    observability: { ...defaults.observability, ...normalizeObject(node?.observability) },
+    metadata,
+  };
+}
+
+function normalizeEdge(edge, index, nodeIds) {
+  const source = String(edge?.source || '');
+  const target = String(edge?.target || '');
+  return {
+    id: String(edge?.id || `canonical-edge-${index + 1}`),
     source,
     target,
-    condition: edge?.condition ?? null,
+    condition: normalizeObject(edge?.condition),
     priority: Number.isFinite(Number(edge?.priority)) ? Number(edge.priority) : index,
-    eventTrigger: edge?.eventTrigger || null,
-    metadata: edge?.metadata && typeof edge.metadata === 'object' ? edge.metadata : {},
-  };
-}
-
-function inferEdgesFromLegacyNext(nodes = []) {
-  const inferred = [];
-
-  nodes.forEach((node, nodeIndex) => {
-    const source = asString(node?.id, `node_${nodeIndex + 1}`);
-    const next = node?.next;
-
-    if (typeof next === 'string' && next.trim()) {
-      inferred.push({
-        source,
-        target: next.trim(),
-        priority: 0,
-      });
-      return;
-    }
-
-    if (Array.isArray(next)) {
-      next.forEach((target, idx) => {
-        const normalizedTarget = asString(target, null);
-        if (!normalizedTarget) return;
-        inferred.push({
-          source,
-          target: normalizedTarget,
-          priority: idx,
-        });
-      });
-      return;
-    }
-
-    if (next && typeof next === 'object') {
-      Object.entries(next).forEach(([port, target], idx) => {
-        const normalizedTarget = asString(target, null);
-        if (!normalizedTarget) return;
-        inferred.push({
-          source,
-          target: normalizedTarget,
-          priority: idx,
-          condition: {
-            kind: 'port',
-            port,
-            expression: `port:${port}`,
-          },
-        });
-      });
-    }
-  });
-
-  return inferred;
-}
-
-export function normalizeCanonicalProcessDefinition(input = {}, options = {}) {
-  const raw = input && typeof input === 'object' ? input : {};
-  const warnings = [];
-
-  const rawNodes = asArray(raw.nodes);
-  const normalizedNodes = rawNodes.map((rawNode, index) => {
-    const nodeId = toPredictableId('node', rawNode?.id, index);
-    const nodeType = asString(rawNode?.type, 'task.script');
-
-    if (!isCanonicalNodeType(nodeType)) {
-      warnings.push(createCanonicalIssue({
-        code: 'canonical_unknown_node_type',
-        message: `Node ${nodeId} has unsupported canonical type "${nodeType}".`,
-        severity: ISSUE_SEVERITY.WARNING,
-        nodeIds: [nodeId],
-      }));
-    }
-
-    const processPolicies = raw.policies && typeof raw.policies === 'object'
-      ? raw.policies
-      : cloneDefaultProcessPolicies();
-
-    const resolvedPolicies = resolveNodePolicies(rawNode, processPolicies);
-
-    return {
-      id: nodeId,
-      type: nodeType,
-      subtype: asString(rawNode?.subtype, null),
-      label: asString(rawNode?.label, defaultNodeLabel(nodeType, nodeId)),
-      config: rawNode?.config && typeof rawNode.config === 'object' ? rawNode.config : {},
-      inputSchema: rawNode?.inputSchema && typeof rawNode.inputSchema === 'object' ? rawNode.inputSchema : null,
-      outputSchema: rawNode?.outputSchema && typeof rawNode.outputSchema === 'object' ? rawNode.outputSchema : null,
-      retryPolicy: resolvedPolicies.retryPolicy,
-      timeoutPolicy: resolvedPolicies.timeoutPolicy,
-      fallbackPolicy: resolvedPolicies.fallbackPolicy,
-      humanHandoffPolicy: resolvedPolicies.humanHandoffPolicy,
-      aiPolicy: resolvedPolicies.aiPolicy,
-      observability: resolvedPolicies.observability,
-      metadata: rawNode?.metadata && typeof rawNode.metadata === 'object' ? rawNode.metadata : {},
-    };
-  });
-
-  const rawEdges = asArray(raw.edges);
-  const edgesSource = rawEdges.length > 0 ? rawEdges : inferEdgesFromLegacyNext(rawNodes);
-
-  const normalizedEdges = edgesSource
-    .map((edge, index) => normalizeEdge(edge, index, warnings))
-    .filter(Boolean);
-
-  const nodeIdSet = new Set(normalizedNodes.map((node) => node.id));
-  const filteredEdges = normalizedEdges.filter((edge) => {
-    const valid = nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target);
-    if (!valid) {
-      warnings.push(createCanonicalIssue({
-        code: 'canonical_edge_unknown_node',
-        message: `Edge ${edge.id} references unknown nodes and was ignored.`,
-        severity: ISSUE_SEVERITY.WARNING,
-        details: {
-          edgeId: edge.id,
-          source: edge.source,
-          target: edge.target,
-        },
-      }));
-    }
-    return valid;
-  });
-
-  let entrypoints = asArray(raw.entrypoints)
-    .map((value) => asString(value, null))
-    .filter(Boolean)
-    .filter((entrypoint) => nodeIdSet.has(entrypoint));
-
-  if (entrypoints.length === 0) {
-    entrypoints = normalizedNodes
-      .filter((node) => node.type === 'start')
-      .map((node) => node.id);
-  }
-
-  if (entrypoints.length === 0 && normalizedNodes.length > 0) {
-    entrypoints = [normalizedNodes[0].id];
-    warnings.push(createCanonicalIssue({
-      code: 'canonical_entrypoint_inferred',
-      message: `Entrypoint not provided. Using first node (${normalizedNodes[0].id}).`,
-      severity: ISSUE_SEVERITY.WARNING,
-      nodeIds: [normalizedNodes[0].id],
-    }));
-  }
-
-  const processPolicies = {
-    ...cloneDefaultProcessPolicies(),
-    ...(raw.policies && typeof raw.policies === 'object' ? raw.policies : {}),
-  };
-
-  const normalized = {
-    id: asString(raw.id, options.defaultProcessId || 'canonical_process'),
-    name: asString(raw.name, 'Canonical Process'),
-    version: Number.isFinite(Number(raw.version)) ? Number(raw.version) : 1,
-    metadata: buildDefaultMetadata(raw.metadata),
-    nodes: normalizedNodes,
-    edges: filteredEdges,
-    entrypoints,
-    policies: processPolicies,
-    aiConfig: raw.aiConfig && typeof raw.aiConfig === 'object' ? raw.aiConfig : {},
-    operationalConfig: raw.operationalConfig && typeof raw.operationalConfig === 'object'
-      ? raw.operationalConfig
-      : {},
-  };
-
-  return {
-    canonicalProcessDefinition: normalized,
-    report: {
-      warnings,
-      normalizedNodeCount: normalizedNodes.length,
-      normalizedEdgeCount: filteredEdges.length,
+    eventTrigger: edge?.eventTrigger ?? null,
+    metadata: {
+      ...normalizeObject(edge?.metadata),
+      sourceMissing: source ? !nodeIds.has(source) : true,
+      targetMissing: target ? !nodeIds.has(target) : true,
     },
   };
 }
 
-export default normalizeCanonicalProcessDefinition;
+export function normalizeCanonicalProcessDefinition(definition) {
+  const base = definition && typeof definition === 'object' ? definition : {};
+  const nodes = normalizeArray(base.nodes).map((node, index) => normalizeNode(node, index));
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const edges = normalizeArray(base.edges).map((edge, index) => normalizeEdge(edge, index, nodeIds));
+  const entrypoints = normalizeArray(base.entrypoints)
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+
+  return {
+    id: String(base.id || 'canonical-process'),
+    name: typeof base.name === 'string' && base.name.trim() ? base.name : 'Canonical Process',
+    version: Number.isFinite(Number(base.version)) ? Number(base.version) : DEFAULT_CANONICAL_VERSION,
+    metadata: normalizeObject(base.metadata),
+    nodes,
+    edges,
+    entrypoints: entrypoints.length > 0
+      ? Array.from(new Set(entrypoints))
+      : nodes.filter((node) => node.type === 'start').map((node) => node.id),
+    policies: { ...cloneDefault(DEFAULT_PROCESS_POLICIES), ...normalizeObject(base.policies) },
+    aiConfig: { ...cloneDefault(DEFAULT_AI_CONFIG), ...normalizeObject(base.aiConfig) },
+    operationalConfig: { ...cloneDefault(DEFAULT_OPERATIONAL_CONFIG), ...normalizeObject(base.operationalConfig) },
+  };
+}

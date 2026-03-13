@@ -4,6 +4,12 @@
 
 Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
 
+## Status destas regras
+
+- Este documento descreve a arquitetura-alvo e os guardrails de implementação alinhados a `docs/OBJETIVO_FINAL_PLATAFORMA.md`, `docs/ARQUITETURA_TECNICA.md`, `docs/ROADMAP.md` e `docs/O_QUE_FALTA.md`.
+- Se o código atual divergir destas regras, a divergência deve ser tratada como legado/dívida técnica a ser reduzida.
+- Exceções existentes no repositório não redefinem o padrão para mudanças novas.
+
 - **Engine = Core do sistema**
   - Onde reside toda a lógica de negócio
   - Execução e validação determinística
@@ -12,9 +18,13 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
   - Camada visual e de interação
   - Nunca contém lógica de negócio
 
-- **API = Interface HTTP**
-  - Camada de transporte
-  - Apenas delega chamadas para a Engine
+- **API = Interface HTTP / Application Boundary**
+   - Camada de transporte e orquestração
+   - Deve delegar para serviços de domínio e engine, evitando concentrar regras em handlers
+
+- **Serviços de domínio = Application / Domain Services**
+   - Orquestram casos de uso e regras compartilhadas
+   - Vivem prioritariamente em `api/services/` e `engine/`
 
 ---
 
@@ -32,20 +42,26 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
 └──────────────┬──────────────────────────┘
                │ HTTP/REST
 ┌──────────────▼──────────────────────────┐
-│         API (Interface Layer)            │
-│  - server.js                            │
-│  - Endpoints REST                       │
-│  - Serialização/Deserialização          │
-│  - Sem lógica de negócio                │
+│   API / APPLICATION BOUNDARY            │
+│  - server.js / handlers HTTP            │
+│  - Auth, serialização, contratos        │
+│  - Orquestração leve                    │
 └──────────────┬──────────────────────────┘
                │
 ┌──────────────▼──────────────────────────┐
-│         ENGINE (Business Logic)          │
+│     DOMAIN SERVICES / USE CASES         │
+│  - api/services/*                       │
+│  - Regras compartilhadas do produto     │
+│  - Integração entre runtime e módulos   │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│         ENGINE (Core Determinístico)     │
 │  - validator.js (validações estáticas)  │
-│  - compileFlow.js (compilação)           │
-│  - executeStep.js (execução)             │
-│  - runner.js (orquestração)              │
-│  - Sem dependências de UI ou API         │
+│  - compileFlow.js (compilação)          │
+│  - executeStep.js (execução)            │
+│  - runner.js (orquestração)             │
+│  - Sem dependências de UI ou HTTP       │
 └─────────────────────────────────────────┘
 ```
 
@@ -53,17 +69,17 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
 
 1. **Frontend (UI):**
    - Apenas renderização e interação
-   - Validação visual para UX (não substitui validação da engine)
+   - Validação visual/preventiva para UX (não substitui a validação autoritativa do backend)
    - Transformação de formatos (Rete JSON ↔ Engine Flow)
 
 2. **API:**
-   - Apenas interface HTTP
+   - Interface HTTP e borda da aplicação
    - Serialização/Deserialização
-   - Delegação para engine
-   - Sem lógica de negócio
+   - Delegação para serviços de domínio/engine
+   - Não deve concentrar regras de negócio diretamente nos handlers
 
-3. **Engine (Core):**
-   - Toda lógica de negócio
+3. **Serviços de domínio + Engine (Core):**
+   - A lógica de negócio deve ficar em serviços de domínio e no core determinístico
    - Validações estáticas
    - Execução determinística
    - Para a mesma entrada, a Engine deve sempre produzir o mesmo resultado,
@@ -86,16 +102,17 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
    - Quando necessário compartilhar código, usar módulos compartilhados
 
 2. **Centralização de Lógica de Negócio**
-   - ✅ **Toda lógica de negócio na Engine**
-   - ✅ **Mensagens de erro centralizadas no backend** (engine/validator.js)
+   - ✅ **Regras canônicas devem ficar no backend** (`engine/` ou `api/services/`)
+   - ✅ **Mensagens de erro canônicas centralizadas no backend**
    - ✅ **Regras de compatibilidade centralizadas** (engine/typeCompatibility.js)
-   - ❌ **NUNCA duplicar lógica de validação no frontend**
+   - ❌ **NUNCA transformar validação preventiva de frontend em fonte autoritativa**
 
 3. **Centralização de Mensagens**
    - ✅ **Backend envia mensagens técnicas e amigáveis**
-   - ✅ **Frontend apenas exibe o que recebe do backend**
-   - ❌ **NUNCA mapear ou transformar mensagens no frontend**
-   - ❌ **NUNCA criar mensagens de erro no frontend**
+   - ✅ **Frontend deve preferir exibir o que recebe do backend**
+   - ✅ **Mensagens locais de UX só podem existir como ajuda preventiva, sem redefinir códigos canônicos**
+   - ❌ **NUNCA remapear erro canônico do backend para outro significado**
+   - ❌ **NUNCA usar mensagens locais para contradizer a validação autoritativa**
 
 4. **Centralização de Regras**
    - ✅ **Regras de compatibilidade de tipos em módulo compartilhado**
@@ -104,10 +121,10 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
    - ❌ **NUNCA duplicar regras de compatibilidade no frontend**
 
 5. **Centralização de Estilos CSS**
-   - ✅ **Todos os estilos estáticos em `index.css`**
+   - ✅ **Novos estilos estáticos devem ir para CSS/classe reutilizável**
    - ✅ **Usar classes CSS para estilos reutilizáveis**
-   - ✅ **Estilos inline apenas para valores dinâmicos calculados em runtime**
-   - ❌ **NUNCA usar estilos inline para estilos estáticos**
+   - ✅ **Estilos inline apenas para valores dinâmicos calculados em runtime, estado visual ou theming contextual**
+   - ❌ **Evitar expandir estilos inline estáticos; legado deve ser migrado quando tocado**
    - ❌ **NUNCA duplicar estilos em múltiplos componentes**
 
 6. **Módulos Compartilhados**

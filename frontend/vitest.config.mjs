@@ -17,11 +17,8 @@ export default defineConfig({
     },
   },
   test: {
-    // Ambiente de teste - jsdom tem suporte a DOMParser nativo
-    environment: 'jsdom',
-    
-    // Setup files para polyfills
-    setupFiles: ['./vitest.setup.js'],
+    // Ambiente de teste - usa happy-dom para evitar problemas de compatibilidade ESM
+    environment: 'happy-dom',
     
     // Timeouts globais para evitar travamentos
     testTimeout: 10000, // 10 segundos por teste
@@ -36,8 +33,8 @@ export default defineConfig({
     restoreMocks: true,
     resetMocks: true,
     
-    // Isolamento de testes - desabilitado para compatibilidade
-    isolate: false, // Desabilita isolamento para evitar problemas com módulos ESM
+    // Isolamento de testes por arquivo para evitar contaminação de mocks/estado global
+    isolate: true,
     
     // Pool de workers para evitar travamentos
     pool: 'threads',
@@ -46,7 +43,7 @@ export default defineConfig({
         singleThread: false,
         minThreads: 1,
         maxThreads: 2, // Reduzido para evitar problemas de memória
-        isolate: false, // Desabilita isolamento para compatibilidade
+        isolate: true,
       },
     },
     

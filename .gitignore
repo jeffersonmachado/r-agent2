@@ -1,8 +1,6 @@
 # Dados de desenvolvimento
+api/data/
 api/data/config.json
-.token.env
-api/data/wa_sessions/
-test-results/
 
 # Node modules
 node_modules/
@@ -21,19 +19,23 @@ logs/
 .env
 .env.local
 .env.*.local
+frontend/.env.production
 
 # Backups locais de config (não versionar)
 .config-backup*.json
+frontend_backup/
 
 # Token RPA (não deve ser commitado)
 tests/rpa/config/rpa-token.json
 rpa/config/rpa-token.json
+.token.env
 
 # Artefatos gerados por testes RPA / Replay (não versionar)
 tests/rpa/replay/
 tests/rpa/reports/
 tests/rpa/screenshots/
 tests/rpa/flows/
+tests/rpa/traces/
 
 # Artefatos gerados por RPA em runtime (novo local)
 rpa/replay/
@@ -46,16 +48,39 @@ data/executions/
 recordings/
 replays/
 
+# Dumps/importações locais (não versionar)
+remote-dumps/
+remote-dumps2/
+
 # Coverage (gerado)
 coverage/
+
+# Artefatos de teste do frontend (JUnit)
+frontend/test-results/
+frontend/.vite/
+
+# Dados locais do vector store do rag-service (não versionar)
+rag-service/data/vector_store/
+rag-service/test-results/
+rag-service/data/adaptive_learning/*_learning.json
+
+# Evidências locais de QA / release
+qa/release-evidence/
+qa/*-report.json
+qa/*-evidence.json
+qa/latest.json
+qa/launch-plan-status.json
+qa/launch-plan-status.md
+qa/release-decision.json
+qa/release-decision.md
+qa/release-summary.md
+qa/release-manifest.json
+qa/selftest-baseline.json
 
 # Build outputs
 dist/
 build/
 *.tsbuildinfo
-frontend/.vite/
-remote-dumps/
-remote-dumps2/
 
 # IDEs
 .vscode/
@@ -67,3 +92,8 @@ remote-dumps2/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporários locais
+tmp_crud_block.js
+tmp_bpmn_smoke_playwright.js
+*Destination}}{{end}}*

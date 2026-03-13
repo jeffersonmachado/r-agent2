@@ -15,7 +15,7 @@ from typing import Optional, List, Dict, Any
 import uvicorn
 import logging
 
-from api.routes import query, index, health, nlp, learning, maintenance
+from api.routes import query, index, health, nlp, learning, maintenance, embeddings
 from config.settings import get_settings
 
 # Configura logging
@@ -41,12 +41,16 @@ app.add_middleware(
 )
 
 # Incluir rotas
+# Compatibilidade/ops: expõe health também em /health (sem prefixo),
+# além de manter /rag/health para clientes existentes.
+app.include_router(health.router, tags=["health"])
 app.include_router(health.router, prefix="/rag", tags=["health"])
 app.include_router(query.router, prefix="/rag", tags=["query"])
 app.include_router(index.router, prefix="/rag", tags=["index"])
 app.include_router(nlp.router, prefix="/rag", tags=["nlp"])
 app.include_router(learning.router, prefix="/rag/learning", tags=["learning"])
 app.include_router(maintenance.router, prefix="/rag", tags=["maintenance"])
+app.include_router(embeddings.router, prefix="/rag", tags=["embeddings"])
 
 
 @app.get("/")

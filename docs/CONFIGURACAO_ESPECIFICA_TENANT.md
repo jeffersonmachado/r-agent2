@@ -2,35 +2,15 @@
 
 ## Definição
 
-**Configuração específica** é quando um tenant tem sua própria configuração de provider de IA definida no banco de dados PostgreSQL (tabela `tenant_ai_settings`) ou no arquivo `config.json` na seção `ai.tenants[tenantId]` (para compatibilidade).
+**Configuração específica** é quando um tenant tem sua própria configuração de provider de IA definida no banco de dados PostgreSQL (tabela `tenant_ai_settings`) e credenciais criptografadas na tabela `tenant_ai_credentials`.
 
-**NOTA:** A configuração preferencial é via banco de dados PostgreSQL. O `config.json` é usado apenas como fallback ou para configuração inicial.
+**NOTA:** O sistema não usa mais API keys globais em `config.json`. Toda credencial é por-tenant (DB).
 
 ## Exemplo de Configuração Específica
 
 ### ✅ COM Configuração Específica
 
-```json
-{
-  "ai": {
-    "openai": {
-      "apiKey": "sk-proj-..."
-    },
-    "anthropic": {
-      "apiKey": "sk-ant-..."
-    },
-    "tenants": {
-      "tenant-acme": {
-        "primary": "openai",
-        "secondary": "anthropic"
-      },
-      "tenant-prod": {
-        "primary": "anthropic"
-      }
-    }
-  }
-}
-```
+O tenant define apenas o provider (primary/secondary). As credenciais ficam no DB e nunca são exibidas.
 
 Neste caso:
 - `tenant-acme` tem configuração específica: usa OpenAI como primário e Anthropic como secundário
@@ -38,15 +18,7 @@ Neste caso:
 
 ### ❌ SEM Configuração Específica
 
-```json
-{
-  "ai": {
-    "openai": {
-      "apiKey": "sk-proj-..."
-    }
-  }
-}
-```
+Sem configuração específica por tenant: o tenant será considerado sem IA configurada.
 
 Neste caso:
 - Não há seção `ai.tenants`
@@ -59,20 +31,8 @@ Neste caso:
 
 ```javascript
 // Configura providers por tenant
-const aiConfig = config.get('ai', {});
-const tenantConfig = aiConfig.tenants || {};  // ← Seção ai.tenants
-
-// Configura tenants específicos (apenas configurações explícitas)
-for (const [tenantId, tenantAiConfig] of Object.entries(tenantConfig)) {
-  if (!tenantAiConfig.primary) {
-    continue;
-  }
-  
-  setTenantAiConfig(tenantId, {
-    primary: tenantAiConfig.primary,
-    secondary: tenantAiConfig.secondary,
-  });
-}
+// O runtime carrega a configuração do tenant do DB para memória quando necessário
+await ensureTenantAiConfigLoaded(tenantId);
 ```
 
 ### 2. Verificação (api/server.js)
@@ -100,12 +60,8 @@ if (!tenantAiConfig || !tenantAiConfig.primary) {
 - **Vantagem**: Cada tenant pode usar um provider diferente
 - **Obrigatório**: Não (mas recomendado)
 
-### Provider Global (ai.openai / ai.anthropic)
-- **Onde**: `config.json` → `ai.openai.apiKey` ou `ai.anthropic.apiKey`
-- **O que define**: As API keys dos providers disponíveis
-- **Exemplo**: `"openai": { "apiKey": "sk-..." }`
-- **Vantagem**: Configuração centralizada
-- **Obrigatório**: Sim (para que os providers funcionem)
+### Provider Global (Removido)
+- Não existe mais. Credenciais são sempre por-tenant (DB).
 
 ## Fluxo de Verificação
 

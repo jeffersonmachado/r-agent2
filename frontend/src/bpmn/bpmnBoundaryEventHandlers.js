@@ -1,5 +1,3 @@
-import { isBpmnFeatureEnabled } from './bpmnFeatureFlags';
-
 function asTrimmedString(value) {
   const out = String(value ?? '').trim();
   return out || null;
@@ -18,9 +16,7 @@ export function registerBoundaryEventHandlers(registry) {
   if (!registry || typeof registry.register !== 'function') return registry;
 
   registry.register('bpmn:boundaryEvent', {
-    onExport: ({ node, flags }) => {
-      if (!isBpmnFeatureEnabled('BOUNDARY_EVENTS', flags)) return null;
-
+    onExport: ({ node }) => {
       const boundaryType = asTrimmedString(node?.config?.bpmnBoundaryEventType);
       if (!boundaryType) return null;
 
@@ -50,8 +46,7 @@ export function registerBoundaryEventHandlers(registry) {
       return null;
     },
 
-    onImport: ({ element, flags, report, elementId }) => {
-      if (!isBpmnFeatureEnabled('BOUNDARY_EVENTS', flags)) return null;
+    onImport: ({ element, report, elementId }) => {
       if (!element || element.localName !== 'boundaryEvent') return null;
 
       const attachedToRef = asTrimmedString(element.getAttribute('attachedToRef'));

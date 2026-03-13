@@ -1,0 +1,268 @@
+const http = require('http');
+
+jest.setTimeout(30000);
+
+jest.mock('../../api/utils/logger', () => ({
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}));
+
+describe('POST /tenants/:tenantKey/ai-credentials/test', () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+  });
+
+  function makeFetchResponseOk(payload) {
+    return {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: jest.fn(async () => payload),
+      text: jest.fn(async () => JSON.stringify(payload)),
+    };
+  }
+
+  async function listenOrSkip(server) {
+    return new Promise((resolve, reject) => {
+      const onError = (error) => {
+        if (error && (error.code === 'EPERM' || error.code === 'EACCES')) {
+          resolve({ skip: true });
+          return;
+        }
+        reject(error);
+      };
+
+      server.once('error', onError);
+      try {
+        server.listen(0, '127.0.0.1', () => {
+          server.off('error', onError);
+          const address = server.address();
+          if (!address || typeof address !== 'object') {
+            resolve({ skip: true });
+            return;
+          }
+          resolve({ skip: false, port: address.port });
+        });
+      } catch (error) {
+        server.off('error', onError);
+        if (error && (error.code === 'EPERM' || error.code === 'EACCES')) {
+          resolve({ skip: true });
+          return;
+        }
+        reject(error);
+      }
+    });
+  }
+
+  function startServerWithMocks(overrides = {}) {
+    const defaultAgent = overrides.defaultAgent || { id: 'a1', username: 'systemadmin', tenantId: 'system', role: 'owner' };
+    const requireAuthImpl = overrides.requireAuth || jest.fn((req) => {
+      req.agent = defaultAgent;
+      req.tenantId = defaultAgent.tenantId;
+      return { valid: true, agent: defaultAgent };
+    });
+    const isSuperAdminImpl = overrides.isSuperAdminFn || jest.fn(() => !!overrides.isSuperAdmin);
+    const getAIConfigImpl = overrides.getAIConfig || jest.fn(async () => ({ primary: 'openai' }));
+    const getDecryptedAPIKeyImpl = overrides.getDecryptedAPIKey || jest.fn(async () => '');
+
+    // Evita boot real de DB/seed/migrations no import do server.
+    jest.doMock('../../api/db/sequelize', () => ({
+      connect: jest.fn(async () => ({})),
+      getSequelize: jest.fn(() => ({})),
+      close: jest.fn(async () => {}),
+      Sequelize: require('sequelize').Sequelize,
+    }));
+    jest.doMock('../../api/db/migrate', () => ({ runMigrations: jest.fn(async () => {}) }));
+    jest.doMock('../../api/db/seed', () => ({ runSeed: jest.fn(async () => {}) }));
+    jest.doMock('../../api/db/models', () => ({ defineRelationships: jest.fn() }));
+
+    jest.doMock('../../api/services/websocketService', () => ({
+      initializeWebSocket: jest.fn(),
+      emitEvent: jest.fn(),
+    }));
+
+    jest.doMock('../../api/middleware/auth', () => ({
+      requireAuth: requireAuthImpl,
+      requirePermission: jest.fn(() => true),
+    }));
+
+    jest.doMock('../../api/services/superAdminService', () => ({
+      isSuperAdmin: isSuperAdminImpl,
+      listAllTenants: jest.fn(async () => ({ success: true, tenants: [] })),
+      getTenantMetrics: jest.fn(async () => ({ success: true })),
+      impersonateUser: jest.fn(async () => ({ success: true })),
+      blockTenant: jest.fn(async () => ({ success: true })),
+      unblockTenant: jest.fn(async () => ({ success: true })),
+      adjustTenantPlan: jest.fn(async () => ({ success: true })),
+    }));
+
+    jest.doMock('../../api/services/tenantAIService', () => ({
+      getAIConfig: getAIConfigImpl,
+      saveAIConfig: jest.fn(async () => ({ success: true })),
+      saveAICredentials: jest.fn(async () => ({ success: true })),
+      getDecryptedAPIKey: getDecryptedAPIKeyImpl,
+    }));
+
+    global.fetch = overrides.fetch || jest.fn(async () => makeFetchResponseOk({ data: [] }));
+
+    const { createServer } = require('../../api/server');
+    return {
+      server: createServer(),
+      mocks: {
+        requireAuth: requireAuthImpl,
+        getAIConfig: getAIConfigImpl,
+        getDecryptedAPIKey: getDecryptedAPIKeyImpl,
+        isSuperAdmin: isSuperAdminImpl,
+      },
+    };
+  }
+
+  async function httpPostJson({ port, path, token, body }) {
+    const payload = JSON.stringify(body || {});
+
+    return await new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          method: 'POST',
+          hostname: '127.0.0.1',
+          port,
+          path,
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload),
+          },
+        },
+        (res) => {
+          let data = '';
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+          res.on('end', () => {
+            try {
+              resolve({ status: res.statusCode, body: JSON.parse(data) });
+            } catch (_) {
+              resolve({ status: res.statusCode, body: data });
+            }
+          });
+        }
+      );
+
+      req.on('error', reject);
+      req.write(payload);
+      req.end();
+    });
+  }
+
+  test('retorna 200 (não 404) para /tenants/system/ai-credentials/test sem credencial salva', async () => {
+    const { server, mocks } = startServerWithMocks({
+      isSuperAdmin: true,
+      getAIConfig: jest.fn(async () => ({ primary: 'openai' })),
+      getDecryptedAPIKey: jest.fn(async () => ''),
+    });
+
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const response = await httpPostJson({
+      port: listenResult.port,
+      path: '/tenants/system/ai-credentials/test',
+      token: 'fake-token',
+      body: {},
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        valid: false,
+        provider: 'openai',
+        tenantId: 'system',
+      })
+    );
+    expect(String(response.body.error || '')).toMatch(/Credencial nao configurada|Credencial não configurada/i);
+    expect(mocks.getAIConfig).toHaveBeenCalledWith('system');
+    expect(mocks.getDecryptedAPIKey).toHaveBeenCalledWith('system', 'openai');
+  });
+
+  test('suporta alias /tenants/current/ai-credentials/test e valida credencial do tenant autenticado', async () => {
+    const fetchMock = jest.fn(async () => makeFetchResponseOk({ data: [{ id: 'model-1' }] }));
+
+    const { server, mocks } = startServerWithMocks({
+      defaultAgent: { id: 'a2', username: 'admin', tenantId: 'tenant-demo', role: 'admin' },
+      isSuperAdmin: false,
+      getAIConfig: jest.fn(async () => ({ primary: 'openai' })),
+      getDecryptedAPIKey: jest.fn(async () => 'sk-test-openai'),
+      fetch: fetchMock,
+    });
+
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const response = await httpPostJson({
+      port: listenResult.port,
+      path: '/tenants/current/ai-credentials/test',
+      token: 'fake-token',
+      body: {},
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        valid: true,
+        provider: 'openai',
+        tenantId: 'tenant-demo',
+        error: null,
+      })
+    );
+
+    expect(mocks.getAIConfig).toHaveBeenCalledWith('tenant-demo');
+    expect(mocks.getDecryptedAPIKey).toHaveBeenCalledWith('tenant-demo', 'openai');
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  test('retorna 403 quando agente comum tenta validar credenciais de outro tenant', async () => {
+    const getAIConfigMock = jest.fn(async () => ({ primary: 'openai' }));
+
+    const { server, mocks } = startServerWithMocks({
+      defaultAgent: { id: 'a3', username: 'agent1', tenantId: 'tenant-a', role: 'agent' },
+      isSuperAdmin: false,
+      getAIConfig: getAIConfigMock,
+    });
+
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const response = await httpPostJson({
+      port: listenResult.port,
+      path: '/tenants/tenant-b/ai-credentials/test',
+      token: 'fake-token',
+      body: {},
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'forbidden',
+      })
+    );
+    expect(mocks.getAIConfig).not.toHaveBeenCalled();
+    expect(mocks.getDecryptedAPIKey).not.toHaveBeenCalled();
+  });
+});

@@ -1,0 +1,175 @@
+.pbx-page {
+  max-width: none;
+  overflow-x: hidden;
+}
+
+.pbx-header {
+  margin-bottom: 20px;
+  display: grid;
+  gap: 12px;
+  align-items: start;
+}
+
+.pbx-title h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.pbx-title p {
+  margin: 10px 0 0 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.pbx-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pbx-error {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 0, 0, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 0, 0, 0.06);
+}
+
+.pbx-dashboard-nav {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.pbx-dashboard-section {
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  background: #0a0a0f;
+  padding: 10px;
+}
+
+.pbx-dashboard-title {
+  margin: 0 0 10px 2px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.pbx-top-overview-card {
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.pbx-top-overview-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--color-border-hover);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.pbx-top-overview-card:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.pbx-top-overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pbx-card {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  background: var(--color-bg-elevated);
+}
+
+.pbx-card h3 {
+  margin-top: 0;
+}
+
+/* Global form polish inside PBX page */
+.pbx-page input,
+.pbx-page select,
+.pbx-page textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--color-border-default);
+  outline: none;
+  transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.pbx-page input:hover:not(:disabled),
+.pbx-page select:hover:not(:disabled),
+.pbx-page textarea:hover:not(:disabled) {
+  border-color: var(--color-border-hover);
+}
+
+.pbx-page input:focus:not(:disabled),
+.pbx-page select:focus:not(:disabled),
+.pbx-page textarea:focus:not(:disabled) {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+
+.pbx-page button {
+  border-radius: 10px;
+}
+
+/* Default button styling for legacy <button> usage inside the PBX page */
+.pbx-page button:not(.btn-default):not(.btn-primary):not(.btn-danger):not(.btn-ghost) {
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.pbx-page button:not(.btn-default):not(.btn-primary):not(.btn-danger):not(.btn-ghost):hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+.pbx-page button:not(.btn-default):not(.btn-primary):not(.btn-danger):not(.btn-ghost):active:not(:disabled) {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-default);
+}
+
+/* Tables */
+.pbx-page table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pbx-page th {
+  text-align: left;
+  padding: 10px 10px;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.pbx-page td {
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  vertical-align: top;
+}
+
+.pbx-page tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+@media (max-width: 768px) {
+  .pbx-title h1 {
+    font-size: 22px;
+  }
+}

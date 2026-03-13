@@ -1,6 +1,42 @@
 import { fetchJson } from './client';
 
 const TOKEN_KEY = 'auth_token';
+const EFFECTIVE_TENANT_KEY = 'auth_effective_tenant_id';
+const AUTH_DEFAULT_TIMEOUT_MS = 30000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientAuthError(error) {
+  if (!error) return false;
+  if (error.name === 'AbortError') return true;
+  const msg = String(error.message || '');
+  return (
+    error.connectionRefused === true ||
+    error.status === 0 ||
+    msg === 'Failed to fetch' ||
+    msg.includes('ERR_CONNECTION_REFUSED') ||
+    msg.includes('NetworkError') ||
+    msg.includes('signal is aborted')
+  );
+}
+
+async function fetchAuthWithRetry(path, init, { maxRetries = 4, baseDelayMs = 750 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const timeoutMs = init?.timeoutMs ?? AUTH_DEFAULT_TIMEOUT_MS;
+      return await fetchJson(path, { ...init, timeoutMs });
+    } catch (error) {
+      lastError = error;
+      const canRetry = isTransientAuthError(error) && attempt < maxRetries;
+      if (!canRetry) throw error;
+      await sleep(baseDelayMs * Math.pow(2, attempt - 1));
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Obtém o token de autenticação do localStorage
@@ -33,6 +69,12 @@ export function removeToken() {
  */
 export function getTenantId() {
   try {
+    // Prioridade: tenant efetivo selecionado explicitamente (super-admin)
+    const effectiveTenantId = localStorage.getItem(EFFECTIVE_TENANT_KEY);
+    if (effectiveTenantId && typeof effectiveTenantId === 'string' && effectiveTenantId.trim()) {
+      return effectiveTenantId.trim();
+    }
+
     const agentData = localStorage.getItem('auth_agent');
     if (agentData) {
       const agent = JSON.parse(agentData);
@@ -71,9 +113,13 @@ export function getAuthHeaders() {
  * Faz login e salva o token
  */
 export async function login(username, password) {
-  const result = await fetchJson('/auth/login', {
+  const result = await fetchAuthWithRetry('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password }),
+    timeoutMs: AUTH_DEFAULT_TIMEOUT_MS,
+  }, {
+    maxRetries: 3,
+    baseDelayMs: 750,
   });
   
   // Salva o token se retornado pela API
@@ -132,7 +178,12 @@ export async function logoutAll() {
  * Obtém informações do agente autenticado
  */
 export async function getCurrentAgent() {
-  return fetchJson('/auth/me');
+  return fetchAuthWithRetry('/auth/me', {
+    timeoutMs: AUTH_DEFAULT_TIMEOUT_MS,
+  }, {
+    maxRetries: 5,
+    baseDelayMs: 500,
+  });
 }
 
 export async function getMe(token) {
@@ -145,6 +196,10 @@ export async function getMe(token) {
 
 export async function listAgents() {
   return fetchJson('/auth/agents');
+}
+
+export async function getAgentNameById(id) {
+  return fetchJson(`/auth/agents/${encodeURIComponent(id)}/name`);
 }
 
 export async function createAgent(data) {

@@ -3,11 +3,11 @@
 
 export const BPMN_FEATURE_FLAGS = Object.freeze({
   ADVANCED_GATEWAYS: false,
-  POOLS_AND_LANES: false,
-  MESSAGE_FLOW: false,
-  BOUNDARY_EVENTS: false,
+  POOLS_AND_LANES: true,
+  MESSAGE_FLOW: true,
+  BOUNDARY_EVENTS: true,
   EXPANDED_SUBPROCESS: false,
-  BPMN_DI: false,
+  BPMN_DI: true,
 });
 
 export function getBpmnFeatureFlags(overrides = {}) {

@@ -32,14 +32,6 @@ function getNodeLabel(type) {
   return schema?.label || type;
 }
 
-function getBpmnStatusClass(status) {
-  const normalized = String(status || '').trim().toLowerCase();
-  if (normalized.includes('degradacao')) return 'degraded';
-  if (normalized.includes('extensao')) return 'extension';
-  if (normalized.includes('nao')) return 'unmapped';
-  return 'supported';
-}
-
 /**
  * Componente editável que só se torna editável com duplo clique
  */
@@ -150,25 +142,31 @@ function DefaultNodeComponent(props) {
   const nodeNumber = node?.data?.nodeNumber || null;
   const config = node?.data?.config || {};
   const validation = node?.data?.validation || {};
-  const hasErrors = validation.status === 'invalid';
-  const errors = validation.errors || [];
+  const issues = validation.errors || [];
   const isActive = node?.data?.ui?.isActive;
   const isExecuted = node?.data?.ui?.isExecuted;
-  const isBpmnVisualMode = !!node?.data?.ui?.bpmnVisualMode;
-  const bpmnElement = node?.data?.ui?.bpmnElement;
-  const bpmnStatus = node?.data?.ui?.bpmnStatus;
-  const bpmnRequiresExtension = !!node?.data?.ui?.bpmnRequiresExtension;
   const isSelected = !!node?.selected;
 
-  const bpmnElementLabel = bpmnElement
-    ? String(bpmnElement).replace(/^bpmn:/, '')
-    : 'nao mapeado';
-  const bpmnStatusClass = getBpmnStatusClass(bpmnStatus);
-  const showBpmnChip = isBpmnVisualMode;
+  const normalizeSeverity = (err) => {
+    if (typeof err === 'string') return 'error';
+    if (!err || typeof err !== 'object') return 'error';
+    const sev = String(err.severity || '').toLowerCase();
+    if (sev === 'warning' || sev === 'info' || sev === 'error') return sev;
+    return 'error';
+  };
 
-  // ✅ Formata mensagens de erro para o tooltip
-  const errorTooltip = hasErrors && errors.length > 0
-    ? errors.map((err, idx) => {
+  const errorItems = issues.filter((e) => normalizeSeverity(e) === 'error');
+  const warningItems = issues.filter((e) => normalizeSeverity(e) === 'warning');
+  const infoItems = issues.filter((e) => normalizeSeverity(e) === 'info');
+
+  const hasErrors = errorItems.length > 0 || validation.status === 'invalid';
+  const hasWarnings = !hasErrors && (warningItems.length > 0 || validation.status === 'warning');
+  const hasInfo = !hasErrors && !hasWarnings && (infoItems.length > 0 || validation.status === 'info');
+
+  const badgeCount = hasErrors ? errorItems.length : hasWarnings ? warningItems.length : hasInfo ? infoItems.length : 0;
+
+  const formatTooltip = (list) =>
+    list.map((err, idx) => {
         // ✅ Usa messageUi (amigável) se disponível, senão usa message (técnica)
         const errorMessage = (typeof err === 'object' && err.messageUi) 
           ? err.messageUi 
@@ -176,14 +174,21 @@ function DefaultNodeComponent(props) {
             ? err.message 
             : (typeof err === 'string' ? err : 'Erro de validação'));
         return `${idx + 1}. ${errorMessage}`;
-      }).join('\n')
-    : '';
+      }).join('\n');
+
+  const validationTooltip = hasErrors
+    ? formatTooltip(errorItems)
+    : hasWarnings
+      ? formatTooltip(warningItems)
+      : hasInfo
+        ? formatTooltip(infoItems)
+        : '';
 
   // Classes CSS baseadas no estado
   const nodeClasses = [
     'flow-node',
     `flow-node--type-${nodeType}`,
-    hasErrors ? 'flow-node--error' : '',
+    hasErrors ? 'flow-node--error' : hasWarnings ? 'flow-node--warning' : hasInfo ? 'flow-node--info' : '',
     isActive ? 'flow-node--active' : '',
     isExecuted ? 'flow-node--executed' : '', // Adiciona classe para nós executados
     isSelected ? 'flow-node--selected' : '',
@@ -198,12 +203,12 @@ function DefaultNodeComponent(props) {
       <div className="flow-node__header">
         <div className="flow-node__icon">{getNodeIcon(nodeType)}</div>
         <div className="flow-node__title">{getNodeLabel(nodeType)}</div>
-        {hasErrors && (
+        {(hasErrors || hasWarnings || hasInfo) && badgeCount > 0 && (
           <div 
-            className="flow-node__error-badge"
-            title={errorTooltip}
+            className={hasErrors ? 'flow-node__error-badge' : hasWarnings ? 'flow-node__warning-badge' : 'flow-node__info-badge'}
+            title={validationTooltip}
           >
-            {errors.length}
+            {badgeCount}
           </div>
         )}
         <div className="flow-node__id-badge">
@@ -211,14 +216,6 @@ function DefaultNodeComponent(props) {
         </div>
       </div>
       <div className="flow-node__content">
-        {showBpmnChip && (
-          <div
-            className={`flow-node__bpmn-chip flow-node__bpmn-chip--${bpmnStatusClass}`}
-            title={`Mapeamento BPMN: ${bpmnElementLabel}${bpmnRequiresExtension ? ' (usa extensao)' : ''}`}
-          >
-            BPMN: {bpmnElementLabel}
-          </div>
-        )}
         {nodeType === 'message' && config.text && (
           <div className="flow-node__preview">
             <div className="flow-node__preview-label">Texto:</div>

@@ -4,7 +4,7 @@
 
 const { runStep } = require('../runner');
 const { NodeRegistry } = require('../nodeRegistry');
-const { messageNodeHandler, endNodeHandler } = require('../nodes/basicNodes');
+const { messageNodeHandler, endNodeHandler, routerNodeHandler } = require('../nodes/basicNodes');
 const { apiNodeHandler } = require('../nodes/apiNode');
 
 describe('runStep', () => {
@@ -271,6 +271,50 @@ describe('runStep', () => {
     // Em timeout, runner cai em node_error_fallback e deve escolher o socket timeout
     expect(result.output.type).toBe('node_error_fallback');
     expect(result.nextState.currentNodeId).toBe('timeoutNode');
+  });
+
+  test('deve desviar para limit_exceeded quando loopMaxAttempts for excedido (router)', async () => {
+    registry.register('router', routerNodeHandler);
+
+    const loopFlow = {
+      id: 'flow-loop-guard',
+      name: 'Loop Guard',
+      version: 1,
+      nodes: [
+        {
+          id: 'router',
+          type: 'router',
+          config: {
+            loopMaxAttempts: 3,
+            rules: [{ condition: { op: 'always' }, next: 'b' }],
+          },
+          next: { default: 'b', limit_exceeded: 'end' },
+        },
+        { id: 'b', type: 'message', config: { text: 'B' }, next: 'router' },
+        { id: 'end', type: 'end' },
+      ],
+    };
+
+    let currentState = {
+      sessionId: 's-loop-guard',
+      flowId: loopFlow.id,
+      currentNodeId: 'router',
+      variables: {},
+      history: [],
+      metadata: {},
+    };
+
+    let lastResult = null;
+    for (let i = 0; i < 10; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      lastResult = await runStep(loopFlow, currentState, registry);
+      currentState = lastResult.nextState;
+      if (currentState.currentNodeId === 'end') break;
+    }
+
+    expect(currentState.currentNodeId).toBe('end');
+    const eventTypes = (lastResult.events || []).map((e) => e.type);
+    expect(eventTypes).toContain('LOOP_LIMIT_EXCEEDED');
   });
 
   test('deve classificar erros corretamente', async () => {

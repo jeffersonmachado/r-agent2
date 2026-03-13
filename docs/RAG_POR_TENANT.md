@@ -20,17 +20,9 @@ Os documentos são armazenados no **PostgreSQL** (tabela `rag_documents`) e cada
 }
 ```
 
-### 2. **Vector Store por Tenant (Python/FAISS)**
+### 2. **Vector Store por Tenant (PostgreSQL/pgvector)**
 
-Cada tenant possui seu próprio índice vetorial FAISS e arquivo de metadados:
-
-```
-data/vector_store/
-  ├── tenant-abc.index          ← Índice FAISS do tenant-abc
-  ├── tenant-abc.metadata.json  ← Metadados dos chunks do tenant-abc
-  ├── tenant-xyz.index          ← Índice FAISS do tenant-xyz
-  └── tenant-xyz.metadata.json  ← Metadados dos chunks do tenant-xyz
-```
+O vector store é persistido no **PostgreSQL** via **pgvector** (tabela `rag_chunks`), usando `tenant_key` como chave de isolamento.
 
 ### 3. **Isolamento em Memória**
 
@@ -38,7 +30,6 @@ O serviço Python mantém instâncias separadas em memória:
 
 ```python
 _vector_stores: Dict[str, Any] = {}  # tenantId -> VectorStore
-_chunks_metadata: Dict[str, Dict[str, Chunk]] = {}  # tenantId -> {chunkId: Chunk}
 ```
 
 ## 🔄 Fluxo de Funcionamento
@@ -65,10 +56,9 @@ _chunks_metadata: Dict[str, Dict[str, Chunk]] = {}  # tenantId -> {chunkId: Chun
    vector_store.add_chunks(chunks, embeddings)
    ```
 
-3. **Armazenamento Físico**
-   - Índice FAISS: `{tenantId}.index`
-   - Metadados: `{tenantId}.metadata.json`
-   - Cada tenant tem seus próprios arquivos
+3. **Persistência**
+   - Chunks e embeddings são gravados no Postgres (`rag_chunks`)
+   - Isolamento por `tenant_key` + `document_id`
 
 ### **Consulta RAG**
 
@@ -137,18 +127,9 @@ def get_vector_store(tenant_id: Optional[str] = None):
     return _vector_stores[tenant_id]
 ```
 
-### **3. Armazenamento Físico Separado**
+### **3. Persistência Isolada**
 
-Cada tenant tem arquivos próprios:
-
-```python
-# rag-service/services/vector_store.py
-def get_vector_store_path(tenant_id: str) -> Path:
-    return base_path / f"{tenant_id}.index"  # ← Arquivo único por tenant
-
-def get_metadata_path(tenant_id: str) -> Path:
-    return base_path / f"{tenant_id}.metadata.json"  # ← Metadados únicos por tenant
-```
+O isolamento é garantido no banco via filtro por `tenant_key` na tabela `rag_chunks` durante indexação e busca.
 
 ## 📊 Configuração por Tenant
 
@@ -194,13 +175,11 @@ function getRagDomains(tenantId) {
 
 **Tenant A (`tenant-abc`):**
 - Documentos: `doc-1`, `doc-2`, `doc-3`
-- Vector Store: `tenant-abc.index`
-- Metadados: `tenant-abc.metadata.json`
+- Vector Store: `rag_chunks` com `tenant_key = "tenant-abc"`
 
 **Tenant B (`tenant-xyz`):**
 - Documentos: `doc-4`, `doc-5`, `doc-6`
-- Vector Store: `tenant-xyz.index`
-- Metadados: `tenant-xyz.metadata.json`
+- Vector Store: `rag_chunks` com `tenant_key = "tenant-xyz"`
 
 ### **Consulta do Tenant A**
 
@@ -215,7 +194,7 @@ const result = await queryRag(
 
 **O que acontece:**
 1. Obtém `vector_store` para `tenant-abc`
-2. Busca apenas em `tenant-abc.index`
+2. Busca apenas em `rag_chunks` filtrando `tenant_key = "tenant-abc"`
 3. Retorna apenas chunks de documentos do `tenant-abc`
 4. **Nunca** acessa dados do `tenant-xyz`
 
@@ -232,7 +211,7 @@ const result = await queryRag(
 
 **O que acontece:**
 1. Obtém `vector_store` para `tenant-xyz`
-2. Busca apenas em `tenant-xyz.index`
+2. Busca apenas em `rag_chunks` filtrando `tenant_key = "tenant-xyz"`
 3. Retorna apenas chunks de documentos do `tenant-xyz`
 4. **Nunca** acessa dados do `tenant-abc`
 
@@ -246,8 +225,7 @@ const result = await queryRag(
 
 ### **2. Sem Vazamento de Dados**
 
-- Cada tenant tem seu próprio índice FAISS
-- Metadados são armazenados separadamente
+- Chunks e embeddings são isolados por `tenant_key`
 - Consultas são isoladas por tenant
 - Não há compartilhamento de dados entre tenants
 
@@ -274,11 +252,10 @@ def _filter_chunks(self, chunks: List[Chunk], filters: Dict):
 ### **Isolamento Garantido Por:**
 
 1. ✅ **tenantId obrigatório** em todas as operações
-2. ✅ **Vector stores separados** por tenant (em memória e arquivos)
+2. ✅ **Isolamento por `tenant_key`** no Postgres (pgvector) e instância por tenant no serviço
 3. ✅ **Filtragem de documentos** por tenant no Node.js
 4. ✅ **Validação de tenantId** no Python
-5. ✅ **Arquivos físicos separados** (`{tenantId}.index`, `{tenantId}.metadata.json`)
-6. ✅ **Configurações específicas** por tenant (URL, domínios, timeout)
+5. ✅ **Configurações específicas** por tenant (URL, domínios, timeout)
 
 ### **Fluxo Completo:**
 

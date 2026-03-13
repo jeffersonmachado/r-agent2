@@ -17,14 +17,62 @@ const SYSTEM_NODE_TYPES = [
   'get_user_info',
 ];
 
+const BPMN_COMPATIBLE_NODE_TYPES = new Set([
+  'start',
+  'message',
+  'user_input',
+  'router',
+  'merge',
+  'set_variable',
+  'api',
+  'delay',
+  'subflow',
+  'end',
+]);
+
 /**
- * Separa nós de sistema dos outros nós
+ * Paleta de nós arrastáveis - versão simplificada e responsiva
  */
-function categorizeNodes() {
+function filterNodeTypesByKind(nodeTypes, flowKind, diagramType) {
+  const normalizedDiagram = String(diagramType || 'engine').trim().toLowerCase();
+  if (normalizedDiagram === 'bpmn') {
+    return (nodeTypes || []).filter((t) => BPMN_COMPATIBLE_NODE_TYPES.has(t.type));
+  }
+
+  const kind = String(flowKind || 'chat').trim().toLowerCase();
+  if (kind === 'voice') {
+    const allowed = new Set([
+      // Estruturais
+      'start',
+      'merge',
+      'router',
+      'end',
+      'set_variable',
+      // System nodes
+      ...SYSTEM_NODE_TYPES,
+      // Voice nodes
+      'voice_prompt_listen',
+      'voice_listen_asr',
+      'voice_gather_dtmf',
+      'voice_branch',
+      'voice_transfer_ramal',
+      'voice_transfer_fila',
+      'voice_transfer_utils',
+      'voice_hangup',
+    ]);
+    return (nodeTypes || []).filter((t) => allowed.has(t.type));
+  }
+
+  // chat (default): esconde nós de voz
+  return (nodeTypes || []).filter((t) => !String(t.type || '').startsWith('voice_'));
+}
+
+function categorizeNodes(flowKind, diagramType) {
   const systemNodes = [];
   const otherNodes = [];
 
-  NODE_TYPES.forEach(nodeType => {
+  const filtered = filterNodeTypesByKind(NODE_TYPES, flowKind, diagramType);
+  filtered.forEach(nodeType => {
     if (SYSTEM_NODE_TYPES.includes(nodeType.type)) {
       systemNodes.push(nodeType);
     } else {
@@ -35,10 +83,7 @@ function categorizeNodes() {
   return { systemNodes, otherNodes };
 }
 
-/**
- * Paleta de nós arrastáveis - versão simplificada e responsiva
- */
-export function NodePaletteCollapsed({ onNodeDragStart, onNodeDragEnd }) {
+export function NodePaletteCollapsed({ onNodeDragStart, onNodeDragEnd, flowKind, diagramType = 'engine' }) {
   const [draggedType, setDraggedType] = useState(null);
 
   const handleDragStart = (e, nodeType) => {
@@ -54,7 +99,7 @@ export function NodePaletteCollapsed({ onNodeDragStart, onNodeDragEnd }) {
     if (onNodeDragEnd) onNodeDragEnd();
   };
 
-  const { systemNodes, otherNodes } = categorizeNodes();
+  const { systemNodes, otherNodes } = categorizeNodes(flowKind, diagramType);
 
   return (
     <div className="node-palette-collapsed">
@@ -88,7 +133,7 @@ export function NodePaletteCollapsed({ onNodeDragStart, onNodeDragEnd }) {
   );
 }
 
-export function NodePalette({ onNodeDragStart, onNodeDragEnd }) {
+export function NodePalette({ onNodeDragStart, onNodeDragEnd, flowKind, diagramType = 'engine' }) {
   const [draggedType, setDraggedType] = useState(null);
   const [isSystemExpanded, setIsSystemExpanded] = useState(false);
 
@@ -114,7 +159,7 @@ export function NodePalette({ onNodeDragStart, onNodeDragEnd }) {
     if (onNodeDragEnd) onNodeDragEnd();
   };
 
-  const { systemNodes, otherNodes } = categorizeNodes();
+  const { systemNodes, otherNodes } = categorizeNodes(flowKind, diagramType);
 
   return (
     <>

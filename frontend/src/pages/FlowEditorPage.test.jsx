@@ -1,10 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor, within } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from '../styles/themeContext';
-import { WebSocketProvider } from '../context/WebSocketContext';
-import { FlowEditorPage } from './FlowEditorPage';
 
 const saveFlow = vi.fn();
 const validateCurrentFlow = vi.fn();
@@ -17,18 +14,29 @@ const setSelectedNode = vi.fn();
 const mockSetValidation = vi.fn();
 const mockDeleteFlow = vi.fn();
 const mockClearCurrentFlow = vi.fn();
-let mockValidationState = null;
+let mockValidation = null;
 
 vi.mock('../state/editorStore', async () => {
   const actual = await vi.importActual('../state/editorStore');
   // Cria valores estáveis que não mudam entre renders
-  const stableCurrentFlow = { id: 'flow-1', name: 'Flow 1', nodes: [] };
+  const stableCurrentFlow = {
+    id: 'flow-1',
+    name: 'Flow 1',
+    nodes: [],
+    metadata: {
+      aiGeneration: {
+        usedFallback: false,
+        qualityScore: 100,
+        attempts: [{ attempt: 1, ok: false }, { attempt: 2, ok: true }],
+      },
+    },
+  };
   return {
     ...actual,
     useEditor: () => ({
       currentFlow: stableCurrentFlow,
       selectedNode: null,
-      validation: mockValidationState,
+      validation: mockValidation,
       simulation: null,
       loading: false,
       error: null, // Sempre null para evitar que o useEffect de erros seja executado
@@ -213,13 +221,17 @@ describe('pages/FlowEditorPage', () => {
   const TEST_TIMEOUT = 5000; // 5 segundos
   
   beforeEach(() => {
+    // Com isolate=false no Vitest, garantimos cache limpo para evitar
+    // interferência de mocks/imports vindos de outros arquivos.
+    vi.resetModules();
+    mockValidation = null;
     // Usa fake timers para controlar todos os setTimeout
     vi.useFakeTimers();
     vi.clearAllMocks();
+    // Garante layout desktop para manter o painel de validação expandido
+    window.innerWidth = 1024;
+    window.dispatchEvent(new Event('resize'));
     localStorage.clear();
-    // Force desktop width so collapsible panels start expanded.
-    // isolate:false means window is shared across test files, so this must be reset here.
-    Object.defineProperty(window, 'innerWidth', { value: 1280, writable: true, configurable: true });
     // Define valores padrão no localStorage para evitar mudanças durante o teste
     localStorage.setItem('paletteWidth', '224');
     localStorage.setItem('rightPanelWidth', '288');
@@ -229,7 +241,6 @@ describe('pages/FlowEditorPage', () => {
     mockSetValidation.mockClear();
     mockDeleteFlow.mockClear();
     mockClearCurrentFlow.mockClear();
-    mockValidationState = null;
   });
 
   afterEach(() => {
@@ -257,6 +268,9 @@ describe('pages/FlowEditorPage', () => {
       let unmount;
       
       const renderPromise = act(async () => {
+        const { FlowEditorPage } = await import('./FlowEditorPage');
+        const { ThemeProvider } = await import('../styles/themeContext');
+        const { WebSocketProvider } = await import('../context/WebSocketContext');
         const result = render(
           <ThemeProvider>
             <WebSocketProvider>
@@ -308,114 +322,58 @@ describe('pages/FlowEditorPage', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('exibe warnings BPMN no painel de validacao', async () => {
-    mockValidationState = {
-      valid: false,
+  it('mostra warnings na seção Validação', async () => {
+    // `valid: true` pode vir acompanhado de warnings/info.
+    mockValidation = {
+      valid: true,
       errors: [
         {
-          code: 'BPMN_EXTENSION_REQUIRED',
-          message: 'Node requires extension',
-          messageUi: 'No "api" requer extensao BPMN do r-agent2.',
+          code: 'SAMPLE_WARNING',
+          message: 'warning técnico',
+          messageUi: 'Este é um warning',
           severity: 'warning',
-          nodeIds: ['17'],
+          nodeIds: [],
         },
       ],
       uiErrors: [
         {
-          code: 'BPMN_EXTENSION_REQUIRED',
-          message: 'Node requires extension',
-          messageUi: 'No "api" requer extensao BPMN do r-agent2.',
-          severity: 'warning',
-          nodeIds: ['17'],
-        },
-        {
-          code: 'BPMN_MISSING_END',
-          message: 'Missing end node',
-          messageUi: 'Fluxo sem no de fim para exportacao BPMN.',
+          code: 'SAMPLE_WARNING',
+          message: 'warning técnico',
+          messageUi: 'Este é um warning',
           severity: 'warning',
           nodeIds: [],
         },
       ],
     };
 
-    const { container } = render(
-      <ThemeProvider>
-        <WebSocketProvider>
-          <FlowEditorPage />
-        </WebSocketProvider>
-      </ThemeProvider>,
-    );
-
     await act(async () => {
-      vi.advanceTimersByTime(50);
+      const { FlowEditorPage } = await import('./FlowEditorPage');
+      const { ThemeProvider } = await import('../styles/themeContext');
+      const { WebSocketProvider } = await import('../context/WebSocketContext');
+      render(
+        <ThemeProvider>
+          <WebSocketProvider>
+            <FlowEditorPage />
+          </WebSocketProvider>
+        </ThemeProvider>,
+      );
     });
 
-    // If the validation section is collapsed (happens when window.innerWidth < 768 in happy-dom),
-    // expand it by clicking its toggle button before asserting content.
-    const validacaoLabel = screen.queryByText('Validação');
-    if (validacaoLabel) {
-      const sectionHeader = validacaoLabel.closest('.section-header');
-      const toggleBtn = sectionHeader?.querySelector('button[title="Expandir"]');
-      if (toggleBtn) {
-        await act(async () => {
-          toggleBtn.click();
-          vi.advanceTimersByTime(50);
-        });
-      }
+    // Em alguns ambientes de teste a seção pode iniciar colapsada (window.innerWidth < 768).
+    const validationHeader = screen.getByText('Validação').closest('.section-header');
+    const toggleBtn = validationHeader?.querySelector('button');
+    if (toggleBtn?.getAttribute('title') === 'Expandir') {
+      await act(async () => {
+        toggleBtn.click();
+      });
     }
 
-    // Use within(container) so we search inside the render container directly,
-    // avoiding any document.body detachment issues with isolate:false + threads.
-    const scope = within(container);
-    expect(scope.getByText('Mensagens Gerais')).toBeTruthy();
-    expect(scope.getByText('No: 17')).toBeTruthy();
-    expect(scope.getByText(/\[BPMN_MISSING_END\]/)).toBeTruthy();
-    expect(scope.getAllByText(/\(WARNING\)/).length).toBeGreaterThan(0);
-    expect(scope.getByText('Fluxo sem no de fim para exportacao BPMN.')).toBeTruthy();
+    // O painel "Validação" deve listar warnings também.
+    // OBS: usamos fake timers nesse arquivo; portanto evitamos `findBy*`/`waitFor`.
+    expect(screen.getByText('Este é um warning')).toBeTruthy();
+    expect(screen.getByText('[SAMPLE_WARNING]')).toBeTruthy();
+    expect(screen.getByText('WARNING')).toBeTruthy();
   }, TEST_TIMEOUT);
 
-  it('toggle BPMN persiste estado no localStorage', async () => {
-    localStorage.removeItem('bpmnVisualMode');
-
-    const { container } = render(
-      <ThemeProvider>
-        <WebSocketProvider>
-          <FlowEditorPage />
-        </WebSocketProvider>
-      </ThemeProvider>,
-    );
-
-    await act(async () => {
-      vi.advanceTimersByTime(50);
-    });
-
-    // Botão BPMN renderizado como children do Toolbar mock
-    const bpmnBtn = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.textContent.trim() === 'BPMN',
-    );
-    expect(bpmnBtn).toBeTruthy();
-
-    // Estado inicial: desligado (localStorage vazio = off)
-    expect(bpmnBtn).not.toHaveClass('btn-base--active');
-
-    // Clica para ligar
-    await act(async () => {
-      bpmnBtn.click();
-      vi.advanceTimersByTime(50);
-    });
-
-    expect(bpmnBtn).toHaveClass('btn-base--active');
-    expect(localStorage.getItem('bpmnVisualMode')).toBe('1');
-
-    // Clica novamente para desligar
-    await act(async () => {
-      bpmnBtn.click();
-      vi.advanceTimersByTime(50);
-    });
-
-    expect(bpmnBtn).not.toHaveClass('btn-base--active');
-    expect(localStorage.getItem('bpmnVisualMode')).toBe('0');
-  }, TEST_TIMEOUT);
+  // Observação: o badge IA/Fallback (score/tentativas) é testado em `FlowCurrentDisplay.test.jsx`
 });
-
-

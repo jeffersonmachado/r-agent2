@@ -23,12 +23,18 @@ function withTimeout(testFn, timeout = 10000) {
  * Executa função assíncrona com timeout
  */
 async function runWithTimeout(asyncFn, timeout = 5000) {
-  return Promise.race([
-    asyncFn(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Operação travou após ${timeout}ms`)), timeout)
-    ),
-  ]);
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`Operação travou após ${timeout}ms`)), timeout);
+  });
+
+  try {
+    return await Promise.race([asyncFn(), timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 /**
@@ -90,4 +96,3 @@ module.exports = {
   withLoopProtection,
   safeTest,
 };
-

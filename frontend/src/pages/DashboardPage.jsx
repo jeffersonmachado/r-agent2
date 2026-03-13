@@ -3,6 +3,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useAuth } from '../context/authContext';
 import { NavigationLink } from '../components/NavigationLink';
 import { getGeneralMetrics, getQueueMetrics } from '../api/analytics';
+import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
 
 /**
@@ -17,6 +18,8 @@ export function DashboardPage() {
   const [queuesKpis, setQueuesKpis] = useState(null);
   const [kpiError, setKpiError] = useState(null);
   const [kpiLoading, setKpiLoading] = useState(true);
+  const [versionInfo, setVersionInfo] = useState(null);
+  const [versionError, setVersionError] = useState(null);
 
   function formatSecondsCompact(sec) {
     if (sec === null || sec === undefined) return '-';
@@ -66,7 +69,45 @@ export function DashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await fetchJson('/version', { silent: true });
+        if (!mounted) return;
+        setVersionInfo(data || null);
+        setVersionError(null);
+      } catch (err) {
+        logger.error('[Dashboard] Erro ao carregar versão', err);
+        if (!mounted) return;
+        setVersionInfo(null);
+        setVersionError('Não foi possível carregar versão');
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const features = [
+    {
+      id: 'chat-humano-dashboard',
+      title: 'Dashboard Chat Humano',
+      description: 'Pilar 1: cockpit de atendimento omnichannel',
+      icon: '💬',
+      path: '/chat-humano',
+      color: 'bg-cyan-500',
+      category: 'Pilares',
+    },
+    {
+      id: 'queue-physical-dashboard',
+      title: 'Dashboard Fila Física',
+      description: 'Pilar 2: operação kiosk/station/panel',
+      icon: '🎫',
+      path: '/fila-fisica',
+      color: 'bg-indigo-500',
+      category: 'Pilares',
+    },
     {
       id: 'support',
       title: 'Atendimento',
@@ -77,6 +118,15 @@ export function DashboardPage() {
       category: 'Atendimento',
     },
     {
+      id: 'inbox',
+      title: 'Inbox',
+      description: 'Inbox unificado com atribuição, transferência e notas',
+      icon: '📥',
+      path: '/inbox',
+      color: 'bg-sky-500',
+      category: 'Atendimento',
+    },
+    {
       id: 'quick-replies',
       title: 'Respostas Rápidas',
       description: 'Mensagens pré-definidas e templates',
@@ -84,6 +134,15 @@ export function DashboardPage() {
       path: '/quick-replies',
       color: 'bg-green-500',
       category: 'Atendimento',
+    },
+    {
+      id: 'faq',
+      title: 'FAQ',
+      description: 'Gerencie perguntas e respostas (base RAG)',
+      icon: '❓',
+      path: '/faq',
+      color: 'bg-purple-500',
+      category: 'Conhecimento',
     },
     {
       id: 'departments',
@@ -104,12 +163,39 @@ export function DashboardPage() {
       category: 'Marketing',
     },
     {
+      id: 'marketing',
+      title: 'Marketing v1',
+      description: 'Forms, leads, scoring e campanhas',
+      icon: '🧲',
+      path: '/marketing',
+      color: 'bg-rose-500',
+      category: 'Marketing',
+    },
+    {
+      id: 'solutions',
+      title: 'Solutions Packs',
+      description: 'Templates por segmento e checklist operacional',
+      icon: '📦',
+      path: '/solutions',
+      color: 'bg-amber-500',
+      category: 'Marketing',
+    },
+    {
       id: 'analytics',
       title: 'Analytics & Métricas',
       description: 'Dashboard com KPIs e indicadores',
       icon: '📊',
       path: '/analytics',
       color: 'bg-red-500',
+      category: 'Analytics',
+    },
+    {
+      id: 'supervisor',
+      title: 'Painel Supervisor',
+      description: 'TME, TMA, abandono e status por agente/fila',
+      icon: '🧭',
+      path: '/supervisor',
+      color: 'bg-teal-500',
       category: 'Analytics',
     },
     {
@@ -149,6 +235,33 @@ export function DashboardPage() {
       category: 'Integração',
     },
     {
+      id: 'node-marketplace',
+      title: 'Node Marketplace',
+      description: 'Catálogo interno de nodes',
+      icon: '🧩',
+      path: '/node-marketplace',
+      color: 'bg-sky-500',
+      category: 'Plataforma',
+    },
+    {
+      id: 'sso-scim',
+      title: 'SSO / SCIM',
+      description: 'Configurações de identidade e provisionamento',
+      icon: '🔐',
+      path: '/sso-scim',
+      color: 'bg-slate-500',
+      category: 'Administração',
+    },
+    {
+      id: 'backup',
+      title: 'Backup / DR',
+      description: 'Exportar/importar flows e settings',
+      icon: '🗄️',
+      path: '/backup',
+      color: 'bg-gray-500',
+      category: 'Administração',
+    },
+    {
       id: 'dev-dashboard',
       title: 'Dashboard de Dev',
       description: 'Ferramentas, configurações e funcionalidades de desenvolvimento',
@@ -182,6 +295,86 @@ export function DashboardPage() {
       icon: '🏢',
       path: '/tenants',
       color: 'bg-purple-500',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'rbac',
+      title: 'RBAC',
+      description: 'Gestão de roles e permissões',
+      icon: '🔐',
+      path: '/rbac',
+      color: 'bg-slate-500',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'mfa',
+      title: 'MFA',
+      description: 'Configuração de autenticação em duas etapas',
+      icon: '🛡️',
+      path: '/mfa',
+      color: 'bg-emerald-600',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'whatsapp-ivr',
+      title: 'URA WhatsApp',
+      description: 'Regras simples e departamentos para WhatsApp',
+      icon: '💬',
+      path: '/whatsapp-ivr',
+      color: 'bg-green-600',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'whatsapp-qr',
+      title: 'WhatsApp QR',
+      description: 'Pareamento via QR e status de sessão',
+      icon: '📱',
+      path: '/whatsapp-connections',
+      color: 'bg-emerald-700',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'developer-keys',
+      title: 'API Keys',
+      description: 'Chaves e uso da API pública',
+      icon: '🔑',
+      path: '/developer-keys',
+      color: 'bg-indigo-700',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'automations',
+      title: 'Automações',
+      description: 'Builder low-code e execução',
+      icon: '🧩',
+      path: '/automations',
+      color: 'bg-fuchsia-700',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'tasks',
+      title: 'Tarefas',
+      description: 'Lembretes e checklist operacional',
+      icon: '✅',
+      path: '/tasks',
+      color: 'bg-teal-700',
+      category: 'Administração',
+      requiresAdmin: true,
+    },
+    {
+      id: 'sla',
+      title: 'SLA por Cliente',
+      description: 'Políticas e violações de SLA',
+      icon: '⏱️',
+      path: '/sla-policies',
+      color: 'bg-orange-700',
       category: 'Administração',
       requiresAdmin: true,
     },
@@ -332,6 +525,41 @@ export function DashboardPage() {
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Bem-vindo, {agent?.name || agent?.username}! Acesse todas as funcionalidades do sistema.
         </p>
+
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
+
+        <div
+          className="bg-bg-elevated rounded-lg border border-border-default p-3 mt-3"
+          style={{ fontSize: '0.85rem' }}
+        >
+          {versionError ? (
+            <span className="text-status-error">{versionError}</span>
+          ) : (
+            <>
+              <span className="text-text-secondary">Versões: </span>
+              <span className="text-text-primary">
+                server.js <strong>{versionInfo?.serverVersion || '-'}</strong>
+              </span>
+              <span className="text-text-secondary"> · package.json </span>
+              <span className="text-text-primary">
+                <strong>{versionInfo?.packageVersion || '-'}</strong>
+              </span>
+              {versionInfo?.versionMismatch ? (
+                <span className="text-status-warning" style={{ marginLeft: 10 }}>
+                  ⚠ divergentes
+                </span>
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
 
       {/* KPIs operacionais (Blip-like) */}
@@ -528,7 +756,7 @@ export function DashboardPage() {
                 <li>• Instagram Direct</li>
                 <li>• OpenAI (Whisper, GPT)</li>
                 <li>• RAG Service (Python FastAPI)</li>
-                <li>• FAISS Vector Store</li>
+                <li>• PostgreSQL (pgvector) Vector Store</li>
               </ul>
             </div>
           </div>
@@ -536,4 +764,3 @@ export function DashboardPage() {
     </div>
   );
 }
-

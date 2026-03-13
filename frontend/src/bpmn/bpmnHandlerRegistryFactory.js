@@ -15,19 +15,15 @@ import { registerPoolLaneHandlers } from './bpmnPoolLaneHandlers';
  * 5. Pool/lane handlers (participant, lane, process swimlanes)
  * 6. Diagram interchange handlers (shapes, edges, bounds, waypoints)
  * 
- * @param {Object} config
- * @param {Object} config.flags - Feature flags for export behavior
  * @returns {Object} Fully configured BPMN handler registry
  */
-export function createBpmnHandlerRegistry(config = {}) {
-  const flags = config.flags || {};
-
+export function createBpmnHandlerRegistry() {
   return registerDiagramInterchangeHandlers(
     registerPoolLaneHandlers(
       registerMessageFlowHandlers(
         registerBoundaryEventHandlers(
           registerAdvancedGatewayHandlers(
-            createBpmnElementRegistry({ flags })
+            createBpmnElementRegistry()
           )
         )
       )

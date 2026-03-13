@@ -42,6 +42,12 @@ export function scrapeUrl(options) {
  * @returns {Promise<Object>} Resultados do scraping
  */
 export function scrapeUrls(options) {
+  const executionId = (options?.executionId && String(options.executionId).trim())
+    ? String(options.executionId).trim()
+    : null;
+  if (!executionId) {
+    throw new Error('executionId é obrigatório para /web-scraping/scrape-batch');
+  }
   return fetchJson('/web-scraping/scrape-batch', {
     method: 'POST',
     body: JSON.stringify(options),

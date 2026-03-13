@@ -48,9 +48,9 @@
     "validateBeforeUse": true
   },
   "urls": {
-    "base": "http://localhost:3000",
+    "base": "http://localhost:3001",
     "frontend": "http://localhost:5173",
-    "api": "http://localhost:3000"
+    "api": "http://localhost:3001"
   },
   "credentials": {
     "testUser": {

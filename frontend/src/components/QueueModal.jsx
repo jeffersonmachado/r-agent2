@@ -12,6 +12,10 @@ import { useToast } from './Toast';
 import { useConfirmDialog } from './ConfirmDialog';
 import { Button } from '../styles/Button';
 import { useWebSocketContext } from '../context/WebSocketContext';
+import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
+import { useLatestRef } from '../hooks/useLatestRef';
+import { useModalDataLifecycle } from '../hooks/useModalDataLifecycle';
+import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 
 /**
@@ -29,18 +33,10 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const showToastRef = React.useRef(showToast);
+  const showToastRef = useLatestRef(showToast);
   const loadTicketsRef = React.useRef();
-  const selectedTicketRef = React.useRef(selectedTicket);
+  const selectedTicketRef = useLatestRef(selectedTicket);
   const loadTicketMessagesRef = React.useRef();
-
-  React.useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
-
-  React.useEffect(() => {
-    selectedTicketRef.current = selectedTicket;
-  }, [selectedTicket]);
 
   // WebSocket para atualizações em tempo real
   const handleWebSocketEvent = useCallback((event, data) => {
@@ -103,7 +99,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     }
   }, []);
 
-  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocketContext({
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
     enabled: isOpen && autoRefresh && !!queueName,
     onEvent: handleWebSocketEvent,
     subscribeEvents: [
@@ -116,6 +112,41 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     ],
   });
 
+  const wsStatus = useWebSocketStatus({
+    connected: wsConnected,
+    authenticated: wsAuthenticated,
+    authFailed,
+  });
+
+  const resolveAssignedToDisplay = useCallback(async (ticketList = []) => {
+    const list = Array.isArray(ticketList) ? ticketList : [];
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ids = Array.from(new Set(
+      list
+        .map((ticket) => String(ticket?.assignedTo || '').trim())
+        .filter((value) => uuidRegex.test(value))
+    ));
+
+    const resolvedById = {};
+    await Promise.all(ids.map(async (id) => {
+      try {
+        const resp = await getAgentNameById(id);
+        const name = String(resp?.agent?.name || '').trim();
+        resolvedById[id] = name || id;
+      } catch {
+        resolvedById[id] = id;
+      }
+    }));
+
+    return list.map((ticket) => {
+      const raw = String(ticket?.assignedTo || '').trim();
+      return {
+        ...ticket,
+        assignedToDisplay: resolvedById[raw] || raw,
+      };
+    });
+  }, []);
+
   // Carrega tickets da fila
   const loadTickets = useCallback(async () => {
     if (!queueName) return;
@@ -123,11 +154,12 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     setLoading(true);
     try {
       const ticketsList = await listQueueTickets(queueName, { status: 'waiting' });
-      setTickets(ticketsList);
+      const ticketsWithDisplay = await resolveAssignedToDisplay(ticketsList);
+      setTickets(ticketsWithDisplay);
       
       // Atualiza ticket selecionado se ainda existir na lista
       if (selectedTicketRef.current?.id) {
-        const updatedTicket = ticketsList.find(t => t.id === selectedTicketRef.current.id);
+        const updatedTicket = ticketsWithDisplay.find(t => t.id === selectedTicketRef.current.id);
         if (updatedTicket) {
           setSelectedTicket(updatedTicket);
         }
@@ -138,18 +170,18 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
     } finally {
       setLoading(false);
     }
-  }, [queueName]);
+  }, [queueName, resolveAssignedToDisplay]);
 
   React.useEffect(() => {
     loadTicketsRef.current = loadTickets;
   }, [loadTickets]);
 
   // Carrega tickets quando o modal abre ou a fila muda
-  useEffect(() => {
-    if (isOpen && queueName) {
-      loadTickets();
-    }
-  }, [isOpen, queueName, loadTickets]);
+  useModalDataLifecycle({
+    isOpen,
+    canLoad: !!queueName,
+    load: loadTickets,
+  });
 
   // Carrega mensagens do ticket selecionado
   const loadTicketMessages = useCallback(async (ticketId) => {
@@ -181,13 +213,12 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
   }, [loadTicketMessages]);
 
   // Carrega mensagens quando ticket é selecionado
-  useEffect(() => {
-    if (selectedTicket) {
-      loadTicketMessages(selectedTicket.id);
-    } else {
-      setTicketMessages([]);
-    }
-  }, [selectedTicket, loadTicketMessages]);
+  useModalDataLifecycle({
+    isOpen: true,
+    canLoad: !!selectedTicket,
+    load: () => loadTicketMessages(selectedTicket.id),
+    reset: () => setTicketMessages([]),
+  });
 
   // Polling removido - apenas WebSocket é usado para atualizações em tempo real
   // Se o WebSocket não estiver conectado, as atualizações só ocorrerão quando:
@@ -318,7 +349,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
         <div className="queue-modal-container">
           {/* Controles superiores */}
           <div className="queue-modal-controls">
-            {wsConnected && wsAuthenticated ? (
+            {wsStatus.phase === 'ready' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span 
                   style={{
@@ -326,10 +357,9 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    backgroundColor: '#25D366',
-                    animation: 'pulse 2s infinite'
+                    backgroundColor: '#25D366'
                   }}
-                  title="WebSocket conectado - Atualizações em tempo real ativas"
+                  title={wsStatus.title}
                 />
                 <span style={{ fontSize: '14px', color: '#666' }}>
                   Atualização em tempo real
@@ -378,7 +408,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                       className={`queue-modal-ticket-item ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
                     >
                       <div className="queue-modal-ticket-item-header">
-                        <span className="queue-modal-ticket-item-id">#{ticket.id.slice(0, 12)}</span>
+                        <span className="queue-modal-ticket-item-id">#{ticket.id}</span>
                         {ticket.unreadCount > 0 && (
                           <span className="queue-modal-ticket-item-badge">{ticket.unreadCount}</span>
                         )}
@@ -401,7 +431,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                       </div>
                       {ticket.assignedTo && (
                         <div className="queue-modal-ticket-item-assigned">
-                          👤 {ticket.assignedTo}
+                          👤 {ticket.assignedToDisplay || ticket.assignedTo}
                         </div>
                       )}
                     </div>
@@ -418,7 +448,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                   <div className="queue-modal-chat-header">
                     <div className="queue-modal-chat-header-info">
                       <div className="queue-modal-chat-header-title">
-                        Ticket #{selectedTicket.id.slice(0, 12)}
+                        Ticket #{selectedTicket.id}
                         {selectedTicket.unreadCount > 0 && (
                           <span className="queue-modal-chat-header-badge">
                             {selectedTicket.unreadCount} nova(s)

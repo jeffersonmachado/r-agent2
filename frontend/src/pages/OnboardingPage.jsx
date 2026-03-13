@@ -2,9 +2,10 @@
  * Página de Onboarding - Wizard de Configuração Inicial
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
+import { useInFlightGuard } from '../hooks/useInFlightGuard';
 import * as onboardingApi from '../api/onboarding';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
@@ -18,6 +19,16 @@ export function OnboardingPage() {
   const [onboarding, setOnboarding] = useState(null);
   const [loading, setLoading] = useState(true);
   const [segment, setSegment] = useState('');
+  const [cannotStartOnboarding, setCannotStartOnboarding] = useState(false);
+
+  // Evita duplicação de chamadas em dev (React StrictMode) e/ou re-renders.
+  const onboardingLoadGuard = useInFlightGuard();
+  const startAttemptedRef = useRef(false);
+
+  const canStartOnboarding = useMemo(() => {
+    const role = currentAgent?.role;
+    return role === 'owner' || role === 'admin' || role === 'super_admin';
+  }, [currentAgent?.role]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -29,24 +40,52 @@ export function OnboardingPage() {
     if (isAuthenticated) {
       loadOnboardingStatus();
     }
-  }, [isAuthenticated]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, canStartOnboarding]);
 
   const loadOnboardingStatus = async () => {
+    if (!onboardingLoadGuard.start()) return;
     try {
       setLoading(true);
+      setCannotStartOnboarding(false);
       const result = await onboardingApi.getOnboardingStatus();
       setOnboarding(result.onboarding);
       
       // Se onboarding não foi iniciado, inicia automaticamente
       if (!result.onboarding?.startedAt) {
-        await onboardingApi.startOnboarding();
-        await loadOnboardingStatus();
+        if (!canStartOnboarding) {
+          setCannotStartOnboarding(true);
+          return;
+        }
+
+        // Garante no máximo 1 tentativa de start por montagem.
+        if (!startAttemptedRef.current) {
+          startAttemptedRef.current = true;
+          try {
+            await onboardingApi.startOnboarding();
+          } catch (err) {
+            // Caso o backend negue por RBAC, tratar como estado esperado.
+            if (err?.status === 403) {
+              setCannotStartOnboarding(true);
+              return;
+            }
+            throw err;
+          }
+        }
+
+        // Recarrega status após iniciar (fluxo linear, sem recursão).
+        const statusAfterStart = await onboardingApi.getOnboardingStatus();
+        setOnboarding(statusAfterStart.onboarding);
       }
     } catch (err) {
       logger.error('Erro ao carregar status de onboarding', err);
-      showToast('Erro ao carregar onboarding', 'error');
+      // Se for 403 na tentativa de start (ou RBAC), não é erro fatal para o usuário.
+      if (err?.status !== 403) {
+        showToast('Erro ao carregar onboarding', 'error');
+      }
     } finally {
       setLoading(false);
+      onboardingLoadGuard.end();
     }
   };
 
@@ -100,7 +139,25 @@ export function OnboardingPage() {
       <div className="support-page">
         <div className="support-header">
           <h1>🚀 Onboarding</h1>
+        
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
         </div>
+      </div>
+
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Filtros</span>
+        </h3>
+        <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
+      </div>
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 text-center">
           <p className="text-text-secondary">Carregando onboarding...</p>
         </div>
@@ -113,6 +170,17 @@ export function OnboardingPage() {
       <div className="support-header">
         <h1>🚀 Onboarding - Configuração Inicial</h1>
       </div>
+
+      {cannotStartOnboarding && !onboarding?.startedAt && (
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
+          <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <p className="text-sm text-text-secondary">
+              Este tenant ainda não iniciou o onboarding. Somente <strong>owner</strong>, <strong>admin</strong> ou{' '}
+              <strong>super_admin</strong> podem iniciar.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Progresso */}
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">

@@ -42,7 +42,7 @@ function normalizeExportOptions(options = {}) {
 export function engineFlowToBpmnXml(flowDefinition, options = {}) {
   const exportOptions = normalizeExportOptions(options);
   const nodes = Array.isArray(flowDefinition?.nodes) ? flowDefinition.nodes : [];
-  const bpmnRegistry = createBpmnHandlerRegistry({ flags: options.flags });
+  const bpmnRegistry = createBpmnHandlerRegistry();
 
   const report = {
     mode: exportOptions.mode,

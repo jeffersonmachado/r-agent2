@@ -18,8 +18,7 @@ import logger from './utils/logger';
 export const FlowEditor = forwardRef(function FlowEditor({
   onFlowChanged,
   onNodeSelected,
-  showToast,
-  bpmnVisualMode = false,
+  showToast
 }, ref) {
   // Obtém currentFlow do contexto
   const { currentFlow } = useEditor();
@@ -30,15 +29,13 @@ export const FlowEditor = forwardRef(function FlowEditor({
   const onFlowChangedRef = useRef(onFlowChanged);
   const onNodeSelectedRef = useRef(onNodeSelected);
   const showToastRef = useRef(showToast);
-  const bpmnVisualModeRef = useRef(Boolean(bpmnVisualMode));
   
   // Atualiza refs quando props mudam (sem recriar o editor)
   useEffect(() => {
     onFlowChangedRef.current = onFlowChanged;
     onNodeSelectedRef.current = onNodeSelected;
     showToastRef.current = showToast;
-    bpmnVisualModeRef.current = Boolean(bpmnVisualMode);
-  }, [onFlowChanged, onNodeSelected, showToast, bpmnVisualMode]);
+  }, [onFlowChanged, onNodeSelected, showToast]);
   
   // ✅ CONFORME COM REFERENCE: createEditorFn SEM dependências dinâmicas
   // O editor é criado uma vez e não recriado quando props mudam
@@ -47,12 +44,7 @@ export const FlowEditor = forwardRef(function FlowEditor({
       onFlowChanged: (...args) => onFlowChangedRef.current?.(...args),
       onNodeSelected: (...args) => onNodeSelectedRef.current?.(...args),
       showToast: (...args) => showToastRef.current?.(...args),
-      bpmnVisualMode: bpmnVisualModeRef.current,
     });
-
-    if (typeof instance?.setBpmnVisualMode === 'function') {
-      instance.setBpmnVisualMode(bpmnVisualModeRef.current);
-    }
     
     return instance;
   }, []); // ✅ Array vazio - nunca recria
@@ -92,13 +84,6 @@ export const FlowEditor = forwardRef(function FlowEditor({
     loadFlow();
   }, [editorInstance, currentFlow]);
 
-  useEffect(() => {
-    if (!editorInstance || typeof editorInstance.setBpmnVisualMode !== 'function') {
-      return;
-    }
-    editorInstance.setBpmnVisualMode(Boolean(bpmnVisualMode));
-  }, [editorInstance, bpmnVisualMode]);
-
   // Expõe editor e area através da ref (para compatibilidade com FlowEditorPage)
   useImperativeHandle(ref, () => {
     if (!editorInstance) return null;
@@ -115,7 +100,7 @@ export const FlowEditor = forwardRef(function FlowEditor({
       arrange: editorInstance.arrange,
       clearEditor: editorInstance.clearEditor,
       loadFromJson: editorInstance.loadFromJson,
-      setBpmnVisualMode: editorInstance.setBpmnVisualMode,
+      updateNodeIO: editorInstance.updateNodeIO,
       // Métodos auxiliares para compatibilidade
       zoomToFit: () => {
         if (editorInstance.area && editorInstance.editor) {

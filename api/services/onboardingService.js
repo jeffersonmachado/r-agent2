@@ -255,7 +255,7 @@ function getOnboardingTemplatePlan(segment) {
     educacao: [...base, 'mkt-onboarding-cliente', 'mkt-agendamento'],
     financeiro: [...base, 'mkt-cobranca', 'mkt-atualizacao-cadastral'],
     cobranca: [...base, 'mkt-cobranca'],
-    academia: [...base, 'mkt-agendamento', 'mkt-onboarding-cliente'],
+    academia: [...base, 'mkt-segment-academia-crossfit', 'mkt-agendamento', 'mkt-onboarding-cliente'],
   };
 
   return {

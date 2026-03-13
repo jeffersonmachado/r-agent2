@@ -1,42 +1,50 @@
 'use strict';
 
-const { buildExecutionTelemetry } = require('./processExecutionTelemetry');
-
 class ProcessObservabilityService {
   constructor({ eventBus } = {}) {
-    this.eventBus = eventBus || null;
-    this.counters = {
-      nodeEnter: 0,
-      nodeExit: 0,
-      failedSteps: 0,
-      fallbackTriggered: 0,
-      handoffTriggered: 0,
-      timeoutTriggered: 0,
-    };
+    this._records = [];
+    this._nodeEnterTimes = new Map();
+    if (eventBus && typeof eventBus.on === 'function') {
+      eventBus.on('*', (event) => this.record(event));
+    }
   }
 
-  recordStep(eventPayload = {}) {
-    const telemetry = buildExecutionTelemetry(eventPayload);
-
-    this.counters.nodeEnter += 1;
-    this.counters.nodeExit += 1;
-    if (telemetry.status === 'error') this.counters.failedSteps += 1;
-    if (telemetry.fallbackTriggered) this.counters.fallbackTriggered += 1;
-    if (telemetry.handoffTriggered) this.counters.handoffTriggered += 1;
-    if (telemetry.timeoutTriggered) this.counters.timeoutTriggered += 1;
-
-    if (this.eventBus && typeof this.eventBus.emitProcessEvent === 'function') {
-      this.eventBus.emitProcessEvent('process.telemetry.step', telemetry);
+  record(event) {
+    if (!event || typeof event !== 'object') return null;
+    const key = `${event.executionId || ''}:${event.nodeId || ''}`;
+    if (event.eventType === 'NODE_ENTER') {
+      this._nodeEnterTimes.set(key, Date.now());
     }
 
-    return telemetry;
+    const metadata = { ...(event.metadata || {}) };
+    if (event.eventType === 'NODE_EXIT') {
+      const startedAt = this._nodeEnterTimes.get(key);
+      if (startedAt) {
+        metadata.durationMs = Date.now() - startedAt;
+        this._nodeEnterTimes.delete(key);
+      }
+    }
+
+    const record = {
+      processId: event.processId || null,
+      executionId: event.executionId || null,
+      nodeId: event.nodeId || null,
+      nodeType: event.nodeType || null,
+      eventType: event.eventType || 'PROCESS_EVENT',
+      timestamp: event.timestamp || new Date().toISOString(),
+      durationMs: metadata.durationMs || null,
+      fallback: event.payload?.fallback || event.payload?.mode || null,
+      error: event.payload?.error || null,
+      metadata,
+    };
+    this._records.push(record);
+    return record;
   }
 
-  snapshot() {
-    return {
-      ...this.counters,
-      generatedAt: new Date().toISOString(),
-    };
+  getRecords(filter = {}) {
+    const executionId = filter.executionId ? String(filter.executionId) : null;
+    if (!executionId) return this._records.slice();
+    return this._records.filter((record) => String(record.executionId || '') === executionId);
   }
 }
 

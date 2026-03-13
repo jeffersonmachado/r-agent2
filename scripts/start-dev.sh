@@ -791,6 +791,36 @@ cd "$RAG_SERVICE_DIR"
 if [ -d "venv" ]; then
     echo -e "${BLUE}Usando ambiente virtual do RAG service...${NC}"
     UVICORN_CMD="venv/bin/uvicorn"
+    
+    # Garante dependências atualizadas (ex.: psycopg2-binary para pgvector)
+    if [ -x "venv/bin/python" ]; then
+        if ! venv/bin/python -c "import psycopg2" >/dev/null 2>&1; then
+            echo -e "${YELLOW}⚠️  Dependências do RAG service desatualizadas (psycopg2 ausente). Instalando requirements...${NC}"
+            if [ -f "requirements.txt" ]; then
+                # Python 3.12: evita builds (ex.: numpy antigo) e garante toolchain do pip atualizada
+                venv/bin/python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1 || true
+                export PIP_PREFER_BINARY=1
+                if ! venv/bin/python -m pip install -r requirements.txt; then
+                    echo -e "${RED}❌ Falha ao instalar requirements do RAG service${NC}"
+                    echo -e "${YELLOW}💡 Tente manualmente: cd $RAG_SERVICE_DIR && venv/bin/python -m pip install -r requirements.txt${NC}"
+                    cd "$PROJECT_ROOT"
+                    exit 1
+                fi
+
+                # Valida novamente após instalar
+                if ! venv/bin/python -c "import psycopg2" >/dev/null 2>&1; then
+                    echo -e "${RED}❌ Dependência crítica ainda ausente (psycopg2). Abortando.${NC}"
+                    echo -e "${YELLOW}💡 Verifique o output do pip install acima.${NC}"
+                    cd "$PROJECT_ROOT"
+                    exit 1
+                fi
+            else
+                echo -e "${YELLOW}⚠️  requirements.txt não encontrado em $RAG_SERVICE_DIR${NC}"
+                cd "$PROJECT_ROOT"
+                exit 1
+            fi
+        fi
+    fi
 elif command -v uvicorn &> /dev/null; then
     echo -e "${BLUE}Usando uvicorn do sistema...${NC}"
     UVICORN_CMD="uvicorn"

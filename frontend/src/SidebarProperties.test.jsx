@@ -1,9 +1,14 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from './styles/themeContext';
 import { SidebarProperties } from './SidebarProperties';
+import { getFlow } from './api/flows';
+
+vi.mock('./api/flows', () => ({
+  getFlow: vi.fn(),
+}));
 
 /**
  * Helper para renderizar componentes que precisam do ThemeProvider
@@ -15,6 +20,48 @@ function renderWithTheme(component) {
 describe('SidebarProperties', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it('no nó subflow, o flowId vira link e mostra o nome do fluxo', async () => {
+    vi.useFakeTimers();
+    try {
+      const onChangeConfig = vi.fn();
+
+      // @ts-ignore - vitest mock
+      getFlow.mockResolvedValue({ id: 'flow-123', name: 'Meu Subfluxo' });
+
+      const node = {
+        id: 'node-subflow',
+        type: 'subflow',
+        config: { flowId: 'flow-123' },
+      };
+
+      renderWithTheme(<SidebarProperties selectedNode={node} onChangeConfig={onChangeConfig} />);
+
+      const link = screen.getByRole('link', { name: /flow-123/i });
+      expect(link).toBeTruthy();
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toBe('noreferrer');
+      expect(link.getAttribute('href') || '').toContain('flowId=flow-123');
+
+      // Debounce (450ms) + promises em cadeia; tudo dentro de act para evitar warnings e garantir flush.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(getFlow).toHaveBeenCalled();
+
+      await act(async () => {
+        // flush microtasks do encadeamento Promise.resolve().then(...).then(...)
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText(/Meu Subfluxo/i)).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('mostra mensagem quando nenhum nó está selecionado', () => {

@@ -19,7 +19,7 @@
 
 const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
-const { Ticket: TicketGetter } = require('../db/models');
+const { Ticket: TicketGetter, ChannelConversation: ChannelConversationGetter } = require('../db/models');
 
 /**
  * @typedef {Object} Message
@@ -62,6 +62,26 @@ const queues = new Map(); // queueName -> Set<ticketId>
 
 function dbAvailable() {
   return !!getSequelize();
+}
+
+async function updateConversationForTicket(ticket, patch = {}) {
+  if (!ticket || !ticket.conversationId) return;
+  if (!dbAvailable()) return;
+  try {
+    const ConversationModel = typeof ChannelConversationGetter === 'function'
+      ? ChannelConversationGetter()
+      : ChannelConversationGetter;
+    if (!ConversationModel) return;
+    await ConversationModel.update(
+      { ...patch, updated_at: new Date() },
+      { where: { id: String(ticket.conversationId), tenant_key: String(ticket.tenantId) } },
+    );
+  } catch (err) {
+    logger.debug('[QueueService] Falha ao atualizar channel_conversation (ignorado)', {
+      ticketId: ticket.id,
+      error: err.message,
+    });
+  }
 }
 
 function toDbPayload(ticket) {
@@ -663,6 +683,37 @@ function closeTicket(ticketId) {
 
   persistTicketBestEffort(ticket);
 
+  // Best-effort: libera conversa associada (omnichannel 1:1)
+  updateConversationForTicket(ticket, {
+    status: 'bot',
+    current_ticket_id: null,
+    last_message_at: new Date(),
+  }).catch(() => {});
+
+  // Best-effort: fecha incidente vinculado ao pedido (orders/delivery)
+  try {
+    const kind = ticket?.context?.metadata?.kind || null;
+    const orderId = ticket?.context?.metadata?.orderId || null;
+    if (kind === 'order_incident' && orderId && ticket.tenantId) {
+      const { getOrderIncident, setOrderIncident } = require('./orderService');
+      getOrderIncident({ tenantId: ticket.tenantId, orderId: String(orderId) })
+        .then((existing) => {
+          const base = existing && typeof existing === 'object' ? existing : {};
+          return setOrderIncident({
+            tenantId: ticket.tenantId,
+            orderId: String(orderId),
+            incident: {
+              ...base,
+              ticketId: ticket.id,
+              status: 'closed',
+              closedAt: new Date().toISOString(),
+            },
+          });
+        })
+        .catch(() => {});
+    }
+  } catch (_) {}
+
   return ticket;
 }
 
@@ -767,6 +818,13 @@ function addAgentMessage(ticketId, message, agentId = null) {
   const clientMessageId = options && options.clientMessageId ? String(options.clientMessageId) : null;
   const externalMessageId = options && options.externalMessageId ? String(options.externalMessageId) : null;
   const deliveryStatus = options && options.deliveryStatus ? String(options.deliveryStatus) : null;
+  const mediaType = options && options.mediaType ? String(options.mediaType).trim().toLowerCase() : null;
+  const mediaUrl = options && options.mediaUrl ? String(options.mediaUrl).trim() : null;
+  const mediaKind = options && options.mediaKind ? String(options.mediaKind).trim().toLowerCase() : null;
+  const documentId = options && options.documentId ? String(options.documentId).trim() : null;
+  const fileName = options && options.fileName ? String(options.fileName).trim() : null;
+  const mimeType = options && options.mimeType ? String(options.mimeType).trim() : null;
+  const sizeBytes = Number.isFinite(options && options.sizeBytes) ? Number(options.sizeBytes) : null;
 
   const messageObj = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -777,6 +835,24 @@ function addAgentMessage(ticketId, message, agentId = null) {
     clientMessageId: clientMessageId || undefined,
     externalMessageId: externalMessageId || undefined,
     deliveryStatus: deliveryStatus || undefined,
+    mediaKind: mediaKind || undefined,
+    documentId: documentId || undefined,
+    mediaUrl: mediaUrl || undefined,
+    fileName: fileName || undefined,
+    mimeType: mimeType || undefined,
+    sizeBytes: Number.isFinite(sizeBytes) ? sizeBytes : undefined,
+    type: mediaType || undefined,
+    media: (mediaUrl || documentId)
+      ? {
+        ...(mediaType ? { type: mediaType } : {}),
+        ...(mediaUrl ? { url: mediaUrl } : {}),
+        ...(fileName ? { fileName } : {}),
+        ...(mimeType ? { mimeType } : {}),
+        ...(Number.isFinite(sizeBytes) ? { sizeBytes } : {}),
+        ...(mediaKind ? { kind: mediaKind } : {}),
+        ...(documentId ? { documentId } : {}),
+      }
+      : undefined,
   };
 
   ticket.messages.push(messageObj);
@@ -792,6 +868,109 @@ function addAgentMessage(ticketId, message, agentId = null) {
     }
   }
 
+  persistTicketBestEffort(ticket);
+
+  return ticket;
+}
+
+/**
+ * Adiciona uma nota interna ao ticket (não enviada ao usuário).
+ *
+ * @param {string} ticketId
+ * @param {string} note
+ * @param {Object|string|null} [author]
+ * @returns {Ticket|null}
+ */
+function addTicketNote(ticketId, note, author = null) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  const text = note != null ? String(note).trim() : '';
+  if (!text) return ticket;
+
+  if (!ticket.messages) {
+    ticket.messages = [];
+  }
+
+  const authorId = author && typeof author === 'object' ? (author.id || author.username || null) : null;
+  const authorName = author && typeof author === 'object'
+    ? (author.username || author.name || author.id || 'system')
+    : (author ? String(author) : 'system');
+
+  const messageObj = {
+    id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text,
+    sender: 'note',
+    authorId: authorId || undefined,
+    authorName: authorName || undefined,
+    timestamp: new Date().toISOString(),
+  };
+
+  ticket.messages.push(messageObj);
+  ticket.updatedAt = new Date().toISOString();
+
+  persistTicketBestEffort(ticket);
+
+  return ticket;
+}
+
+/**
+ * Transfere um ticket de fila e/ou atendente.
+ *
+ * @param {string} ticketId
+ * @param {{queue?: string|null, assignedTo?: string|null}} params
+ * @returns {Ticket|null}
+ */
+function transferTicket(ticketId, params = {}) {
+  const ticket = tickets.get(ticketId);
+  if (!ticket) return null;
+
+  const nextQueue = params.queue != null && String(params.queue).trim() !== ''
+    ? String(params.queue).trim()
+    : null;
+  const hasAssignedTo = Object.prototype.hasOwnProperty.call(params, 'assignedTo');
+  const assignedTo = hasAssignedTo
+    ? (params.assignedTo != null && String(params.assignedTo).trim() !== '' ? String(params.assignedTo).trim() : null)
+    : undefined;
+
+  if (!nextQueue && !hasAssignedTo) {
+    return ticket;
+  }
+
+  // Atualiza fila (ajustando índices)
+  if (nextQueue && nextQueue !== ticket.queue) {
+    const prevQueue = ticket.queue ? String(ticket.queue) : null;
+    if (prevQueue) {
+      const prevSet = queues.get(prevQueue);
+      if (prevSet) prevSet.delete(ticketId);
+    }
+    if (!queues.has(nextQueue)) queues.set(nextQueue, new Set());
+    queues.get(nextQueue).add(ticketId);
+    ticket.queue = nextQueue;
+  }
+
+  if (hasAssignedTo) {
+    ticket.assignedTo = assignedTo || null;
+  }
+
+  if (ticket.status !== 'closed') {
+    ticket.status = ticket.assignedTo ? 'in_progress' : 'waiting';
+  }
+
+  if (!Array.isArray(ticket.messages)) ticket.messages = [];
+  const parts = [];
+  if (nextQueue) parts.push(`Fila: ${nextQueue}`);
+  if (hasAssignedTo) parts.push(ticket.assignedTo ? `Atribuído: ${ticket.assignedTo}` : 'Sem atendente');
+  if (parts.length > 0) {
+    ticket.messages.push({
+      id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      text: `Transferência realizada. ${parts.join(' · ')}`,
+      sender: 'system',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  ticket.updatedAt = new Date().toISOString();
   persistTicketBestEffort(ticket);
 
   return ticket;
@@ -915,6 +1094,14 @@ function setTicketMode(ticketId, params = {}) {
   });
 
   persistTicketBestEffort(ticket);
+
+  // Best-effort: reflete modo no channel_conversation
+  const convPatch = {
+    status: mode === 'human' ? 'human' : (mode === 'bot' ? 'bot' : 'paused'),
+    current_ticket_id: mode === 'human' ? ticket.id : (mode === 'bot' ? ticket.id : ticket.id),
+    last_message_at: new Date(),
+  };
+  updateConversationForTicket(ticket, convPatch).catch(() => {});
   return ticket;
 }
 
@@ -951,15 +1138,44 @@ function listAllTickets(options = {}) {
 
   // Log de debug para comparar com getMetrics
   logger.debug(`[QueueService] listAllTickets: Map tem ${tickets.size} ticket(s), Array tem ${ticketList.length} ticket(s)`, {
-    filters: { tenantId: options.tenantId, status: options.status, queue: options.queue },
+    filters: { tenantId: options.tenantId, status: options.status, queue: options.queue, q: options.q },
   });
 
+  // Filtro de status (pode ser string única ou múltiplos separados por vírgula)
   if (options.status) {
-    ticketList = ticketList.filter((t) => t.status === options.status);
+    const statusList = String(options.status)
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s);
+    if (statusList.length > 0) {
+      ticketList = ticketList.filter((t) => statusList.includes(t.status));
+    }
   }
 
   if (options.queue) {
     ticketList = ticketList.filter((t) => t.queue === options.queue);
+  }
+
+  // Filtro de busca por query (q) - procura em ID, contact, número, etc
+  if (options.q) {
+    const query = String(options.q).toLowerCase();
+    ticketList = ticketList.filter((t) => {
+      const id = String(t.id || '').toLowerCase();
+      const contact = String(t.contact || '').toLowerCase();
+      const phone = String(t.phone || '').toLowerCase();
+      const firstName = String(t.firstName || '').toLowerCase();
+      const lastName = String(t.lastName || '').toLowerCase();
+      const queue = String(t.queue || '').toLowerCase();
+      
+      return (
+        id.includes(query) ||
+        contact.includes(query) ||
+        phone.includes(query) ||
+        firstName.includes(query) ||
+        lastName.includes(query) ||
+        queue.includes(query)
+      );
+    });
   }
 
   // Ordena por data de criação (mais recentes primeiro)
@@ -972,15 +1188,28 @@ function listAllTickets(options = {}) {
     Math.max(1, parseInt(options.limit, 10) || 1000),
     10000 // Máximo de 10000 tickets por requisição
   );
-  const offset = Math.max(0, parseInt(options.offset, 10) || 0);
+  
+  let offset = 0;
+  if (options.cursor) {
+    // Cursor é um índice no array
+    offset = Math.max(0, parseInt(options.cursor, 10) || 0);
+  } else if (options.offset !== undefined) {
+    offset = Math.max(0, parseInt(options.offset, 10) || 0);
+  }
   
   const paginatedTickets = ticketList.slice(offset, offset + limit);
+  const nextOffset = offset + limit;
+  const hasMore = nextOffset < total;
+  const nextCursor = hasMore ? String(nextOffset) : null;
 
   return {
-    tickets: paginatedTickets,
+    items: paginatedTickets,
+    tickets: paginatedTickets, // Mantém compatibilidade com chamadas antigas
     total,
     limit,
     offset,
+    nextCursor,
+    hasMore,
   };
 }
 
@@ -1163,6 +1392,8 @@ module.exports = {
   updateTicket,
   updateLastMessage,
   addAgentMessage,
+  addTicketNote,
+  transferTicket,
   updateOutboundMessageMeta,
   markMessagesAsRead,
   setTicketMode,
@@ -1174,4 +1405,3 @@ module.exports = {
   // Interno: usado por services omnichannel para repovoar cache runtime.
   _upsertTicketFromDbRow: upsertTicketFromDbRow,
 };
-

@@ -11,6 +11,7 @@ const {
   userInputNodeHandler,
   endNodeHandler,
 } = require('../../engine/nodes/basicNodes');
+const { mergeNodeHandler } = require('../../engine/nodes/mergeNode');
 const fileRagService = require('../../engine/services/fileRagService');
 const ragDocumentsService = require('../../api/services/ragDocumentsService');
 
@@ -27,6 +28,7 @@ describe('Integração - Upload de Arquivos no Chat', () => {
     registry.register('start', startNodeHandler);
     registry.register('message', messageNodeHandler);
     registry.register('user_input', userInputNodeHandler);
+    registry.register('merge', mergeNodeHandler);
     registry.register('end', endNodeHandler);
 
     flow = {

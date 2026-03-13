@@ -1,0 +1,425 @@
+# O que falta (fonte única) — backlog operacional e critérios de “v1 vendável”
+
+- **Última atualização**: Mar/2026 (11/03)
+
+Este documento é a **fonte de verdade única** do “o que falta” a partir do estado atual do repositório (Mar/2026).  
+Ele substitui a visão antiga “capability-driven vs benchmarks” como lista operacional de execução.
+
+> Em caso de conflito de interpretação, prevalecem a visão/north star de `docs/OBJETIVO_FINAL_PLATAFORMA.md` e a arquitetura-alvo de `docs/ARQUITETURA_TECNICA.md`.
+> O plano de lançamento de `01/03/2026` abaixo é mantido como histórico operacional e evidência de release, não como calendário vigente.
+
+> Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
+
+## Update L-01/L-02/L-03/L-04/L-05 (13/02/2026)
+
+- [x] **L-01** fechado com smoke dedicado de filas físicas (kiosk/panel/station):
+  - `scripts/test-physical-queue-smoke.js`
+  - valida `call/start/pause/resume/finish` + métricas (`doneCount`)
+  - evidência: `qa/l01-physical-queue-evidence.json`
+  - log: `qa/smoke/l01-physical-queue.log`
+
+- [x] **L-02** fechado com smoke dedicado:
+  - `scripts/test-ura-publish-rollback-smoke.js`
+  - evidência: `qa/l02-ura-publish-rollback-evidence.json`
+  - log: `qa/smoke/l02-ura-publish-rollback.log`
+
+- [x] **L-03** fechado com TTS+ASR PBX + chamada real (originate) e evidência no gate:
+  - `scripts/test-pbx-voice-tts-asr-smoke.js`
+  - chamada real via `POST /api/cc/click2call` e validação CDR em `GET /api/pbx/cdr`
+  - evidência: `qa/l03-pbx-voice-tts-asr-evidence.json`
+  - log: `qa/smoke/l03-pbx-voice-tts-asr.log`
+
+- [x] **L-04** fechado com integração PBX call events v0 -> runtime (trigger por evento):
+  - `scripts/test-pbx-call-events-runtime-smoke.js`
+  - valida trigger `CallEnded` (`source=pbx.cdr`) em flow real, com execução registrada
+  - valida também ledger por nó (`node_executions`) com `nodesCount > 0` na evidência
+  - valida caminho de fila (`execution_jobs`: `dispatch_event_trigger`) com jobs concluídos e sem `dead` (retry/DLQ)
+  - evidência: `qa/l04-pbx-call-events-runtime-evidence.json`
+  - log: `qa/smoke/l04-pbx-call-events-runtime.log`
+
+- [x] **L-05** fechado com smoke ChatPro/omnichannel (inbox runtime) + evidência dedicada:
+  - `scripts/test-inbox-runtime-smoke.js`
+  - valida assign/transfer/note/tags/quick replies e consistência de conversa/ticket
+  - evidência: `qa/l05-chatpro-omnichannel-evidence.json`
+  - log: `qa/smoke/l05-chatpro-omnichannel.log`
+
+- [x] Gate com consolidado e validação obrigatória de L-01/L-02/L-03/L-04/L-05:
+  - consolidado: `qa/smoke-evidence.json`
+  - validação no gate: `tools/system/release-gate.js`
+
+## Update RC de lançamento (14/02/2026)
+
+- [x] Pipeline **Stack Test (Docker Compose)** estabilizado no fluxo de RC:
+  - login GHCR no job de autoteste para pull de imagens pré-aquecidas
+  - alinhamento da origem do `RPA_TOKEN` no autoteste (evita divergência com env do runner)
+  - recuperação de permissão em `frontend/node_modules` com fallback de limpeza via container
+- [x] RC validado com sucesso:
+  - tag: `v2026.03.01-rc5`
+  - run: `22020947013`
+  - resultado: `Prewarm imagens de teste (GHCR)=success` e `Autotest com stack completa=success`
+
+---
+
+## 1) Estado atual (Fev/2026) — o que já foi entregue (resumo)
+
+### Core (eventos + execução)
+- **Event Model canônico v1**: `api/events/eventModelV1.js`
+- **Event ledger append-only (`event_ledger`)**: migration `api/db/migrations/20260204020000-create-event-ledger.js` + `api/services/eventLedgerService.js`
+- **Retenção mínima (prune)**: `api/services/pruneEventLedgerService.js` (por `EVENT_LEDGER_RETENTION_DAYS`)
+- **Execution Queue + Scheduler v1 (DB-first)**:
+  - migrations `api/db/migrations/20260204021000-create-exec-jobs-and-schedules.js`
+  - worker `api/services/executionQueueService.js`
+  - scheduler `api/services/schedulerService.js`
+  - SLA scan `api/services/opsSlaService.js` (`DeliverySLARisk`, `PhysicalSLARisk`)
+- **Execution ledger por nó (v1, DB-first)**:
+  - migrations `api/db/migrations/20260204031000-create-flow-execution-ledger.js` (tabelas `flow_executions` + `node_executions`)
+  - serviço: `api/services/flowExecutionLedgerService.js` (header + steps por node; replay controlado em modo simulation)
+- **Dispatcher de triggers a partir do `event_ledger` (v1 parcial)**:
+  - cursor: migration `api/db/migrations/20260204033000-event-dispatch-state-and-schedule.js` (`event_dispatch_state` + schedule `scan_event_triggers`)
+  - serviço: `api/services/eventLedgerTriggerDispatcher.js` (scan + enqueue + dispatch via webhooks)
+  - extensão do estado: migration `api/db/migrations/20260204034000-event-dispatch-state-add-last-event-id.js`
+  - trigger de flows (best-effort): `api/services/flowEventTriggerService.js` (mapeamento via `metadata.eventTriggers`)
+
+### Suites verticais (MVP→v1 operacional)
+- **Fast service (filas físicas)**:
+  - público por token: `/physical/*` (kiosk/panel/station) em `api/server.js`
+  - operações adicionais (station): `start/pause/resume/skip/transfer`
+  - admin: `GET/POST /api/physical/queues`, `GET /api/physical/metrics`
+  - sequenciamento robusto: `physical_ticket_sequences` (migration `20260204022000-physical-queues-multiunit-and-sequences.js`)
+- **Pedidos/Storefront/Delivery**:
+  - público por token: `POST /storefront/orders`
+  - hardening v1: idempotência por `idempotencyKey` (storefront) + propagação de `correlationId` (best-effort)
+  - métricas: `GET /api/orders/metrics` (agregações por `locationId`)
+  - incidente mínimo: `POST /orders/:id/incidents` (abre ticket digital e emite evento)
+  - incidente operacional (omnichannel): ticket 1:1 com o pedido, idempotência e status
+- **Omnichannel v1**:
+  - unificação conversa↔ticket 1:1 com idempotência
+  - status por mensagem (delivered/read/failed) na operação
+  - roteamento/skills básicos, SLA simples e histórico unificado
+- **Templates “solutions” por segmento**:
+  - pacotes E2E (fastfood/pizzaria/clínica) com operação e métricas mínimas
+- **PBX v1**:
+  - base produto/realtime/CDR via migrations PBX
+  - `dialplan/apply` com trilha mínima em `pbx_config_versions` (signature)
+  - **Provisionamento de ramais (MVP)**: `POST /api/pbx/extensions` aceita `provisioning` (vendor+mac) e expõe `GET /provision/<tenantKey>/<vendor>/<mac>` (ou com token). Ver `docs/PBX_PROVISIONING_GRANDSTREAM_AVAYA.md`.
+  - **Ops v1.1**: rotação de token e provisionamento em lote no admin (frontend).
+  - **Call events v0 (estado + schedule)**: migration `api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js` + `api/services/pbx/pbxCallEventsService.js`.
+
+### Marketing (v1 completo)
+- **Migrations e modelos base**: `api/db/migrations/20260204040000-marketing-v1-core.js` + models `Marketing*` em `api/db/models/`.
+- **Serviço inicial**: `api/services/marketing/marketingService.js`.
+- **Público**: `GET /mkt/track.js`, `POST /mkt/e`, `GET /lp/:slug`, `POST /lp/:slug/submit`.
+- **Campanhas de email**: `POST /api/marketing/email-campaigns/:id/send` (envio best-effort).
+- **UI/admin completa**: gestão de forms/leads/scoring/email + jornadas v1 e funil visual básico.
+
+### Voz (base técnica entregue)
+- **Voice nodes v0 (engine)**: `engine/nodes/voiceNodes.js` + `engine/__tests__/voiceNodes.test.js`.
+- **Ingestão básica de eventos de voz**: `api/services/voiceEventService.js` + `POST /api/voice/events`.
+
+### RPA Flow Pipeline (base entregue)
+- **Serviço**: `api/services/rpaFlowPipelineService.js` (análise → seeds → validação → conversão flow→RPA).
+- **Endpoints**: preview e execução no `api/server.js`.
+- **Playbook operacional**: `docs/RPA_FLOW_PIPELINE_PLAYBOOK.md`.
+
+### SaaS e governança (base enterprise já entregue)
+- **Multi-tenant + RBAC + planos/limites + auditoria + super-admin + onboarding + rate-limit por tenant**: ver `IMPLEMENTACAO_SAAS_COMPLETA.md`.
+
+### Hardening de IA (contratos + safe-mode)
+- **AI Output Envelope (obrigatório)**:
+  - especificação: `docs/IA_OUTPUT_ENVELOPE.md`
+  - schema: `contracts/ia/ai-output-envelope.schema.json`
+  - implementação/testes: `engine/ai/aiEnvelope.js` e `tests/unit/aiEnvelope.test.js`
+
+### Integrações de plataforma (base)
+- **Webhooks customizados**: `api/services/webhookService.js`
+- **WebSockets (real-time por tenant)**: `api/services/websocketService.js`
+- **Validação de inputs**: `api/utils/inputValidator.js` (resumo em `IMPLEMENTACOES_MELHORIAS.md`)
+ 
+### Analytics e marketplace (primeiro corte)
+- **Analytics/ROI v0**: `api/services/roiService.js` + `GET /analytics/roi` + UI em `frontend/src/pages/AnalyticsPage.jsx`.
+- **Node marketplace v0** (catálogo estático): `api/services/nodeMarketplaceService.js` + `GET /api/node-marketplace/catalog` + UI `frontend/src/pages/NodeMarketplacePage.jsx`.
+  - **Próximo foco**: evoluir para **Analytics/ROI v1** (funil básico, custos por canal e KPIs de SLA).
+
+### Governança enterprise (primeiro corte)
+- **Ambientes de flow (dev/stage/prod)**: `GET /flows?environment=...` + `PUT /flows/:id/environment` + seletor no editor.
+- **SSO/SCIM (config por tenant)**: `api/services/tenantSettingsService.js` + endpoints `/api/tenant-settings/:key` + UI `frontend/src/pages/SsoScimPage.jsx`.
+- **Backup/DR básico**: `GET /api/backup/export` + `POST /api/backup/import` + UI `frontend/src/pages/BackupPage.jsx`.
+
+### Gate operacional
+- **Selftest**: `GET /health/selftest`
+- **Runner de stack**: `scripts/system-autotest-stack.sh` com gate de selftest (FAIL bloqueia)
+- **Unit tests**: `npm run test:unit` passando no estado atual
+- **Bootstrap/autoprovisionamento (base)**:
+  - `startInitialization()` em `api/server.js` garante `systemadmin`/tenant `system` (primeira inicialização).
+  - Seed idempotente: `api/db/seed.js` (+ utilitário `scripts/create-super-admin.js`).
+  - One-click bootstrap (super-admin): `POST /super-admin/bootstrap/one-click` (serviço `api/services/oneClickBootstrapService.js`).
+
+### Entregas concluídas (ex-backlog)
+- **Execution ledger**: endpoints de consulta (execution_id/correlation_id/subject_id) com RBAC e replay parcial “from node” com trilha auditável.
+- **Queue/Scheduler enterprise mínimo**: quotas por tenant, DLQ consultável/reprocessável, métricas (lag/falhas/retries) e selftest por limiar.
+- **Triggers do `event_ledger` (v1)**: mapping evento→flow/trigger com idempotência; dispatcher v1 para webhooks e disparo best-effort de flows.
+- **PBX call events v0**: ringing/answered/ended no `event_ledger`, correlação com ticket/pedido e base DB-first (estado + schedule).
+- **Fast service v1**: auditoria operacional consultável, métricas completas e contratos de estados com idempotência.
+- **Orders/Delivery v1**: KPIs `order_to_ready`/`order_to_deliver` + alertas e dashboard mínimo.
+- **Tokens públicos**: endpoints admin (listar/revogar/rotacionar), rate-limit por token/kind e dashboards mínimos de uso.
+- **RPA Flow Pipeline v1.1**: documentação/playbooks, testes E2E e validações de segurança, observabilidade (logs/métricas/audit).
+- **Autoprovisionamento v1**: checklist/relatório por step, opções por suíte/unidade e gates de segurança.
+- **PBX provisioning v1.1**: templates vendor/model/firmware, parâmetros operacionais, rotação/expiração de token com trilha auditável e bulk + sanity check.
+- **Core DAG + event model (consolidação)**: triggers/handlers full-fidelity do `event_ledger` e retenção por tenant com custo previsível.
+- **Plataforma integrada**: SDK/marketplace de nodes, Analytics/ROI completo e Voz v1 no DAG.
+- **Enterprise**: HA/DR, auditoria imutável, programa de parceiros e marketplace monetizado.
+
+---
+
+## 2) Backlog único (priorizado) — Now/Next/Later (o que falta)
+
+> Regra: cada item abaixo é “único” (não duplicar em outros docs). Se um tema aparecer em mais de um pilar, ele deve ser referenciado (não replicado).
+
+### Now (0–3 meses) — prioridade máxima (ChatPro + Fila + PBX TTS/ASR)
+
+#### 2.0 Convergência arquitetural ao modelo alvo
+- **Fazer o código seguir a arquitetura e a visão novas, sem normalizar exceções legadas**
+  - reduzir validações e mensagens canônicas duplicadas no frontend/editor
+  - migrar regras compartilháveis para backend e módulos compartilhados
+  - reduzir expansão de estilos inline estáticos nas áreas críticas do frontend
+  - decompor trechos extensos de `api/server.js` em handlers/serviços menores alinhados à arquitetura técnica
+  - **Critério de pronto**: mudanças novas passam a seguir a arquitetura-alvo por padrão, e os principais desvios legados ficam explícitos no backlog até serem removidos.
+
+#### 2.1 Atendimento ChatPro-like (omnichannel + operação)
+- **Fechar hardening do atendimento unificado**
+  - conversa↔ticket 1:1 consistente em todos os canais
+  - idempotência de mensagem no ticket (retry sem duplicar)
+  - status por mensagem no console do atendente (`sent/delivered/read/failed`)
+  - SLA operacional por fila/departamento com alertas e trilha auditável
+  - roteamento por skills/capacidade/horário (além de round_robin/least_busy)
+  - histórico unificado por cliente (Customer 360 operacional)
+  - **Critério de pronto**: operação omnichannel sem divergência de estado (mensagem, ticket, SLA e roteamento), com evidência no gate.
+
+#### 2.2 Controle de fila física (Qminder-like)
+- **Fechar v1 operacional de filas físicas**
+  - regras por unidade/serviço/horário/capacidade
+  - priorização robusta (preferencial/agendado/triagem)
+  - operações completas de estação (`call/start/finish/skip/transfer/pause/resume`)
+  - painel resiliente e trilha auditável por estação/painel
+  - métricas consistentes (`wait_time`, `throughput`, `abandon_rate`) por unidade/serviço/faixa horária
+  - integração com runtime (triggers/ações) e correlação com ticket digital
+  - **Critério de pronto**: jornada kiosk→station→panel estável, auditável e mensurável com KPIs mínimos no gate.
+
+#### 2.3 PBX com TTS+ASR (voz real em produção)
+- **Fechar operação PBX v1 com evidência de chamada real**
+  - TTS+ASR funcional no fluxo de voz (smoke dedicado)
+  - chamada real (`click2call/originate`) confirmada no gate
+  - integração call events (`ringing/answered/ended`) com runtime e `node_executions`
+  - fallback operacional quando `cdrFound=false` na janela do smoke: aceitar `originated=true` com evidência de runtime/gate
+  - **Critério de pronto**: gate `PASS` com evidência de voz real + trigger de runtime por evento de chamada.
+
+#### 2.4 Execução “enterprise mínima” (core DAG)
+- **Conectar o execution ledger por nó ao runtime + expor consulta/replay assistido**
+  - **Status**: base DB-first já existe (`flow_executions`/`node_executions` + `flowExecutionLedgerService`) e os runtimes principais (mensageria/eventos/voz) já registram execução por nó.
+  - **Update (14/02/2026)**: selftest passou a validar cobertura de runtime real no ledger (métricas por modo em `flowExecutionLedger`: `simulation/message/event/voice`), degradando quando houver apenas execução de simulação na janela.
+  - **Saídas mínimas**:
+    - registrar execuções reais do DAG (não só simulation/flows específicos)
+  - **Critério de pronto**: responder “o que aconteceu em qual node” e permitir replay controlado com rastreabilidade.
+
+#### 2.5 Triggers do runtime a partir do `event_ledger`
+- **Consumer/dispatcher** de `event_ledger` para acionar execuções (regras mínimas)
+  - retry/backoff e DLQ integrados ao runtime/queue
+  - **Status (13/02/2026)**:
+    - caminho `event_ledger -> execution_jobs(dispatch_event_trigger) -> worker -> runtime` validado no smoke L-04
+    - gate exige evidência de queue (`jobsDone > 0` e `jobsDead = 0`) e execução real de nós (`nodesCount > 0`)
+  - **Update (14/02/2026)**: cobertura de falha ampliada com thresholds operacionais por tenant no selftest (`SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON`) e rotina de reprocesso assistido documentada no runbook (`docs/RUNBOOK_SUITES_V1.md`).
+
+### Next (3–6 meses) — produto inicial por suíte + analytics/ROI v1
+
+#### 2.6 Analytics/ROI v1 (sair do v0)
+- funil visual básico e atribuição mínima por canal
+- custos por canal + KPIs de SLA mínimos (order_to_ready/order_to_deliver)
+- dashboards operacionais por suíte (fast service + orders/delivery)
+
+### Next (6–12 meses) — consolidação core + PBX/voz v1
+
+#### 2.7 PBX + voz v1 (base CCaaS)
+- URA visual v1, filas de voz e gravação com trilha auditável
+- observabilidade de voz (CDR/eventos) e custos básicos
+
+---
+
+## 3) Gates e “Definição de Pronto” (DoD) — para declarar v1 vendável
+
+### 3.1 Gate mínimo de CI/Stack
+- `scripts/system-autotest-stack.sh` deve cobrir (no mínimo):
+  - token público → pedido → transições (kitchen/dispatch) → status público
+  - token público → kiosk cria ticket → station opera (call/start/finish/skip/transfer) → panel reflete
+  - `/health/selftest` retorna `PASS` ou `WARN` (FAIL bloqueia)
+- Gate oficial: `tools/system/validate.js` deve passar (contratos + QA completa).
+- Autotest: `scripts/autotest.js` deve resultar em veredito `GO`.
+  - **Status**: `tools/system/validate.js` passou localmente em 05/02 (18/18 RPA); `scripts/autotest.js` retornou `GO` (sem Docker).
+
+### 3.2 DoD (por tema)
+- **Prioridade de release (ChatPro + Fila + PBX TTS/ASR)**: evidência de operação real e auditável no gate para os três pilares.
+- **Ledger por nó + replay**: execução auditável (inputs/outputs), replay parcial controlado, retenção por tenant.
+- **Queue/scheduler enterprise mínimo**: quotas, DLQ, métricas e selftest por limiar.
+- **Suites vendáveis** (Fast service + Orders/Delivery): estados consistentes + idempotência + auditoria + KPIs mínimos.
+
+---
+
+## 4) Plano de lançamento — 01/03/2026 (checklist operacional histórico)
+
+> Registro histórico do ciclo de lançamento com data alvo em **01/03/2026**.
+> Regra de decisão: sem `PASS` no gate e sem evidências completas, **não liberar**.
+
+### D-7 (22/02/2026) — freeze técnico e baseline
+- [x] validar pipeline candidato da stack (RC):
+  - referência: `v2026.03.01-rc5`
+  - run: `https://github.com/jeffersonmachado/r-agent2/actions/runs/22020947013`
+- [x] gerar status consolidado do plano (D-7/D-1/D0):
+  - `npm run system:launch-plan-status`
+  - saídas: `qa/launch-plan-status.json` e `qa/launch-plan-status.md`
+  - update (14/02/2026): `overall=ready` (`progress=18/18`)
+- [x] congelar escopo de release (apenas correções críticas e blockers)
+  - `npm run system:release-decision`
+  - saída: `qa/release-decision.json` (`scope.frozen=true`)
+- [x] confirmar branch/tag candidata e owners de plantão (engenharia + operação)
+  - `npm run system:release-decision`
+  - saída: `qa/release-decision.json` (`candidate.branch/tag` + `owners.engineering/operations`)
+- [x] executar gate completo:
+  - `npm run system:release-gate`
+  - update (14/02/2026): `PASS` (report em `qa/release-gate-report.json`)
+- [x] validar evidências mínimas atualizadas:
+  - `qa/release-gate-report.json`
+  - `qa/smoke-evidence.json` (L-01/L-02/L-03/L-04/L-05 em `pass`)
+  - update (14/02/2026): `l01/l02/l03/l04/l05=pass`
+- [x] registrar baseline de selftest e checks críticos:
+  - `eventDispatchRuntime`
+  - `pbxEventRuntime`
+  - `voiceRuntime`
+  - update (14/02/2026): baseline salvo em `qa/selftest-baseline.json` (`status=WARN`; `eventDispatchRuntime=degraded`, `pbxEventRuntime=degraded`, `voiceRuntime=healthy`)
+
+### D-1 (28/02/2026) — go/no-go técnico
+- [x] execução padronizada da janela técnica (modo rápido):
+  - `RELEASE_WINDOW_FAST=1 npm run system:release-window`
+  - saída: `qa/release-window-report.json`
+- [x] executar decisão consolidada (gate + rollback + smoke evidence):
+  - `npm run system:go-no-go`
+  - saída: `qa/go-no-go-report.json` com `decision=GO|NO_GO`
+- [x] atualizar status consolidado do plano:
+  - `npm run system:launch-plan-status`
+  - regra: `overall=ready` para avançar com liberação
+- [x] formalizar decisão go/no-go com registro de data/hora e responsáveis:
+  - `npm run system:release-decision`
+  - saídas: `qa/release-decision.json` e `qa/release-decision.md`
+- [x] rerodar gate completo em janela controlada:
+  - `npm run system:release-gate`
+- [x] executar drill de rollback:
+  - `npm run system:rollback-drill`
+  - opcional com rollback PBX aplicado: `ROLLBACK_DRILL_APPLY_PBX=1 npm run system:rollback-drill`
+  - observação: o drill valida evidência PBX L-03/L-04 no `qa/smoke-evidence.json` por padrão (`ROLLBACK_DRILL_REQUIRE_PBX_SMOKE_EVIDENCE=1`).
+- [x] revisar critérios de aceite:
+  - release gate `PASS`
+  - selftest sem `FAIL`
+  - evidência de chamada real PBX `originated` (L-03)
+  - evidência de trigger runtime por call event (L-04 com `flow.executionId`)
+  - evidência ChatPro/omnichannel (L-05 com `ticket.id` + operações críticas em `true`)
+
+### D0 (01/03/2026) — execução de lançamento
+- [ ] abrir janela oficial de deploy e congelar mudanças paralelas
+- [ ] validar workspace de release (sem pendências fora de QA):
+  - `npm run system:release-clean-check`
+- [ ] executar publicação/deploy da versão candidata
+- [ ] execução guiada de D0 (opcional, comando único):
+  - dry-run (padrão seguro): `npm run system:release-d0`
+  - execução real: `RELEASE_D0_DRY_RUN=0 RELEASE_D0_DEPLOY_COMMAND="<comando_deploy>" npm run system:release-d0`
+  - saída: `qa/release-d0-report.json`
+- [ ] executar janela completa de release (modo full):
+  - `npm run system:release-window`
+  - saída: `qa/release-window-report.json`
+- [ ] gerar manifesto do release candidate:
+  - `npm run system:release-manifest`
+  - saída: `qa/release-manifest.json`
+- [ ] executar smoke pós-release imediato:
+  - `npm run system:release-gate` (ou, em contingência, `RELEASE_GATE_MODE=legacy npm run system:release-gate`)
+- [ ] consolidar status final da janela:
+  - `npm run system:launch-plan-status`
+  - validar `qa/launch-plan-status.md` como checklist final da ata de release
+- [ ] confirmar operação mínima por suíte:
+  - Fast service (kiosk/panel/station)
+  - Orders/Delivery (create/order lifecycle/status)
+  - PBX/Voz (dialplan/runtime/eventos)
+- [ ] arquivar evidências finais da janela:
+  - `qa/release-gate-report.json`
+  - `qa/smoke-evidence.json`
+  - `qa/rollback-drill-report.json`
+  - `qa/go-no-go-report.json`
+  - `qa/release-decision.json`
+  - `qa/release-decision.md`
+  - `qa/release-window-report.json`
+  - `qa/release-manifest.json`
+  - `qa/release-summary.md`
+  - `qa/launch-plan-status.json`
+  - `qa/launch-plan-status.md`
+  - comando recomendado para pacote consolidado: `npm run system:release-evidence-pack`
+
+### 4.1 Checklist executável (foco: ChatPro + Fila + PBX TTS/ASR)
+
+- **Update (14/02/2026)**:
+  - `tools/system/launch-plan-status.js` agora consolida prontidão por pilar (`chatpro`, `queue`, `pbx`) com base em `qa/smoke-evidence.json`.
+  - `tools/system/go-no-go.js` passou a incluir o bloco `checks.smoke.pillars` no relatório para decisão GO/NO_GO por pilar.
+  - evidências ficam em `qa/launch-plan-status.json` e `qa/go-no-go-report.json`.
+
+#### D-7 (22/02/2026) — preparação e baseline
+- [x] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  evidência: `qa/l05-chatpro-omnichannel-evidence.json` + `qa/smoke-evidence.json` com `l05.status=pass`.
+- [x] **Fila física (owner: Fast Service/API+Frontend)**  
+  comando: `npm run system:release-gate`  
+  evidência: `qa/l01-physical-queue-evidence.json` + fluxo `kiosk -> station -> panel` sem falhas no `qa/release-gate-report.json`.
+- [x] **PBX TTS/ASR (owner: Voz/PBX)**  
+  comando: `npm run system:release-gate`  
+  evidência: `qa/l03-pbx-voice-tts-asr-evidence.json` e `qa/l04-pbx-call-events-runtime-evidence.json` atualizados.
+
+#### D-1 (28/02/2026) — go/no-go técnico por pilar
+- [x] **Decisão consolidada (owner: Engenharia de Plataforma)**  
+  comando: `npm run system:go-no-go`  
+  aceite: `qa/go-no-go-report.json` com `decision=GO`; qualquer `NO_GO` bloqueia release até correção.
+- [x] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  aceite: sem divergência mensagem↔ticket↔SLA no gate; sem `FAIL` no selftest.
+- [x] **Fila física (owner: Fast Service/API+Frontend)**  
+  comando: `npm run system:release-gate`  
+  aceite: operação de estação (`call/start/pause/resume/finish/skip/transfer`) validada e painel consistente.
+- [x] **PBX TTS/ASR (owner: Voz/PBX)**  
+  comando: `npm run system:release-gate`  
+  aceite: chamada real `originated=true`; trigger por call event com `flow.executionId`; quando `cdrFound=false`, evidência de originação + runtime aceita.
+- [x] **ChatPro evidência dedicada (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  aceite: `qa/l05-chatpro-omnichannel-evidence.json` com `ok=true` e operações críticas (`assign/transfer/note/tags/quick replies`) validadas.
+- [x] **Rollback readiness (owner: Engenharia de Plataforma)**  
+  comando: `npm run system:rollback-drill`  
+  evidência: `qa/rollback-drill-report.json` sem bloqueadores, incluindo `checks.pbxSmokeEvidence` válido (L-03/L-04).
+
+#### D0 (01/03/2026) — pós-deploy imediato
+- [ ] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  evidência: smoke pós-release em `pass` para operação omnichannel.
+- [ ] **Fila física (owner: Fast Service/API+Frontend)**  
+  comando: `npm run system:release-gate`  
+  evidência: L-01 em `pass` + jornada completa operável + métricas mínimas no relatório de gate.
+- [ ] **PBX TTS/ASR (owner: Voz/PBX)**  
+  comando: `npm run system:release-gate`  
+  evidência: L-03 e L-04 em `pass`, com logs em `qa/smoke/`.
+- [ ] **ChatPro (owner: Atendimento/API)**  
+  comando: `npm run system:release-gate`  
+  evidência: L-05 em `pass`, com log em `qa/smoke/l05-chatpro-omnichannel.log`.
+
+### Contingência (qualquer momento da janela)
+- [ ] se incidente crítico, acionar `docs/ROLLBACK_PLAYBOOK_SUITES_CRITICAS.md`
+- [ ] executar snapshot/backup antes de alterar estado:
+  - `bash scripts/backup-postgres.sh`
+- [ ] após rollback, rerodar gate técnico mínimo:
+  - `npm run system:release-gate`
+
+- **Automação (14/02/2026)**:
+  - fluxo unificado de contingência: `npm run system:release-contingency`
+  - relatório: `qa/release-contingency-report.json`
+  - modo dry-run (sem executar comandos): `RELEASE_CONTINGENCY_DRY_RUN=1 npm run system:release-contingency`
+  - janela full com backup opcional antes do checklist final: `RELEASE_WINDOW_RUN_BACKUP=1 npm run system:release-window`

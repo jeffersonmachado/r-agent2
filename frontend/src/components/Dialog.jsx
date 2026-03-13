@@ -8,6 +8,7 @@ export function Dialog({
   isOpen,
   onClose,
   title,
+  headerActions = null,
   children,
   size = 'md',
   showCloseButton = true,
@@ -164,6 +165,8 @@ export function Dialog({
 
   if (!isOpen) return null;
 
+  const isCollapsed = !!(dynamicSize && typeof dynamicSize === 'object' && dynamicSize.isCollapsed === true);
+
   // Calcula classes e estilos de tamanho baseado em dynamicSize, dialogSize ou size padrão
   const getSizeConfig = () => {
     // Prioridade: dialogSize (redimensionamento manual) > dynamicSize > size padrão
@@ -232,7 +235,7 @@ export function Dialog({
       {/* Dialog */}
       <div
         ref={dialogRef}
-        className={`relative z-10 bg-gradient-to-br from-bg-elevated to-bg-tertiary border border-border-default ${isFullscreen ? 'rounded-none' : 'rounded-xl'} shadow-2xl w-full ${isFullscreen ? 'h-full' : sizeConfig.className} ${isFullscreen ? '' : (dialogSize.height ? '' : 'max-h-[90vh]')} flex flex-col ${hasCustomPosition || isFullscreen ? '' : 'slide-in-from-top-4'} ${isDragging ? 'cursor-move' : ''}`}
+        className={`relative z-10 bg-gradient-to-br from-bg-elevated to-bg-tertiary border border-border-default ${isFullscreen ? 'rounded-none' : 'rounded-xl'} shadow-2xl w-full ${isFullscreen ? 'h-full' : sizeConfig.className} ${isFullscreen ? '' : ((dialogSize.height || isCollapsed) ? '' : 'max-h-[90vh]')} flex flex-col ${hasCustomPosition || isFullscreen ? '' : 'slide-in-from-top-4'} ${isDragging ? 'cursor-move' : ''}`}
         onClick={(e) => e.stopPropagation()}
         style={{ 
           ...dialogStyle, 
@@ -243,43 +246,66 @@ export function Dialog({
         {/* Header */}
         {title && (
           <div
-            ref={headerRef}
-            onMouseDown={handleMouseDown}
-            className={`flex items-center justify-between px-6 py-4 border-b border-border-default ${draggable ? 'cursor-move' : ''}`}
+            className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border-default"
           >
-            <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+            {/* Área de drag + título (lado esquerdo) */}
+            <div
+              ref={headerRef}
+              onMouseDown={handleMouseDown}
+              className={`flex items-center gap-2 flex-1 min-w-0 ${draggable ? 'cursor-move' : ''}`}
+            >
               {draggable && (
-                <svg className="w-4 h-4 text-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-text-tertiary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                 </svg>
               )}
-              {title}
-            </h2>
-            {showCloseButton && (
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
-                aria-label="Fechar"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+              <h2 className="text-lg font-semibold text-text-primary min-w-0">
+                <div className="min-w-0 truncate">
+                  {title}
+                </div>
+              </h2>
+            </div>
+
+            {/* Ações do header + fechar (lado direito) */}
+            <div className="flex items-center gap-1 shrink-0">
+              {headerActions ? (
+                <div className="flex items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
+                  {headerActions}
+                </div>
+              ) : null}
+
+              {showCloseButton && (
+                <button
+                  onClick={onClose}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+                  aria-label="Fechar"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* Content */}
-        <div className={`flex-1 overflow-hidden ${isFullscreen ? 'p-4' : 'p-6'} scrollbar-thin scrollbar-thumb-border-default scrollbar-track-transparent`}>
-          {children}
+        {/* Importante: durante resize, desabilita eventos no conteúdo para não perder mousemove (ex.: iframe/canvas). */}
+        <div
+          className={`${isCollapsed ? 'hidden' : 'flex-1'} overflow-hidden ${isFullscreen ? 'p-4' : 'p-6'} scrollbar-thin scrollbar-thumb-border-default scrollbar-track-transparent ${
+            isResizing ? 'pointer-events-none select-none' : ''
+          }`}
+        >
+          {!isCollapsed ? children : null}
         </div>
 
         {/* Handle de redimensionamento */}
-        {resizable && (
+        {resizable && !isCollapsed && (
           <div
             ref={resizeHandleRef}
             onMouseDown={handleResizeStart}
-            className={`absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-end justify-end p-1 ${
+            className={`absolute bottom-0 right-0 z-50 w-6 h-6 cursor-nwse-resize flex items-end justify-end p-1 pointer-events-auto ${
               isResizing ? 'opacity-100' : 'opacity-60 hover:opacity-100'
             } transition-opacity`}
             title="Redimensionar"

@@ -1,291 +1,154 @@
 import {
-  CANONICAL_NODE_TYPES,
-  TERMINAL_NODE_TYPES,
-  ISSUE_SEVERITY,
-  createCanonicalIssue,
-  createCanonicalValidationReport,
+  CANONICAL_FALLBACK,
+  CANONICAL_GATEWAY_EXCLUSIVE,
+  CANONICAL_START,
+  CANONICAL_TASK_AI,
+  CANONICAL_TASK_USER,
+  CANONICAL_WAIT_TIMER,
+  isCanonicalTerminalType,
 } from './canonicalTypes';
+import { normalizeCanonicalProcessDefinition } from './canonicalNormalizer';
 
-function buildAdjacency(edges = []) {
+function createIssue(severity, code, message, nodeIds = [], details = {}) {
+  return {
+    source: 'canonical',
+    severity,
+    code,
+    message,
+    messageUi: message,
+    nodeIds: Array.isArray(nodeIds) ? nodeIds : [],
+    details,
+  };
+}
+
+function buildAdjacency(edges) {
   const outgoing = new Map();
   const incoming = new Map();
-
-  edges.forEach((edge) => {
+  for (const edge of edges) {
     if (!outgoing.has(edge.source)) outgoing.set(edge.source, []);
     if (!incoming.has(edge.target)) incoming.set(edge.target, []);
     outgoing.get(edge.source).push(edge);
     incoming.get(edge.target).push(edge);
-  });
-
+  }
   return { outgoing, incoming };
 }
 
-function dfsReachable(startIds, outgoing) {
-  const visited = new Set();
-  const stack = [...startIds];
+export function flattenCanonicalValidationIssues(report) {
+  return [
+    ...(Array.isArray(report?.errors) ? report.errors : []),
+    ...(Array.isArray(report?.warnings) ? report.warnings : []),
+    ...(Array.isArray(report?.suggestions) ? report.suggestions : []),
+  ];
+}
 
+export function validateCanonicalProcessDefinition(definition) {
+  const canonical = normalizeCanonicalProcessDefinition(definition);
+  const errors = [];
+  const warnings = [];
+  const suggestions = [];
+  const { outgoing, incoming } = buildAdjacency(canonical.edges);
+  const nodeMap = new Map(canonical.nodes.map((node) => [node.id, node]));
+
+  const startNodes = canonical.nodes.filter((node) => node.type === CANONICAL_START);
+  if (startNodes.length === 0) {
+    errors.push(createIssue('error', 'CANONICAL_START_MISSING', 'O processo canônico precisa ter pelo menos um nó start.'));
+  }
+
+  const entrypoints = canonical.entrypoints.length > 0 ? canonical.entrypoints : startNodes.map((node) => node.id);
+  const visited = new Set();
+  const stack = [...entrypoints];
   while (stack.length > 0) {
     const current = stack.pop();
     if (!current || visited.has(current)) continue;
     visited.add(current);
-
     const nextEdges = outgoing.get(current) || [];
     nextEdges.forEach((edge) => {
-      if (edge?.target && !visited.has(edge.target)) {
+      if (edge.target && nodeMap.has(edge.target) && !visited.has(edge.target)) {
         stack.push(edge.target);
       }
     });
   }
 
-  return visited;
-}
+  canonical.nodes.forEach((node) => {
+    const incomingEdges = incoming.get(node.id) || [];
+    const outgoingEdges = outgoing.get(node.id) || [];
+    const subtype = node.subtype || node.metadata?.adapter?.reteType || '';
 
-function detectCycles(nodeIds, outgoing) {
-  const visited = new Set();
-  const inStack = new Set();
-  const cycles = [];
-
-  function walk(nodeId, trail = []) {
-    if (inStack.has(nodeId)) {
-      cycles.push([...trail, nodeId]);
-      return;
-    }
-    if (visited.has(nodeId)) return;
-
-    visited.add(nodeId);
-    inStack.add(nodeId);
-
-    const edges = outgoing.get(nodeId) || [];
-    edges.forEach((edge) => walk(edge.target, [...trail, nodeId]));
-
-    inStack.delete(nodeId);
-  }
-
-  nodeIds.forEach((nodeId) => walk(nodeId, []));
-  return cycles;
-}
-
-function hasTerminalPath(nodeId, outgoing, nodeById, memo = new Map(), stack = new Set()) {
-  if (memo.has(nodeId)) return memo.get(nodeId);
-  if (stack.has(nodeId)) return false;
-
-  const node = nodeById.get(nodeId);
-  if (!node) return false;
-  if (TERMINAL_NODE_TYPES.has(node.type)) {
-    memo.set(nodeId, true);
-    return true;
-  }
-
-  const edges = outgoing.get(nodeId) || [];
-  if (edges.length === 0) {
-    memo.set(nodeId, false);
-    return false;
-  }
-
-  stack.add(nodeId);
-  const result = edges.some((edge) => hasTerminalPath(edge.target, outgoing, nodeById, memo, stack));
-  stack.delete(nodeId);
-
-  memo.set(nodeId, result);
-  return result;
-}
-
-export function validateCanonicalProcess(canonicalProcess = {}) {
-  const report = createCanonicalValidationReport();
-  const nodes = Array.isArray(canonicalProcess.nodes) ? canonicalProcess.nodes : [];
-  const edges = Array.isArray(canonicalProcess.edges) ? canonicalProcess.edges : [];
-  const entrypoints = Array.isArray(canonicalProcess.entrypoints) ? canonicalProcess.entrypoints : [];
-
-  if (nodes.length === 0) {
-    report.errors.push(createCanonicalIssue({
-      code: 'canonical_no_nodes',
-      message: 'Canonical process must contain at least one node.',
-      severity: ISSUE_SEVERITY.ERROR,
-    }));
-  }
-
-  const nodeById = new Map();
-  const duplicateNodeIds = new Set();
-
-  nodes.forEach((node) => {
-    if (!node?.id) return;
-    if (nodeById.has(node.id)) {
-      duplicateNodeIds.add(node.id);
-      return;
-    }
-    nodeById.set(node.id, node);
-  });
-
-  if (duplicateNodeIds.size > 0) {
-    report.errors.push(createCanonicalIssue({
-      code: 'canonical_duplicate_nodes',
-      message: 'Canonical process contains duplicated node IDs.',
-      severity: ISSUE_SEVERITY.ERROR,
-      nodeIds: Array.from(duplicateNodeIds),
-    }));
-  }
-
-  if (entrypoints.length === 0) {
-    report.errors.push(createCanonicalIssue({
-      code: 'canonical_missing_entrypoint',
-      message: 'Canonical process must declare at least one entrypoint.',
-      severity: ISSUE_SEVERITY.ERROR,
-    }));
-  }
-
-  entrypoints.forEach((entrypoint) => {
-    if (!nodeById.has(entrypoint)) {
-      report.errors.push(createCanonicalIssue({
-        code: 'canonical_entrypoint_unknown_node',
-        message: `Entrypoint ${entrypoint} does not reference an existing node.`,
-        severity: ISSUE_SEVERITY.ERROR,
-        nodeIds: [entrypoint],
-      }));
-    }
-  });
-
-  const { outgoing, incoming } = buildAdjacency(edges);
-
-  edges.forEach((edge) => {
-    if (!nodeById.has(edge.source) || !nodeById.has(edge.target)) {
-      report.errors.push(createCanonicalIssue({
-        code: 'canonical_edge_unknown_node',
-        message: `Edge ${edge.id || 'unknown'} references unknown nodes.`,
-        severity: ISSUE_SEVERITY.ERROR,
-        details: {
-          edgeId: edge.id || null,
-          source: edge.source,
-          target: edge.target,
-        },
-      }));
-    }
-  });
-
-  const reachable = dfsReachable(entrypoints, outgoing);
-  const orphanNodes = nodes
-    .map((node) => node.id)
-    .filter((nodeId) => !reachable.has(nodeId));
-
-  if (orphanNodes.length > 0) {
-    report.warnings.push(createCanonicalIssue({
-      code: 'canonical_orphan_nodes',
-      message: 'There are nodes unreachable from process entrypoints.',
-      severity: ISSUE_SEVERITY.WARNING,
-      nodeIds: orphanNodes,
-    }));
-  }
-
-  const loops = detectCycles(nodes.map((node) => node.id), outgoing);
-  if (loops.length > 0) {
-    report.warnings.push(createCanonicalIssue({
-      code: 'canonical_potentially_dangerous_loops',
-      message: 'Potential cyclic paths were detected. Ensure loops have explicit break conditions.',
-      severity: ISSUE_SEVERITY.WARNING,
-      details: {
-        loops,
-      },
-    }));
-  }
-
-  nodes.forEach((node) => {
-    const nodeId = node.id;
-    const nodeType = node.type;
-    const nodeOutgoing = outgoing.get(nodeId) || [];
-
-    if (nodeType !== CANONICAL_NODE_TYPES.END && nodeOutgoing.length === 0 && !TERMINAL_NODE_TYPES.has(nodeType)) {
-      report.warnings.push(createCanonicalIssue({
-        code: 'canonical_route_without_termination',
-        message: `Node ${nodeId} has no outgoing path and is not terminal.`,
-        severity: ISSUE_SEVERITY.WARNING,
-        nodeIds: [nodeId],
-      }));
+    if (node.type !== CANONICAL_START && incomingEdges.length === 0) {
+      errors.push(createIssue('error', 'CANONICAL_NODE_ORPHAN', `O nó "${node.label}" está órfão no processo canônico.`, [node.id]));
     }
 
-    if (node.fallbackPolicy?.enabled === true && !node.fallbackPolicy?.targetNodeId) {
-      report.warnings.push(createCanonicalIssue({
-        code: 'canonical_fallback_incomplete',
-        message: `Node ${nodeId} enables fallback but does not define targetNodeId.`,
-        severity: ISSUE_SEVERITY.WARNING,
-        nodeIds: [nodeId],
-      }));
+    if (!visited.has(node.id) && node.type !== CANONICAL_START) {
+      warnings.push(createIssue('warning', 'CANONICAL_NODE_UNREACHABLE', `O nó "${node.label}" não é alcançável a partir dos entrypoints.`, [node.id]));
     }
 
-    if (nodeType === CANONICAL_NODE_TYPES.WAIT_TIMER) {
-      const cfg = node.config && typeof node.config === 'object' ? node.config : {};
-      if (!cfg.timeDuration && !cfg.timeCycle && !cfg.timeDate && !cfg.ms) {
-        report.errors.push(createCanonicalIssue({
-          code: 'canonical_timer_missing_configuration',
-          message: `Timer node ${nodeId} must define timeDuration, timeCycle, timeDate, or ms.`,
-          severity: ISSUE_SEVERITY.ERROR,
-          nodeIds: [nodeId],
-        }));
-      }
+    if (!isCanonicalTerminalType(node.type, subtype) && outgoingEdges.length === 0) {
+      warnings.push(createIssue('warning', 'CANONICAL_PATH_WITHOUT_EXIT', `O nó "${node.label}" não possui saída canônica.`, [node.id]));
     }
 
-    if (nodeType === CANONICAL_NODE_TYPES.TASK_USER) {
-      const handoff = node.humanHandoffPolicy || {};
-      if (handoff.enabled && !handoff.queue && !handoff.team) {
-        report.warnings.push(createCanonicalIssue({
-          code: 'canonical_handoff_incomplete',
-          message: `User task ${nodeId} enables handoff without queue/team.`,
-          severity: ISSUE_SEVERITY.WARNING,
-          nodeIds: [nodeId],
-        }));
-      }
+    if (node.type === CANONICAL_GATEWAY_EXCLUSIVE && outgoingEdges.length < 2) {
+      warnings.push(createIssue('warning', 'CANONICAL_GATEWAY_LOW_BRANCHING', `O gateway "${node.label}" deveria ter ao menos duas saídas.`, [node.id]));
     }
 
-    if (nodeType === CANONICAL_NODE_TYPES.TASK_AI) {
-      const cfg = node.config && typeof node.config === 'object' ? node.config : {};
-      const hasPrompt = typeof cfg.prompt === 'string' && cfg.prompt.trim().length > 0;
-      const hasTask = typeof cfg.task === 'string' && cfg.task.trim().length > 0;
+    if (node.type === CANONICAL_TASK_AI) {
+      const hasFallbackEdge = outgoingEdges.some((edge) => {
+        const port = String(edge.metadata?.sourcePort || '').toLowerCase();
+        return port.includes('fallback') || port.includes('error');
+      });
+      const hasPrompt = typeof node.config?.promptTemplate === 'string' && node.config.promptTemplate.trim() !== '';
+      const hasTask = typeof node.config?.task === 'string' && node.config.task.trim() !== '';
+
       if (!hasPrompt && !hasTask) {
-        report.errors.push(createCanonicalIssue({
-          code: 'canonical_ai_task_missing_config',
-          message: `AI task ${nodeId} must define prompt or task configuration.`,
-          severity: ISSUE_SEVERITY.ERROR,
-          nodeIds: [nodeId],
-        }));
+        errors.push(createIssue('error', 'CANONICAL_AI_CONFIG_MISSING', `O nó de IA "${node.label}" está sem configuração mínima.`, [node.id]));
+      }
+      if (!hasFallbackEdge) {
+        warnings.push(createIssue('warning', 'CANONICAL_AI_FALLBACK_MISSING', `O nó de IA "${node.label}" não possui caminho explícito de fallback.`, [node.id]));
       }
     }
 
-    const inCount = (incoming.get(nodeId) || []).length;
-    const outCount = nodeOutgoing.length;
-    if (inCount > 0 && outCount > 3 && nodeType !== CANONICAL_NODE_TYPES.GATEWAY_EXCLUSIVE) {
-      report.suggestions.push(createCanonicalIssue({
-        code: 'canonical_high_fanout_non_gateway',
-        message: `Node ${nodeId} has high fan-out and should likely be modeled as a gateway.`,
-        severity: ISSUE_SEVERITY.SUGGESTION,
-        nodeIds: [nodeId],
-        details: {
-          inCount,
-          outCount,
-        },
+    if (node.type === CANONICAL_WAIT_TIMER) {
+      const hasTimerValue = ['delayMs', 'seconds', 'timeoutMs', 'cron', 'expression', 'timeDuration']
+        .some((key) => node.config?.[key] !== undefined && node.config?.[key] !== null && node.config?.[key] !== '');
+      if (!hasTimerValue) {
+        errors.push(createIssue('error', 'CANONICAL_TIMER_INVALID', `O nó temporal "${node.label}" não possui configuração de tempo válida.`, [node.id]));
+      }
+    }
+
+    if (node.type === CANONICAL_TASK_USER) {
+      const queue = node.config?.queue || node.config?.ramal || node.config?.fila || null;
+      if (!queue && String(subtype || '').includes('handoff')) {
+        errors.push(createIssue('error', 'CANONICAL_HANDOFF_INCOMPLETE', `O handoff "${node.label}" está sem fila ou destino configurado.`, [node.id]));
+      }
+    }
+
+    if (node.type !== CANONICAL_FALLBACK && incomingEdges.length > 1 && node.type === CANONICAL_GATEWAY_EXCLUSIVE) {
+      suggestions.push(createIssue('info', 'CANONICAL_GATEWAY_MERGE_HINT', `Considere introduzir um nó de merge antes de "${node.label}" para tornar a estrutura mais explícita.`, [node.id]));
+    }
+  });
+
+  const fallbackNodes = canonical.nodes.filter((node) => node.type === CANONICAL_FALLBACK);
+  if (fallbackNodes.length === 0) {
+    suggestions.push(createIssue('info', 'CANONICAL_FALLBACK_MISSING', 'O processo não possui um nó canônico de fallback explícito.'));
+  }
+
+  canonical.edges.forEach((edge) => {
+    if (edge.metadata?.sourceMissing || edge.metadata?.targetMissing) {
+      errors.push(createIssue('error', 'CANONICAL_EDGE_INCONSISTENT', `A aresta "${edge.id}" referencia nós inexistentes.`, [edge.source, edge.target].filter(Boolean), {
+        sourceMissing: !!edge.metadata?.sourceMissing,
+        targetMissing: !!edge.metadata?.targetMissing,
       }));
     }
   });
 
-  const terminalMemo = new Map();
-  entrypoints.forEach((entrypoint) => {
-    if (!nodeById.has(entrypoint)) return;
-    const hasPath = hasTerminalPath(entrypoint, outgoing, nodeById, terminalMemo, new Set());
-    if (!hasPath) {
-      report.warnings.push(createCanonicalIssue({
-        code: 'canonical_entrypoint_without_terminal_path',
-        message: `Entrypoint ${entrypoint} has no guaranteed path to terminal node.`,
-        severity: ISSUE_SEVERITY.WARNING,
-        nodeIds: [entrypoint],
-      }));
-    }
-  });
-
-  report.summary = {
-    errorCount: report.errors.length,
-    warningCount: report.warnings.length,
-    suggestionCount: report.suggestions.length,
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    suggestions,
+    summary: {
+      nodeCount: canonical.nodes.length,
+      edgeCount: canonical.edges.length,
+      startCount: startNodes.length,
+    },
   };
-  report.valid = report.errors.length === 0;
-
-  return report;
 }
-
-export default validateCanonicalProcess;

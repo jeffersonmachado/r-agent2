@@ -54,7 +54,43 @@ O envio outbound é **DB-first** (fila no banco) para garantir:
   - Ter runbook/alerta para `db_unavailable_no_direct_send` (indica indisponibilidade do DB e envio bloqueado).
 
 - **Observabilidade**
-  - Monitorar logs `warn` de:
-    - webhook ignorado por `tenant` não resolvido (sinal de `phone_number_id` não cadastrado/errado)
-    - worker não iniciado por DB indisponível
+- Monitorar logs `warn` de:
+  - webhook ignorado por `tenant` não resolvido (sinal de `phone_number_id` não cadastrado/errado)
+  - worker não iniciado por DB indisponível
 
+### Selftest operacional (PBX event runtime)
+
+O endpoint `GET /health/selftest` inclui o check `pbxEventRuntime`, que consolida:
+- fila `scan_pbx_cdr_events`
+- fila `dispatch_event_trigger`
+- volume recente de eventos `CallRinging|CallAnswered|CallEnded` no `event_ledger`
+
+#### Variáveis de limiar
+
+- `SELFTEST_PBX_EVENT_WINDOW_MIN` (default: `60`)
+- `SELFTEST_PBX_EVENT_SCAN_DEAD_WARN` (default: `1`)
+- `SELFTEST_PBX_EVENT_SCAN_DEAD_FAIL` (default: `5`)
+- `SELFTEST_PBX_EVENT_SCAN_LAG_WARN_SEC` (default: `300`)
+- `SELFTEST_PBX_EVENT_SCAN_LAG_FAIL_SEC` (default: `1800`)
+- `SELFTEST_PBX_EVENT_DISPATCH_DEAD_WARN` (default: `1`)
+- `SELFTEST_PBX_EVENT_DISPATCH_DEAD_FAIL` (default: `20`)
+- `SELFTEST_PBX_EVENT_DISPATCH_RETRYING_WARN` (default: `20`)
+- `SELFTEST_PBX_EVENT_DISPATCH_RETRYING_FAIL` (default: `200`)
+
+#### Baseline recomendado por ambiente
+
+- `dev`:
+  - `SELFTEST_PBX_EVENT_SCAN_DEAD_FAIL=10`
+  - `SELFTEST_PBX_EVENT_SCAN_LAG_FAIL_SEC=7200`
+  - `SELFTEST_PBX_EVENT_DISPATCH_DEAD_FAIL=100`
+  - `SELFTEST_PBX_EVENT_DISPATCH_RETRYING_FAIL=500`
+- `stage`:
+  - `SELFTEST_PBX_EVENT_SCAN_DEAD_FAIL=5`
+  - `SELFTEST_PBX_EVENT_SCAN_LAG_FAIL_SEC=3600`
+  - `SELFTEST_PBX_EVENT_DISPATCH_DEAD_FAIL=50`
+  - `SELFTEST_PBX_EVENT_DISPATCH_RETRYING_FAIL=300`
+- `prod`:
+  - `SELFTEST_PBX_EVENT_SCAN_DEAD_FAIL=5`
+  - `SELFTEST_PBX_EVENT_SCAN_LAG_FAIL_SEC=1800`
+  - `SELFTEST_PBX_EVENT_DISPATCH_DEAD_FAIL=20`
+  - `SELFTEST_PBX_EVENT_DISPATCH_RETRYING_FAIL=200`

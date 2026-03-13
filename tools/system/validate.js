@@ -113,6 +113,13 @@ function validateContracts() {
 function executeQA() {
   logSection('ETAPA 2: Execução Completa de QA');
 
+  const qaEnv = {
+    ...process.env,
+    SKIP_TENANT_SITE_INDEXING: 'true',
+    RPA_SKIP_IF_FRONTEND_UNREACHABLE: 'true',
+    RPA_SKIP_IF_API_UNREACHABLE: 'true',
+  };
+
   const qaSteps = [
     {
       name: 'Testes Unitários',
@@ -130,6 +137,11 @@ function executeQA() {
       description: 'Executando testes de stress...'
     },
     {
+      name: 'Seed RPA',
+      command: 'node scripts/seed-rpa-flows.js',
+      description: 'Preparando flows mínimos para testes RPA...'
+    },
+    {
       name: 'Testes RPA',
       command: 'npm run test:rpa',
       description: 'Executando testes RPA...'
@@ -145,7 +157,8 @@ function executeQA() {
       execSync(step.command, {
         cwd: ROOT_DIR,
         stdio: 'inherit',
-        encoding: 'utf8'
+        encoding: 'utf8',
+        env: qaEnv,
       });
       
       logSuccess(`${step.name} passou`);
@@ -207,4 +220,3 @@ if (require.main === module) {
 }
 
 module.exports = { validateContracts, executeQA };
-

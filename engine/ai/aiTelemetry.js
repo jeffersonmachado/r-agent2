@@ -19,7 +19,8 @@ const path = require('path');
 const logger = require('../../api/utils/logger');
 
 // Diretório para logs de telemetria
-const TELEMETRY_DIR = path.join(__dirname, '../../../logs/ai-telemetry');
+// Usa cwd para ficar ancorado na raiz do repo (evita path relativo quebrado).
+const TELEMETRY_DIR = path.resolve(process.cwd(), 'logs', 'ai-telemetry');
 const TELEMETRY_FILE = path.join(TELEMETRY_DIR, 'failures.jsonl');
 const TELEMETRY_SUCCESS_FILE = path.join(TELEMETRY_DIR, 'success.jsonl');
 

@@ -1,120 +1,112 @@
 # Canonical Process Architecture
 
-## Objective
+## Motivo
 
-Introduce a canonical process layer between authoring formats and runtime execution without breaking:
-- existing Rete editor flow
-- existing runtime behavior
-- existing `FlowDefinition` compatibility
+O projeto já possui um caminho estável entre editor visual, `FlowDefinition` da engine e runtime. A nova camada canônica foi introduzida para complementar essa arquitetura, sem reescrever o que já funciona.
 
-## Target Architecture
+Objetivos imediatos:
 
-```text
-Rete / BPMN / AI / Templates
-            |
-            v
-CanonicalProcessDefinition
-            |
-            v
-Canonical Normalizer + Validator + Compiler
-            |
-            v
-Runtime Adapter (Canonical -> Legacy Engine Flow)
-            |
-            v
-executeStep runtime + observability
-```
+- normalizar fluxos antes da compilação
+- validar semântica com granularidade maior
+- preparar adapters para BPMN
+- preparar geração/autoria por IA em um formato mais estável
 
-## Implemented Core Layers
+## Arquitetura
 
-### 1. Canonical model core (frontend)
-Location: `frontend/src/process-canonical/`
+Fluxo principal atual com a nova camada:
+
+`Rete JSON -> CanonicalProcessDefinition -> Compiler -> EngineFlowDefinition -> runtime`
+
+Fluxo de leitura/inspeção:
+
+`EngineFlowDefinition -> CanonicalProcessDefinition`
+
+Fluxo de round-trip do editor:
+
+`Rete JSON -> CanonicalProcessDefinition -> Rete JSON`
+
+## Componentes
+
+### `frontend/src/process-canonical/`
 
 - `canonicalTypes.js`
-  - canonical node taxonomy
-  - issue/report model
+  Define os tipos canônicos mínimos e o mapeamento base entre tipos do editor/engine e tipos canônicos.
 - `canonicalDefaults.js`
-  - default policies (retry, timeout, fallback, handoff, ai, observability)
+  Centraliza defaults de políticas, observabilidade e configuração operacional.
 - `canonicalNormalizer.js`
-  - stable IDs
-  - optional field normalization
-  - edge normalization/inference
+  Garante shape consistente do processo, dos nós e das arestas.
 - `canonicalValidator.js`
-  - semantic validation independent of visual format
+  Executa validações semânticas adicionais, retornando `errors`, `warnings` e `suggestions`.
 - `canonicalCompiler.js`
-  - deterministic compiled model
-  - indexed topology for runtime readiness
-  - `versionHash`
+  Produz uma representação compilada determinística com `adjacency`, `nodeMap` e `edgeMap`.
 
-### 2. Canonical adapters (frontend)
-Location: `frontend/src/process-adapters/`
+### `frontend/src/process-adapters/`
 
 - `reteToCanonical.js`
+  Converte o JSON do editor em `CanonicalProcessDefinition`, preservando IDs estáveis e mapeando conexões.
 - `canonicalToRete.js`
+  Converte o modelo canônico de volta para o formato do editor.
 - `engineFlowToCanonical.js`
+  Normaliza `FlowDefinition` da engine para o modelo canônico.
 - `canonicalToEngineFlow.js`
+  Compila o modelo canônico de volta para `FlowDefinition`.
 
-Adapter rules:
-- preserve current behavior wherever possible
-- emit warnings for degradation
-- avoid hidden conversion logic spread across multiple modules
+## Relação com o editor
 
-### 3. Incremental editor integration
-- `frontend/src/state/editorStore.jsx` now enriches validation with canonical pipeline reports:
-  - mapping report
-  - semantic validation report
-  - compilation report
-- Legacy backend error path remains untouched for node highlighting compatibility.
+O editor atual não foi substituído.
 
-### 4. Runtime preparation (backend)
-Location: `api/core/process-runtime/`
+- a UI continua baseada em Rete
+- `nodeSchemas` continuam sendo a fonte da verdade para o editor
+- a validação anterior continua existindo
+- a validação canônica entra como camada complementar
 
-- `processRuntimeService.js`
-  - accepts legacy flow or canonical process definition
-  - canonical definitions are adapted to legacy engine flow for execution
-- `processEventBus.js`
-- `processExecutionContext.js`
-- `processStateMachine.js`
-- `processTimerService.js`
-- `processExecutionTelemetry.js`
-- `processObservabilityService.js`
+Na prática:
 
-This enables hybrid runtime adoption without forcing an immediate engine rewrite.
+- ao validar no editor, os avisos canônicos são mesclados ao estado de validação atual
+- ao salvar, o fluxo passa por `Rete -> Canonical -> Engine`
 
-## Transition Strategy
+## Relação com o runtime
 
-### Current (stable)
-`Rete -> FlowDefinition -> compileFlow -> executeStep`
+O runtime continua executando `FlowDefinition`.
 
-### Transitional (now enabled)
-`Rete -> Canonical -> (validate + compile canonical) -> Canonical->Engine adapter -> executeStep`
+A camada canônica atua antes disso:
 
-### Future
-- BPMN imports/exports become canonical adapters first.
-- AI authoring produces canonical directly.
-- Runtime can gradually move from adapter-based execution to native canonical execution.
+- normaliza
+- valida
+- compila
 
-## Backward Compatibility Guarantees
+Isso permite evoluir o runtime sem acoplar novas regras diretamente ao formato do editor.
 
-1. Existing `reteJsonToEngineFlow` path remains valid.
-2. Existing backend `validateFlow` and runtime path remain intact.
-3. Canonical integration is additive, not destructive.
-4. Degradation is reported explicitly through warnings.
+## Preparação para BPMN
 
-## Runtime Decision Boundary
+O modelo canônico foi desenhado para servir de ponto comum entre:
 
-- Editor responsibility ends at canonical/legacy conversion and validation.
-- Engine/runtime responsibility starts at compiled executable flow execution.
-- Canonical layer is the explicit contract between them.
+- editor visual atual
+- import/export BPMN
+- validação semântica
+- compilação para runtime
 
-## Known Current Limits
+Isso reduz o custo de múltiplos conversores diretos entre formatos.
 
-1. Canonical runtime currently executes via adapter to legacy engine handlers.
-2. Full BPMN parity is intentionally deferred.
-3. AI authoring modules provide baseline contracts; full UI orchestration is future work.
+## Preparação para IA de autoria
 
-## Why This Enables BPMN + AI + Optimization
+Com um modelo intermediário explícito, a IA pode:
 
-- BPMN: can map to canonical without coupling XML to runtime.
-- AI authoring: can generate/review canonical directly.
-- Optimization: canonical observability metadata and telemetry are now standardized for analytics loops.
+- gerar processo canônico em vez de gerar diretamente JSON do editor
+- receber feedback semântico mais forte
+- operar com menor acoplamento ao layout e aos detalhes internos do Rete
+
+## Limitações atuais
+
+- a taxonomia canônica ainda mapeia vários nós avançados para tipos mais genéricos
+- parte da semântica específica do editor permanece em `config`
+- a UI ainda exibe tudo no mesmo painel de validação, sem seção separada para “canônico”
+- o runtime ainda consome `FlowDefinition`, não o modelo canônico diretamente
+
+## Próximos passos
+
+1. enriquecer mapeamentos canônicos para voice, RAG e utilitários avançados
+2. adicionar adapter BPMN -> Canonical
+3. adicionar adapter Canonical -> BPMN
+4. separar no editor os warnings do backend, preflight e canônicos
+5. permitir geração assistida por IA diretamente em `CanonicalProcessDefinition`

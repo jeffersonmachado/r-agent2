@@ -23,13 +23,13 @@ services:
       RATE_LIMIT_SCRAPING_DURATION: ${RATE_LIMIT_SCRAPING_DURATION:-300}
       RATE_LIMIT_SCRAPING_RPS: ${RATE_LIMIT_SCRAPING_RPS:-3}
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
-      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8001}
+      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       # PostgreSQL - Configuração de produção
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${PGUSER:-postgres}:${PGPASSWORD:-postgres}@postgres:5432/${PGDATABASE:-r_agent2}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:-StrongPass}@postgres:5432/${POSTGRES_DB:-results_saas}}
       PGHOST: ${PGHOST:-postgres}
-      PGUSER: ${PGUSER:-postgres}
-      PGPASSWORD: ${PGPASSWORD:-postgres}
-      PGDATABASE: ${PGDATABASE:-r_agent2}
+      PGUSER: ${POSTGRES_USER:-results_app}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-StrongPass}
+      PGDATABASE: ${POSTGRES_DB:-results_saas}
       PGPORT: ${PGPORT:-5432}
       # Criptografia de segredos (OBRIGATÓRIO em produção)
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
@@ -52,18 +52,36 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Configurações adicionais de produção
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # -------------------------------------------------------------------
+      # PBX v1 (Asterisk Realtime/ODBC + AMI)
+      # -------------------------------------------------------------------
+      AMI_HOST: ${AMI_HOST:-asterisk}
+      AMI_PORT: ${AMI_PORT:-5038}
+      AMI_USERNAME: ${AMI_USERNAME:-ragent2}
+      AMI_SECRET: ${AMI_SECRET:-ragent2}
+      AMI_ORIGINATE_ENABLED: ${AMI_ORIGINATE_ENABLED:-false}
+      PBX_MEDIA_DIR: ${PBX_MEDIA_DIR:-/app/api/data/pbx-media}
+      PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
+      PBX_RECORDING_ENABLED: ${PBX_RECORDING_ENABLED:-false}
+      PBX_MIXMONITOR_DIR: ${PBX_MIXMONITOR_DIR:-/var/spool/asterisk/monitor/pbx}
     ports:
       # Porta exposta no host (externa) -> porta interna do container (3000)
       - "${API_PUBLIC_PORT:-3001}:3000"
     volumes:
       # Persistência de dados
-      - api-data:/app/api/data
+      - r-agent2-api-data:/app/api/data
+      - r-agent2-pbx-media-data:/app/api/data/pbx-media
+      - r-agent2-pbx-recordings-data:/app/api/data/pbx-recordings
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
+      rag-service:
+        condition: service_healthy
+      asterisk:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
@@ -100,7 +118,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
@@ -126,30 +144,33 @@ services:
       PORT: 8000
       DEBUG: ${RAG_DEBUG:-false}
       EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-384}
       CHUNK_SIZE: ${RAG_CHUNK_SIZE:-500}
       CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-50}
       CHUNK_STRATEGY: ${RAG_CHUNK_STRATEGY:-sentence}
-      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-faiss}
+      VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-postgres}
       VECTOR_STORE_PATH: /app/data/vector_store
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-r_agent2}}
     ports:
-      - "${RAG_PORT:-8002}:8001"
+      - "${RAG_PORT:-8002}:8000"
     volumes:
-      - rag-vector-store:/app/data/vector_store
+      - r-agent2-rag-vector-store:/app/data/vector_store
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/rag/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
@@ -160,32 +181,33 @@ services:
           memory: 1G
 
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: r-agent2-postgres-prod
     environment:
-      POSTGRES_USER: ${PGUSER:-postgres}
-      POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
-      POSTGRES_DB: ${PGDATABASE:-r_agent2}
+      POSTGRES_USER: ${POSTGRES_USER:-results_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-StrongPass}
+      POSTGRES_DB: ${POSTGRES_DB:-results_saas}
       PGDATA: /var/lib/postgresql/data/pgdata
       # Configurações de performance para produção
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=pt_BR.UTF-8"
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
       # Configurações de segurança
       POSTGRES_HOST_AUTH_METHOD: md5
     ports:
       - "${PGPORT:-5433}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - r-agent2-postgres-data:/var/lib/postgresql/data
       # Scripts de inicialização (opcional)
       # - ./scripts/postgres-init:/docker-entrypoint-initdb.d
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres} -d ${PGDATABASE:-r_agent2}"]
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 40s
     deploy:
       resources:
         limits:
@@ -215,6 +237,35 @@ services:
       -c log_timezone=America/Sao_Paulo
       -c timezone=America/Sao_Paulo
 
+  asterisk:
+    build:
+      context: ./pbx/asterisk
+      dockerfile: ./Dockerfile
+    image: r-agent2-asterisk:latest
+    container_name: r-agent2-asterisk-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
+      - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
+      - r-agent2-pbx-media-data:/var/lib/asterisk/sounds/pbx
+      - r-agent2-pbx-recordings-data:/var/spool/asterisk/monitor/pbx
+    command: sh -c "asterisk -f -vvvvv -d"
+    ports:
+      - "${AMI_PUBLIC_PORT:-5038}:5038"
+      - "${SIP_UDP_PORT:-5060}:5060/udp"
+    restart: unless-stopped
+    networks:
+      - r-agent2-network
+    healthcheck:
+      test: ["CMD-SHELL", "asterisk -rx 'core show version' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   redis:
     build:
       context: ./redis
@@ -224,17 +275,16 @@ services:
     ports:
       - "${REDIS_PORT:-6380}:6379"
     volumes:
-      - redis-data:/data
+      - r-agent2-redis-data:/data
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
-    restart: always
+    restart: unless-stopped
     networks:
       - r-agent2-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 5s
+      timeout: 3s
       retries: 5
-      start_period: 10s
     deploy:
       resources:
         limits:
@@ -245,14 +295,12 @@ services:
           memory: 128M
 
 volumes:
-  rag-vector-store:
-    driver: local
-  redis-data:
-    driver: local
-  api-data:
-    driver: local
-  postgres-data:
-    driver: local
+  r-agent2-postgres-data:
+  r-agent2-redis-data:
+  r-agent2-api-data:
+  r-agent2-pbx-media-data:
+  r-agent2-pbx-recordings-data:
+  r-agent2-rag-vector-store:
 
 networks:
   r-agent2-network:

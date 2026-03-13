@@ -33,7 +33,7 @@ export function RpaReplaysPage() {
     return saved ? parseInt(saved, 10) : 400;
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [replayInfoCollapsed, setReplayInfoCollapsed] = useState(false);
   
   // Filtros
@@ -249,7 +249,10 @@ export function RpaReplaysPage() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('pt-BR');
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('pt-BR');
   };
 
   const formatDuration = (ms) => {
@@ -1265,4 +1268,3 @@ export function RpaReplaysPage() {
     </div>
   );
 }
-

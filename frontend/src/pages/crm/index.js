@@ -1,0 +1,15 @@
+export { CrmPage } from './CrmPage';
+export { CrmDashboardPage } from './CrmDashboardPage';
+export { AccountsPage } from './AccountsPage';
+export { ContactsPage } from './ContactsPage';
+export { LeadsPage } from './LeadsPage';
+export { PipelinesPage } from './PipelinesPage';
+export { OpportunitiesPage } from './OpportunitiesPage';
+export { ActivitiesPage } from './ActivitiesPage';
+export { AnalyticsPage } from './AnalyticsPage';
+export { AnalyticsDashboard } from './AnalyticsDashboard';
+export { ReportsPage } from './ReportsPage';
+export { CampaignsPage } from './CampaignsPage';
+export { WebhooksPage } from './WebhooksPage';
+export { RbacPage } from './RbacPage';
+export { AuditPage } from './AuditPage';

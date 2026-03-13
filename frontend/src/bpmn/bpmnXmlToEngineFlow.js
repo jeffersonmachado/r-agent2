@@ -14,6 +14,7 @@ const ROUTER_NODE_TYPES = new Set(['router', 'schedule_router', 'options']);
 const FLOW_NODE_LOCAL_NAMES = new Set([
   'startEvent',
   'endEvent',
+  'task',
   'serviceTask',
   'scriptTask',
   'userTask',
@@ -269,6 +270,28 @@ function resolveScriptTaskType(extensionMetadata, report, elementId) {
   return 'set_variable';
 }
 
+function resolveGenericTaskType(extensionMetadata, report, elementId) {
+  const extensionType = asTrimmedString(extensionMetadata && extensionMetadata.type);
+
+  if (extensionType && extensionMetadata && extensionMetadata.data) {
+    return {
+      nodeType: extensionType,
+      degraded: false,
+    };
+  }
+
+  report.warnings.push({
+    code: 'bpmn_task_ambiguous',
+    elementId,
+    message: 'Generic BPMN task has no extension metadata. Imported as api by default.',
+  });
+
+  return {
+    nodeType: 'api',
+    degraded: true,
+  };
+}
+
 function resolveGatewayType(extensionMetadata) {
   const extensionType = asTrimmedString(extensionMetadata && extensionMetadata.type);
   if (extensionType === BPMN_EXTENSION_TYPES.SCHEDULE_ROUTER) return 'schedule_router';
@@ -336,6 +359,13 @@ function resolveNodeDescriptor(element, report, registry, options = {}) {
     case 'userTask':
       descriptor.nodeType = 'handoff';
       break;
+
+    case 'task': {
+      const genericTask = resolveGenericTaskType(extensionMetadata, report, bpmnElementId);
+      descriptor.nodeType = genericTask.nodeType;
+      descriptor.degraded = genericTask.degraded;
+      break;
+    }
 
     case 'callActivity': {
       descriptor.nodeType = 'subflow';
@@ -648,7 +678,7 @@ export function bpmnXmlToEngineFlow(xml, options = {}) {
   const bpmnRegistry = registerDiagramInterchangeHandlers(registerPoolLaneHandlers(
     registerMessageFlowHandlers(
       registerBoundaryEventHandlers(
-        registerAdvancedGatewayHandlers(createBpmnElementRegistry({ flags: options.flags }))
+        registerAdvancedGatewayHandlers(createBpmnElementRegistry())
       )
     )
   ));
@@ -777,6 +807,9 @@ export function bpmnXmlToEngineFlow(xml, options = {}) {
     nodes: flowNodes,
     metadata: {
       ...(options.metadata && typeof options.metadata === 'object' ? options.metadata : {}),
+      diagramType: 'bpmn',
+      editorMode: 'bpmn',
+      sourceXml: String(xml || ''),
       bpmn: {
         sourceFormat: 'bpmn2',
         importedAt: new Date().toISOString(),

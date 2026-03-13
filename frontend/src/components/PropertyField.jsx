@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Input, Textarea } from '../styles/Input';
 import { fetchJson } from '../api/client';
+import { getTenantId } from '../api/auth';
 
 /**
  * Campo de propriedade com label, ajuda e validação
@@ -412,6 +413,7 @@ export function KeywordsField({
   const keywords = value && typeof value === 'object' ? value : {};
   const [newKeywords, setNewKeywords] = useState({});
   const [aiSuggestions, setAiSuggestions] = useState({});
+  const [aiSuggestionConfidence, setAiSuggestionConfidence] = useState({});
   const [aiLoading, setAiLoading] = useState({});
 
   const handleAddKeyword = (intent) => {
@@ -485,6 +487,7 @@ export function KeywordsField({
   const handleGenerateAiSuggestions = async (intent) => {
     setAiLoading({ ...aiLoading, [intent]: true });
     setAiSuggestions({ ...aiSuggestions, [intent]: [] });
+    setAiSuggestionConfidence({ ...aiSuggestionConfidence, [intent]: null });
     
     try {
       const prompt = `Você é um especialista em classificação de intenções de usuários em chatbots. 
@@ -508,7 +511,7 @@ Gere palavras-chave novas que não estejam na lista acima.`;
         method: 'POST',
         body: JSON.stringify({
           prompt,
-          tenantId: null, // TODO: obter do contexto do agente autenticado
+          tenantId: getTenantId(),
         }),
       });
 
@@ -533,16 +536,22 @@ Gere palavras-chave novas que não estejam na lista acima.`;
                 .filter((kw) => kw && !currentKeywords.includes(kw));
               
               setAiSuggestions({ ...aiSuggestions, [intent]: filtered });
+              setAiSuggestionConfidence({
+                ...aiSuggestionConfidence,
+                [intent]: Number.isFinite(Number(response?.confidence)) ? Number(response.confidence) : null,
+              });
             }
           }
         } catch (parseError) {
           console.error('Erro ao parsear sugestões da IA:', parseError);
           setAiSuggestions({ ...aiSuggestions, [intent]: [] });
+          setAiSuggestionConfidence({ ...aiSuggestionConfidence, [intent]: null });
         }
       }
     } catch (error) {
       console.error('Erro ao gerar sugestões da IA:', error);
       setAiSuggestions({ ...aiSuggestions, [intent]: [] });
+      setAiSuggestionConfidence({ ...aiSuggestionConfidence, [intent]: null });
     } finally {
       setAiLoading({ ...aiLoading, [intent]: false });
     }
@@ -660,14 +669,21 @@ Gere palavras-chave novas que não estejam na lista acima.`;
                           <label className="text-xs text-text-secondary font-medium">
                             Sugestões de IA:
                           </label>
-                          <button
-                            type="button"
-                            onClick={() => handleAddAllAiSuggestions(intent)}
-                            className="px-2 py-1 text-xs bg-bg-tertiary text-text-secondary rounded hover:bg-bg-hover transition-colors"
-                            title="Adicionar todas as sugestões da IA"
-                          >
-                            + Adicionar todas
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {Number.isFinite(Number(aiSuggestionConfidence[intent])) && (
+                              <span className="text-[11px] px-2 py-1 rounded-full border border-border-default bg-bg-tertiary text-text-secondary">
+                                Confiança: {Math.round(Math.max(0, Math.min(1, Number(aiSuggestionConfidence[intent]))) * 100)}%
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleAddAllAiSuggestions(intent)}
+                              className="px-2 py-1 text-xs bg-bg-tertiary text-text-secondary rounded hover:bg-bg-hover transition-colors"
+                              title="Adicionar todas as sugestões da IA"
+                            >
+                              + Adicionar todas
+                            </button>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {aiSuggestions[intent].map((suggestion, idx) => (
@@ -1234,4 +1250,3 @@ export function ScheduleRouterField({
     </PropertyField>
   );
 }
-

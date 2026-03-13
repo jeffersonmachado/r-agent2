@@ -1,5 +1,3 @@
-import { isBpmnFeatureEnabled } from './bpmnFeatureFlags';
-
 function isParallelGatewayNode(node) {
   const gatewayType = String(node?.config?.bpmnGatewayType || '').trim();
   return node?.type === 'router' && gatewayType === 'parallel';
@@ -9,8 +7,7 @@ export function registerAdvancedGatewayHandlers(registry) {
   if (!registry || typeof registry.register !== 'function') return registry;
 
   registry.register('bpmn:parallelGateway', {
-    onExport: ({ node, flags }) => {
-      if (!isBpmnFeatureEnabled('ADVANCED_GATEWAYS', flags)) return null;
+    onExport: ({ node }) => {
       if (!isParallelGatewayNode(node)) return null;
 
       return {
@@ -18,8 +15,7 @@ export function registerAdvancedGatewayHandlers(registry) {
       };
     },
 
-    onImport: ({ element, flags }) => {
-      if (!isBpmnFeatureEnabled('ADVANCED_GATEWAYS', flags)) return null;
+    onImport: ({ element }) => {
       if (!element || element.localName !== 'parallelGateway') return null;
 
       return {

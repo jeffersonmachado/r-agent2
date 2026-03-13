@@ -104,6 +104,16 @@ export function SegmentationPage() {
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Tags, categorias e filtros avançados
         </p>
+      
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
       </div>
 
         {/* Filtros */}

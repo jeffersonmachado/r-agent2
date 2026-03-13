@@ -1,5 +1,3 @@
-import { isBpmnFeatureEnabled } from './bpmnFeatureFlags';
-
 function asTrimmedString(value) {
   const out = String(value ?? '').trim();
   return out || null;
@@ -22,9 +20,7 @@ export function registerPoolLaneHandlers(registry) {
   if (!registry || typeof registry.register !== 'function') return registry;
 
   registry.register('bpmn:participant', {
-    onExport: ({ node, flags }) => {
-      if (!isBpmnFeatureEnabled('MESSAGE_FLOW', flags)) return null;
-
+    onExport: ({ node }) => {
       const poolType = node?.config?.bpmnPoolType;
       if (poolType !== true) return null;
 
@@ -35,8 +31,7 @@ export function registerPoolLaneHandlers(registry) {
       };
     },
 
-    onImport: ({ element, flags, report, elementId }) => {
-      if (!isBpmnFeatureEnabled('MESSAGE_FLOW', flags)) return null;
+    onImport: ({ element, report, elementId }) => {
       if (!element || element.localName !== 'participant') return null;
 
       const processRef = asTrimmedString(element.getAttribute('processRef'));
@@ -59,9 +54,7 @@ export function registerPoolLaneHandlers(registry) {
   });
 
   registry.register('bpmn:lane', {
-    onExport: ({ node, flags }) => {
-      if (!isBpmnFeatureEnabled('MESSAGE_FLOW', flags)) return null;
-
+    onExport: ({ node }) => {
       const laneType = node?.config?.bpmnLaneType;
       if (laneType !== 'lane') return null;
 
@@ -72,8 +65,7 @@ export function registerPoolLaneHandlers(registry) {
       };
     },
 
-    onImport: ({ element, flags, report, elementId, parentPoolId }) => {
-      if (!isBpmnFeatureEnabled('MESSAGE_FLOW', flags)) return null;
+    onImport: ({ element, report, elementId, parentPoolId }) => {
       if (!element || element.localName !== 'lane') return null;
 
       report?.warnings?.push({

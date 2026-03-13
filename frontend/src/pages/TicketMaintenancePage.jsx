@@ -6,6 +6,9 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import { NavigationLink } from '../components/NavigationLink';
 import { useRouter } from '../hooks/useRouter';
+import { usePhoneMasking } from '../hooks/usePhoneMasking';
+import { MaskedPhone } from '../components/MaskedPhone';
+import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 
 /**
@@ -38,6 +41,7 @@ export function TicketMaintenancePage() {
   const [metrics, setMetrics] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [queues, setQueues] = useState([]);
+  const { enabled: phoneMaskingEnabled } = usePhoneMasking();
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [pagination, setPagination] = useState({
@@ -66,6 +70,16 @@ export function TicketMaintenancePage() {
 
   // Carrega métricas do sistema
   const loadMetrics = useCallback(async () => {
+    // Importante para automações (RPA) e UX:
+    // a seção de métricas (incluindo o botão "Gerenciar Filas") só renderiza quando `metrics` não é null.
+    // Se o backend estiver lento, deixamos um placeholder imediatamente para a UI não "sumir".
+    setMetrics((prev) => prev ?? {
+      totalTickets: 0,
+      ticketsByStatus: { waiting: 0, in_progress: 0, closed: 0 },
+      ticketsByQueue: {},
+      oldClosedTickets: { olderThan7Days: 0, olderThan30Days: 0 },
+      memoryUsage: { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 },
+    });
     try {
       const data = await getQueueMetrics();
       logger.info('Métricas carregadas', { 
@@ -157,6 +171,31 @@ export function TicketMaintenancePage() {
         finalTotal = result.total || 0; // Total do backend (já paginado)
       }
 
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const ids = Array.from(new Set(
+        finalTickets
+          .map((ticket) => String(ticket?.assignedTo || '').trim())
+          .filter((value) => uuidRegex.test(value))
+      ));
+      const resolvedById = {};
+      await Promise.all(ids.map(async (id) => {
+        try {
+          const resp = await getAgentNameById(id);
+          const name = String(resp?.agent?.name || '').trim();
+          resolvedById[id] = name || id;
+        } catch {
+          resolvedById[id] = id;
+        }
+      }));
+
+      finalTickets = finalTickets.map((ticket) => {
+        const raw = String(ticket?.assignedTo || '').trim();
+        return {
+          ...ticket,
+          assignedToDisplay: resolvedById[raw] || raw,
+        };
+      });
+
       setTickets(finalTickets);
       setTotalTickets(finalTotal);
     } catch (error) {
@@ -202,6 +241,7 @@ export function TicketMaintenancePage() {
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleString('pt-BR');
   };
 
@@ -423,6 +463,7 @@ export function TicketMaintenancePage() {
                       });
                     }
                   }}
+                  data-testid="queue-manager-toggle"
                   variant="secondary"
                   style={{ fontSize: '0.9em', padding: '6px 12px' }}
                 >
@@ -716,7 +757,7 @@ export function TicketMaintenancePage() {
                         {getStatusLabel(ticket.status)}
                       </span>
                     </td>
-                    <td>{formatPhoneNumber(ticket.phoneNumber)}</td>
+                    <td><MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} /></td>
                     <td className="message-cell">
                       {ticket.lastUserMessage ? (
                         <span title={ticket.lastUserMessage}>
@@ -728,7 +769,7 @@ export function TicketMaintenancePage() {
                         <span className="empty-text">-</span>
                       )}
                     </td>
-                    <td>{ticket.assignedTo || <span className="empty-text">-</span>}</td>
+                    <td>{ticket.assignedToDisplay || ticket.assignedTo || <span className="empty-text">-</span>}</td>
                     <td className="date-cell">{formatDate(ticket.createdAt)}</td>
                     <td className="date-cell">{formatDate(ticket.updatedAt)}</td>
                   </tr>
@@ -790,4 +831,3 @@ export function TicketMaintenancePage() {
     </div>
   );
 }
-

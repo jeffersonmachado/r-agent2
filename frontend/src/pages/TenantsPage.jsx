@@ -19,6 +19,25 @@ export function TenantsPage() {
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
+  const copyToClipboard = async (text, label = 'Valor') => {
+    const value = (text === null || text === undefined) ? '' : String(text);
+    if (!value.trim()) {
+      showToast(`${label} está vazio`, 'warning', 2500);
+      return;
+    }
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        showToast(`${label} copiado`, 'success', 2000);
+      } else {
+        showToast('Clipboard indisponível neste navegador', 'warning', 3000);
+      }
+    } catch (err) {
+      logger.warn('[TenantsPage] Falha ao copiar para clipboard', { error: err?.message || String(err) });
+      showToast('Falha ao copiar', 'error', 3000);
+    }
+  };
+
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -460,6 +479,90 @@ export function TenantsPage() {
                 />
                 <p className="mt-1 text-xs text-text-secondary">Objetivo estratégico do cliente com o uso da plataforma</p>
               </div>
+
+              {/* Rastreabilidade do fluxo inicial (somente leitura) */}
+              {editingTenant && (
+                <div className="p-4 bg-bg-secondary rounded-lg border border-border-default">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="text-sm font-semibold text-text-primary">
+                      Rastreabilidade do fluxo inicial
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const s = editingTenant?.settings || {};
+                        const text = [
+                          `initialFlowId: ${s?.initialFlowId || ''}`,
+                          `initialFlowExecutionId: ${s?.initialFlowExecutionId || ''}`,
+                          `initialFlowGeneratedAt: ${s?.initialFlowGeneratedAt || ''}`,
+                        ].join('\n');
+                        copyToClipboard(text, 'Metadados do fluxo inicial');
+                      }}
+                    >
+                      Copiar tudo
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs text-text-secondary">Flow ID</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-text-primary font-mono max-w-[420px] truncate" title={editingTenant?.settings?.initialFlowId || ''}>
+                          {editingTenant?.settings?.initialFlowId || '—'}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(editingTenant?.settings?.initialFlowId, 'Flow ID')}
+                        >
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs text-text-secondary">Execution ID</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-text-primary font-mono max-w-[420px] truncate" title={editingTenant?.settings?.initialFlowExecutionId || ''}>
+                          {editingTenant?.settings?.initialFlowExecutionId || '—'}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(editingTenant?.settings?.initialFlowExecutionId, 'Execution ID')}
+                        >
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs text-text-secondary">Gerado em</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-text-primary font-mono max-w-[420px] truncate" title={editingTenant?.settings?.initialFlowGeneratedAt || ''}>
+                          {editingTenant?.settings?.initialFlowGeneratedAt || '—'}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(editingTenant?.settings?.initialFlowGeneratedAt, 'Gerado em')}
+                        >
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-xs text-text-secondary">
+                    Esses campos são preenchidos automaticamente quando o fluxo inicial é persistido.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block mb-2 text-sm font-medium text-text-primary">

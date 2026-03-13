@@ -11,11 +11,17 @@
             "message",
             "user_input",
             "router",
+            "semantic_router",
             "schedule_router",
             "set_variable",
             "handoff",
             "ai",
+            "rag_answer",
             "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -26,18 +32,26 @@
             "delay",
             "format_date",
             "random_number",
-            "get_user_info"
+            "get_user_info",
+            "merge"
           ]
         },
         "message": {
           "canConnectTo": [
             "user_input",
             "router",
+            "semantic_router",
             "schedule_router",
             "set_variable",
             "handoff",
             "ai",
+            "rag_answer",
             "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -48,18 +62,26 @@
             "delay",
             "format_date",
             "random_number",
-            "get_user_info"
+            "get_user_info",
+            "merge"
           ]
         },
         "user_input": {
           "canConnectTo": [
             "router",
+            "semantic_router",
             "schedule_router",
             "message",
             "set_variable",
             "handoff",
             "ai",
+            "rag_answer",
             "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -70,7 +92,95 @@
             "delay",
             "format_date",
             "random_number",
-            "get_user_info"
+            "get_user_info",
+            "merge"
+          ]
+        },
+        "options": {
+          "canConnectTo": [
+            "router",
+            "semantic_router",
+            "schedule_router",
+            "message",
+            "set_variable",
+            "handoff",
+            "ai",
+            "rag_answer",
+            "ai_task",
+            "business_entry",
+            "subflow",
+            "api",
+            "fallback",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info",
+            "merge"
+          ]
+        },
+        "api": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "semantic_router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "subflow",
+            "options",
+            "business_entry",
+            "fallback",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info",
+            "merge"
+          ]
+        },
+        "semantic_router": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "semantic_router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "rag_answer",
+            "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info",
+            "merge"
           ]
         },
         "router": {
@@ -78,11 +188,18 @@
             "message",
             "user_input",
             "router",
+            "semantic_router",
             "schedule_router",
             "set_variable",
             "handoff",
             "ai",
+            "rag_answer",
             "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -93,7 +210,8 @@
             "delay",
             "format_date",
             "random_number",
-            "get_user_info"
+            "get_user_info",
+            "merge"
           ]
         },
         "schedule_router": {
@@ -101,11 +219,18 @@
             "message",
             "user_input",
             "router",
+            "semantic_router",
             "schedule_router",
             "set_variable",
             "handoff",
             "ai",
+            "rag_answer",
             "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -116,7 +241,8 @@
             "delay",
             "format_date",
             "random_number",
-            "get_user_info"
+            "get_user_info",
+            "merge"
           ]
         },
         "set_variable": {
@@ -124,10 +250,17 @@
             "message",
             "user_input",
             "router",
+            "semantic_router",
             "schedule_router",
             "handoff",
             "ai",
+            "rag_answer",
             "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -138,7 +271,8 @@
             "delay",
             "format_date",
             "random_number",
-            "get_user_info"
+            "get_user_info",
+            "merge"
           ]
         },
         "ai": {
@@ -146,9 +280,14 @@
             "message",
             "user_input",
             "router",
+            "semantic_router",
             "schedule_router",
             "set_variable",
             "handoff",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -159,7 +298,35 @@
             "delay",
             "format_date",
             "random_number",
-            "get_user_info"
+            "get_user_info",
+            "merge"
+          ]
+        },
+        "rag_answer": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "semantic_router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info",
+            "merge"
           ]
         },
         "ai_task": {
@@ -167,9 +334,118 @@
             "message",
             "user_input",
             "router",
+            "semantic_router",
             "schedule_router",
             "set_variable",
             "handoff",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info",
+            "merge"
+          ]
+        },
+        "business_entry": {
+          "canConnectTo": [
+            "router",
+            "semantic_router",
+            "schedule_router",
+            "message",
+            "set_variable",
+            "handoff",
+            "ai",
+            "rag_answer",
+            "ai_task",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info",
+            "merge"
+          ]
+        },
+        "subflow": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "semantic_router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "rag_answer",
+            "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
+            "end",
+            "get_flow_info",
+            "get_queue_status",
+            "get_config_value",
+            "list_flows",
+            "get_current_time",
+            "generate_uuid",
+            "delay",
+            "format_date",
+            "random_number",
+            "get_user_info",
+            "merge"
+          ]
+        },
+        "handoff": {
+          "canConnectTo": [
+            "end"
+          ],
+          "restriction": "handoff só pode conectar a end"
+        },
+        "fallback": {
+          "canConnectTo": [
+            "message",
+            "handoff",
+            "end"
+          ]
+        },
+        "merge": {
+          "canConnectTo": [
+            "message",
+            "user_input",
+            "router",
+            "semantic_router",
+            "schedule_router",
+            "set_variable",
+            "handoff",
+            "ai",
+            "rag_answer",
+            "ai_task",
+            "business_entry",
+            "subflow",
+            "options",
+            "api",
+            "fallback",
             "end",
             "get_flow_info",
             "get_queue_status",
@@ -182,12 +458,6 @@
             "random_number",
             "get_user_info"
           ]
-        },
-        "handoff": {
-          "canConnectTo": [
-            "end"
-          ],
-          "restriction": "handoff só pode conectar a end"
         },
         "get_flow_info": {
           "canConnectTo": [

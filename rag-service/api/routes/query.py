@@ -5,7 +5,7 @@ Endpoint de consulta RAG.
 from fastapi import APIRouter, HTTPException
 from models.query import QueryRequest, QueryResponse, Source, QueryMetadata
 from services.embedding_service import generate_embedding
-from services.vector_store import get_vector_store
+from services.vector_store import get_vector_store, normalize_tenant_id
 from services.llm_service import generate_response
 from services.nlp_service import process_nlp, improve_query_for_rag, expand_query
 from services.adaptive_learning import get_adaptive_learning_service
@@ -240,6 +240,9 @@ async def query_rag(request: QueryRequest):
         
         if not request.tenantId:
             raise HTTPException(status_code=400, detail="tenantId é obrigatório")
+        
+        # Normaliza tenantId para garantir que query e index usem o mesmo namespace
+        request.tenantId = normalize_tenant_id(request.tenantId)
         
         # Valida se a query não é um UUID ou sem sentido
         if is_uuid_or_meaningless_query(request.query):

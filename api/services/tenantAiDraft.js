@@ -74,6 +74,13 @@ function buildTenantDraftFromAi(tenantData, options = {}) {
   };
 }
 
+function clampString(v, maxLen) {
+  const s = String(v || '').trim();
+  if (!Number.isFinite(maxLen) || maxLen <= 0) return s;
+  if (s.length <= maxLen) return s;
+  return s.slice(0, maxLen).trim();
+}
+
 /**
  * @param {any} draft
  * @param {any} tenantContract - contracts/tenant.contract.json
@@ -148,6 +155,34 @@ function createTenantAiDraft(aiTenantData, options = {}) {
   const riskFlags = ['PENDING_REVIEW'];
   let qualityScore = 100;
 
+  // Enforce contract maxLength deterministically (evita falhas por texto "bom, mas longo").
+  // IMPORTANT: deve acontecer ANTES do AJV.
+  const contract = require('../../contracts/tenant.contract.json');
+  const ramoMax = contract?.properties?.ramo_atividade?.maxLength;
+  const objMax = contract?.properties?.objetivo?.maxLength;
+
+  const originalRamo = tenantDraft.ramo_atividade;
+  const originalObj = tenantDraft.objetivo;
+  if (Number.isFinite(ramoMax)) tenantDraft.ramo_atividade = clampString(tenantDraft.ramo_atividade, ramoMax);
+  if (Number.isFinite(objMax)) tenantDraft.objetivo = clampString(tenantDraft.objetivo, objMax);
+
+  const truncations = [];
+  if (originalRamo && tenantDraft.ramo_atividade && originalRamo.length !== tenantDraft.ramo_atividade.length) {
+    truncations.push({ field: 'ramo_atividade', originalLength: originalRamo.length, maxLength: ramoMax });
+  }
+  if (originalObj && tenantDraft.objetivo && originalObj.length !== tenantDraft.objetivo.length) {
+    truncations.push({ field: 'objetivo', originalLength: originalObj.length, maxLength: objMax });
+  }
+  if (truncations.length > 0) {
+    warnings.push({
+      code: 'FIELDS_TRUNCATED',
+      message: 'Alguns campos foram truncados para atender ao contrato (maxLength).',
+      details: truncations,
+    });
+    riskFlags.push('FIELDS_TRUNCATED');
+    qualityScore -= 5;
+  }
+
   // Proibir segredos no payload bruto (defesa extra; ainda assim construímos por whitelist)
   if (containsSensitiveKeys(aiTenantData)) {
     riskFlags.push('SENSITIVE_FIELDS_DETECTED');
@@ -171,7 +206,7 @@ function createTenantAiDraft(aiTenantData, options = {}) {
   }
 
   // Semântica adicional (hardening)
-  const semantic = validateTenantDraft(tenantDraft, require('../../contracts/tenant.contract.json'));
+  const semantic = validateTenantDraft(tenantDraft, contract);
   if (!semantic.valid) {
     for (const e of semantic.errors || []) errors.push(e);
   }

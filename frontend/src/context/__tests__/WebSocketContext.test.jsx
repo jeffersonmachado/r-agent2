@@ -162,7 +162,7 @@ describe('WebSocketContext', () => {
   });
 
   it('conecta ao WebSocket quando Provider é montado', async () => {
-    render(
+    const { container } = render(
       <WebSocketProvider>
         <TestComponent />
       </WebSocketProvider>
@@ -177,12 +177,14 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('connected').textContent).toBe('connected');
+      const el = container.querySelector('[data-testid="connected"]') || screen.queryByTestId('connected');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('connected');
     }, { timeout: 2000 });
   });
 
   it('autentica com token quando conecta', async () => {
-    render(
+    const { container } = render(
       <WebSocketProvider>
         <TestComponent />
       </WebSocketProvider>
@@ -193,7 +195,9 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('connected').textContent).toBe('connected');
+      const el = container.querySelector('[data-testid="connected"]') || screen.queryByTestId('connected');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('connected');
     }, { timeout: 2000 });
 
     // Verifica que enviou mensagem de autenticação
@@ -209,7 +213,7 @@ describe('WebSocketContext', () => {
   });
 
   it('atualiza authenticated quando recebe sucesso de autenticação', async () => {
-    render(
+    const { container } = render(
       <WebSocketProvider>
         <TestComponent />
       </WebSocketProvider>
@@ -220,7 +224,9 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('connected').textContent).toBe('connected');
+      const el = container.querySelector('[data-testid="connected"]') || screen.queryByTestId('connected');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('connected');
     }, { timeout: 2000 });
 
     // Simula resposta de autenticação
@@ -233,7 +239,9 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('authenticated').textContent).toBe('authenticated');
+      const el = container.querySelector('[data-testid="authenticated"]') || screen.queryByTestId('authenticated');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('authenticated');
     }, { timeout: 2000 });
   });
 
@@ -309,7 +317,7 @@ describe('WebSocketContext', () => {
     const onEvent1 = vi.fn();
     const onEvent2 = vi.fn();
 
-    render(
+    const { container } = render(
       <WebSocketProvider>
         <TestComponent onEvent={onEvent1} />
         <TestComponent onEvent={onEvent2} />
@@ -322,11 +330,9 @@ describe('WebSocketContext', () => {
 
     // Usa queryAllByTestId porque há múltiplos componentes
     await waitFor(() => {
-      const connectedEls = screen.queryAllByTestId('connected');
+      const connectedEls = container.querySelectorAll('[data-testid="connected"]');
       expect(connectedEls.length).toBeGreaterThan(0);
-      if (connectedEls.length > 0) {
-        expect(connectedEls[0].textContent).toBe('connected');
-      }
+      expect(connectedEls[0].textContent).toBe('connected');
     }, { timeout: 2000 });
 
     // Simula evento
@@ -345,7 +351,7 @@ describe('WebSocketContext', () => {
   });
 
   it('permite enviar mensagem via send', async () => {
-    render(
+    const { container } = render(
       <WebSocketProvider>
         <TestComponent />
       </WebSocketProvider>
@@ -356,12 +362,16 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('connected').textContent).toBe('connected');
+      const el = container.querySelector('[data-testid="connected"]') || screen.queryByTestId('connected');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('connected');
     }, { timeout: 2000 });
 
     // Clica no botão de enviar
     await act(async () => {
-      screen.getByTestId('send-button').click();
+      const btn = container.querySelector('[data-testid="send-button"]') || screen.queryByTestId('send-button');
+      expect(btn).toBeTruthy();
+      btn.click();
     });
 
     // Verifica que mensagem foi enviada
@@ -375,7 +385,7 @@ describe('WebSocketContext', () => {
   });
 
   it('permite reconectar via reconnect', async () => {
-    render(
+    const { container } = render(
       <WebSocketProvider>
         <TestComponent />
       </WebSocketProvider>
@@ -386,7 +396,9 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('connected').textContent).toBe('connected');
+      const el = container.querySelector('[data-testid="connected"]') || screen.queryByTestId('connected');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('connected');
     }, { timeout: 2000 });
 
     // Fecha conexão
@@ -396,12 +408,14 @@ describe('WebSocketContext', () => {
 
     // Clica no botão de reconectar
     await act(async () => {
-      screen.getByTestId('reconnect-button').click();
+      const btn = container.querySelector('[data-testid="reconnect-button"]') || screen.queryByTestId('reconnect-button');
+      expect(btn).toBeTruthy();
+      btn.click();
     });
 
     // Verifica que tentou reconectar
     // Nota: Em um teste real, precisaríamos verificar se um novo WebSocket foi criado
-    expect(screen.getByTestId('reconnect-button')).toBeTruthy();
+    expect(container.querySelector('[data-testid="reconnect-button"]') || screen.queryByTestId('reconnect-button')).toBeTruthy();
   });
 
   it('lança erro se usado fora do Provider', () => {
@@ -423,7 +437,7 @@ describe('WebSocketContext', () => {
   it('não registra handler quando enabled é false', async () => {
     const onEvent = vi.fn();
 
-    render(
+    const { container } = render(
       <WebSocketProvider>
         <TestComponent enabled={false} onEvent={onEvent} />
       </WebSocketProvider>
@@ -434,7 +448,9 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('connected').textContent).toBe('connected');
+      const el = container.querySelector('[data-testid="connected"]') || screen.queryByTestId('connected');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('connected');
     }, { timeout: 2000 });
 
     // Simula evento
@@ -456,7 +472,7 @@ describe('WebSocketContext', () => {
   });
 
   it('limpa recursos ao desmontar Provider', async () => {
-    const { unmount } = render(
+    const { unmount, container } = render(
       <WebSocketProvider>
         <TestComponent />
       </WebSocketProvider>
@@ -467,7 +483,9 @@ describe('WebSocketContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('connected').textContent).toBe('connected');
+      const el = container.querySelector('[data-testid="connected"]') || screen.queryByTestId('connected');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('connected');
     }, { timeout: 2000 });
 
     // Desmonta o Provider

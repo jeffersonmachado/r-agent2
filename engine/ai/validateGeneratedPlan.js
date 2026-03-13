@@ -20,7 +20,9 @@
 
 const { validateFlowPlan } = require('../../api/utils/validateFlowPlan');
 const { validateRpaPlan } = require('../../api/utils/validateRpaPlan');
-const logger = require('../../api/utils/logger');
+// NOTE: este gate vive hoje na pasta engine/ai, mas não deve depender da API.
+// Para logs, usamos console (compatível com .debug/.info/.warn/.error).
+const logger = console;
 const { recordValidationFailure } = require('./aiTelemetry');
 const { recordAiGateFailure } = require('../qa/qaTelemetry');
 const { validateChatbotFlowSemantic } = require('./chatbotSemanticValidator');

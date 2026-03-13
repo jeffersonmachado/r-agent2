@@ -55,19 +55,9 @@ function buildBoundaryErrorXml() {
 }
 
 describe('Phase 9.2 boundary events', () => {
-  it('keeps default MVP export behavior when boundary events are disabled', () => {
+  it('exports timer boundaryEvent by default', () => {
     const { xml } = engineFlowToBpmnXml(buildBoundaryTimerFlow(), {
       mode: BPMN_EXPORT_MODE.SIMPLE,
-    });
-
-    expect(xml).toContain('bpmn:intermediateCatchEvent');
-    expect(xml).not.toContain('bpmn:boundaryEvent');
-  });
-
-  it('exports timer boundaryEvent when BOUNDARY_EVENTS is enabled', () => {
-    const { xml } = engineFlowToBpmnXml(buildBoundaryTimerFlow(), {
-      mode: BPMN_EXPORT_MODE.SIMPLE,
-      flags: { BOUNDARY_EVENTS: true },
     });
 
     expect(xml).toContain('bpmn:boundaryEvent');
@@ -97,7 +87,6 @@ describe('Phase 9.2 boundary events', () => {
 
     const { xml } = engineFlowToBpmnXml(flow, {
       mode: BPMN_EXPORT_MODE.SIMPLE,
-      flags: { BOUNDARY_EVENTS: true },
     });
 
     const attachedTaskId = xml.match(/<bpmn:sendTask[^>]*id="([^"]+)"/)?.[1];
@@ -129,7 +118,6 @@ describe('Phase 9.2 boundary events', () => {
 
     const { xml } = engineFlowToBpmnXml(flow, {
       mode: BPMN_EXPORT_MODE.SIMPLE,
-      flags: { BOUNDARY_EVENTS: true },
     });
 
     const attachedTaskId = xml.match(/<bpmn:sendTask[^>]*id="([^"]+)"/)?.[1];
@@ -140,17 +128,8 @@ describe('Phase 9.2 boundary events', () => {
     expect(boundaryAttachedTo).not.toBe('Ghost_Pool_1');
   });
 
-  it('keeps boundaryEvent unsupported by default during import', () => {
+  it('imports timer boundaryEvent as degraded delay by default', () => {
     const { flowDefinition, report } = bpmnXmlToEngineFlow(buildBoundaryTimerXml());
-
-    expect(report.unsupportedElements.some((item) => item.elementName === 'boundaryEvent')).toBe(true);
-    expect(flowDefinition.nodes.some((node) => node.config.bpmnElementName === 'boundaryEvent')).toBe(false);
-  });
-
-  it('imports timer boundaryEvent as degraded delay when BOUNDARY_EVENTS is enabled', () => {
-    const { flowDefinition, report } = bpmnXmlToEngineFlow(buildBoundaryTimerXml(), {
-      flags: { BOUNDARY_EVENTS: true },
-    });
 
     const boundaryDelay = flowDefinition.nodes.find(
       (node) =>
@@ -165,10 +144,8 @@ describe('Phase 9.2 boundary events', () => {
     expect(report.warnings.some((item) => item.code === 'bpmn_boundary_event_degraded')).toBe(true);
   });
 
-  it('imports error boundaryEvent as degraded fallback when BOUNDARY_EVENTS is enabled', () => {
-    const { flowDefinition, report } = bpmnXmlToEngineFlow(buildBoundaryErrorXml(), {
-      flags: { BOUNDARY_EVENTS: true },
-    });
+  it('imports error boundaryEvent as degraded fallback by default', () => {
+    const { flowDefinition, report } = bpmnXmlToEngineFlow(buildBoundaryErrorXml());
 
     const boundaryFallback = flowDefinition.nodes.find(
       (node) =>

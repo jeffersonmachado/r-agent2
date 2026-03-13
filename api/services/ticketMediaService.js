@@ -1,0 +1,96 @@
+const crypto = require('crypto');
+const getTicketMediaModel = require('../db/models/TicketMedia');
+
+let ensureReadyPromise = null;
+
+function normalizeTenant(tenantId) {
+  const value = String(tenantId || '').trim();
+  return value || 'default';
+}
+
+async function ensureReady() {
+  if (!ensureReadyPromise) {
+    ensureReadyPromise = (async () => {
+      const TicketMedia = getTicketMediaModel();
+      await TicketMedia.sync();
+      return TicketMedia;
+    })().catch((err) => {
+      ensureReadyPromise = null;
+      throw err;
+    });
+  }
+  return ensureReadyPromise;
+}
+
+function buildMediaId() {
+  return `tm-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function toSize(value, fallback = null) {
+  if (Number.isFinite(value)) return Number(value);
+  const parsed = parseInt(String(value || ''), 10);
+  if (Number.isFinite(parsed)) return parsed;
+  return fallback;
+}
+
+async function storeTicketMedia({ tenantId, fileName, mimeType, sizeBytes, buffer, createdBy = null }) {
+  if (!buffer || !Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new Error('Arquivo de midia vazio ou invalido');
+  }
+
+  const TicketMedia = await ensureReady();
+  const id = buildMediaId();
+  const normalizedTenant = normalizeTenant(tenantId);
+  const now = new Date();
+  const safeMimeType = String(mimeType || '').trim() || 'application/octet-stream';
+  const safeFileName = String(fileName || '').trim() || id;
+  const finalSize = toSize(sizeBytes, buffer.length);
+  const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+
+  await TicketMedia.create({
+    id,
+    tenantKey: normalizedTenant,
+    fileName: safeFileName,
+    mimeType: safeMimeType,
+    sizeBytes: finalSize,
+    sha256: hash,
+    createdBy: createdBy ? String(createdBy) : null,
+    data: buffer,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return {
+    id,
+    tenantId: normalizedTenant,
+    fileName: safeFileName,
+    mimeType: safeMimeType,
+    sizeBytes: finalSize,
+    sha256: hash,
+  };
+}
+
+async function getTicketMediaById(id, tenantId) {
+  const TicketMedia = await ensureReady();
+  const normalizedTenant = normalizeTenant(tenantId);
+
+  const row = await TicketMedia.findOne({
+    where: { id: String(id), tenantKey: normalizedTenant },
+  });
+
+  if (!row) return null;
+  const base = typeof row.toJSON === 'function' ? row.toJSON() : row;
+  return {
+    id: base.id,
+    tenantId: base.tenantKey,
+    fileName: base.fileName || null,
+    mimeType: base.mimeType || 'application/octet-stream',
+    sizeBytes: toSize(base.sizeBytes, null),
+    data: base.data,
+  };
+}
+
+module.exports = {
+  storeTicketMedia,
+  getTicketMediaById,
+};

@@ -38,36 +38,17 @@ function buildParallelGatewayXml() {
 }
 
 describe('Phase 9.1 parallel gateway', () => {
-  it('keeps default MVP export behavior when advanced gateways are disabled', () => {
+  it('exports router as parallelGateway by default', () => {
     const { xml } = engineFlowToBpmnXml(buildParallelGatewayFlow(), {
       mode: BPMN_EXPORT_MODE.SIMPLE,
-    });
-
-    expect(xml).toContain('bpmn:exclusiveGateway');
-    expect(xml).not.toContain('bpmn:parallelGateway');
-  });
-
-  it('exports router as parallelGateway when ADVANCED_GATEWAYS is enabled', () => {
-    const { xml } = engineFlowToBpmnXml(buildParallelGatewayFlow(), {
-      mode: BPMN_EXPORT_MODE.SIMPLE,
-      flags: { ADVANCED_GATEWAYS: true },
     });
 
     expect(xml).toContain('bpmn:parallelGateway');
     expect(xml).not.toContain('bpmn:exclusiveGateway');
   });
 
-  it('keeps parallelGateway unsupported by default during import', () => {
+  it('imports parallelGateway as router by default', () => {
     const { flowDefinition, report } = bpmnXmlToEngineFlow(buildParallelGatewayXml());
-
-    expect(report.unsupportedElements.some((item) => item.elementName === 'parallelGateway')).toBe(true);
-    expect(flowDefinition.nodes.some((node) => node.config.bpmnElementName === 'parallelGateway')).toBe(false);
-  });
-
-  it('imports parallelGateway as router when ADVANCED_GATEWAYS is enabled', () => {
-    const { flowDefinition, report } = bpmnXmlToEngineFlow(buildParallelGatewayXml(), {
-      flags: { ADVANCED_GATEWAYS: true },
-    });
 
     const routerNode = flowDefinition.nodes.find((node) => node.type === 'router');
     expect(routerNode).toBeTruthy();

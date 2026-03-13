@@ -124,28 +124,8 @@ function getEdgeWaypointsByTargetName(xml) {
 }
 
 describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
-  it('test 1: Flag OFF - DI elements ignored and no visual info exported', () => {
-    const imported = bpmnXmlToEngineFlow(buildBpmnXmlWithDiagramInterchange(), {
-      flags: { BPMN_DI: false },
-    });
-
-    const hasDiData = imported.flowDefinition.nodes.some(
-      (node) => node.config?.bpmnDiShape || node.config?.bpmnDiEdges
-    );
-    expect(hasDiData).toBe(false);
-
-    const exported = engineFlowToBpmnXml(imported.flowDefinition, {
-      flags: { BPMN_DI: false },
-    });
-
-    expect(exported.xml).not.toContain('<bpmn:diagram');
-    expect(exported.xml).not.toContain('<di:bounds');
-  });
-
-  it('test 2: Flag ON - di:shape bounds import correctly for multiple nodes', () => {
-    const { flowDefinition } = bpmnXmlToEngineFlow(buildBpmnXmlWithDiagramInterchange(), {
-      flags: { BPMN_DI: true },
-    });
+  it('test 1: di:shape bounds import correctly for multiple nodes by default', () => {
+    const { flowDefinition } = bpmnXmlToEngineFlow(buildBpmnXmlWithDiagramInterchange());
 
     const startNode = flowDefinition.nodes.find((node) => node.config?.bpmnElementId === 'Start_1');
     const taskNode = flowDefinition.nodes.find((node) => node.config?.bpmnElementId === 'Task_1');
@@ -161,10 +141,8 @@ describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
     });
   });
 
-  it('test 3: Flag ON - di:edge waypoints import with ordering preserved', () => {
-    const { flowDefinition } = bpmnXmlToEngineFlow(buildBpmnXmlWithDiagramInterchange(), {
-      flags: { BPMN_DI: true },
-    });
+  it('test 2: di:edge waypoints import with ordering preserved by default', () => {
+    const { flowDefinition } = bpmnXmlToEngineFlow(buildBpmnXmlWithDiagramInterchange());
 
     const sourceNode = flowDefinition.nodes.find((node) => node.config?.bpmnElementId === 'Start_1');
     const edgeData = sourceNode?.config?.bpmnDiEdges?.SF_1;
@@ -176,7 +154,7 @@ describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
     ]);
   });
 
-  it('test 4: Flag ON - export preserves bounds in di:shape and emits diagram/plane', () => {
+  it('test 3: export preserves bounds in di:shape and emits diagram/plane by default', () => {
     const flow = {
       id: 'flow-di-export',
       nodes: [
@@ -194,9 +172,7 @@ describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
       ],
     };
 
-    const { xml } = engineFlowToBpmnXml(flow, {
-      flags: { BPMN_DI: true },
-    });
+    const { xml } = engineFlowToBpmnXml(flow);
 
     expect(xml).toContain('<bpmn:diagram id="Diagram_1">');
     expect(xml).toContain('<bpmn:plane id="Plane_1" bpmnElement="Process_flow-di-export">');
@@ -204,10 +180,8 @@ describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
     expect(xml).toContain('<di:bounds x="50" y="100" width="150" height="60" />');
   });
 
-  it('test 5: Round-trip with flag ON - DI bounds and waypoints survive import/export', () => {
-    const imported = bpmnXmlToEngineFlow(buildBpmnXmlWithDiagramInterchange(), {
-      flags: { BPMN_DI: true },
-    });
+  it('test 4: round-trip preserves DI bounds and waypoints by default', () => {
+    const imported = bpmnXmlToEngineFlow(buildBpmnXmlWithDiagramInterchange());
 
     imported.flowDefinition.nodes.push({
       id: '99',
@@ -222,9 +196,7 @@ describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
     const endNode = imported.flowDefinition.nodes.find((node) => node.config?.bpmnElementId === 'End_1');
     if (endNode) endNode.next = '99';
 
-    const exported = engineFlowToBpmnXml(imported.flowDefinition, {
-      flags: { BPMN_DI: true },
-    });
+    const exported = engineFlowToBpmnXml(imported.flowDefinition);
 
     expect(exported.xml).toContain('<di:bounds x="100" y="200" width="120" height="80" />');
     expect(exported.xml).toContain('<di:waypoint x="110" y="210" />');
@@ -232,10 +204,8 @@ describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
     expect(exported.xml).toContain('<di:bounds x="320" y="60" width="140" height="70" />');
   });
 
-  it('test 6: Flag ON - DI edges keep target-specific waypoints even if stored edge order is reversed', () => {
-    const imported = bpmnXmlToEngineFlow(buildBpmnXmlWithGatewayDiagramInterchange(), {
-      flags: { BPMN_DI: true },
-    });
+  it('test 5: DI edges keep target-specific waypoints even if stored edge order is reversed', () => {
+    const imported = bpmnXmlToEngineFlow(buildBpmnXmlWithGatewayDiagramInterchange());
 
     const gatewayNode = imported.flowDefinition.nodes.find(
       (node) => node.config?.bpmnElementId === 'Gateway_1'
@@ -249,9 +219,7 @@ describe('Phase 9.4 BPMN DI (diagram interchange)', () => {
       SF_A: originalEdges.SF_A,
     };
 
-    const exported = engineFlowToBpmnXml(imported.flowDefinition, {
-      flags: { BPMN_DI: true },
-    });
+    const exported = engineFlowToBpmnXml(imported.flowDefinition);
 
     const edgeWaypointsByTargetName = getEdgeWaypointsByTargetName(exported.xml);
 

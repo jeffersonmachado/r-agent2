@@ -9,27 +9,31 @@
 
 const { registerAiProvider, setTenantAiConfig, getAiProviderForTenant } = require('../../engine/aiProviderManager');
 const config = require('../utils/config');
+const logger = require('../utils/logger');
 
-// Logger simples para o backend (usa console com prefixo)
-const logger = {
-  debug: (msg, data) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[DEBUG] ${msg}`, data || '');
+/**
+ * Extrai um "caller hint" do stack para debug (dev only).
+ * Ajuda a identificar qual serviço/arquivo originou a chamada de IA.
+ *
+ * @returns {string|null}
+ */
+function getCallerHint() {
+  try {
+    const stack = new Error().stack || '';
+    const lines = String(stack).split('\n').map((l) => l.trim());
+    // Remove as 2 primeiras linhas (Error + este helper) e procura o primeiro frame fora deste arquivo.
+    for (const line of lines.slice(2)) {
+      if (!line) continue;
+      // Evita frames do próprio aiProviderService
+      if (line.includes('api/services/aiProviderService.js')) continue;
+      if (line.includes('aiProviderService.js')) continue;
+      return line;
     }
-  },
-  info: (msg, data) => {
-    console.log(`[INFO] ${msg}`, data || '');
-  },
-  warn: (msg, data) => {
-    console.warn(`[WARN] ${msg}`, data || '');
-  },
-  error: (msg, error) => {
-    const errorData = error instanceof Error 
-      ? { message: error.message, stack: error.stack }
-      : error;
-    console.error(`[ERROR] ${msg}`, errorData || '');
-  },
-};
+    return lines[2] || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Determina qual parâmetro usar para limitar tokens baseado no modelo
@@ -66,18 +70,37 @@ function getTokenLimitParam(model, promptLength = 0) {
  * Provider de IA usando OpenAI
  */
 function createOpenAIProvider() {
-  const apiKey = config.get('ai.openai.apiKey');
-  if (!apiKey) {
-    throw new Error('OpenAI API key não configurada');
-  }
-
   return {
     async generate(prompt, context) {
       try {
+        // Resolve API key EXCLUSIVAMENTE por tenant (DB, criptografada).
+        const tenantId = context?.tenantId || null;
+        if (!tenantId) {
+          throw new Error('OpenAI: tenantId é obrigatório para resolver credenciais por tenant');
+        }
+        let apiKey = null;
+        try {
+          // eslint-disable-next-line global-require
+          const { getDecryptedAPIKey } = require('./tenantAIService');
+          apiKey = await getDecryptedAPIKey(String(tenantId), 'openai');
+        } catch (e) {
+          logger.warn('⚠️ OpenAI: falha ao obter API key do tenant (DB)', { tenantId, error: e.message });
+        }
+
+        if (!apiKey) {
+          throw new Error(`OpenAI API key não configurada para o tenant: ${tenantId}`);
+        }
+
         const model = config.get('ai.openai.model', 'gpt-5.2');
         const tokenParams = getTokenLimitParam(model, prompt.length);
         
         logger.debug('🤖 OpenAI: Iniciando geração', {
+          // Observabilidade do "porquê" (origem) da chamada:
+          source: context?.source || null,
+          executionId: context?.executionId || null,
+          endpoint: context?.endpoint || null,
+          requestId: context?.requestId || null,
+          caller: context?.caller || null,
           model,
           promptLength: prompt.length,
           hasApiKey: !!apiKey,
@@ -101,6 +124,7 @@ function createOpenAIProvider() {
           
           const response = await fetch(url, {
             method: 'POST',
+            signal: context?.signal || undefined,
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${apiKey}`,
@@ -127,7 +151,17 @@ function createOpenAIProvider() {
               errorData,
               errorMessage,
             });
-            throw new Error(errorMessage);
+            const e = new Error(errorMessage);
+            e.status = response.status;
+            e.code = errorData?.error?.code || null;
+            e.type = errorData?.error?.type || null;
+            try {
+              // best-effort: expõe headers para camadas superiores (retry-after etc.)
+              e.headers = Object.fromEntries(response.headers.entries());
+            } catch (_) {
+              e.headers = null;
+            }
+            throw e;
           }
 
           const data = await response.json();
@@ -147,11 +181,14 @@ function createOpenAIProvider() {
         // SDK disponível: usa SDK
         logger.debug('📤 OpenAI: Enviando requisição via SDK', { model, tokenParams });
         const openai = new OpenAI({ apiKey });
-        const completion = await openai.chat.completions.create({
-          model: model,
-          messages: [{ role: 'user', content: prompt }],
-          ...tokenParams,
-        });
+        const completion = await openai.chat.completions.create(
+          {
+            model: model,
+            messages: [{ role: 'user', content: prompt }],
+            ...tokenParams,
+          },
+          context?.signal ? { signal: context.signal } : undefined,
+        );
 
         logger.debug('✅ OpenAI: Resposta recebida via SDK', {
           hasChoices: !!completion.choices,
@@ -183,16 +220,34 @@ function createOpenAIProvider() {
  * Provider de IA usando Anthropic (Claude)
  */
 function createAnthropicProvider() {
-  const apiKey = config.get('ai.anthropic.apiKey');
-  if (!apiKey) {
-    throw new Error('Anthropic API key não configurada');
-  }
-
   return {
     async generate(prompt, context) {
       try {
+        const tenantId = context?.tenantId || null;
+        if (!tenantId) {
+          throw new Error('Anthropic: tenantId é obrigatório para resolver credenciais por tenant');
+        }
+        let apiKey = null;
+        try {
+          // eslint-disable-next-line global-require
+          const { getDecryptedAPIKey } = require('./tenantAIService');
+          apiKey = await getDecryptedAPIKey(String(tenantId), 'anthropic');
+        } catch (e) {
+          logger.warn('⚠️ Anthropic: falha ao obter API key do tenant (DB)', { tenantId, error: e.message });
+        }
+
+        if (!apiKey) {
+          throw new Error(`Anthropic API key não configurada para o tenant: ${tenantId}`);
+        }
+
         const model = config.get('ai.anthropic.model', 'claude-3-sonnet-20240229');
         logger.debug('🤖 Anthropic: Iniciando geração', {
+          // Observabilidade do "porquê" (origem) da chamada:
+          source: context?.source || null,
+          executionId: context?.executionId || null,
+          endpoint: context?.endpoint || null,
+          requestId: context?.requestId || null,
+          caller: context?.caller || null,
           model,
           promptLength: prompt.length,
           hasApiKey: !!apiKey,
@@ -215,6 +270,7 @@ function createAnthropicProvider() {
           
           const response = await fetch(url, {
             method: 'POST',
+            signal: context?.signal || undefined,
             headers: {
               'x-api-key': apiKey,
               'anthropic-version': '2023-06-01',
@@ -242,7 +298,16 @@ function createAnthropicProvider() {
               errorData,
               errorMessage,
             });
-            throw new Error(errorMessage);
+            const e = new Error(errorMessage);
+            e.status = response.status;
+            e.code = errorData?.error?.type || errorData?.error?.code || null;
+            e.type = errorData?.error?.type || null;
+            try {
+              e.headers = Object.fromEntries(response.headers.entries());
+            } catch (_) {
+              e.headers = null;
+            }
+            throw e;
           }
 
           const data = await response.json();
@@ -261,11 +326,14 @@ function createAnthropicProvider() {
         // SDK disponível: usa SDK
         logger.debug('📤 Anthropic: Enviando requisição via SDK', { model });
         const anthropic = new Anthropic({ apiKey });
-        const message = await anthropic.messages.create({
-          model: model,
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        });
+        const message = await anthropic.messages.create(
+          {
+            model: model,
+            max_tokens: 1000,
+            messages: [{ role: 'user', content: prompt }],
+          },
+          context?.signal ? { signal: context.signal } : undefined,
+        );
 
         logger.debug('✅ Anthropic: Resposta recebida via SDK', {
           hasContent: !!message.content,
@@ -405,6 +473,58 @@ async function initializeAiProviders() {
 }
 
 /**
+ * Garante que a configuração de IA do tenant esteja carregada no runtime (aiProviderManager).
+ * Isso evita inconsistência entre:
+ * - status do tenant (config no banco) e
+ * - execução real (getAiProviderForTenant usa cache em memória).
+ *
+ * Observação: esta função NÃO registra providers globais (openai/anthropic).
+ * Ela apenas sincroniza a configuração do tenant (primary/secondary) do DB → memória.
+ *
+ * @param {string} tenantId
+ * @returns {Promise<{loaded: boolean, reason?: string, primary?: string, secondary?: string}>}
+ */
+async function ensureTenantAiConfigLoaded(tenantId) {
+  if (!tenantId || typeof tenantId !== 'string') {
+    return { loaded: false, reason: 'tenantId inválido' };
+  }
+
+  try {
+    const { getAIConfig } = require('./tenantAIService');
+    const aiConfig = await getAIConfig(tenantId);
+
+    // Se tenant não existe, não carrega
+    if (aiConfig === null) {
+      return { loaded: false, reason: 'tenant não encontrado' };
+    }
+
+    // Se não está configurado, não carrega
+    if (!aiConfig?.configured || !aiConfig?.primary) {
+      return { loaded: false, reason: 'tenant sem IA configurada' };
+    }
+
+    setTenantAiConfig(tenantId, {
+      primary: aiConfig.primary,
+      secondary: aiConfig.secondary,
+    });
+
+    logger.info('✅ ensureTenantAiConfigLoaded: Config carregada no runtime', {
+      tenantId,
+      primary: aiConfig.primary,
+      secondary: aiConfig.secondary,
+    });
+
+    return { loaded: true, primary: aiConfig.primary, secondary: aiConfig.secondary };
+  } catch (err) {
+    logger.warn('⚠️ ensureTenantAiConfigLoaded: Falha ao carregar config do tenant', {
+      tenantId,
+      error: err.message,
+    });
+    return { loaded: false, reason: 'erro ao carregar config do banco' };
+  }
+}
+
+/**
  * Gera resposta de IA para um prompt
  * 
  * @param {string} prompt - Prompt para a IA
@@ -415,7 +535,13 @@ async function initializeAiProviders() {
 async function generateAiResponse(prompt, tenantId, context = {}) {
   logger.debug('🔍 generateAiResponse: Obtendo provider', { tenantId });
   
-  const provider = getAiProviderForTenant(tenantId);
+  let provider = getAiProviderForTenant(tenantId);
+  if (!provider) {
+    // Tenta hidratar config do tenant do DB → memória (caso tenha sido configurado após boot
+    // ou caso a inicialização não tenha carregado esse tenant por algum motivo).
+    await ensureTenantAiConfigLoaded(tenantId);
+    provider = getAiProviderForTenant(tenantId);
+  }
   if (!provider) {
     const errorMsg = `Nenhum provider de IA configurado para tenant: ${tenantId}`;
     logger.error('❌ generateAiResponse', new Error(errorMsg));
@@ -430,11 +556,26 @@ async function generateAiResponse(prompt, tenantId, context = {}) {
   });
 
   try {
+    // Meta de observabilidade propagada para o provider (vai aparecer no log "Iniciando geração").
+    // - `caller` é inferido por stack (dev) quando não vem explicitamente.
+    const caller = (typeof context?.caller === 'string' && context.caller.trim())
+      ? context.caller.trim()
+      : (process.env.NODE_ENV !== 'production' ? getCallerHint() : null);
+
     const result = await provider.generate(prompt, {
+      tenantId,
       sessionId: context.sessionId,
       flowId: context.flowId,
       nodeId: context.nodeId,
       variables: context.variables || {},
+      // Cancelamento (best-effort): permite interromper chamadas ao provider
+      signal: context.signal || null,
+      // Extras (best-effort): ajudam a diagnosticar volume e origem.
+      source: context.source || null,
+      executionId: context.executionId || null,
+      endpoint: context.endpoint || null,
+      requestId: context.requestId || null,
+      caller,
     });
     
     logger.debug('✅ generateAiResponse: Resposta gerada', {
@@ -456,6 +597,7 @@ async function generateAiResponse(prompt, tenantId, context = {}) {
 
 module.exports = {
   initializeAiProviders,
+  ensureTenantAiConfigLoaded,
   generateAiResponse,
   createOpenAIProvider,
   createAnthropicProvider,

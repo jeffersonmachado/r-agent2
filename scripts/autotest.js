@@ -21,7 +21,8 @@ function runCommand(command, description) {
     logger.info(`[autotest] ${description}`);
     execSync(command, {
       cwd: path.join(__dirname, '..'),
-      stdio: 'inherit'
+      stdio: 'inherit',
+      env: process.env,
     });
     return { success: true };
   } catch (error) {
@@ -35,6 +36,9 @@ function runCommand(command, description) {
  */
 function runAutotest() {
   logger.info('[autotest] Iniciando auto teste do sistema');
+
+  process.env.SKIP_TENANT_SITE_INDEXING = 'true';
+  process.env.RPA_SKIP_IF_FRONTEND_UNREACHABLE = 'true';
 
   // 1. Executa todos os testes
   const testResult = runCommand('npm run test:all', 'Executando todos os testes');

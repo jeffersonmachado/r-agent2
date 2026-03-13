@@ -209,6 +209,9 @@ const {
 } = require('./services/ragDocumentsService');
 const ragService = require('./services/ragService');
 const { parseMultipartFormData } = require('./utils/multipartParser');
+const { extractKeywords: nlpExtractKeywords, analyzeText: nlpAnalyzeText } = require('./services/nlpService');
+const { extractSemanticContext } = require('./services/semanticContextService');
+const { storeTicketMedia, getTicketMediaById } = require('./services/ticketMediaService');
 const {
   scrapeUrl,
   scrapeUrls,
@@ -242,8 +245,19 @@ const {
   emitEvent,
 } = require('./services/websocketService');
 const { validateInput, ValidationError, schemas } = require('./utils/inputValidator');
+const { sendApiError, buildApiError } = require('./utils/apiError');
 
 const port = Number(config.get('api.port', 3000));
+
+// In-memory appointment schedule store (per-tenant)
+const _appointmentSchedules = new Map(); // id -> schedule
+function _genScheduleId() {
+  return `sched-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+function _getSchedules(tenantId) {
+  if (!_appointmentSchedules.has(tenantId)) _appointmentSchedules.set(tenantId, new Map());
+  return _appointmentSchedules.get(tenantId);
+}
 
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, 'data');
@@ -327,6 +341,107 @@ function detectProcessManager() {
       note: 'Servidor rodando diretamente com node',
     },
   };
+}
+
+function normalizeAiProvider(provider) {
+  if (!provider || typeof provider !== 'string') return null;
+  const normalized = provider.trim().toLowerCase();
+  if (normalized === 'openai' || normalized === 'anthropic') return normalized;
+  return null;
+}
+
+async function validateProviderTokenDirect(provider, apiKey) {
+  const normalizedProvider = normalizeAiProvider(provider);
+  if (!normalizedProvider) {
+    return {
+      valid: false,
+      error: 'Provider deve ser "openai" ou "anthropic"',
+    };
+  }
+
+  const cleanApiKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+  if (!cleanApiKey) {
+    return {
+      valid: false,
+      error: 'Token não pode estar vazio',
+    };
+  }
+
+  try {
+    if (normalizedProvider === 'openai') {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${cleanApiKey}`,
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+        if (data && Array.isArray(data.data)) {
+          return { valid: true, error: null };
+        }
+        return { valid: false, error: 'Resposta inválida da API OpenAI' };
+      }
+
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401) return { valid: false, error: 'Token inválido ou expirado' };
+      if (response.status === 403) return { valid: false, error: 'Token não tem permissão para acessar a API' };
+      return {
+        valid: false,
+        error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': cleanApiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'test' }],
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data && data.content) {
+        return { valid: true, error: null };
+      }
+      return { valid: false, error: 'Resposta inválida da API Anthropic' };
+    }
+
+    const errorData = await response.json().catch(() => ({}));
+    if (response.status === 401) return { valid: false, error: 'Token inválido ou expirado' };
+    if (response.status === 403) return { valid: false, error: 'Token não tem permissão para acessar a API' };
+    return {
+      valid: false,
+      error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}`,
+    };
+  } catch (validationError) {
+    if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
+      return {
+        valid: false,
+        error: 'Timeout ao validar token. Verifique sua conexão com a internet.',
+      };
+    }
+    if (validationError.name === 'TypeError' && validationError.message.includes('fetch')) {
+      return {
+        valid: false,
+        error: 'Erro de conexão. Verifique sua conexão com a internet.',
+      };
+    }
+    return {
+      valid: false,
+      error: validationError.message || 'Erro ao validar token',
+    };
+  }
 }
 
 /**
@@ -999,6 +1114,11 @@ function hasJsonContentType(req) {
 async function requestHandler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
 
+  // Populate req.id from incoming X-Request-Id header for tracing
+  if (!req.id && req.headers && req.headers['x-request-id']) {
+    req.id = String(req.headers['x-request-id']).trim() || undefined;
+  }
+
   // Handle CORS preflight requests
   if (method === 'OPTIONS') {
     setCorsHeaders(res);
@@ -1207,7 +1327,17 @@ async function requestHandler(req, res) {
   // Rotas públicas: /health, /version, /system/status, /system/websocket, OPTIONS
   // Rotas de autenticação não exigem tenant_id (login, reset, convites)
   // Rotas de super-admin não exigem tenant_id (mas exigem autenticação super-admin)
-  const publicRoutes = ['/health', '/health/db', '/version', '/system/status', '/system/websocket'];
+  const publicRoutes = [
+    '/health',
+    '/health/db',
+    '/version',
+    '/system/status',
+    '/system/websocket',
+    '/storefront/orders',
+    '/physical/kiosk/tickets',
+    '/physical/panel/state',
+    '/public-tokens/resolve',
+  ];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
   // Webhooks de provedores (inbound) não podem ser bloqueados por falta de tenant no início:
   // tenant é resolvido por channel_accounts e, se não resolver, deve retornar 200 OK com log warn.
@@ -1980,12 +2110,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const { prompt, name, tenantId, urls } = body;
+      const { prompt, name, tenantId, urls, fileNames, mode } = body;
+      const normalizedMode = String(mode || 'default').trim().toLowerCase();
+      const institutionalMode = normalizedMode === 'institutional';
 
-      if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      if (!institutionalMode && (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0)) {
         badRequest(res, 'Prompt é obrigatório');
         return;
       }
+
+      const effectivePrompt = (prompt && typeof prompt === 'string' && prompt.trim().length > 0)
+        ? prompt.trim()
+        : `Gere uma descrição institucional em português para ${name || 'a empresa'}, com foco em clareza, objetividade e chamada para ação.`;
 
       const isSuperAdminUser = isSuperAdmin(req.agent);
       const tenantIdForAI = (req.agent?.tenantId && String(req.agent.tenantId).trim())
@@ -2107,8 +2243,144 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         // Continua sem contexto RAG se houver erro
       }
 
+      // Fallback determinístico: sem contexto indexado, mas com fontes informadas.
+      // Evita chamar IA e retorna orientação segura para o usuário.
+      if (!ragContext && Array.isArray(urls) && urls.length > 0) {
+        const fallbackSuggestion = (
+          name && String(name).trim()
+            ? `Descrição preliminar de ${String(name).trim()}: empresa com presença digital ativa e fontes informadas para indexação. Recomendamos complementar com conteúdos institucionais e diferenciais de serviço para melhorar a precisão.`
+            : 'Descrição preliminar: presença digital ativa com fontes informadas para indexação. Recomendamos complementar com conteúdos institucionais e diferenciais de serviço para melhorar a precisão.'
+        );
+
+        sendJson(res, 200, {
+          ok: true,
+          suggestion: fallbackSuggestion,
+          warnings: [{
+            code: 'NO_INDEXED_CONTEXT_FALLBACK',
+            message: 'Sem contexto indexado no RAG. Retornando sugestão preliminar baseada nas fontes informadas.',
+            details: {
+              tenantId: tenantIdForAI,
+              sourcesCount: urls.length,
+            },
+          }],
+        });
+        return;
+      }
+
+      if (institutionalMode) {
+        const parseJsonText = (text) => {
+          const raw = String(text || '').trim();
+          if (!raw) return null;
+          try {
+            return JSON.parse(raw);
+          } catch (_) {
+            const match = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+            if (match && match[1]) {
+              try {
+                return JSON.parse(match[1]);
+              } catch (__){
+                return null;
+              }
+            }
+            return null;
+          }
+        };
+
+        const splitParagraphs = (text) => String(text || '')
+          .split(/\n\s*\n/g)
+          .map((p) => p.trim())
+          .filter(Boolean);
+
+        const hasForbiddenTerms = (text) => {
+          const lower = String(text || '').toLowerCase();
+          return lower.includes('com base no conteúdo')
+            || lower.includes('aparente')
+            || lower.includes('fontes')
+            || lower.includes('ocr')
+            || lower.includes('scraping')
+            || lower.includes('rag');
+        };
+
+        const hasCta = (paragraph) => /entre em contato|fale com|saiba mais|solicite/i.test(String(paragraph || ''));
+
+        const profilePrompt = [
+          'Extraia um perfil institucional estruturado a partir do contexto abaixo.',
+          'Retorne apenas JSON válido.',
+          'SCHEMA (preencha exatamente estas chaves):',
+          '{',
+          '  "name": string|null,',
+          '  "website": string|null,',
+          '  "segment": string|null,',
+          '  "whatItDoes": string|null,',
+          '  "productsServices": string[],',
+          '  "audience": string[],',
+          '  "differentials": string[],',
+          '  "proofPoints": object[],',
+          '  "contacts": object,',
+          '  "channels": object,',
+          '  "locations": string[],',
+          '  "paymentMethods": string[],',
+          '  "legal": object,',
+          '  "operatingHours": string[],',
+          '  "tone": string|null,',
+          '  "confidence": number|null',
+          '}',
+          '',
+          `Nome informado: ${name || 'N/A'}`,
+          `URLs informadas: ${Array.isArray(urls) ? urls.join(', ') : 'nenhuma'}`,
+          `Arquivos informados: ${Array.isArray(fileNames) ? fileNames.join(', ') : 'nenhum'}`,
+          ragContext ? `Contexto indexado:${ragContext}` : 'Sem contexto indexado.',
+        ].join('\n');
+
+        const profileAiResult = await generateAiResponse(profilePrompt, tenantIdForAI, {});
+        const entityProfile = parseJsonText(profileAiResult?.text) || {
+          name: name || null,
+          website: Array.isArray(urls) && urls[0] ? String(urls[0]) : null,
+          productsServices: [],
+          differentials: [],
+          paymentMethods: [],
+        };
+
+        const institutionalPrompt = [
+          'Escreva um texto institucional em português com EXATAMENTE 3 parágrafos.',
+          'Regras obrigatórias:',
+          '- Sem metalinguagem e sem mencionar RAG, OCR, scraping, fontes, ou "com base no conteúdo".',
+          '- Não usar a palavra "aparente".',
+          '- O 3º parágrafo deve ter CTA (ex.: entre em contato, saiba mais, solicite).',
+          '- Linguagem clara, profissional e natural.',
+          '',
+          `Pedido do usuário: ${effectivePrompt}`,
+          `Perfil estruturado: ${JSON.stringify(entityProfile)}`,
+          ragContext ? `Contexto indexado:${ragContext}` : 'Sem contexto indexado.',
+        ].join('\n');
+
+        let institutionalText = String((await generateAiResponse(institutionalPrompt, tenantIdForAI, {}))?.text || '').trim();
+        let paragraphs = splitParagraphs(institutionalText);
+        if (hasForbiddenTerms(institutionalText) || paragraphs.length !== 3 || !hasCta(paragraphs[2])) {
+          const rewritePrompt = [
+            'Reescreva o texto abaixo seguindo estritamente:',
+            '- Exatamente 3 parágrafos;',
+            '- Não usar: "com base no conteúdo", "aparente", "fontes", "OCR", "scraping", "RAG";',
+            '- O 3º parágrafo deve conter CTA;',
+            '',
+            'Texto a reescrever:',
+            institutionalText,
+          ].join('\n');
+          institutionalText = String((await generateAiResponse(rewritePrompt, tenantIdForAI, {}))?.text || institutionalText).trim();
+          paragraphs = splitParagraphs(institutionalText);
+        }
+
+        sendJson(res, 200, {
+          ok: true,
+          suggestion: institutionalText,
+          entityProfile,
+          warnings: [],
+        });
+        return;
+      }
+
       // Monta prompt final com contexto RAG se disponível
-      let finalPrompt = prompt;
+      let finalPrompt = effectivePrompt;
       
       if (ragContext) {
         // Se há contexto RAG, usa ele como fonte principal
@@ -3424,6 +3696,36 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /auth/agents/:id/name - Retorna apenas o nome de um agente (qualquer agente autenticado pode consultar)
+  if (method === 'GET' && pathname.startsWith('/auth/agents/') && pathname.endsWith('/name')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const rawSeg = pathname.slice('/auth/agents/'.length);
+    const agentId = decodeURIComponent(rawSeg.slice(0, rawSeg.length - '/name'.length));
+    const agent = await getAgent(agentId);
+    if (!agent) {
+      sendJson(res, 404, { error: 'agent_not_found' });
+      return;
+    }
+    if (req.tenantId && agent.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+    const resolvedName = agent.name || agent.username || agent.email || agentId;
+    sendJson(res, 200, {
+      id: agent.id,
+      name: resolvedName,
+      agent: {
+        id: agent.id,
+        name: resolvedName,
+      },
+    });
+    return;
+  }
+
   // GET /auth/agents/:id - Obtém agente específico
   if (method === 'GET' && pathname.startsWith('/auth/agents/')) {
     const authResult = requireAuth(req);
@@ -4451,6 +4753,21 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         const auditReport = await generateAuditReport({ ...result.metadata, auditId }, { format: 'json' });
         result.metadata.auditId = auditId;
         result.metadata.reportId = auditReport.reportId;
+      }
+
+      // Compatibilidade: expõe validationWarnings em formato estável para UI/testes
+      if (!result.validationWarnings) {
+        const flowValidation = result?.validation?.flow || null;
+        const validationErrors = Array.isArray(flowValidation?.errors) ? flowValidation.errors : [];
+        const codes = validationErrors
+          .map((errItem) => (errItem && (errItem.code || errItem.type)) ? String(errItem.code || errItem.type) : null)
+          .filter(Boolean);
+
+        result.validationWarnings = {
+          valid: flowValidation?.valid !== false,
+          errors: validationErrors,
+          codes,
+        };
       }
 
       // Retorna resultado completo
@@ -5889,6 +6206,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const queue = urlObj.searchParams.get('queue');
     const limit = urlObj.searchParams.get('limit');
     const offset = urlObj.searchParams.get('offset');
+    const cursor = urlObj.searchParams.get('cursor');
+    const q = urlObj.searchParams.get('q') || undefined;
 
     // Log para identificar origem das requisições
     logger.debug('[Server] GET /tickets chamado', {
@@ -5898,6 +6217,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       queue,
       limit,
       offset,
+      cursor,
+      q,
       userAgent: req.headers['user-agent']?.substring(0, 50),
       referer: req.headers['referer']?.substring(0, 50),
     });
@@ -5906,8 +6227,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       tenantId: req.tenantId, // Filtro por tenant
       status, 
       queue,
+      q,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
+      cursor: cursor || undefined,
     });
     
     // Filtra tickets por permissão (agent só vê próprios ou não atribuídos)
@@ -5924,6 +6247,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       ticketsCount: result.tickets?.length || 0,
       limit: result.limit,
       offset: result.offset,
+      cursor: result.nextCursor,
       agentRole: req.agent.role,
     });
     
@@ -6919,6 +7243,101 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /tickets/media/upload - Upload de midia para mensagens de suporte (armazenada no banco)
+  if (method === 'POST' && pathname === '/tickets/media/upload') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    const contentType = String(req.headers['content-type'] || '').toLowerCase();
+    if (!contentType.includes('multipart/form-data')) {
+      badRequest(res, 'Content-Type deve ser multipart/form-data');
+      return;
+    }
+
+    try {
+      const { files } = await parseMultipartFormData(req);
+      const file = Array.isArray(files) ? (files.find((f) => f.fieldname === 'file') || files[0]) : null;
+      if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
+        badRequest(res, 'Arquivo e obrigatorio (field "file")');
+        return;
+      }
+
+      // Limite de seguranca para upload em memoria
+      if (file.buffer.length > 25 * 1024 * 1024) {
+        sendJson(res, 413, { error: 'payload_too_large', message: 'Arquivo maior que 25MB' });
+        return;
+      }
+
+      const saved = await storeTicketMedia({
+        tenantId: req.tenantId,
+        fileName: file.filename,
+        mimeType: file.mimeType,
+        sizeBytes: file.size,
+        buffer: file.buffer,
+        createdBy: req.agent?.id || null,
+      });
+
+      sendJson(res, 201, {
+        id: saved.id,
+        url: `/tickets/media/${encodeURIComponent(saved.id)}`,
+        fileName: saved.fileName,
+        mimeType: saved.mimeType,
+        sizeBytes: saved.sizeBytes,
+      });
+    } catch (err) {
+      logger.error('[TicketMedia] Erro ao fazer upload de midia', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao carregar arquivo' });
+    }
+    return;
+  }
+
+  // GET /tickets/media/:id - Le o binario da midia do banco
+  if (method === 'GET' && pathname.startsWith('/tickets/media/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'tickets', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const mediaId = decodeURIComponent(pathname.slice('/tickets/media/'.length));
+      const item = await getTicketMediaById(mediaId, req.tenantId);
+      if (!item || !item.data) {
+        sendJson(res, 404, { error: 'media_not_found' });
+        return;
+      }
+
+      const safeName = String(item.fileName || `media-${mediaId}`).replace(/[\r\n"]/g, '_');
+      res.setHeader('Content-Type', item.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+      res.setHeader('Cache-Control', 'private, max-age=60');
+      if (Number.isFinite(item.sizeBytes)) {
+        res.setHeader('Content-Length', String(item.sizeBytes));
+      }
+      res.writeHead(200);
+      res.end(item.data);
+    } catch (err) {
+      logger.error('[TicketMedia] Erro ao ler midia', err);
+      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao ler arquivo' });
+    }
+    return;
+  }
+
   // GET /tickets/:id - Obtém um ticket específico (verificar por último, após todas as rotas específicas)
   if (method === 'GET' && pathname.startsWith('/tickets/') && 
       !pathname.endsWith('/messages') && 
@@ -6926,7 +7345,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       !pathname.endsWith('/close') && 
       !pathname.endsWith('/mark-read') && 
       !pathname.endsWith('/message') &&
-      !pathname.startsWith('/tickets/session/')) {
+      !pathname.startsWith('/tickets/session/') &&
+      !pathname.startsWith('/tickets/media/')) {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
@@ -7030,10 +7450,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
     try {
       const body = await parseJsonBody(req);
-      const message = body && body.message ? String(body.message) : null;
+      const message = body && typeof body.message === 'string' ? String(body.message) : '';
+      const rawMedia = body && body.media && typeof body.media === 'object' ? body.media : null;
+      const mediaKind = rawMedia ? String(rawMedia.kind || 'standard').trim().toLowerCase() : null;
+      const mediaTypeRaw = rawMedia ? String(rawMedia.type || '').trim().toLowerCase() : '';
+      const mediaType = ['image', 'video', 'audio', 'document'].includes(mediaTypeRaw) ? mediaTypeRaw : 'document';
+      const mediaUrl = rawMedia ? String(rawMedia.url || '').trim() : '';
+      const mediaDocumentId = rawMedia ? String(rawMedia.documentId || '').trim() : '';
+      const hasMedia = !!(rawMedia && (mediaUrl || (mediaKind === 'rag' && mediaDocumentId)));
 
-      if (!message || message.trim() === '') {
-        badRequest(res, 'Campo "message" é obrigatório e não pode estar vazio');
+      if (message.trim() === '' && !hasMedia) {
+        badRequest(res, 'Campo "message" ou "media" é obrigatório');
         return;
       }
 
@@ -7064,7 +7491,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       const agentId = req.agent.id;
       try {
         const clientMessageId = `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-        const updatedTicket = addAgentMessage(id, message, agentId, { clientMessageId, deliveryStatus: 'pending' });
+        const updatedTicket = addAgentMessage(id, message, agentId, {
+          clientMessageId,
+          deliveryStatus: 'pending',
+          mediaKind: hasMedia ? mediaKind : null,
+          mediaType: hasMedia ? mediaType : null,
+          mediaUrl: hasMedia ? (mediaUrl || '') : null,
+          documentId: hasMedia ? (mediaDocumentId || '') : null,
+          fileName: hasMedia ? String(rawMedia.fileName || '').trim() : null,
+          mimeType: hasMedia ? String(rawMedia.mimeType || '').trim() : null,
+          sizeBytes: hasMedia && Number.isFinite(rawMedia.sizeBytes) ? Number(rawMedia.sizeBytes) : null,
+        });
         if (!updatedTicket) {
           logger.warn('[Ticket] Não foi possível adicionar mensagem ao histórico (ticket não encontrado)', { ticketId: id });
           sendJson(res, 404, { error: 'ticket_not_found' });
@@ -7099,13 +7536,26 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
             updateOutboundMessageMeta(id, { clientMessageId, deliveryStatus: 'pending' });
           }
 
-          await outboundQueueService.enqueueOutbound({
-            tenantId: req.tenantId,
-            channelType: 'whatsapp',
-            conversationId: ticket.conversationId || null,
-            message: { to: phoneNumber, type: 'text', body: { text: message }, meta: { ticketId: id, clientMessageId } },
-          });
-          logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', { ticketId: id, phoneNumber });
+          // No canal WhatsApp atual, o worker outbound envia apenas texto.
+          // Para mensagens com mídia, inclui legenda e/ou URL como texto quando disponível.
+          const fallbackMediaUrl = (hasMedia && mediaKind === 'rag' && mediaDocumentId)
+            ? `/rag/documents/${encodeURIComponent(mediaDocumentId)}/file`
+            : (hasMedia ? mediaUrl : '');
+          const outboundText = hasMedia
+            ? [message.trim(), fallbackMediaUrl].filter(Boolean).join('\n')
+            : message;
+
+          if (outboundText && outboundText.trim() !== '') {
+            await outboundQueueService.enqueueOutbound({
+              tenantId: req.tenantId,
+              channelType: 'whatsapp',
+              conversationId: ticket.conversationId || null,
+              message: { to: phoneNumber, type: 'text', body: { text: outboundText }, meta: { ticketId: id, clientMessageId } },
+            });
+            logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', { ticketId: id, phoneNumber, hasMedia });
+          } else {
+            logger.info('[Ticket] Mensagem com mídia salva sem envio outbound (sem texto/url disponível)', { ticketId: id, phoneNumber });
+          }
         } catch (whatsappError) {
           // Se o erro for de credenciais inválidas, apenas loga um aviso e continua
           // Isso permite que o sistema funcione em modo de desenvolvimento/teste
@@ -7132,6 +7582,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ticketId: id,
         agentId: req.agent.id,
         message,
+        hasMedia,
       }).catch((err) => {
         logger.error('[Webhook] Erro ao disparar webhook para ticket.message.sent:', err);
       });
@@ -7141,6 +7592,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         ticketId: id,
         agentId: req.agent.id,
         message,
+        hasMedia,
         ticket: ticket, // Ticket completo para atualização local sem requisição HTTP
       }, { tenantId, agentId: ticket.assignedTo });
 
@@ -7151,7 +7603,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         action: 'ticket_message',
         resource: 'ticket',
         resourceId: id,
-        details: { messageLength: message.length },
+        details: { messageLength: message.length, hasMedia },
         ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown',
       });
@@ -7160,6 +7612,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         success: true,
         ticketId: id,
         message,
+        hasMedia,
       });
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -7359,10 +7812,37 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }
       }
 
-      // Resposta compatível + nova forma obrigatória
+      const validationWarnings = (() => {
+        const validationErrors = Array.isArray(wrapperResult?.validation?.errors)
+          ? wrapperResult.validation.errors
+          : [];
+        return {
+          valid: wrapperResult?.validation?.valid !== false,
+          errors: validationErrors,
+          codes: validationErrors
+            .map((e) => (e && (e.code || e.type)) ? String(e.code || e.type) : null)
+            .filter(Boolean),
+        };
+      })();
+
+      // Resposta compatível + shape alinhado com /flows/generate
       const response = wrapperResult.success
-        ? { envelope, flow: wrapperResult.flow, ...iaResult }
-        : { envelope, error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' }, ...iaResult };
+        ? {
+          success: true,
+          flowDefinition: wrapperResult.flow || null,
+          validationWarnings,
+          envelope,
+          flow: wrapperResult.flow,
+          ...iaResult,
+        }
+        : {
+          success: false,
+          flowDefinition: wrapperResult.flow || null,
+          validationWarnings,
+          envelope,
+          error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' },
+          ...iaResult,
+        };
 
       sendJson(res, wrapperResult.success ? 200 : 400, response);
     } catch (err) {
@@ -7560,9 +8040,37 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         }
       }
 
+      const validationWarnings = (() => {
+        const validationErrors = Array.isArray(wrapperResult?.validation?.errors)
+          ? wrapperResult.validation.errors
+          : [];
+        return {
+          valid: wrapperResult?.validation?.valid !== false,
+          errors: validationErrors,
+          codes: validationErrors
+            .map((e) => (e && (e.code || e.type)) ? String(e.code || e.type) : null)
+            .filter(Boolean),
+        };
+      })();
+
       const response = wrapperResult.success
-        ? { envelope, rpaTest: wrapperResult.plan, ...iaResult }
-        : { envelope, error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' }, ...iaResult };
+        ? {
+          success: true,
+          flowDefinition: wrapperResult.flow || null,
+          rpaTest: wrapperResult.plan || null,
+          validationWarnings,
+          envelope,
+          ...iaResult,
+        }
+        : {
+          success: false,
+          flowDefinition: wrapperResult.flow || null,
+          rpaTest: wrapperResult.plan || null,
+          validationWarnings,
+          envelope,
+          error: wrapperResult.error || { type: 'GENERATION_ERROR', message: 'Erro na geração' },
+          ...iaResult,
+        };
 
       sendJson(res, wrapperResult.success ? 200 : 400, response);
     } catch (err) {
@@ -8995,6 +9503,94 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /tenants/:tenantKey/ai-credentials/test - Valida credenciais salvas do tenant
+  // Também cobre /tenants/current/ai-credentials/test por compatibilidade.
+  if (method === 'POST' && pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/)) {
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/);
+    let tenantKey = decodeURIComponent(match[1]);
+
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      if (tenantKey === 'current') {
+        tenantKey = authResult.agent?.tenantId;
+      }
+      if (!tenantKey || tenantKey === 'current') {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId ausente ou inválido' });
+        return;
+      }
+
+      const isSuperAdminUser = isSuperAdmin(authResult.agent);
+      if (!isSuperAdminUser && authResult.agent.role !== 'admin' && authResult.agent.tenantId !== tenantKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado a este tenant' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const providerOverride = body && typeof body.provider === 'string' ? body.provider.trim().toLowerCase() : null;
+
+      const aiConfig = await getAIConfig(tenantKey);
+      if (aiConfig === null) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant não encontrado' });
+        return;
+      }
+
+      const provider = providerOverride || aiConfig.primary || aiConfig.provider || null;
+      if (!provider) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider: null,
+          tenantId: tenantKey,
+          error: 'Provider primário não configurado para o tenant',
+        });
+        return;
+      }
+
+      const apiKey = await getDecryptedAPIKey(tenantKey, provider);
+      if (!apiKey || !apiKey.trim()) {
+        sendJson(res, 200, {
+          success: true,
+          valid: false,
+          provider,
+          tenantId: tenantKey,
+          error: `Credencial não configurada para o provider ${provider}`,
+        });
+        return;
+      }
+
+      const validation = await validateProviderTokenDirect(provider, apiKey);
+      sendJson(res, 200, {
+        success: true,
+        valid: validation.valid === true,
+        provider,
+        tenantId: tenantKey,
+        error: validation.error || null,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao validar credenciais salvas do tenant:', err);
+        sendJson(res, 500, {
+          success: false,
+          valid: false,
+          error: err.message || 'Erro ao validar credenciais salvas do tenant',
+        });
+      }
+    }
+    return;
+  }
+
   // PUT /config - Atualiza a configuração
   if (method === 'PUT' && pathname === '/config') {
     if (!hasJsonContentType(req)) {
@@ -9077,109 +9673,18 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
         return;
       }
 
-      if (provider !== 'openai' && provider !== 'anthropic') {
+      const normalizedProvider = normalizeAiProvider(provider);
+      if (!normalizedProvider) {
         badRequest(res, 'Provider deve ser "openai" ou "anthropic"');
         return;
       }
 
-      // Remove espaços em branco do token
-      const cleanApiKey = apiKey.trim();
-      if (!cleanApiKey) {
-        sendJson(res, 200, {
-          success: true,
-          valid: false,
-          error: 'Token não pode estar vazio',
-        });
-        return;
-      }
-
-      let isValid = false;
-      let error = null;
-
-      try {
-        if (provider === 'openai') {
-          // Valida token OpenAI fazendo uma chamada REAL à API (nunca usa fallback)
-          // Usa endpoint de listagem de modelos que é leve e rápido
-          const response = await fetch('https://api.openai.com/v1/models', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${cleanApiKey}`,
-            },
-            // Timeout de 10 segundos para evitar espera longa
-            signal: AbortSignal.timeout(10000),
-          });
-
-          if (response.ok) {
-            // Verifica se a resposta realmente contém dados válidos
-            const data = await response.json().catch(() => null);
-            if (data && Array.isArray(data.data)) {
-              isValid = true;
-            } else {
-              error = 'Resposta inválida da API OpenAI';
-            }
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            if (response.status === 401) {
-              error = 'Token inválido ou expirado';
-            } else if (response.status === 403) {
-              error = 'Token não tem permissão para acessar a API';
-            } else {
-              error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
-            }
-          }
-        } else if (provider === 'anthropic') {
-          // Valida token Anthropic fazendo uma chamada REAL à API (nunca usa fallback)
-          // Anthropic não tem endpoint de listagem, então fazemos uma chamada de teste mínima
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'x-api-key': cleanApiKey,
-              'anthropic-version': '2023-06-01',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'claude-3-haiku-20240307',
-              max_tokens: 10,
-              messages: [{ role: 'user', content: 'test' }],
-            }),
-            // Timeout de 10 segundos para evitar espera longa
-            signal: AbortSignal.timeout(10000),
-          });
-
-          if (response.ok) {
-            // Verifica se a resposta realmente contém dados válidos
-            const data = await response.json().catch(() => null);
-            if (data && data.content) {
-              isValid = true;
-            } else {
-              error = 'Resposta inválida da API Anthropic';
-            }
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            if (response.status === 401) {
-              error = 'Token inválido ou expirado';
-            } else if (response.status === 403) {
-              error = 'Token não tem permissão para acessar a API';
-            } else {
-              error = errorData.error?.message || `Erro ${response.status}: ${response.statusText}`;
-            }
-          }
-        }
-      } catch (validationError) {
-        // Trata diferentes tipos de erro
-        if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
-          error = 'Timeout ao validar token. Verifique sua conexão com a internet.';
-        } else if (validationError.name === 'TypeError' && validationError.message.includes('fetch')) {
-          error = 'Erro de conexão. Verifique sua conexão com a internet.';
-        } else {
-          error = validationError.message || 'Erro ao validar token';
-        }
-      }
+      const validation = await validateProviderTokenDirect(normalizedProvider, apiKey);
 
       sendJson(res, 200, {
         success: true,
-        valid: isValid,
-        error: error || null,
+        valid: validation.valid === true,
+        error: validation.error || null,
       });
     } catch (err) {
       logger.error('Erro ao validar token de provedor', err);
@@ -11975,1438 +12480,339 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
-  // POST /web-scraping/scrape - Raspa uma URL
-  if (method === 'POST' && pathname === '/web-scraping/scrape') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const permResult = requirePermission(req, 'rag', 'create');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
-      return;
-    }
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-    try {
-      const body = await parseJsonBody(req);
-      if (!body.url) {
-        badRequest(res, 'URL é obrigatória');
-        return;
-      }
-      const userId = req.agent?.id || req.agent?.username || 'anonymous';
-      const executionId = body.executionId || `exec-${Date.now()}`;
-      
-      const result = await scrapeUrl(body.url, {
-        contentSelector: body.contentSelector,
-        removeSelectors: body.removeSelectors,
-        timeout: body.timeout || 30000,
-        autoIndex: body.autoIndex !== false,
-        source: body.source || 'web_scraping',
-        category: body.category,
-        tags: body.tags || [],
-        tenantId: req.tenantId,
-        userId,
-        executionId,
-      });
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'web_scraping',
-        resource: 'web_scraping',
-        resourceId: result.documentId,
-        details: { url: body.url },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
-      sendJson(res, 200, result);
-    } catch (err) {
-      // Trata erro de rate limit
-      if (err.code === 'RATE_LIMIT_EXCEEDED') {
-        // Garante que retryAfter é um número válido
-        const retryAfter = (err.retryAfter && !isNaN(err.retryAfter) && err.retryAfter > 0)
-          ? err.retryAfter
-          : 60; // Fallback padrão de 60 segundos
-        
-        sendJson(res, 429, {
-          error: 'rate_limit_exceeded',
-          message: `Rate limit excedido. Tente novamente em ${retryAfter} segundos.`,
-          retryAfter: retryAfter,
-        });
-        return;
-      }
-      logger.error('Erro ao raspar URL:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message });
-    }
-    return;
-  }
-
-  // POST /web-scraping/scrape-batch - Raspa múltiplas URLs
-  if (method === 'POST' && pathname === '/web-scraping/scrape-batch') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const permResult = requirePermission(req, 'rag', 'create');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
-      return;
-    }
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-    try {
-      const body = await parseJsonBody(req);
-      if (!body.urls || !Array.isArray(body.urls) || body.urls.length === 0) {
-        badRequest(res, 'URLs é obrigatório e deve ser um array não vazio');
-        return;
-      }
-      const results = await scrapeUrls(body.urls, {
-        contentSelector: body.contentSelector,
-        removeSelectors: body.removeSelectors,
-        timeout: body.timeout || 30000,
-        concurrency: body.concurrency || 3,
-        autoIndex: body.autoIndex !== false,
-        source: body.source || 'web_scraping',
-        category: body.category,
-        tags: body.tags || [],
-        tenantId: req.tenantId,
-      });
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'web_scraping_batch',
-        resource: 'web_scraping',
-        details: { urlsCount: body.urls.length },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
-      sendJson(res, 200, { results });
-    } catch (err) {
-      logger.error('Erro ao raspar URLs:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message });
-    }
-    return;
-  }
-
-  // -----------------------------------------------------------------------
-  // Webhooks Customizados
-  // -----------------------------------------------------------------------
-
-  // GET /webhooks/events - Lista eventos disponíveis
-  if (method === 'GET' && pathname === '/webhooks/events') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const events = getAvailableEvents();
-    sendJson(res, 200, { events });
-    return;
-  }
-
-  // GET /webhooks - Lista webhooks do tenant
-  if (method === 'GET' && pathname === '/webhooks') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const webhooksList = listWebhooks(req.tenantId);
-    sendJson(res, 200, { webhooks: webhooksList });
-    return;
-  }
-
-  // GET /webhooks/:id - Obtém webhook específico
-  if (method === 'GET' && pathname.startsWith('/webhooks/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const webhookId = pathname.split('/')[2];
-    const webhook = getWebhook(webhookId);
-
-    if (!webhook) {
-      sendJson(res, 404, { error: 'not_found', message: 'Webhook não encontrado' });
-      return;
-    }
-
-    // Verifica se pertence ao tenant do agente
-      if (webhook.tenantId !== req.tenantId) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado' });
-      return;
-    }
-
-    sendJson(res, 200, { webhook });
-    return;
-  }
-
-  // POST /webhooks - Cria novo webhook
-  if (method === 'POST' && pathname === '/webhooks') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const permResult = requirePermission(req, 'webhooks', 'create');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
-      return;
-    }
-
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-
-    try {
-      const body = await parseJsonBody(req);
-      
-      // Usa tenantId do agente autenticado
-      const webhookData = {
-        ...body,
-        tenantId: body.tenantId || req.tenantId,
-      };
-
-      const result = createWebhook(webhookData);
-
-      if (!result.success) {
-        sendJson(res, 400, { error: 'validation_error', message: result.error });
-        return;
-      }
-
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'create',
-        resource: 'webhook',
-        details: { webhookId: result.webhook.id },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
-
-      sendJson(res, 201, { webhook: result.webhook });
-    } catch (err) {
-      if (err instanceof SyntaxError) {
-        badRequest(res, 'JSON inválido no corpo da requisição');
-      } else {
-        logger.error('Erro ao criar webhook:', err);
-        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao criar webhook' });
-      }
-    }
-    return;
-  }
-
-  // PUT /webhooks/:id - Atualiza webhook
-  if (method === 'PUT' && pathname.startsWith('/webhooks/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const permResult = requirePermission(req, 'webhooks', 'update');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
-      return;
-    }
-
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-
-    try {
-      const webhookId = pathname.split('/')[2];
-      const existingWebhook = getWebhook(webhookId);
-
-      if (!existingWebhook) {
-        sendJson(res, 404, { error: 'not_found', message: 'Webhook não encontrado' });
-        return;
-      }
-
-      // Verifica se pertence ao tenant do agente
-      if (existingWebhook.tenantId !== req.tenantId) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado' });
-        return;
-      }
-
-      const body = await parseJsonBody(req);
-      const result = updateWebhook(webhookId, body);
-
-      if (!result.success) {
-        sendJson(res, 400, { error: 'validation_error', message: result.error });
-        return;
-      }
-
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'update',
-        resource: 'webhook',
-        details: { webhookId },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
-
-      sendJson(res, 200, { webhook: result.webhook });
-    } catch (err) {
-      if (err instanceof SyntaxError) {
-        badRequest(res, 'JSON inválido no corpo da requisição');
-      } else {
-        logger.error('Erro ao atualizar webhook:', err);
-        sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao atualizar webhook' });
-      }
-    }
-    return;
-  }
-
-  // DELETE /webhooks/:id - Deleta webhook
-  if (method === 'DELETE' && pathname.startsWith('/webhooks/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const permResult = requirePermission(req, 'webhooks', 'delete');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
-      return;
-    }
-
-    const webhookId = pathname.split('/')[2];
-    const existingWebhook = getWebhook(webhookId);
-
-    if (!existingWebhook) {
-      sendJson(res, 404, { error: 'not_found', message: 'Webhook não encontrado' });
-      return;
-    }
-
-    // Verifica se pertence ao tenant do agente
-      if (existingWebhook.tenantId !== req.tenantId) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado' });
-      return;
-    }
-
-    const result = deleteWebhook(webhookId);
-
-    if (!result.success) {
-      sendJson(res, 400, { error: 'validation_error', message: result.error });
-      return;
-    }
-
-    logAction({
-      agentId: req.agent.id,
-      username: req.agent.username,
-      action: 'delete',
-      resource: 'webhook',
-      details: { webhookId },
-      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-      userAgent: req.headers['user-agent'] || 'unknown',
+  // =======================================================================
+  // Config Admin Routes
+  // =======================================================================
+  {
+    const { handleConfigAdminRoutes } = require('./serverHandlers/configAdminRoutes');
+    const handledConfigAdmin = await handleConfigAdminRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, logAction, flows,
+      },
     });
+    if (handledConfigAdmin) return;
+  }
 
-    sendJson(res, 200, { success: true });
-    return;
+  // =======================================================================
+  // Storefront Public Routes
+  // =======================================================================
+  {
+    const { handleStorefrontRoutes } = require('./serverHandlers/storefrontRoutes');
+    const { checkRateLimit } = require('../infra/rate-limit');
+    const handledStorefront = await handleStorefrontRoutes({
+      req, res, method, pathname,
+      deps: {
+        sendJson, badRequest, hasJsonContentType, parseJsonBody, logger, checkRateLimit,
+      },
+    });
+    if (handledStorefront) return;
+  }
+
+  // =======================================================================
+  // Physical Public Routes
+  // =======================================================================
+  {
+    const { handlePhysicalPublicRoutes } = require('./serverHandlers/physicalPublicRoutes');
+    const { checkRateLimit } = require('../infra/rate-limit');
+    const handledPhysicalPublic = await handlePhysicalPublicRoutes({
+      req, res, method, pathname,
+      deps: {
+        sendJson, badRequest, hasJsonContentType, parseJsonBody, logger, checkRateLimit, logAction,
+      },
+    });
+    if (handledPhysicalPublic) return;
+  }
+
+  // =======================================================================
+  // Public Token Routes
+  // =======================================================================
+  {
+    const { handlePublicTokenRoutes } = require('./serverHandlers/publicTokenRoutes');
+    const { checkRateLimit } = require('../infra/rate-limit');
+    const handledPublicToken = await handlePublicTokenRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, logAction, checkRateLimit,
+      },
+    });
+    if (handledPublicToken) return;
+  }
+
+  // =======================================================================
+  // Web Scraping Routes
+  // =======================================================================
+  {
+    const { handleWebScrapingRoutes } = require('./serverHandlers/webScrapingRoutes');
+    const { requireExecutionId } = require('./middleware/requireExecutionId');
+    const { createPipelineWs } = require('./ws/pipelineEmitter');
+    const { emitPipelineStage } = require('./ws/emitPipelineStage');
+    const { failGeneration } = require('./services/failGeneration');
+    const { GenerationFailureReasons } = require('./constants/GenerationFailureReasons');
+    const { ensureExecutionContext, requireStages, updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+    const handledWebScraping = await handleWebScrapingRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        isSuperAdmin, logAction, logger, setCorsHeaders, sendApiError, buildApiError,
+        scrapeUrl, scrapeUrls, requireExecutionId, createPipelineWs, emitPipelineStage,
+        ensureExecutionContext, requireStages, updateStage, updateStatus, failGeneration,
+        GenerationFailureReasons,
+      },
+    });
+    if (handledWebScraping) return;
+  }
+
+  // =======================================================================
+  // Webhooks Customizados Routes
+  // =======================================================================
+  {
+    const { handleWebhooksRoutes } = require('./serverHandlers/webhooksRoutes');
+    const handledWebhooks = await handleWebhooksRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logAction, logger,
+        getAvailableEvents, listWebhooks, getWebhook, createWebhook, updateWebhook, deleteWebhook,
+      },
+    });
+    if (handledWebhooks) return;
+  }
+
+  // =======================================================================
+  // RPA - Testes Automatizados Routes
+  // =======================================================================
+  {
+    const { handleRpaTestsRoutes } = require('./serverHandlers/rpaTestsRoutes');
+    const {
+      listRecordings, executeRecording, getExecutionStatus, cancelExecution, continueExecution,
+      nextStep, deleteRecording, startManualRecording, stopManualRecording, getRecordingStatus,
+    } = require('./services/rpaService');
+    const handledRpaTests = await handleRpaTestsRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, sendJson, badRequest, hasJsonContentType, parseJsonBody, logger,
+        listRecordings, executeRecording, getExecutionStatus, cancelExecution, continueExecution,
+        nextStep, deleteRecording, startManualRecording, stopManualRecording, getRecordingStatus,
+        path, fs,
+      },
+    });
+    if (handledRpaTests) return;
+  }
+
+  // =======================================================================
+  // QA - Qualidade e Validação Routes
+  // =======================================================================
+  {
+    const { handleQaRoutes } = require('./serverHandlers/qaRoutes');
+    const handledQa = await handleQaRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logAction, logger,
+        getLatestQaResult, getQaHistory, getQaStatistics, getQaResultById, runQaManual,
+      },
+    });
+    if (handledQa) return;
+  }
+
+  // =======================================================================
+  // Dev - Gerenciamento de Contratos, Prompts e RAG Routes
+  // =======================================================================
+  {
+    const { handleDevManagementRoutes } = require('./serverHandlers/devManagementRoutes');
+    const handledDev = await handleDevManagementRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, sendJson, badRequest, hasJsonContentType, parseJsonBody, isSuperAdmin,
+        logAction, logger, path, fs,
+      },
+    });
+    if (handledDev) return;
   }
 
   // -----------------------------------------------------------------------
-  // RPA - Testes Automatizados
+  // GET /api/schedules - Lista agendamentos
   // -----------------------------------------------------------------------
-
-  const {
-    listRecordings,
-    executeRecording,
-    getExecutionStatus,
-    cancelExecution,
-    continueExecution,
-    nextStep,
-    deleteRecording,
-    startManualRecording,
-    stopManualRecording,
-    getRecordingStatus,
-  } = require('./services/rpaService');
-
-  // GET /rpa/recordings - Lista gravações disponíveis
-  if (method === 'GET' && pathname === '/rpa/recordings') {
+  if (method === 'GET' && pathname === '/api/schedules') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-
-    try {
-      const recordings = listRecordings();
-      sendJson(res, 200, { recordings });
-    } catch (error) {
-      logger.error('Erro ao listar gravações RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar gravações RPA' });
-    }
+    const urlObj = new URL(req.url, 'http://localhost');
+    const contextType = urlObj.searchParams.get('contextType') || undefined;
+    const contextId = urlObj.searchParams.get('contextId') || undefined;
+    const limit = Math.min(parseInt(urlObj.searchParams.get('limit') || '50', 10), 200);
+    const store = _getSchedules(req.tenantId || 'default');
+    let items = Array.from(store.values());
+    if (contextType) items = items.filter(s => s.contextType === contextType);
+    if (contextId) items = items.filter(s => s.contextId === contextId);
+    items.sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
+    items = items.slice(0, limit);
+    sendJson(res, 200, { items, total: items.length });
     return;
   }
 
-  // DELETE /rpa/recordings/:id - Remove uma gravação
-  if (method === 'DELETE' && pathname.startsWith('/rpa/recordings/')) {
+  // POST /api/schedules - Cria agendamento
+  if (method === 'POST' && pathname === '/api/schedules') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-
-    try {
-      let recordingId = decodeURIComponent(pathname.slice('/rpa/recordings/'.length));
-      // Remove .json se presente
-      if (recordingId.endsWith('.json')) {
-        recordingId = recordingId.slice(0, -'.json'.length);
-      }
-      
-      if (!recordingId || recordingId.trim() === '') {
-        badRequest(res, 'ID da gravação é obrigatório');
-        return;
-      }
-
-      const result = deleteRecording(recordingId);
-
-      if (!result.success) {
-        if (result.message.includes('não encontrada')) {
-          sendJson(res, 404, {
-            error: 'not_found',
-            message: result.message,
-          });
-        } else {
-          sendJson(res, 500, {
-            error: 'internal_error',
-            message: result.message,
-          });
-        }
-        return;
-      }
-
-      // eslint-disable-next-line no-console
-      logger.debug(`Gravação removida: ${recordingId}`);
-
-      sendJson(res, 200, {
-        success: true,
-        deletedId: result.deletedId,
-        message: result.message,
-      });
-    } catch (err) {
-      logger.error('Erro ao remover gravação', err);
-      sendJson(res, 500, {
-        error: 'internal_error',
-        message: 'Erro interno ao remover gravação',
-      });
-    }
+    const body = await parseJsonBody(req);
+    const id = _genScheduleId();
+    const now = new Date().toISOString();
+    const schedule = {
+      id,
+      tenantId: req.tenantId || 'default',
+      contextType: String(body.contextType || 'custom'),
+      contextId: String(body.contextId || ''),
+      contactId: body.contactId || null,
+      conversationId: body.conversationId || null,
+      channel: body.channel || 'whatsapp',
+      mode: body.mode || 'agent_based',
+      startAt: body.startAt || now,
+      endAt: body.endAt || now,
+      timezone: body.timezone || 'UTC',
+      purpose: body.purpose || 'compromisso',
+      notes: body.notes || null,
+      origin: body.origin || 'human',
+      status: 'scheduled',
+      confirmationStatus: body.requiresConfirmation ? 'pending' : 'not_required',
+      requiresConfirmation: !!body.requiresConfirmation,
+      ownerId: body.ownerId || null,
+      teamId: body.teamId || null,
+      reminders: Array.isArray(body.reminders) ? body.reminders : [],
+      metadata: body.metadata || {},
+      createdAt: now,
+      updatedAt: now,
+    };
+    _getSchedules(req.tenantId || 'default').set(id, schedule);
+    sendJson(res, 201, { schedule });
     return;
   }
 
-  // POST /rpa/execute/:recordingId - Executa uma gravação
-  if (method === 'POST' && pathname.startsWith('/rpa/execute/')) {
+  // GET /api/schedules/availability - Consulta disponibilidade
+  if (method === 'GET' && pathname === '/api/schedules/availability') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-
-    try {
-      const recordingId = pathname.split('/rpa/execute/')[1];
-      if (!recordingId) {
-        badRequest(res, 'ID da gravação é obrigatório');
-        return;
-      }
-
-      const body = await parseJsonBody(req);
-      const config = body.config || {};
-      const data = body.data || {};
-      
-      // Passa o token de autenticação para o overlay
-      const token = req.token || null;
-
-      const result = await executeRecording(recordingId, config, data, token);
-      sendJson(res, 200, result);
-    } catch (error) {
-      logger.error('Erro ao executar RPA:', error);
-      sendJson(res, 500, { 
-        error: 'internal_error', 
-        message: error.message || 'Erro ao executar RPA' 
-      });
-    }
+    sendJson(res, 200, { available: true, slots: [] });
     return;
   }
 
-  // GET /rpa/execution/:executionId - Obtém status de execução
-  if (method === 'GET' && pathname.startsWith('/rpa/execution/')) {
+  // POST /api/schedules/:id/confirm|decline|reschedule|cancel|in-progress|done|no-show
+  if (method === 'POST' && pathname.startsWith('/api/schedules/')) {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-
-    try {
-      const executionId = pathname.split('/rpa/execution/')[1];
-      if (!executionId) {
-        badRequest(res, 'ID da execução é obrigatório');
+    const schedSeg = pathname.slice('/api/schedules/'.length);
+    const slashIdx = schedSeg.indexOf('/');
+    if (slashIdx !== -1) {
+      const schedId = decodeURIComponent(schedSeg.slice(0, slashIdx));
+      const action = schedSeg.slice(slashIdx + 1);
+      const store = _getSchedules(req.tenantId || 'default');
+      const sched = store.get(schedId);
+      if (!sched) {
+        sendJson(res, 404, { error: 'schedule_not_found' });
         return;
       }
-
-      const status = getExecutionStatus(executionId);
-      if (!status) {
-        sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
-        return;
-      }
-
-      sendJson(res, 200, status);
-    } catch (error) {
-      logger.error('Erro ao obter status da execução RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter status' });
-    }
-    return;
-  }
-
-  // POST /rpa/execution/:executionId/cancel - Cancela execução
-  if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/cancel')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const parts = pathname.split('/');
-      const executionId = parts[parts.length - 2];
-      
-      if (!executionId) {
-        badRequest(res, 'ID da execução é obrigatório');
-        return;
-      }
-
-      const result = await cancelExecution(executionId);
-      if (!result.success) {
-        sendJson(res, 400, { error: 'validation_error', message: result.error });
-        return;
-      }
-
-      sendJson(res, 200, { success: true, message: 'Execução cancelada' });
-    } catch (error) {
-      logger.error('Erro ao cancelar execução RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao cancelar execução' });
-    }
-    return;
-  }
-
-  // POST /rpa/execution/:executionId/continue - Continua execução pausada sem pausas
-  if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/continue')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const parts = pathname.split('/');
-      const executionId = parts[parts.length - 2];
-      
-      if (!executionId) {
-        badRequest(res, 'ID da execução é obrigatório');
-        return;
-      }
-
-      // Continua sem pausas (desativa step-by-step)
-      const result = continueExecution(executionId, true);
-      if (!result.success) {
-        sendJson(res, 400, { error: 'validation_error', message: result.error });
-        return;
-      }
-
-      sendJson(res, 200, { success: true, message: 'Execução continuada sem pausas' });
-    } catch (error) {
-      logger.error('Erro ao continuar execução RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao continuar execução' });
-    }
-    return;
-  }
-
-  // POST /rpa/record/start - Inicia gravação manual
-  if (method === 'POST' && pathname === '/rpa/record/start') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-
-    try {
-      const body = await parseJsonBody(req);
-      const seedName = body.seedName || body.name;
-      const initialUrl = body.initialUrl || body.url;
-
-      if (!seedName || seedName.trim() === '') {
-        badRequest(res, 'Nome do seed (seedName) é obrigatório');
-        return;
-      }
-
-      const result = await startManualRecording(seedName, initialUrl);
-      
-      if (!result.success) {
-        sendJson(res, 400, result);
-        return;
-      }
-
-      sendJson(res, 200, result);
-    } catch (error) {
-      logger.error('Erro ao iniciar gravação manual', error);
-      sendJson(res, 500, {
-        error: 'internal_error',
-        message: error.message || 'Erro ao iniciar gravação manual',
-      });
-    }
-    return;
-  }
-
-  // POST /rpa/record/stop/:recordingId - Para gravação manual
-  if (method === 'POST' && pathname.startsWith('/rpa/record/stop/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const recordingId = pathname.split('/rpa/record/stop/')[1];
-      if (!recordingId) {
-        badRequest(res, 'ID da gravação é obrigatório');
-        return;
-      }
-
-      const result = await stopManualRecording(recordingId);
-      
-      if (!result.success) {
-        sendJson(res, 400, result);
-        return;
-      }
-
-      sendJson(res, 200, result);
-    } catch (error) {
-      logger.error('Erro ao parar gravação manual', error);
-      sendJson(res, 500, {
-        error: 'internal_error',
-        message: error.message || 'Erro ao parar gravação manual',
-      });
-    }
-    return;
-  }
-
-  // GET /rpa/record/status/:recordingId - Obtém status da gravação manual
-  if (method === 'GET' && pathname.startsWith('/rpa/record/status/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const recordingId = pathname.split('/rpa/record/status/')[1];
-      if (!recordingId) {
-        badRequest(res, 'ID da gravação é obrigatório');
-        return;
-      }
-
-      const result = getRecordingStatus(recordingId);
-      
-      if (!result.success) {
-        sendJson(res, 404, result);
-        return;
-      }
-
-      sendJson(res, 200, result);
-    } catch (error) {
-      logger.error('Erro ao obter status da gravação', error);
-      sendJson(res, 500, {
-        error: 'internal_error',
-        message: error.message || 'Erro ao obter status da gravação',
-      });
-    }
-    return;
-  }
-
-  // POST /rpa/execution/:executionId/next - Executa apenas o próximo step
-  if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/next')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const parts = pathname.split('/');
-      const executionId = parts[parts.length - 2];
-      
-      if (!executionId) {
-        badRequest(res, 'ID da execução é obrigatório');
-        return;
-      }
-
-      const result = nextStep(executionId);
-      if (!result.success) {
-        sendJson(res, 400, { error: 'validation_error', message: result.error });
-        return;
-      }
-
-      sendJson(res, 200, { success: true, message: 'Próximo step executado' });
-    } catch (error) {
-      logger.error('Erro ao executar próximo step RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao executar próximo step' });
-    }
-    return;
-  }
-
-  // GET /rpa/execution/:executionId/report - Obtém relatório de execução
-  if (method === 'GET' && pathname.includes('/rpa/execution/') && pathname.endsWith('/report')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const parts = pathname.split('/');
-      const executionId = parts[parts.length - 2];
-      
-      if (!executionId) {
-        badRequest(res, 'ID da execução é obrigatório');
-        return;
-      }
-
-      const status = getExecutionStatus(executionId);
-      if (!status) {
-        sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
-        return;
-      }
-
-      // Retorna o relatório completo
-      sendJson(res, 200, {
-        executionId: status.id,
-        recordingId: status.recordingId,
-        status: status.status,
-        startTime: status.startTime,
-        endTime: status.endTime,
-        results: status.results,
-      });
-    } catch (error) {
-      logger.error('Erro ao obter relatório da execução RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter relatório' });
-    }
-    return;
-  }
-
-  // GET /tests/rpa/reports/:filename - Serve arquivo de relatório RPA
-  if (method === 'GET' && pathname.startsWith('/tests/rpa/reports/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const filename = pathname.slice('/tests/rpa/reports/'.length);
-      
-      // Validação de segurança: apenas arquivos JSON e sem path traversal
-      if (!filename || filename.includes('..') || filename.includes('/') || !filename.endsWith('.json')) {
-        sendJson(res, 400, { error: 'invalid_filename', message: 'Nome de arquivo inválido' });
-        return;
-      }
-
-      const reportPath = path.join(__dirname, '..', 'tests', 'rpa', 'reports', filename);
-      
-      // Verifica se o arquivo existe
-      if (!fs.existsSync(reportPath)) {
-        sendJson(res, 404, { error: 'not_found', message: 'Relatório não encontrado' });
-        return;
-      }
-
-      // Lê e retorna o arquivo JSON
-      const reportContent = fs.readFileSync(reportPath, 'utf8');
-      const reportData = JSON.parse(reportContent);
-      
-      // Retorna com Content-Type correto
-      setCorsHeaders(res);
-      res.writeHead(200, {
-        'Content-Type': 'application/json; charset=utf-8',
-      });
-      res.end(JSON.stringify(reportData));
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        logger.error('Erro ao fazer parse do relatório JSON:', error);
-        sendJson(res, 500, { error: 'invalid_json', message: 'Relatório contém JSON inválido' });
+      const now = new Date().toISOString();
+      if (action === 'confirm') {
+        sched.confirmationStatus = 'confirmed'; sched.status = 'scheduled'; sched.updatedAt = now;
+      } else if (action === 'decline') {
+        sched.confirmationStatus = 'declined'; sched.status = 'cancelled'; sched.updatedAt = now;
+      } else if (action === 'cancel') {
+        sched.status = 'cancelled'; sched.updatedAt = now;
+      } else if (action === 'done') {
+        sched.status = 'done'; sched.updatedAt = now;
+      } else if (action === 'no-show') {
+        sched.status = 'no_show'; sched.updatedAt = now;
+      } else if (action === 'in-progress') {
+        sched.status = 'in_progress'; sched.updatedAt = now;
+      } else if (action === 'reschedule') {
+        const body = await parseJsonBody(req);
+        if (body.startAt) sched.startAt = body.startAt;
+        if (body.endAt) sched.endAt = body.endAt;
+        sched.status = 'scheduled'; sched.updatedAt = now;
       } else {
-        logger.error('Erro ao servir relatório RPA:', error);
-        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao servir relatório' });
+        sendJson(res, 404, { error: 'action_not_found' });
+        return;
       }
-    }
-    return;
-  }
-
-  // GET /tests/rpa/replay - Lista todos os arquivos de replay
-  if (method === 'GET' && pathname === '/tests/rpa/replay') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      sendJson(res, 200, { schedule: sched });
       return;
     }
-
-    try {
-      const replayDir = path.join(__dirname, '..', 'tests', 'rpa', 'replay');
-      
-      // Verifica se o diretório existe
-      if (!fs.existsSync(replayDir)) {
-        sendJson(res, 200, { files: [] });
-        return;
-      }
-
-      // Lista todos os arquivos JSON com detalhes adicionais
-      const files = fs.readdirSync(replayDir)
-        .filter(file => file.endsWith('.json'))
-        .map(file => {
-          const filePath = path.join(replayDir, file);
-          const stats = fs.statSync(filePath);
-          
-          // Tenta ler o conteúdo do arquivo para extrair mais detalhes
-          let details = {
-            filename: file,
-            size: stats.size,
-            modified: stats.mtime.toISOString(),
-            created: stats.birthtime.toISOString(),
-          };
-          
-          try {
-            const content = fs.readFileSync(filePath, 'utf8');
-            const replayData = JSON.parse(content);
-            
-            // Extrai informações relevantes do replay
-            if (replayData.id) details.id = replayData.id;
-            if (replayData.recordingId) details.recordingId = replayData.recordingId;
-            if (replayData.startTime) details.startTime = replayData.startTime;
-            if (replayData.endTime) details.endTime = replayData.endTime;
-            if (replayData.mode) details.mode = replayData.mode;
-            if (replayData.result) details.result = replayData.result;
-            
-            // Conta ações e telas
-            if (Array.isArray(replayData.actions)) {
-              details.actionCount = replayData.actions.length;
-            }
-            if (Array.isArray(replayData.screens)) {
-              details.screenCount = replayData.screens.length;
-            }
-            if (Array.isArray(replayData.errors)) {
-              details.errorCount = replayData.errors.length;
-            }
-            
-            // Calcula duração se tiver startTime e endTime
-            if (replayData.startTime && replayData.endTime) {
-              const start = new Date(replayData.startTime);
-              const end = new Date(replayData.endTime);
-              details.duration = end - start; // em milissegundos
-            }
-          } catch (parseError) {
-            // Se não conseguir fazer parse, mantém apenas os dados básicos
-            logger.debug(`Não foi possível extrair detalhes do replay ${file}:`, parseError.message);
-          }
-          
-          return details;
-        })
-        .sort((a, b) => new Date(b.modified) - new Date(a.modified)); // Mais recentes primeiro
-
-      sendJson(res, 200, { files });
-    } catch (error) {
-      logger.error('Erro ao listar replays RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar replays' });
-    }
-    return;
-  }
-
-  // GET /tests/rpa/replay/:filename - Serve arquivo de log/replay RPA
-  if (method === 'GET' && pathname.startsWith('/tests/rpa/replay/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const filename = pathname.slice('/tests/rpa/replay/'.length);
-      
-      // Validação de segurança: apenas arquivos JSON e sem path traversal
-      if (!filename || filename.includes('..') || filename.includes('/') || !filename.endsWith('.json')) {
-        sendJson(res, 400, { error: 'invalid_filename', message: 'Nome de arquivo inválido' });
-        return;
-      }
-
-      const replayPath = path.join(__dirname, '..', 'tests', 'rpa', 'replay', filename);
-      
-      // Verifica se o arquivo existe
-      if (!fs.existsSync(replayPath)) {
-        sendJson(res, 404, { error: 'not_found', message: 'Log/Replay não encontrado' });
-        return;
-      }
-
-      // Lê e retorna o arquivo JSON
-      const replayContent = fs.readFileSync(replayPath, 'utf8');
-      const replayData = JSON.parse(replayContent);
-      
-      // Retorna com Content-Type correto
-      setCorsHeaders(res);
-      res.writeHead(200, {
-        'Content-Type': 'application/json; charset=utf-8',
-      });
-      res.end(JSON.stringify(replayData));
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        logger.error('Erro ao fazer parse do log/replay JSON:', error);
-        sendJson(res, 500, { error: 'invalid_json', message: 'Log/Replay contém JSON inválido' });
-      } else {
-        logger.error('Erro ao servir log/replay RPA:', error);
-        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao servir log/replay' });
-      }
-    }
-    return;
-  }
-
-  // DELETE /tests/rpa/replay/:filename - Remove arquivo de replay RPA
-  if (method === 'DELETE' && pathname.startsWith('/tests/rpa/replay/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const filename = pathname.slice('/tests/rpa/replay/'.length);
-      
-      // Validação de segurança: apenas arquivos JSON e sem path traversal
-      if (!filename || filename.includes('..') || filename.includes('/') || !filename.endsWith('.json')) {
-        sendJson(res, 400, { error: 'invalid_filename', message: 'Nome de arquivo inválido' });
-        return;
-      }
-
-      const replayPath = path.join(__dirname, '..', 'tests', 'rpa', 'replay', filename);
-      
-      // Verifica se o arquivo existe
-      if (!fs.existsSync(replayPath)) {
-        sendJson(res, 404, { error: 'not_found', message: 'Replay não encontrado' });
-        return;
-      }
-
-      // Remove o arquivo
-      fs.unlinkSync(replayPath);
-      
-      logger.info(`Replay removido: ${filename}`);
-      
-      sendJson(res, 200, {
-        success: true,
-        deletedFilename: filename,
-        message: `Replay "${filename}" removido com sucesso`,
-      });
-    } catch (error) {
-      logger.error('Erro ao remover replay RPA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao remover replay' });
-    }
-    return;
   }
 
   // -----------------------------------------------------------------------
-  // QA - Qualidade e Validação
+  // POST /api/debug/entities/extract - Extrai entidades de texto
   // -----------------------------------------------------------------------
-
-  // GET /qa/latest - Último resultado de QA
-  if (method === 'GET' && pathname === '/qa/latest') {
+  if (method === 'POST' && pathname === '/api/debug/entities/extract') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-
+    const body = await parseJsonBody(req);
+    const text = String(body.text || '');
     try {
-      const result = getLatestQaResult();
-      if (!result) {
-        sendJson(res, 404, { error: 'not_found', message: 'Nenhum resultado de QA encontrado' });
-        return;
-      }
+      const result = await extractSemanticContext({
+        rawText: text,
+        tenantId: req.tenantId,
+        channel: body.channel || 'whatsapp',
+        dryRun: false,
+      });
       sendJson(res, 200, result);
-    } catch (error) {
-      logger.error('Erro ao obter último resultado QA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter resultado QA' });
-    }
-    return;
-  }
-
-  // GET /qa/history - Histórico de resultados de QA
-  if (method === 'GET' && pathname === '/qa/history') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const url = new URL(req.url || '/', 'http://localhost');
-      const limit = parseInt(url.searchParams.get('limit') || '50', 10);
-      const source = url.searchParams.get('source') || undefined;
-
-      const history = getQaHistory({ limit, source });
-      sendJson(res, 200, { results: history, count: history.length });
-    } catch (error) {
-      logger.error('Erro ao obter histórico QA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter histórico QA' });
-    }
-    return;
-  }
-
-  // GET /qa/stats - Estatísticas de QA
-  if (method === 'GET' && pathname === '/qa/stats') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const stats = getQaStatistics();
-      sendJson(res, 200, stats);
-    } catch (error) {
-      logger.error('Erro ao obter estatísticas QA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter estatísticas QA' });
-    }
-    return;
-  }
-
-  // GET /qa/:id - Resultado de QA por ID (commit ou timestamp)
-  if (method === 'GET' && pathname.startsWith('/qa/') && pathname !== '/qa/latest' && pathname !== '/qa/history' && pathname !== '/qa/stats') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    try {
-      const id = pathname.split('/qa/')[1];
-      if (!id) {
-        badRequest(res, 'ID do resultado QA é obrigatório');
-        return;
-      }
-
-      const result = getQaResultById(id);
-      if (!result) {
-        sendJson(res, 404, { error: 'not_found', message: 'Resultado de QA não encontrado' });
-        return;
-      }
-      sendJson(res, 200, result);
-    } catch (error) {
-      logger.error('Erro ao obter resultado QA por ID:', error);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter resultado QA' });
-    }
-    return;
-  }
-
-  // POST /qa/run - Executa QA manualmente
-  if (method === 'POST' && pathname === '/qa/run') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    const permResult = requirePermission(req, 'qa', 'execute');
-    if (!permResult.allowed) {
-      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
-      return;
-    }
-
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-
-    try {
-      const body = await parseJsonBody(req);
-      const changedFiles = body.changedFiles || undefined;
-      const source = body.source || 'manual';
-
-      const result = runQaManual({ changedFiles, source });
-
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'execute',
-        resource: 'qa',
-        details: { status: result.status, scopes: result.scope },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
-
-      sendJson(res, 200, result);
-    } catch (error) {
-      logger.error('Erro ao executar QA:', error);
-      sendJson(res, 500, { error: 'internal_error', message: error.message || 'Erro ao executar QA' });
-    }
-    return;
-  }
-
-  // -----------------------------------------------------------------------
-  // Dev - Gerenciamento de Contratos, Prompts e RAG
-  // -----------------------------------------------------------------------
-
-  // GET /dev/files - Lista arquivos disponíveis (contratos, prompts)
-  // Apenas super-admin pode acessar
-  if (method === 'GET' && pathname === '/dev/files') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-
-    // Verifica se é super-admin
-    const isSuperAdminUser = isSuperAdmin(req.agent);
-    if (!isSuperAdminUser) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem acessar arquivos de desenvolvimento' });
-      return;
-    }
-
-    try {
-      const projectRoot = path.join(__dirname, '..');
-      const contractsDir = path.join(projectRoot, 'contracts');
-      const promptsDir = path.join(projectRoot, 'prompts');
-      const nodesDir = path.join(projectRoot, 'api/data/rag/chatbot');
-      
-      const files = {
-        contracts: [],
-        prompts: [],
-        nodes: [],
-        documents: {}, // Documentos organizados por categoria
-      };
-
-      // Lista contratos
-      if (fs.existsSync(contractsDir)) {
-        const listFiles = (dir, basePath = '') => {
-          const entries = fs.readdirSync(dir, { withFileTypes: true });
-          for (const entry of entries) {
-            const fullPath = path.join(dir, entry.name);
-            const relativePath = path.join(basePath, entry.name).replace(/\\/g, '/');
-            
-            if (entry.isDirectory()) {
-              listFiles(fullPath, relativePath);
-            } else if (entry.isFile() && (entry.name.endsWith('.json') || entry.name.endsWith('.md'))) {
-              files.contracts.push({
-                path: relativePath,
-                name: entry.name,
-                type: entry.name.endsWith('.json') ? 'json' : 'markdown',
-                size: fs.statSync(fullPath).size,
-              });
-            }
-          }
-        };
-        listFiles(contractsDir);
-      }
-
-      // Lista prompts
-      if (fs.existsSync(promptsDir)) {
-        const entries = fs.readdirSync(promptsDir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isFile() && entry.name.endsWith('.md')) {
-            const fullPath = path.join(promptsDir, entry.name);
-            files.prompts.push({
-              path: entry.name,
-              name: entry.name,
-              type: 'markdown',
-              size: fs.statSync(fullPath).size,
-            });
-          }
-        }
-      }
-
-      // Lista arquivos de nós (nodes, schema, rules, errors)
-      if (fs.existsSync(nodesDir)) {
-        const listNodeFiles = (dir, basePath = '') => {
-          const entries = fs.readdirSync(dir, { withFileTypes: true });
-          for (const entry of entries) {
-            const fullPath = path.join(dir, entry.name);
-            const relativePath = path.join(basePath, entry.name).replace(/\\/g, '/');
-            
-            if (entry.isDirectory()) {
-              // Inclui subdiretórios: nodes/, schema/, rules/, known_errors/
-              if (entry.name === 'nodes' || entry.name === 'schema' || entry.name === 'rules' || entry.name === 'known_errors') {
-                listNodeFiles(fullPath, relativePath);
-              }
-            } else if (entry.isFile() && entry.name.endsWith('.json')) {
-              files.nodes.push({
-                path: relativePath,
-                name: entry.name,
-                type: 'json',
-                size: fs.statSync(fullPath).size,
-              });
-            }
-          }
-        };
-        listNodeFiles(nodesDir);
-      }
-
-      // Lista documentos organizados do diretório "dev Documentos"
-      const documentsDir = path.join(projectRoot, 'dev Documentos');
-      if (fs.existsSync(documentsDir)) {
-        const categories = fs.readdirSync(documentsDir, { withFileTypes: true })
-          .filter(entry => entry.isDirectory() && entry.name.match(/^\d{2}_/))
-          .map(entry => entry.name)
-          .sort();
-        
-        for (const category of categories) {
-          const categoryDir = path.join(documentsDir, category);
-          const categoryFiles = [];
-          
-          const listCategoryFiles = (dir, basePath = '') => {
-            const entries = fs.readdirSync(dir, { withFileTypes: true });
-            for (const entry of entries) {
-              const fullPath = path.join(dir, entry.name);
-              const relativePath = basePath ? path.join(basePath, entry.name).replace(/\\/g, '/') : entry.name;
-              
-              if (entry.isDirectory()) {
-                listCategoryFiles(fullPath, relativePath);
-              } else if (entry.isFile() && entry.name.endsWith('.md')) {
-                const stats = fs.statSync(fullPath);
-                categoryFiles.push({
-                  path: relativePath,
-                  name: entry.name,
-                  type: 'markdown',
-                  size: stats.size,
-                  modified: stats.mtime.toISOString(),
-                });
-              }
-            }
-          };
-          
-          listCategoryFiles(categoryDir);
-          if (categoryFiles.length > 0) {
-            files.documents[category] = categoryFiles;
-          }
-        }
-      }
-
-      sendJson(res, 200, files);
     } catch (err) {
-      logger.error('[Dev] Erro ao listar arquivos:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao listar arquivos' });
+      logger.warn('[API] /api/debug/entities/extract fallback to keywords', { error: err.message });
+      const keywords = nlpExtractKeywords(text);
+      sendJson(res, 200, { entities: keywords, keywords, error: null });
     }
     return;
   }
 
-  // GET /dev/files/:type/:path - Lê conteúdo de um arquivo
-  // Apenas super-admin pode acessar
-  if (method === 'GET' && pathname.startsWith('/dev/files/')) {
+  // POST /api/support/tags/suggest - Sugere tags para um ticket
+  if (method === 'POST' && pathname === '/api/support/tags/suggest') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-
-    // Verifica se é super-admin
-    const isSuperAdminUser = isSuperAdmin(req.agent);
-    if (!isSuperAdminUser) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem ler arquivos de desenvolvimento' });
-      return;
-    }
-
-    try {
-      const parts = pathname.split('/').filter(p => p);
-      // parts: ['dev', 'files', 'type', 'path...']
-      if (parts.length < 4) {
-        badRequest(res, 'Caminho inválido. Use /dev/files/:type/:path');
-        return;
-      }
-
-      const type = parts[2]; // 'contracts', 'prompts', 'nodes' ou 'documents'
-      const filePath = parts.slice(3).join('/'); // resto do caminho
-
-      if (type !== 'contracts' && type !== 'prompts' && type !== 'nodes' && type !== 'documents') {
-        badRequest(res, 'Tipo inválido. Use "contracts", "prompts", "nodes" ou "documents"');
-        return;
-      }
-
-      const projectRoot = path.join(__dirname, '..');
-      let baseDir;
-      if (type === 'contracts') {
-        baseDir = path.join(projectRoot, 'contracts');
-      } else if (type === 'prompts') {
-        baseDir = path.join(projectRoot, 'prompts');
-      } else if (type === 'nodes') {
-        baseDir = path.join(projectRoot, 'api/data/rag/chatbot');
-      } else if (type === 'documents') {
-        // Para documents, o caminho é: categoria/arquivo.md
-        const categoryPath = parts[3]; // categoria (ex: 01_Analises)
-        const fileName = parts.slice(4).join('/'); // nome do arquivo
-        baseDir = path.join(projectRoot, 'dev Documentos', categoryPath);
-        filePath = fileName; // Atualiza filePath para o nome do arquivo
-      }
-      
-      const fullPath = path.join(baseDir, filePath);
-      
-      // Validação de segurança: garante que o caminho está dentro do diretório base
-      const normalizedPath = path.normalize(fullPath);
-      const normalizedBase = path.normalize(baseDir);
-      if (!normalizedPath.startsWith(normalizedBase)) {
-        badRequest(res, 'Caminho inválido: tentativa de acesso fora do diretório permitido');
-        return;
-      }
-
-      if (!fs.existsSync(normalizedPath)) {
-        sendJson(res, 404, { error: 'not_found', message: 'Arquivo não encontrado' });
-        return;
-      }
-
-      const content = fs.readFileSync(normalizedPath, 'utf8');
-      const stats = fs.statSync(normalizedPath);
-      
-      sendJson(res, 200, {
-        path: filePath,
-        type: type,
-        content: content,
-        size: stats.size,
-        modified: stats.mtime.toISOString(),
-      });
-    } catch (err) {
-      logger.error('[Dev] Erro ao ler arquivo:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao ler arquivo' });
-    }
+    const body = await parseJsonBody(req);
+    const text = String(body.text || '');
+    const keywords = nlpExtractKeywords(text);
+    sendJson(res, 200, { tags: keywords.slice(0, 10), keywords });
     return;
   }
 
-  // PUT /dev/files/:type/:path - Salva conteúdo de um arquivo
-  // Apenas super-admin pode acessar
-  if (method === 'PUT' && pathname.startsWith('/dev/files/')) {
+  // POST /api/support/sentiment/suggest - Analisa sentimento de texto
+  if (method === 'POST' && pathname === '/api/support/sentiment/suggest') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
-
-    // Verifica se é super-admin
-    const isSuperAdminUser = isSuperAdmin(req.agent);
-    if (!isSuperAdminUser) {
-      sendJson(res, 403, { error: 'forbidden', message: 'Apenas super-admins podem editar arquivos de desenvolvimento' });
-      return;
-    }
-
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return;
-    }
-
+    const body = await parseJsonBody(req);
+    const text = String(body.text || '');
     try {
-      const parts = pathname.split('/').filter(p => p);
-      if (parts.length < 4) {
-        badRequest(res, 'Caminho inválido. Use /dev/files/:type/:path');
-        return;
-      }
-
-      const type = parts[2];
-      const filePath = parts.slice(3).join('/');
-
-      if (type !== 'contracts' && type !== 'prompts' && type !== 'nodes' && type !== 'documents') {
-        badRequest(res, 'Tipo inválido. Use "contracts", "prompts", "nodes" ou "documents"');
-        return;
-      }
-
-      const body = await parseJsonBody(req);
-      if (!body.content || typeof body.content !== 'string') {
-        badRequest(res, 'Campo "content" (string) é obrigatório');
-        return;
-      }
-
-      const projectRoot = path.join(__dirname, '..');
-      let baseDir;
-      let filePathToUse = filePath;
-      
-      if (type === 'contracts') {
-        baseDir = path.join(projectRoot, 'contracts');
-      } else if (type === 'prompts') {
-        baseDir = path.join(projectRoot, 'prompts');
-      } else if (type === 'nodes') {
-        baseDir = path.join(projectRoot, 'api/data/rag/chatbot');
-      } else if (type === 'documents') {
-        // Para documents, o caminho é: categoria/arquivo.md
-        const categoryPath = parts[3]; // categoria (ex: 01_Analises)
-        const fileName = parts.slice(4).join('/'); // nome do arquivo
-        baseDir = path.join(projectRoot, 'dev Documentos', categoryPath);
-        filePathToUse = fileName; // Atualiza filePath para o nome do arquivo
-      }
-      
-      const fullPath = path.join(baseDir, filePathToUse);
-      
-      // Validação de segurança
-      const normalizedPath = path.normalize(fullPath);
-      const normalizedBase = path.normalize(baseDir);
-      if (!normalizedPath.startsWith(normalizedBase)) {
-        badRequest(res, 'Caminho inválido: tentativa de acesso fora do diretório permitido');
-        return;
-      }
-
-      // Cria diretório se não existir
-      const dir = path.dirname(normalizedPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      // Valida JSON se for arquivo JSON
-      if (normalizedPath.endsWith('.json')) {
-        try {
-          JSON.parse(body.content);
-        } catch (jsonErr) {
-          badRequest(res, `JSON inválido: ${jsonErr.message}`);
-          return;
-        }
-      }
-
-      // Salva arquivo
-      fs.writeFileSync(normalizedPath, body.content, 'utf8');
-      
-      logAction({
-        agentId: req.agent.id,
-        username: req.agent.username,
-        action: 'update',
-        resource: 'dev_file',
-        resourceId: `${type}/${filePath}`,
-        details: { type, path: filePath },
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
-      });
-
-      const stats = fs.statSync(normalizedPath);
-      sendJson(res, 200, {
-        success: true,
-        path: filePath,
-        type: type,
-        size: stats.size,
-        modified: stats.mtime.toISOString(),
-      });
+      const result = await nlpAnalyzeText(text);
+      sendJson(res, 200, { sentiment: result.sentiment, intent: result.intent, result });
     } catch (err) {
-      logger.error('[Dev] Erro ao salvar arquivo:', err);
-      sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao salvar arquivo' });
+      // Fallback: heuristic sentiment
+      const lower = text.toLowerCase();
+      const pos = /\b(obrigad|ótimo|excelente|perfeito|feliz|satisf|grato)/.test(lower);
+      const neg = /\b(problema|erro|falha|ruim|péssim|horrív|insatisf|reclamaç)/.test(lower);
+      const sentiment = pos && !neg ? 'positive' : neg && !pos ? 'negative' : 'neutral';
+      sendJson(res, 200, { sentiment, intent: null, result: null });
     }
     return;
   }
@@ -13860,6 +13266,7 @@ module.exports = {
     validateFlowStructure,
     flows,
     sessionEvents,
+    requestHandler,
   },
 };
 

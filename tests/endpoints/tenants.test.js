@@ -162,23 +162,23 @@ async function testTenantsEndpoints() {
         console.log('   ⚠️  Erro ao obter métricas:', usageResponse.status);
       }
 
-      // 6. GET /tenants/:id/ai-provider-status
-      console.log(`6. Testando GET /tenants/${tenantId}/ai-provider-status...`);
-      const aiStatusUrl = new URL(`/tenants/${tenantId}/ai-provider-status`, API_BASE_URL);
+      // 6. POST /tenants/:id/ai-credentials/test
+      console.log(`6. Testando POST /tenants/${tenantId}/ai-credentials/test...`);
+      const aiStatusUrl = new URL(`/tenants/${tenantId}/ai-credentials/test`, API_BASE_URL);
       const aiStatusResponse = await httpRequest({
         hostname: aiStatusUrl.hostname,
         port: aiStatusUrl.port || 3000,
         path: aiStatusUrl.pathname,
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-      });
+      }, {});
 
       if (aiStatusResponse.status === 200) {
-        console.log('   ✅ Status de provider de IA obtido');
-        console.log(`      hasValidProvider: ${aiStatusResponse.body.hasValidProvider}`);
+        console.log('   ✅ Status de credencial de IA obtido');
+        console.log(`      valid: ${aiStatusResponse.body.valid}`);
       } else {
         console.log('   ⚠️  Erro ao obter status:', aiStatusResponse.status);
       }
@@ -212,6 +212,16 @@ async function testTenantsEndpoints() {
     return { success: false, error: error.message };
   }
 }
+
+describe('Endpoints de Tenants (smoke)', () => {
+  test('executa smoke test quando habilitado', async () => {
+    if (process.env.RUN_ENDPOINT_TESTS !== 'true') {
+      return;
+    }
+    const result = await testTenantsEndpoints();
+    expect(result && result.success).toBe(true);
+  });
+});
 
 // Executa se for chamado diretamente
 if (require.main === module) {

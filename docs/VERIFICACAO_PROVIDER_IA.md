@@ -4,7 +4,7 @@ Este documento detalha o processo completo de verificação de provider de IA v�
 
 ## Visão Geral
 
-O sistema verifica se um tenant possui um provider de IA válido configurado antes de permitir o acesso à plataforma. A verificação ocorre em dois momentos:
+O sistema verifica se um tenant possui um provider de IA válido configurado (por-tenant, no banco) antes de permitir o acesso à plataforma. A verificação ocorre em dois momentos:
 
 1. **Após login bem-sucedido** (usuário não super-admin)
 2. **Após seleção de tenant** (super-admin)
@@ -57,8 +57,8 @@ function initializeAiProviders() {
 ```
 
 **O que acontece:**
-- Registra providers globais (OpenAI, Anthropic) se tiverem API keys configuradas
-- Configura providers específicos por tenant se houver configuração em `ai.tenants[tenantId]`
+- Registra providers (OpenAI, Anthropic) no runtime
+- Configura providers por tenant a partir do banco (`tenant_ai_settings`)
 
 ### 2. Verificação no Endpoint da API
 
@@ -89,19 +89,8 @@ if (method === 'GET' && pathname.startsWith('/tenants/') && pathname.endsWith('/
   const provider = getAiProviderForTenant(tenantId);
   const hasTenantProvider = provider !== null && typeof provider === 'object' && typeof provider.generate === 'function';
 
-  // 4. Se não tiver provider específico, verifica providers globais
-  let hasValidProvider = hasTenantProvider;
-  
-  if (!hasTenantProvider) {
-    const config = require('./utils/config');
-    const aiConfig = config.get('ai', {});
-    
-    // Verifica se há pelo menos um provider com API key configurada
-    const hasOpenAI = !!(aiConfig.openai && aiConfig.openai.apiKey);
-    const hasAnthropic = !!(aiConfig.anthropic && aiConfig.anthropic.apiKey);
-    
-    hasValidProvider = hasOpenAI || hasAnthropic;
-  }
+  // 4. Sem fallback global: o provider deve estar configurado por tenant
+  const hasValidProvider = hasTenantProvider;
 
   // 5. Retorna resultado
   sendJson(res, 200, { 
@@ -167,10 +156,7 @@ Um provider é considerado válido quando **pelo menos uma** das seguintes condi
 - O provider tem o método `generate` implementado
 
 #### 2. Provider Global Disponível
-- Não há configuração específica do tenant
-- Mas há pelo menos um provider global configurado com API key:
-  - `ai.openai.apiKey` está configurado, OU
-  - `ai.anthropic.apiKey` está configurado
+**Removido.** O sistema não usa mais API keys globais; credenciais e provider são sempre por tenant (DB).
 
 ### Exemplo de Configuração
 
@@ -199,18 +185,7 @@ Um provider é considerado válido quando **pelo menos uma** das seguintes condi
 ```
 
 #### Configuração Global (Fallback)
-
-```json
-{
-  "ai": {
-    "openai": {
-      "apiKey": "sk-..."
-    }
-  }
-}
-```
-
-Neste caso, todos os tenants sem configuração específica podem usar o OpenAI global.
+**Removido.** Não há mais fallback global.
 
 ## Fluxo no Frontend
 
@@ -286,8 +261,8 @@ O sistema gera logs detalhados em cada etapa:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Inicialização do Servidor                                │
-│    - Registra providers globais (OpenAI, Anthropic)        │
-│    - Configura providers específicos por tenant             │
+│    - Registra providers (OpenAI/Anthropic)                 │
+│    - Configura providers por tenant (DB)                   │
 └─────────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -301,8 +276,7 @@ O sistema gera logs detalhados em cada etapa:
 ┌─────────────────────────────────────────────────────────────┐
 │ 3. Verificação de Provider                                  │
 │    - Chama GET /tenants/:id/ai-provider-status              │
-│    - Verifica provider específico do tenant                │
-│    - Se não houver, verifica providers globais             │
+│    - Verifica provider do tenant no runtime                 │
 └─────────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -326,9 +300,9 @@ O sistema gera logs detalhados em cada etapa:
 
 ## Tratamento de Erros
 
-- **Erro na verificação**: Sistema continua normalmente (não bloqueia acesso)
-- **Provider não encontrado**: Redireciona para configuração
-- **API key inválida**: Provider não é registrado na inicialização
+- **Erro na verificação (rede/401/500/timeouts)**: **bloqueia o acesso** e redireciona para a tela de configuração de IA (`/config?tab=ai`, e quando possível inclui `&tenant=<tenantId>`).
+- **Provider não encontrado / não configurado**: **bloqueia o acesso** e redireciona para configuração (`/config?tab=ai` / `?tab=ai&tenant=<tenantId>`).
+- **API key inválida**: Provider pode existir na configuração, mas será considerado **inválido** e o usuário será direcionado para configuração para corrigir.
 
 ## Notas Importantes
 

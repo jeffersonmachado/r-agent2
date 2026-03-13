@@ -3,8 +3,8 @@
 ### Endpoints existentes
 
 - `POST /flows/generate` / `POST /flows/generate/dry-run`: orquestrador (contrato `generation.interface.json` + auditoria `auditService`)
-- `POST /ai/chatbot/generate`: wrapper oficial (retorna **sempre** `envelope` + `flow` e mantém `IaGenerationResult` por compatibilidade)
-- `POST /ai/rpa/generate`: wrapper oficial (retorna **sempre** `envelope` + `rpaTest` e mantém `IaGenerationResult` por compatibilidade)
+- `POST /ai/chatbot/generate`: **alias** do orquestrador (retorna o mesmo formato do `POST /flows/generate`)
+- `POST /ai/rpa/generate`: **alias** do orquestrador (retorna o mesmo formato do `POST /flows/generate` com `generateRpaTest=true`)
 - `POST /flows`: persistência de fluxo (gate obrigatório quando `metadata.generatedBy === 'ai'`)
 - `POST /flows/preview`: preview/diff read-only do FlowDefinition
 

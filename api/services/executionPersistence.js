@@ -26,6 +26,14 @@ const { Execution } = require('../db/models');
  */
 async function persistExecution(execution) {
   const executionId = execution.executionId;
+  const executionMode = execution?.payload?.executionMode || null;
+  const isDryRun = executionMode === 'dry-run' || execution?.options?.dryRun === true || execution?.payload?.dryRun === true;
+
+  // Regra: em dry-run não grava nada no banco.
+  if (isDryRun) {
+    logger.debug('[executionPersistence] Dry-run: persistência ignorada', { executionId, executionMode });
+    return;
+  }
 
   // Prepara dados para persistência (apenas o necessário)
   const persistedData = {

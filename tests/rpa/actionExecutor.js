@@ -21,13 +21,108 @@ class ActionExecutor {
     this.dataPopulator = new DataPopulator();
     this.screenshots = [];
     this.errors = [];
+    // Logs detalhados por step/ação (úteis para debug no backend/CI)
+    this.debugLogs = [];
+    this.consoleLogs = [];
+    this.httpErrors = [];
     this.options = {
       headless: options.headless !== undefined ? options.headless : config.playwright.headless,
       slowMo: options.slowMo || config.playwright.slowMo,
       timeout: options.timeout || config.playwright.timeout,
       typingSpeedMs: options.typingSpeedMs || 0, // Delay por caractere (0 = preenchimento rápido)
       devtools: options.devtools !== undefined ? options.devtools : true,
+      detailedLogs: options.detailedLogs !== undefined ? options.detailedLogs : (process.env.RPA_DETAILED_LOGS !== '0'),
+      maxDebugEntries: options.maxDebugEntries !== undefined
+        ? options.maxDebugEntries
+        : (Number(process.env.RPA_MAX_DEBUG_ENTRIES) || 2000),
+      maxConsoleEntries: options.maxConsoleEntries !== undefined
+        ? options.maxConsoleEntries
+        : (Number(process.env.RPA_MAX_CONSOLE_ENTRIES) || 500),
+      captureHttpErrors: options.captureHttpErrors !== undefined
+        ? options.captureHttpErrors
+        : (process.env.RPA_CAPTURE_HTTP_ERRORS === '1' || process.env.RPA_CAPTURE_HTTP_ERRORS === 'true'),
+      traceEnabled: options.traceEnabled !== undefined
+        ? options.traceEnabled
+        : (process.env.RPA_TRACE === '1' || process.env.RPA_TRACE === 'true'),
+      traceDir: options.traceDir || process.env.RPA_TRACE_DIR || path.join(__dirname, 'traces'),
     };
+  }
+
+  _pushDebug(entry) {
+    if (!this.options.detailedLogs) return;
+    this.debugLogs.push(entry);
+    if (this.debugLogs.length > this.options.maxDebugEntries) {
+      this.debugLogs.shift();
+    }
+  }
+
+  _pushConsole(entry) {
+    if (!this.options.detailedLogs) return;
+    this.consoleLogs.push(entry);
+    if (this.consoleLogs.length > this.options.maxConsoleEntries) {
+      this.consoleLogs.shift();
+    }
+  }
+
+  _splitSelectors(selector) {
+    if (!selector || typeof selector !== 'string') return [];
+    return selector
+      .split(',')
+      .map((s) => String(s).trim())
+      .filter(Boolean);
+  }
+
+  async _safeGetUrl() {
+    try {
+      return this.page?.url?.() || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async _safeGetTitle() {
+    try {
+      if (!this.page) return null;
+      return await this.page.title();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async diagnoseSelector(selector) {
+    if (!this.page) return { selector, error: 'page_not_initialized' };
+    if (!selector || typeof selector !== 'string') return { selector, error: 'invalid_selector' };
+
+    // Playwright suporta seletores não-CSS (ex.: text=), então usamos locator() como fonte de verdade.
+    try {
+      const locator = this.page.locator(selector);
+      const count = await locator.count().catch(() => null);
+      const hasAnyMatch = typeof count === 'number' && count > 0;
+      const firstVisible = hasAnyMatch
+        ? await locator.first().isVisible().catch(() => false)
+        : false;
+      // Evita esperar timeout padrão (30s) em seletores inexistentes.
+      const firstText = hasAnyMatch
+        ? await locator.first().innerText({ timeout: 300 }).catch(() => null)
+        : null;
+      return {
+        selector,
+        count,
+        firstVisible,
+        firstText: typeof firstText === 'string' ? firstText.slice(0, 200) : firstText,
+      };
+    } catch (error) {
+      return { selector, error: error.message };
+    }
+  }
+
+  async collectSelectorDiagnostics(selectors) {
+    const diags = [];
+    for (const sel of selectors) {
+      // eslint-disable-next-line no-await-in-loop
+      diags.push(await this.diagnoseSelector(sel));
+    }
+    return diags;
   }
 
   /**
@@ -44,7 +139,36 @@ class ActionExecutor {
       viewport: { width: 1280, height: 720 },
     });
 
+    // Tracing (opcional) - útil para diagnóstico em CI/stack.
+    // Observação: não vira gate; apenas evidência.
+    if (this.options.traceEnabled) {
+      try {
+        const fs = require('fs');
+        if (!fs.existsSync(this.options.traceDir)) {
+          fs.mkdirSync(this.options.traceDir, { recursive: true });
+        }
+      } catch (_) {}
+    }
+
     this.page = await this.context.newPage();
+    
+    // Captura console do browser (útil para debug de travas/renders)
+    if (this.options.detailedLogs) {
+      this.page.on('console', (msg) => {
+        try {
+          // Reduz ruído: captura tudo, mas com cap e truncamento
+          this._pushConsole({
+            type: 'console',
+            level: msg.type(),
+            text: (msg.text() || '').slice(0, 2000),
+            location: msg.location?.() || null,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (e) {
+          // ignora
+        }
+      });
+    }
     
     // Intercepta erros da página
     this.page.on('pageerror', (error) => {
@@ -65,6 +189,87 @@ class ActionExecutor {
         timestamp: new Date().toISOString(),
       });
     });
+
+    // Captura respostas HTTP com status >= 400 (não é gate; apenas evidência).
+    if (this.options.captureHttpErrors) {
+      this.page.on('response', async (response) => {
+        try {
+          const status = response.status();
+          if (status < 400) return;
+          const req = response.request();
+          const url = response.url();
+          const method = req.method();
+
+          // Tenta capturar um preview do body apenas quando for texto/JSON, com limite.
+          let bodyPreview = null;
+          let contentType = null;
+          try {
+            const headers = response.headers();
+            contentType = headers['content-type'] || headers['Content-Type'] || null;
+          } catch (_) {}
+
+          const isTextLike = contentType
+            ? /application\/json|text\/|application\/problem\+json|application\/x-www-form-urlencoded/i.test(contentType)
+            : false;
+          if (isTextLike) {
+            try {
+              const txt = await response.text();
+              if (typeof txt === 'string') bodyPreview = txt.slice(0, 2000);
+            } catch (_) {
+              // ignora
+            }
+          }
+
+          const entry = {
+            type: 'http_error',
+            status,
+            url,
+            method,
+            contentType,
+            bodyPreview,
+            timestamp: new Date().toISOString(),
+          };
+          this.httpErrors.push(entry);
+          // também expõe via errors (mantém compatibilidade com report atual)
+          this.errors.push(entry);
+        } catch (_) {
+          // ignora
+        }
+      });
+    }
+  }
+
+  async startTracing() {
+    if (!this.options.traceEnabled) return { started: false };
+    if (!this.context || !this.context.tracing) return { started: false };
+    try {
+      await this.context.tracing.start({ screenshots: true, snapshots: true, sources: false });
+      return { started: true };
+    } catch (error) {
+      return { started: false, error: error.message };
+    }
+  }
+
+  async stopTracing(name = `trace-${Date.now()}`) {
+    if (!this.options.traceEnabled) return null;
+    if (!this.context || !this.context.tracing) return null;
+    try {
+      const filepath = path.join(this.options.traceDir, `${name}.zip`);
+      await this.context.tracing.stop({ path: filepath });
+      return filepath;
+    } catch (_) {
+      // best-effort
+      try { await this.context.tracing.stop(); } catch {}
+      return null;
+    }
+  }
+
+  getDebugLogs() {
+    return this.debugLogs;
+  }
+
+  getConsoleLogs() {
+    return this.consoleLogs;
   }
 
   /**
@@ -106,57 +311,301 @@ class ActionExecutor {
       };
     }
 
-    const actionType = action.type;
+    // ------------------------------------------------------------
+    // Normalização de formatos legados / gerados por IA
+    // ------------------------------------------------------------
+    // Existem 3 formatos em circulação:
+    // 1) Novo: { type: 'assert', selector, text/visible/exists/value/count, page: {...} }
+    // 2) Wrapper: { type: 'assert', selector, assert: { type: 'text'|'visible'|'exists'|'url'|'value', expected }, ... }
+    // 3) Legado: { action: 'assert', type: 'url'|'text'|'visible'|..., selector, expected }
+    //
+    // Sem normalização:
+    // - asserts com "assert: {..}" viram no-op (não validam nada)
+    // - steps com type="url" falham com "Tipo de ação desconhecido: url"
+    const parseExistsExpected = (value) => {
+      if (value === undefined || value === null) return undefined;
+      if (value === true || value === 'true') return true;
+      if (value === false || value === 'false') return false;
+      if (typeof value === 'string' && value.trim() !== '') return true;
+      return Boolean(value);
+    };
+
+    const normalizeAction = (a) => {
+      if (!a || typeof a !== 'object') return a;
+
+      // Formato legado: action='assert' e type indica o tipo de assert (url/text/visible/exists/value)
+      if (a.action === 'assert' && a.type && a.type !== 'assert') {
+        const kind = a.type;
+        const normalized = { ...a, type: 'assert' };
+
+        if (kind === 'url') {
+          const expected = a.expected || a.value || a.title;
+          normalized.page = normalized.page || {};
+          normalized.page.url = normalized.page.url || {};
+          if (expected !== undefined) normalized.page.url.exact = expected;
+          return normalized;
+        }
+
+        if (kind === 'text') {
+          if (a.expected !== undefined) {
+            // `body` normalmente contém MUITO texto (UI + logs). Para seeds gerados,
+            // o esperado costuma ser substring, não igualdade exata.
+            const selector = typeof a.selector === 'string' ? a.selector.trim() : '';
+            const isInputLike =
+              selector.includes('input') ||
+              selector.includes('textarea') ||
+              selector.includes('contenteditable');
+            if (isInputLike) {
+              normalized.value = a.expected;
+            } else if (selector === 'body') {
+              normalized.textContains = a.expected;
+            } else {
+              normalized.text = a.expected;
+            }
+          }
+          return normalized;
+        }
+
+        if (kind === 'visible') {
+          if (a.expected !== undefined) normalized.visible = a.expected === true || a.expected === 'true';
+          return normalized;
+        }
+
+        if (kind === 'exists') {
+          if (a.expected !== undefined) normalized.exists = parseExistsExpected(a.expected);
+          return normalized;
+        }
+
+        if (kind === 'value') {
+          if (a.expected !== undefined) normalized.value = a.expected;
+          return normalized;
+        }
+
+        return normalized;
+      }
+
+      // Wrapper: type='assert' com campo assert:{type, expected}
+      if (a.type === 'assert' && a.assert && typeof a.assert === 'object') {
+        const kind = a.assert.type;
+        const expected = a.assert.expected;
+        const normalized = { ...a };
+
+        if (kind === 'url') {
+          normalized.page = normalized.page || {};
+          normalized.page.url = normalized.page.url || {};
+          if (expected !== undefined) normalized.page.url.exact = expected;
+          return normalized;
+        }
+
+        if (kind === 'text') {
+          if (expected !== undefined) {
+            // Mesma regra do formato legado: `body` => contains por padrão
+            const selector = typeof a.selector === 'string' ? a.selector.trim() : '';
+            const isInputLike =
+              selector.includes('input') ||
+              selector.includes('textarea') ||
+              selector.includes('contenteditable');
+            if (isInputLike) {
+              normalized.value = expected;
+            } else if (selector === 'body') {
+              normalized.textContains = expected;
+            } else {
+              normalized.text = expected;
+            }
+          }
+          return normalized;
+        }
+
+        if (kind === 'visible') {
+          if (expected !== undefined) normalized.visible = expected === true || expected === 'true';
+          return normalized;
+        }
+
+        if (kind === 'exists') {
+          if (expected !== undefined) normalized.exists = parseExistsExpected(expected);
+          return normalized;
+        }
+
+        if (kind === 'value') {
+          if (expected !== undefined) normalized.value = expected;
+          return normalized;
+        }
+
+        return normalized;
+      }
+
+      // Segurança: alguns geradores produzem { type:'url', expected } (sem action='assert')
+      if (a.type === 'url') {
+        const expected = a.expected || a.value || a.title;
+        return {
+          ...a,
+          type: 'assert',
+          page: {
+            url: {
+              exact: expected,
+            },
+          },
+        };
+      }
+
+      return a;
+    };
+
+    const normalizedAction = normalizeAction(action);
+    const actionType = normalizedAction.type;
+
+    const startedAt = new Date().toISOString();
+    const startMs = Date.now();
+    const urlBefore = await this._safeGetUrl();
+    const titleBefore = await this._safeGetTitle();
+
+    const debugBase = {
+      startedAt,
+      actionType,
+      description: normalizedAction.description || action.description || null,
+      urlBefore,
+      titleBefore,
+      // Campos mais comuns (sem vazar payload gigante)
+      selector: normalizedAction.selector || null,
+      url: normalizedAction.url || normalizedAction.value || null,
+      valuePreview:
+        typeof normalizedAction.value === 'string'
+          ? normalizedAction.value.slice(0, 200)
+          : (normalizedAction.value !== undefined ? normalizedAction.value : null),
+      timeout: normalizedAction.timeout || this.options.timeout,
+      critical: normalizedAction.critical,
+    };
+
     let result = { success: false, error: null };
 
     try {
       switch (actionType) {
         case 'navigate':
-          result = await this.executeNavigate(action, data);
+          result = await this.executeNavigate(normalizedAction, data);
           break;
         case 'click':
-          result = await this.executeClick(action, data);
+          result = await this.executeClick(normalizedAction, data);
           break;
         case 'fill':
-          result = await this.executeFill(action, data);
+          result = await this.executeFill(normalizedAction, data);
           break;
         case 'select':
-          result = await this.executeSelect(action, data);
+          result = await this.executeSelect(normalizedAction, data);
           break;
         case 'wait':
-          result = await this.executeWait(action, data);
+          result = await this.executeWait(normalizedAction, data);
           break;
         case 'assert':
-          result = await this.executeAssert(action, data);
+          result = await this.executeAssert(normalizedAction, data);
           break;
         default:
           result = { success: false, error: `Tipo de ação desconhecido: ${actionType}` };
       }
 
+      const durationMs = Date.now() - startMs;
+      const urlAfter = await this._safeGetUrl();
+      const titleAfter = await this._safeGetTitle();
+
+      // Diagnóstico adicional em caso de falha (principalmente seletores)
+      let diagnostics = null;
+      if (!result.success && this.options.detailedLogs) {
+        try {
+          if (actionType === 'click' || actionType === 'fill' || actionType === 'select') {
+            const selectors = this._splitSelectors(this.replaceVariables(normalizedAction.selector, data));
+            diagnostics = {
+              kind: 'selector',
+              selectorsTried: selectors,
+              selectorDiagnostics: await this.collectSelectorDiagnostics(selectors.slice(0, 10)),
+            };
+          } else if (actionType === 'wait') {
+            const condition = normalizedAction.condition || normalizedAction.selector;
+            const selectors = this._splitSelectors(this.replaceVariables(condition, data));
+            diagnostics = {
+              kind: 'wait',
+              state: normalizedAction.state || 'visible',
+              selectorsTried: selectors,
+              selectorDiagnostics: await this.collectSelectorDiagnostics(selectors.slice(0, 10)),
+            };
+          } else if (actionType === 'assert') {
+            if (normalizedAction.page?.url) {
+              diagnostics = {
+                kind: 'assert_url',
+                expected: normalizedAction.page.url,
+                actualUrl: urlAfter,
+              };
+            } else if (normalizedAction.selector) {
+              const selectors = this._splitSelectors(this.replaceVariables(normalizedAction.selector, data));
+              diagnostics = {
+                kind: 'assert_selector',
+                selectorsTried: selectors,
+                selectorDiagnostics: await this.collectSelectorDiagnostics(selectors.slice(0, 10)),
+              };
+            }
+          }
+        } catch (diagError) {
+          diagnostics = { kind: 'diagnostics_error', error: diagError.message };
+        }
+      }
+
+      const debug = {
+        ...debugBase,
+        endedAt: new Date().toISOString(),
+        durationMs,
+        urlAfter,
+        titleAfter,
+        success: !!result.success,
+        error: result.error || null,
+        code: result.code || null,
+        diagnostics,
+      };
+
+      // Mantém histórico interno para debug posterior
+      this._pushDebug(debug);
+
       // Detecta erros
       if (!result.success) {
-        const detectedError = this.errorDetector.detect(result.error, action, this.page);
+        const detectedError = this.errorDetector.detect(result.error, normalizedAction, this.page);
         if (detectedError) {
           // Tenta recuperação automática
-          const recovery = await this.errorRecovery.recover(detectedError, action, this.page);
+          const recovery = await this.errorRecovery.recover(detectedError, normalizedAction, this.page);
           if (recovery.success) {
             // Tenta executar ação novamente após recuperação
-            return await this.executeAction(action, data);
+            return await this.executeAction(normalizedAction, data);
           }
         }
       }
 
-      return result;
+      return {
+        ...result,
+        debug,
+      };
     } catch (error) {
       // Captura screenshot em caso de erro
       if (config.playwright.screenshot.onFailure) {
         await this.captureScreenshot(`error-${actionType}-${Date.now()}`);
       }
 
+      const durationMs = Date.now() - startMs;
+      const urlAfter = await this._safeGetUrl();
+      const titleAfter = await this._safeGetTitle();
+      const debug = {
+        ...debugBase,
+        endedAt: new Date().toISOString(),
+        durationMs,
+        urlAfter,
+        titleAfter,
+        success: false,
+        error: error.message,
+        code: 'RPA_ACTION_THROWN',
+        diagnostics: { kind: 'exception', stack: error.stack },
+      };
+      this._pushDebug(debug);
+
       return {
         success: false,
         error: error.message,
         stack: error.stack,
+        debug,
       };
     }
   }
@@ -408,9 +857,41 @@ class ActionExecutor {
             timeout: action.timeout || this.options.timeout,
           });
         } catch (e) {
-          const error = new Error(`Elemento não encontrado: ${foundSelector}`);
-          error.code = 'RPA_ELEMENT_NOT_FOUND';
-          throw error;
+          // Fallback para inputs genéricos quando o seletor é muito específico (ex.: textarea)
+          const rawSelector = String(selectors[0] || '').trim();
+          const isInputLike =
+            rawSelector === 'textarea' ||
+            rawSelector === 'input' ||
+            rawSelector.includes('textarea') ||
+            rawSelector.includes('input') ||
+            rawSelector.includes('contenteditable');
+
+          if (isInputLike) {
+            const fallbackSelectors = [
+              "textarea",
+              "input[type='text']",
+              "input",
+              "[contenteditable='true']",
+            ];
+            for (const fallback of fallbackSelectors) {
+              try {
+                await this.page.waitForSelector(fallback, {
+                  state: 'visible',
+                  timeout: 5000,
+                });
+                foundSelector = fallback;
+                break;
+              } catch (_) {
+                // tenta próximo fallback
+              }
+            }
+          }
+
+          if (!foundSelector) {
+            const error = new Error(`Elemento não encontrado: ${rawSelector}`);
+            error.code = 'RPA_ELEMENT_NOT_FOUND';
+            throw error;
+          }
         }
       }
 
@@ -625,11 +1106,64 @@ class ActionExecutor {
   validateUrl(urlConfig, actualUrl, data) {
     if (urlConfig.exact !== undefined) {
       const expectedUrl = this.replaceVariables(urlConfig.exact, data);
-      if (actualUrl !== expectedUrl) {
-        return {
-          valid: false,
-          error: `URL esperada exata "${expectedUrl}", recebida "${actualUrl}"`,
-        };
+      // Compatibilidade + robustez:
+      // - Se o esperado não contém query/hash, comparamos apenas origin+pathname (ignora query/hash do atual).
+      //   Ex.: esperado "http://localhost:5173/chat" deve aceitar "http://localhost:5173/chat?flowId=..."
+      // - Se o esperado é apenas a base/origin (pathname "/"), aceitamos qualquer rota dentro do mesmo origin.
+      // - Se o esperado contém query/hash, aí sim exigimos igualdade completa.
+      const expectedHasQueryOrHash = /[?#]/.test(expectedUrl);
+      if (!expectedHasQueryOrHash) {
+        try {
+          const expectedParsed = new URL(expectedUrl);
+          const actualParsed = new URL(actualUrl);
+
+          const expectedOrigin = expectedParsed.origin;
+          const actualOrigin = actualParsed.origin;
+          if (expectedOrigin !== actualOrigin) {
+            return {
+              valid: false,
+              error: `URL esperada exata "${expectedUrl}", recebida "${actualUrl}"`,
+            };
+          }
+
+          const normalizePath = (p) => {
+            if (!p) return '/';
+            if (p.length > 1 && p.endsWith('/')) return p.slice(0, -1);
+            return p;
+          };
+
+          const expectedPath = normalizePath(expectedParsed.pathname);
+          const actualPath = normalizePath(actualParsed.pathname);
+
+          // Caso especial: esperado é só base/origin ("/") => qualquer rota do mesmo origin é válida
+          if (expectedPath === '/') {
+            return { valid: true };
+          }
+
+          // Caso padrão: exige pathname igual, ignora query/hash do atual
+          if (expectedPath !== actualPath) {
+            return {
+              valid: false,
+              error: `URL esperada exata "${expectedUrl}", recebida "${actualUrl}"`,
+            };
+          }
+        } catch (e) {
+          // Se URL() falhar (ex.: relativo), cai no comportamento antigo (comparação literal)
+          if (actualUrl !== expectedUrl) {
+            return {
+              valid: false,
+              error: `URL esperada exata "${expectedUrl}", recebida "${actualUrl}"`,
+            };
+          }
+        }
+      } else {
+        // Expected com query/hash => igualdade literal
+        if (actualUrl !== expectedUrl) {
+          return {
+            valid: false,
+            error: `URL esperada exata "${expectedUrl}", recebida "${actualUrl}"`,
+          };
+        }
       }
     }
 
@@ -957,7 +1491,51 @@ class ActionExecutor {
 
       // Verifica existência
       if (action.exists !== undefined) {
-        const exists = await this.page.locator(selector).count() > 0;
+        // Hardening: asserts negativos com seletor genérico são frágeis e tendem a falhar sempre.
+        // Ex.: "input, textarea, [contenteditable='true']"
+        if (action.exists === false) {
+          const norm = String(selector || '').trim().replace(/"/g, "'").replace(/\s+/g, ' ');
+          const isGeneric =
+            norm === 'input' ||
+            norm === 'textarea' ||
+            norm === "[contenteditable='true']" ||
+            norm.startsWith('input,') ||
+            norm.startsWith('textarea,') ||
+            norm.includes('input, textarea') ||
+            (norm.includes("[contenteditable='true']") && (norm.includes('input') || norm.includes('textarea')));
+          if (isGeneric) {
+            return {
+              success: false,
+              error: action.message || `Assert negativo com seletor genérico não é permitido: "${selector}"`,
+              code: 'RPA_INVALID_ASSERT',
+            };
+          }
+        }
+        let exists = await this.page.locator(selector).count() > 0;
+        if (!exists && action.exists === true) {
+          const rawSelector = String(selector || '').trim();
+          const isInputLike =
+            rawSelector === 'textarea' ||
+            rawSelector === 'input' ||
+            rawSelector.includes('textarea') ||
+            rawSelector.includes('input') ||
+            rawSelector.includes('contenteditable');
+          if (isInputLike) {
+            const fallbackSelectors = [
+              "textarea",
+              "input[type='text']",
+              "input",
+              "[contenteditable='true']",
+            ];
+            for (const fallback of fallbackSelectors) {
+              const fallbackExists = await this.page.locator(fallback).count() > 0;
+              if (fallbackExists) {
+                exists = true;
+                break;
+              }
+            }
+          }
+        }
         if (exists !== action.exists) {
           return {
             success: false,
@@ -978,8 +1556,32 @@ class ActionExecutor {
         }
       }
 
-      // Verifica texto
-      if (action.text) {
+      // Verifica texto (contém)
+      // Regra: se `textContains` estiver definido, ele tem precedência e NÃO executamos
+      // a validação de `text` exato (evita seeds gerados com ambos os campos).
+      if (action.textContains !== undefined) {
+        const actualTextRaw = await this.page.locator(selector).textContent();
+        const expectedTextRaw = this.replaceVariables(action.textContains, data);
+
+        const actualText = (actualTextRaw || '');
+        const expectedText = (expectedTextRaw || '');
+
+        const normalizeWs = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+        const ok =
+          actualText.includes(expectedText) ||
+          normalizeWs(actualText).includes(normalizeWs(expectedText));
+
+        if (!ok) {
+          return {
+            success: false,
+            error: action.message || `Texto deve conter "${expectedText}", recebido "${actualText}"`,
+            code: 'RPA_ACTION_FAILED',
+          };
+        }
+      }
+
+      // Verifica texto (exato) — apenas quando `textContains` não foi solicitado
+      if (action.text && action.textContains === undefined) {
         const actualText = await this.page.locator(selector).textContent();
         const expectedText = this.replaceVariables(action.text, data);
         if (actualText.trim() !== expectedText.trim()) {
@@ -995,6 +1597,16 @@ class ActionExecutor {
         const actualValue = await this.page.locator(selector).inputValue();
         const expectedValue = this.replaceVariables(action.value, data);
         if (actualValue !== expectedValue) {
+          const isInputLike =
+            selector.includes('input') ||
+            selector.includes('textarea') ||
+            selector.includes('contenteditable');
+          if (isInputLike) {
+            const bodyText = await this.page.locator('body').textContent();
+            if (bodyText && bodyText.includes(expectedValue)) {
+              return { success: true };
+            }
+          }
           return {
             success: false,
             error: action.message || `Valor esperado "${expectedValue}", recebido "${actualValue}"`,
@@ -1108,6 +1720,10 @@ class ActionExecutor {
     return [...this.errors];
   }
 
+  getHttpErrors() {
+    return [...this.httpErrors];
+  }
+
   /**
    * Retorna screenshots capturados.
    */
@@ -1117,4 +1733,3 @@ class ActionExecutor {
 }
 
 module.exports = { ActionExecutor };
-

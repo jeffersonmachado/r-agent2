@@ -6,13 +6,24 @@ const ROUTE_CHANGE_EVENT = 'router:change';
 
 /**
  * Remove o prefixo base path do pathname (ex: /r-agent2/dashboard -> /dashboard)
+ * Suporta múltiplas formas de prefixo (configurado ou hardcoded)
  */
 function normalizePath(pathname) {
   const basePath = getBasePath();
+  
+  // Primeiro tenta remover o basePath configurado (ex: /r-agent2)
   if (basePath && pathname.startsWith(basePath)) {
     const normalized = pathname.substring(basePath.length) || '/';
     return normalized;
   }
+  
+  // Fallback: Se não temos basePath definido mas a URL tem /r-agent2, remove mesmo assim
+  // Isso garante que funcione em produção mesmo se VITE_BASE_PATH não estiver definido
+  if (!basePath && pathname.startsWith('/r-agent2/')) {
+    const normalized = pathname.substring('/r-agent2'.length) || '/';
+    return normalized;
+  }
+  
   return pathname;
 }
 

@@ -66,7 +66,7 @@ curl http://localhost:8000/rag/health
 ```json
 {
   "status": "healthy",
-  "vectorStore": "faiss",
+  "vectorStore": "postgres",
   "embeddingModel": "sentence-transformers/all-MiniLM-L6-v2",
   "indexedDocuments": 0,
   "indexedChunks": 0
@@ -98,22 +98,12 @@ O frontend estará disponível em: `http://localhost:5173`
 ./scripts/start-dev.sh
 ```
 
-## 📁 Estrutura de Arquivos em Desenvolvimento
+## 📁 Persistência em Desenvolvimento
 
-### **Vector Store do Tenant Demo**
+Os documentos e embeddings/chunks do RAG ficam no PostgreSQL:
 
-```
-rag-service/data/vector_store/
-  ├── <tenant-id>.index          ← Índice FAISS do tenant
-  └── <tenant-id>.metadata.json  ← Metadados dos chunks do tenant
-```
-
-### **Documentos RAG**
-
-```
-api/data/
-  └── (DB-only) documentos ficam no PostgreSQL (tabela `rag_documents`)
-```
+- `rag_documents`: documentos
+- `rag_chunks`: chunks + embeddings (pgvector), com isolamento por `tenant_key`
 
 ## 🔧 Configuração de Variáveis de Ambiente
 
@@ -136,9 +126,8 @@ CHUNK_SIZE=500
 CHUNK_OVERLAP=50
 CHUNK_STRATEGY=sentence
 
-# Vector Store
-VECTOR_STORE_TYPE=faiss
-VECTOR_STORE_PATH=./data/vector_store
+# Banco de dados (vector store Postgres/pgvector)
+DATABASE_URL=postgresql://user:pass@localhost:5432/ragent
 
 # LLM (opcional - para geração de respostas)
 LLM_PROVIDER=openai
@@ -287,17 +276,14 @@ curl http://localhost:8000/rag/health
 **Informações retornadas:**
 - `indexedDocuments`: Número de documentos indexados
 - `indexedChunks`: Número total de chunks
-- `vectorStore`: Tipo de vector store (faiss)
+- `vectorStore`: Tipo de vector store (postgres)
 - `embeddingModel`: Modelo de embeddings usado
 
 ### **4. Limpar Dados de Desenvolvimento**
 
 ```bash
-# Limpar vector store do tenant
-rm -rf rag-service/data/vector_store/<tenant-id>.*
-
-# Limpar documentos RAG (DB-only): use SQL ou uma rota administrativa
-# Exemplo (cuidado): DELETE FROM rag_documents WHERE tenant_key='<tenant-id>';
+# Limpar documentos/chunks RAG do tenant (DB-only):
+# Use a interface web/API para remover documentos, ou execute SQL (cuidado).
 ```
 
 ## 🔄 Fluxo Completo em Desenvolvimento
@@ -428,7 +414,7 @@ uvicorn main:app --reload
 - Verificar se há documentos indexados: `curl http://localhost:8000/rag/health`
 - Verificar se o `tenantId` na consulta corresponde ao tenant dos documentos
 - Verificar se o `minScore` não está muito alto
-- Verificar se há chunks no vector store: `ls -la rag-service/data/vector_store/`
+- Verificar se há chunks indexados: `curl http://localhost:8000/rag/health`
 
 ## 📚 Referências
 
@@ -459,7 +445,6 @@ curl http://localhost:8000/rag/health
 curl http://localhost:3000/api/rag/documents?tenantId=<tenant-id>
 
 # Limpar e recriar dados
-rm -rf rag-service/data/vector_store/*
 node scripts/seed.js --tenant=<tenant-id>
 ```
 

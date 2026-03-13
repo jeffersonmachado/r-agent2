@@ -107,7 +107,9 @@ export function AuditPage() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleString('pt-BR');
   };
 
@@ -176,6 +178,16 @@ export function AuditPage() {
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Visualize e monitore todas as ações realizadas no sistema
         </p>
+      
+        <div className="support-controls">
+          <button
+            type="button"
+            className="btn-default px-4 py-2 text-sm"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

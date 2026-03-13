@@ -19,6 +19,7 @@ jest.mock('../../utils/config', () => ({
 }));
 jest.mock('../webScrapingService');
 jest.mock('../ragDocumentsService');
+jest.mock('../../db/models', () => require('../../../tests/helpers/dbMock').mockModelsFactory());
 
 // Mock do banco de dados
 const { mockSequelize, mockModels } = mockDatabase();

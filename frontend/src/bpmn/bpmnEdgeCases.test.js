@@ -241,6 +241,27 @@ describe('bpmnXmlToEngineFlow – edge cases', () => {
       expect(node.type).toBe('api');
       expect(report.warnings.some((w) => w.code === 'bpmn_service_task_ambiguous')).toBe(true);
     });
+
+    it('importa bpmn:task generico como api degradado e preserva sequence flows', () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" targetNamespace="http://x">
+  <bpmn:process id="Process_1" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" />
+    <bpmn:task id="Task_1" name="Do Something" />
+    <bpmn:endEvent id="EndEvent_1" />
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1" />
+  </bpmn:process>
+</bpmn:definitions>`;
+
+      const { flowDefinition, report } = bpmnXmlToEngineFlow(xml);
+      expect(flowDefinition.nodes).toHaveLength(3);
+      expect(flowDefinition.nodes.map((node) => node.type)).toEqual(['start', 'api', 'end']);
+      expect(report.warnings.some((w) => w.code === 'bpmn_task_ambiguous')).toBe(true);
+      expect(report.warnings.some((w) => w.code === 'bpmn_sequence_flow_orphan')).toBe(false);
+      expect(report.ignoredSequenceFlowCount).toBe(0);
+      expect(report.degradedNodes.some((node) => node.elementId === 'Task_1')).toBe(true);
+    });
   });
 
   describe('scriptTask sem extensao (ambiguidade)', () => {

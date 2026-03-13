@@ -1,32 +1,69 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="1" failures="1" errors="0" time="1.718">
-    <testsuite name="src/process-adapters/__tests__/bpmnFlagsIntegration.test.js" timestamp="2026-03-11T22:04:07.462Z" hostname="jmachado-Precision-5530" tests="1" failures="1" errors="0" skipped="0" time="0">
-        <testcase classname="src/process-adapters/__tests__/bpmnFlagsIntegration.test.js" name="src/process-adapters/__tests__/bpmnFlagsIntegration.test.js" time="0">
-            <system-out>
-⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
-
-            </system-out>
-            <failure message="Failed to resolve import &quot;../process-adapters/bpmnAdapter&quot; from &quot;src/process-adapters/__tests__/bpmnFlagsIntegration.test.js&quot;. Does the file exist?" type="Error">
-Error: Failed to resolve import &quot;../process-adapters/bpmnAdapter&quot; from &quot;src/process-adapters/__tests__/bpmnFlagsIntegration.test.js&quot;. Does the file exist?
-  Plugin: vite:import-analysis
-  File: /opt/results/ria/r-agent2/frontend/src/process-adapters/__tests__/bpmnFlagsIntegration.test.js:13:9
-  11 |    getElementSupport,
-  12 |    validateBpmnXml,
-  13 |  } from &apos;../process-adapters/bpmnAdapter&apos;;
-     |          ^
-  14 |  import {
-  15 |    FeatureFlagManager,
- ❯ TransformPluginContext._formatError node_modules/vitest/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41
- ❯ TransformPluginContext.error node_modules/vitest/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16
- ❯ normalizeUrl node_modules/vitest/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23
- ❯ node_modules/vitest/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
- ❯ TransformPluginContext.transform node_modules/vitest/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7
- ❯ PluginContainer.transform node_modules/vitest/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18
- ❯ loadAndTransform node_modules/vitest/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-Serialized Error: { __vitest_rollup_error__: { plugin: &apos;vite:import-analysis&apos;, id: &apos;/opt/results/ria/r-agent2/frontend/src/process-adapters/__tests__/bpmnFlagsIntegration.test.js&apos;, loc: { file: &apos;/opt/results/ria/r-agent2/frontend/src/process-adapters/__tests__/bpmnFlagsIntegration.test.js&apos;, line: 13, column: 9 }, frame: &apos;11 |    getElementSupport,\n12 |    validateBpmnXml,\n13 |  } from \&apos;../process-adapters/bpmnAdapter\&apos;;\n   |          ^\n14 |  import {\n15 |    FeatureFlagManager,&apos; } }
-            </failure>
+<testsuites name="vitest tests" tests="31" failures="0" errors="0" time="4.277">
+    <testsuite name="src/bpmn/bpmnEdgeCases.test.js" timestamp="2026-03-13T16:27:08.609Z" hostname="jmachado-Precision-5530" tests="27" failures="0" errors="0" skipped="0" time="2.834179324">
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; fluxo vazio &gt; retorna XML valido com processo sem elementos" time="0.117909876">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; fluxo vazio &gt; aceita flowDefinition null e retorna XML valido" time="0.103552295">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; nos sem config / config parcial &gt; exporta no start sem config" time="0.107508377">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; nos sem config / config parcial &gt; exporta no message com config vazio" time="0.101604398">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; nos sem config / config parcial &gt; exporta no api sem config (modo simple: warning de extensao omitida)" time="0.101690318">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; nos sem config / config parcial &gt; exporta no api com config (modo extensions: extensao incluida)" time="0.101965669">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; caracteres especiais no nome/config &gt; escapa &lt; &gt; &amp; &quot; nos atributos name do elemento" time="0.103912976">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; caracteres especiais no nome/config &gt; escapa conteudo de extensao com aspas" time="0.102213166">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; no fallback (mapeamento ragent2: -&gt; degradacao) &gt; exporta fallback como scriptTask com warning de mapeamento nao padrao" time="0.104207831">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; loop / auto-referencia &gt; deduplica sequenceFlows identicos sem lancar erro" time="0.10324289">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; subflow com calledElement &gt; propaga calledElement a partir de config.flowId" time="0.102433703">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; subflow com calledElement &gt; usa fallback de calledElement quando config.flowId ausente" time="0.102075192">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; conexao com alvo inexistente &gt; emite warning bpmn_missing_target_node e nao quebra" time="0.102497865">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="engineFlowToBpmnXml – edge cases &gt; router com regras condicionais &gt; exporta router com conditions nos sequenceFlows" time="0.103842673">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; XML invalido &gt; lanca erro para XML totalmente malformado" time="0.122953869">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; XML invalido &gt; lanca erro para XML sem elemento process" time="0.10887624">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; XML invalido &gt; lanca erro para string vazia" time="0.105109666">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; processo vazio &gt; retorna fluxo com zero nos e sem erros" time="0.103432814">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; elemento nao suportado &gt; registra no relatorio e nao inclui no fluxo" time="0.104167326">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; serviceTask sem extensao (ambiguidade) &gt; importa como api por padrao e emite warning" time="0.101945696">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; serviceTask sem extensao (ambiguidade) &gt; importa bpmn:task generico como api degradado e preserva sequence flows" time="0.105526331">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; scriptTask sem extensao (ambiguidade) &gt; importa como set_variable por padrao e emite warning" time="0.101725588">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; sequenceFlow com sourceRef/targetRef desconhecidos &gt; ignora o flow e emite warning bpmn_sequence_flow_orphan" time="0.101131046">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; sequenceFlow sem sourceRef ou targetRef &gt; ignora e emite warning bpmn_sequence_flow_incomplete" time="0.101161456">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; intermediateCatchEvent com timer &gt; importa como delay com timeDuration" time="0.102310785">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; callActivity (subflow) com calledElement &gt; preserva flowId a partir de calledElement" time="0.102197361">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnEdgeCases.test.js" name="bpmnXmlToEngineFlow – edge cases &gt; gateway condicional com sequenceFlows &gt; cria rules e next adequados no router" time="0.102475299">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/bpmn/bpmnRoundTrip.test.js" timestamp="2026-03-13T16:27:08.618Z" hostname="jmachado-Precision-5530" tests="4" failures="0" errors="0" skipped="0" time="0.463994406">
+        <testcase classname="src/bpmn/bpmnRoundTrip.test.js" name="BPMN export/import round-trip &gt; exporta em modo simple com warning de extensao omitida" time="0.121530774">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnRoundTrip.test.js" name="BPMN export/import round-trip &gt; exporta em modo extensions com namespace e metadados r-agent2" time="0.10536614">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnRoundTrip.test.js" name="BPMN export/import round-trip &gt; importa BPMN com extensoes e mapeia gateway condicional/default" time="0.121550279">
+        </testcase>
+        <testcase classname="src/bpmn/bpmnRoundTrip.test.js" name="BPMN export/import round-trip &gt; faz round-trip com extensoes preservando tipos principais" time="0.110567146">
         </testcase>
     </testsuite>
 </testsuites>

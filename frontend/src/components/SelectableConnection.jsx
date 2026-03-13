@@ -20,23 +20,15 @@ const Svg = ({ children, onClick, onPointerDown, data, ...props }) => {
   );
 };
 
-const Path = ({ selected, d, category, visualMode, ...props }) => (
-  (() => {
-    const classes = [selected ? "rete-connection-path-selected" : "rete-connection-path"];
-    if (!selected && visualMode && category) {
-      classes.push(`rete-connection-path--${category}`);
-    }
-    return (
+const Path = ({ selected, styles, d, ...props }) => (
   <path
     {...props}
     fill="none"
     strokeWidth={selected ? 10 : 8}
     stroke={selected ? "rgb(255, 217, 44)" : "steelblue"}
-    className={classes.join(' ')}
+    className={selected ? "rete-connection-path-selected" : "rete-connection-path"}
     d={d}
   />
-    );
-  })()
 );
 
 // Path invisível maior para facilitar cliques (renderizado primeiro para ficar atrás)
@@ -146,8 +138,6 @@ export function SelectableConnection(props) {
   };
 
   const isSelected = isSelectedLocal || props.data?.selected || false;
-  const bpmnCategory = props.data?.bpmnVisualCategory || null;
-  const isBpmnVisualMode = !!props.data?.bpmnVisualMode;
 
   // ✅ Extrai 'data' das props para não passar para o SVG (SVG não aceita atributo 'data')
   // ✅ Preserva TODAS as outras props do ReactPlugin (incluindo style se existir)
@@ -164,9 +154,8 @@ export function SelectableConnection(props) {
       <HoverPath d={path} />
       <Path 
         selected={isSelected} 
+        styles={props.styles} 
         d={path} 
-        category={bpmnCategory}
-        visualMode={isBpmnVisualMode}
       />
     </Svg>
   );

@@ -11,7 +11,11 @@ import { useToast } from './Toast';
 import { useConfirmDialog } from './ConfirmDialog';
 import { Button } from '../styles/Button';
 import { useTheme } from '../styles/themeContext';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useWebSocketContext } from '../context/WebSocketContext';
+import { useLatestRef } from '../hooks/useLatestRef';
+import { useModalDataLifecycle } from '../hooks/useModalDataLifecycle';
+import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
+import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 
 /**
@@ -29,17 +33,9 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [currentTicket, setCurrentTicket] = useState(ticket);
 
-  const showToastRef = React.useRef(showToast);
+  const showToastRef = useLatestRef(showToast);
   const loadMessagesRef = React.useRef();
-  const currentTicketRef = React.useRef(currentTicket);
-
-  React.useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
-
-  React.useEffect(() => {
-    currentTicketRef.current = currentTicket;
-  }, [currentTicket]);
+  const currentTicketRef = useLatestRef(currentTicket);
 
   // WebSocket para atualizações em tempo real
   const handleWebSocketEvent = useCallback((event, data) => {
@@ -87,7 +83,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
     }
   }, [onTicketUpdate]);
 
-  const { connected: wsConnected, authenticated: wsAuthenticated } = useWebSocket({
+  const { connected: wsConnected, authenticated: wsAuthenticated, authFailed } = useWebSocketContext({
     enabled: isOpen && autoRefresh && !!currentTicket?.id,
     onEvent: handleWebSocketEvent,
     subscribeEvents: [
@@ -96,6 +92,12 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
       'ticket.updated',
       'ticket.closed',
     ],
+  });
+
+  const wsStatus = useWebSocketStatus({
+    connected: wsConnected,
+    authenticated: wsAuthenticated,
+    authFailed,
   });
 
   // Atualiza ticket quando prop muda
@@ -114,7 +116,35 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
 
     try {
       const result = await getTicketMessages(ticketId);
-      setTicketMessages(result.messages || []);
+      const messages = Array.isArray(result?.messages) ? result.messages : [];
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const ids = Array.from(new Set(
+        messages
+          .map((msg) => String(msg?.agentId || '').trim())
+          .filter((value) => uuidRegex.test(value))
+      ));
+
+      const resolvedById = {};
+      await Promise.all(ids.map(async (id) => {
+        try {
+          const resp = await getAgentNameById(id);
+          const name = String(resp?.agent?.name || '').trim();
+          resolvedById[id] = name || id;
+        } catch {
+          resolvedById[id] = id;
+        }
+      }));
+
+      const messagesWithDisplay = messages.map((msg) => {
+        const raw = String(msg?.agentId || '').trim();
+        if (!raw) return msg;
+        return {
+          ...msg,
+          agentNameDisplay: resolvedById[raw] || raw,
+        };
+      });
+
+      setTicketMessages(messagesWithDisplay);
       
       // Marca como lidas se ticket está atribuído e em progresso
       if (currentTicketRef.current && currentTicketRef.current.status === 'in_progress' && currentTicketRef.current.unreadCount > 0) {
@@ -149,13 +179,12 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
   }, [loadTicketMessages]);
 
   // Carrega mensagens quando o modal abre ou ticket muda
-  useEffect(() => {
-    if (isOpen && currentTicket?.id) {
-      loadTicketMessages(currentTicket.id);
-    } else {
-      setTicketMessages([]);
-    }
-  }, [isOpen, currentTicket?.id, loadTicketMessages]);
+  useModalDataLifecycle({
+    isOpen,
+    canLoad: !!currentTicket?.id,
+    load: () => loadTicketMessages(currentTicket.id),
+    reset: () => setTicketMessages([]),
+  });
 
   // Polling removido - apenas WebSocket é usado para atualizações em tempo real
   // Se o WebSocket não estiver conectado, as atualizações só ocorrerão quando:
@@ -317,7 +346,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title={`Ticket #${currentTicket.id.slice(0, 12)}`}
+        title={`Ticket #${currentTicket.id}`}
         size="full"
         resizable={true}
         draggable={true}
@@ -326,7 +355,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
         <div className="ticket-modal-container">
           {/* Controles superiores */}
           <div className="ticket-modal-controls">
-            {wsConnected && wsAuthenticated ? (
+            {wsStatus.phase === 'ready' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span 
                   style={{
@@ -334,10 +363,9 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    backgroundColor: '#25D366',
-                    animation: 'pulse 2s infinite'
+                    backgroundColor: '#25D366'
                   }}
-                  title="WebSocket conectado - Atualizações em tempo real ativas"
+                  title={wsStatus.title}
                 />
                 <span style={{ fontSize: '14px', color: '#666' }}>
                   Atualização em tempo real
@@ -430,7 +458,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
                             minute: '2-digit' 
                           })}
                           {msg.sender === 'agent' && msg.agentId && (
-                            <span className="ticket-modal-message-sender"> • {msg.agentId}</span>
+                            <span className="ticket-modal-message-sender"> • {msg.agentNameDisplay || msg.agentId}</span>
                           )}
                         </div>
                       </div>

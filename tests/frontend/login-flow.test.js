@@ -117,25 +117,25 @@ async function testLoginFlow() {
 
     // 3. Simula verificação de provider ANTES de atualizar agente (como o frontend faz)
     console.log('3. Simulando verificação de provider ANTES de atualizar agente...');
-    const aiStatusUrl = new URL(`/tenants/${tenantId}/ai-provider-status`, API_BASE_URL);
+    const aiStatusUrl = new URL(`/tenants/${tenantId}/ai-credentials/test`, API_BASE_URL);
     const aiStatusResponse = await httpRequest({
       hostname: aiStatusUrl.hostname,
       port: aiStatusUrl.port || 3000,
       path: aiStatusUrl.pathname,
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-    });
+    }, {});
 
     if (aiStatusResponse.status !== 200) {
       console.log('   ❌ Erro ao verificar provider');
       return { success: false, error: 'Erro ao verificar provider' };
     }
 
-    const hasValidProvider = aiStatusResponse.body.hasValidProvider === true;
-    console.log(`   ✅ Verificação concluída: hasValidProvider = ${hasValidProvider}`);
+    const hasValidProvider = aiStatusResponse.body.valid === true;
+    console.log(`   ✅ Verificação concluída: valid = ${hasValidProvider}`);
 
     // 4. Simula atualização do agente (como o frontend faz)
     console.log('4. Simulando atualização do agente com novo tenantId...');
@@ -235,20 +235,20 @@ async function testRedirectFlow() {
 
     // 2. Verifica provider (simula o que o frontend faz)
     console.log('2. Verificando provider de IA...');
-    const aiStatusUrl = new URL(`/tenants/${tenantId}/ai-provider-status`, API_BASE_URL);
+    const aiStatusUrl = new URL(`/tenants/${tenantId}/ai-credentials/test`, API_BASE_URL);
     const aiStatusResponse = await httpRequest({
       hostname: aiStatusUrl.hostname,
       port: aiStatusUrl.port || 3000,
       path: aiStatusUrl.pathname,
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-    });
+    }, {});
 
-    const hasValidProvider = aiStatusResponse.body.hasValidProvider === true;
-    console.log(`   hasValidProvider: ${hasValidProvider}`);
+    const hasValidProvider = aiStatusResponse.body.valid === true;
+    console.log(`   valid: ${hasValidProvider}`);
 
     // 3. Simula o comportamento esperado do frontend
     console.log('3. Simulando comportamento do frontend...');

@@ -9,26 +9,48 @@ import { useTheme } from './styles/themeContext';
 export function Toolbar({
   onImportJson,
   onExportJson,
-  onImportBpmn,
-  onExportBpmn,
-  onExportBpmnWithExtensions,
+  onExportPNG,
+  onExportSVG,
+  onExportPDF,
   onSimulate,
   onTest,
   onSave,
   onSaveAsTemplate,
   onValidate,
+  onValidateAndFix,
+  onShowErrors,
   onArrange,
+  onOptimizeLayout,
+  onSimplifyGraph,
   onZoomIn,
   onZoomOut,
   onZoomFit,
   onResetZoom,
   onCenterCanvas,
+  onToggleMinimap,
   onUndo,
   onRedo,
   onCopy,
   onPaste,
   onDuplicate,
+  onSelectAll,
+  onDeselectAll,
+  onAlignLeft,
+  onAlignCenter,
+  onAlignRight,
+  onAlignTop,
+  onAlignMiddle,
+  onAlignBottom,
+  onDistributeHorizontal,
+  onDistributeVertical,
+  onToggleReroutePoints,
+  onClearOrphanConnections,
   onSearchNode,
+  onGoToNode,
+  onNextNode,
+  onPreviousNode,
+  onToggleDebug,
+  onShowStatistics,
   onImportTemplate,
   onOpen,
   onClearEditor,
@@ -310,35 +332,58 @@ export function Toolbar({
       // Removido: resizeObserverInstance não é mais necessário
       window.removeEventListener('resize', handleWindowResize);
     };
-    }, [onSave, onSaveAsTemplate, onValidate, onSimulate, onTest, onOpen, onArrange, onZoomOut, onZoomIn, onZoomFit, onResetZoom, onUndo, onRedo, onCopy, onPaste, onSearchNode, onImportJson, onExportJson, onImportBpmn, onExportBpmn, onExportBpmnWithExtensions, onImportTemplate, onDuplicate]);
+    }, [onSave, onSaveAsTemplate, onValidate, onSimulate, onTest, onOpen, onArrange, onZoomOut, onZoomIn, onZoomFit, onResetZoom, onUndo, onRedo, onCopy, onPaste, onSearchNode, onImportJson, onExportJson, onImportTemplate, onDuplicate]);
 
   // Função helper para obter ícone e texto baseado na key
   const getIconAndText = (key) => {
     const iconMap = {
       'import': { icon: 'icon-import', text: 'Importar' },
       'export': { icon: 'icon-export', text: 'Exportar' },
-      'bpmnImport': { icon: 'icon-import', text: 'Importar BPMN' },
-      'bpmnExport': { icon: 'icon-export', text: 'Exportar BPMN' },
-      'bpmnExportExt': { icon: 'icon-export', text: 'BPMN + Extensoes' },
       'template': { icon: 'icon-template', text: 'Template' },
       'open': { icon: 'icon-folder-open', text: 'Abrir' },
       'save': { icon: 'icon-save', text: 'Salvar' },
       'saveAsTemplate': { icon: 'icon-save', text: 'Template' },
       'validate': { icon: 'icon-check', text: 'Validar' },
+      'validateAndFix': { icon: 'icon-check', text: 'Validar e corrigir' },
+      'showErrors': { icon: 'icon-check', text: 'Mostrar erros' },
       'simulate': { icon: 'icon-play', text: 'Simular' },
       'test': { icon: 'icon-chat', text: 'Testar' },
       'zoomOut': { icon: 'icon-minus', text: 'Diminuir zoom' },
       'resetZoom': { icon: null, text: '100% Zoom' },
       'zoomIn': { icon: 'icon-plus', text: 'Aumentar zoom' },
       'zoomFit': { icon: 'icon-search', text: 'Fit' },
+      'centerCanvas': { icon: 'icon-search', text: 'Centralizar canvas' },
+      'toggleMinimap': { icon: 'icon-settings', text: 'Alternar minimap' },
       'undo': { icon: 'icon-undo', text: 'Desfazer' },
       'redo': { icon: 'icon-redo', text: 'Refazer' },
       'copy': { icon: 'icon-copy', text: 'Copiar' },
       'paste': { icon: 'icon-paste', text: 'Colar' },
       'duplicate': { icon: 'icon-duplicate', text: 'Duplicar' },
       'arrange': { icon: 'icon-settings', text: 'Organizar' },
+      'optimizeLayout': { icon: 'icon-settings', text: 'Otimizar layout' },
+      'simplify': { icon: 'icon-settings', text: 'Simplificar grafo' },
+      'selectAll': { icon: 'icon-check', text: 'Selecionar tudo' },
+      'deselectAll': { icon: 'icon-check', text: 'Limpar seleção' },
+      'alignLeft': { icon: 'icon-settings', text: 'Alinhar esquerda' },
+      'alignCenter': { icon: 'icon-settings', text: 'Alinhar centro' },
+      'alignRight': { icon: 'icon-settings', text: 'Alinhar direita' },
+      'alignTop': { icon: 'icon-settings', text: 'Alinhar topo' },
+      'alignMiddle': { icon: 'icon-settings', text: 'Alinhar meio' },
+      'alignBottom': { icon: 'icon-settings', text: 'Alinhar base' },
+      'distributeHorizontal': { icon: 'icon-settings', text: 'Distribuir horizontal' },
+      'distributeVertical': { icon: 'icon-settings', text: 'Distribuir vertical' },
+      'toggleReroute': { icon: 'icon-settings', text: 'Alternar reroute' },
+      'clearOrphans': { icon: 'icon-trash', text: 'Limpar conexões órfãs' },
       'search': { icon: 'icon-search', text: 'Buscar' },
+      'goTo': { icon: 'icon-search', text: 'Ir para nó' },
+      'nextNode': { icon: 'icon-plus', text: 'Próximo nó' },
+      'previousNode': { icon: 'icon-minus', text: 'Nó anterior' },
+      'toggleDebug': { icon: 'icon-settings', text: 'Alternar debug' },
+      'showStatistics': { icon: 'icon-settings', text: 'Estatísticas' },
       'clear': { icon: 'icon-trash', text: 'Limpar' },
+      'exportPng': { icon: 'icon-export', text: 'Exportar PNG' },
+      'exportSvg': { icon: 'icon-export', text: 'Exportar SVG' },
+      'exportPdf': { icon: 'icon-export', text: 'Exportar PDF' },
     };
     return iconMap[key] || { icon: null, text: key };
   };
@@ -373,9 +418,6 @@ export function Toolbar({
     if (!visibleItems.extra) {
       if (onImportJson) groups.extra.push({ key: 'import', action: onImportJson });
       if (onExportJson) groups.extra.push({ key: 'export', action: onExportJson });
-      if (onImportBpmn) groups.extra.push({ key: 'bpmnImport', action: onImportBpmn });
-      if (onExportBpmn) groups.extra.push({ key: 'bpmnExport', action: onExportBpmn });
-      if (onExportBpmnWithExtensions) groups.extra.push({ key: 'bpmnExportExt', action: onExportBpmnWithExtensions });
       if (onImportTemplate) groups.extra.push({ key: 'template', action: onImportTemplate });
     }
     
@@ -402,6 +444,38 @@ export function Toolbar({
     if (!visibleItems.search && onSearchNode) {
       groups.search.push({ key: 'search', action: () => setShowSearch(true) });
     }
+
+    // Ações avançadas sempre disponíveis pelo menu "Mais"
+    if (onValidateAndFix) groups.main.push({ key: 'validateAndFix', action: onValidateAndFix });
+    if (onShowErrors) groups.main.push({ key: 'showErrors', action: onShowErrors });
+    if (onToggleDebug) groups.main.push({ key: 'toggleDebug', action: onToggleDebug });
+    if (onShowStatistics) groups.main.push({ key: 'showStatistics', action: onShowStatistics });
+
+    if (onCenterCanvas) groups.zoom.push({ key: 'centerCanvas', action: onCenterCanvas });
+    if (onToggleMinimap) groups.zoom.push({ key: 'toggleMinimap', action: onToggleMinimap });
+
+    if (onSelectAll) groups.edit.push({ key: 'selectAll', action: onSelectAll });
+    if (onDeselectAll) groups.edit.push({ key: 'deselectAll', action: onDeselectAll });
+    if (onAlignLeft) groups.edit.push({ key: 'alignLeft', action: onAlignLeft });
+    if (onAlignCenter) groups.edit.push({ key: 'alignCenter', action: onAlignCenter });
+    if (onAlignRight) groups.edit.push({ key: 'alignRight', action: onAlignRight });
+    if (onAlignTop) groups.edit.push({ key: 'alignTop', action: onAlignTop });
+    if (onAlignMiddle) groups.edit.push({ key: 'alignMiddle', action: onAlignMiddle });
+    if (onAlignBottom) groups.edit.push({ key: 'alignBottom', action: onAlignBottom });
+    if (onDistributeHorizontal) groups.edit.push({ key: 'distributeHorizontal', action: onDistributeHorizontal });
+    if (onDistributeVertical) groups.edit.push({ key: 'distributeVertical', action: onDistributeVertical });
+    if (onToggleReroutePoints) groups.edit.push({ key: 'toggleReroute', action: onToggleReroutePoints });
+    if (onClearOrphanConnections) groups.edit.push({ key: 'clearOrphans', action: onClearOrphanConnections });
+    if (onOptimizeLayout) groups.edit.push({ key: 'optimizeLayout', action: onOptimizeLayout });
+    if (onSimplifyGraph) groups.edit.push({ key: 'simplify', action: onSimplifyGraph });
+
+    if (onGoToNode) groups.search.push({ key: 'goTo', action: onGoToNode });
+    if (onNextNode) groups.search.push({ key: 'nextNode', action: onNextNode });
+    if (onPreviousNode) groups.search.push({ key: 'previousNode', action: onPreviousNode });
+
+    if (onExportPNG) groups.extra.push({ key: 'exportPng', action: onExportPNG });
+    if (onExportSVG) groups.extra.push({ key: 'exportSvg', action: onExportSVG });
+    if (onExportPDF) groups.extra.push({ key: 'exportPdf', action: onExportPDF });
     
     // Retorna grupos na ordem de prioridade: file > main > search > zoom > edit > tools > extra
     return {
@@ -729,7 +803,7 @@ export function Toolbar({
       {visibleItems.extra && (
         <div className="toolbar-group toolbar-group-extra">
           {onImportJson && (
-            <button className="btn-base" onClick={onImportJson} title="Importar JSON">
+            <button className="btn-base" onClick={onImportJson} title="Importar JSON/BPMN">
               <span className="icon icon-import"></span>
               <span>Importar</span>
             </button>
@@ -738,24 +812,6 @@ export function Toolbar({
             <button className="btn-base" onClick={onExportJson} title="Exportar JSON">
               <span className="icon icon-export"></span>
               <span>Exportar</span>
-            </button>
-          )}
-          {onImportBpmn && (
-            <button className="btn-base" onClick={onImportBpmn} title="Importar BPMN XML">
-              <span className="icon icon-import"></span>
-              <span>Imp. BPMN</span>
-            </button>
-          )}
-          {onExportBpmn && (
-            <button className="btn-base" onClick={onExportBpmn} title="Exportar BPMN simples">
-              <span className="icon icon-export"></span>
-              <span>BPMN</span>
-            </button>
-          )}
-          {onExportBpmnWithExtensions && (
-            <button className="btn-base" onClick={onExportBpmnWithExtensions} title="Exportar BPMN com extensoes r-agent2">
-              <span className="icon icon-export"></span>
-              <span>BPMN+</span>
             </button>
           )}
           {onImportTemplate && (

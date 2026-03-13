@@ -76,6 +76,16 @@ async function syncDatabase(options = {}) {
   }
 
   const nodeEnv = process.env.NODE_ENV || 'development';
+
+  function shouldEnableSequelizeLogging() {
+    const raw = process.env.SEQUELIZE_LOGGING;
+    if (raw !== undefined) {
+      const v = String(raw).trim().toLowerCase();
+      if (['0', 'false', 'off', 'no'].includes(v)) return false;
+      if (['1', 'true', 'on', 'yes'].includes(v)) return true;
+    }
+    return nodeEnv === 'development';
+  }
   
   // REGRA A: PRODUÇÃO - NUNCA executar sync() - BLOQUEIO ABSOLUTO
   // IMPORTANTE: Mesmo que database.allowSync=true no config, produção NUNCA executa sync
@@ -146,7 +156,7 @@ async function syncDatabase(options = {}) {
     await sequelize.sync({ 
       force: finalForce,
       alter: finalAlter,
-      logging: nodeEnv === 'development' 
+      logging: shouldEnableSequelizeLogging()
         ? (msg) => logger.debug(`[DB Sync] ${msg}`)
         : false,
     });

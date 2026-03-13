@@ -19,6 +19,7 @@ const { OutboundQueueItem, ChannelConversation, ChannelMessage } = require('../d
 const { TicketEvent } = require('../db/models');
 const { sendTextMessage } = require('./whatsappService');
 const { sendInstagramMessage, sendInstagramMedia } = require('./instagramService');
+const { sendMessengerMessage } = require('./messengerService');
 const { updateOutboundMessageMeta, getTicket } = require('./queueService');
 const { emitEvent } = require('./websocketService');
 const { logAction } = require('./auditService');
@@ -98,6 +99,52 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
   const Model = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
   const now = new Date();
 
+  // -------------------------------------------------------------------
+  // Idempotência (v1):
+  // - Se o caller fornecer um clientMessageId em message.meta, evitamos
+  //   duplicar itens na fila quando houver retries HTTP/WS.
+  // - Se o caller fornecer externalMessageId (raro no enqueue), também deduplica.
+  // -------------------------------------------------------------------
+  try {
+    const meta = message && typeof message === 'object' ? (message.meta || {}) : {};
+    const clientMessageId = meta && meta.clientMessageId ? String(meta.clientMessageId) : null;
+    const externalMessageId = message && message.externalMessageId ? String(message.externalMessageId) : null;
+
+    if (clientMessageId) {
+      const sequelize = Model.sequelize;
+      const [rows] = await sequelize.query(
+        `SELECT id
+         FROM outbound_queue
+         WHERE tenant_key = :tenantKey
+           AND (message->'meta'->>'clientMessageId') = :clientMessageId
+         LIMIT 1`,
+        {
+          replacements: {
+            tenantKey: tenantId,
+            clientMessageId,
+          },
+        },
+      );
+      if (Array.isArray(rows) && rows.length > 0 && rows[0] && rows[0].id) {
+        return { queued: false, idempotent: true, itemId: String(rows[0].id) };
+      }
+    }
+
+    if (externalMessageId) {
+      const existing = await Model.findOne({
+        where: {
+          tenant_key: tenantId,
+          external_message_id: externalMessageId,
+        },
+      });
+      if (existing) {
+        return { queued: false, idempotent: true, itemId: existing.id };
+      }
+    }
+  } catch (_) {
+    // best-effort: não bloquear enfileiramento por falha de dedupe
+  }
+
   const item = await Model.create({
     id: newId('outq'),
     tenant_key: tenantId,
@@ -119,6 +166,9 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
 
 async function deliverOutbound({ tenantId, channelType, message }) {
   // messageNormalized esperado: { to, type, body }
+  const meta = message && typeof message === 'object'
+    ? (message.meta || (message.body && message.body.meta) || null)
+    : null;
   if (channelType === 'whatsapp') {
     const to = message.to;
     const kind = message.type || 'text';
@@ -132,7 +182,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         channelType,
         to,
         type: 'text',
-        body: { text },
+        body: { text, ...(meta ? { meta } : {}) },
         externalMessageId,
         status: 'sent',
       }).catch((err) => {
@@ -200,6 +250,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
           templateName,
           languageCode: languageCode || 'pt_BR',
           parameters,
+          ...(meta ? { meta } : {}),
         },
         externalMessageId,
         status: 'sent',
@@ -228,7 +279,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         channelType,
         to,
         type: 'text',
-        body: { text },
+        body: { text, ...(meta ? { meta } : {}) },
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
@@ -247,7 +298,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         channelType,
         to,
         type: kind,
-        body: { url: mediaUrl },
+        body: { url: mediaUrl, ...(meta ? { meta } : {}) },
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
@@ -257,6 +308,59 @@ async function deliverOutbound({ tenantId, channelType, message }) {
     }
 
     throw new Error(`Outbound Instagram: type "${kind}" ainda não suportado`);
+  }
+
+  if (channelType === 'messenger') {
+    const to = message.to;
+    const kind = message.type || 'text';
+    if (!to) throw new Error('Outbound Messenger requer {to}');
+
+    if (kind === 'text') {
+      const text = message.body?.text || message.body?.body || message.text;
+      if (!text) throw new Error('Outbound Messenger requer body.text');
+      const result = await sendMessengerMessage(to, text);
+      if (!result?.success) throw new Error(result?.error || 'Falha ao enviar Messenger');
+      await persistOutboundMessage({
+        tenantId,
+        channelType,
+        to,
+        type: 'text',
+        body: { text, ...(meta ? { meta } : {}) },
+        externalMessageId: result.messageId || null,
+        status: 'sent',
+      }).catch((err) => {
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+      });
+      return { success: true, externalMessageId: result.messageId || null };
+    }
+
+    throw new Error(`Outbound Messenger: type "${kind}" ainda não suportado`);
+  }
+
+  if (channelType === 'email') {
+    // MVP: fila/outbox com persistência + eventos; envio real pode ser plugado depois.
+    const to = message.to;
+    const kind = message.type || 'text';
+    if (!to) throw new Error('Outbound Email requer {to}');
+    if (kind !== 'text') throw new Error('Outbound Email só suporta type=text no MVP');
+
+    const subject = message.body?.subject || message.subject || '(sem assunto)';
+    const text = message.body?.text || message.body?.body || message.text || '';
+    const html = message.body?.html || null;
+    const externalMessageId = `email-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    await persistOutboundMessage({
+      tenantId,
+      channelType,
+      to,
+      type: 'text',
+      body: { subject: String(subject), text: String(text), html: html ? String(html) : null, ...(meta ? { meta } : {}) },
+      externalMessageId,
+      status: 'sent',
+    }).catch((err) => {
+      logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+    });
+    return { success: true, externalMessageId };
   }
 
   throw new Error(`channelType "${channelType}" não suportado em outbound`);
@@ -302,13 +406,19 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
 
   const externalId = String(to).replace(/^\+/, '');
   const now = new Date();
+  const meta = body && typeof body === 'object' ? body.meta : null;
+  const ticketId = meta?.ticketId || meta?.ticket_id || body?.ticketId || body?.ticket_id || null;
 
   let conversation = await ConversationModel.findOne({
     where: { tenant_key: tenantId, channel_type: channelType, external_id: externalId },
   });
 
   if (conversation) {
-    await conversation.update({ last_message_at: now, updated_at: now });
+    await conversation.update({
+      last_message_at: now,
+      updated_at: now,
+      ...(ticketId ? { current_ticket_id: String(ticketId), status: 'human' } : {}),
+    });
   } else {
     conversation = await ConversationModel.create({
       id: newId('conv'),
@@ -316,8 +426,8 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
       channel_type: channelType,
       external_id: externalId,
       contact_id: externalId,
-      status: 'bot',
-      current_ticket_id: null,
+      status: ticketId ? 'human' : 'bot',
+      current_ticket_id: ticketId ? String(ticketId) : null,
       last_message_at: now,
       created_at: now,
       updated_at: now,

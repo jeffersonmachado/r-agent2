@@ -10,10 +10,6 @@ import {
   engineFlowToReteJson,
   reteJsonToEngineFlow,
 } from '../engine-mapper/engineMapper';
-import { validateBpmnCompatibility } from '../bpmn/validateBpmnCompatibility';
-import { engineFlowToCanonical } from '../process-adapters/engineFlowToCanonical';
-import { validateCanonicalProcess } from '../process-canonical/canonicalValidator';
-import { compileCanonicalProcess } from '../process-canonical/canonicalCompiler';
 import logger from '../utils/logger';
 
 /**
@@ -26,20 +22,6 @@ import logger from '../utils/logger';
  */
 
 const EditorContext = createContext(null);
-
-function toUiIssue(issue, source = 'canonical') {
-  return {
-    code: issue?.code || `${source}_issue`,
-    message: issue?.message || 'Issue',
-    messageUi: issue?.message || 'Issue',
-    severity: issue?.severity || 'warning',
-    nodeIds: Array.isArray(issue?.nodeIds) ? issue.nodeIds : [],
-    details: {
-      source,
-      ...(issue?.details && typeof issue.details === 'object' ? issue.details : {}),
-    },
-  };
-}
 
 // Nota: Este arquivo exporta tanto um componente (EditorProvider) quanto um hook (useEditor).
 // O Vite Fast Refresh pode mostrar um aviso, mas o código funciona corretamente.
@@ -55,6 +37,20 @@ export function EditorProvider({ children }) {
   const [error, setError] = useState(null);
 
   const clearError = useCallback(() => setError(null), []);
+
+  const getTenantHeadersOverride = useCallback(() => {
+    try {
+      if (typeof window === 'undefined') return null;
+      const params = new URLSearchParams(window.location.search || '');
+      const tenantId = params.get('tenantId');
+      if (tenantId && String(tenantId).trim()) {
+        return { 'X-Tenant-Id': String(tenantId).trim() };
+      }
+    } catch {
+      // noop
+    }
+    return null;
+  }, []);
 
   /**
    * Carrega um fluxo do backend e converte para JSON do editor.
@@ -73,7 +69,8 @@ export function EditorProvider({ children }) {
     
     try {
       logger.debug('Buscando fluxo na API', { flowId });
-      const flow = await flowsApi.getFlow(flowId);
+      const headers = getTenantHeadersOverride();
+      const flow = await flowsApi.getFlow(flowId, headers ? { headers } : undefined);
       logger.info('Fluxo carregado da API', { flowId: flow?.id, flowName: flow?.name });
       
       setCurrentFlow(flow);
@@ -101,7 +98,7 @@ export function EditorProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getTenantHeadersOverride]);
 
   /**
    * Salva o fluxo atual (create ou update) usando o backend.
@@ -138,6 +135,16 @@ export function EditorProvider({ children }) {
             (metaOverrides && metaOverrides.name) ||
             'Fluxo sem nome',
           version: (currentFlow && currentFlow.version) || 1,
+          kind:
+            (currentFlow && currentFlow.kind) ||
+            (metaOverrides && metaOverrides.kind) ||
+            'chat',
+          metadata:
+            (metaOverrides && metaOverrides.metadata && typeof metaOverrides.metadata === 'object')
+              ? metaOverrides.metadata
+              : ((currentFlow && currentFlow.metadata && typeof currentFlow.metadata === 'object')
+                  ? currentFlow.metadata
+                  : undefined),
         };
 
         logger.debug('Metadados do fluxo', baseMeta);
@@ -155,10 +162,12 @@ export function EditorProvider({ children }) {
         let saved;
         if (currentFlow && currentFlow.id) {
           logger.info('Atualizando fluxo existente', { flowId: currentFlow.id });
-          saved = await flowsApi.updateFlow(currentFlow.id, flowDefinition);
+          const headers = getTenantHeadersOverride();
+          saved = await flowsApi.updateFlow(currentFlow.id, flowDefinition, headers ? { headers } : undefined);
         } else {
           logger.info('Criando novo fluxo');
-          saved = await flowsApi.createFlow(flowDefinition);
+          const headers = getTenantHeadersOverride();
+          saved = await flowsApi.createFlow(flowDefinition, headers ? { headers } : undefined);
         }
 
         logger.info('Fluxo salvo com sucesso', { flowId: saved?.id, flowName: saved?.name });
@@ -196,7 +205,7 @@ export function EditorProvider({ children }) {
         setLoading(false);
       }
     },
-    [currentFlow],
+    [currentFlow, getTenantHeadersOverride],
   );
 
   /**
@@ -213,70 +222,21 @@ export function EditorProvider({ children }) {
     try {
       const flowDefinition = reteJsonToEngineFlow(reteJson, currentFlow || undefined);
       const result = await flowsApi.validateFlow(flowDefinition);
-      const bpmnCompatibility = validateBpmnCompatibility(reteJson);
-      const canonicalMapped = engineFlowToCanonical(flowDefinition, {
-        defaultProcessId: flowDefinition?.id || 'canonical_from_editor',
-      });
-      const canonicalValidation = validateCanonicalProcess(canonicalMapped.canonicalProcessDefinition);
-      const canonicalCompilation = compileCanonicalProcess(
-        canonicalMapped.canonicalProcessDefinition,
-        { strict: false }
-      );
-
-      const backendErrors = Array.isArray(result?.errors) ? result.errors : [];
-      const bpmnWarnings = Array.isArray(bpmnCompatibility?.warnings)
-        ? bpmnCompatibility.warnings
-        : [];
-
-      const canonicalWarnings = [
-        ...(Array.isArray(canonicalMapped?.report?.warnings) ? canonicalMapped.report.warnings : []),
-        ...(Array.isArray(canonicalValidation?.warnings) ? canonicalValidation.warnings : []),
-      ].map((issue) => toUiIssue(issue, 'canonical'));
-
-      const canonicalErrors = Array.isArray(canonicalValidation?.errors)
-        ? canonicalValidation.errors.map((issue) => toUiIssue(issue, 'canonical'))
-        : [];
-
-      const canonicalSuggestions = Array.isArray(canonicalValidation?.suggestions)
-        ? canonicalValidation.suggestions.map((issue) => toUiIssue(issue, 'canonical'))
-        : [];
-
-      const uiErrors = [
-        ...backendErrors,
-        ...bpmnWarnings,
-        ...canonicalErrors,
-        ...canonicalWarnings,
-        ...canonicalSuggestions,
-      ];
       
-      // Mantem errors apenas do backend para nao impactar a pintura de erros por no no editor.
+      // ✅ Remove mapeamento duplicado - erros já vêm mapeados e amigáveis do backend
       const validationResult = {
         ...result,
-        errors: backendErrors,
-        uiErrors,
-        bpmnCompatibility,
-        canonical: {
-          mappedReport: canonicalMapped.report,
-          validationReport: canonicalValidation,
-          compilationReport: canonicalCompilation.report,
-          compiledProcessDefinition: canonicalCompilation.compiledProcessDefinition,
-        },
+        uiErrors: result.errors || [], // ✅ Usa diretamente (já são amigáveis)
       };
       
-      // Debug: log de erros backend + warnings de compatibilidade BPMN
+      // Debug: log dos erros (já mapeados)
       logger.debug('Validação concluída', {
         valid: validationResult.valid,
         errorCount: validationResult.uiErrors.length,
-        backendErrorCount: backendErrors.length,
-        bpmnWarningCount: bpmnWarnings.length,
-        canonicalErrorCount: canonicalErrors.length,
-        canonicalWarningCount: canonicalWarnings.length,
-        canonicalSuggestionCount: canonicalSuggestions.length,
         errors: validationResult.uiErrors.map(e => ({
           code: e.code,
           message: e.message,
           nodeIds: e.nodeIds,
-          severity: e.severity,
         })),
       });
       
@@ -371,6 +331,18 @@ export function EditorProvider({ children }) {
     setError(null);
   }, []);
 
+  /**
+   * Atualiza o kind do fluxo atual no estado (sem persistir automaticamente).
+   * O kind será persistido no backend no próximo "Salvar".
+   */
+  const setCurrentFlowKind = useCallback((kind) => {
+    const normalized = String(kind || 'chat').trim().toLowerCase() === 'voice' ? 'voice' : 'chat';
+    setCurrentFlow((prev) => {
+      if (!prev || typeof prev !== 'object') return prev;
+      return { ...prev, kind: normalized };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       currentFlow,
@@ -391,6 +363,7 @@ export function EditorProvider({ children }) {
       simulateCurrentFlow,
       deleteFlow,
       clearCurrentFlow,
+      setCurrentFlowKind,
     }),
     [
       clearError,
@@ -406,6 +379,7 @@ export function EditorProvider({ children }) {
       simulateCurrentFlow,
       deleteFlow,
       clearCurrentFlow,
+      setCurrentFlowKind,
     ],
   );
 
