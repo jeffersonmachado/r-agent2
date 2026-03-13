@@ -27,10 +27,11 @@
 }
 
 .bpmn-editor {
-  --bpmn-canvas-bg: #0f1622;
-  --bpmn-grid-line: #1c2636;
-  --bpmn-label-color: #d9e2ef;
-  --bpmn-stroke: #8ea2bd;
+  --bpmn-canvas-bg: #111824;
+  --bpmn-canvas-bg-soft: #182234;
+  --bpmn-grid-major: rgba(214, 182, 132, 0.12);
+  --bpmn-grid-minor: rgba(214, 182, 132, 0.06);
+  --bpmn-label-color: #f2f5fb;
   --bpmn-font-family: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --bpmn-font-size: 13px;
   --bpmn-line-height: 1.35;
@@ -53,8 +54,25 @@
   background: var(--bpmn-canvas-bg);
 }
 
+.bpmn-editor__canvas .djs-container {
+  background-image:
+    radial-gradient(circle at 12% 10%, rgba(241, 163, 73, 0.14), transparent 27%),
+    radial-gradient(circle at 82% 86%, rgba(236, 99, 89, 0.11), transparent 30%),
+    radial-gradient(circle at 62% 6%, rgba(94, 144, 197, 0.08), transparent 24%),
+    linear-gradient(180deg, var(--bpmn-canvas-bg-soft), var(--bpmn-canvas-bg));
+}
+
+.bpmn-editor__canvas .djs-container svg {
+  background: transparent;
+}
+
 .bpmn-editor__canvas .djs-container .djs-grid line {
-  stroke: var(--bpmn-grid-line);
+  stroke: var(--bpmn-grid-minor);
+}
+
+.bpmn-editor__canvas .djs-container .djs-grid .djs-grid-major line,
+.bpmn-editor__canvas .djs-container .djs-grid line.djs-grid-major {
+  stroke: var(--bpmn-grid-major);
 }
 
 .bpmn-editor__canvas .djs-label,
@@ -66,6 +84,9 @@
   line-height: var(--bpmn-line-height);
   fill: var(--bpmn-label-color);
   text-rendering: geometricPrecision;
+  paint-order: stroke;
+  stroke: rgba(10, 14, 22, 0.78);
+  stroke-width: 0.65px;
 }
 
 .bpmn-editor__canvas .djs-element.djs-shape:not(.djs-label) text {
@@ -94,14 +115,6 @@
 .bpmn-editor__canvas marker path {
   stroke-width: 1.25;
   stroke-linejoin: round;
-}
-
-.bpmn-editor__canvas .djs-shape .djs-visual > rect,
-.bpmn-editor__canvas .djs-shape .djs-visual > path,
-.bpmn-editor__canvas .djs-shape .djs-visual > circle,
-.bpmn-editor__canvas .djs-shape .djs-visual > polygon,
-.bpmn-editor__canvas .djs-shape .djs-visual > ellipse {
-  stroke: var(--bpmn-stroke);
 }
 
 .bpmn-editor__loading {

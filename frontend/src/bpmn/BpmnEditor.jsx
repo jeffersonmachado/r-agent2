@@ -146,9 +146,9 @@ export const BpmnEditor = forwardRef(function BpmnEditor(
       },
       additionalModules: [bpmnVisualModule],
       bpmnRenderer: {
-        defaultFillColor: '#131b27',
-        defaultStrokeColor: '#8ea2bd',
-        defaultLabelColor: '#d9e2ef',
+        defaultFillColor: '#1a2433',
+        defaultStrokeColor: '#5b6e86',
+        defaultLabelColor: '#f2f5fb',
       },
       textRenderer: {
         defaultStyle: {
