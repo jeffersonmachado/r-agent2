@@ -547,8 +547,9 @@ function applyConnectionsToNodes(flowNodes, outgoingBySource, report) {
     }
 
     if (ROUTER_NODE_TYPES.has(node.type)) {
-      const isParallelGateway =
-        String(node?.config?.bpmnGatewayType || '').trim() === 'parallel';
+      const gatewayType = String(node?.config?.bpmnGatewayType || '').trim();
+      const isParallelGateway = gatewayType === 'parallel';
+      const isEventBasedGateway = gatewayType === 'event_based';
       const conditioned = links.filter((link) => !!link.condition);
       const unconditioned = links.filter((link) => !link.condition);
 
@@ -566,6 +567,25 @@ function applyConnectionsToNodes(flowNodes, outgoingBySource, report) {
           return;
         }
 
+        node.next = links.map((link) => link.targetId);
+        return;
+      }
+
+      if (isEventBasedGateway) {
+        if (conditioned.length > 0) {
+          report.warnings.push({
+            code: 'bpmn_event_based_gateway_condition_ignored',
+            nodeId: node.id,
+            message: 'Condition expressions on eventBasedGateway outputs were ignored.',
+          });
+        }
+
+        if (links.length === 1) {
+          node.next = links[0].targetId;
+          return;
+        }
+
+        // eventBasedGateway naturally fans out without conditions.
         node.next = links.map((link) => link.targetId);
         return;
       }

@@ -323,6 +323,40 @@ describe('bpmnXmlToEngineFlow – edge cases', () => {
     });
   });
 
+  describe('gateway de degradacao (eventBasedGateway)', () => {
+    it('importa como router sem warning de gateway sem condicoes', () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" targetNamespace="http://x">
+  <bpmn:process id="Process_1" isExecutable="true">
+    <bpmn:startEvent id="Start_1" />
+    <bpmn:eventBasedGateway id="Gate_1" />
+    <bpmn:intermediateCatchEvent id="Timer_1">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration>PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Msg_1">
+      <bpmn:messageEventDefinition />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="SF_1" sourceRef="Start_1" targetRef="Gate_1" />
+    <bpmn:sequenceFlow id="SF_2" sourceRef="Gate_1" targetRef="Timer_1" />
+    <bpmn:sequenceFlow id="SF_3" sourceRef="Gate_1" targetRef="Msg_1" />
+  </bpmn:process>
+</bpmn:definitions>`;
+
+      const { flowDefinition, report } = bpmnXmlToEngineFlow(xml);
+      const gatewayNode = flowDefinition.nodes.find((n) => n.config?.bpmnElementId === 'Gate_1');
+
+      expect(gatewayNode).toBeTruthy();
+      expect(gatewayNode.type).toBe('router');
+      expect(gatewayNode.config?.bpmnGatewayType).toBe('event_based');
+      expect(Array.isArray(gatewayNode.next)).toBe(true);
+      expect(gatewayNode.next).toHaveLength(2);
+      expect(report.warnings.some((w) => w.code === 'bpmn_gateway_degraded')).toBe(true);
+      expect(report.warnings.some((w) => w.code === 'bpmn_gateway_without_conditions')).toBe(false);
+    });
+  });
+
   describe('sequenceFlow sem sourceRef ou targetRef', () => {
     it('ignora e emite warning bpmn_sequence_flow_incomplete', () => {
       const xml = `<?xml version="1.0" encoding="UTF-8"?>

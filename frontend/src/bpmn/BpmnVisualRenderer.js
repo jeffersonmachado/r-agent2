@@ -25,9 +25,9 @@ const THEME = {
     strokeWidth: 2.2,
   },
   intermediateEvent: {
-    fill: '#32251a',
-    stroke: '#f0b04e',
-    innerStroke: '#ffd59a',
+    fill: '#2a1f3d',
+    stroke: '#b983ff',
+    innerStroke: '#d8baff',
     strokeWidth: 2.0,
   },
   gateway: {
@@ -287,7 +287,7 @@ function labelThemeForTarget(targetType) {
 
   if (targetType.includes('Intermediate') || targetType.includes('Event') || targetType === 'BoundaryEvent') {
     return {
-      fill: '#f8e7c8',
+      fill: '#ecdfff',
       fontSize: '12px',
       fontWeight: '550',
     };
