@@ -60,7 +60,7 @@ async function handleAiRoutes({ req, res, method, pathname, deps }) {
         rpaMode: options.rpaMode,
       };
 
-      const { orchestrateGeneration } = require('../services/generationOrchestratorService');
+      const { orchestrateGeneration } = require('../services/generationOrchestrator');
       const result = await orchestrateGeneration(payload, { tenantId });
 
       // Mantém compatibilidade com /flows/generate: validação warnings em top-level
@@ -126,7 +126,7 @@ async function handleAiRoutes({ req, res, method, pathname, deps }) {
         rpaMode: options.rpaMode || 'infer',
       };
 
-      const { orchestrateGeneration } = require('../services/generationOrchestratorService');
+      const { orchestrateGeneration } = require('../services/generationOrchestrator');
       const result = await orchestrateGeneration(payload, { tenantId });
       try {
         const flowValidation = result?.validation?.flow || null;
