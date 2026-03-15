@@ -106,6 +106,8 @@ jobs:
         with:
           context: .
           file: ./api/Dockerfile
+          build-args: |
+            API_BASE_IMAGE=node:22-bookworm-slim
           push: false
           tags: chatbot-api:latest
           cache-from: type=gha
