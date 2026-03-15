@@ -9,8 +9,20 @@ async function columnExists(queryInterface, tableName, columnName) {
   }
 }
 
+async function tableExists(queryInterface, tableName) {
+  try {
+    await queryInterface.describeTable(tableName);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const hasTable = await tableExists(queryInterface, 'autonomous_schedule_policies');
+    if (!hasTable) return;
+
     const exists = await columnExists(queryInterface, 'autonomous_schedule_policies', 'min_gap_duration_minutes');
     if (!exists) {
       await queryInterface.addColumn('autonomous_schedule_policies', 'min_gap_duration_minutes', {
@@ -28,6 +40,9 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    const hasTable = await tableExists(queryInterface, 'autonomous_schedule_policies');
+    if (!hasTable) return;
+
     const exists = await columnExists(queryInterface, 'autonomous_schedule_policies', 'min_gap_duration_minutes');
     if (exists) {
       await queryInterface.removeColumn('autonomous_schedule_policies', 'min_gap_duration_minutes');
