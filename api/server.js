@@ -249,15 +249,7 @@ const { sendApiError, buildApiError } = require('./utils/apiError');
 
 const port = Number(config.get('api.port', 3000));
 
-// In-memory appointment schedule store (per-tenant)
-const _appointmentSchedules = new Map(); // id -> schedule
-function _genScheduleId() {
-  return `sched-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-function _getSchedules(tenantId) {
-  if (!_appointmentSchedules.has(tenantId)) _appointmentSchedules.set(tenantId, new Map());
-  return _appointmentSchedules.get(tenantId);
-}
+const scheduleService = require('./services/scheduleService');
 
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, 'data');
@@ -1230,7 +1222,7 @@ async function requestHandler(req, res) {
 
   // Readiness probe: verifica se o serviço está pronto para receber tráfego
   // Retorna 200 apenas se: DB ok E sem migrations pendentes
-  if (method === 'GET' && pathname === '/health/ready') {
+  if (method === 'GET' && (pathname === '/health/ready' || pathname === '/ready')) {
     try {
       const dbHealth = require('./db/health');
       
@@ -1274,6 +1266,23 @@ async function requestHandler(req, res) {
         reason: 'check_failed',
         error: err.message || 'Erro ao verificar readiness',
         timestamp: new Date().toISOString()
+      });
+    }
+    return;
+  }
+
+  if (method === 'GET' && (pathname === '/health/selftest' || pathname === '/selftest')) {
+    try {
+      const { runSelftest } = require('./services/selftestService');
+      const result = await runSelftest();
+      const httpStatus = result.status === 'FAIL' ? 503 : 200;
+      sendJson(res, httpStatus, result);
+    } catch (err) {
+      logger.error('[Selftest] Erro ao executar selftest:', err);
+      sendJson(res, 503, {
+        status: 'FAIL',
+        error: err.message || 'selftest_failed',
+        meta: { timestamp: new Date().toISOString() },
       });
     }
     return;
@@ -2095,6 +2104,122 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // POST /system/pipeline/validate-prereqs - Valida pré-requisitos do pipeline tenant
+  if (method === 'POST' && pathname === '/system/pipeline/validate-prereqs') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) {
+        return;
+      }
+
+      const tenantId = (authResult.agent?.tenantId && String(authResult.agent.tenantId).trim())
+        ? String(authResult.agent.tenantId).trim()
+        : null;
+      if (!tenantId) {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId ausente para validar pré-requisitos do pipeline' });
+        return;
+      }
+
+      const { ensureExecutionContext, updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+      const { checkRagServiceStatus } = require('./services/systemStatusService');
+
+      const pipelineExecution = ensureExecutionContext(
+        { executionId, tenantId, useRag: body?.useRag === true },
+        { tenantId }
+      );
+      updateStatus(pipelineExecution, 'running', {
+        currentStage: 'providerValidated',
+        message: 'Validando pré-requisitos do pipeline',
+        source: '/system/pipeline/validate-prereqs',
+      });
+
+      const aiConfig = await getAIConfig(tenantId);
+      const provider = aiConfig?.primary || aiConfig?.provider || null;
+      const hasConfiguredProvider = !!(aiConfig?.configured && provider);
+      const apiKey = hasConfiguredProvider ? await getDecryptedAPIKey(tenantId, provider) : null;
+      const providerValidated = !!(hasConfiguredProvider && apiKey && String(apiKey).trim());
+
+      if (!providerValidated) {
+        sendJson(res, 422, {
+          error: 'provider_not_configured',
+          code: 'PROVIDER_NOT_CONFIGURED',
+          message: 'Provider de IA não configurado para este tenant. Configure um provider e suas credenciais antes de continuar.',
+          details: {
+            tenantId,
+            provider: provider || null,
+            configured: !!aiConfig?.configured,
+          },
+        });
+        return;
+      }
+
+      updateStage(pipelineExecution, 'providerValidated', true);
+
+      const shouldValidateRag = body?.useRag !== false;
+      let ragValidated = true;
+      let ragStatus = null;
+
+      if (shouldValidateRag) {
+        ragStatus = await checkRagServiceStatus();
+        ragValidated = ragStatus?.status === 'healthy';
+        if (!ragValidated) {
+          sendJson(res, 422, {
+            error: 'rag_unavailable',
+            code: 'RAG_UNAVAILABLE',
+            message: ragStatus?.error || 'Serviço RAG indisponível. Verifique a saúde do serviço antes de continuar.',
+            details: {
+              tenantId,
+              ragStatus,
+            },
+          });
+          return;
+        }
+      }
+
+      updateStage(pipelineExecution, 'ragValidated', true);
+      updateStatus(pipelineExecution, 'running', {
+        currentStage: shouldValidateRag ? 'ragValidated' : 'providerValidated',
+        message: shouldValidateRag
+          ? 'Pré-requisitos do pipeline validados'
+          : 'Pré-requisitos do pipeline validados (RAG não solicitado)',
+        source: '/system/pipeline/validate-prereqs',
+      });
+
+      sendJson(res, 200, {
+        ok: true,
+        executionId,
+        tenantId,
+        providerValidated: true,
+        ragValidated,
+        provider,
+      });
+    } catch (err) {
+      logger.error('[System] Erro ao validar pré-requisitos do pipeline', err);
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        sendJson(res, 500, {
+          error: 'internal_error',
+          message: err.message || 'Erro ao validar pré-requisitos do pipeline',
+        });
+      }
+    }
+    return;
+  }
+
   // POST /system/suggest-description - Sugere descrição usando IA
   if (method === 'POST' && pathname === '/system/suggest-description') {
     const authResult = requireAuth(req);
@@ -2578,6 +2703,243 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('Erro ao obter plano/uso do tenant:', err);
       sendJson(res, 500, { error: 'Erro ao obter plano/uso', message: err.message });
+    }
+    return;
+  }
+
+  // POST /system/generate-faq - Gera perguntas/FAQ agrupadas a partir do contexto do tenant
+  if (method === 'POST' && pathname === '/system/generate-faq') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const tenantId = (body?.tenantId && isSuperAdmin(req.agent))
+        ? String(body.tenantId).trim()
+        : String(authResult.agent?.tenantId || '').trim();
+
+      if (!tenantId) {
+        badRequest(res, 'tenantId é obrigatório');
+        return;
+      }
+
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const rawExecutionId = body?.executionId ? String(body.executionId).trim() : '';
+      const executionId = rawExecutionId ? requireExecutionId(body, res, badRequest) : null;
+      if (rawExecutionId && !executionId) {
+        return;
+      }
+
+      const { generateFaq } = require('./services/faqGeneratorService');
+      const { ensureExecutionContext, updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+
+      let execution = null;
+      const pipelineStage = String(body?.pipelineStage || '').trim();
+      if (executionId) {
+        execution = ensureExecutionContext(
+          { executionId, tenantId, pipelineStage },
+          { tenantId }
+        );
+        updateStatus(execution, 'running', {
+          currentStage: pipelineStage || 'faqGenerated',
+          message: pipelineStage === 'questionsGenerated' ? 'Gerando perguntas automaticamente' : 'Gerando FAQ do tenant',
+          source: '/system/generate-faq',
+        });
+      }
+
+      const result = await generateFaq({
+        tenantId,
+        name: body?.name ?? null,
+        description: body?.description ?? null,
+        urls: Array.isArray(body?.urls) ? body.urls : [],
+        fileNames: Array.isArray(body?.fileNames) ? body.fileNames : [],
+        chunks: Array.isArray(body?.chunks) ? body.chunks : [],
+        executionId: executionId || null,
+        contextMode: body?.contextMode ?? 'auto',
+        rules: body?.rules ?? null,
+        dryRun: body?.dryRun === true,
+      });
+
+      if (execution && pipelineStage) {
+        updateStage(execution, pipelineStage, true);
+        updateStatus(execution, 'running', {
+          currentStage: pipelineStage,
+          message: pipelineStage === 'questionsGenerated' ? 'Perguntas geradas' : 'FAQ gerado',
+          source: '/system/generate-faq',
+        });
+      } else if (execution) {
+        updateStage(execution, 'faqGenerated', true);
+      }
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('[System] Erro ao gerar FAQ:', err);
+        sendJson(res, 500, {
+          error: 'internal_error',
+          message: err.message || 'Erro ao gerar FAQ',
+        });
+      }
+    }
+    return;
+  }
+
+  // POST /system/generate-faq-answers - Gera respostas para perguntas de FAQ
+  if (method === 'POST' && pathname === '/system/generate-faq-answers') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const tenantId = (body?.tenantId && isSuperAdmin(req.agent))
+        ? String(body.tenantId).trim()
+        : String(authResult.agent?.tenantId || '').trim();
+
+      if (!tenantId) {
+        badRequest(res, 'tenantId é obrigatório');
+        return;
+      }
+
+      const { generateFaqAnswers } = require('./services/faqAnswersService');
+      const result = await generateFaqAnswers({
+        tenantId,
+        questions: Array.isArray(body?.questions) ? body.questions : [],
+        executionId: body?.executionId ?? null,
+        name: body?.name ?? null,
+        urls: Array.isArray(body?.urls) ? body.urls : [],
+        fileNames: Array.isArray(body?.fileNames) ? body.fileNames : [],
+        chunks: Array.isArray(body?.chunks) ? body.chunks : [],
+        contextMode: body?.contextMode ?? 'auto',
+        dryRun: body?.dryRun === true,
+      });
+
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('[System] Erro ao gerar respostas de FAQ:', err);
+        sendJson(res, 500, {
+          error: 'internal_error',
+          message: err.message || 'Erro ao gerar respostas de FAQ',
+        });
+      }
+    }
+    return;
+  }
+
+  // POST /system/generate-initial-flow - Gera um fluxo inicial visual para tenant
+  if (method === 'POST' && pathname === '/system/generate-initial-flow') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const tenantIdForAI = (body?.tenantId && isSuperAdmin(req.agent))
+        ? String(body.tenantId).trim()
+        : String(authResult.agent?.tenantId || '').trim();
+      const targetTenantId = body?.targetTenantId ? String(body.targetTenantId).trim() : tenantIdForAI;
+
+      if (!tenantIdForAI) {
+        badRequest(res, 'tenantId é obrigatório');
+        return;
+      }
+      if (!targetTenantId) {
+        badRequest(res, 'targetTenantId é obrigatório');
+        return;
+      }
+
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const rawExecutionId = body?.executionId ? String(body.executionId).trim() : '';
+      const executionId = rawExecutionId ? requireExecutionId(body, res, badRequest) : null;
+      if (rawExecutionId && !executionId) {
+        return;
+      }
+
+      const { generateInitialGraph } = require('./services/initialGraphService');
+      const { ensureExecutionContext, updateStage, updateStatus } = require('./services/pipelineExecutionContext');
+
+      let execution = null;
+      if (executionId) {
+        execution = ensureExecutionContext(
+          { executionId, tenantId: tenantIdForAI, targetTenantId },
+          { tenantId: tenantIdForAI }
+        );
+        updateStatus(execution, 'running', {
+          currentStage: 'initialFlowGenerated',
+          message: 'Gerando fluxo inicial do tenant',
+          source: '/system/generate-initial-flow',
+        });
+      }
+
+      const result = await generateInitialGraph({
+        tenantIdForAI,
+        tenantIdTarget: targetTenantId,
+        name: body?.name ?? null,
+        description: body?.description ?? null,
+        urls: Array.isArray(body?.urls) ? body.urls : [],
+        fileNames: Array.isArray(body?.fileNames) ? body.fileNames : [],
+        executionId: executionId || null,
+        contextMode: body?.contextMode ?? 'auto',
+        chunks: Array.isArray(body?.chunks) ? body.chunks : [],
+        rules: body?.rules ?? null,
+        dryRun: body?.dryRun === true || body?.persistFlow === false,
+      });
+
+      if (execution) {
+        updateStage(execution, 'initialFlowGenerated', true);
+        updateStatus(execution, 'running', {
+          currentStage: 'initialFlowGenerated',
+          message: 'Fluxo inicial gerado',
+          source: '/system/generate-initial-flow',
+        });
+      }
+
+      sendJson(res, 200, {
+        initialFlow: result?.reteJson || null,
+        entities: {
+          categories: Array.isArray(result?.categories) ? result.categories : [],
+          coverage: typeof result?.coverage === 'number' ? result.coverage : 0,
+          excludedItemsCount: Number(result?.excludedItemsCount || 0),
+        },
+        persisted: !!result?.persisted,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('[System] Erro ao gerar fluxo inicial:', err);
+        sendJson(res, 500, {
+          error: 'internal_error',
+          message: err.message || 'Erro ao gerar fluxo inicial',
+        });
+      }
     }
     return;
   }
@@ -11728,6 +12090,44 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     return;
   }
 
+  // GET /rag/health - Health do RAG (Node): compara BD vs vector store e retorna warning se inconsistente
+  if (method === 'GET' && pathname === '/rag/health') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      const tenantId = url.searchParams.get('tenantId')
+        ? String(url.searchParams.get('tenantId')).trim()
+        : (req.agent?.tenantId ? String(req.agent.tenantId).trim() : null);
+      if (!tenantId) {
+        badRequest(res, 'tenantId é obrigatório');
+        return;
+      }
+
+      const autoRepair = url.searchParams.get('autoRepair') === 'true';
+      const { getRagHealth } = require('./services/ragDocumentsService');
+      const health = await getRagHealth(tenantId, { autoRepair });
+      sendJson(res, 200, health);
+    } catch (err) {
+      logger.error('Erro ao obter rag health:', err);
+      sendJson(res, 500, {
+        error: 'internal_error',
+        message: err.message || 'Erro ao obter health do RAG',
+      });
+    }
+    return;
+  }
+
   // GET /rag/deduplication/stats - Estatísticas de deduplicação
   if (method === 'GET' && pathname === '/rag/deduplication/stats') {
     const authResult = requireAuth(req);
@@ -12057,6 +12457,71 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch (err) {
       logger.error('Erro ao reindexar documentos em lote:', err);
       sendJson(res, 500, { error: 'internal_error', message: err.message });
+    }
+    return;
+  }
+
+  // POST /rag/ephemeral/context - Persiste contexto efêmero com TTL para dry-run
+  if (method === 'POST' && pathname === '/rag/ephemeral/context') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+
+    const permResult = requirePermission(req, 'rag', 'create');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return;
+    }
+
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    try {
+      const body = await parseJsonBody(req);
+      const { requireExecutionId } = require('./middleware/requireExecutionId');
+      const executionId = requireExecutionId(body, res, badRequest);
+      if (!executionId) {
+        return;
+      }
+
+      const requestedTenantId = body?.tenantId ? String(body.tenantId).trim() : '';
+      const authenticatedTenantId = authResult.agent?.tenantId ? String(authResult.agent.tenantId).trim() : '';
+      const isSuperAdminUser = isSuperAdmin(req.agent);
+      const tenantId = isSuperAdminUser && requestedTenantId
+        ? requestedTenantId
+        : authenticatedTenantId;
+
+      if (!tenantId) {
+        badRequest(res, 'tenantId é obrigatório');
+        return;
+      }
+
+      const { upsertEphemeralContext } = require('./services/ephemeralRagContextService');
+      const result = await upsertEphemeralContext({
+        tenantId,
+        executionId,
+        chunks: Array.isArray(body?.chunks) ? body.chunks : [],
+        ttlSeconds: body?.ttlSeconds,
+        replace: body?.replace === true,
+      });
+
+      sendJson(res, 200, {
+        ok: true,
+        tenantId,
+        executionId,
+        ...result,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao persistir contexto efêmero RAG:', err);
+        sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro ao persistir contexto efêmero' });
+      }
     }
     return;
   }
@@ -12634,6 +13099,70 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     if (handledDev) return;
   }
 
+  // =======================================================================
+  // Intelligence - Tenant Intelligence Core Routes
+  // =======================================================================
+  {
+    const { handleIntelligenceRoutes } = require('./serverHandlers/intelligenceRoutes');
+    const handledIntelligence = await handleIntelligenceRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger,
+      },
+    });
+    if (handledIntelligence) return;
+  }
+
+  // =======================================================================
+  // Intelligence - Market Intelligence Layer Routes
+  // =======================================================================
+  {
+    const { handleMarketIntelligenceRoutes } = require('./serverHandlers/marketIntelligenceRoutes');
+    const handledMarketIntelligence = await handleMarketIntelligenceRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger,
+      },
+    });
+    if (handledMarketIntelligence) return;
+  }
+
+  // =======================================================================
+  // Access Control - Core Routes
+  // =======================================================================
+  {
+    const { handleAccessControlRoutes } = require('./serverHandlers/accessControlRoutes');
+    const handledAccessControl = await handleAccessControlRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, logAction,
+      },
+    });
+    if (handledAccessControl) return;
+  }
+
+  // =======================================================================
+  // Scheduling Support - Calendar / Lookups / CRM Contacts Routes
+  // =======================================================================
+  {
+    const { handleSchedulingSupportRoutes } = require('./serverHandlers/schedulingSupportRoutes');
+    const handledSchedulingSupport = await handleSchedulingSupportRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger,
+      },
+    });
+    if (handledSchedulingSupport) return;
+  }
+
   // -----------------------------------------------------------------------
   // GET /api/schedules - Lista agendamentos
   // -----------------------------------------------------------------------
@@ -12647,13 +13176,13 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     const contextType = urlObj.searchParams.get('contextType') || undefined;
     const contextId = urlObj.searchParams.get('contextId') || undefined;
     const limit = Math.min(parseInt(urlObj.searchParams.get('limit') || '50', 10), 200);
-    const store = _getSchedules(req.tenantId || 'default');
-    let items = Array.from(store.values());
-    if (contextType) items = items.filter(s => s.contextType === contextType);
-    if (contextId) items = items.filter(s => s.contextId === contextId);
-    items.sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
-    items = items.slice(0, limit);
-    sendJson(res, 200, { items, total: items.length });
+    const result = scheduleService.listSchedules({
+      tenantId: req.tenantId || 'default',
+      contextType,
+      contextId,
+      limit,
+    });
+    sendJson(res, 200, result);
     return;
   }
 
@@ -12665,34 +13194,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       return;
     }
     const body = await parseJsonBody(req);
-    const id = _genScheduleId();
-    const now = new Date().toISOString();
-    const schedule = {
-      id,
+    const schedule = scheduleService.createSchedule({
       tenantId: req.tenantId || 'default',
-      contextType: String(body.contextType || 'custom'),
-      contextId: String(body.contextId || ''),
-      contactId: body.contactId || null,
-      conversationId: body.conversationId || null,
-      channel: body.channel || 'whatsapp',
-      mode: body.mode || 'agent_based',
-      startAt: body.startAt || now,
-      endAt: body.endAt || now,
-      timezone: body.timezone || 'UTC',
-      purpose: body.purpose || 'compromisso',
-      notes: body.notes || null,
-      origin: body.origin || 'human',
-      status: 'scheduled',
-      confirmationStatus: body.requiresConfirmation ? 'pending' : 'not_required',
-      requiresConfirmation: !!body.requiresConfirmation,
-      ownerId: body.ownerId || null,
-      teamId: body.teamId || null,
-      reminders: Array.isArray(body.reminders) ? body.reminders : [],
-      metadata: body.metadata || {},
-      createdAt: now,
-      updatedAt: now,
-    };
-    _getSchedules(req.tenantId || 'default').set(id, schedule);
+      payload: body,
+    });
     sendJson(res, 201, { schedule });
     return;
   }
@@ -12720,32 +13225,31 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     if (slashIdx !== -1) {
       const schedId = decodeURIComponent(schedSeg.slice(0, slashIdx));
       const action = schedSeg.slice(slashIdx + 1);
-      const store = _getSchedules(req.tenantId || 'default');
-      const sched = store.get(schedId);
+      let payload = {};
+      if (action === 'reschedule') {
+        payload = await parseJsonBody(req);
+      }
+      let sched = null;
+      try {
+        sched = scheduleService.updateScheduleStatus({
+          tenantId: req.tenantId || 'default',
+          scheduleId: schedId,
+          action,
+          payload,
+        });
+      } catch (err) {
+        if (err && err.code === 'schedule_not_found') {
+          sendJson(res, 404, { error: 'schedule_not_found' });
+          return;
+        }
+        if (err && err.code === 'schedule_action_not_found') {
+          sendJson(res, 404, { error: 'action_not_found' });
+          return;
+        }
+        throw err;
+      }
       if (!sched) {
         sendJson(res, 404, { error: 'schedule_not_found' });
-        return;
-      }
-      const now = new Date().toISOString();
-      if (action === 'confirm') {
-        sched.confirmationStatus = 'confirmed'; sched.status = 'scheduled'; sched.updatedAt = now;
-      } else if (action === 'decline') {
-        sched.confirmationStatus = 'declined'; sched.status = 'cancelled'; sched.updatedAt = now;
-      } else if (action === 'cancel') {
-        sched.status = 'cancelled'; sched.updatedAt = now;
-      } else if (action === 'done') {
-        sched.status = 'done'; sched.updatedAt = now;
-      } else if (action === 'no-show') {
-        sched.status = 'no_show'; sched.updatedAt = now;
-      } else if (action === 'in-progress') {
-        sched.status = 'in_progress'; sched.updatedAt = now;
-      } else if (action === 'reschedule') {
-        const body = await parseJsonBody(req);
-        if (body.startAt) sched.startAt = body.startAt;
-        if (body.endAt) sched.endAt = body.endAt;
-        sched.status = 'scheduled'; sched.updatedAt = now;
-      } else {
-        sendJson(res, 404, { error: 'action_not_found' });
         return;
       }
       sendJson(res, 200, { schedule: sched });
@@ -13269,5 +13773,3 @@ module.exports = {
     requestHandler,
   },
 };
-
-
