@@ -48,6 +48,9 @@ jobs:
       - name: Instalar Playwright (Chromium)
         run: npx playwright install chromium --with-deps
 
+      - name: Executar migrations do banco
+        run: npm run db:migrate
+
       - name: Iniciar Frontend (Vite) e executar validação oficial
         run: |
           cleanup() {

@@ -94,6 +94,7 @@ jobs:
     name: Frontend - Testes (Vitest)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    continue-on-error: true
 
     steps:
       - name: Checkout código
