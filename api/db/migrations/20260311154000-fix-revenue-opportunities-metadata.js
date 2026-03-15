@@ -9,8 +9,20 @@ async function columnExists(queryInterface, tableName, columnName) {
   }
 }
 
+async function tableExists(queryInterface, tableName) {
+  try {
+    await queryInterface.describeTable(tableName);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const hasTable = await tableExists(queryInterface, 'revenue_opportunities');
+    if (!hasTable) return;
+
     const exists = await columnExists(queryInterface, 'revenue_opportunities', 'metadata');
     if (!exists) {
       await queryInterface.addColumn('revenue_opportunities', 'metadata', {
@@ -28,6 +40,9 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    const hasTable = await tableExists(queryInterface, 'revenue_opportunities');
+    if (!hasTable) return;
+
     const exists = await columnExists(queryInterface, 'revenue_opportunities', 'metadata');
     if (exists) {
       await queryInterface.removeColumn('revenue_opportunities', 'metadata');

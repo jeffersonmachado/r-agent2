@@ -1,8 +1,17 @@
 'use strict';
 
+async function describeTableSafe(queryInterface, tableName) {
+  try {
+    return await queryInterface.describeTable(tableName);
+  } catch (_) {
+    return null;
+  }
+}
+
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const columns = await queryInterface.describeTable('kiosk_sessions');
+    const columns = await describeTableSafe(queryInterface, 'kiosk_sessions');
+    if (!columns) return;
 
     if (!columns.contact_id) {
       await queryInterface.addColumn('kiosk_sessions', 'contact_id', {
@@ -20,7 +29,8 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    const columns = await queryInterface.describeTable('kiosk_sessions');
+    const columns = await describeTableSafe(queryInterface, 'kiosk_sessions');
+    if (!columns) return;
 
     if (columns.ticket_id) {
       await queryInterface.removeColumn('kiosk_sessions', 'ticket_id');
