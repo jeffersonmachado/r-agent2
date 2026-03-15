@@ -72,7 +72,13 @@ const {
 } = require('./services/onboardingService');
 const { requireAuth, requirePermission } = require('./middleware/auth');
 const { tenantRateLimitMiddleware } = require('./middleware/tenantRateLimit');
-const { canAccessTicket, canModifyTicket } = require('./services/rbacService');
+const {
+  canAccessTicket,
+  canModifyTicket,
+  listPermissions,
+  createRole,
+  getRoleDefinitions,
+} = require('./services/rbacService');
 const {
   listQueue,
   listQueues,
@@ -146,6 +152,11 @@ const {
   getTrendMetrics,
   getAllMetrics,
 } = require('./services/analyticsService');
+const {
+  getSupervisorMetrics,
+  getSupervisorAgentStatus,
+  getSupervisorQueueStatus,
+} = require('./services/supervisorService');
 const {
   exportTicketsCSV,
   exportMetricsCSV,
@@ -5085,6 +5096,228 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       sendJson(res, 200, { sentiment, intent: null, result: null });
     }
     return;
+  }
+
+  // =======================================================================
+  // Automation Routes
+  // =======================================================================
+  {
+    const { handleAutomationRoutes } = require('./serverHandlers/automationRoutes');
+    const handledAutomation = await handleAutomationRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson,
+      },
+    });
+    if (handledAutomation) return;
+  }
+
+  // =======================================================================
+  // Developer Key Routes
+  // =======================================================================
+  {
+    const { handleDeveloperKeyRoutes } = require('./serverHandlers/developerKeyRoutes');
+    const handledDeveloperKey = await handleDeveloperKeyRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson,
+      },
+    });
+    if (handledDeveloperKey) return;
+  }
+
+  // =======================================================================
+  // Marketing Routes
+  // =======================================================================
+  {
+    const { handleMarketingRoutes } = require('./serverHandlers/marketingRoutes');
+    const handledMarketing = await handleMarketingRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson, badRequest,
+        hasJsonContentType, parseJsonBody, logger,
+      },
+    });
+    if (handledMarketing) return;
+  }
+
+  // =======================================================================
+  // Order Routes
+  // =======================================================================
+  {
+    const { handleOrderRoutes } = require('./serverHandlers/orderRoutes');
+    const handledOrder = await handleOrderRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson,
+      },
+    });
+    if (handledOrder) return;
+  }
+
+  // =======================================================================
+  // Process Runtime Routes
+  // =======================================================================
+  {
+    const { handleProcessRuntimeRoutes } = require('./serverHandlers/processRuntimeRoutes');
+    const handledProcessRuntime = await handleProcessRuntimeRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant, sendJson,
+        badRequest, hasJsonContentType, parseJsonBody, logger,
+      },
+    });
+    if (handledProcessRuntime) return;
+  }
+
+  // =======================================================================
+  // Public API Routes
+  // =======================================================================
+  {
+    const { handlePublicApiRoutes } = require('./serverHandlers/publicApiRoutes');
+    const handledPublicApi = await handlePublicApiRoutes({
+      req, res, method, pathname,
+      deps: {
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, checkRateLimit,
+      },
+    });
+    if (handledPublicApi) return;
+  }
+
+  // =======================================================================
+  // RAG Documents Routes
+  // =======================================================================
+  {
+    const { handleRagDocumentsRoutes } = require('./serverHandlers/ragDocumentsRoutes');
+    const handledRagDocuments = await handleRagDocumentsRoutes({
+      req, res, method, pathname,
+      deps: {},
+    });
+    if (handledRagDocuments) return;
+  }
+
+  // =======================================================================
+  // RBAC Routes
+  // =======================================================================
+  {
+    const { handleRbacRoutes } = require('./serverHandlers/rbacRoutes');
+    const handledRbac = await handleRbacRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant, sendJson,
+        badRequest, hasJsonContentType, parseJsonBody, logger,
+        getRoleDefinitions, createRole, listPermissions, getAgent,
+        updateAgent,
+      },
+    });
+    if (handledRbac) return;
+  }
+
+  // =======================================================================
+  // SLA Routes
+  // =======================================================================
+  {
+    const { handleSlaRoutes } = require('./serverHandlers/slaRoutes');
+    const handledSla = await handleSlaRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson,
+      },
+    });
+    if (handledSla) return;
+  }
+
+  // =======================================================================
+  // Solution Routes
+  // =======================================================================
+  {
+    const { handleSolutionRoutes } = require('./serverHandlers/solutionRoutes');
+    const handledSolution = await handleSolutionRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson, badRequest,
+        hasJsonContentType, parseJsonBody, logger,
+      },
+    });
+    if (handledSolution) return;
+  }
+
+  // =======================================================================
+  // Supervisor Routes
+  // =======================================================================
+  {
+    const { handleSupervisorRoutes } = require('./serverHandlers/supervisorRoutes');
+    const handledSupervisor = await handleSupervisorRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant, sendJson,
+        logger, getSupervisorMetrics, getGeneralMetrics, getSupervisorAgentStatus,
+        getSupervisorQueueStatus,
+      },
+    });
+    if (handledSupervisor) return;
+  }
+
+  // =======================================================================
+  // Task Routes
+  // =======================================================================
+  {
+    const { handleTaskRoutes } = require('./serverHandlers/taskRoutes');
+    const handledTask = await handleTaskRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson,
+      },
+    });
+    if (handledTask) return;
+  }
+
+  // =======================================================================
+  // Webhook Routes
+  // =======================================================================
+  {
+    const { handleWebhookRoutes } = require('./serverHandlers/webhookRoutes');
+    const handledWebhook = await handleWebhookRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, sendJson, badRequest, hasJsonContentType,
+        parseJsonBody, logger, verifyWebhook, processWhatsAppMessage,
+        verifyMessengerWebhook, sendMessengerMessage, sendMessengerButtons, verifyInstagramWebhook,
+        sendInstagramMessage, sendInstagramMedia, channelNormalizationService, channelGatewayService,
+        resolveOrCreateTicketFromIncomingMessage, appendTicketMessage, autoAssignTicket, emitEvent,
+        flows, sessionEvents, saveSessionEventsToFile,
+      },
+    });
+    if (handledWebhook) return;
+  }
+
+  // =======================================================================
+  // WhatsApp IVR Routes
+  // =======================================================================
+  {
+    const { handleWhatsAppIvrRoutes } = require('./serverHandlers/whatsAppIvrRoutes');
+    const handledWhatsAppIvr = await handleWhatsAppIvrRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson,
+      },
+    });
+    if (handledWhatsAppIvr) return;
+  }
+
+  // =======================================================================
+  // WhatsApp QR Webhook Routes
+  // =======================================================================
+  {
+    const { handleWhatsAppQrWebhookRoutes } = require('./serverHandlers/whatsAppQrWebhookRoutes');
+    const handledWhatsAppQrWebhook = await handleWhatsAppQrWebhookRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, sendJson,
+      },
+    });
+    if (handledWhatsAppQrWebhook) return;
   }
 
   // -----------------------------------------------------------------------
