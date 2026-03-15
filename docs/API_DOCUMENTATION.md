@@ -31,6 +31,7 @@ Para obter um token, faça login em `/auth/login`.
 13. [Segmentação](#segmentação)
 14. [Templates WhatsApp](#templates-whatsapp)
 15. [Webhooks](#webhooks)
+16. [Access Control](#access-control)
 
 ---
 
@@ -248,6 +249,199 @@ Sugere respostas baseadas no contexto.
 }
 ```
 
+---
+
+## 🚪 Access Control
+
+### GET /api/access-control/devices
+Lista devices de controle de acesso do tenant autenticado.
+
+### POST /api/access-control/devices
+Cria um device de controle de acesso.
+
+**Body:**
+```json
+{
+  "name": "Catraca Entrada A",
+  "type": "turnstile",
+  "vendor": "Control iD",
+  "location": "Recepção",
+  "unit_id": "unit-1",
+  "integration_mode": "backend_decides"
+}
+```
+
+### PATCH /api/access-control/devices/:id
+Atualiza um device existente.
+
+### GET /api/access-control/credentials
+Lista credenciais do tenant.
+
+### POST /api/access-control/credentials
+Cria uma credencial e, quando necessário, faz o bootstrap mínimo de `AccessSubject` e `AccessMembership`.
+
+**Body:**
+```json
+{
+  "type": "qrcode",
+  "credential_value": "qr-dinamico-123",
+  "customer_id": "cust-10",
+  "membership_id": "mem-10",
+  "billing_status": "active",
+  "vertical": "fitness"
+}
+```
+
+### PATCH /api/access-control/credentials/:id
+Atualiza credencial existente.
+
+### GET /api/access-control/policies
+Lista políticas de acesso.
+
+### POST /api/access-control/policies
+Cria política de acesso.
+
+**Body:**
+```json
+{
+  "name": "Fitness manhã",
+  "vertical": "fitness",
+  "days_allowed": ["mon", "tue", "wed", "thu", "fri"],
+  "time_start": "06:00",
+  "time_end": "12:00",
+  "unit_scope": ["unit-1"],
+  "anti_passback_mode": "strict",
+  "max_entries_per_day": 2
+}
+```
+
+### PATCH /api/access-control/policies/:id
+Atualiza política de acesso.
+
+### POST /api/access-control/decisions/resolve
+Resolve uma decisão de acesso protegida por auth do painel.
+
+**Body:**
+```json
+{
+  "device_id": "dev-1",
+  "action": "enter",
+  "credential_value": "qr-dinamico-123",
+  "vertical": "fitness"
+}
+```
+
+### GET /api/access-control/decisions/:id/status
+Consulta o status reconciliado da execução de uma `AccessDecision`.
+
+**Resposta:**
+```json
+{
+  "ok": true,
+  "decision": {
+    "id": "acdcn-1",
+    "decision": "allow"
+  },
+  "execution_status": "executed",
+  "callback_event": {
+    "id": "ace-callback-1"
+  }
+}
+```
+
+### POST /api/access-control/events
+Registra um `AccessEvent` por rota protegida.
+
+### GET /api/access-control/events
+Lista eventos de acesso com filtros por `subject_id`, `device_id`, `event_type` e `limit`.
+
+### GET /api/access-control/decisions
+Lista decisões emitidas pelo módulo com filtros por `subject_id`, `device_id`, `decision`, `reason_code`, `execution_status` e `limit`.
+
+Quando `include_status=true` (padrão atual da UI), a resposta também pode trazer `summary` com totais por status e sinal de `pending_critical`.
+Cada item reconciliado também pode trazer `pending_critical_threshold_ms` e `pending_critical_threshold_source`.
+
+Parâmetros úteis adicionais:
+- `pending_critical_only=true` para retornar apenas decisões pendentes críticas
+- `device_id=<id>` para focar um ponto físico específico
+- `subject_id=<id>` para troubleshooting por pessoa/credencial associada
+
+### GET /api/access-control/health
+Retorna snapshot operacional do módulo com `summary`, `threshold_ms`, `threshold_scope`, `has_incidents` e amostra de `pending_critical_items`.
+
+Observação operacional:
+- o threshold de criticidade é reconciliado por decisão com precedência de `AccessPolicy.metadata.pending_critical_age_by_unit`, `AccessPolicy.metadata.pending_critical_age_ms`, `AccessPolicy.grace_policy.pending_critical_age_ms`, `AccessDevice.metadata.pending_critical_age_ms` e fallback em `ACCESS_CONTROL_PENDING_CRITICAL_AGE_MS`.
+
+### POST /api/access-control/visitors/qrcode
+Gera QR temporário de visitante.
+
+### POST /api/access-control/qrcode/resolve
+Resolve um QR temporário e emite uma `AccessDecision`.
+
+### POST /physical/access/resolve?token=<public_token>
+Endpoint público/controlado para device integration. Requer `PublicAccessToken` do kind `access_control`.
+
+**Body:**
+```json
+{
+  "device_id": "dev-1",
+  "action": "enter",
+  "credential_value": "qr-ou-rfid-ou-pin",
+  "vertical": "fitness"
+}
+```
+
+**Resposta:**
+```json
+{
+  "ok": true,
+  "decision": {
+    "id": "acdcn-1",
+    "decision": "allow",
+    "reason_code": "allowed_active"
+  },
+  "token": "signed-short-lived-decision",
+  "execution_command": {
+    "vendor": "control_id",
+    "deviceId": "dev-1",
+    "action": "ALLOW",
+    "ttlSec": 120,
+    "token": "signed-short-lived-decision"
+  },
+  "event": {
+    "id": "ace-1"
+  }
+}
+```
+
+### POST /physical/access/events?token=<public_token>
+Endpoint público/controlado para o hardware reportar execução operacional (`entry`, `exit`, `device_callback`, `deny`).
+
+### POST /physical/access/ack?token=<public_token>
+Endpoint público/controlado para o hardware confirmar a execução do comando emitido pelo backend.
+
+**Body:**
+```json
+{
+  "decision_id": "acdcn-1",
+  "subject_id": "sub-1",
+  "status": "executed",
+  "command": "ALLOW",
+  "hardware_response": {
+    "relay": "opened"
+  }
+}
+```
+
+### POST /public-tokens
+Cria token público operacional. O campo `kind` aceita:
+
+- `storefront`
+- `kiosk`
+- `panel`
+- `station`
+- `access_control`
+
 **Resposta:**
 ```json
 {
@@ -457,4 +651,3 @@ Acesso básico a tickets e atendimento.
 ## 📞 Suporte
 
 Para mais informações, consulte a documentação completa ou entre em contato com o suporte.
-

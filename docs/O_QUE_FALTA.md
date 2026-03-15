@@ -205,6 +205,15 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - integração com runtime (triggers/ações) e correlação com ticket digital
   - **Critério de pronto**: jornada kiosk→station→panel estável, auditável e mensurável com KPIs mínimos no gate.
 
+#### 2.2.1 Access Control horizontal
+- [x] decision engine centralizado com QR temporário, biometria sem autorização implícita e trilha auditável
+- [x] integrações públicas/controladas iniciais com `PublicAccessToken(kind=access_control)`
+- [x] `execution_command` canônico para device/vendor e confirmação de execução via `ack`
+- [x] reconciliação operacional de decisão (`pending/executed/failed/expired`) + destaque para `pending_critical`
+- [ ] endurecer integrações com protocolos reais de dispositivos/vendors
+- [ ] completar overrides operacionais e analytics específicos de acesso/presença
+- [ ] expandir policies avançadas para beauty (sala/recurso/profissional)
+
 #### 2.3 PBX com TTS+ASR (voz real em produção)
 - **Fechar operação PBX v1 com evidência de chamada real**
   - TTS+ASR funcional no fluxo de voz (smoke dedicado)

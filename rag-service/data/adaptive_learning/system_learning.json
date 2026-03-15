@@ -8,62 +8,6 @@
         "success": true,
         "confidence": 0.6282363190813373,
         "chunksFound": 6,
-        "timestamp": "2026-01-09T13:41:21.590988"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
-        "timestamp": "2026-01-09T13:43:06.681665"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
-        "timestamp": "2026-01-09T13:43:27.749539"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
-        "timestamp": "2026-01-09T13:49:06.804745"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
-        "timestamp": "2026-01-09T13:49:41.835231"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
-        "timestamp": "2026-01-09T14:22:14.882213"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
-        "timestamp": "2026-01-09T14:22:26.716605"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
-        "timestamp": "2026-01-09T14:33:00.136236"
-      },
-      {
-        "query": "studiooly studiooly.com.br informações sobre serviços produtos item artigo mercadoria studiooly informações",
-        "success": true,
-        "confidence": 0.6282363190813373,
-        "chunksFound": 6,
         "timestamp": "2026-01-09T14:33:30.686566"
       },
       {
@@ -702,6 +646,62 @@
         "confidence": 0.5521184866194132,
         "chunksFound": 6,
         "timestamp": "2026-03-13T02:27:36.798030"
+      },
+      {
+        "query": "https://studiooly.com.br/ studiooly.com.br informações sobre serviços produtos item artigo mercadoria https studiooly",
+        "success": true,
+        "confidence": 0.5197565455682389,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:23:22.993549"
+      },
+      {
+        "query": "https://studiooly.com.br/ studiooly.com.br informações sobre serviços produtos item artigo mercadoria https studiooly",
+        "success": true,
+        "confidence": 0.5197565455682389,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:30:15.030536"
+      },
+      {
+        "query": "https://studiooly.com.br/ studiooly.com.br informações sobre serviços produtos item artigo mercadoria https studiooly",
+        "success": true,
+        "confidence": 0.5197565455682389,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:34:25.729878"
+      },
+      {
+        "query": "https://studiooly.com.br/ studiooly.com.br informações sobre serviços produtos item artigo mercadoria https studiooly",
+        "success": true,
+        "confidence": 0.5197565455682389,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:38:28.949471"
+      },
+      {
+        "query": "Perguntas frequentes e informações sobre o tenant perguntas frequentes informações",
+        "success": true,
+        "confidence": 0.5521184866194132,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:50:07.857126"
+      },
+      {
+        "query": "Perguntas frequentes e informações sobre o tenant perguntas frequentes informações",
+        "success": true,
+        "confidence": 0.5521184866194132,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:50:11.999161"
+      },
+      {
+        "query": "https://studiooly.com.br/ studiooly.com.br informações sobre serviços produtos item artigo mercadoria https studiooly",
+        "success": true,
+        "confidence": 0.5197565455682389,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:50:24.513065"
+      },
+      {
+        "query": "https://studiooly.com.br/ studiooly.com.br informações sobre serviços produtos item artigo mercadoria https studiooly",
+        "success": true,
+        "confidence": 0.5197565455682389,
+        "chunksFound": 6,
+        "timestamp": "2026-03-13T19:56:24.345030"
       }
     ],
     "failed": [
@@ -842,11 +842,11 @@
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 148,
-    "successfulQueries": 129,
+    "totalQueries": 156,
+    "successfulQueries": 137,
     "failedQueries": 19,
-    "avgConfidence": 0.550782236426171,
-    "lastUpdated": "2026-03-13T02:27:36.797991"
+    "avgConfidence": 0.5380925908779512,
+    "lastUpdated": "2026-03-13T19:56:24.344991"
   },
   "config": {
     "minScore": 0.3,
@@ -920,5 +920,5 @@
     ]
   },
   "createdAt": "2026-01-09T04:23:09.658349",
-  "updatedAt": "2026-03-13T02:27:36.798091"
+  "updatedAt": "2026-03-13T19:56:24.345088"
 }

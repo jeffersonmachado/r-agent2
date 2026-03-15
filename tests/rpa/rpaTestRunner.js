@@ -105,12 +105,14 @@ class RpaTestRunner {
       recordingId: recordingData.id,
       recordingName: recordingData.name,
       success: true,
+      finalDecision: 'PASS',
       steps: [],
       errors: [],
       screenshots: [],
       startTime: new Date().toISOString(),
       replayId: null,
       tracePath: null,
+      reliabilityMetrics: null,
     };
 
     // Inicia sistema de replay
@@ -158,15 +160,40 @@ class RpaTestRunner {
 
         const stepResult = await this.executor.executeAction(step, mergedData);
         const stepEndTime = new Date().toISOString();
+        const stepBugResolution = stepResult?.bugResolution || null;
+
+        const replayActionPayload = {
+          ...step,
+          step: `step-${i + 1}`,
+          metadata: {
+            ...(step.metadata || {}),
+            classification: stepBugResolution?.classification || null,
+            owner: stepBugResolution?.owner || null,
+            recoveryPlan: stepBugResolution?.recoveryPlan || null,
+            strategiesAttempted: stepBugResolution?.strategiesAttempted || [],
+            selectorRepairCandidates: stepBugResolution?.selectorRepairCandidates || [],
+            finalDecision: stepResult?.finalDecision || null,
+            severity: stepBugResolution?.severity || null,
+            evidenceArtifacts: stepBugResolution?.evidenceArtifacts || null,
+          },
+        };
 
         // Registra ação no replay
         if (this.options.enableReplay) {
           this.replaySystem.recordAction(
-            { ...step, step: `step-${i + 1}` },
+            replayActionPayload,
             {
               ...stepResult,
               startTime: stepStartTime,
               endTime: stepEndTime,
+              classification: stepBugResolution?.classification || null,
+              owner: stepBugResolution?.owner || null,
+              recoveryPlan: stepBugResolution?.recoveryPlan || null,
+              strategiesAttempted: stepBugResolution?.strategiesAttempted || [],
+              selectorRepairCandidates: stepBugResolution?.selectorRepairCandidates || [],
+              finalDecision: stepResult?.finalDecision || null,
+              severity: stepBugResolution?.severity || null,
+              evidenceArtifacts: stepBugResolution?.evidenceArtifacts || null,
             }
           );
         }
@@ -180,6 +207,8 @@ class RpaTestRunner {
           timestamp: stepStartTime,
           duration: new Date(stepEndTime) - new Date(stepStartTime),
           debug: stepResult.debug || null,
+          finalDecision: stepResult.finalDecision || null,
+          bugResolution: stepBugResolution,
         });
 
         if (!stepResult.success) {
@@ -297,6 +326,29 @@ class RpaTestRunner {
         results.screenshots.push(...screenshots);
       }
 
+      // Exibe metricas de confiabilidade do motor autonomo.
+      try {
+        results.reliabilityMetrics = this.executor.getReliabilityMetrics?.() || null;
+      } catch (_) {}
+
+      // Deriva decisao final da execucao.
+      const failedStepWithDecision = [...results.steps]
+        .reverse()
+        .find((entry) => entry && entry.success === false && entry.finalDecision);
+      if (failedStepWithDecision) {
+        results.finalDecision = failedStepWithDecision.finalDecision;
+      } else {
+        const hasRecoveryPass = results.steps.some(
+          (entry) => entry && entry.success && entry.finalDecision === 'PASS_WITH_RECOVERY'
+        );
+        const hasRetryPass = results.steps.some(
+          (entry) => entry && entry.success && entry.finalDecision === 'PASS_WITH_RETRY'
+        );
+        if (hasRecoveryPass) results.finalDecision = 'PASS_WITH_RECOVERY';
+        else if (hasRetryPass) results.finalDecision = 'PASS_WITH_RETRY';
+        else results.finalDecision = 'PASS';
+      }
+
       this.results.push(results);
       return results;
     } catch (error) {
@@ -317,12 +369,17 @@ class RpaTestRunner {
       } catch (_) {}
       
       results.success = false;
+      results.finalDecision = 'FAIL_UNKNOWN';
       results.errors.push({
         step: 'unknown',
         action: 'unknown',
         error: error.message,
         stack: error.stack,
       });
+
+      try {
+        results.reliabilityMetrics = this.executor?.getReliabilityMetrics?.() || null;
+      } catch (_) {}
 
       this.results.push(results);
       return results;

@@ -209,4 +209,192 @@ describe('physicalPublicRoutes handler', () => {
       inService: 1,
     });
   });
+
+  test('POST /physical/access/resolve delega ao decision engine com token publico bound ao device', async () => {
+    const resolvePublicToken = jest.fn(async () => ({
+      ok: true,
+      tokenId: 'pt-ac-1',
+      tenantId: 'tenant-1',
+      locationId: 'loc-ac-1',
+      kind: 'access_control',
+      meta: { deviceId: 'dev-1', vertical: 'fitness' },
+    }));
+    const resolveDecision = jest.fn(async () => ({
+      decision: { id: 'dec-1', decision: 'allow', reason_code: 'allowed_active' },
+      token: 'signed-decision',
+      event: { id: 'evt-1' },
+    }));
+    const getDevice = jest.fn(async () => ({ id: 'dev-1', vendor: 'Control iD', model: 'IDBlock' }));
+
+    jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
+    jest.doMock('../../api/modules/access-control/accessDecisionService', () => ({ resolveDecision }));
+    jest.doMock('../../api/modules/access-control/accessControlService', () => ({ getDevice }));
+    const { handlePhysicalPublicRoutes } = require('../../api/serverHandlers/physicalPublicRoutes');
+
+    const req = makeReq({ url: '/physical/access/resolve?token=abc', headers: { 'user-agent': 'jest' } });
+    const res = { setHeader: jest.fn() };
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({
+        credential_value: 'qr-123',
+        action: 'enter',
+      })),
+    });
+
+    const handled = await handlePhysicalPublicRoutes({ req, res, method: 'POST', pathname: '/physical/access/resolve', deps });
+
+    expect(handled).toBe(true);
+    expect(resolveDecision).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1',
+      deviceId: 'dev-1',
+      credentialValue: 'qr-123',
+      action: 'enter',
+      vertical: 'fitness',
+    }));
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 200, expect.objectContaining({
+      ok: true,
+      token: 'signed-decision',
+      execution_command: expect.objectContaining({
+        vendor: 'control_id',
+        deviceId: 'dev-1',
+        action: 'ALLOW',
+      }),
+    }));
+  });
+
+  test('POST /physical/access/resolve bloqueia device divergente do token', async () => {
+    const resolvePublicToken = jest.fn(async () => ({
+      ok: true,
+      tokenId: 'pt-ac-2',
+      tenantId: 'tenant-1',
+      locationId: 'loc-ac-1',
+      kind: 'access_control',
+      meta: { deviceId: 'dev-bound' },
+    }));
+
+    jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
+    jest.doMock('../../api/modules/access-control/accessDecisionService', () => ({ resolveDecision: jest.fn() }));
+    const { handlePhysicalPublicRoutes } = require('../../api/serverHandlers/physicalPublicRoutes');
+
+    const req = makeReq({ url: '/physical/access/resolve?token=abc' });
+    const res = { setHeader: jest.fn() };
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({
+        device_id: 'dev-other',
+        credential_value: 'qr-123',
+      })),
+    });
+
+    const handled = await handlePhysicalPublicRoutes({ req, res, method: 'POST', pathname: '/physical/access/resolve', deps });
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 403, {
+      error: 'forbidden',
+      message: 'device_id divergente do token público',
+    });
+  });
+
+  test('POST /physical/access/events registra evento via token publico', async () => {
+    const resolvePublicToken = jest.fn(async () => ({
+      ok: true,
+      tokenId: 'pt-ac-3',
+      tenantId: 'tenant-1',
+      locationId: 'loc-ac-1',
+      kind: 'access_control',
+      meta: { deviceId: 'dev-2' },
+    }));
+    const createEvent = jest.fn(async ({ payload }) => ({ id: 'evt-22', ...payload }));
+
+    jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
+    jest.doMock('../../api/modules/access-control/accessControlService', () => ({ createEvent }));
+    const { handlePhysicalPublicRoutes } = require('../../api/serverHandlers/physicalPublicRoutes');
+
+    const req = makeReq({ url: '/physical/access/events?token=abc', headers: { 'user-agent': 'jest' } });
+    const res = { setHeader: jest.fn() };
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({
+        event_type: 'entry',
+        direction: 'in',
+        subject_id: 'sub-1',
+      })),
+    });
+
+    const handled = await handlePhysicalPublicRoutes({ req, res, method: 'POST', pathname: '/physical/access/events', deps });
+
+    expect(handled).toBe(true);
+    expect(createEvent).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      payload: expect.objectContaining({
+        device_id: 'dev-2',
+        event_type: 'entry',
+        direction: 'in',
+        subject_id: 'sub-1',
+        metadata: expect.objectContaining({
+          publicTokenId: 'pt-ac-3',
+          publicLocationId: 'loc-ac-1',
+          reportedBy: 'public_access_device',
+        }),
+      }),
+    });
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 201, expect.objectContaining({
+      ok: true,
+      item: expect.objectContaining({ id: 'evt-22' }),
+    }));
+  });
+
+  test('POST /physical/access/ack registra confirmação de execução do hardware', async () => {
+    const resolvePublicToken = jest.fn(async () => ({
+      ok: true,
+      tokenId: 'pt-ac-4',
+      tenantId: 'tenant-1',
+      locationId: 'loc-ac-1',
+      kind: 'access_control',
+      meta: { deviceId: 'dev-9', vendor: 'Control iD' },
+    }));
+    const createEvent = jest.fn(async ({ payload }) => ({ id: 'evt-ack', ...payload }));
+
+    jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
+    jest.doMock('../../api/modules/access-control/accessControlService', () => ({ createEvent }));
+    const { handlePhysicalPublicRoutes } = require('../../api/serverHandlers/physicalPublicRoutes');
+
+    const req = makeReq({ url: '/physical/access/ack?token=abc', headers: { 'user-agent': 'jest' } });
+    const res = { setHeader: jest.fn() };
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({
+        decision_id: 'dec-1',
+        subject_id: 'sub-1',
+        status: 'executed',
+        command: 'ALLOW',
+        hardware_response: { relay: 'opened' },
+      })),
+    });
+
+    const handled = await handlePhysicalPublicRoutes({ req, res, method: 'POST', pathname: '/physical/access/ack', deps });
+
+    expect(handled).toBe(true);
+    expect(createEvent).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      payload: expect.objectContaining({
+        device_id: 'dev-9',
+        subject_id: 'sub-1',
+        decision_id: 'dec-1',
+        event_type: 'device_callback',
+        raw_payload: expect.objectContaining({
+          ack: true,
+          status: 'executed',
+          command: 'ALLOW',
+          vendor: 'Control iD',
+          hardware_response: { relay: 'opened' },
+        }),
+        metadata: expect.objectContaining({
+          publicTokenId: 'pt-ac-4',
+          publicLocationId: 'loc-ac-1',
+          reportedBy: 'public_access_device_ack',
+        }),
+      }),
+    });
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 201, expect.objectContaining({
+      ok: true,
+      item: expect.objectContaining({ id: 'evt-ack' }),
+    }));
+  });
 });

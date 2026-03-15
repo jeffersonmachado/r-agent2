@@ -109,7 +109,7 @@ describe('publicTokenRoutes handler', () => {
 
     expect(handled).toBe(true);
     expect(createPublicToken).not.toHaveBeenCalled();
-    expect(deps.badRequest).toHaveBeenCalledWith(res, 'Campo "kind" inválido. Use: storefront|kiosk|panel|station');
+    expect(deps.badRequest).toHaveBeenCalledWith(res, 'Campo "kind" inválido. Use: storefront|kiosk|panel|station|access_control');
   });
 
   test('POST /public-tokens cria token e audita', async () => {
@@ -252,7 +252,7 @@ describe('publicTokenRoutes handler', () => {
     expect(handled).toBe(true);
     expect(resolvePublicToken).toHaveBeenCalledWith({
       token: 'xyz',
-      allowedKinds: ['storefront', 'kiosk', 'panel', 'station'],
+      allowedKinds: ['storefront', 'kiosk', 'panel', 'station', 'access_control'],
     });
     expect(deps.logAction).toHaveBeenCalled();
     expect(deps.sendJson).toHaveBeenCalledWith(res, 200, {
@@ -263,6 +263,7 @@ describe('publicTokenRoutes handler', () => {
         tenantId: 'tenant-1',
         locationId: 'loc-44',
         meta: { label: 'A' },
+        allowedKinds: ['storefront', 'kiosk', 'panel', 'station', 'access_control'],
       },
     });
   });

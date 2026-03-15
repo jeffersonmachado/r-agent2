@@ -308,10 +308,12 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         recordingId: recording.id,
         recordingName: recording.name,
         success: true,
+        finalDecision: 'PASS',
         steps: [],
         errors: [],
         screenshots: [],
         startTime: new Date().toISOString(),
+        reliabilityMetrics: null,
       };
 
       try {
@@ -919,6 +921,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             error: stepResult.error || null,
             timestamp: new Date().toISOString(),
             debug: stepResult.debug || null,
+            finalDecision: stepResult.finalDecision || null,
+            bugResolution: stepResult.bugResolution || null,
           });
 
           if (stepResult.success) {
@@ -975,6 +979,27 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
 
         results.endTime = new Date().toISOString();
         results.duration = new Date(results.endTime) - new Date(results.startTime);
+
+        try {
+          results.reliabilityMetrics = runner.executor.getReliabilityMetrics?.() || null;
+        } catch (_) {}
+
+        const failedStepWithDecision = [...results.steps]
+          .reverse()
+          .find((entry) => entry && entry.success === false && entry.finalDecision);
+        if (failedStepWithDecision) {
+          results.finalDecision = failedStepWithDecision.finalDecision;
+        } else {
+          const hasRecoveryPass = results.steps.some(
+            (entry) => entry && entry.success && entry.finalDecision === 'PASS_WITH_RECOVERY'
+          );
+          const hasRetryPass = results.steps.some(
+            (entry) => entry && entry.success && entry.finalDecision === 'PASS_WITH_RETRY'
+          );
+          if (hasRecoveryPass) results.finalDecision = 'PASS_WITH_RECOVERY';
+          else if (hasRetryPass) results.finalDecision = 'PASS_WITH_RETRY';
+          else results.finalDecision = 'PASS';
+        }
 
         // Adiciona erros coletados da página
         const pageErrors = runner.executor.getErrors();

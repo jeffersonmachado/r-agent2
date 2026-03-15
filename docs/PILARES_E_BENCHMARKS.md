@@ -17,6 +17,8 @@ Benchmarks citados explicitamente como referências de capacidade:
 - Voz/Contact Center: **Twilio Flex / Talkdesk / Five9**
 - IA: **LangFlow / Flowise**
 - Filas físicas: **Qminder / QLess / Waitwhile / Skiplino**
+- Access Control fitness: **Tecnofit / EVO / W12 / ABC Evo / Wellhub**
+- Access Control observacional: **Pacto** (pendente de validação pública mais forte)
 - Delivery/Marketplace: **iFood / Uber Eats / Rappi / DoorDash**
 
 ---
@@ -216,4 +218,3 @@ Independentemente do pilar, a plataforma precisa manter consistência enterprise
 - **RBAC e auditoria**: trilhas de ações relevantes (flows, credenciais, operações, atendimento, fila física).
 - **Observabilidade**: métricas e logs correlacionados por execução/cliente/ticket/chamada/senha.
 - **Custos previsíveis**: limites por tenant e pricing por uso (execuções, eventos, seats, minutos, IA).
-

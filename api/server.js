@@ -87,6 +87,11 @@ const {
   markMessagesAsRead,
   getTicketMessages,
 } = require('./services/queueService');
+  const {
+    createTicket,
+    transferTicket,
+    addTicketNote,
+  } = require('./services/queueService');
 const {
   listQuickReplies,
   getQuickReply,
@@ -1346,6 +1351,7 @@ async function requestHandler(req, res) {
     '/physical/kiosk/tickets',
     '/physical/panel/state',
     '/public-tokens/resolve',
+      '/physical/station',
   ];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
   // Webhooks de provedores (inbound) não podem ser bloqueados por falta de tenant no início:
@@ -1713,25 +1719,6 @@ async function requestHandler(req, res) {
       message: `Todas as sessões foram encerradas`,
       sessionsRemoved: removed 
     });
-    return;
-  }
-
-  // GET /auth/me - Obtém informações do agente autenticado
-  if (method === 'GET' && pathname === '/auth/me') {
-    const token = req.headers.authorization?.replace('Bearer ', '') || null;
-
-    if (!token) {
-      sendJson(res, 401, { error: 'unauthorized', message: 'Token não fornecido' });
-      return;
-    }
-
-    const validation = validateToken(token);
-    if (!validation.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: validation.error || 'Token inválido' });
-      return;
-    }
-
-    sendJson(res, 200, { agent: validation.agent });
     return;
   }
 
@@ -12993,6 +12980,25 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 
   // =======================================================================
   // Public Token Routes
+    // =======================================================================
+    // Physical Station Routes
+    // =======================================================================
+    {
+      const { handlePhysicalStationRoutes } = require('./serverHandlers/physicalStationRoutes');
+      const { checkRateLimit } = require('../infra/rate-limit');
+      const { createTicket: _createTicket } = require('./services/queueService');
+      const handledPhysicalStation = await handlePhysicalStationRoutes({
+        req, res, method, pathname,
+        deps: {
+          sendJson, badRequest, hasJsonContentType, parseJsonBody, logger,
+          checkRateLimit, logAction, createTicket: _createTicket,
+        },
+      });
+      if (handledPhysicalStation) return;
+    }
+
+    // =======================================================================
+    // Public Token Routes
   // =======================================================================
   {
     const { handlePublicTokenRoutes } = require('./serverHandlers/publicTokenRoutes');
@@ -13148,6 +13154,22 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   }
 
   // =======================================================================
+  // PBX v1 / Legacy Routes
+  // =======================================================================
+  {
+    const { handlePbxRoutes } = require('./serverHandlers/pbxRoutes');
+    const handledPbx = await handlePbxRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody, parseMultipartFormData,
+        logger, buildApiError, logAction,
+      },
+    });
+    if (handledPbx) return;
+  }
+
+  // =======================================================================
   // Scheduling Support - Calendar / Lookups / CRM Contacts Routes
   // =======================================================================
   {
@@ -13163,9 +13185,112 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     if (handledSchedulingSupport) return;
   }
 
+  // =======================================================================
+  // Voice Routes (events, runtime, event-ledger)
+  // =======================================================================
+  {
+    const { handleVoiceRoutes } = require('./serverHandlers/voiceRoutes');
+    const handledVoice = await handleVoiceRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger,
+      },
+    });
+    if (handledVoice) return;
+  }
+
+  // =======================================================================
+  // Physical Queue Routes
+  // =======================================================================
+  {
+    const { handleQueueTicketRoutes } = require('./serverHandlers/queueTicketRoutes');
+    const handledQueueTicket = await handleQueueTicketRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger,
+      },
+    });
+    if (handledQueueTicket) return;
+  }
+
+  // =======================================================================
+  // Ops Routes (event-ledger metrics, flow-execution metrics)
+  // =======================================================================
+  {
+    const { handleOpsRoutes } = require('./serverHandlers/opsRoutes');
+    const handledOps = await handleOpsRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, logAction,
+      },
+    });
+    if (handledOps) return;
+  }
+
+  // =======================================================================
+  // Execution Ledger Routes
+  // =======================================================================
+  {
+    const { handleExecutionLedgerRoutes } = require('./serverHandlers/executionLedgerRoutes');
+    const handledExecutionLedger = await handleExecutionLedgerRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, logAction,
+      },
+    });
+    if (handledExecutionLedger) return;
+  }
+
   // -----------------------------------------------------------------------
   // GET /api/schedules - Lista agendamentos
-  // -----------------------------------------------------------------------
+    // =======================================================================
+    // WhatsApp Connection Routes (QR, status, events, disconnect)
+    // =======================================================================
+    {
+      const { handleWhatsAppConnectionRoutes } = require('./serverHandlers/whatsAppConnectionRoutes');
+      const handledWhatsAppConnection = await handleWhatsAppConnectionRoutes({
+        req, res, method, pathname,
+        deps: {
+          requireAuth, requirePermission, requireTenant,
+          sendJson, badRequest, hasJsonContentType, parseJsonBody,
+          logger,
+        },
+      });
+      if (handledWhatsAppConnection) return;
+    }
+
+    // -----------------------------------------------------------------------
+    // =======================================================================
+    // Inbox / Conversations Routes (UX-01)
+    // =======================================================================
+    {
+      const { handleInboxRoutes } = require('./serverHandlers/inboxRoutes');
+      const handledInbox = await handleInboxRoutes({
+        req, res, method, pathname,
+        deps: {
+          requireAuth, requirePermission,
+          sendJson, badRequest, hasJsonContentType, parseJsonBody,
+          listAllTickets, getTicket,
+          canAccessTicket, canModifyTicket,
+          assignTicket, transferTicket, addTicketNote,
+          triggerWebhooks, emitEvent,
+          logAction, logger,
+        },
+      });
+      if (handledInbox) return;
+    }
+
+    // -----------------------------------------------------------------------
+    // GET /api/schedules - Lista agendamentos
+    // -----------------------------------------------------------------------
   if (method === 'GET' && pathname === '/api/schedules') {
     const authResult = requireAuth(req);
     if (!authResult.valid) {
@@ -13723,6 +13848,16 @@ if (require.main === module) {
         logger.warn('[Assignment] Falha ao iniciar worker (ignorado)', { error: err.message });
       }
     }
+
+      // Execution Queue Worker (dispatch_event_trigger jobs) - best-effort
+      if (process.env.ENABLE_EXECUTION_QUEUE_WORKER !== 'false') {
+        try {
+          const { startExecutionQueueWorker } = require('./services/executionQueueService');
+          startExecutionQueueWorker({ intervalMs: 800 });
+        } catch (err) {
+          logger.warn('[ExecutionQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
+        }
+      }
 
     // Channel Health monitor (best-effort)
     if (process.env.ENABLE_CHANNEL_HEALTH_MONITOR !== 'false') {

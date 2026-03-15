@@ -81,6 +81,13 @@ export const menuItems = [
     roles: ['supervisor', 'manager', 'admin', 'owner'],
   },
   {
+    label: 'Access Control',
+    path: '/access-control',
+    icon: '🚪',
+    permission: { resource: 'config', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
     label: 'Solutions Packs',
     path: '/solutions',
     icon: '📦',
@@ -91,6 +98,12 @@ export const menuItems = [
     label: 'Analytics',
     path: '/analytics',
     icon: '📊',
+    permission: { resource: 'reports', action: 'read' },
+  },
+  {
+    label: 'Tenant Intelligence',
+    path: '/tenant-intelligence',
+    icon: '🧠',
     permission: { resource: 'reports', action: 'read' },
   },
   {

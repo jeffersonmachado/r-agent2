@@ -23,6 +23,7 @@ import { FaqManagementPage } from './pages/FaqManagementPage';
 import { DepartmentsPage } from './pages/DepartmentsPage';
 import { BulkMessagingPage } from './pages/BulkMessagingPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { TenantIntelligencePage } from './pages/TenantIntelligencePage';
 import { SupervisorPage } from './pages/SupervisorPage';
 import { RbacPage } from './pages/RbacPage';
 import { MfaPage } from './pages/MfaPage';
@@ -61,6 +62,7 @@ import { ChatHumanoDashboardPage } from './pages/ChatHumanoDashboardPage';
 import { FailedMessagesPage } from './pages/FailedMessagesPage';
 import { QueuePhysicalDashboardPage } from './pages/QueuePhysicalDashboardPage';
 import { MarketingPage } from './pages/MarketingPage';
+import { AccessControlPage } from './pages/AccessControlPage';
 import { SolutionsPage } from './pages/SolutionsPage';
 import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
 import { SsoScimPage } from './pages/SsoScimPage';
@@ -271,6 +273,7 @@ function AppWithAuth() {
   const isDepartments = isRoute('/departments');
   const isBulkMessaging = isRoute('/bulk-messaging');
   const isAnalytics = isRoute('/analytics');
+  const isTenantIntelligence = isRoute('/tenant-intelligence');
   const isSupervisor = isRoute('/supervisor');
   const isRbac = isRoute('/rbac');
   const isMfa = isRoute('/mfa');
@@ -315,6 +318,7 @@ function AppWithAuth() {
   const isKitchen = isRoute('/kitchen');
   const isDispatch = isRoute('/dispatch');
   const isMarketing = isRoute('/marketing');
+  const isAccessControl = isRoute('/access-control');
   const isSolutions = isRoute('/solutions');
   const isNodeMarketplace = isRoute('/node-marketplace');
   const isSsoScim = isRoute('/sso-scim');
@@ -336,9 +340,9 @@ function AppWithAuth() {
       isStorefrontOrder, isStorefrontOrderStatus,
       isKiosk, isPanel, isStation,
       isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
+      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-      isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
+      isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOrders, isKitchen, isDispatch,
       isLogin
     ];
@@ -352,9 +356,9 @@ function AppWithAuth() {
     }
   }, [
     isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
+    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-    isOrders, isKitchen, isDispatch, isMarketing, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
+    isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -381,6 +385,7 @@ function AppWithAuth() {
       '/departments': '🏢 Departamentos',
       '/bulk-messaging': '📢 Disparos em Massa',
       '/analytics': '📈 Analytics & Métricas',
+      '/tenant-intelligence': '🧠 Tenant Intelligence',
       '/supervisor': '🧭 Painel Supervisor',
       '/rbac': '🔐 RBAC',
       '/mfa': '🔐 MFA',
@@ -448,6 +453,7 @@ function AppWithAuth() {
       '/failed-messages': '🚨 Mensagens Falhadas',
       '/fila-fisica': '🎫 Dashboard Fila Física',
       '/marketing': '🧲 Marketing',
+      '/access-control': '🚪 Access Control',
       '/solutions': '📦 Solutions Packs',
       '/node-marketplace': '🧩 Node Marketplace',
       '/sso-scim': '🔐 SSO / SCIM',
@@ -505,7 +511,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/sla-policies'];
+  const protectedRoutes = ['/', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -599,6 +605,8 @@ function AppWithAuth() {
         <BulkMessagingPage />
       ) : isAnalytics ? (
         <AnalyticsPage />
+      ) : isTenantIntelligence ? (
+        <TenantIntelligencePage />
       ) : isSupervisor ? (
         <SupervisorPage />
       ) : isRbac ? (
@@ -681,6 +689,8 @@ function AppWithAuth() {
         <DispatchPage />
       ) : isMarketing ? (
         <MarketingPage />
+      ) : isAccessControl ? (
+        <AccessControlPage />
       ) : isSolutions ? (
         <SolutionsPage />
       ) : isNodeMarketplace ? (

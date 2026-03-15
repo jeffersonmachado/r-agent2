@@ -108,9 +108,9 @@ async function handlePublicTokenRoutes(ctx) {
       const meta = body && typeof body.meta === 'object' && body.meta ? body.meta : {};
       const expiresInSec = body && body.expiresInSec != null ? Number(body.expiresInSec) : null;
 
-      const allowedKinds = new Set(['storefront', 'kiosk', 'panel', 'station']);
+      const allowedKinds = new Set(['storefront', 'kiosk', 'panel', 'station', 'access_control']);
       if (!allowedKinds.has(kind)) {
-        badRequest(res, 'Campo "kind" inválido. Use: storefront|kiosk|panel|station');
+        badRequest(res, 'Campo "kind" inválido. Use: storefront|kiosk|panel|station|access_control');
         return true;
       }
 
@@ -273,7 +273,7 @@ async function handlePublicTokenRoutes(ctx) {
       const { resolvePublicToken } = require('../services/publicAccessTokenService');
       const resolved = await resolvePublicToken({
         token,
-        allowedKinds: ['storefront', 'kiosk', 'panel', 'station'],
+        allowedKinds: ['storefront', 'kiosk', 'panel', 'station', 'access_control'],
       });
       if (!resolved.ok) {
         sendJson(res, 401, { error: 'unauthorized', message: 'Token inválido' });
@@ -302,6 +302,7 @@ async function handlePublicTokenRoutes(ctx) {
           tenantId: resolved.tenantId,
           locationId: resolved.locationId,
           meta: resolved.meta || {},
+          allowedKinds: ['storefront', 'kiosk', 'panel', 'station', 'access_control'],
         },
       });
     } catch (err) {

@@ -74,6 +74,7 @@ vi.mock('../api/quickReplies', () => ({
   listQuickReplies: (...args) => listQuickRepliesMock(...args),
   searchQuickReplies: (...args) => searchQuickRepliesMock(...args),
   useQuickReply: (...args) => useQuickReplyMock(...args),
+  getCategories: vi.fn(() => Promise.resolve({ categories: [] })),
 }));
 vi.mock('../api/scheduling', () => ({
   listSchedules: (...args) => listSchedulesMock(...args),

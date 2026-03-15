@@ -641,6 +641,12 @@ const viteConfig = defineConfig(({ mode }) => {
       join(__dirname, '..', 'engine', 'utils', 'templateRenderer.js'),
       join(__dirname, '..', 'engine', 'utils', 'jsonSchemaValidator.js'),
     ],
+    exclude: [
+      // pdfjs-dist faz import() interno com caminho dinâmico para o worker.
+      // Como já configuramos o worker manualmente em fileProcessor.js,
+      // evitamos a pré-otimização do Vite para não gerar warning ruidoso em DEV.
+      'pdfjs-dist',
+    ],
     esbuildOptions: {
       // Permite importar CommonJS e força processamento
       mainFields: ['module', 'main'],

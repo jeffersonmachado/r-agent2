@@ -472,6 +472,7 @@ async function handlePbxRoutes(ctx) {
     if (!tenantKey) return;
 
     try {
+      const { queryLogs: _queryLogs } = require('../services/auditService');
       const urlObj = new URL(req.url || '/', 'http://localhost');
       const rawHours = Number(urlObj.searchParams.get('hours') || 72);
       const rawLimit = Number(urlObj.searchParams.get('limit') || 300);
@@ -479,7 +480,7 @@ async function handlePbxRoutes(ctx) {
       const limit = Number.isFinite(rawLimit) ? Math.max(10, Math.min(1000, Math.floor(rawLimit))) : 300;
       const startDate = new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString();
 
-      const result = await queryLogs({
+      const result = await _queryLogs({
         tenantId: tenantKey,
         startDate,
         limit,

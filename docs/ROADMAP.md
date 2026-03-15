@@ -14,6 +14,7 @@
 - **Execution queue + scheduler v1** + ledger por nó (DB-first) com endpoints de ops: ver `ROADMAP_3A5_ANOS.md`
 - **Suites verticais v1 operacional**:
   - **Filas físicas (totem/painel/estação)** por token + multi-unidade/sequências + métricas mínimas
+  - **Access Control** horizontal v1 com decision engine, QR temporário, perfil fitness inicial, comando para device e status reconciliado
   - **Pedidos/Storefront/Delivery** por token + operação interna (kitchen/dispatch) + incidentes mínimos
 - **PBX v1** (migrations produto/realtime/CDR) + CRUD básico + apply/preview + provisioning v1.1 (templates/token/validações): ver `ROADMAP_3A5_ANOS.md`
 - **Omnichannel v1 (mínimo vendável)**: unificação conversa↔ticket 1:1, status por mensagem e roteamento/skills básicos

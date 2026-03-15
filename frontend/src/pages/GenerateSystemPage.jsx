@@ -238,10 +238,11 @@ export function GenerateSystemPage() {
       });
 
       const flow = resp?.initialFlow || resp?.data?.initialFlow || null;
+      const persisted = resp?.persisted === true || resp?.data?.persisted === true;
       const entities = resp?.entities || resp?.data?.entities || null;
       if (entities && typeof entities === 'object') setInitialFlowEntities(entities);
       if (flow && typeof flow === 'object') {
-        setInitialFlow(flow);
+        setInitialFlow({ ...flow, __persisted: persisted });
         return flow;
       }
       return null;
@@ -1611,11 +1612,8 @@ export function GenerateSystemPage() {
               descriptionSuggested: { status: 'in_progress', progress: 0, message: 'Sugerindo descrição do tenant com IA usando conteúdo indexado...' }
             }, 'description-suggestion');
 
-            // Dry-run: envia evidências para Redis+TTL e pede sugestão baseada no contexto efêmero.
-            // Importante: se o backend cair em fallback "memory" (sem Redis pronto),
-            // o contexto pode NÃO estar disponível na próxima requisição (restart/nodemon/múltiplas instâncias).
-            // Nesses casos, enviamos chunks inline para garantir que a sugestão tenha evidências.
-            let useInlineChunksForSuggest = false;
+            // Dry-run: exige persistência do contexto efêmero em Redis+TTL antes de continuar.
+            // Se a persistência falhar ou cair em modo diferente de Redis, interrompemos o fluxo.
             if (executionMode === 'dry-run' && dryRunExecutionId) {
               try {
                 if (!ephemeralChunks || ephemeralChunks.length === 0) {
@@ -1652,23 +1650,18 @@ export function GenerateSystemPage() {
                   stats: ephRes?.stats ?? null,
                 });
 
-                // Se NÃO foi persistido em Redis, não confiamos no "memory" para a próxima chamada.
-                // Preferimos enviar inline para evitar NO_INDEXED_CONTEXT_FALLBACK/LOW_CONFIDENCE por falta de evidências.
                 if (ephRes?.used && String(ephRes.used) !== 'redis') {
-                  useInlineChunksForSuggest = true;
-                  useInlineChunksForSuggestRef.current = true;
-                  logger.warn('[TenantMode] Contexto efêmero não persistido em Redis. Enviando chunks inline para sugestão.', {
+                  const persistenceError = new Error('O contexto efêmero não foi persistido em Redis. A geração foi interrompida.');
+                  logger.error('[TenantMode] Contexto efêmero não persistido em Redis. Interrompendo geração.', {
                     tenantId: validatedTenantId,
                     executionId: dryRunExecutionId,
                     used: ephRes?.used,
                   });
+                  throw persistenceError;
                 }
               } catch (e) {
-                // Importante: se Redis falhar e continuarmos enviando contextMode=ephemeral,
-                // o backend NÃO terá contexto e cairá em fallback. Então mandamos os chunks inline.
-                useInlineChunksForSuggest = true;
-                useInlineChunksForSuggestRef.current = true;
-                logger.warn('[TenantMode] Falha ao persistir contexto efêmero (Redis). Enviando chunks inline para sugestão.', e);
+                logger.error('[TenantMode] Falha ao persistir contexto efêmero (Redis). Interrompendo geração.', e);
+                throw e;
               }
             }
             
@@ -1692,11 +1685,7 @@ export function GenerateSystemPage() {
                 dryRun: executionMode === 'dry-run',
                 // Sempre envia executionId para permitir correlacionar falhas via websocket.
                 executionId: pipelineExecutionId,
-                ...(executionMode === 'dry-run'
-                  ? (useInlineChunksForSuggest
-                      ? { chunks: ephemeralChunks.slice(0, 30).map(c => ({ ...c, text: (c?.text || '').slice(0, 5000) })) }
-                      : { contextMode: 'ephemeral' })
-                  : {}),
+                ...(executionMode === 'dry-run' ? { contextMode: 'ephemeral' } : {}),
               }),
               timeoutMs: 60000,
             });
@@ -2048,8 +2037,9 @@ export function GenerateSystemPage() {
               }
 
               const flow = resp?.initialFlow || resp?.data?.initialFlow || null;
+              const persisted = resp?.persisted === true || resp?.data?.persisted === true;
               if (flow && typeof flow === 'object') {
-                setInitialFlow(flow);
+                setInitialFlow({ ...flow, __persisted: persisted });
               }
             })().catch((graphErr) => {
               logger.warn('[TenantMode] Falha ao gerar fluxo inicial automaticamente (best-effort)', {
@@ -5335,7 +5325,9 @@ export function GenerateSystemPage() {
           {(() => {
             const rawFlowId = initialFlow?.id || null;
             const isDryRunId = rawFlowId && String(rawFlowId).includes('dry-run');
-            const flowId = rawFlowId && !isDryRunId ? rawFlowId : null;
+            const isPersistedFlow = initialFlow?.__persisted === true;
+            const looksLikePlaceholderId = rawFlowId && String(rawFlowId).includes('@0.1.0');
+            const flowId = rawFlowId && !isDryRunId && !looksLikePlaceholderId && isPersistedFlow ? rawFlowId : null;
             const basePath = getBasePath() || '';
             const contentHeight = isInitialFlowFullscreen
               ? 'calc(100vh - 6rem)'
@@ -6273,4 +6265,3 @@ export function GenerateSystemPage() {
     </div>
   );
 }
-

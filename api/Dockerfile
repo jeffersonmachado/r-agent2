@@ -55,6 +55,7 @@ COPY --from=builder /app/scripts ./scripts
 # Copiamos apenas o código necessário (não a suíte inteira de testes).
 COPY tests/rpa/*.js ./tests/rpa/
 COPY tests/rpa/rpa.config.json ./tests/rpa/rpa.config.json
+COPY tests/rpa/bugResolution ./tests/rpa/bugResolution
 COPY tests/rpa/utils ./tests/rpa/utils
 COPY tests/rpa/seeds ./tests/rpa/seeds
 COPY tests/helpers/errorClassifier.js ./tests/helpers/errorClassifier.js

@@ -62,6 +62,9 @@
   - Metricas completas (abandono, produtividade por estacao).
   - Estados e transicoes definidos (waiting/called/in_service/done/abandoned)
     com idempotencia.
+  - Camada `access-control` horizontal para autorizacao fisica com
+    decision engine centralizado, QR temporario, trilha auditavel,
+    comando canonico para device e reconciliacao de execucao.
 - **Dependencias**
   - Rotas `api/physical/*` e modelos de fila fisica.
   - `api/services/opsSlaService.js` (para alertas de operacao).

@@ -47,6 +47,13 @@ const getDelivery = require('./Delivery');
 const getPhysicalQueue = require('./PhysicalQueue');
 const getPhysicalTicket = require('./PhysicalTicket');
 const getPhysicalTicketSequence = require('./PhysicalTicketSequence');
+const getAccessSubject = require('./AccessSubject');
+const getAccessMembership = require('./AccessMembership');
+const getAccessCredential = require('./AccessCredential');
+const getAccessPolicy = require('./AccessPolicy');
+const getAccessDevice = require('./AccessDevice');
+const getAccessDecision = require('./AccessDecision');
+const getAccessEvent = require('./AccessEvent');
 const getPbxTenant = require('./PbxTenant');
 const getPbxExtension = require('./PbxExtension');
 const getPbxTrunk = require('./PbxTrunk');
@@ -90,6 +97,16 @@ const getMarketingEmailCampaign = require('./MarketingEmailCampaign');
 const getMarketingEmailSend = require('./MarketingEmailSend');
 const getMarketingLink = require('./MarketingLink');
 const getMarketingLinkClick = require('./MarketingLinkClick');
+const getTenantGoal = require('./TenantGoal');
+const getTenantMetricSnapshot = require('./TenantMetricSnapshot');
+const getTenantInsight = require('./TenantInsight');
+const getTenantInsightEvidence = require('./TenantInsightEvidence');
+const getTenantRecommendation = require('./TenantRecommendation');
+const getMarketMetricAggregate = require('./MarketMetricAggregate');
+const getMarketBenchmark = require('./MarketBenchmark');
+const getMarketPattern = require('./MarketPattern');
+const getMarketPrediction = require('./MarketPrediction');
+const getMarketPlaybook = require('./MarketPlaybook');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -136,6 +153,13 @@ const Delivery = () => getDelivery();
 const PhysicalQueue = () => getPhysicalQueue();
 const PhysicalTicket = () => getPhysicalTicket();
 const PhysicalTicketSequence = () => getPhysicalTicketSequence();
+const AccessSubject = () => getAccessSubject();
+const AccessMembership = () => getAccessMembership();
+const AccessCredential = () => getAccessCredential();
+const AccessPolicy = () => getAccessPolicy();
+const AccessDevice = () => getAccessDevice();
+const AccessDecision = () => getAccessDecision();
+const AccessEvent = () => getAccessEvent();
 const PbxTenant = () => getPbxTenant();
 const PbxExtension = () => getPbxExtension();
 const PbxTrunk = () => getPbxTrunk();
@@ -179,6 +203,16 @@ const MarketingEmailCampaign = () => getMarketingEmailCampaign();
 const MarketingEmailSend = () => getMarketingEmailSend();
 const MarketingLink = () => getMarketingLink();
 const MarketingLinkClick = () => getMarketingLinkClick();
+const TenantGoal = () => getTenantGoal();
+const TenantMetricSnapshot = () => getTenantMetricSnapshot();
+const TenantInsight = () => getTenantInsight();
+const TenantInsightEvidence = () => getTenantInsightEvidence();
+const TenantRecommendation = () => getTenantRecommendation();
+const MarketMetricAggregate = () => getMarketMetricAggregate();
+const MarketBenchmark = () => getMarketBenchmark();
+const MarketPattern = () => getMarketPattern();
+const MarketPrediction = () => getMarketPrediction();
+const MarketPlaybook = () => getMarketPlaybook();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -215,6 +249,37 @@ function defineRelationships() {
   const ChannelConversationModel = ChannelConversation();
   const ChannelMessageModel = ChannelMessage();
   const OutboundQueueItemModel = OutboundQueueItem();
+  const TenantInsightModel = TenantInsight();
+  const TenantInsightEvidenceModel = TenantInsightEvidence();
+  const TenantRecommendationModel = TenantRecommendation();
+  const TenantGoalModel = TenantGoal();
+
+  TenantInsightModel.hasMany(TenantInsightEvidenceModel, {
+    foreignKey: 'insight_id',
+    as: 'evidences',
+  });
+  TenantInsightEvidenceModel.belongsTo(TenantInsightModel, {
+    foreignKey: 'insight_id',
+    as: 'insight',
+  });
+
+  TenantInsightModel.hasMany(TenantRecommendationModel, {
+    foreignKey: 'insight_id',
+    as: 'recommendations',
+  });
+  TenantRecommendationModel.belongsTo(TenantInsightModel, {
+    foreignKey: 'insight_id',
+    as: 'insight',
+  });
+
+  TenantGoalModel.hasMany(TenantRecommendationModel, {
+    foreignKey: 'goal_id',
+    as: 'recommendations',
+  });
+  TenantRecommendationModel.belongsTo(TenantGoalModel, {
+    foreignKey: 'goal_id',
+    as: 'goal',
+  });
 
   // Tenant <-> User (many-to-many via TenantUser)
   TenantModel.belongsToMany(UserModel, {
@@ -359,6 +424,13 @@ module.exports = {
   PhysicalQueue,
   PhysicalTicket,
   PhysicalTicketSequence,
+  AccessSubject,
+  AccessMembership,
+  AccessCredential,
+  AccessPolicy,
+  AccessDevice,
+  AccessDecision,
+  AccessEvent,
   PbxTenant,
   PbxExtension,
   PbxTrunk,
@@ -400,6 +472,16 @@ module.exports = {
   MarketingScoringRule,
   MarketingEmailCampaign,
   MarketingEmailSend,
+  TenantGoal,
+  TenantMetricSnapshot,
+  TenantInsight,
+  TenantInsightEvidence,
+  TenantRecommendation,
+  MarketMetricAggregate,
+  MarketBenchmark,
+  MarketPattern,
+  MarketPrediction,
+  MarketPlaybook,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -446,6 +528,13 @@ module.exports = {
   getPhysicalQueue,
   getPhysicalTicket,
   getPhysicalTicketSequence,
+  getAccessSubject,
+  getAccessMembership,
+  getAccessCredential,
+  getAccessPolicy,
+  getAccessDevice,
+  getAccessDecision,
+  getAccessEvent,
   getPbxTenant,
   getPbxExtension,
   getPbxTrunk,
@@ -489,4 +578,14 @@ module.exports = {
   getMarketingEmailSend,
   getMarketingLink,
   getMarketingLinkClick,
+  getTenantGoal,
+  getTenantMetricSnapshot,
+  getTenantInsight,
+  getTenantInsightEvidence,
+  getTenantRecommendation,
+  getMarketMetricAggregate,
+  getMarketBenchmark,
+  getMarketPattern,
+  getMarketPrediction,
+  getMarketPlaybook,
 };

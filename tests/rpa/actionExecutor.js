@@ -10,6 +10,16 @@ const { ErrorDetector } = require('./errorDetection');
 const { ErrorRecovery } = require('./errorRecovery');
 const { DataPopulator } = require('./dataPopulation');
 const path = require('path');
+const { BugDetectionEngine } = require('./bugResolution/bugDetectionEngine');
+const { PageStateInspector } = require('./bugResolution/pageStateInspector');
+const { RecoveryPlanner } = require('./bugResolution/recoveryPlanner');
+const { RecoveryExecutor } = require('./bugResolution/recoveryExecutor');
+const { RetryGovernor } = require('./bugResolution/retryGovernor');
+const { SelectorRepairEngine } = require('./bugResolution/selectorRepairEngine');
+const { StepRepairEngine } = require('./bugResolution/stepRepairEngine');
+const { BugEvidenceGenerator } = require('./bugResolution/bugEvidenceGenerator');
+const { PatchSuggestionEngine } = require('./bugResolution/patchSuggestionEngine');
+const { BugMemoryStore } = require('./bugResolution/bugMemoryStore');
 
 class ActionExecutor {
   constructor(options = {}) {
@@ -18,6 +28,33 @@ class ActionExecutor {
     this.context = null;
     this.errorDetector = new ErrorDetector();
     this.errorRecovery = new ErrorRecovery();
+    this.bugDetectionEngine = new BugDetectionEngine();
+    this.pageStateInspector = new PageStateInspector({
+      outputDir: path.join(__dirname, 'reports', 'bugs'),
+    });
+    this.recoveryPlanner = new RecoveryPlanner();
+    this.selectorRepairEngine = new SelectorRepairEngine();
+    this.stepRepairEngine = new StepRepairEngine();
+    this.retryGovernor = new RetryGovernor({
+      MAX_STEP_RETRIES: Number(process.env.RPA_MAX_STEP_RETRIES || 3),
+      MAX_RECOVERY_ATTEMPTS: Number(process.env.RPA_MAX_RECOVERY_ATTEMPTS || 2),
+      MAX_SELECTOR_REPAIR_ATTEMPTS: Number(process.env.RPA_MAX_SELECTOR_REPAIR_ATTEMPTS || 3),
+      MAX_TOTAL_STEP_TIME_MS:
+        Number(options.maxTotalStepTimeMs || process.env.RPA_MAX_TOTAL_STEP_TIME_MS) ||
+        Math.max(Number(config.playwright.timeout || 30000) * 4, 120000),
+    });
+    this.recoveryExecutor = new RecoveryExecutor({
+      selectorRepairEngine: this.selectorRepairEngine,
+      stepRepairEngine: this.stepRepairEngine,
+      defaultWaitMs: Number(process.env.RPA_RECOVERY_DEFAULT_WAIT_MS || 1000),
+    });
+    this.bugEvidenceGenerator = new BugEvidenceGenerator({
+      outputDir: path.join(__dirname, 'reports', 'bugs'),
+    });
+    this.patchSuggestionEngine = new PatchSuggestionEngine();
+    this.bugMemoryStore = new BugMemoryStore({
+      storagePath: path.join(__dirname, 'reports', 'bugs', 'bug-memory.json'),
+    });
     this.dataPopulator = new DataPopulator();
     this.screenshots = [];
     this.errors = [];
@@ -25,6 +62,17 @@ class ActionExecutor {
     this.debugLogs = [];
     this.consoleLogs = [];
     this.httpErrors = [];
+    this.reliabilityCounters = {
+      totalActions: 0,
+      failedActions: 0,
+      recoveredActions: 0,
+      retriedActions: 0,
+      selectorRepairAttempts: 0,
+      selectorRepairSuccesses: 0,
+      recurringBugHits: 0,
+      flakyFingerprintHits: 0,
+    };
+    this.lastBugResolution = null;
     this.options = {
       headless: options.headless !== undefined ? options.headless : config.playwright.headless,
       slowMo: options.slowMo || config.playwright.slowMo,
@@ -123,6 +171,189 @@ class ActionExecutor {
       diags.push(await this.diagnoseSelector(sel));
     }
     return diags;
+  }
+
+  _resolveFailureDecision(owner) {
+    if (owner === 'APPLICATION') return 'FAIL_APPLICATION_BUG';
+    if (owner === 'AUTOMATION') return 'FAIL_AUTOMATION_BUG';
+    if (owner === 'INFRASTRUCTURE') return 'FAIL_INFRASTRUCTURE';
+    return 'FAIL_UNKNOWN';
+  }
+
+  _resolveSuccessDecision(runtimeContext) {
+    if (runtimeContext?.recoveryAttempts > 0) return 'PASS_WITH_RECOVERY';
+    if (runtimeContext?.retryCount > 0) return 'PASS_WITH_RETRY';
+    return 'PASS';
+  }
+
+  async _runAutonomousResolution({ result, action, runtimeContext }) {
+    const latestHttpError = [...this.httpErrors]
+      .reverse()
+      .find((entry) => Number(entry?.status || 0) >= 400);
+
+    const detectedError = this.errorDetector.detect(result.error, action, this.page);
+
+    const pageStateSnapshot = await this.pageStateInspector.inspect(this.page, {
+      selector: action.selector,
+      consoleLogs: this.consoleLogs,
+      httpErrors: this.httpErrors,
+    });
+
+    const detection = this.bugDetectionEngine.detect({
+      error: {
+        message: result.error,
+        code: result.code,
+        status: latestHttpError?.status || null,
+      },
+      action,
+      detectedError,
+      status: latestHttpError?.status || null,
+      pageStateHash: pageStateSnapshot.pageStateHash,
+    });
+
+    const governorSnapshot = this.retryGovernor.snapshot(runtimeContext);
+    const recoveryPlan = this.recoveryPlanner.plan({
+      classification: detection.classification,
+      owner: detection.owner,
+      governorSnapshot,
+      action,
+      pageStateSnapshot,
+    });
+
+    const recoveryAttempts = [];
+    let selectorRepair = null;
+    let stepRepair = null;
+    let recoverySucceeded = false;
+
+    for (const strategy of recoveryPlan.strategySequence) {
+      if (strategy === 'FAIL_FAST') break;
+      if (!this.retryGovernor.canAttemptRecovery(runtimeContext)) break;
+
+      if (strategy === 'REPAIR_SELECTOR') {
+        if (!this.retryGovernor.canAttemptSelectorRepair(runtimeContext)) {
+          continue;
+        }
+        this.retryGovernor.registerSelectorRepairAttempt(runtimeContext, pageStateSnapshot.pageStateHash);
+        this.reliabilityCounters.selectorRepairAttempts += 1;
+      }
+
+      this.retryGovernor.registerRecoveryAttempt(runtimeContext, strategy, pageStateSnapshot.pageStateHash);
+
+      // eslint-disable-next-line no-await-in-loop
+      const attempt = await this.recoveryExecutor.execute({
+        strategy,
+        page: this.page,
+        action,
+        classification: detection.classification,
+        pageStateSnapshot,
+      });
+      recoveryAttempts.push(attempt);
+
+      if (strategy === 'REPAIR_SELECTOR' && attempt.evidence?.selectorRepair) {
+        selectorRepair = attempt.evidence.selectorRepair.selectorRepair || null;
+        if (attempt.evidence.selectorRepair.applied) {
+          this.reliabilityCounters.selectorRepairSuccesses += 1;
+        }
+      }
+
+      if (strategy === 'REPAIR_STEP' && attempt.evidence?.stepRepair?.stepRepair) {
+        stepRepair = attempt.evidence.stepRepair.stepRepair;
+      }
+
+      if (attempt.success) {
+        recoverySucceeded = true;
+        break;
+      }
+    }
+
+    if (!recoverySucceeded && this.retryGovernor.canAttemptRecovery(runtimeContext) && detectedError) {
+      this.retryGovernor.registerRecoveryAttempt(runtimeContext, 'LEGACY_ERROR_RECOVERY', pageStateSnapshot.pageStateHash);
+      const legacyRecovery = await this.errorRecovery.recover(detectedError, action, this.page);
+      recoveryAttempts.push({
+        strategy: 'LEGACY_ERROR_RECOVERY',
+        startedAt: new Date().toISOString(),
+        endedAt: new Date().toISOString(),
+        success: !!legacyRecovery?.success,
+        evidence: legacyRecovery || null,
+        notes: legacyRecovery?.reason || null,
+      });
+      recoverySucceeded = !!legacyRecovery?.success;
+    }
+
+    const patchSuggestions = this.patchSuggestionEngine.suggest({
+      classification: detection.classification,
+      action,
+      selectorRepair,
+      stepRepair,
+    });
+
+    const memory = this.bugMemoryStore.registerBug({
+      fingerprint: detection.fingerprint,
+      owner: detection.owner,
+      recoverySucceeded,
+      topRecoveryOutcome: recoverySucceeded ? 'RECOVERED' : 'FAILED',
+    });
+
+    if (memory.recurring) {
+      this.reliabilityCounters.recurringBugHits += 1;
+    }
+    if (memory.flaky) {
+      this.reliabilityCounters.flakyFingerprintHits += 1;
+    }
+
+    const failureDecision = this._resolveFailureDecision(detection.owner);
+    const evidenceArtifacts = this.bugEvidenceGenerator.generate({
+      classification: detection.classification,
+      owner: detection.owner,
+      action,
+      selectorRepair,
+      pageStateSnapshot,
+      recoveryPlan,
+      recoveryAttempts,
+      finalDecision: recoverySucceeded ? 'PASS_WITH_RECOVERY' : failureDecision,
+      patchSuggestions,
+      notes: {
+        retryGovernor: this.retryGovernor.snapshot(runtimeContext),
+        fingerprint: detection.fingerprint,
+      },
+    });
+
+    const bugResolution = {
+      classification: detection.classification,
+      owner: detection.owner,
+      fingerprint: detection.fingerprint,
+      recoveryPlan,
+      strategiesAttempted: recoveryAttempts.map((entry) => entry.strategy),
+      selectorRepairCandidates: selectorRepair?.candidates || [],
+      patchSuggestions,
+      severity: detection.classification?.severity || null,
+      evidenceArtifacts,
+      pageStateHash: pageStateSnapshot.pageStateHash,
+      recurring: memory.recurring,
+      flaky: memory.flaky,
+    };
+
+    this.lastBugResolution = bugResolution;
+
+    if (recoverySucceeded && this.retryGovernor.canRetryStep(runtimeContext)) {
+      this.reliabilityCounters.recoveredActions += 1;
+      this.reliabilityCounters.retriedActions += 1;
+      this.retryGovernor.registerStepRetry(runtimeContext);
+      return {
+        retry: true,
+        finalDecision: 'PASS_WITH_RECOVERY',
+        bugResolution,
+      };
+    }
+
+    this.reliabilityCounters.failedActions += 1;
+    this.retryGovernor.markFinalDecision(runtimeContext, failureDecision);
+
+    return {
+      retry: false,
+      finalDecision: failureDecision,
+      bugResolution,
+    };
   }
 
   /**
@@ -293,7 +524,7 @@ class ActionExecutor {
    * @param {Object} action - Ação a executar
    * @param {Object} data - Dados para substituição de variáveis
    */
-  async executeAction(action, data = {}) {
+  async executeAction(action, data = {}, runtimeContext = null) {
     // Validação inicial
     if (!action) {
       return {
@@ -453,6 +684,41 @@ class ActionExecutor {
 
     const normalizedAction = normalizeAction(action);
     const actionType = normalizedAction.type;
+    const stepRuntimeContext = runtimeContext || this.retryGovernor.createContext(normalizedAction);
+
+    this.reliabilityCounters.totalActions += 1;
+
+    if (!this.retryGovernor.canContinue(stepRuntimeContext)) {
+      const decision = this._resolveFailureDecision('INFRASTRUCTURE');
+      this.reliabilityCounters.failedActions += 1;
+      return {
+        success: false,
+        error: 'RetryGovernor exceeded MAX_TOTAL_STEP_TIME for this action',
+        code: 'RPA_MAX_TOTAL_STEP_TIME_EXCEEDED',
+        finalDecision: decision,
+        bugResolution: {
+          classification: {
+            type: 'RENDER_TIMEOUT',
+            severity: 'HIGH',
+            nature: 'INFRASTRUCTURE',
+            probableCause: 'step execution exceeded max total time budget',
+            confidence: 1,
+            recoverable: false,
+            suggestedRecoveryStrategies: ['FAIL_FAST'],
+            suggestedPermanentFixes: ['review flaky step and reduce chained retries'],
+          },
+          owner: 'INFRASTRUCTURE',
+          fingerprint: null,
+          recoveryPlan: { strategySequence: ['FAIL_FAST'] },
+          strategiesAttempted: [...stepRuntimeContext.attemptedStrategies],
+          selectorRepairCandidates: [],
+          patchSuggestions: [],
+          severity: 'HIGH',
+          evidenceArtifacts: null,
+          pageStateHash: stepRuntimeContext.lastPageStateHash,
+        },
+      };
+    }
 
     const startedAt = new Date().toISOString();
     const startMs = Date.now();
@@ -562,23 +828,88 @@ class ActionExecutor {
       // Mantém histórico interno para debug posterior
       this._pushDebug(debug);
 
-      // Detecta erros
-      if (!result.success) {
-        const detectedError = this.errorDetector.detect(result.error, normalizedAction, this.page);
-        if (detectedError) {
-          // Tenta recuperação automática
-          const recovery = await this.errorRecovery.recover(detectedError, normalizedAction, this.page);
-          if (recovery.success) {
-            // Tenta executar ação novamente após recuperação
-            return await this.executeAction(normalizedAction, data);
-          }
-        }
+      if (result.success) {
+        const finalDecision = this._resolveSuccessDecision(stepRuntimeContext);
+        this.retryGovernor.markFinalDecision(stepRuntimeContext, finalDecision);
+
+        const bugResolution =
+          stepRuntimeContext.recoveryAttempts > 0 || stepRuntimeContext.retryCount > 0
+            ? {
+                ...(this.lastBugResolution || {}),
+                finalDecision,
+                retryGovernor: this.retryGovernor.snapshot(stepRuntimeContext),
+              }
+            : null;
+
+        return {
+          ...result,
+          debug,
+          finalDecision,
+          bugResolution,
+        };
       }
 
-      return {
-        ...result,
-        debug,
-      };
+      try {
+        const autonomousResolution = await this._runAutonomousResolution({
+          result,
+          action: normalizedAction,
+          runtimeContext: stepRuntimeContext,
+        });
+
+        if (autonomousResolution.retry) {
+          return await this.executeAction(normalizedAction, data, stepRuntimeContext);
+        }
+
+        return {
+          ...result,
+          debug,
+          finalDecision: autonomousResolution.finalDecision,
+          bugResolution: {
+            ...autonomousResolution.bugResolution,
+            finalDecision: autonomousResolution.finalDecision,
+            retryGovernor: this.retryGovernor.snapshot(stepRuntimeContext),
+          },
+        };
+      } catch (resolutionError) {
+        const detectedError = this.errorDetector.detect(result.error, normalizedAction, this.page);
+        const recovery = detectedError
+          ? await this.errorRecovery.recover(detectedError, normalizedAction, this.page)
+          : { success: false };
+
+        if (recovery.success && this.retryGovernor.canRetryStep(stepRuntimeContext)) {
+          this.retryGovernor.registerStepRetry(stepRuntimeContext);
+          this.reliabilityCounters.retriedActions += 1;
+          return await this.executeAction(normalizedAction, data, stepRuntimeContext);
+        }
+
+        this.reliabilityCounters.failedActions += 1;
+        return {
+          ...result,
+          debug,
+          finalDecision: 'FAIL_UNKNOWN',
+          bugResolution: {
+            classification: {
+              type: 'UNKNOWN_ERROR',
+              severity: 'HIGH',
+              nature: 'INSTABILITY',
+              probableCause: `autonomous-resolution-failed: ${resolutionError.message}`,
+              confidence: 0.2,
+              recoverable: false,
+              suggestedRecoveryStrategies: ['FAIL_FAST'],
+              suggestedPermanentFixes: ['inspect autonomous resolution logs'],
+            },
+            owner: 'UNCERTAIN',
+            fingerprint: null,
+            recoveryPlan: { strategySequence: ['FAIL_FAST'] },
+            strategiesAttempted: [...stepRuntimeContext.attemptedStrategies],
+            selectorRepairCandidates: [],
+            patchSuggestions: [],
+            severity: 'HIGH',
+            evidenceArtifacts: null,
+            pageStateHash: stepRuntimeContext.lastPageStateHash,
+          },
+        };
+      }
     } catch (error) {
       // Captura screenshot em caso de erro
       if (config.playwright.screenshot.onFailure) {
@@ -601,12 +932,47 @@ class ActionExecutor {
       };
       this._pushDebug(debug);
 
-      return {
+      const thrownResult = {
         success: false,
         error: error.message,
-        stack: error.stack,
-        debug,
+        code: 'RPA_ACTION_THROWN',
       };
+
+      try {
+        const autonomousResolution = await this._runAutonomousResolution({
+          result: thrownResult,
+          action: normalizedAction,
+          runtimeContext: stepRuntimeContext,
+        });
+
+        if (autonomousResolution.retry) {
+          return await this.executeAction(normalizedAction, data, stepRuntimeContext);
+        }
+
+        return {
+          success: false,
+          error: error.message,
+          stack: error.stack,
+          debug,
+          code: 'RPA_ACTION_THROWN',
+          finalDecision: autonomousResolution.finalDecision,
+          bugResolution: {
+            ...autonomousResolution.bugResolution,
+            finalDecision: autonomousResolution.finalDecision,
+            retryGovernor: this.retryGovernor.snapshot(stepRuntimeContext),
+          },
+        };
+      } catch (_) {
+        this.reliabilityCounters.failedActions += 1;
+        return {
+          success: false,
+          error: error.message,
+          stack: error.stack,
+          debug,
+          code: 'RPA_ACTION_THROWN',
+          finalDecision: 'FAIL_UNKNOWN',
+        };
+      }
     }
   }
 
@@ -1729,6 +2095,40 @@ class ActionExecutor {
    */
   getScreenshots() {
     return [...this.screenshots];
+  }
+
+  getLastBugResolution() {
+    return this.lastBugResolution ? { ...this.lastBugResolution } : null;
+  }
+
+  getReliabilityMetrics() {
+    const total = this.reliabilityCounters.totalActions || 0;
+    const failed = this.reliabilityCounters.failedActions || 0;
+    const recovered = this.reliabilityCounters.recoveredActions || 0;
+    const retried = this.reliabilityCounters.retriedActions || 0;
+    const selectorRepairAttempts = this.reliabilityCounters.selectorRepairAttempts || 0;
+    const selectorRepairSuccesses = this.reliabilityCounters.selectorRepairSuccesses || 0;
+
+    const memoryStats = this.bugMemoryStore.getStats();
+    const bugRate = total > 0 ? Number((failed / total).toFixed(4)) : 0;
+    const recoveryRate = failed > 0 ? Number((recovered / failed).toFixed(4)) : 0;
+    const retryRate = total > 0 ? Number((retried / total).toFixed(4)) : 0;
+    const selectorRepairSuccessRate =
+      selectorRepairAttempts > 0
+        ? Number((selectorRepairSuccesses / selectorRepairAttempts).toFixed(4))
+        : 0;
+
+    return {
+      bugRate,
+      recoveryRate,
+      retryRate,
+      flakyStepRate: Number(memoryStats.flakyStepRate || 0),
+      recurringBugFingerprintRate: Number(memoryStats.recurringBugFingerprintRate || 0),
+      selectorRepairSuccessRate,
+      counters: {
+        ...this.reliabilityCounters,
+      },
+    };
   }
 }
 
