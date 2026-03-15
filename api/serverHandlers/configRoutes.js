@@ -337,12 +337,16 @@ async function handleConfigRoutes({ req, res, method, pathname, deps }) {
     return true;
   }
 
-  // POST /tenants/current/ai-credentials/test - Valida credenciais salvas (criptografadas) do tenant atual
-  if (method === 'POST' && pathname === '/tenants/current/ai-credentials/test') {
+  // POST /tenants/:tenantKey/ai-credentials/test - Valida credenciais salvas do tenant
+  // Também cobre /tenants/current/ai-credentials/test por compatibilidade.
+  if (method === 'POST' && pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/)) {
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;
     }
+
+    const match = pathname.match(/^\/tenants\/([^\/]+)\/ai-credentials\/test$/);
+    let tenantKey = decodeURIComponent(match[1]);
 
     try {
       const authResult = requireAuth(req);
@@ -351,68 +355,57 @@ async function handleConfigRoutes({ req, res, method, pathname, deps }) {
         return true;
       }
 
-      let tenantId = authResult.agent.tenantId;
-      if (tenantId === 'current') {
-        sendJson(res, 400, { error: 'bad_request', message: 'tenantId inválido: "current" não é um tenant válido.' });
-        return true;
+      if (tenantKey === 'current') {
+        tenantKey = authResult.agent?.tenantId;
       }
-      if (!tenantId) {
-        sendJson(res, 400, { error: 'bad_request', message: 'Agente não possui tenantId' });
+      if (!tenantKey || tenantKey === 'current') {
+        sendJson(res, 400, { error: 'bad_request', message: 'tenantId ausente ou inválido' });
         return true;
       }
 
-      const permResult = requirePermission(req, 'config', 'update');
       const isSuperAdminUser = isSuperAdmin(authResult.agent);
-      if (!permResult.allowed && !isSuperAdminUser) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Permissão insuficiente para validar credenciais de IA' });
+      if (!isSuperAdminUser && authResult.agent.role !== 'admin' && authResult.agent.tenantId !== tenantKey) {
+        sendJson(res, 403, { error: 'forbidden', message: 'Acesso negado a este tenant' });
         return true;
       }
 
       const body = await parseJsonBody(req);
-      const providerFromBody = body?.provider ? String(body.provider).trim() : null;
+      const providerOverride = body && typeof body.provider === 'string' ? body.provider.trim().toLowerCase() : null;
 
-      const aiCfg = await getAIConfig(tenantId);
+      const aiCfg = await getAIConfig(tenantKey);
+      if (aiCfg === null) {
+        sendJson(res, 404, { error: 'not_found', message: 'Tenant não encontrado' });
+        return true;
+      }
 
       const configuredPrimary = aiCfg?.primary || aiCfg?.provider || null;
-      if (!aiCfg?.configured || !configuredPrimary) {
+      const providerToTest = providerOverride || configuredPrimary;
+      if (!providerToTest) {
         sendJson(res, 200, {
           success: true,
           valid: false,
           provider: null,
-          error: 'Provider primário não configurado (salve a configuração de IA do tenant)',
+          tenantId: tenantKey,
+          error: 'Provider primário não configurado para o tenant',
         });
         return true;
       }
 
-      const providerToTest = providerFromBody || configuredPrimary;
-      if (providerFromBody && providerFromBody !== configuredPrimary) {
+      const apiKey = await getDecryptedAPIKey(tenantKey, providerToTest);
+      if (!apiKey || !String(apiKey).trim()) {
         sendJson(res, 200, {
           success: true,
           valid: false,
-          provider: providerFromBody,
-          error: `Provider informado (${providerFromBody}) difere do provider primário configurado (${configuredPrimary}). Salve a configuração de IA.`,
+          provider: providerToTest,
+          tenantId: tenantKey,
+          error: `Credencial não configurada para o provider ${providerToTest}`,
         });
         return true;
       }
 
-      if (providerToTest !== 'openai' && providerToTest !== 'anthropic') {
-        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Provider não suportado' });
-        return true;
-      }
-
-      const apiKey = await getDecryptedAPIKey(tenantId, providerToTest);
-      if (!apiKey || !String(apiKey).trim()) {
-        sendJson(res, 200, { success: true, valid: false, provider: providerToTest, error: 'Credenciais não encontradas para este provider' });
-        return true;
-      }
-
-      const cleanApiKey = String(apiKey).trim();
-      let isValid = false;
-      let error = null;
-
-      const validation = await validateProviderCredentials(providerToTest, cleanApiKey);
-      isValid = validation.valid;
-      error = validation.error;
+      const validation = await validateProviderCredentials(providerToTest, apiKey);
+      const isValid = validation.valid;
+      const error = validation.error;
 
       try {
         const executionIdHeader =
@@ -426,16 +419,30 @@ async function handleConfigRoutes({ req, res, method, pathname, deps }) {
             status: 'running',
             stages: { providerValidated: true },
             metadata: { message: 'Provider de IA validado', source: '/tenants/current/ai-credentials/test', provider: providerToTest },
-          }, { tenantId });
+          }, { tenantId: tenantKey });
         }
       } catch (_) {
         // best-effort: não bloquear validação por WS
       }
 
-      sendJson(res, 200, { success: true, valid: isValid, provider: providerToTest, error: error || null });
+      sendJson(res, 200, {
+        success: true,
+        valid: isValid === true,
+        provider: providerToTest,
+        tenantId: tenantKey,
+        error: error || null,
+      });
     } catch (err) {
-      logger.error('Erro ao validar credenciais de IA do tenant atual', err);
-      sendJson(res, 500, { success: false, error: 'Erro ao validar credenciais', message: err.message });
+      if (err instanceof SyntaxError) {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+      } else {
+        logger.error('Erro ao validar credenciais salvas do tenant:', err);
+        sendJson(res, 500, {
+          success: false,
+          valid: false,
+          error: err.message || 'Erro ao validar credenciais salvas do tenant',
+        });
+      }
     }
     return true;
   }
