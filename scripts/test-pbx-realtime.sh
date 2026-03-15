@@ -45,17 +45,57 @@ expected_queue="${tenant_key}__${queue}"
 db_realtime_ok="false"
 
 create_extension() {
-  curl -fsS -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${token}" \
-    -d "{\"extension\":\"${ext}\",\"displayName\":\"Maria Test\",\"authUsername\":\"${ext}\",\"authPassword\":\"testpass\"}" \
-    "${API_URL}/api/pbx/extensions" >/dev/null
+  post_with_retry \
+    "${API_URL}/api/pbx/extensions" \
+    "{\"extension\":\"${ext}\",\"displayName\":\"Maria Test\",\"authUsername\":\"${ext}\",\"authPassword\":\"testpass\"}" \
+    "criação de ramal"
 }
 
 create_queue() {
-  curl -fsS -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${token}" \
-    -d "{\"name\":\"${queue}\",\"displayName\":\"Suporte\",\"strategy\":\"ringall\",\"options\":{\"timeout\":15}}" \
-    "${API_URL}/api/pbx/queues" >/dev/null
+  post_with_retry \
+    "${API_URL}/api/pbx/queues" \
+    "{\"name\":\"${queue}\",\"displayName\":\"Suporte\",\"strategy\":\"ringall\",\"options\":{\"timeout\":15}}" \
+    "criação de fila"
+}
+
+post_with_retry() {
+  local endpoint="$1"
+  local payload="$2"
+  local label="$3"
+  local attempts="${PBX_API_RETRY_ATTEMPTS:-12}"
+  local sleep_sec="${PBX_API_RETRY_SLEEP_SEC:-2}"
+
+  for attempt in $(seq 1 "$attempts"); do
+    local response http_code body
+    response="$(curl -sS -H "Content-Type: application/json" \
+      -H "Authorization: Bearer ${token}" \
+      -d "$payload" \
+      -w '\n%{http_code}' \
+      "$endpoint" || true)"
+    http_code="$(printf '%s' "$response" | tail -n1)"
+    body="$(printf '%s' "$response" | sed '$d')"
+
+    if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+      return 0
+    fi
+
+    if [[ "$http_code" == "409" ]]; then
+      echo "[pbx-realtime] WARN: ${label} retornou 409 (conflito), seguindo como idempotente"
+      return 0
+    fi
+
+    echo "[pbx-realtime] WARN: ${label} falhou (tentativa ${attempt}/${attempts}) http=${http_code}"
+    if [[ -n "$body" ]]; then
+      echo "[pbx-realtime] body: $body"
+    fi
+
+    if [[ "$attempt" -lt "$attempts" ]]; then
+      sleep "$sleep_sec"
+    fi
+  done
+
+  echo "[pbx-realtime] ERRO: ${label} falhou após ${attempts} tentativas"
+  return 1
 }
 
 echo "[pbx-realtime] Criando ramal via API (tenant_key=${tenant_key}, id=${expected_id})..."
