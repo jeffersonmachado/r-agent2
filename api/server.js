@@ -4940,162 +4940,20 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
       if (handledInbox) return;
     }
 
-    // -----------------------------------------------------------------------
-    // GET /api/schedules - Lista agendamentos
-    // -----------------------------------------------------------------------
-  if (method === 'GET' && pathname === '/api/schedules') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const urlObj = new URL(req.url, 'http://localhost');
-    const contextType = urlObj.searchParams.get('contextType') || undefined;
-    const contextId = urlObj.searchParams.get('contextId') || undefined;
-    const limit = Math.min(parseInt(urlObj.searchParams.get('limit') || '50', 10), 200);
-    const result = scheduleService.listSchedules({
-      tenantId: req.tenantId || 'default',
-      contextType,
-      contextId,
-      limit,
+  // =======================================================================
+  // Support + Debug Routes
+  // =======================================================================
+  {
+    const { handleSupportDebugRoutes } = require('./serverHandlers/supportDebugRoutes');
+    const handledSupportDebug = await handleSupportDebugRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, sendJson, parseJsonBody,
+        scheduleService, extractSemanticContext,
+        logger, nlpExtractKeywords, nlpAnalyzeText,
+      },
     });
-    sendJson(res, 200, result);
-    return;
-  }
-
-  // POST /api/schedules - Cria agendamento
-  if (method === 'POST' && pathname === '/api/schedules') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const body = await parseJsonBody(req);
-    const schedule = scheduleService.createSchedule({
-      tenantId: req.tenantId || 'default',
-      payload: body,
-    });
-    sendJson(res, 201, { schedule });
-    return;
-  }
-
-  // GET /api/schedules/availability - Consulta disponibilidade
-  if (method === 'GET' && pathname === '/api/schedules/availability') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    sendJson(res, 200, { available: true, slots: [] });
-    return;
-  }
-
-  // POST /api/schedules/:id/confirm|decline|reschedule|cancel|in-progress|done|no-show
-  if (method === 'POST' && pathname.startsWith('/api/schedules/')) {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const schedSeg = pathname.slice('/api/schedules/'.length);
-    const slashIdx = schedSeg.indexOf('/');
-    if (slashIdx !== -1) {
-      const schedId = decodeURIComponent(schedSeg.slice(0, slashIdx));
-      const action = schedSeg.slice(slashIdx + 1);
-      let payload = {};
-      if (action === 'reschedule') {
-        payload = await parseJsonBody(req);
-      }
-      let sched = null;
-      try {
-        sched = scheduleService.updateScheduleStatus({
-          tenantId: req.tenantId || 'default',
-          scheduleId: schedId,
-          action,
-          payload,
-        });
-      } catch (err) {
-        if (err && err.code === 'schedule_not_found') {
-          sendJson(res, 404, { error: 'schedule_not_found' });
-          return;
-        }
-        if (err && err.code === 'schedule_action_not_found') {
-          sendJson(res, 404, { error: 'action_not_found' });
-          return;
-        }
-        throw err;
-      }
-      if (!sched) {
-        sendJson(res, 404, { error: 'schedule_not_found' });
-        return;
-      }
-      sendJson(res, 200, { schedule: sched });
-      return;
-    }
-  }
-
-  // -----------------------------------------------------------------------
-  // POST /api/debug/entities/extract - Extrai entidades de texto
-  // -----------------------------------------------------------------------
-  if (method === 'POST' && pathname === '/api/debug/entities/extract') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const body = await parseJsonBody(req);
-    const text = String(body.text || '');
-    try {
-      const result = await extractSemanticContext({
-        rawText: text,
-        tenantId: req.tenantId,
-        channel: body.channel || 'whatsapp',
-        dryRun: false,
-      });
-      sendJson(res, 200, result);
-    } catch (err) {
-      logger.warn('[API] /api/debug/entities/extract fallback to keywords', { error: err.message });
-      const keywords = nlpExtractKeywords(text);
-      sendJson(res, 200, { entities: keywords, keywords, error: null });
-    }
-    return;
-  }
-
-  // POST /api/support/tags/suggest - Sugere tags para um ticket
-  if (method === 'POST' && pathname === '/api/support/tags/suggest') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const body = await parseJsonBody(req);
-    const text = String(body.text || '');
-    const keywords = nlpExtractKeywords(text);
-    sendJson(res, 200, { tags: keywords.slice(0, 10), keywords });
-    return;
-  }
-
-  // POST /api/support/sentiment/suggest - Analisa sentimento de texto
-  if (method === 'POST' && pathname === '/api/support/sentiment/suggest') {
-    const authResult = requireAuth(req);
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
-    const body = await parseJsonBody(req);
-    const text = String(body.text || '');
-    try {
-      const result = await nlpAnalyzeText(text);
-      sendJson(res, 200, { sentiment: result.sentiment, intent: result.intent, result });
-    } catch (err) {
-      // Fallback: heuristic sentiment
-      const lower = text.toLowerCase();
-      const pos = /\b(obrigad|ótimo|excelente|perfeito|feliz|satisf|grato)/.test(lower);
-      const neg = /\b(problema|erro|falha|ruim|péssim|horrív|insatisf|reclamaç)/.test(lower);
-      const sentiment = pos && !neg ? 'positive' : neg && !pos ? 'negative' : 'neutral';
-      sendJson(res, 200, { sentiment, intent: null, result: null });
-    }
-    return;
+    if (handledSupportDebug) return;
   }
 
   // =======================================================================
