@@ -45,6 +45,34 @@ jobs:
         cd ..
         node -e "const http=require('http'); const url='http://127.0.0.1:5173'; let tries=60; (function ping(){ http.get(url,res=>{process.exit(0)}).on('error',()=>{ if(--tries<=0) process.exit(1); setTimeout(ping,1000); });})();"
         npm run system:validate
+
+    - name: Scheduling support API smoke (non-blocking)
+      continue-on-error: true
+      env:
+        API_BASE_URL: http://127.0.0.1:3001
+        TEST_TENANT_ID: tenant-demo
+        SMOKE_SKIP_IF_API_UNREACHABLE: 'true'
+      run: npm run test:scheduling-support:smoke
+
+    - name: Upload scheduling support smoke report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: scheduling-support-smoke-${{ matrix.node-version }}
+        path: /tmp/scheduling_support_smoke_report.md
+        retention-days: 7
+        if-no-files-found: ignore
+
+    - name: Summarize scheduling support smoke
+      if: always()
+      run: |
+        echo "## Scheduling Support Smoke" >> "$GITHUB_STEP_SUMMARY"
+        if [ -f /tmp/scheduling_support_smoke_report.md ]; then
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/scheduling_support_smoke_report.md >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "- Report not generated." >> "$GITHUB_STEP_SUMMARY"
+        fi
     
     - name: Upload RPA reports
       if: always()
