@@ -21,7 +21,7 @@
     "test:tenant-intelligence:smoke": "node ./tmp_tenant_intelligence_smoke_playwright_authmock.js",
     "test:market-intelligence:smoke": "node ./tmp_market_intelligence_smoke_api.js",
     "test:scheduling-support:smoke": "node ./tmp_scheduling_support_smoke_api.js",
-    "test:bpmn:smoke": "node ./tmp_bpmn_smoke_playwright_authmock.js",
+    "test:bpmn:smoke": "node ./scripts/test-bpmn-editor-smoke.js",
     "test:rpa:reliability:smoke": "jest tests/runtime/rpaReliabilitySmoke.test.js --runInBand",
     "test:ai-governance": "jest tests/ai-governance",
     "test:contracts": "jest tests/contracts",
