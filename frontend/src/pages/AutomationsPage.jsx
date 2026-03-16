@@ -247,11 +247,13 @@ export function AutomationsPage() {
       return;
     }
 
-    setRuntimeInsights((prev) => ({
-      ...prev,
+    setRuntimeInsights({
       loading: true,
       error: '',
-    }));
+      analytics: null,
+      simulation: null,
+      intelligence: null,
+    });
 
     try {
       const [analyticsOut, simulationOut, intelligenceOut] = await Promise.all([
@@ -269,11 +271,13 @@ export function AutomationsPage() {
       setInsightsProcessId(processId);
     } catch (err) {
       logger.error('[Automations] erro ao carregar insights de processo', err);
-      setRuntimeInsights((prev) => ({
-        ...prev,
+      setRuntimeInsights({
         loading: false,
         error: 'Não foi possível carregar insights do processo',
-      }));
+        analytics: null,
+        simulation: null,
+        intelligence: null,
+      });
       showToast('Erro ao carregar insights do processo', 'error');
     }
   }

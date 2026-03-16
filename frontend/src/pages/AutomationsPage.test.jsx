@@ -239,4 +239,60 @@ describe('pages/AutomationsPage', () => {
       expect(screen.getByText('Recomendações: 1')).toBeInTheDocument();
     });
   });
+
+  it('avisa quando tenta carregar insights sem processId', async () => {
+    render(<AutomationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('exec-1')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('Carregar insights'));
+
+    await waitFor(() => {
+      expect(showToastMock).toHaveBeenCalledWith('Informe um processId para carregar os insights', 'warning');
+      expect(processRuntimeApi.getProcessRuntimeAnalytics).not.toHaveBeenCalled();
+      expect(processRuntimeApi.simulateProcessDefinition).not.toHaveBeenCalled();
+      expect(processRuntimeApi.getProcessIntelligence).not.toHaveBeenCalled();
+    });
+  });
+
+  it('limpa dados antigos e exibe erro quando insights falham', async () => {
+    let analyticsCalls = 0;
+    processRuntimeApi.getProcessRuntimeAnalytics.mockImplementation(() => {
+      analyticsCalls += 1;
+      if (analyticsCalls === 1) {
+        return Promise.resolve({
+          ok: true,
+          analytics: {
+            process: {
+              totalExecutions: 3,
+            },
+          },
+        });
+      }
+      throw new Error('boom');
+    });
+
+    render(<AutomationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('exec-1')).toBeInTheDocument();
+    });
+
+    await userEvent.type(screen.getByPlaceholderText('processId'), 'flow-1');
+    await userEvent.click(screen.getByText('Carregar insights'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Total de execuções: 3')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('Carregar insights'));
+
+    await waitFor(() => {
+      expect(showToastMock).toHaveBeenCalledWith('Erro ao carregar insights do processo', 'error');
+      expect(screen.getByText('Não foi possível carregar insights do processo')).toBeInTheDocument();
+      expect(screen.queryByText('Total de execuções: 3')).not.toBeInTheDocument();
+    });
+  });
 });
