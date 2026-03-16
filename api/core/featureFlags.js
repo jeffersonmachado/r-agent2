@@ -21,7 +21,7 @@ export class FeatureFlagManager {
    * @param {Object} [config={}] Mapa de flag -> valor booleano padrão
    */
   constructor(config = {}) {
-    this._config = { ...config };
+    this._config = config && typeof config === 'object' ? { ...config } : {};
     this._tenantOverrides = {};
     this._userOverrides = {};
   }
@@ -60,9 +60,11 @@ export class FeatureFlagManager {
    * @param {Object} flags
    */
   setTenantFlags(tenantId, flags) {
+    if (!tenantId) return;
+    const safeFlags = flags && typeof flags === 'object' ? flags : {};
     this._tenantOverrides[tenantId] = {
       ...(this._tenantOverrides[tenantId] || {}),
-      ...flags,
+      ...safeFlags,
     };
   }
 
@@ -72,9 +74,11 @@ export class FeatureFlagManager {
    * @param {Object} flags
    */
   setUserFlags(userId, flags) {
+    if (!userId) return;
+    const safeFlags = flags && typeof flags === 'object' ? flags : {};
     this._userOverrides[userId] = {
       ...(this._userOverrides[userId] || {}),
-      ...flags,
+      ...safeFlags,
     };
   }
 
@@ -84,10 +88,17 @@ export class FeatureFlagManager {
    * @returns {Object}
    */
   getFeatureStatus(context = {}) {
+    const tenantKeySets = Object.values(this._tenantOverrides)
+      .filter((value) => value && typeof value === 'object')
+      .flatMap((value) => Object.keys(value));
+    const userKeySets = Object.values(this._userOverrides)
+      .filter((value) => value && typeof value === 'object')
+      .flatMap((value) => Object.keys(value));
+
     const allKeys = new Set([
       ...Object.keys(this._config),
-      ...Object.values(this._tenantOverrides).flatMap(Object.keys),
-      ...Object.values(this._userOverrides).flatMap(Object.keys),
+      ...tenantKeySets,
+      ...userKeySets,
     ]);
 
     const status = {};
@@ -116,11 +127,11 @@ export class FeatureFlagManager {
    */
   import(exported) {
     if (!exported) return;
-    if (exported.config) this._config = { ...exported.config };
-    if (exported.tenantOverrides) {
+    if (exported.config && typeof exported.config === 'object') this._config = { ...exported.config };
+    if (exported.tenantOverrides && typeof exported.tenantOverrides === 'object') {
       this._tenantOverrides = JSON.parse(JSON.stringify(exported.tenantOverrides));
     }
-    if (exported.userOverrides) {
+    if (exported.userOverrides && typeof exported.userOverrides === 'object') {
       this._userOverrides = JSON.parse(JSON.stringify(exported.userOverrides));
     }
   }
@@ -138,7 +149,8 @@ export class RolloutStrategy {
    * @returns {{ getCurrentPhase(): { phase: number, percentage: number } }}
    */
   static gradual(options) {
-    const { startDate } = options;
+    const safeOptions = options && typeof options === 'object' ? options : {};
+    const startDate = safeOptions.startDate instanceof Date ? safeOptions.startDate : new Date();
 
     function parseDurationMs(duration) {
       if (!duration) return 0;
@@ -151,11 +163,14 @@ export class RolloutStrategy {
     }
 
     const phases = [1, 2, 3, 4]
-      .map((n) => ({ phase: n, ...(options[`phase${n}`] || null) }))
+      .map((n) => ({ phase: n, ...(safeOptions[`phase${n}`] || null) }))
       .filter((p) => p.percentage != null);
 
     return {
       getCurrentPhase() {
+        if (phases.length === 0) {
+          return { phase: 0, percentage: 0 };
+        }
         const elapsed = Date.now() - startDate.getTime();
         let accumulated = 0;
         for (const phaseConfig of phases) {
@@ -182,7 +197,7 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static whitelist(allowedTenantIds) {
-    const set = new Set(allowedTenantIds);
+    const set = new Set(Array.isArray(allowedTenantIds) ? allowedTenantIds : []);
     return {
       isEnabled(tenantId) {
         return set.has(tenantId);
@@ -196,7 +211,7 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static blacklist(blockedTenantIds) {
-    const set = new Set(blockedTenantIds);
+    const set = new Set(Array.isArray(blockedTenantIds) ? blockedTenantIds : []);
     return {
       isEnabled(tenantId) {
         return !set.has(tenantId);
@@ -210,11 +225,12 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(context: { group: string }): boolean }}
    */
   static byGroup(groupMap) {
+    const safeGroupMap = groupMap && typeof groupMap === 'object' ? groupMap : {};
     return {
       isEnabled(context) {
         const group = context && context.group;
-        if (!group || !groupMap[group]) return false;
-        return Boolean(groupMap[group].enabled);
+        if (!group || !safeGroupMap[group]) return false;
+        return Boolean(safeGroupMap[group].enabled);
       },
     };
   }
