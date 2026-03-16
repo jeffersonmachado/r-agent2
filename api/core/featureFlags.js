@@ -16,14 +16,53 @@
  * FeatureFlagManager
  * --------------------------------------------------------------------- */
 
+const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isSafeKey(key) {
+  return typeof key === 'string' && key.length > 0 && !BLOCKED_KEYS.has(key);
+}
+
+function createSafeRecord(input) {
+  if (!isRecord(input)) return Object.create(null);
+  const output = Object.create(null);
+  for (const [key, value] of Object.entries(input)) {
+    if (!isSafeKey(key)) continue;
+    output[key] = value;
+  }
+  return output;
+}
+
+function mergeRecords(...records) {
+  const output = Object.create(null);
+  for (const record of records) {
+    if (!isRecord(record)) continue;
+    for (const [key, value] of Object.entries(record)) {
+      if (!isSafeKey(key)) continue;
+      output[key] = value;
+    }
+  }
+  return output;
+}
+
+function normalizeScopeId(scopeId) {
+  if (typeof scopeId !== 'string') return '';
+  const normalized = scopeId.trim();
+  if (!isSafeKey(normalized)) return '';
+  return normalized;
+}
+
 export class FeatureFlagManager {
   /**
    * @param {Object} [config={}] Mapa de flag -> valor booleano padrão
    */
   constructor(config = {}) {
-    this._config = config && typeof config === 'object' ? { ...config } : {};
-    this._tenantOverrides = {};
-    this._userOverrides = {};
+    this._config = createSafeRecord(config);
+    this._tenantOverrides = Object.create(null);
+    this._userOverrides = Object.create(null);
   }
 
   /**
@@ -60,12 +99,10 @@ export class FeatureFlagManager {
    * @param {Object} flags
    */
   setTenantFlags(tenantId, flags) {
-    if (!tenantId) return;
-    const safeFlags = flags && typeof flags === 'object' ? flags : {};
-    this._tenantOverrides[tenantId] = {
-      ...(this._tenantOverrides[tenantId] || {}),
-      ...safeFlags,
-    };
+    const safeTenantId = normalizeScopeId(tenantId);
+    if (!safeTenantId) return;
+    const safeFlags = createSafeRecord(flags);
+    this._tenantOverrides[safeTenantId] = mergeRecords(this._tenantOverrides[safeTenantId], safeFlags);
   }
 
   /**
@@ -74,12 +111,10 @@ export class FeatureFlagManager {
    * @param {Object} flags
    */
   setUserFlags(userId, flags) {
-    if (!userId) return;
-    const safeFlags = flags && typeof flags === 'object' ? flags : {};
-    this._userOverrides[userId] = {
-      ...(this._userOverrides[userId] || {}),
-      ...safeFlags,
-    };
+    const safeUserId = normalizeScopeId(userId);
+    if (!safeUserId) return;
+    const safeFlags = createSafeRecord(flags);
+    this._userOverrides[safeUserId] = mergeRecords(this._userOverrides[safeUserId], safeFlags);
   }
 
   /**
@@ -127,12 +162,24 @@ export class FeatureFlagManager {
    */
   import(exported) {
     if (!exported) return;
-    if (exported.config && typeof exported.config === 'object') this._config = { ...exported.config };
-    if (exported.tenantOverrides && typeof exported.tenantOverrides === 'object') {
-      this._tenantOverrides = JSON.parse(JSON.stringify(exported.tenantOverrides));
+    if (isRecord(exported.config)) this._config = createSafeRecord(exported.config);
+    if (isRecord(exported.tenantOverrides)) {
+      const nextTenantOverrides = Object.create(null);
+      for (const [tenantId, tenantFlags] of Object.entries(exported.tenantOverrides)) {
+        const safeTenantId = normalizeScopeId(tenantId);
+        if (!safeTenantId) continue;
+        nextTenantOverrides[safeTenantId] = createSafeRecord(tenantFlags);
+      }
+      this._tenantOverrides = nextTenantOverrides;
     }
-    if (exported.userOverrides && typeof exported.userOverrides === 'object') {
-      this._userOverrides = JSON.parse(JSON.stringify(exported.userOverrides));
+    if (isRecord(exported.userOverrides)) {
+      const nextUserOverrides = Object.create(null);
+      for (const [userId, userFlags] of Object.entries(exported.userOverrides)) {
+        const safeUserId = normalizeScopeId(userId);
+        if (!safeUserId) continue;
+        nextUserOverrides[safeUserId] = createSafeRecord(userFlags);
+      }
+      this._userOverrides = nextUserOverrides;
     }
   }
 }

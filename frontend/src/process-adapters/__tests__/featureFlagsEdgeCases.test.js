@@ -50,4 +50,46 @@ describe('featureFlags edge cases', () => {
     expect(manager2.isEnabled('f1')).toBe(false);
     expect(manager2.isEnabled('f2')).toBe(true);
   });
+
+  it('ignora scope ids perigosos e nao aplica overrides com __proto__', () => {
+    const manager = new FeatureFlagManager({ baseFlag: false });
+
+    manager.setTenantFlags('__proto__', { hackedFlag: true });
+    manager.setUserFlags('constructor', { hackedFlag: true });
+
+    expect(manager.isEnabled('hackedFlag', { tenantId: '__proto__' })).toBe(false);
+    expect(manager.isEnabled('hackedFlag', { userId: 'constructor' })).toBe(false);
+    expect(manager.isEnabled('baseFlag')).toBe(false);
+  });
+
+  it('import sanitiza ids e chaves perigosas em overrides', () => {
+    const manager = new FeatureFlagManager({ safeBase: true });
+
+    manager.import({
+      config: {
+        safeBase: false,
+        __proto__: true,
+      },
+      tenantOverrides: {
+        '__proto__': { leak: true },
+        'tenant-1': {
+          safeFeature: true,
+          constructor: true,
+        },
+      },
+      userOverrides: {
+        prototype: { leak: true },
+        'user-1': {
+          safeFeature: false,
+          __proto__: true,
+        },
+      },
+    });
+
+    expect(manager.isEnabled('safeBase')).toBe(false);
+    expect(manager.isEnabled('safeFeature', { tenantId: 'tenant-1' })).toBe(true);
+    expect(manager.isEnabled('safeFeature', { userId: 'user-1' })).toBe(false);
+    expect(manager.isEnabled('leak', { tenantId: '__proto__' })).toBe(false);
+    expect(manager.isEnabled('leak', { userId: 'prototype' })).toBe(false);
+  });
 });
