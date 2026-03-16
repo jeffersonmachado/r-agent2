@@ -200,4 +200,18 @@ describe('featureFlags edge cases', () => {
     });
     expect(strategyInvalidDuration.getCurrentPhase()).toEqual({ phase: 1, percentage: 20 });
   });
+
+  it('byGroup normaliza enabled textual e numerico', () => {
+    const strategy = RolloutStrategy.byGroup({
+      ops: { enabled: 'false' },
+      beta: { enabled: 'YES' },
+      alpha: { enabled: 0 },
+      ga: { enabled: 1 },
+    });
+
+    expect(strategy.isEnabled({ group: 'ops' })).toBe(false);
+    expect(strategy.isEnabled({ group: 'beta' })).toBe(true);
+    expect(strategy.isEnabled({ group: 'alpha' })).toBe(false);
+    expect(strategy.isEnabled({ group: 'ga' })).toBe(true);
+  });
 });

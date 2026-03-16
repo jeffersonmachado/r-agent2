@@ -362,7 +362,7 @@ export class RolloutStrategy {
       isEnabled(context) {
         const group = normalizeScopeId(context && context.group);
         if (!group || !safeGroupMap[group] || !isRecord(safeGroupMap[group])) return false;
-        return Boolean(safeGroupMap[group].enabled);
+        return normalizeFlagValue(safeGroupMap[group].enabled);
       },
     };
   }
