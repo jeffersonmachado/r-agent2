@@ -92,3 +92,28 @@
   - `TEST_IMAGE_PREFIX` (default: `r-agent2`)
   - `TEST_IMAGE_TAG` (default: `test`)
   - `TEST_API_BASE_IMAGE` (override explicito da base da API)
+
+## Fluxo Padrao da Test Stack
+- Subir stack de teste:
+  - `npm run test:stack:up`
+- Aguardar readiness manualmente:
+  - `npm run test:stack:wait-ready`
+- Rodar smoke essencial da stack (API + frontend + RAG):
+  - `npm run test:stack:smoke`
+- Rodar fluxo completo com cleanup automatico:
+  - `npm run test:stack:full`
+- Derrubar stack manualmente:
+  - `npm run test:stack:down`
+- Reaproveitar imagens locais e evitar rebuild:
+  - `STACK_NO_BUILD=1 npm run test:stack:full`
+- Manter stack ativa apos o fluxo completo:
+  - `STACK_KEEP_UP=1 npm run test:stack:full`
+
+## CI da Test Stack
+- Workflow dedicado:
+  - `.github/workflows/test-stack-smoke.yml`
+- Caracteristicas:
+  - nao bloqueante (`continue-on-error: true`)
+  - executa `npm run test:stack:full`
+  - publica `docker compose ps` e logs como artifact
+  - escreve resumo no `GITHUB_STEP_SUMMARY` com outcome, duracao e snapshot da stack
