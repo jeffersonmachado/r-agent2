@@ -252,4 +252,15 @@ describe('featureFlags edge cases', () => {
 
     expect(strategyNegative.getCurrentPhase()).toEqual({ phase: 1, percentage: 25 });
   });
+
+  it('gradual nao trava em fase intermediaria sem duracao', () => {
+    const strategy = RolloutStrategy.gradual({
+      startDate: Date.now() - 2500,
+      phase1: { percentage: 10, duration: '1s' },
+      phase2: { percentage: 50, duration: 0 },
+      phase3: { percentage: 90 },
+    });
+
+    expect(strategy.getCurrentPhase()).toEqual({ phase: 3, percentage: 90 });
+  });
 });

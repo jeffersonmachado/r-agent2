@@ -292,7 +292,9 @@ export class RolloutStrategy {
         }
         const elapsed = Date.now() - startDate.getTime();
         let accumulated = 0;
-        for (const phaseConfig of phases) {
+        for (let index = 0; index < phases.length; index += 1) {
+          const phaseConfig = phases[index];
+          const isLastPhase = index === phases.length - 1;
           const duration = phaseConfig.durationMs;
           if (duration > 0 && elapsed < accumulated + duration) {
             return { phase: phaseConfig.phase, percentage: phaseConfig.percentage };
@@ -300,8 +302,12 @@ export class RolloutStrategy {
           if (duration > 0) {
             accumulated += duration;
           } else {
-            // Last phase — no duration constraint
-            return { phase: phaseConfig.phase, percentage: phaseConfig.percentage };
+            if (isLastPhase) {
+              // Last phase — no duration constraint
+              return { phase: phaseConfig.phase, percentage: phaseConfig.percentage };
+            }
+            // Intermediate zero-duration phases are skipped.
+            continue;
           }
         }
         const last = phases[phases.length - 1];
