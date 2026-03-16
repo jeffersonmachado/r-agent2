@@ -259,7 +259,11 @@ export class RolloutStrategy {
         return duration;
       }
       const normalizedDuration = String(duration).trim().toLowerCase();
-      const match = normalizedDuration.match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)$/);
+      const numericOnly = Number(normalizedDuration);
+      if (Number.isFinite(numericOnly)) {
+        return numericOnly > 0 ? numericOnly : 0;
+      }
+      const match = normalizedDuration.match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/);
       if (!match) return 0;
       const value = parseFloat(match[1]);
       const unit = match[2];

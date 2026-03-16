@@ -234,4 +234,22 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'zero' })).toBe(false);
     expect(byGroup.isEnabled({ group: 'negative' })).toBe(true);
   });
+
+  it('gradual aceita duration numerica em string e com espaco antes da unidade', () => {
+    const strategy = RolloutStrategy.gradual({
+      startDate: Date.now() - 2500,
+      phase1: { percentage: 10, duration: '1000' },
+      phase2: { percentage: 60, duration: '1 s' },
+      phase3: { percentage: 90 },
+    });
+
+    expect(strategy.getCurrentPhase()).toEqual({ phase: 3, percentage: 90 });
+
+    const strategyNegative = RolloutStrategy.gradual({
+      startDate: Date.now() - 10000,
+      phase1: { percentage: 25, duration: '-100' },
+    });
+
+    expect(strategyNegative.getCurrentPhase()).toEqual({ phase: 1, percentage: 25 });
+  });
 });
