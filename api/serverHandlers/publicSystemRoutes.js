@@ -12,6 +12,19 @@ async function handlePublicSystemRoutes(ctx) {
     requireAuth,
   } = deps;
 
+  // Handle CORS preflight globally before route-specific checks.
+  if (method === 'OPTIONS') {
+    setCorsHeaders(res);
+    res.writeHead(204);
+    res.end();
+    return true;
+  }
+
+  // Keep legacy debug log for all /metrics requests without claiming the route.
+  if (method === 'GET' && pathname.startsWith('/metrics')) {
+    logger.debug(`[Server] Requisição GET recebida: ${pathname}`);
+  }
+
   if (method === 'GET' && pathname === '/health') {
     sendJson(res, 200, { status: 'ok' });
     return true;

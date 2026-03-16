@@ -1131,22 +1131,9 @@ async function requestHandler(req, res) {
     req.id = String(req.headers['x-request-id']).trim() || undefined;
   }
 
-  // Handle CORS preflight requests
-  if (method === 'OPTIONS') {
-    setCorsHeaders(res);
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
   // URL é relativa; usamos base fictícia apenas para parse
   const url = new URL(req.url || '/', 'http://localhost');
   const { pathname } = url;
-
-  // Log de debug para todas as requisições GET a /metrics
-  if (method === 'GET' && pathname.startsWith('/metrics')) {
-    logger.debug(`[Server] Requisição GET recebida: ${pathname}`);
-  }
 
   // -----------------------------------------------------------------------
   // Public System Routes
