@@ -34,6 +34,13 @@ function normalizeFlagName(flagName) {
 }
 
 function normalizeFlagValue(value) {
+  if (isRecord(value)) {
+    if (Object.prototype.hasOwnProperty.call(value, 'enabled')) {
+      return normalizeFlagValue(value.enabled);
+    }
+    return false;
+  }
+  if (Array.isArray(value)) return false;
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
   if (typeof value === 'string') {

@@ -303,4 +303,26 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'risky' })).toBe(false);
     expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
   });
+
+  it('so aceita objetos de flag com campo enabled explicito', () => {
+    const manager = new FeatureFlagManager({
+      objectEnabledTrue: { enabled: 'true' },
+      objectEnabledFalse: { enabled: 'false' },
+      objectWithoutEnabled: { value: true },
+      arrayValue: [1],
+    });
+
+    expect(manager.isEnabled('objectEnabledTrue')).toBe(true);
+    expect(manager.isEnabled('objectEnabledFalse')).toBe(false);
+    expect(manager.isEnabled('objectWithoutEnabled')).toBe(false);
+    expect(manager.isEnabled('arrayValue')).toBe(false);
+
+    const byGroup = RolloutStrategy.byGroup({
+      nested: { enabled: { enabled: 'yes' } },
+      flat: { enabled: { x: 1 } },
+    });
+
+    expect(byGroup.isEnabled({ group: 'nested' })).toBe(true);
+    expect(byGroup.isEnabled({ group: 'flat' })).toBe(false);
+  });
 });
