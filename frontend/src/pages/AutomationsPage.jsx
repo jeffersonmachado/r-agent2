@@ -9,6 +9,9 @@ import {
   listProcessInstances,
   getProcessInstance,
   getProcessInstanceHistory,
+  getProcessRuntimeAnalytics,
+  simulateProcessDefinition,
+  getProcessIntelligence,
 } from '../api/processRuntime';
 import logger from '../utils/logger';
 
@@ -74,6 +77,12 @@ function formatAiAnalysisSummary(aiAnalysis) {
   return parts.join(' • ');
 }
 
+function formatPercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '-';
+  return `${(numeric * 100).toFixed(1)}%`;
+}
+
 export function AutomationsPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
@@ -86,6 +95,14 @@ export function AutomationsPage() {
   const [inspectedInstance, setInspectedInstance] = useState(null);
   const [instanceHistory, setInstanceHistory] = useState([]);
   const [historyFilter, setHistoryFilter] = useState({ eventType: '', nodeId: '', limit: '50' });
+  const [insightsProcessId, setInsightsProcessId] = useState('');
+  const [runtimeInsights, setRuntimeInsights] = useState({
+    loading: false,
+    error: '',
+    analytics: null,
+    simulation: null,
+    intelligence: null,
+  });
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -220,6 +237,44 @@ export function AutomationsPage() {
       setInstanceHistory(Array.isArray(historyOut?.history) ? historyOut.history : []);
     } catch (err) {
       logger.error('[Automations] erro ao filtrar histórico', err);
+    }
+  }
+
+  async function handleLoadProcessInsights() {
+    const processId = String(insightsProcessId || inspectedInstance?.instance?.processId || '').trim();
+    if (!processId) {
+      showToast('Informe um processId para carregar os insights', 'warning');
+      return;
+    }
+
+    setRuntimeInsights((prev) => ({
+      ...prev,
+      loading: true,
+      error: '',
+    }));
+
+    try {
+      const [analyticsOut, simulationOut, intelligenceOut] = await Promise.all([
+        getProcessRuntimeAnalytics({ processId, limit: 500 }),
+        simulateProcessDefinition({ processId }),
+        getProcessIntelligence({ processId, limit: 500 }),
+      ]);
+      setRuntimeInsights({
+        loading: false,
+        error: '',
+        analytics: analyticsOut || null,
+        simulation: simulationOut || null,
+        intelligence: intelligenceOut || null,
+      });
+      setInsightsProcessId(processId);
+    } catch (err) {
+      logger.error('[Automations] erro ao carregar insights de processo', err);
+      setRuntimeInsights((prev) => ({
+        ...prev,
+        loading: false,
+        error: 'Não foi possível carregar insights do processo',
+      }));
+      showToast('Erro ao carregar insights do processo', 'error');
     }
   }
 
@@ -636,6 +691,58 @@ export function AutomationsPage() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        <div className="support-details-panel">
+          <div className="support-details-title">Insights de processo</div>
+          <div className="text-xs text-text-tertiary" style={{ marginBottom: '8px' }}>
+            Carrega analytics, simulação e inteligência para um processId.
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            <Input
+              placeholder="processId"
+              value={insightsProcessId}
+              onChange={(e) => setInsightsProcessId(e.target.value)}
+              style={{ flex: '1', minWidth: '220px' }}
+            />
+            <Button onClick={handleLoadProcessInsights} style={{ width: 'auto' }} disabled={runtimeInsights.loading}>
+              {runtimeInsights.loading ? 'Carregando...' : 'Carregar insights'}
+            </Button>
+          </div>
+
+          {runtimeInsights.error && (
+            <div className="text-sm" style={{ color: 'var(--status-error)', marginBottom: '8px' }}>
+              {runtimeInsights.error}
+            </div>
+          )}
+
+          {runtimeInsights.analytics && (
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>Analytics</div>
+              <div className="text-sm">Total de execuções: {runtimeInsights.analytics?.analytics?.process?.totalExecutions ?? '-'}</div>
+              <div className="text-sm">Taxa de sucesso: {formatPercent(runtimeInsights.analytics?.analytics?.process?.successRate)}</div>
+              <div className="text-sm">Taxa de falha: {formatPercent(runtimeInsights.analytics?.analytics?.process?.failureRate)}</div>
+              <div className="text-sm">P95 duração (ms): {runtimeInsights.analytics?.analytics?.process?.p95DurationMs ?? '-'}</div>
+            </div>
+          )}
+
+          {runtimeInsights.simulation && (
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>Simulação</div>
+              <div className="text-sm">Complexidade: {runtimeInsights.simulation?.simulation?.complexityScore ?? '-'}</div>
+              <div className="text-sm">Caminhos terminais: {runtimeInsights.simulation?.simulation?.terminalPaths?.length ?? 0}</div>
+              <div className="text-sm">Loops: {runtimeInsights.simulation?.simulation?.loops?.length ?? 0}</div>
+              <div className="text-sm">Nós inalcançáveis: {runtimeInsights.simulation?.simulation?.unreachableNodes?.length ?? 0}</div>
+            </div>
+          )}
+
+          {runtimeInsights.intelligence && (
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>Inteligência</div>
+              <div className="text-sm">Bottlenecks: {runtimeInsights.intelligence?.bottlenecks?.length ?? 0}</div>
+              <div className="text-sm">Recomendações: {runtimeInsights.intelligence?.intelligence?.recommendations?.length ?? 0}</div>
             </div>
           )}
         </div>

@@ -45,6 +45,9 @@ vi.mock('../api/processRuntime', () => ({
   listProcessInstances: vi.fn(),
   getProcessInstance: vi.fn(),
   getProcessInstanceHistory: vi.fn(),
+  getProcessRuntimeAnalytics: vi.fn(),
+  simulateProcessDefinition: vi.fn(),
+  getProcessIntelligence: vi.fn(),
   cancelProcessInstance: vi.fn(),
   resumeProcessInstance: vi.fn(),
 }));
@@ -66,6 +69,9 @@ describe('pages/AutomationsPage', () => {
         },
       ],
     });
+    processRuntimeApi.getProcessRuntimeAnalytics.mockResolvedValue({ ok: true, analytics: {} });
+    processRuntimeApi.simulateProcessDefinition.mockResolvedValue({ ok: true, simulation: {} });
+    processRuntimeApi.getProcessIntelligence.mockResolvedValue({ ok: true, intelligence: {} });
   });
 
   it('renderiza detalhes operacionais da instância inspecionada', async () => {
@@ -180,6 +186,57 @@ describe('pages/AutomationsPage', () => {
         nodeId: 'human-approval',
         limit: 10,
       });
+    });
+  });
+
+  it('carrega insights de processo com analytics, simulacao e inteligencia', async () => {
+    processRuntimeApi.getProcessRuntimeAnalytics.mockResolvedValue({
+      ok: true,
+      analytics: {
+        process: {
+          totalExecutions: 8,
+          successRate: 0.75,
+          failureRate: 0.25,
+          p95DurationMs: 1200,
+        },
+      },
+    });
+    processRuntimeApi.simulateProcessDefinition.mockResolvedValue({
+      ok: true,
+      simulation: {
+        complexityScore: 42,
+        terminalPaths: [['start', 'end']],
+        loops: [],
+        unreachableNodes: ['dead-1'],
+      },
+    });
+    processRuntimeApi.getProcessIntelligence.mockResolvedValue({
+      ok: true,
+      bottlenecks: [{ nodeId: 'slow-node' }],
+      intelligence: {
+        recommendations: [{ id: 'rec-1' }],
+      },
+    });
+
+    render(<AutomationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('exec-1')).toBeInTheDocument();
+    });
+
+    await userEvent.type(screen.getByPlaceholderText('processId'), 'flow-1');
+    await userEvent.click(screen.getByText('Carregar insights'));
+
+    await waitFor(() => {
+      expect(processRuntimeApi.getProcessRuntimeAnalytics).toHaveBeenCalledWith({ processId: 'flow-1', limit: 500 });
+      expect(processRuntimeApi.simulateProcessDefinition).toHaveBeenCalledWith({ processId: 'flow-1' });
+      expect(processRuntimeApi.getProcessIntelligence).toHaveBeenCalledWith({ processId: 'flow-1', limit: 500 });
+      expect(screen.getByText('Total de execuções: 8')).toBeInTheDocument();
+      expect(screen.getByText('Taxa de sucesso: 75.0%')).toBeInTheDocument();
+      expect(screen.getByText('Complexidade: 42')).toBeInTheDocument();
+      expect(screen.getByText('Nós inalcançáveis: 1')).toBeInTheDocument();
+      expect(screen.getByText('Bottlenecks: 1')).toBeInTheDocument();
+      expect(screen.getByText('Recomendações: 1')).toBeInTheDocument();
     });
   });
 });
