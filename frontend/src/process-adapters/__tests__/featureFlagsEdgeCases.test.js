@@ -832,4 +832,26 @@ describe('featureFlags edge cases', () => {
     expect(manager.isEnabled('feature-9999', { tenantId: 'tenant-1' })).toBe(true);
     expect(manager.isEnabled('feature-10000', { tenantId: 'tenant-1' })).toBe(false);
   });
+
+  it('getFeatureStatus aplica limite defensivo de cardinalidade de chaves', () => {
+    const baseFlags = {};
+    const tenantFlags = {};
+    const userFlags = {};
+
+    for (let i = 0; i < 10000; i += 1) {
+      baseFlags[`cfg-${i}`] = true;
+      tenantFlags[`tenant-${i}`] = true;
+      userFlags[`user-${i}`] = true;
+    }
+
+    const manager = new FeatureFlagManager(baseFlags);
+    manager.setTenantFlags('tenant-1', tenantFlags);
+    manager.setUserFlags('user-1', userFlags);
+
+    const status = manager.getFeatureStatus({ tenantId: 'tenant-1', userId: 'user-1' });
+    expect(Object.keys(status).length).toBeLessThanOrEqual(20000);
+    expect(status['cfg-9999']).toBe(true);
+    expect(status['tenant-9999']).toBe(true);
+    expect(status['user-0']).toBeUndefined();
+  });
 });

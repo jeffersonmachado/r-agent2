@@ -20,6 +20,7 @@ const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const MAX_FLAG_VALUE_DEPTH = 8;
 const MAX_SCOPE_LIST_LENGTH = 10000;
 const MAX_RECORD_ENTRIES = 10000;
+const MAX_FEATURE_STATUS_KEYS = 20000;
 
 function isSafeArray(value) {
   try {
@@ -151,6 +152,7 @@ function mergeRecords(...records) {
 function collectFlagNamesFromRecord(record, targetSet) {
   if (!isRecord(record) || !(targetSet instanceof Set)) return;
   for (const [flagKey] of safeEntries(record)) {
+    if (targetSet.size >= MAX_FEATURE_STATUS_KEYS) return;
     const normalizedFlag = normalizeFlagName(flagKey);
     if (!normalizedFlag) continue;
     targetSet.add(normalizedFlag);
@@ -160,6 +162,7 @@ function collectFlagNamesFromRecord(record, targetSet) {
 function collectFlagNamesFromScopedOverrides(scopedOverrides, targetSet) {
   if (!isRecord(scopedOverrides) || !(targetSet instanceof Set)) return;
   for (const [, flags] of safeEntries(scopedOverrides)) {
+    if (targetSet.size >= MAX_FEATURE_STATUS_KEYS) return;
     collectFlagNamesFromRecord(flags, targetSet);
   }
 }
