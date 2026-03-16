@@ -26,6 +26,7 @@
     "test:stack:down": "bash ./scripts/test-stack-down.sh",
     "test:stack:wait-ready": "bash ./scripts/wait-ready.sh",
     "test:stack:smoke": "bash ./scripts/test-stack-smoke.sh",
+    "test:stack:full": "bash ./scripts/test-stack-full.sh",
     "test:rpa:reliability:smoke": "jest tests/runtime/rpaReliabilitySmoke.test.js --runInBand",
     "test:ai-governance": "jest tests/ai-governance",
     "test:contracts": "jest tests/contracts",
