@@ -152,4 +152,36 @@ describe('featureFlags edge cases', () => {
     expect(manager.isEnabled('__proto__')).toBe(false);
     expect(manager.isEnabled('feature-b', { tenantId: 'tenant-1' })).toBe(true);
   });
+
+  it('normaliza valores textuais e numericos de flags para booleanos esperados', () => {
+    const manager = new FeatureFlagManager({
+      featureStringFalse: 'false',
+      featureStringTrue: ' true ',
+      featureZero: 0,
+      featureOne: 1,
+    });
+
+    manager.setTenantFlags('tenant-1', {
+      featureTenantOff: 'off',
+      featureTenantOn: 'ON',
+    });
+
+    manager.import({
+      userOverrides: {
+        'user-1': {
+          featureUserNo: 'no',
+          featureUserYes: 'yes',
+        },
+      },
+    });
+
+    expect(manager.isEnabled('featureStringFalse')).toBe(false);
+    expect(manager.isEnabled('featureStringTrue')).toBe(true);
+    expect(manager.isEnabled('featureZero')).toBe(false);
+    expect(manager.isEnabled('featureOne')).toBe(true);
+    expect(manager.isEnabled('featureTenantOff', { tenantId: 'tenant-1' })).toBe(false);
+    expect(manager.isEnabled('featureTenantOn', { tenantId: 'tenant-1' })).toBe(true);
+    expect(manager.isEnabled('featureUserNo', { userId: 'user-1' })).toBe(false);
+    expect(manager.isEnabled('featureUserYes', { userId: 'user-1' })).toBe(true);
+  });
 });

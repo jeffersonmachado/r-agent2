@@ -33,13 +33,25 @@ function normalizeFlagName(flagName) {
   return normalized;
 }
 
+function normalizeFlagValue(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return false;
+    if (['false', '0', 'off', 'no', 'disabled'].includes(normalized)) return false;
+    if (['true', '1', 'on', 'yes', 'enabled'].includes(normalized)) return true;
+  }
+  return Boolean(value);
+}
+
 function createSafeRecord(input) {
   if (!isRecord(input)) return Object.create(null);
   const output = Object.create(null);
   for (const [key, value] of Object.entries(input)) {
     const normalizedKey = normalizeFlagName(key);
     if (!normalizedKey) continue;
-    output[normalizedKey] = value;
+    output[normalizedKey] = normalizeFlagValue(value);
   }
   return output;
 }
@@ -51,7 +63,7 @@ function mergeRecords(...records) {
     for (const [key, value] of Object.entries(record)) {
       const normalizedKey = normalizeFlagName(key);
       if (!normalizedKey) continue;
-      output[normalizedKey] = value;
+      output[normalizedKey] = normalizeFlagValue(value);
     }
   }
   return output;
