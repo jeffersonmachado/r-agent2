@@ -972,6 +972,42 @@ describe('featureFlags edge cases', () => {
     brokenGetTime.mockRestore();
   });
 
+  it('tolera trim/toLowerCase hostis em normalizacao de strings', () => {
+    const originalTrim = String.prototype.trim;
+    const originalToLowerCase = String.prototype.toLowerCase;
+
+    const trimSpy = vi.spyOn(String.prototype, 'trim').mockImplementation(function mockTrim() {
+      const raw = String(this);
+      if (raw === ' featureA ' || raw === ' tenant-1 ') {
+        throw new Error('trim-boom');
+      }
+      return originalTrim.call(this);
+    });
+
+    const lowerSpy = vi.spyOn(String.prototype, 'toLowerCase').mockImplementation(function mockLower() {
+      const raw = String(this);
+      if (raw === 'ON') {
+        throw new Error('lower-boom');
+      }
+      return originalToLowerCase.call(this);
+    });
+
+    try {
+      expect(() => new FeatureFlagManager({ featureA: 'ON' })).not.toThrow();
+      const manager = new FeatureFlagManager({ featureA: 'ON' });
+
+      expect(() => manager.isEnabled(' featureA ')).not.toThrow();
+      expect(manager.isEnabled(' featureA ')).toBe(false);
+
+      const whitelist = RolloutStrategy.whitelist([' tenant-1 ']);
+      expect(() => whitelist.isEnabled(' tenant-1 ')).not.toThrow();
+      expect(whitelist.isEnabled(' tenant-1 ')).toBe(false);
+    } finally {
+      trimSpy.mockRestore();
+      lowerSpy.mockRestore();
+    }
+  });
+
   it('whitelist e blacklist toleram erro no constructor do Set e degradam para lista vazia', () => {
     // The try/catch guard in whitelist/blacklist catches Set constructor errors.
     // We exercise it by passing a spy on normalizeScopeIdList via a poisoned

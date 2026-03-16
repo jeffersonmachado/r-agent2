@@ -90,9 +90,27 @@ function safeKeys(record) {
   }
 }
 
+function safeTrimString(value) {
+  if (typeof value !== 'string') return '';
+  try {
+    return value.trim();
+  } catch {
+    return '';
+  }
+}
+
+function safeLowerString(value) {
+  if (typeof value !== 'string') return '';
+  try {
+    return value.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 function normalizeFlagName(flagName) {
   if (typeof flagName !== 'string') return '';
-  const normalized = flagName.trim();
+  const normalized = safeTrimString(flagName);
   if (!isSafeKey(normalized)) return '';
   return normalized;
 }
@@ -115,7 +133,7 @@ function normalizeFlagValue(value, depth = 0) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
   if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
+    const normalized = safeLowerString(safeTrimString(value));
     if (!normalized) return false;
     if (['null', 'undefined', 'nan'].includes(normalized)) return false;
     if (['false', '0', 'off', 'no', 'disabled'].includes(normalized)) return false;
@@ -252,7 +270,7 @@ function upsertScopedFlags(scopedOverrides, scopeId, safeFlags) {
 
 function normalizeScopeId(scopeId) {
   if (typeof scopeId !== 'string') return '';
-  const normalized = scopeId.trim();
+  const normalized = safeTrimString(scopeId);
   if (!isSafeKey(normalized)) return '';
   return normalized;
 }
@@ -313,7 +331,8 @@ function normalizeStartDate(value) {
     if (Number.isFinite(timestamp)) return parsed;
   }
   if (typeof value === 'string') {
-    const trimmed = value.trim();
+    const trimmed = safeTrimString(value);
+    if (!trimmed) return new Date();
     const numericTimestamp = /^\d+$/.test(trimmed) ? Number(trimmed) : NaN;
     if (Number.isFinite(numericTimestamp)) {
       const parsedFromTimestamp = new Date(numericTimestamp);
