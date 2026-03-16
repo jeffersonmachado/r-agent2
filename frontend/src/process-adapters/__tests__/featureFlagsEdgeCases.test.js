@@ -986,7 +986,7 @@ describe('featureFlags edge cases', () => {
 
     const lowerSpy = vi.spyOn(String.prototype, 'toLowerCase').mockImplementation(function mockLower() {
       const raw = String(this);
-      if (raw === 'ON') {
+      if (raw === 'ON' || raw === '1S') {
         throw new Error('lower-boom');
       }
       return originalToLowerCase.call(this);
@@ -1002,6 +1002,14 @@ describe('featureFlags edge cases', () => {
       const whitelist = RolloutStrategy.whitelist([' tenant-1 ']);
       expect(() => whitelist.isEnabled(' tenant-1 ')).not.toThrow();
       expect(whitelist.isEnabled(' tenant-1 ')).toBe(false);
+
+      const strategy = RolloutStrategy.gradual({
+        startDate: new Date('2020-01-01T00:00:00.000Z'),
+        phase1: { percentage: 10, duration: '1S' },
+        phase2: { percentage: 90 },
+      });
+      expect(() => strategy.getCurrentPhase()).not.toThrow();
+      expect(strategy.getCurrentPhase()).toEqual({ phase: 2, percentage: 90 });
     } finally {
       trimSpy.mockRestore();
       lowerSpy.mockRestore();

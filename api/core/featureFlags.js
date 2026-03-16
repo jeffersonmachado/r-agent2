@@ -557,10 +557,12 @@ export class RolloutStrategy {
       }
       let normalizedDuration = '';
       try {
-        normalizedDuration = String(duration).trim().toLowerCase();
+        normalizedDuration = String(duration);
       } catch {
         return 0;
       }
+      normalizedDuration = safeLowerString(safeTrimString(normalizedDuration));
+      if (!normalizedDuration) return 0;
       const numericOnly = safeToFiniteNumber(normalizedDuration);
       if (numericOnly != null) {
         return numericOnly > 0 ? numericOnly : 0;
