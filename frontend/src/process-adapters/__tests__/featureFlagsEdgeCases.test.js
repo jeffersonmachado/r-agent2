@@ -783,4 +783,35 @@ describe('featureFlags edge cases', () => {
     expect(manager.isEnabled('tenantFeature', { tenantId: 'tenant-1' })).toBe(true);
     expect(manager.isEnabled('userFeature', { userId: 'user-1' })).toBe(true);
   });
+
+  it('import/export ignoram escopos sem flags validas e preservam escopos validos', () => {
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+
+    const manager = new FeatureFlagManager({ base: true });
+    manager.import({
+      tenantOverrides: {
+        'tenant-valid': { canRun: 'yes' },
+        'tenant-empty': {},
+        'tenant-hostile': revoked.proxy,
+      },
+      userOverrides: {
+        'user-valid': { canRun: 'on' },
+        'user-empty': { __proto__: true },
+      },
+    });
+
+    expect(manager.isEnabled('canRun', { tenantId: 'tenant-valid' })).toBe(true);
+    expect(manager.isEnabled('canRun', { userId: 'user-valid' })).toBe(true);
+    expect(manager.isEnabled('canRun', { tenantId: 'tenant-empty' })).toBe(false);
+    expect(manager.isEnabled('canRun', { tenantId: 'tenant-hostile' })).toBe(false);
+    expect(manager.isEnabled('canRun', { userId: 'user-empty' })).toBe(false);
+
+    const exported = manager.export();
+    expect(exported.tenantOverrides['tenant-valid']).toEqual({ canRun: true });
+    expect(exported.userOverrides['user-valid']).toEqual({ canRun: true });
+    expect(exported.tenantOverrides['tenant-empty']).toBeUndefined();
+    expect(exported.tenantOverrides['tenant-hostile']).toBeUndefined();
+    expect(exported.userOverrides['user-empty']).toBeUndefined();
+  });
 });

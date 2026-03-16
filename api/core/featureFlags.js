@@ -173,7 +173,9 @@ function toExportScopedOverrides(scopedOverrides) {
   for (const [scopeId, flags] of safeEntries(scopedOverrides)) {
     const normalizedScopeId = normalizeScopeId(scopeId);
     if (!normalizedScopeId) continue;
-    output[normalizedScopeId] = toExportFlagRecord(flags);
+    const safeFlags = toExportFlagRecord(flags);
+    if (Object.keys(safeFlags).length === 0) continue;
+    output[normalizedScopeId] = safeFlags;
   }
   return output;
 }
@@ -397,7 +399,9 @@ export class FeatureFlagManager {
       for (const [tenantId, tenantFlags] of safeEntries(exportedTenantOverrides)) {
         const safeTenantId = normalizeScopeId(tenantId);
         if (!safeTenantId) continue;
-        nextTenantOverrides[safeTenantId] = createSafeRecord(tenantFlags);
+        const safeTenantFlags = createSafeRecord(tenantFlags);
+        if (Object.keys(safeTenantFlags).length === 0) continue;
+        nextTenantOverrides[safeTenantId] = safeTenantFlags;
       }
       this._tenantOverrides = nextTenantOverrides;
     }
@@ -406,7 +410,9 @@ export class FeatureFlagManager {
       for (const [userId, userFlags] of safeEntries(exportedUserOverrides)) {
         const safeUserId = normalizeScopeId(userId);
         if (!safeUserId) continue;
-        nextUserOverrides[safeUserId] = createSafeRecord(userFlags);
+        const safeUserFlags = createSafeRecord(userFlags);
+        if (Object.keys(safeUserFlags).length === 0) continue;
+        nextUserOverrides[safeUserId] = safeUserFlags;
       }
       this._userOverrides = nextUserOverrides;
     }
