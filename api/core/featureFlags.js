@@ -26,12 +26,20 @@ function isSafeKey(key) {
   return typeof key === 'string' && key.length > 0 && !BLOCKED_KEYS.has(key);
 }
 
+function normalizeFlagName(flagName) {
+  if (typeof flagName !== 'string') return '';
+  const normalized = flagName.trim();
+  if (!isSafeKey(normalized)) return '';
+  return normalized;
+}
+
 function createSafeRecord(input) {
   if (!isRecord(input)) return Object.create(null);
   const output = Object.create(null);
   for (const [key, value] of Object.entries(input)) {
-    if (!isSafeKey(key)) continue;
-    output[key] = value;
+    const normalizedKey = normalizeFlagName(key);
+    if (!normalizedKey) continue;
+    output[normalizedKey] = value;
   }
   return output;
 }
@@ -41,8 +49,9 @@ function mergeRecords(...records) {
   for (const record of records) {
     if (!isRecord(record)) continue;
     for (const [key, value] of Object.entries(record)) {
-      if (!isSafeKey(key)) continue;
-      output[key] = value;
+      const normalizedKey = normalizeFlagName(key);
+      if (!normalizedKey) continue;
+      output[normalizedKey] = value;
     }
   }
   return output;
@@ -82,24 +91,26 @@ export class FeatureFlagManager {
    * @returns {boolean}
    */
   isEnabled(flagName, context = {}) {
+    const normalizedFlagName = normalizeFlagName(flagName);
+    if (!normalizedFlagName) return false;
     const tenantId = normalizeScopeId(context?.tenantId);
     const userId = normalizeScopeId(context?.userId);
 
     if (userId && this._userOverrides[userId]) {
       const userFlags = this._userOverrides[userId];
-      if (Object.prototype.hasOwnProperty.call(userFlags, flagName)) {
-        return Boolean(userFlags[flagName]);
+      if (Object.prototype.hasOwnProperty.call(userFlags, normalizedFlagName)) {
+        return Boolean(userFlags[normalizedFlagName]);
       }
     }
 
     if (tenantId && this._tenantOverrides[tenantId]) {
       const tenantFlags = this._tenantOverrides[tenantId];
-      if (Object.prototype.hasOwnProperty.call(tenantFlags, flagName)) {
-        return Boolean(tenantFlags[flagName]);
+      if (Object.prototype.hasOwnProperty.call(tenantFlags, normalizedFlagName)) {
+        return Boolean(tenantFlags[normalizedFlagName]);
       }
     }
 
-    return Boolean(this._config[flagName]);
+    return Boolean(this._config[normalizedFlagName]);
   }
 
   /**

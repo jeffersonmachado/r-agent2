@@ -135,4 +135,21 @@ describe('featureFlags edge cases', () => {
     });
     expect(fallback.getCurrentPhase()).toEqual({ phase: 1, percentage: 0 });
   });
+
+  it('normaliza nomes de flags e bloqueia chaves perigosas com espacos', () => {
+    const manager = new FeatureFlagManager({
+      ' feature-a ': true,
+      ' __proto__ ': true,
+    });
+
+    manager.setTenantFlags('tenant-1', {
+      ' feature-b ': true,
+      ' __proto__ ': true,
+    });
+
+    expect(manager.isEnabled('feature-a')).toBe(true);
+    expect(manager.isEnabled(' feature-a ')).toBe(true);
+    expect(manager.isEnabled('__proto__')).toBe(false);
+    expect(manager.isEnabled('feature-b', { tenantId: 'tenant-1' })).toBe(true);
+  });
 });
