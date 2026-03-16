@@ -41,6 +41,8 @@ function normalizeFlagValue(value) {
     if (!normalized) return false;
     if (['false', '0', 'off', 'no', 'disabled'].includes(normalized)) return false;
     if (['true', '1', 'on', 'yes', 'enabled'].includes(normalized)) return true;
+    const numericLike = Number(normalized);
+    if (Number.isFinite(numericLike)) return numericLike !== 0;
   }
   return Boolean(value);
 }

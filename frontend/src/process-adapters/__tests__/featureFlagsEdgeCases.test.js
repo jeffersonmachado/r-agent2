@@ -214,4 +214,24 @@ describe('featureFlags edge cases', () => {
     expect(strategy.isEnabled({ group: 'alpha' })).toBe(false);
     expect(strategy.isEnabled({ group: 'ga' })).toBe(true);
   });
+
+  it('normaliza strings numericas de flags e byGroup', () => {
+    const manager = new FeatureFlagManager({
+      featureZeroString: '0',
+      featureNegativeString: '-2',
+      featureFloatString: '0.5',
+    });
+
+    expect(manager.isEnabled('featureZeroString')).toBe(false);
+    expect(manager.isEnabled('featureNegativeString')).toBe(true);
+    expect(manager.isEnabled('featureFloatString')).toBe(true);
+
+    const byGroup = RolloutStrategy.byGroup({
+      zero: { enabled: '0' },
+      negative: { enabled: '-1' },
+    });
+
+    expect(byGroup.isEnabled({ group: 'zero' })).toBe(false);
+    expect(byGroup.isEnabled({ group: 'negative' })).toBe(true);
+  });
 });
