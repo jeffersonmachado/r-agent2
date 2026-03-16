@@ -92,4 +92,29 @@ describe('featureFlags edge cases', () => {
     expect(manager.isEnabled('leak', { tenantId: '__proto__' })).toBe(false);
     expect(manager.isEnabled('leak', { userId: 'prototype' })).toBe(false);
   });
+
+  it('isEnabled normaliza tenantId/userId com espacos', () => {
+    const manager = new FeatureFlagManager({ featureX: false });
+    manager.setTenantFlags('tenant-1', { featureX: true });
+    manager.setUserFlags('user-1', { featureX: false });
+
+    expect(manager.isEnabled('featureX', { tenantId: '  tenant-1  ' })).toBe(true);
+    expect(manager.isEnabled('featureX', { tenantId: 'tenant-1', userId: '  user-1 ' })).toBe(false);
+  });
+
+  it('rollout strategies normalizam ids e grupos', () => {
+    const whitelist = RolloutStrategy.whitelist([' tenant-1 ', '__proto__']);
+    const blacklist = RolloutStrategy.blacklist([' tenant-9 ', 'constructor']);
+    const byGroup = RolloutStrategy.byGroup({
+      ' premium ': { enabled: true },
+      '__proto__': { enabled: true },
+    });
+
+    expect(whitelist.isEnabled('tenant-1')).toBe(true);
+    expect(whitelist.isEnabled('__proto__')).toBe(false);
+    expect(blacklist.isEnabled('tenant-9')).toBe(false);
+    expect(blacklist.isEnabled('constructor')).toBe(true);
+    expect(byGroup.isEnabled({ group: 'premium' })).toBe(true);
+    expect(byGroup.isEnabled({ group: '__proto__' })).toBe(false);
+  });
 });

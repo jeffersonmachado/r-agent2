@@ -74,7 +74,8 @@ export class FeatureFlagManager {
    * @returns {boolean}
    */
   isEnabled(flagName, context = {}) {
-    const { tenantId, userId } = context;
+    const tenantId = normalizeScopeId(context?.tenantId);
+    const userId = normalizeScopeId(context?.userId);
 
     if (userId && this._userOverrides[userId]) {
       const userFlags = this._userOverrides[userId];
@@ -244,10 +245,16 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static whitelist(allowedTenantIds) {
-    const set = new Set(Array.isArray(allowedTenantIds) ? allowedTenantIds : []);
+    const set = new Set(
+      (Array.isArray(allowedTenantIds) ? allowedTenantIds : [])
+        .map((tenantId) => normalizeScopeId(tenantId))
+        .filter(Boolean)
+    );
     return {
       isEnabled(tenantId) {
-        return set.has(tenantId);
+        const normalizedTenantId = normalizeScopeId(tenantId);
+        if (!normalizedTenantId) return false;
+        return set.has(normalizedTenantId);
       },
     };
   }
@@ -258,10 +265,16 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static blacklist(blockedTenantIds) {
-    const set = new Set(Array.isArray(blockedTenantIds) ? blockedTenantIds : []);
+    const set = new Set(
+      (Array.isArray(blockedTenantIds) ? blockedTenantIds : [])
+        .map((tenantId) => normalizeScopeId(tenantId))
+        .filter(Boolean)
+    );
     return {
       isEnabled(tenantId) {
-        return !set.has(tenantId);
+        const normalizedTenantId = normalizeScopeId(tenantId);
+        if (!normalizedTenantId) return true;
+        return !set.has(normalizedTenantId);
       },
     };
   }
@@ -272,11 +285,18 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(context: { group: string }): boolean }}
    */
   static byGroup(groupMap) {
-    const safeGroupMap = groupMap && typeof groupMap === 'object' ? groupMap : {};
+    const safeGroupMap = Object.create(null);
+    if (isRecord(groupMap)) {
+      for (const [groupKey, groupValue] of Object.entries(groupMap)) {
+        const normalizedGroupKey = normalizeScopeId(groupKey);
+        if (!normalizedGroupKey || !isRecord(groupValue)) continue;
+        safeGroupMap[normalizedGroupKey] = groupValue;
+      }
+    }
     return {
       isEnabled(context) {
-        const group = context && context.group;
-        if (!group || !safeGroupMap[group]) return false;
+        const group = normalizeScopeId(context && context.group);
+        if (!group || !safeGroupMap[group] || !isRecord(safeGroupMap[group])) return false;
         return Boolean(safeGroupMap[group].enabled);
       },
     };
