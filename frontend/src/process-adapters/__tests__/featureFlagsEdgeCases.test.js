@@ -1051,36 +1051,27 @@ describe('featureFlags edge cases', () => {
   });
 
   it('whitelist e blacklist toleram erro no constructor do Set e degradam para lista vazia', () => {
-    // The try/catch guard in whitelist/blacklist catches Set constructor errors.
-    // We exercise it by passing a spy on normalizeScopeIdList via a poisoned
-    // array-like whose Symbol.iterator throws after the first element.
-    // Since the module uses the native Set, we verify the guard using vi.spyOn
-    // on the underlying FeatureFlagManager to inject a throwing iterable into
-    // the Set call path isn't possible from outside.
-    //
-    // Instead we validate the observable contract: even if an internal Set
-    // creation error were to occur, both strategies must degrade gracefully.
-    // We verify this by checking that passing a valid list of IDs works and
-    // that the strategies do not throw on any input.
+    const OriginalSet = globalThis.Set;
+    const hostileSetSpy = vi.spyOn(globalThis, 'Set').mockImplementation(() => {
+      throw new Error('set-constructor-boom');
+    });
 
-    // Normal operation — guards are not triggered.
-    const whitelist = RolloutStrategy.whitelist(['tenant-1', 'tenant-2']);
-    const blacklist = RolloutStrategy.blacklist(['tenant-3', 'tenant-4']);
+    try {
+      // Force Set construction failure and ensure both strategies degrade safely.
+      const whitelist = RolloutStrategy.whitelist(['tenant-1', 'tenant-2']);
+      const blacklist = RolloutStrategy.blacklist(['tenant-3', 'tenant-4']);
 
-    expect(() => whitelist.isEnabled('tenant-1')).not.toThrow();
-    expect(() => whitelist.isEnabled('unknown')).not.toThrow();
-    expect(() => blacklist.isEnabled('tenant-3')).not.toThrow();
-    expect(() => blacklist.isEnabled('unknown')).not.toThrow();
+      expect(() => whitelist.isEnabled('tenant-1')).not.toThrow();
+      expect(() => blacklist.isEnabled('tenant-3')).not.toThrow();
 
-    expect(whitelist.isEnabled('tenant-1')).toBe(true);
-    expect(whitelist.isEnabled('unknown')).toBe(false);
-    expect(blacklist.isEnabled('tenant-3')).toBe(false);
-    expect(blacklist.isEnabled('unknown')).toBe(true);
-
-    // Empty / null inputs — normalizeScopeIdList returns [] → Set receives [].
-    const emptyWhitelist = RolloutStrategy.whitelist(null);
-    const emptyBlacklist = RolloutStrategy.blacklist(null);
-    expect(emptyWhitelist.isEnabled('any')).toBe(false);
-    expect(emptyBlacklist.isEnabled('any')).toBe(true);
+      // Fallback behaves like empty set: whitelist denies, blacklist allows.
+      expect(whitelist.isEnabled('tenant-1')).toBe(false);
+      expect(whitelist.isEnabled('unknown')).toBe(false);
+      expect(blacklist.isEnabled('tenant-3')).toBe(true);
+      expect(blacklist.isEnabled('unknown')).toBe(true);
+    } finally {
+      hostileSetSpy.mockRestore();
+      globalThis.Set = OriginalSet;
+    }
   });
 });

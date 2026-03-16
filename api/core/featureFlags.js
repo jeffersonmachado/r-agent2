@@ -365,6 +365,27 @@ function normalizeScopeIdList(input) {
   return normalizedList;
 }
 
+function createSafeScopeSet(scopeIds) {
+  try {
+    return new Set(scopeIds);
+  } catch {
+    return {
+      has() {
+        return false;
+      },
+    };
+  }
+}
+
+function safeScopeSetHas(scopeSet, scopeId) {
+  if (!scopeSet || typeof scopeSet.has !== 'function') return false;
+  try {
+    return Boolean(scopeSet.has(scopeId));
+  } catch {
+    return false;
+  }
+}
+
 export class FeatureFlagManager {
   /**
    * @param {Object} [config={}] Mapa de flag -> valor booleano padrão
@@ -608,17 +629,12 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static whitelist(allowedTenantIds) {
-    let set;
-    try {
-      set = new Set(normalizeScopeIdList(allowedTenantIds));
-    } catch {
-      set = new Set();
-    }
+    const set = createSafeScopeSet(normalizeScopeIdList(allowedTenantIds));
     return {
       isEnabled(tenantId) {
         const normalizedTenantId = normalizeScopeId(tenantId);
         if (!normalizedTenantId) return false;
-        return set.has(normalizedTenantId);
+        return safeScopeSetHas(set, normalizedTenantId);
       },
     };
   }
@@ -629,17 +645,12 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static blacklist(blockedTenantIds) {
-    let set;
-    try {
-      set = new Set(normalizeScopeIdList(blockedTenantIds));
-    } catch {
-      set = new Set();
-    }
+    const set = createSafeScopeSet(normalizeScopeIdList(blockedTenantIds));
     return {
       isEnabled(tenantId) {
         const normalizedTenantId = normalizeScopeId(tenantId);
         if (!normalizedTenantId) return true;
-        return !set.has(normalizedTenantId);
+        return !safeScopeSetHas(set, normalizedTenantId);
       },
     };
   }
