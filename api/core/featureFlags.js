@@ -304,25 +304,25 @@ function normalizePercentage(value) {
 
 function normalizeStartDate(value) {
   if (value instanceof Date) {
-    try {
-      if (Number.isFinite(value.getTime())) return value;
-    } catch {
-      // Fall through to default date.
-    }
+    const timestamp = getSafeDateTimestamp(value, NaN);
+    if (Number.isFinite(timestamp)) return value;
   }
   if (typeof value === 'number') {
     const parsed = new Date(value);
-    if (Number.isFinite(parsed.getTime())) return parsed;
+    const timestamp = getSafeDateTimestamp(parsed, NaN);
+    if (Number.isFinite(timestamp)) return parsed;
   }
   if (typeof value === 'string') {
     const trimmed = value.trim();
     const numericTimestamp = /^\d+$/.test(trimmed) ? Number(trimmed) : NaN;
     if (Number.isFinite(numericTimestamp)) {
       const parsedFromTimestamp = new Date(numericTimestamp);
-      if (Number.isFinite(parsedFromTimestamp.getTime())) return parsedFromTimestamp;
+      const timestampFromNumeric = getSafeDateTimestamp(parsedFromTimestamp, NaN);
+      if (Number.isFinite(timestampFromNumeric)) return parsedFromTimestamp;
     }
     const parsed = new Date(trimmed);
-    if (Number.isFinite(parsed.getTime())) return parsed;
+    const timestamp = getSafeDateTimestamp(parsed, NaN);
+    if (Number.isFinite(timestamp)) return parsed;
   }
   return new Date();
 }
@@ -527,10 +527,14 @@ export class RolloutStrategy {
       }
       const match = normalizedDuration.match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/);
       if (!match) return 0;
-      const value = parseFloat(match[1]);
+      const value = safeToFiniteNumber(match[1]);
+      if (value == null || value <= 0) return 0;
       const unit = match[2];
       const multiplierMap = { ms: 1, s: 1000, m: 60000, h: 3600000, d: 86400000 };
-      return value * (multiplierMap[unit] || 0);
+      const multiplier = safeToFiniteNumber(multiplierMap[unit]);
+      if (multiplier == null || multiplier <= 0) return 0;
+      const durationMs = value * multiplier;
+      return Number.isFinite(durationMs) && durationMs > 0 ? durationMs : 0;
     }
 
     const phases = [1, 2, 3, 4]

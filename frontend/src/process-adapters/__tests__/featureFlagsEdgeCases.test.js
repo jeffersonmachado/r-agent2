@@ -948,6 +948,30 @@ describe('featureFlags edge cases', () => {
     expect(manager.isEnabled('newFlag')).toBe(true);
   });
 
+  it('gradual tolera startDate hostil e duracao nao parseavel sem quebrar fase', () => {
+    const hostileStartDate = new Date('2020-01-01T00:00:00.000Z');
+    const brokenGetTime = vi.spyOn(hostileStartDate, 'getTime').mockImplementation(() => {
+      throw new Error('start-get-time-boom');
+    });
+
+    const hostileDuration = {
+      toString() {
+        throw new Error('duration-to-string-boom');
+      },
+    };
+
+    const strategy = RolloutStrategy.gradual({
+      startDate: hostileStartDate,
+      phase1: { percentage: 20, duration: hostileDuration },
+      phase2: { percentage: 80 },
+    });
+
+    expect(() => strategy.getCurrentPhase()).not.toThrow();
+    expect(strategy.getCurrentPhase()).toEqual({ phase: 2, percentage: 80 });
+
+    brokenGetTime.mockRestore();
+  });
+
   it('whitelist e blacklist toleram erro no constructor do Set e degradam para lista vazia', () => {
     // The try/catch guard in whitelist/blacklist catches Set constructor errors.
     // We exercise it by passing a spy on normalizeScopeIdList via a poisoned
