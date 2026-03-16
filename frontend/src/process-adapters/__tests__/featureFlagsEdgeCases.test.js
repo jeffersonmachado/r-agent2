@@ -553,4 +553,24 @@ describe('featureFlags edge cases', () => {
     expect(blacklist.isEnabled('tenant-2')).toBe(false);
     expect(blacklist.isEnabled('tenant-3')).toBe(true);
   });
+
+  it('whitelist e blacklist aplicam limite defensivo de tamanho da lista', () => {
+    const hugeAllowed = [];
+    hugeAllowed.length = 10005;
+    hugeAllowed[9999] = 'tenant-at-limit';
+    hugeAllowed[10001] = 'tenant-beyond-limit';
+
+    const hugeBlocked = [];
+    hugeBlocked.length = 10005;
+    hugeBlocked[9999] = 'blocked-at-limit';
+    hugeBlocked[10001] = 'blocked-beyond-limit';
+
+    const whitelist = RolloutStrategy.whitelist(hugeAllowed);
+    const blacklist = RolloutStrategy.blacklist(hugeBlocked);
+
+    expect(whitelist.isEnabled('tenant-at-limit')).toBe(true);
+    expect(whitelist.isEnabled('tenant-beyond-limit')).toBe(false);
+    expect(blacklist.isEnabled('blocked-at-limit')).toBe(false);
+    expect(blacklist.isEnabled('blocked-beyond-limit')).toBe(true);
+  });
 });

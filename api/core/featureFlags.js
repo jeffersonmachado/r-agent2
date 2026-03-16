@@ -18,6 +18,7 @@
 
 const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const MAX_FLAG_VALUE_DEPTH = 8;
+const MAX_SCOPE_LIST_LENGTH = 10000;
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -160,7 +161,8 @@ function normalizeScopeIdList(input) {
   }
 
   const normalizedList = [];
-  for (let index = 0; index < length; index += 1) {
+  const boundedLength = Math.min(length, MAX_SCOPE_LIST_LENGTH);
+  for (let index = 0; index < boundedLength; index += 1) {
     const normalizedValue = normalizeScopeId(safeGet(input, index));
     if (!normalizedValue) continue;
     normalizedList.push(normalizedValue);
