@@ -515,4 +515,42 @@ describe('featureFlags edge cases', () => {
     expect(() => manager.isEnabled('base', context)).not.toThrow();
     expect(manager.isEnabled('base', context)).toBe(true);
   });
+
+  it('whitelist e blacklist toleram listas com getters que lancam erro', () => {
+    const allowedList = [];
+    Object.defineProperty(allowedList, '0', {
+      enumerable: true,
+      get() {
+        throw new Error('allowed-boom');
+      },
+    });
+    Object.defineProperty(allowedList, '1', {
+      enumerable: true,
+      value: ' tenant-1 ',
+    });
+    allowedList.length = 2;
+
+    const blockedList = [];
+    Object.defineProperty(blockedList, '0', {
+      enumerable: true,
+      value: ' tenant-2 ',
+    });
+    Object.defineProperty(blockedList, '1', {
+      enumerable: true,
+      get() {
+        throw new Error('blocked-boom');
+      },
+    });
+    blockedList.length = 2;
+
+    const whitelist = RolloutStrategy.whitelist(allowedList);
+    const blacklist = RolloutStrategy.blacklist(blockedList);
+
+    expect(() => whitelist.isEnabled('tenant-1')).not.toThrow();
+    expect(() => blacklist.isEnabled('tenant-1')).not.toThrow();
+    expect(whitelist.isEnabled('tenant-1')).toBe(true);
+    expect(whitelist.isEnabled('tenant-3')).toBe(false);
+    expect(blacklist.isEnabled('tenant-2')).toBe(false);
+    expect(blacklist.isEnabled('tenant-3')).toBe(true);
+  });
 });

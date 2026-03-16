@@ -150,6 +150,24 @@ function normalizeStartDate(value) {
   return new Date();
 }
 
+function normalizeScopeIdList(input) {
+  if (!Array.isArray(input)) return [];
+  let length = 0;
+  try {
+    length = input.length;
+  } catch {
+    return [];
+  }
+
+  const normalizedList = [];
+  for (let index = 0; index < length; index += 1) {
+    const normalizedValue = normalizeScopeId(safeGet(input, index));
+    if (!normalizedValue) continue;
+    normalizedList.push(normalizedValue);
+  }
+  return normalizedList;
+}
+
 export class FeatureFlagManager {
   /**
    * @param {Object} [config={}] Mapa de flag -> valor booleano padrão
@@ -372,11 +390,7 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static whitelist(allowedTenantIds) {
-    const set = new Set(
-      (Array.isArray(allowedTenantIds) ? allowedTenantIds : [])
-        .map((tenantId) => normalizeScopeId(tenantId))
-        .filter(Boolean)
-    );
+    const set = new Set(normalizeScopeIdList(allowedTenantIds));
     return {
       isEnabled(tenantId) {
         const normalizedTenantId = normalizeScopeId(tenantId);
@@ -392,11 +406,7 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static blacklist(blockedTenantIds) {
-    const set = new Set(
-      (Array.isArray(blockedTenantIds) ? blockedTenantIds : [])
-        .map((tenantId) => normalizeScopeId(tenantId))
-        .filter(Boolean)
-    );
+    const set = new Set(normalizeScopeIdList(blockedTenantIds));
     return {
       isEnabled(tenantId) {
         const normalizedTenantId = normalizeScopeId(tenantId);
