@@ -263,4 +263,26 @@ describe('featureFlags edge cases', () => {
 
     expect(strategy.getCurrentPhase()).toEqual({ phase: 3, percentage: 90 });
   });
+
+  it('interpreta placeholders textuais nullish como false', () => {
+    const manager = new FeatureFlagManager({
+      nullFlag: 'null',
+      undefinedFlag: 'undefined',
+      nanFlag: 'NaN',
+      trueFlag: 'enabled',
+    });
+
+    expect(manager.isEnabled('nullFlag')).toBe(false);
+    expect(manager.isEnabled('undefinedFlag')).toBe(false);
+    expect(manager.isEnabled('nanFlag')).toBe(false);
+    expect(manager.isEnabled('trueFlag')).toBe(true);
+
+    const byGroup = RolloutStrategy.byGroup({
+      nullish: { enabled: 'undefined' },
+      active: { enabled: 'yes' },
+    });
+
+    expect(byGroup.isEnabled({ group: 'nullish' })).toBe(false);
+    expect(byGroup.isEnabled({ group: 'active' })).toBe(true);
+  });
 });
