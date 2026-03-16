@@ -397,4 +397,69 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'unstable' })).toBe(false);
     expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
   });
+
+  it('ignora propriedades com getter que lanca durante sanitizacao de mapas', () => {
+    const config = {};
+    Object.defineProperty(config, 'safeConfig', {
+      enumerable: true,
+      value: true,
+    });
+    Object.defineProperty(config, 'brokenConfig', {
+      enumerable: true,
+      get() {
+        throw new Error('config-boom');
+      },
+    });
+
+    const manager = new FeatureFlagManager(config);
+    expect(manager.isEnabled('safeConfig')).toBe(true);
+    expect(manager.isEnabled('brokenConfig')).toBe(false);
+
+    const tenantFlags = {};
+    Object.defineProperty(tenantFlags, 'tenantSafe', {
+      enumerable: true,
+      value: 'on',
+    });
+    Object.defineProperty(tenantFlags, 'tenantBroken', {
+      enumerable: true,
+      get() {
+        throw new Error('tenant-boom');
+      },
+    });
+
+    expect(() => manager.setTenantFlags('tenant-1', tenantFlags)).not.toThrow();
+    expect(manager.isEnabled('tenantSafe', { tenantId: 'tenant-1' })).toBe(true);
+    expect(manager.isEnabled('tenantBroken', { tenantId: 'tenant-1' })).toBe(false);
+
+    const userOverrides = {};
+    Object.defineProperty(userOverrides, 'user-1', {
+      enumerable: true,
+      value: { featureA: 'yes' },
+    });
+    Object.defineProperty(userOverrides, 'broken-user', {
+      enumerable: true,
+      get() {
+        throw new Error('user-boom');
+      },
+    });
+
+    expect(() => manager.import({ userOverrides })).not.toThrow();
+    expect(manager.isEnabled('featureA', { userId: 'user-1' })).toBe(true);
+
+    const groupMap = {};
+    Object.defineProperty(groupMap, 'safe', {
+      enumerable: true,
+      value: { enabled: 'yes' },
+    });
+    Object.defineProperty(groupMap, 'broken', {
+      enumerable: true,
+      get() {
+        throw new Error('group-map-boom');
+      },
+    });
+
+    const byGroup = RolloutStrategy.byGroup(groupMap);
+    expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
+    expect(byGroup.isEnabled({ group: 'broken' })).toBe(false);
+  });
 });

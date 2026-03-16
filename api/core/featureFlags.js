@@ -27,6 +27,25 @@ function isSafeKey(key) {
   return typeof key === 'string' && key.length > 0 && !BLOCKED_KEYS.has(key);
 }
 
+function safeEntries(record) {
+  if (!isRecord(record)) return [];
+  let keys = [];
+  try {
+    keys = Object.keys(record);
+  } catch {
+    return [];
+  }
+  const entries = [];
+  for (const key of keys) {
+    try {
+      entries.push([key, record[key]]);
+    } catch {
+      // Ignore properties that throw on access.
+    }
+  }
+  return entries;
+}
+
 function normalizeFlagName(flagName) {
   if (typeof flagName !== 'string') return '';
   const normalized = flagName.trim();
@@ -67,7 +86,7 @@ function normalizeFlagValue(value, depth = 0) {
 function createSafeRecord(input) {
   if (!isRecord(input)) return Object.create(null);
   const output = Object.create(null);
-  for (const [key, value] of Object.entries(input)) {
+  for (const [key, value] of safeEntries(input)) {
     const normalizedKey = normalizeFlagName(key);
     if (!normalizedKey) continue;
     output[normalizedKey] = normalizeFlagValue(value);
@@ -79,7 +98,7 @@ function mergeRecords(...records) {
   const output = Object.create(null);
   for (const record of records) {
     if (!isRecord(record)) continue;
-    for (const [key, value] of Object.entries(record)) {
+    for (const [key, value] of safeEntries(record)) {
       const normalizedKey = normalizeFlagName(key);
       if (!normalizedKey) continue;
       output[normalizedKey] = normalizeFlagValue(value);
@@ -235,7 +254,7 @@ export class FeatureFlagManager {
     if (isRecord(exported.config)) this._config = createSafeRecord(exported.config);
     if (isRecord(exported.tenantOverrides)) {
       const nextTenantOverrides = Object.create(null);
-      for (const [tenantId, tenantFlags] of Object.entries(exported.tenantOverrides)) {
+      for (const [tenantId, tenantFlags] of safeEntries(exported.tenantOverrides)) {
         const safeTenantId = normalizeScopeId(tenantId);
         if (!safeTenantId) continue;
         nextTenantOverrides[safeTenantId] = createSafeRecord(tenantFlags);
@@ -244,7 +263,7 @@ export class FeatureFlagManager {
     }
     if (isRecord(exported.userOverrides)) {
       const nextUserOverrides = Object.create(null);
-      for (const [userId, userFlags] of Object.entries(exported.userOverrides)) {
+      for (const [userId, userFlags] of safeEntries(exported.userOverrides)) {
         const safeUserId = normalizeScopeId(userId);
         if (!safeUserId) continue;
         nextUserOverrides[safeUserId] = createSafeRecord(userFlags);
@@ -381,7 +400,7 @@ export class RolloutStrategy {
   static byGroup(groupMap) {
     const safeGroupMap = Object.create(null);
     if (isRecord(groupMap)) {
-      for (const [groupKey, groupValue] of Object.entries(groupMap)) {
+      for (const [groupKey, groupValue] of safeEntries(groupMap)) {
         const normalizedGroupKey = normalizeScopeId(groupKey);
         if (!normalizedGroupKey || !isRecord(groupValue)) continue;
         safeGroupMap[normalizedGroupKey] = groupValue;
