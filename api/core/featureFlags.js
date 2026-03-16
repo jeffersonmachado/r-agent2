@@ -454,7 +454,10 @@ export class FeatureFlagManager {
     const exportedTenantOverrides = safeGet(exported, 'tenantOverrides');
     const exportedUserOverrides = safeGet(exported, 'userOverrides');
 
-    if (isRecord(exportedConfig)) this._config = createSafeRecord(exportedConfig);
+    if (isRecord(exportedConfig)) {
+      const safeConfig = createSafeRecord(exportedConfig);
+      if (!isEmptySafeRecord(safeConfig)) this._config = safeConfig;
+    }
     if (isRecord(exportedTenantOverrides)) {
       const tenantKeys = safeKeys(exportedTenantOverrides);
       if (tenantKeys === null) {
@@ -582,7 +585,12 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static whitelist(allowedTenantIds) {
-    const set = new Set(normalizeScopeIdList(allowedTenantIds));
+    let set;
+    try {
+      set = new Set(normalizeScopeIdList(allowedTenantIds));
+    } catch {
+      set = new Set();
+    }
     return {
       isEnabled(tenantId) {
         const normalizedTenantId = normalizeScopeId(tenantId);
@@ -598,7 +606,12 @@ export class RolloutStrategy {
    * @returns {{ isEnabled(tenantId: string): boolean }}
    */
   static blacklist(blockedTenantIds) {
-    const set = new Set(normalizeScopeIdList(blockedTenantIds));
+    let set;
+    try {
+      set = new Set(normalizeScopeIdList(blockedTenantIds));
+    } catch {
+      set = new Set();
+    }
     return {
       isEnabled(tenantId) {
         const normalizedTenantId = normalizeScopeId(tenantId);
