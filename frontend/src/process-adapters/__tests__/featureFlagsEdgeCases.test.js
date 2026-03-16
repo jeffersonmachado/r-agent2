@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   FeatureFlagManager,
   RolloutStrategy,
@@ -867,5 +867,26 @@ describe('featureFlags edge cases', () => {
     expect(exported.tenantOverrides['tenant-1']).toBeUndefined();
     expect(exported.userOverrides['user-1']).toBeUndefined();
     expect(exported.tenantOverrides['tenant-2']).toEqual({ keep: true });
+  });
+
+  it('gradual tolera Date.now invalido/erro e permanece deterministico', () => {
+    const strategy = RolloutStrategy.gradual({
+      startDate: new Date('2020-01-01T00:00:00.000Z'),
+      phase1: { percentage: 10, duration: '1s' },
+      phase2: { percentage: 90 },
+    });
+
+    const throwingNow = vi.spyOn(Date, 'now').mockImplementation(() => {
+      throw new Error('now-boom');
+    });
+
+    expect(() => strategy.getCurrentPhase()).not.toThrow();
+    expect(strategy.getCurrentPhase()).toEqual({ phase: 1, percentage: 10 });
+    throwingNow.mockRestore();
+
+    const invalidNow = vi.spyOn(Date, 'now').mockImplementation(() => NaN);
+    expect(() => strategy.getCurrentPhase()).not.toThrow();
+    expect(strategy.getCurrentPhase()).toEqual({ phase: 1, percentage: 10 });
+    invalidNow.mockRestore();
   });
 });

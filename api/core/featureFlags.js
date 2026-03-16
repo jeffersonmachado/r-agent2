@@ -256,6 +256,25 @@ function safeToFiniteNumber(value) {
   }
 }
 
+function getSafeNowTimestamp() {
+  try {
+    const now = safeToFiniteNumber(Date.now());
+    return now == null ? 0 : now;
+  } catch {
+    return 0;
+  }
+}
+
+function getSafeDateTimestamp(date, fallback = 0) {
+  if (!(date instanceof Date)) return fallback;
+  try {
+    const timestamp = safeToFiniteNumber(date.getTime());
+    return timestamp == null ? fallback : timestamp;
+  } catch {
+    return fallback;
+  }
+}
+
 function normalizePercentage(value) {
   const numericValue = safeToFiniteNumber(value);
   if (numericValue == null) return null;
@@ -456,6 +475,7 @@ export class RolloutStrategy {
   static gradual(options) {
     const safeOptions = options && typeof options === 'object' ? options : {};
     const startDate = normalizeStartDate(safeGet(safeOptions, 'startDate'));
+    const startTimestamp = getSafeDateTimestamp(startDate, getSafeNowTimestamp());
 
     function parseDurationMs(duration) {
       if (!duration) return 0;
@@ -501,7 +521,7 @@ export class RolloutStrategy {
         if (phases.length === 0) {
           return { phase: 0, percentage: 0 };
         }
-        const elapsed = Date.now() - startDate.getTime();
+        const elapsed = Math.max(0, getSafeNowTimestamp() - startTimestamp);
         let accumulated = 0;
         for (let index = 0; index < phases.length; index += 1) {
           const phaseConfig = phases[index];
