@@ -213,7 +213,7 @@ function toExportScopedOverrides(scopedOverrides) {
     const normalizedScopeId = normalizeScopeId(scopeId);
     if (!normalizedScopeId) continue;
     const safeFlags = toExportFlagRecord(flags);
-    if (Object.keys(safeFlags).length === 0) continue;
+    if (isEmptySafeRecord(safeFlags)) continue;
     output[normalizedScopeId] = safeFlags;
   }
   return output;
@@ -487,7 +487,7 @@ export class FeatureFlagManager {
           const safeTenantId = normalizeScopeId(tenantId);
           if (!safeTenantId) continue;
           const safeTenantFlags = createSafeRecord(tenantFlags);
-          if (Object.keys(safeTenantFlags).length === 0) continue;
+          if (isEmptySafeRecord(safeTenantFlags)) continue;
           nextTenantOverrides[safeTenantId] = safeTenantFlags;
         }
         this._tenantOverrides = nextTenantOverrides;
@@ -503,7 +503,7 @@ export class FeatureFlagManager {
           const safeUserId = normalizeScopeId(userId);
           if (!safeUserId) continue;
           const safeUserFlags = createSafeRecord(userFlags);
-          if (Object.keys(safeUserFlags).length === 0) continue;
+          if (isEmptySafeRecord(safeUserFlags)) continue;
           nextUserOverrides[safeUserId] = safeUserFlags;
         }
         this._userOverrides = nextUserOverrides;

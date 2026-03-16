@@ -1008,6 +1008,48 @@ describe('featureFlags edge cases', () => {
     }
   });
 
+  it('import e export toleram Object.keys com erro na checagem de flags vazias', () => {
+    const originalKeys = Object.keys;
+    const keysSpy = vi.spyOn(Object, 'keys').mockImplementation((target) => {
+      if (target && typeof target === 'object') {
+        const proto = Object.getPrototypeOf(target);
+        if (proto === Object.prototype && Object.prototype.hasOwnProperty.call(target, 'exportMarker')) {
+          throw new Error('keys-export-boom');
+        }
+        if (
+          proto === null
+          && (
+            Object.prototype.hasOwnProperty.call(target, 'importMarker')
+            || Object.prototype.hasOwnProperty.call(target, 'importUserMarker')
+          )
+        ) {
+          throw new Error('keys-import-boom');
+        }
+      }
+      return originalKeys(target);
+    });
+
+    try {
+      const managerExport = new FeatureFlagManager({ base: true });
+      managerExport.setTenantFlags('tenant-export', { exportMarker: true });
+
+      expect(() => managerExport.export()).not.toThrow();
+      const exported = managerExport.export();
+      expect(exported.tenantOverrides['tenant-export']).toBeUndefined();
+
+      const managerImport = new FeatureFlagManager({ base: true });
+      expect(() => managerImport.import({
+        tenantOverrides: { 'tenant-1': { importMarker: true } },
+        userOverrides: { 'user-1': { importUserMarker: true } },
+      })).not.toThrow();
+
+      expect(managerImport.isEnabled('importMarker', { tenantId: 'tenant-1' })).toBe(false);
+      expect(managerImport.isEnabled('importUserMarker', { userId: 'user-1' })).toBe(false);
+    } finally {
+      keysSpy.mockRestore();
+    }
+  });
+
   it('whitelist e blacklist toleram erro no constructor do Set e degradam para lista vazia', () => {
     // The try/catch guard in whitelist/blacklist catches Set constructor errors.
     // We exercise it by passing a spy on normalizeScopeIdList via a poisoned
