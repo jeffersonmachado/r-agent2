@@ -379,4 +379,22 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'unstable' })).toBe(false);
     expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
   });
+
+  it('byGroup nao quebra quando o proprio objeto de grupo tem getter enabled com erro', () => {
+    const groupWithThrowingEnabled = {};
+    Object.defineProperty(groupWithThrowingEnabled, 'enabled', {
+      get() {
+        throw new Error('group-boom');
+      },
+    });
+
+    const byGroup = RolloutStrategy.byGroup({
+      unstable: groupWithThrowingEnabled,
+      safe: { enabled: 'on' },
+    });
+
+    expect(() => byGroup.isEnabled({ group: 'unstable' })).not.toThrow();
+    expect(byGroup.isEnabled({ group: 'unstable' })).toBe(false);
+    expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
+  });
 });
