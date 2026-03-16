@@ -209,12 +209,22 @@ function safeSet(record, key, value) {
   }
 }
 
+function isEmptySafeRecord(record) {
+  try {
+    return Object.keys(record).length === 0;
+  } catch {
+    return true;
+  }
+}
+
 function rebuildScopedOverrides(scopedOverrides) {
   const rebuilt = Object.create(null);
   for (const [scopeId, flags] of safeEntries(scopedOverrides)) {
     const normalizedScopeId = normalizeScopeId(scopeId);
     if (!normalizedScopeId) continue;
-    rebuilt[normalizedScopeId] = createSafeRecord(flags);
+    const safeFlags = createSafeRecord(flags);
+    if (isEmptySafeRecord(safeFlags)) continue;
+    rebuilt[normalizedScopeId] = safeFlags;
   }
   return rebuilt;
 }
@@ -344,6 +354,7 @@ export class FeatureFlagManager {
     const safeTenantId = normalizeScopeId(tenantId);
     if (!safeTenantId) return;
     const safeFlags = createSafeRecord(flags);
+    if (isEmptySafeRecord(safeFlags)) return;
     this._tenantOverrides = upsertScopedFlags(this._tenantOverrides, safeTenantId, safeFlags);
   }
 
@@ -356,6 +367,7 @@ export class FeatureFlagManager {
     const safeUserId = normalizeScopeId(userId);
     if (!safeUserId) return;
     const safeFlags = createSafeRecord(flags);
+    if (isEmptySafeRecord(safeFlags)) return;
     this._userOverrides = upsertScopedFlags(this._userOverrides, safeUserId, safeFlags);
   }
 

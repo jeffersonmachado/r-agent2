@@ -854,4 +854,18 @@ describe('featureFlags edge cases', () => {
     expect(status['tenant-9999']).toBe(true);
     expect(status['user-0']).toBeUndefined();
   });
+
+  it('setTenantFlags e setUserFlags ignoram payload vazio sem criar escopo vazio', () => {
+    const manager = new FeatureFlagManager({ base: true });
+
+    manager.setTenantFlags('tenant-1', {});
+    manager.setUserFlags('user-1', {});
+    manager.setTenantFlags('tenant-2', { keep: true });
+    manager.setTenantFlags('tenant-2', {});
+
+    const exported = manager.export();
+    expect(exported.tenantOverrides['tenant-1']).toBeUndefined();
+    expect(exported.userOverrides['user-1']).toBeUndefined();
+    expect(exported.tenantOverrides['tenant-2']).toEqual({ keep: true });
+  });
 });
