@@ -152,3 +152,20 @@ export function validateCanonicalProcessDefinition(definition) {
     },
   };
 }
+
+const CODE_REMAP = {
+  CANONICAL_AI_CONFIG_MISSING: 'canonical_ai_task_missing_config',
+};
+
+/**
+ * Alias de validateCanonicalProcessDefinition com codigos de erro
+ * normalizados para o estilo lowercase_snake_case.
+ */
+export function validateCanonicalProcess(definition) {
+  const result = validateCanonicalProcessDefinition(definition);
+  const errors = result.errors.map((err) => ({
+    ...err,
+    code: CODE_REMAP[err.code] || err.code,
+  }));
+  return { ...result, errors };
+}

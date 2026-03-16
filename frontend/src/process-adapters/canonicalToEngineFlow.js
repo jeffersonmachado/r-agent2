@@ -56,7 +56,7 @@ export function canonicalToEngineFlow(definition, meta = {}) {
     };
   });
 
-  return {
+  const flowDefinition = {
     tenantId: meta?.tenantId || canonical.metadata?.tenantId || 'demo-tenant',
     id: meta?.id || canonical.id || 'canonical-flow',
     name: meta?.name || canonical.name || 'Canonical Flow',
@@ -70,5 +70,10 @@ export function canonicalToEngineFlow(definition, meta = {}) {
         entrypoints: canonical.entrypoints.slice(),
       },
     },
+  };
+
+  return {
+    ...flowDefinition,
+    flowDefinition,
   };
 }

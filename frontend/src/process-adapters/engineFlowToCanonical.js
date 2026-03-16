@@ -64,7 +64,7 @@ export function engineFlowToCanonical(flow) {
     }
   });
 
-  return normalizeCanonicalProcessDefinition({
+  const canonicalProcessDefinition = normalizeCanonicalProcessDefinition({
     id: String(flow?.id || 'canonical-from-engine'),
     name: String(flow?.name || 'Canonical Process'),
     version: Number.isFinite(Number(flow?.version)) ? Number(flow.version) : 1,
@@ -77,4 +77,9 @@ export function engineFlowToCanonical(flow) {
     edges,
     entrypoints: canonicalNodes.filter((node) => node.type === 'start').map((node) => node.id),
   });
+
+  return {
+    ...canonicalProcessDefinition,
+    canonicalProcessDefinition,
+  };
 }

@@ -52,3 +52,47 @@ export function compileCanonicalProcessDefinition(definition) {
     validation,
   };
 }
+
+function djb2Hash(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(16);
+}
+
+/**
+ * Compila um processo canonico retornando relatorio de validacao e a definicao
+ * compilada com indexes pre-calculados para uso em runtime.
+ */
+export function compileCanonicalProcess(definition) {
+  const canonical = normalizeCanonicalProcessDefinition(definition);
+  const report = validateCanonicalProcessDefinition(canonical);
+
+  const nodeById = Object.fromEntries(canonical.nodes.map((n) => [n.id, n]));
+
+  const outgoingByNodeId = Object.fromEntries(canonical.nodes.map((n) => [n.id, []]));
+  canonical.edges.forEach((edge) => {
+    if (outgoingByNodeId[edge.source]) {
+      outgoingByNodeId[edge.source].push(edge);
+    } else {
+      outgoingByNodeId[edge.source] = [edge];
+    }
+  });
+
+  const versionHash = djb2Hash(
+    JSON.stringify({ id: canonical.id, version: canonical.version, nodes: canonical.nodes, edges: canonical.edges })
+  );
+
+  return {
+    report,
+    compiledProcessDefinition: {
+      format: 'canonical-compiled',
+      versionHash,
+      nodeById,
+      outgoingByNodeId,
+      entrypoints: canonical.entrypoints.slice(),
+    },
+  };
+}

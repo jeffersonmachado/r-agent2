@@ -81,8 +81,13 @@ export function canonicalToRete(definition) {
     });
   });
 
-  return {
+  const reteJson = {
     id: 'chatbot-flow@0.1.0',
     nodes: reteNodes,
+  };
+
+  return {
+    ...reteJson,
+    reteJson,
   };
 }

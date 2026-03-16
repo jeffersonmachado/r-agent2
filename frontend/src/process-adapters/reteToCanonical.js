@@ -44,7 +44,7 @@ export function reteToCanonical(reteJson, meta = {}) {
 
   const edges = extractReteEdges(nodesObj, resolveCanonicalId);
 
-  return normalizeCanonicalProcessDefinition({
+  const canonicalProcessDefinition = normalizeCanonicalProcessDefinition({
     id: String(meta?.id || reteJson?.id || 'canonical-from-rete'),
     name: String(meta?.name || 'Canonical Process'),
     version: Number.isFinite(Number(meta?.version)) ? Number(meta.version) : 1,
@@ -57,4 +57,9 @@ export function reteToCanonical(reteJson, meta = {}) {
     edges,
     entrypoints: nodes.filter((node) => node.type === 'start').map((node) => node.id),
   });
+
+  return {
+    ...canonicalProcessDefinition,
+    canonicalProcessDefinition,
+  };
 }

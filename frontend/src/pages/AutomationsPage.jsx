@@ -5,6 +5,11 @@ import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
 import { listAutomations, upsertAutomation, publishAutomation, runAutomation } from '../api/automations';
+import {
+  listProcessInstances,
+  getProcessInstance,
+  getProcessInstanceHistory,
+} from '../api/processRuntime';
 import logger from '../utils/logger';
 
 const DEFAULT_DEFINITION = {
@@ -77,6 +82,10 @@ export function AutomationsPage() {
   const [loading, setLoading] = useState(false);
   const [automations, setAutomations] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [processInstances, setProcessInstances] = useState([]);
+  const [inspectedInstance, setInspectedInstance] = useState(null);
+  const [instanceHistory, setInstanceHistory] = useState([]);
+  const [historyFilter, setHistoryFilter] = useState({ eventType: '', nodeId: '', limit: '50' });
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -172,9 +181,52 @@ export function AutomationsPage() {
     }
   }
 
+  async function loadProcessInstances() {
+    try {
+      const out = await listProcessInstances({ limit: 50 });
+      setProcessInstances(Array.isArray(out?.items) ? out.items : []);
+    } catch (err) {
+      logger.error('[Automations] erro ao carregar instâncias', err);
+    }
+  }
+
+  async function handleInspectInstance(executionId) {
+    try {
+      const [instanceOut, historyOut] = await Promise.all([
+        getProcessInstance(executionId),
+        getProcessInstanceHistory(executionId, {
+          eventType: null,
+          nodeId: null,
+          limit: 50,
+        }),
+      ]);
+      setInspectedInstance(instanceOut || null);
+      setInstanceHistory(Array.isArray(historyOut?.history) ? historyOut.history : []);
+      setHistoryFilter({ eventType: '', nodeId: '', limit: '50' });
+    } catch (err) {
+      logger.error('[Automations] erro ao inspecionar instância', err);
+      showToast('Erro ao carregar detalhes da instância', 'error');
+    }
+  }
+
+  async function handleApplyHistoryFilter(executionId) {
+    try {
+      const limit = Number(historyFilter.limit) > 0 ? Number(historyFilter.limit) : 50;
+      const historyOut = await getProcessInstanceHistory(executionId, {
+        eventType: historyFilter.eventType.trim() || null,
+        nodeId: historyFilter.nodeId.trim() || null,
+        limit,
+      });
+      setInstanceHistory(Array.isArray(historyOut?.history) ? historyOut.history : []);
+    } catch (err) {
+      logger.error('[Automations] erro ao filtrar histórico', err);
+    }
+  }
+
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       load();
+      loadProcessInstances();
     }
   }, [authLoading, isAuthenticated]);
 
@@ -462,6 +514,130 @@ export function AutomationsPage() {
           <div className="text-xs text-text-tertiary" style={{ marginTop: '8px' }}>
             Builder visual em primeiro corte: adicione e reordene passos por drag-and-drop; o JSON permanece editável.
           </div>
+        </div>
+
+        <div className="support-details-panel">
+          <div className="support-details-title">Instâncias de processo ativas</div>
+          {processInstances.length === 0 ? (
+            <div className="text-text-tertiary">Nenhuma instância ativa.</div>
+          ) : (
+            <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
+              <table className="support-table">
+                <thead>
+                  <tr>
+                    <th>ID de execução</th>
+                    <th>Processo</th>
+                    <th>Status</th>
+                    <th>Nó atual</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {processInstances.map((inst) => (
+                    <tr key={inst.executionId}>
+                      <td>{inst.executionId}</td>
+                      <td>{inst.processId}</td>
+                      <td>{inst.status}</td>
+                      <td>{inst.currentNodeId || '-'}</td>
+                      <td>
+                        <Button onClick={() => handleInspectInstance(inst.executionId)} style={{ width: 'auto' }}>Ver</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {inspectedInstance && (
+            <div style={{ marginTop: '16px', padding: '16px', border: '1px solid var(--border-default)', borderRadius: '8px' }}>
+              <div className="support-details-title">Histórico operacional</div>
+
+              {inspectedInstance.stopped && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Parada / resumo</div>
+                  {inspectedInstance.stopped.reason && (
+                    <div className="text-sm">{inspectedInstance.stopped.reason}</div>
+                  )}
+                  {inspectedInstance.stopped.detail && (
+                    <div className="text-sm text-text-secondary">{inspectedInstance.stopped.detail}</div>
+                  )}
+                </div>
+              )}
+
+              {inspectedInstance.waitingState && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Estado de espera</div>
+                  <div className="text-sm">Tipo: <span>{inspectedInstance.waitingState.type}</span></div>
+                  {inspectedInstance.waitingState.correlationKey && (
+                    <div className="text-sm">Chave: <span>{inspectedInstance.waitingState.correlationKey}</span></div>
+                  )}
+                </div>
+              )}
+
+              {Array.isArray(inspectedInstance.path) && inspectedInstance.path.length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Caminho</div>
+                  <div className="text-sm font-mono">{inspectedInstance.path.join(' -> ')}</div>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ fontWeight: 600, marginBottom: '8px' }}>Filtrar histórico</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <Input
+                    placeholder="eventType"
+                    value={historyFilter.eventType}
+                    onChange={(e) => setHistoryFilter((f) => ({ ...f, eventType: e.target.value }))}
+                    style={{ flex: '1', minWidth: '140px' }}
+                  />
+                  <Input
+                    placeholder="nodeId"
+                    value={historyFilter.nodeId}
+                    onChange={(e) => setHistoryFilter((f) => ({ ...f, nodeId: e.target.value }))}
+                    style={{ flex: '1', minWidth: '140px' }}
+                  />
+                  <Input
+                    placeholder="limit"
+                    value={historyFilter.limit}
+                    onChange={(e) => setHistoryFilter((f) => ({ ...f, limit: e.target.value }))}
+                    style={{ width: '80px' }}
+                  />
+                  <Button
+                    onClick={() => handleApplyHistoryFilter(inspectedInstance.instance?.executionId)}
+                    style={{ width: 'auto' }}
+                  >
+                    Aplicar filtros
+                  </Button>
+                </div>
+              </div>
+
+              {instanceHistory.length > 0 && (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="support-table">
+                    <thead>
+                      <tr>
+                        <th>Seq</th>
+                        <th>Evento</th>
+                        <th>Nó</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {instanceHistory.map((evt, i) => (
+                        <tr key={`${evt.sequence || i}-${evt.eventType}`}>
+                          <td>{evt.sequence}</td>
+                          <td>{evt.eventType}</td>
+                          <td>{evt.nodeId || '-'}</td>
+                          <td>{evt.timestamp}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="support-details-panel">

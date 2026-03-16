@@ -216,6 +216,23 @@ export function reteJsonToEngineFlow(reteJson, meta) {
     ? meta.metadata
     : {};
 
+  // Compute entrypoints: nodes that are never the target of another node's connection
+  const targetIds = new Set();
+  engineNodes.forEach((n) => {
+    if (!n.next) return;
+    if (typeof n.next === 'string') {
+      targetIds.add(n.next);
+    } else if (Array.isArray(n.next)) {
+      n.next.forEach((t) => targetIds.add(t));
+    } else if (typeof n.next === 'object') {
+      Object.values(n.next).forEach((t) => {
+        if (typeof t === 'string') targetIds.add(t);
+        else if (Array.isArray(t)) t.forEach((id) => targetIds.add(id));
+      });
+    }
+  });
+  const entrypoints = engineNodes.filter((n) => !targetIds.has(n.id)).map((n) => n.id);
+
   const result = {
     tenantId: (meta && meta.tenantId) || 'demo-tenant',
     id: (meta && meta.id) || 'demo-flow',
@@ -228,6 +245,9 @@ export function reteJsonToEngineFlow(reteJson, meta) {
     metadata: {
       ...extraMetadata,
       positions: positions,
+      canonical: {
+        entrypoints,
+      },
     },
   };
 
@@ -864,5 +884,8 @@ export function engineFlowToReteJson(flow) {
   return result;
 }
 
-
-
+/**
+ * Alias de compatibilidade para `reteJsonToEngineFlow`.
+ * Mantém suporte a importações legadas que referenciam o nome anterior.
+ */
+export const legacyReteJsonToEngineFlow = reteJsonToEngineFlow;

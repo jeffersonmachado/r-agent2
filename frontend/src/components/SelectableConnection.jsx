@@ -20,16 +20,26 @@ const Svg = ({ children, onClick, onPointerDown, data, ...props }) => {
   );
 };
 
-const Path = ({ selected, styles, d, ...props }) => (
-  <path
-    {...props}
-    fill="none"
-    strokeWidth={selected ? 10 : 8}
-    stroke={selected ? "rgb(255, 217, 44)" : "steelblue"}
-    className={selected ? "rete-connection-path-selected" : "rete-connection-path"}
-    d={d}
-  />
-);
+const Path = ({ selected, styles, d, bpmnVisualMode, bpmnVisualCategory, ...props }) => {
+  let className;
+  if (selected) {
+    className = 'rete-connection-path-selected';
+  } else if (bpmnVisualMode && bpmnVisualCategory) {
+    className = `rete-connection-path rete-connection-path--${bpmnVisualCategory}`;
+  } else {
+    className = 'rete-connection-path';
+  }
+  return (
+    <path
+      {...props}
+      fill="none"
+      strokeWidth={selected ? 10 : 8}
+      stroke={selected ? "rgb(255, 217, 44)" : "steelblue"}
+      className={className}
+      d={d}
+    />
+  );
+};
 
 // Path invisível maior para facilitar cliques (renderizado primeiro para ficar atrás)
 const HoverPath = ({ d, ...props }) => (
@@ -155,7 +165,9 @@ export function SelectableConnection(props) {
       <Path 
         selected={isSelected} 
         styles={props.styles} 
-        d={path} 
+        d={path}
+        bpmnVisualMode={data?.bpmnVisualMode}
+        bpmnVisualCategory={data?.bpmnVisualCategory}
       />
     </Svg>
   );
