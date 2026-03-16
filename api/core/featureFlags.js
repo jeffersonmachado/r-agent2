@@ -55,6 +55,14 @@ function normalizeScopeId(scopeId) {
   return normalized;
 }
 
+function normalizePercentage(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+  if (numericValue < 0) return 0;
+  if (numericValue > 100) return 100;
+  return numericValue;
+}
+
 export class FeatureFlagManager {
   /**
    * @param {Object} [config={}] Mapa de flag -> valor booleano padrão
@@ -198,11 +206,13 @@ export class RolloutStrategy {
    */
   static gradual(options) {
     const safeOptions = options && typeof options === 'object' ? options : {};
-    const startDate = safeOptions.startDate instanceof Date ? safeOptions.startDate : new Date();
+    const rawStartDate = safeOptions.startDate instanceof Date ? safeOptions.startDate : new Date();
+    const startDate = Number.isFinite(rawStartDate.getTime()) ? rawStartDate : new Date();
 
     function parseDurationMs(duration) {
       if (!duration) return 0;
-      const match = String(duration).match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)$/);
+      const normalizedDuration = String(duration).trim().toLowerCase();
+      const match = normalizedDuration.match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)$/);
       if (!match) return 0;
       const value = parseFloat(match[1]);
       const unit = match[2];
@@ -211,8 +221,18 @@ export class RolloutStrategy {
     }
 
     const phases = [1, 2, 3, 4]
-      .map((n) => ({ phase: n, ...(safeOptions[`phase${n}`] || null) }))
-      .filter((p) => p.percentage != null);
+      .map((n) => {
+        const phaseConfig = isRecord(safeOptions[`phase${n}`]) ? safeOptions[`phase${n}`] : null;
+        if (!phaseConfig) return null;
+        const percentage = normalizePercentage(phaseConfig.percentage);
+        if (percentage == null) return null;
+        return {
+          phase: n,
+          percentage,
+          durationMs: parseDurationMs(phaseConfig.duration),
+        };
+      })
+      .filter(Boolean);
 
     return {
       getCurrentPhase() {
@@ -222,7 +242,7 @@ export class RolloutStrategy {
         const elapsed = Date.now() - startDate.getTime();
         let accumulated = 0;
         for (const phaseConfig of phases) {
-          const duration = parseDurationMs(phaseConfig.duration);
+          const duration = phaseConfig.durationMs;
           if (duration > 0 && elapsed < accumulated + duration) {
             return { phase: phaseConfig.phase, percentage: phaseConfig.percentage };
           }

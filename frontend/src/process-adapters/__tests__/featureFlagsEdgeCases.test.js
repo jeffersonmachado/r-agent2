@@ -117,4 +117,22 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'premium' })).toBe(true);
     expect(byGroup.isEnabled({ group: '__proto__' })).toBe(false);
   });
+
+  it('gradual sanitiza percentuais e aceita duracao com espacos/maiusculas', () => {
+    const strategy = RolloutStrategy.gradual({
+      startDate: new Date('invalid-date'),
+      phase1: { percentage: 'abc', duration: '1s' },
+      phase2: { percentage: 150, duration: ' 1S ' },
+      phase3: { percentage: -10 },
+    });
+
+    const current = strategy.getCurrentPhase();
+    expect(current).toEqual({ phase: 2, percentage: 100 });
+
+    const fallback = RolloutStrategy.gradual({
+      startDate: new Date(Date.now() - 10000),
+      phase1: { percentage: -50 },
+    });
+    expect(fallback.getCurrentPhase()).toEqual({ phase: 1, percentage: 0 });
+  });
 });
