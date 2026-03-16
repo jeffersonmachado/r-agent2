@@ -462,4 +462,57 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
     expect(byGroup.isEnabled({ group: 'broken' })).toBe(false);
   });
+
+  it('import tolera getters de topo com erro e ainda aplica partes validas', () => {
+    const manager = new FeatureFlagManager({ keepMe: true });
+
+    const exported = {};
+    Object.defineProperty(exported, 'config', {
+      get() {
+        throw new Error('config-top-boom');
+      },
+    });
+    Object.defineProperty(exported, 'userOverrides', {
+      enumerable: true,
+      value: {
+        'user-1': { importedFlag: 'yes' },
+      },
+    });
+
+    expect(() => manager.import(exported)).not.toThrow();
+    expect(manager.isEnabled('keepMe')).toBe(true);
+    expect(manager.isEnabled('importedFlag', { userId: 'user-1' })).toBe(true);
+  });
+
+  it('gradual e isEnabled toleram getters de contexto/opcoes com erro', () => {
+    const options = {};
+    Object.defineProperty(options, 'startDate', {
+      get() {
+        throw new Error('start-boom');
+      },
+    });
+    Object.defineProperty(options, 'phase1', {
+      get() {
+        throw new Error('phase1-boom');
+      },
+    });
+    Object.defineProperty(options, 'phase2', {
+      enumerable: true,
+      value: { percentage: 70 },
+    });
+
+    expect(() => RolloutStrategy.gradual(options).getCurrentPhase()).not.toThrow();
+    expect(RolloutStrategy.gradual(options).getCurrentPhase()).toEqual({ phase: 2, percentage: 70 });
+
+    const manager = new FeatureFlagManager({ base: true });
+    const context = {};
+    Object.defineProperty(context, 'tenantId', {
+      get() {
+        throw new Error('tenant-context-boom');
+      },
+    });
+
+    expect(() => manager.isEnabled('base', context)).not.toThrow();
+    expect(manager.isEnabled('base', context)).toBe(true);
+  });
 });

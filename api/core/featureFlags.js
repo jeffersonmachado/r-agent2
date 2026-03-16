@@ -27,6 +27,15 @@ function isSafeKey(key) {
   return typeof key === 'string' && key.length > 0 && !BLOCKED_KEYS.has(key);
 }
 
+function safeGet(record, key) {
+  if (!record) return undefined;
+  try {
+    return record[key];
+  } catch {
+    return undefined;
+  }
+}
+
 function safeEntries(record) {
   if (!isRecord(record)) return [];
   let keys = [];
@@ -162,8 +171,8 @@ export class FeatureFlagManager {
   isEnabled(flagName, context = {}) {
     const normalizedFlagName = normalizeFlagName(flagName);
     if (!normalizedFlagName) return false;
-    const tenantId = normalizeScopeId(context?.tenantId);
-    const userId = normalizeScopeId(context?.userId);
+    const tenantId = normalizeScopeId(safeGet(context, 'tenantId'));
+    const userId = normalizeScopeId(safeGet(context, 'userId'));
 
     if (userId && this._userOverrides[userId]) {
       const userFlags = this._userOverrides[userId];
@@ -251,19 +260,23 @@ export class FeatureFlagManager {
    */
   import(exported) {
     if (!exported) return;
-    if (isRecord(exported.config)) this._config = createSafeRecord(exported.config);
-    if (isRecord(exported.tenantOverrides)) {
+    const exportedConfig = safeGet(exported, 'config');
+    const exportedTenantOverrides = safeGet(exported, 'tenantOverrides');
+    const exportedUserOverrides = safeGet(exported, 'userOverrides');
+
+    if (isRecord(exportedConfig)) this._config = createSafeRecord(exportedConfig);
+    if (isRecord(exportedTenantOverrides)) {
       const nextTenantOverrides = Object.create(null);
-      for (const [tenantId, tenantFlags] of safeEntries(exported.tenantOverrides)) {
+      for (const [tenantId, tenantFlags] of safeEntries(exportedTenantOverrides)) {
         const safeTenantId = normalizeScopeId(tenantId);
         if (!safeTenantId) continue;
         nextTenantOverrides[safeTenantId] = createSafeRecord(tenantFlags);
       }
       this._tenantOverrides = nextTenantOverrides;
     }
-    if (isRecord(exported.userOverrides)) {
+    if (isRecord(exportedUserOverrides)) {
       const nextUserOverrides = Object.create(null);
-      for (const [userId, userFlags] of safeEntries(exported.userOverrides)) {
+      for (const [userId, userFlags] of safeEntries(exportedUserOverrides)) {
         const safeUserId = normalizeScopeId(userId);
         if (!safeUserId) continue;
         nextUserOverrides[safeUserId] = createSafeRecord(userFlags);
@@ -286,7 +299,7 @@ export class RolloutStrategy {
    */
   static gradual(options) {
     const safeOptions = options && typeof options === 'object' ? options : {};
-    const startDate = normalizeStartDate(safeOptions.startDate);
+    const startDate = normalizeStartDate(safeGet(safeOptions, 'startDate'));
 
     function parseDurationMs(duration) {
       if (!duration) return 0;
@@ -309,14 +322,15 @@ export class RolloutStrategy {
 
     const phases = [1, 2, 3, 4]
       .map((n) => {
-        const phaseConfig = isRecord(safeOptions[`phase${n}`]) ? safeOptions[`phase${n}`] : null;
+        const phaseValue = safeGet(safeOptions, `phase${n}`);
+        const phaseConfig = isRecord(phaseValue) ? phaseValue : null;
         if (!phaseConfig) return null;
-        const percentage = normalizePercentage(phaseConfig.percentage);
+        const percentage = normalizePercentage(safeGet(phaseConfig, 'percentage'));
         if (percentage == null) return null;
         return {
           phase: n,
           percentage,
-          durationMs: parseDurationMs(phaseConfig.duration),
+          durationMs: parseDurationMs(safeGet(phaseConfig, 'duration')),
         };
       })
       .filter(Boolean);
@@ -408,9 +422,10 @@ export class RolloutStrategy {
     }
     return {
       isEnabled(context) {
-        const group = normalizeScopeId(context && context.group);
-        if (!group || !safeGroupMap[group] || !isRecord(safeGroupMap[group])) return false;
-        return normalizeFlagValue(safeGroupMap[group]);
+        const group = normalizeScopeId(safeGet(context, 'group'));
+        const groupConfig = safeGet(safeGroupMap, group);
+        if (!group || !groupConfig || !isRecord(groupConfig)) return false;
+        return normalizeFlagValue(groupConfig);
       },
     };
   }
