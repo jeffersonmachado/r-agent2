@@ -1082,4 +1082,81 @@ describe('featureFlags edge cases', () => {
       globalThis.Set = OriginalSet;
     }
   });
+
+  it('import aplica parte valida quando tenantOverrides e hostil mas userOverrides e valido', () => {
+    const manager = new FeatureFlagManager({ base: true });
+    manager.setTenantFlags('tenant-keep', { keepTenant: true });
+
+    const hostileTenantOverrides = new Proxy({}, {
+      ownKeys() {
+        throw new Error('tenant-keys-boom');
+      },
+      getOwnPropertyDescriptor() {
+        throw new Error('tenant-desc-boom');
+      },
+      get() {
+        throw new Error('tenant-get-boom');
+      },
+    });
+
+    expect(() => manager.import({
+      tenantOverrides: hostileTenantOverrides,
+      userOverrides: {
+        'user-2': { importedUser: 'on' },
+      },
+    })).not.toThrow();
+
+    expect(manager.isEnabled('keepTenant', { tenantId: 'tenant-keep' })).toBe(true);
+    expect(manager.isEnabled('importedUser', { userId: 'user-2' })).toBe(true);
+  });
+
+  it('import com payload misto ignora escopos invalidos e preserva flags validas', () => {
+    const manager = new FeatureFlagManager({ base: true });
+
+    const tenantFlags = {};
+    Object.defineProperty(tenantFlags, 'goodFlag', {
+      enumerable: true,
+      value: 'yes',
+    });
+    Object.defineProperty(tenantFlags, 'badFlag', {
+      enumerable: true,
+      get() {
+        throw new Error('tenant-flag-get-boom');
+      },
+    });
+
+    expect(() => manager.import({
+      tenantOverrides: {
+        'tenant-ok': tenantFlags,
+        '': { ignoredTenant: true },
+      },
+      userOverrides: {
+        'user-ok': { userGood: 1 },
+        '   ': { userIgnored: true },
+      },
+    })).not.toThrow();
+
+    expect(manager.isEnabled('goodFlag', { tenantId: 'tenant-ok' })).toBe(true);
+    expect(manager.isEnabled('badFlag', { tenantId: 'tenant-ok' })).toBe(false);
+    expect(manager.isEnabled('userGood', { userId: 'user-ok' })).toBe(true);
+    expect(manager.isEnabled('ignoredTenant', { tenantId: '' })).toBe(false);
+    expect(manager.isEnabled('userIgnored', { userId: '   ' })).toBe(false);
+
+    const exported = manager.export();
+    expect(exported.tenantOverrides['tenant-ok']).toEqual({ goodFlag: true });
+    expect(exported.userOverrides['user-ok']).toEqual({ userGood: true });
+  });
+
+  it('gradual com fases parcialmente invalidas usa a ultima fase normalizada valida', () => {
+    const strategy = RolloutStrategy.gradual({
+      startDate: '   ',
+      phase1: { percentage: 'nan', duration: 'abc' },
+      phase2: { percentage: 30, duration: -100 },
+      phase3: { percentage: '70', duration: '1x' },
+      phase4: { percentage: null },
+    });
+
+    expect(() => strategy.getCurrentPhase()).not.toThrow();
+    expect(strategy.getCurrentPhase()).toEqual({ phase: 4, percentage: 0 });
+  });
 });
