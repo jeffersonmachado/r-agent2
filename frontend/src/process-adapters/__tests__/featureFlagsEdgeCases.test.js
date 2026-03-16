@@ -348,4 +348,35 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'cyclic' })).toBe(false);
     expect(byGroup.isEnabled({ group: 'nested' })).toBe(true);
   });
+
+  it('desabilita tipos nao suportados e getters de enabled com erro', () => {
+    const throwingEnabled = {};
+    Object.defineProperty(throwingEnabled, 'enabled', {
+      get() {
+        throw new Error('boom');
+      },
+    });
+
+    const manager = new FeatureFlagManager({
+      functionFlag: () => true,
+      symbolFlag: Symbol('on'),
+      bigintFlag: 1n,
+      throwingFlag: throwingEnabled,
+    });
+
+    expect(manager.isEnabled('functionFlag')).toBe(false);
+    expect(manager.isEnabled('symbolFlag')).toBe(false);
+    expect(manager.isEnabled('bigintFlag')).toBe(false);
+    expect(() => manager.isEnabled('throwingFlag')).not.toThrow();
+    expect(manager.isEnabled('throwingFlag')).toBe(false);
+
+    const byGroup = RolloutStrategy.byGroup({
+      unstable: { enabled: throwingEnabled },
+      safe: { enabled: true },
+    });
+
+    expect(() => byGroup.isEnabled({ group: 'unstable' })).not.toThrow();
+    expect(byGroup.isEnabled({ group: 'unstable' })).toBe(false);
+    expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
+  });
 });

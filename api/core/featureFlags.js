@@ -38,11 +38,17 @@ function normalizeFlagValue(value, depth = 0) {
   if (depth >= MAX_FLAG_VALUE_DEPTH) return false;
   if (isRecord(value)) {
     if (Object.prototype.hasOwnProperty.call(value, 'enabled')) {
-      return normalizeFlagValue(value.enabled, depth + 1);
+      try {
+        return normalizeFlagValue(value.enabled, depth + 1);
+      } catch {
+        return false;
+      }
     }
     return false;
   }
   if (Array.isArray(value)) return false;
+  if (value == null) return false;
+  if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') return false;
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
   if (typeof value === 'string') {
