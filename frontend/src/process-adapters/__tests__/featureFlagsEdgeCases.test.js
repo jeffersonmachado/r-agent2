@@ -593,4 +593,31 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'group-9999' })).toBe(true);
     expect(byGroup.isEnabled({ group: 'group-10000' })).toBe(false);
   });
+
+  it('tolera proxies hostis que lancam em hasOwnProperty/getOwnPropertyDescriptor', () => {
+    const hostileProxy = new Proxy({}, {
+      getOwnPropertyDescriptor() {
+        throw new Error('hasown-boom');
+      },
+      get() {
+        throw new Error('get-boom');
+      },
+    });
+
+    const manager = new FeatureFlagManager({
+      proxyFlag: hostileProxy,
+    });
+
+    expect(() => manager.isEnabled('proxyFlag')).not.toThrow();
+    expect(manager.isEnabled('proxyFlag')).toBe(false);
+
+    const byGroup = RolloutStrategy.byGroup({
+      unstable: hostileProxy,
+      stable: { enabled: true },
+    });
+
+    expect(() => byGroup.isEnabled({ group: 'unstable' })).not.toThrow();
+    expect(byGroup.isEnabled({ group: 'unstable' })).toBe(false);
+    expect(byGroup.isEnabled({ group: 'stable' })).toBe(true);
+  });
 });

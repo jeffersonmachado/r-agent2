@@ -38,6 +38,14 @@ function safeGet(record, key) {
   }
 }
 
+function safeHasOwn(record, key) {
+  try {
+    return Object.prototype.hasOwnProperty.call(record, key);
+  } catch {
+    return false;
+  }
+}
+
 function safeEntries(record) {
   if (!isRecord(record)) return [];
   let keys = [];
@@ -68,7 +76,7 @@ function normalizeFlagName(flagName) {
 function normalizeFlagValue(value, depth = 0) {
   if (depth >= MAX_FLAG_VALUE_DEPTH) return false;
   if (isRecord(value)) {
-    if (Object.prototype.hasOwnProperty.call(value, 'enabled')) {
+    if (safeHasOwn(value, 'enabled')) {
       try {
         return normalizeFlagValue(value.enabled, depth + 1);
       } catch {
@@ -198,14 +206,14 @@ export class FeatureFlagManager {
 
     if (userId && this._userOverrides[userId]) {
       const userFlags = this._userOverrides[userId];
-      if (Object.prototype.hasOwnProperty.call(userFlags, normalizedFlagName)) {
+      if (safeHasOwn(userFlags, normalizedFlagName)) {
         return Boolean(userFlags[normalizedFlagName]);
       }
     }
 
     if (tenantId && this._tenantOverrides[tenantId]) {
       const tenantFlags = this._tenantOverrides[tenantId];
-      if (Object.prototype.hasOwnProperty.call(tenantFlags, normalizedFlagName)) {
+      if (safeHasOwn(tenantFlags, normalizedFlagName)) {
         return Boolean(tenantFlags[normalizedFlagName]);
       }
     }
