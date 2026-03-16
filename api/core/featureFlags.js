@@ -81,6 +81,15 @@ function safeEntries(record) {
   return entries;
 }
 
+function safeKeys(record) {
+  if (!isRecord(record)) return [];
+  try {
+    return Object.keys(record);
+  } catch {
+    return null;
+  }
+}
+
 function normalizeFlagName(flagName) {
   if (typeof flagName !== 'string') return '';
   const normalized = flagName.trim();
@@ -447,26 +456,36 @@ export class FeatureFlagManager {
 
     if (isRecord(exportedConfig)) this._config = createSafeRecord(exportedConfig);
     if (isRecord(exportedTenantOverrides)) {
-      const nextTenantOverrides = Object.create(null);
-      for (const [tenantId, tenantFlags] of safeEntries(exportedTenantOverrides)) {
-        const safeTenantId = normalizeScopeId(tenantId);
-        if (!safeTenantId) continue;
-        const safeTenantFlags = createSafeRecord(tenantFlags);
-        if (Object.keys(safeTenantFlags).length === 0) continue;
-        nextTenantOverrides[safeTenantId] = safeTenantFlags;
+      const tenantKeys = safeKeys(exportedTenantOverrides);
+      if (tenantKeys === null) {
+        // Keep existing state if source keys are unreadable (hostile map).
+      } else {
+        const nextTenantOverrides = Object.create(null);
+        for (const [tenantId, tenantFlags] of safeEntries(exportedTenantOverrides)) {
+          const safeTenantId = normalizeScopeId(tenantId);
+          if (!safeTenantId) continue;
+          const safeTenantFlags = createSafeRecord(tenantFlags);
+          if (Object.keys(safeTenantFlags).length === 0) continue;
+          nextTenantOverrides[safeTenantId] = safeTenantFlags;
+        }
+        this._tenantOverrides = nextTenantOverrides;
       }
-      this._tenantOverrides = nextTenantOverrides;
     }
     if (isRecord(exportedUserOverrides)) {
-      const nextUserOverrides = Object.create(null);
-      for (const [userId, userFlags] of safeEntries(exportedUserOverrides)) {
-        const safeUserId = normalizeScopeId(userId);
-        if (!safeUserId) continue;
-        const safeUserFlags = createSafeRecord(userFlags);
-        if (Object.keys(safeUserFlags).length === 0) continue;
-        nextUserOverrides[safeUserId] = safeUserFlags;
+      const userKeys = safeKeys(exportedUserOverrides);
+      if (userKeys === null) {
+        // Keep existing state if source keys are unreadable (hostile map).
+      } else {
+        const nextUserOverrides = Object.create(null);
+        for (const [userId, userFlags] of safeEntries(exportedUserOverrides)) {
+          const safeUserId = normalizeScopeId(userId);
+          if (!safeUserId) continue;
+          const safeUserFlags = createSafeRecord(userFlags);
+          if (Object.keys(safeUserFlags).length === 0) continue;
+          nextUserOverrides[safeUserId] = safeUserFlags;
+        }
+        this._userOverrides = nextUserOverrides;
       }
-      this._userOverrides = nextUserOverrides;
     }
   }
 }

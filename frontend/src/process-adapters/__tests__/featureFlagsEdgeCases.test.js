@@ -903,4 +903,26 @@ describe('featureFlags edge cases', () => {
 
     brokenIso.mockRestore();
   });
+
+  it('import nao apaga overrides existentes quando mapas de override sao hostis', () => {
+    const manager = new FeatureFlagManager({ base: false });
+    manager.setTenantFlags('tenant-1', { tenantKeep: true });
+    manager.setUserFlags('user-1', { userKeep: 'yes' });
+
+    const hostileMap = new Proxy({}, {
+      ownKeys() {
+        throw new Error('keys-boom');
+      },
+      getOwnPropertyDescriptor() {
+        throw new Error('desc-boom');
+      },
+      get() {
+        throw new Error('get-boom');
+      },
+    });
+
+    expect(() => manager.import({ tenantOverrides: hostileMap, userOverrides: hostileMap })).not.toThrow();
+    expect(manager.isEnabled('tenantKeep', { tenantId: 'tenant-1' })).toBe(true);
+    expect(manager.isEnabled('userKeep', { userId: 'user-1' })).toBe(true);
+  });
 });
