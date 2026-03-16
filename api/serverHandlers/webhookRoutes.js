@@ -62,7 +62,6 @@ async function handleWebhookRoutes({ req, res, method, pathname, deps }) {
               // Atualiza status delivery/read/failed quando disponível (best-effort)
               if (Array.isArray(value.statuses) && value.statuses.length > 0) {
                 // eslint-disable-next-line no-await-in-loop
-                const { channelGatewayService } = require('../services/channelGatewayService');
                 await channelGatewayService.updateStatus('whatsapp', { value }).catch(() => null);
               }
               const messages = value.messages || [];

@@ -533,7 +533,7 @@ async function handleFlowCrudRoutes(ctx) {
     }
     
     flows.delete(id);
-    deleteFlowBestEffort(id);
+    await deleteFlowBestEffort(id);
     
     // Dispara webhooks e WebSocket
     triggerWebhooks(flow.tenantId, 'flow.deleted', {

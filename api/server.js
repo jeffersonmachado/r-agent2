@@ -855,7 +855,7 @@ function persistFlowBestEffort(flow) {
   }
 }
 
-function deleteFlowBestEffort(flowId) {
+async function deleteFlowBestEffort(flowId) {
   try {
     const { getSequelize } = require('./db/sequelize');
     const sequelize = getSequelize();
@@ -863,13 +863,9 @@ function deleteFlowBestEffort(flowId) {
     const { Flow } = require('./db/models');
     const FlowModel = Flow();
 
-    setImmediate(() => {
-      FlowModel.destroy({ where: { id: flowId } }).catch((err) => {
-        logger.warn('[Flows] Falha ao remover flow no PostgreSQL', { flowId, error: err.message });
-      });
-    });
+    await FlowModel.destroy({ where: { id: flowId } });
   } catch (err) {
-    // best-effort
+    logger.warn('[Flows] Falha ao remover flow no PostgreSQL', { flowId, error: err.message });
   }
 }
 

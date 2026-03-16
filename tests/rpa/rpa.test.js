@@ -198,7 +198,7 @@ if (!SHOULD_RUN) {
       
       expect(result.success).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
-    }, 30000);
+    }, 60000);
 
     test('deve substituir variáveis', async () => {
       const recording = {

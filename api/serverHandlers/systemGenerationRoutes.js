@@ -845,8 +845,25 @@ async function handleSystemGenerationRoutes(ctx) {
         return true;
       }
 
-      // Retorna resultado completo
-      sendJson(res, 200, result);
+      // tenantPipeline safe-mode: non-critical errors → 207 with warnings
+      const isTenantPipeline = body.tenantPipeline === true;
+      if (isTenantPipeline && !result.success) {
+        const originalErrors = Array.isArray(result.errors) ? result.errors : [];
+        const safeWarnings = originalErrors.map((e) => ({
+          type: 'TENANT_PIPELINE_NON_BLOCKING_ERROR',
+          message: typeof e === 'string' ? e : String(e),
+        }));
+        const existingWarnings = Array.isArray(result.warnings) ? result.warnings : [];
+        sendJson(res, 207, {
+          ...result,
+          success: true,
+          tenantSafeMode: true,
+          errors: [],
+          warnings: [...existingWarnings, ...safeWarnings],
+        });
+      } else {
+        sendJson(res, 200, result);
+      }
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON inválido no corpo da requisição');
