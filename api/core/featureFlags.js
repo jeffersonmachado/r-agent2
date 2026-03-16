@@ -129,11 +129,19 @@ function createSafeRecord(input) {
 
 function mergeRecords(...records) {
   const output = Object.create(null);
+  let outputSize = 0;
   for (const record of records) {
     if (!isRecord(record)) continue;
     for (const [key, value] of safeEntries(record)) {
       const normalizedKey = normalizeFlagName(key);
       if (!normalizedKey) continue;
+
+      const hasKey = safeHasOwn(output, normalizedKey);
+      if (!hasKey) {
+        if (outputSize >= MAX_RECORD_ENTRIES) continue;
+        outputSize += 1;
+      }
+
       output[normalizedKey] = normalizeFlagValue(value);
     }
   }

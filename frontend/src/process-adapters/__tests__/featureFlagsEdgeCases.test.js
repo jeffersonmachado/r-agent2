@@ -814,4 +814,22 @@ describe('featureFlags edge cases', () => {
     expect(exported.tenantOverrides['tenant-hostile']).toBeUndefined();
     expect(exported.userOverrides['user-empty']).toBeUndefined();
   });
+
+  it('merge de flags por escopo aplica limite defensivo e ainda atualiza chave existente', () => {
+    const manager = new FeatureFlagManager();
+
+    const initialFlags = {};
+    for (let i = 0; i < 10000; i += 1) {
+      initialFlags[`feature-${i}`] = false;
+    }
+
+    manager.setTenantFlags('tenant-1', initialFlags);
+    manager.setTenantFlags('tenant-1', {
+      'feature-9999': true,
+      'feature-10000': true,
+    });
+
+    expect(manager.isEnabled('feature-9999', { tenantId: 'tenant-1' })).toBe(true);
+    expect(manager.isEnabled('feature-10000', { tenantId: 'tenant-1' })).toBe(false);
+  });
 });
