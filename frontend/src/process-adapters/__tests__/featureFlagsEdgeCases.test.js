@@ -285,4 +285,22 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'nullish' })).toBe(false);
     expect(byGroup.isEnabled({ group: 'active' })).toBe(true);
   });
+
+  it('trata strings nao reconhecidas como false para evitar habilitacao acidental', () => {
+    const manager = new FeatureFlagManager({
+      typoFlag: 'flase',
+      randomFlag: 'maybe',
+    });
+
+    expect(manager.isEnabled('typoFlag')).toBe(false);
+    expect(manager.isEnabled('randomFlag')).toBe(false);
+
+    const byGroup = RolloutStrategy.byGroup({
+      risky: { enabled: 'maybe' },
+      safe: { enabled: 'true' },
+    });
+
+    expect(byGroup.isEnabled({ group: 'risky' })).toBe(false);
+    expect(byGroup.isEnabled({ group: 'safe' })).toBe(true);
+  });
 });
