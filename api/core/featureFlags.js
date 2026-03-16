@@ -19,6 +19,7 @@
 const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const MAX_FLAG_VALUE_DEPTH = 8;
 const MAX_SCOPE_LIST_LENGTH = 10000;
+const MAX_RECORD_ENTRIES = 10000;
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -46,7 +47,8 @@ function safeEntries(record) {
     return [];
   }
   const entries = [];
-  for (const key of keys) {
+  const boundedKeys = keys.slice(0, MAX_RECORD_ENTRIES);
+  for (const key of boundedKeys) {
     try {
       entries.push([key, record[key]]);
     } catch {

@@ -573,4 +573,24 @@ describe('featureFlags edge cases', () => {
     expect(blacklist.isEnabled('blocked-at-limit')).toBe(false);
     expect(blacklist.isEnabled('blocked-beyond-limit')).toBe(true);
   });
+
+  it('sanitizacao de mapas aplica limite defensivo de quantidade de chaves', () => {
+    const hugeConfig = {};
+    for (let i = 0; i < 10005; i += 1) {
+      hugeConfig[`feature-${i}`] = i === 9999 || i === 10000;
+    }
+
+    const manager = new FeatureFlagManager(hugeConfig);
+    expect(manager.isEnabled('feature-9999')).toBe(true);
+    expect(manager.isEnabled('feature-10000')).toBe(false);
+
+    const hugeGroupMap = {};
+    for (let i = 0; i < 10005; i += 1) {
+      hugeGroupMap[`group-${i}`] = { enabled: i === 9999 || i === 10000 };
+    }
+
+    const byGroup = RolloutStrategy.byGroup(hugeGroupMap);
+    expect(byGroup.isEnabled({ group: 'group-9999' })).toBe(true);
+    expect(byGroup.isEnabled({ group: 'group-10000' })).toBe(false);
+  });
 });
