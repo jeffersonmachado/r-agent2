@@ -889,4 +889,18 @@ describe('featureFlags edge cases', () => {
     expect(strategy.getCurrentPhase()).toEqual({ phase: 1, percentage: 10 });
     invalidNow.mockRestore();
   });
+
+  it('export tolera Date.toISOString com erro e usa fallback deterministico', () => {
+    const manager = new FeatureFlagManager({ base: true });
+
+    const brokenIso = vi.spyOn(Date.prototype, 'toISOString').mockImplementation(() => {
+      throw new Error('iso-boom');
+    });
+
+    expect(() => manager.export()).not.toThrow();
+    const exported = manager.export();
+    expect(exported.exportedAt).toBe('1970-01-01T00:00:00.000Z');
+
+    brokenIso.mockRestore();
+  });
 });

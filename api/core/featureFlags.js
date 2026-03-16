@@ -21,6 +21,7 @@ const MAX_FLAG_VALUE_DEPTH = 8;
 const MAX_SCOPE_LIST_LENGTH = 10000;
 const MAX_RECORD_ENTRIES = 10000;
 const MAX_FEATURE_STATUS_KEYS = 20000;
+const FALLBACK_ISO_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 
 function isSafeArray(value) {
   try {
@@ -275,6 +276,15 @@ function getSafeDateTimestamp(date, fallback = 0) {
   }
 }
 
+function getSafeIsoTimestamp() {
+  try {
+    const iso = new Date().toISOString();
+    return typeof iso === 'string' && iso.length > 0 ? iso : FALLBACK_ISO_TIMESTAMP;
+  } catch {
+    return FALLBACK_ISO_TIMESTAMP;
+  }
+}
+
 function normalizePercentage(value) {
   const numericValue = safeToFiniteNumber(value);
   if (numericValue == null) return null;
@@ -421,7 +431,7 @@ export class FeatureFlagManager {
       config: safeConfig,
       tenantOverrides: safeTenantOverrides,
       userOverrides: safeUserOverrides,
-      exportedAt: new Date().toISOString(),
+      exportedAt: getSafeIsoTimestamp(),
     };
   }
 
