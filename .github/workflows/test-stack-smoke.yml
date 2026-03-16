@@ -48,7 +48,11 @@ jobs:
           docker --version
           docker compose version
 
+      - name: Record stack smoke start
+        run: echo "STACK_SMOKE_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Run full test stack workflow
+        id: stack_full
         env:
           STACK_KEEP_UP: '1'
         run: npm run test:stack:full
@@ -77,8 +81,25 @@ jobs:
       - name: Summarize stack smoke
         if: always()
         run: |
+          END_TS="$(date +%s)"
+          DURATION="unknown"
+          if [ -n "${STACK_SMOKE_STARTED_AT:-}" ]; then
+            DURATION="$((END_TS - STACK_SMOKE_STARTED_AT))s"
+          fi
+
           echo "## Test Stack Smoke" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Outcome: ${{ steps.stack_full.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Duration: ${DURATION}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Command: npm run test:stack:full" >> "$GITHUB_STEP_SUMMARY"
           echo "- Non-blocking workflow: enabled" >> "$GITHUB_STEP_SUMMARY"
           echo "- Diagnostics artifact: test-stack-smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cleanup: docker compose down -v" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f /tmp/test-stack-ps.txt ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "### docker compose ps" >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/test-stack-ps.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
