@@ -652,4 +652,34 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'unstable' })).toBe(false);
     expect(byGroup.isEnabled({ group: 'stable' })).toBe(true);
   });
+
+  it('getFeatureStatus e export toleram mapas hostis e preservam dados validos', () => {
+    const manager = new FeatureFlagManager({ base: true });
+    manager.setTenantFlags('tenant-safe', { tenantOnly: 'yes' });
+
+    const hostileScopeMap = new Proxy({}, {
+      ownKeys() {
+        throw new Error('scope-keys-boom');
+      },
+      getOwnPropertyDescriptor() {
+        throw new Error('scope-desc-boom');
+      },
+      get() {
+        throw new Error('scope-get-boom');
+      },
+    });
+
+    manager._userOverrides = hostileScopeMap;
+
+    expect(() => manager.getFeatureStatus({ tenantId: 'tenant-safe' })).not.toThrow();
+    const status = manager.getFeatureStatus({ tenantId: 'tenant-safe' });
+    expect(status.base).toBe(true);
+    expect(status.tenantOnly).toBe(true);
+
+    expect(() => manager.export()).not.toThrow();
+    const exported = manager.export();
+    expect(exported.config.base).toBe(true);
+    expect(exported.tenantOverrides['tenant-safe'].tenantOnly).toBe(true);
+    expect(exported.userOverrides).toEqual({});
+  });
 });

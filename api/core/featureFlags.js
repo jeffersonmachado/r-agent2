@@ -127,6 +127,44 @@ function mergeRecords(...records) {
   return output;
 }
 
+function collectFlagNamesFromRecord(record, targetSet) {
+  if (!isRecord(record) || !(targetSet instanceof Set)) return;
+  for (const [flagKey] of safeEntries(record)) {
+    const normalizedFlag = normalizeFlagName(flagKey);
+    if (!normalizedFlag) continue;
+    targetSet.add(normalizedFlag);
+  }
+}
+
+function collectFlagNamesFromScopedOverrides(scopedOverrides, targetSet) {
+  if (!isRecord(scopedOverrides) || !(targetSet instanceof Set)) return;
+  for (const [, flags] of safeEntries(scopedOverrides)) {
+    collectFlagNamesFromRecord(flags, targetSet);
+  }
+}
+
+function toExportFlagRecord(record) {
+  const output = {};
+  if (!isRecord(record)) return output;
+  for (const [flagKey, flagValue] of safeEntries(record)) {
+    const normalizedFlag = normalizeFlagName(flagKey);
+    if (!normalizedFlag) continue;
+    output[normalizedFlag] = normalizeFlagValue(flagValue);
+  }
+  return output;
+}
+
+function toExportScopedOverrides(scopedOverrides) {
+  const output = {};
+  if (!isRecord(scopedOverrides)) return output;
+  for (const [scopeId, flags] of safeEntries(scopedOverrides)) {
+    const normalizedScopeId = normalizeScopeId(scopeId);
+    if (!normalizedScopeId) continue;
+    output[normalizedScopeId] = toExportFlagRecord(flags);
+  }
+  return output;
+}
+
 function normalizeScopeId(scopeId) {
   if (typeof scopeId !== 'string') return '';
   const normalized = scopeId.trim();
@@ -266,18 +304,10 @@ export class FeatureFlagManager {
    * @returns {Object}
    */
   getFeatureStatus(context = {}) {
-    const tenantKeySets = Object.values(this._tenantOverrides)
-      .filter((value) => value && typeof value === 'object')
-      .flatMap((value) => Object.keys(value));
-    const userKeySets = Object.values(this._userOverrides)
-      .filter((value) => value && typeof value === 'object')
-      .flatMap((value) => Object.keys(value));
-
-    const allKeys = new Set([
-      ...Object.keys(this._config),
-      ...tenantKeySets,
-      ...userKeySets,
-    ]);
+    const allKeys = new Set();
+    collectFlagNamesFromRecord(this._config, allKeys);
+    collectFlagNamesFromScopedOverrides(this._tenantOverrides, allKeys);
+    collectFlagNamesFromScopedOverrides(this._userOverrides, allKeys);
 
     const status = {};
     for (const key of allKeys) {
@@ -291,10 +321,14 @@ export class FeatureFlagManager {
    * @returns {{ config: Object, tenantOverrides: Object, userOverrides: Object, exportedAt: string }}
    */
   export() {
+    const safeConfig = toExportFlagRecord(this._config);
+    const safeTenantOverrides = toExportScopedOverrides(this._tenantOverrides);
+    const safeUserOverrides = toExportScopedOverrides(this._userOverrides);
+
     return {
-      config: { ...this._config },
-      tenantOverrides: JSON.parse(JSON.stringify(this._tenantOverrides)),
-      userOverrides: JSON.parse(JSON.stringify(this._userOverrides)),
+      config: safeConfig,
+      tenantOverrides: safeTenantOverrides,
+      userOverrides: safeUserOverrides,
       exportedAt: new Date().toISOString(),
     };
   }
