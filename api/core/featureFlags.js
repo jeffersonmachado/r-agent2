@@ -22,6 +22,12 @@ const MAX_SCOPE_LIST_LENGTH = 10000;
 const MAX_RECORD_ENTRIES = 10000;
 const MAX_FEATURE_STATUS_KEYS = 20000;
 const FALLBACK_ISO_TIMESTAMP = '1970-01-01T00:00:00.000Z';
+const DURATION_UNIT_MULTIPLIERS = Object.freeze({ ms: 1, s: 1000, m: 60000, h: 3600000, d: 86400000 });
+const EMPTY_SCOPE_SET = Object.freeze({
+  has() {
+    return false;
+  },
+});
 
 function isSafeArray(value) {
   try {
@@ -238,11 +244,8 @@ function safeSet(record, key, value) {
 }
 
 function isEmptySafeRecord(record) {
-  try {
-    return Object.keys(record).length === 0;
-  } catch {
-    return true;
-  }
+  const keys = safeKeys(record);
+  return keys == null || keys.length === 0;
 }
 
 function rebuildScopedOverrides(scopedOverrides) {
@@ -369,11 +372,7 @@ function createSafeScopeSet(scopeIds) {
   try {
     return new Set(scopeIds);
   } catch {
-    return {
-      has() {
-        return false;
-      },
-    };
+    return EMPTY_SCOPE_SET;
   }
 }
 
@@ -572,8 +571,7 @@ export class RolloutStrategy {
       const value = safeToFiniteNumber(match[1]);
       if (value == null || value <= 0) return 0;
       const unit = match[2];
-      const multiplierMap = { ms: 1, s: 1000, m: 60000, h: 3600000, d: 86400000 };
-      const multiplier = safeToFiniteNumber(multiplierMap[unit]);
+      const multiplier = safeToFiniteNumber(DURATION_UNIT_MULTIPLIERS[unit]);
       if (multiplier == null || multiplier <= 0) return 0;
       const durationMs = value * multiplier;
       return Number.isFinite(durationMs) && durationMs > 0 ? durationMs : 0;
