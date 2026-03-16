@@ -84,6 +84,25 @@ function normalizePercentage(value) {
   return numericValue;
 }
 
+function normalizeStartDate(value) {
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value;
+  if (typeof value === 'number') {
+    const parsed = new Date(value);
+    if (Number.isFinite(parsed.getTime())) return parsed;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    const numericTimestamp = /^\d+$/.test(trimmed) ? Number(trimmed) : NaN;
+    if (Number.isFinite(numericTimestamp)) {
+      const parsedFromTimestamp = new Date(numericTimestamp);
+      if (Number.isFinite(parsedFromTimestamp.getTime())) return parsedFromTimestamp;
+    }
+    const parsed = new Date(trimmed);
+    if (Number.isFinite(parsed.getTime())) return parsed;
+  }
+  return new Date();
+}
+
 export class FeatureFlagManager {
   /**
    * @param {Object} [config={}] Mapa de flag -> valor booleano padrão
@@ -229,11 +248,14 @@ export class RolloutStrategy {
    */
   static gradual(options) {
     const safeOptions = options && typeof options === 'object' ? options : {};
-    const rawStartDate = safeOptions.startDate instanceof Date ? safeOptions.startDate : new Date();
-    const startDate = Number.isFinite(rawStartDate.getTime()) ? rawStartDate : new Date();
+    const startDate = normalizeStartDate(safeOptions.startDate);
 
     function parseDurationMs(duration) {
       if (!duration) return 0;
+      if (typeof duration === 'number') {
+        if (!Number.isFinite(duration) || duration <= 0) return 0;
+        return duration;
+      }
       const normalizedDuration = String(duration).trim().toLowerCase();
       const match = normalizedDuration.match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)$/);
       if (!match) return 0;

@@ -184,4 +184,20 @@ describe('featureFlags edge cases', () => {
     expect(manager.isEnabled('featureUserNo', { userId: 'user-1' })).toBe(false);
     expect(manager.isEnabled('featureUserYes', { userId: 'user-1' })).toBe(true);
   });
+
+  it('gradual aceita startDate em string/timestamp e duration numerica em ms', () => {
+    const strategyFromStringDate = RolloutStrategy.gradual({
+      startDate: String(Date.now() - 3000),
+      phase1: { percentage: 10, duration: 1000 },
+      phase2: { percentage: 60, duration: 1000 },
+      phase3: { percentage: 90 },
+    });
+    expect(strategyFromStringDate.getCurrentPhase()).toEqual({ phase: 3, percentage: 90 });
+
+    const strategyInvalidDuration = RolloutStrategy.gradual({
+      startDate: Date.now() - 5000,
+      phase1: { percentage: 20, duration: -100 },
+    });
+    expect(strategyInvalidDuration.getCurrentPhase()).toEqual({ phase: 1, percentage: 20 });
+  });
 });
