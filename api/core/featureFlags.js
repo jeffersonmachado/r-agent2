@@ -165,6 +165,14 @@ function toExportScopedOverrides(scopedOverrides) {
   return output;
 }
 
+function getOverrideValue(scopedOverrides, scopeId, flagName) {
+  if (!scopeId || !flagName) return undefined;
+  const scopeFlags = safeGet(scopedOverrides, scopeId);
+  if (!isRecord(scopeFlags)) return undefined;
+  if (!safeHasOwn(scopeFlags, flagName)) return undefined;
+  return safeGet(scopeFlags, flagName);
+}
+
 function normalizeScopeId(scopeId) {
   if (typeof scopeId !== 'string') return '';
   const normalized = scopeId.trim();
@@ -257,21 +265,17 @@ export class FeatureFlagManager {
     const tenantId = normalizeScopeId(safeGet(context, 'tenantId'));
     const userId = normalizeScopeId(safeGet(context, 'userId'));
 
-    if (userId && this._userOverrides[userId]) {
-      const userFlags = this._userOverrides[userId];
-      if (safeHasOwn(userFlags, normalizedFlagName)) {
-        return Boolean(userFlags[normalizedFlagName]);
-      }
+    const userOverride = getOverrideValue(this._userOverrides, userId, normalizedFlagName);
+    if (userOverride !== undefined) {
+      return normalizeFlagValue(userOverride);
     }
 
-    if (tenantId && this._tenantOverrides[tenantId]) {
-      const tenantFlags = this._tenantOverrides[tenantId];
-      if (safeHasOwn(tenantFlags, normalizedFlagName)) {
-        return Boolean(tenantFlags[normalizedFlagName]);
-      }
+    const tenantOverride = getOverrideValue(this._tenantOverrides, tenantId, normalizedFlagName);
+    if (tenantOverride !== undefined) {
+      return normalizeFlagValue(tenantOverride);
     }
 
-    return Boolean(this._config[normalizedFlagName]);
+    return normalizeFlagValue(safeGet(this._config, normalizedFlagName));
   }
 
   /**

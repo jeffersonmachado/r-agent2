@@ -682,4 +682,47 @@ describe('featureFlags edge cases', () => {
     expect(exported.tenantOverrides['tenant-safe'].tenantOnly).toBe(true);
     expect(exported.userOverrides).toEqual({});
   });
+
+  it('isEnabled tolera mapas de override hostis e aplica fallback seguro', () => {
+    const manager = new FeatureFlagManager({ baseFlag: true, tenantFlag: false });
+    manager.setTenantFlags('tenant-safe', { tenantFlag: true });
+
+    manager._userOverrides = new Proxy({}, {
+      get() {
+        throw new Error('user-map-get-boom');
+      },
+      getOwnPropertyDescriptor() {
+        throw new Error('user-map-desc-boom');
+      },
+    });
+
+    manager._tenantOverrides = new Proxy({
+      'tenant-safe': new Proxy({ tenantFlag: true }, {
+        get(target, key) {
+          if (key === 'tenantFlag') throw new Error('tenant-flag-get-boom');
+          return target[key];
+        },
+        getOwnPropertyDescriptor(target, key) {
+          if (key === 'tenantFlag') throw new Error('tenant-flag-desc-boom');
+          return Object.getOwnPropertyDescriptor(target, key);
+        },
+      }),
+    }, {
+      get(target, key) {
+        if (key === 'tenant-safe') return target[key];
+        throw new Error('tenant-map-get-boom');
+      },
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'tenant-safe') {
+          return Object.getOwnPropertyDescriptor(target, key);
+        }
+        throw new Error('tenant-map-desc-boom');
+      },
+    });
+
+    expect(() => manager.isEnabled('baseFlag', { userId: 'user-1' })).not.toThrow();
+    expect(manager.isEnabled('baseFlag', { userId: 'user-1' })).toBe(true);
+    expect(() => manager.isEnabled('tenantFlag', { tenantId: 'tenant-safe' })).not.toThrow();
+    expect(manager.isEnabled('tenantFlag', { tenantId: 'tenant-safe' })).toBe(false);
+  });
 });
