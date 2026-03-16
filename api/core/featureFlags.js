@@ -134,16 +134,31 @@ function normalizeScopeId(scopeId) {
   return normalized;
 }
 
+function safeToFiniteNumber(value) {
+  try {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizePercentage(value) {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) return null;
+  const numericValue = safeToFiniteNumber(value);
+  if (numericValue == null) return null;
   if (numericValue < 0) return 0;
   if (numericValue > 100) return 100;
   return numericValue;
 }
 
 function normalizeStartDate(value) {
-  if (value instanceof Date && Number.isFinite(value.getTime())) return value;
+  if (value instanceof Date) {
+    try {
+      if (Number.isFinite(value.getTime())) return value;
+    } catch {
+      // Fall through to default date.
+    }
+  }
   if (typeof value === 'number') {
     const parsed = new Date(value);
     if (Number.isFinite(parsed.getTime())) return parsed;
@@ -337,9 +352,14 @@ export class RolloutStrategy {
         if (!Number.isFinite(duration) || duration <= 0) return 0;
         return duration;
       }
-      const normalizedDuration = String(duration).trim().toLowerCase();
-      const numericOnly = Number(normalizedDuration);
-      if (Number.isFinite(numericOnly)) {
+      let normalizedDuration = '';
+      try {
+        normalizedDuration = String(duration).trim().toLowerCase();
+      } catch {
+        return 0;
+      }
+      const numericOnly = safeToFiniteNumber(normalizedDuration);
+      if (numericOnly != null) {
         return numericOnly > 0 ? numericOnly : 0;
       }
       const match = normalizedDuration.match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/);

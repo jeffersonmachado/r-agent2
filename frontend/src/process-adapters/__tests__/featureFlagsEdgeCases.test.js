@@ -516,6 +516,38 @@ describe('featureFlags edge cases', () => {
     expect(manager.isEnabled('base', context)).toBe(true);
   });
 
+  it('gradual tolera coercoes hostis em percentage/duration e Date#getTime invalido', () => {
+    const throwingCoercion = {
+      [Symbol.toPrimitive]() {
+        throw new Error('coercion-boom');
+      },
+    };
+
+    const strategy = RolloutStrategy.gradual({
+      startDate: Date.now() - 5000,
+      phase1: { percentage: throwingCoercion, duration: throwingCoercion },
+      phase2: { percentage: '70' },
+    });
+
+    expect(() => strategy.getCurrentPhase()).not.toThrow();
+    expect(strategy.getCurrentPhase()).toEqual({ phase: 2, percentage: 70 });
+
+    const brokenDate = new Date();
+    Object.defineProperty(brokenDate, 'getTime', {
+      value() {
+        throw new Error('date-boom');
+      },
+    });
+
+    const safeDateStrategy = RolloutStrategy.gradual({
+      startDate: brokenDate,
+      phase1: { percentage: 30 },
+    });
+
+    expect(() => safeDateStrategy.getCurrentPhase()).not.toThrow();
+    expect(safeDateStrategy.getCurrentPhase()).toEqual({ phase: 1, percentage: 30 });
+  });
+
   it('whitelist e blacklist toleram listas com getters que lancam erro', () => {
     const allowedList = [];
     Object.defineProperty(allowedList, '0', {
