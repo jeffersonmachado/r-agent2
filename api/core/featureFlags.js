@@ -186,6 +186,37 @@ function getOverrideValue(scopedOverrides, scopeId, flagName) {
   return safeGet(scopeFlags, flagName);
 }
 
+function safeSet(record, key, value) {
+  if (!record) return false;
+  try {
+    record[key] = value;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function rebuildScopedOverrides(scopedOverrides) {
+  const rebuilt = Object.create(null);
+  for (const [scopeId, flags] of safeEntries(scopedOverrides)) {
+    const normalizedScopeId = normalizeScopeId(scopeId);
+    if (!normalizedScopeId) continue;
+    rebuilt[normalizedScopeId] = createSafeRecord(flags);
+  }
+  return rebuilt;
+}
+
+function upsertScopedFlags(scopedOverrides, scopeId, safeFlags) {
+  const merged = mergeRecords(safeGet(scopedOverrides, scopeId), safeFlags);
+  if (safeSet(scopedOverrides, scopeId, merged)) {
+    return scopedOverrides;
+  }
+
+  const rebuilt = rebuildScopedOverrides(scopedOverrides);
+  rebuilt[scopeId] = mergeRecords(rebuilt[scopeId], safeFlags);
+  return rebuilt;
+}
+
 function normalizeScopeId(scopeId) {
   if (typeof scopeId !== 'string') return '';
   const normalized = scopeId.trim();
@@ -300,7 +331,7 @@ export class FeatureFlagManager {
     const safeTenantId = normalizeScopeId(tenantId);
     if (!safeTenantId) return;
     const safeFlags = createSafeRecord(flags);
-    this._tenantOverrides[safeTenantId] = mergeRecords(this._tenantOverrides[safeTenantId], safeFlags);
+    this._tenantOverrides = upsertScopedFlags(this._tenantOverrides, safeTenantId, safeFlags);
   }
 
   /**
@@ -312,7 +343,7 @@ export class FeatureFlagManager {
     const safeUserId = normalizeScopeId(userId);
     if (!safeUserId) return;
     const safeFlags = createSafeRecord(flags);
-    this._userOverrides[safeUserId] = mergeRecords(this._userOverrides[safeUserId], safeFlags);
+    this._userOverrides = upsertScopedFlags(this._userOverrides, safeUserId, safeFlags);
   }
 
   /**

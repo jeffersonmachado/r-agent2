@@ -744,4 +744,43 @@ describe('featureFlags edge cases', () => {
     revokedConfig.revoke();
     expect(() => new FeatureFlagManager(revokedConfig.proxy)).not.toThrow();
   });
+
+  it('setTenantFlags e setUserFlags toleram mapas internos hostis em escrita', () => {
+    const manager = new FeatureFlagManager({ baseFlag: false });
+
+    manager._tenantOverrides = new Proxy({}, {
+      set() {
+        throw new Error('tenant-set-boom');
+      },
+      get() {
+        return undefined;
+      },
+      ownKeys() {
+        return [];
+      },
+      getOwnPropertyDescriptor() {
+        return undefined;
+      },
+    });
+
+    manager._userOverrides = new Proxy({}, {
+      set() {
+        throw new Error('user-set-boom');
+      },
+      get() {
+        return undefined;
+      },
+      ownKeys() {
+        return [];
+      },
+      getOwnPropertyDescriptor() {
+        return undefined;
+      },
+    });
+
+    expect(() => manager.setTenantFlags('tenant-1', { tenantFeature: true })).not.toThrow();
+    expect(() => manager.setUserFlags('user-1', { userFeature: 'yes' })).not.toThrow();
+    expect(manager.isEnabled('tenantFeature', { tenantId: 'tenant-1' })).toBe(true);
+    expect(manager.isEnabled('userFeature', { userId: 'user-1' })).toBe(true);
+  });
 });
