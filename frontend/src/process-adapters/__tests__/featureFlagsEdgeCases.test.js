@@ -725,4 +725,23 @@ describe('featureFlags edge cases', () => {
     expect(() => manager.isEnabled('tenantFlag', { tenantId: 'tenant-safe' })).not.toThrow();
     expect(manager.isEnabled('tenantFlag', { tenantId: 'tenant-safe' })).toBe(false);
   });
+
+  it('tolera proxy revogado em caminhos que usam isRecord', () => {
+    const revokedValue = Proxy.revocable({}, {});
+    revokedValue.revoke();
+
+    const manager = new FeatureFlagManager({ revokedFlag: revokedValue.proxy });
+    expect(() => manager.isEnabled('revokedFlag')).not.toThrow();
+    expect(manager.isEnabled('revokedFlag')).toBe(false);
+
+    const revokedByGroupValue = Proxy.revocable({}, {});
+    revokedByGroupValue.revoke();
+    const byGroup = RolloutStrategy.byGroup({ unstable: revokedByGroupValue.proxy });
+    expect(() => byGroup.isEnabled({ group: 'unstable' })).not.toThrow();
+    expect(byGroup.isEnabled({ group: 'unstable' })).toBe(false);
+
+    const revokedConfig = Proxy.revocable({}, {});
+    revokedConfig.revoke();
+    expect(() => new FeatureFlagManager(revokedConfig.proxy)).not.toThrow();
+  });
 });

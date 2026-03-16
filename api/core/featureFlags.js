@@ -21,8 +21,21 @@ const MAX_FLAG_VALUE_DEPTH = 8;
 const MAX_SCOPE_LIST_LENGTH = 10000;
 const MAX_RECORD_ENTRIES = 10000;
 
+function isSafeArray(value) {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
 function isRecord(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  if (!value) return false;
+  try {
+    return typeof value === 'object' && !isSafeArray(value);
+  } catch {
+    return false;
+  }
 }
 
 function isSafeKey(key) {
@@ -85,7 +98,7 @@ function normalizeFlagValue(value, depth = 0) {
     }
     return false;
   }
-  if (Array.isArray(value)) return false;
+  if (isSafeArray(value)) return false;
   if (value == null) return false;
   if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') return false;
   if (typeof value === 'boolean') return value;
@@ -223,7 +236,7 @@ function normalizeStartDate(value) {
 }
 
 function normalizeScopeIdList(input) {
-  if (!Array.isArray(input)) return [];
+  if (!isSafeArray(input)) return [];
   let length = 0;
   try {
     length = input.length;
