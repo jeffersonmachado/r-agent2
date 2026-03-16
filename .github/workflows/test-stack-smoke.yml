@@ -1,0 +1,84 @@
+name: Test Stack Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docker-compose.test.yml'
+      - 'package.json'
+      - 'scripts/test-stack-*.sh'
+      - 'api/**'
+      - 'engine/**'
+      - 'frontend/**'
+      - 'infra/**'
+      - 'rag-service/**'
+      - '.github/workflows/test-stack-smoke.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docker-compose.test.yml'
+      - 'package.json'
+      - 'scripts/test-stack-*.sh'
+      - 'api/**'
+      - 'engine/**'
+      - 'frontend/**'
+      - 'infra/**'
+      - 'rag-service/**'
+      - '.github/workflows/test-stack-smoke.yml'
+
+jobs:
+  stack-smoke:
+    name: Stack Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+
+      - name: Show Docker versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Run full test stack workflow
+        env:
+          STACK_KEEP_UP: '1'
+        run: npm run test:stack:full
+
+      - name: Capture docker compose diagnostics
+        if: always()
+        run: |
+          docker compose -f docker-compose.test.yml ps > /tmp/test-stack-ps.txt || true
+          docker compose -f docker-compose.test.yml logs --no-color > /tmp/test-stack.log || true
+
+      - name: Upload stack smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-stack-smoke
+          path: |
+            /tmp/test-stack-ps.txt
+            /tmp/test-stack.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Cleanup test stack
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v || true
+
+      - name: Summarize stack smoke
+        if: always()
+        run: |
+          echo "## Test Stack Smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Command: npm run test:stack:full" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Non-blocking workflow: enabled" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Diagnostics artifact: test-stack-smoke" >> "$GITHUB_STEP_SUMMARY"
