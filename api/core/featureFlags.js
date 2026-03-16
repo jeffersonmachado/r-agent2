@@ -17,6 +17,7 @@
  * --------------------------------------------------------------------- */
 
 const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const MAX_FLAG_VALUE_DEPTH = 8;
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -33,10 +34,11 @@ function normalizeFlagName(flagName) {
   return normalized;
 }
 
-function normalizeFlagValue(value) {
+function normalizeFlagValue(value, depth = 0) {
+  if (depth >= MAX_FLAG_VALUE_DEPTH) return false;
   if (isRecord(value)) {
     if (Object.prototype.hasOwnProperty.call(value, 'enabled')) {
-      return normalizeFlagValue(value.enabled);
+      return normalizeFlagValue(value.enabled, depth + 1);
     }
     return false;
   }

@@ -325,4 +325,27 @@ describe('featureFlags edge cases', () => {
     expect(byGroup.isEnabled({ group: 'nested' })).toBe(true);
     expect(byGroup.isEnabled({ group: 'flat' })).toBe(false);
   });
+
+  it('protege contra recursao infinita em enabled ciclico', () => {
+    const cyclic = {};
+    cyclic.enabled = cyclic;
+
+    const manager = new FeatureFlagManager({
+      cyclicFlag: cyclic,
+      nestedFlag: { enabled: { enabled: 'true' } },
+    });
+
+    expect(() => manager.isEnabled('cyclicFlag')).not.toThrow();
+    expect(manager.isEnabled('cyclicFlag')).toBe(false);
+    expect(manager.isEnabled('nestedFlag')).toBe(true);
+
+    const byGroup = RolloutStrategy.byGroup({
+      cyclic: { enabled: cyclic },
+      nested: { enabled: { enabled: 'yes' } },
+    });
+
+    expect(() => byGroup.isEnabled({ group: 'cyclic' })).not.toThrow();
+    expect(byGroup.isEnabled({ group: 'cyclic' })).toBe(false);
+    expect(byGroup.isEnabled({ group: 'nested' })).toBe(true);
+  });
 });
