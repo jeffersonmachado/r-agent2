@@ -22,8 +22,22 @@ function newId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
 
-function safeStr(v) {
-  return v == null ? '' : String(v).trim();
+function safeToString(v, fallback = '') {
+  if (v == null) return fallback;
+  try {
+    return String(v);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeStr(v, fallback = '') {
+  const raw = safeToString(v, fallback);
+  try {
+    return raw.trim();
+  } catch (_) {
+    return fallback;
+  }
 }
 
 function normalizeEmail(v) {
@@ -47,7 +61,7 @@ async function listForms({ tenantId }) {
   if (!dbAvailable()) return [];
   const Model = MarketingForm();
   const rows = await Model.findAll({
-    where: { tenant_key: String(tenantId) },
+    where: { tenant_key: safeStr(tenantId) },
     order: [['updated_at', 'DESC']],
     limit: 2000,
   });
@@ -56,7 +70,7 @@ async function listForms({ tenantId }) {
 
 async function upsertForm({ tenantId, slug, name, fields = {}, landingHtml = null, settings = {}, status = 'active' }) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
-  const t = String(tenantId || '').trim();
+  const t = safeStr(tenantId || '');
   const s = safeStr(slug).toLowerCase().replace(/[^a-z0-9-_]/g, '-');
   if (!t) return { ok: false, error: 'tenant_required' };
   if (!s) return { ok: false, error: 'slug_required' };
@@ -67,9 +81,9 @@ async function upsertForm({ tenantId, slug, name, fields = {}, landingHtml = nul
   const row = existing
     ? await existing.update({
       name: n,
-      status: String(status || 'active'),
+      status: safeToString(status || 'active'),
       fields: fields && typeof fields === 'object' ? fields : {},
-      landing_html: landingHtml != null ? String(landingHtml) : null,
+      landing_html: landingHtml != null ? safeToString(landingHtml) : null,
       settings: settings && typeof settings === 'object' ? settings : {},
     })
     : await Model.create({
@@ -77,9 +91,9 @@ async function upsertForm({ tenantId, slug, name, fields = {}, landingHtml = nul
       tenant_key: t,
       slug: s,
       name: n,
-      status: String(status || 'active'),
+      status: safeToString(status || 'active'),
       fields: fields && typeof fields === 'object' ? fields : {},
-      landing_html: landingHtml != null ? String(landingHtml) : null,
+      landing_html: landingHtml != null ? safeToString(landingHtml) : null,
       settings: settings && typeof settings === 'object' ? settings : {},
     });
 
@@ -90,14 +104,14 @@ async function getFormBySlug({ tenantId, slug }) {
   if (!dbAvailable()) return null;
   const Model = MarketingForm();
   const s = safeStr(slug).toLowerCase();
-  const row = await Model.findOne({ where: { tenant_key: String(tenantId), slug: s } });
+  const row = await Model.findOne({ where: { tenant_key: safeStr(tenantId), slug: s } });
   return row ? (row.toJSON ? row.toJSON() : row) : null;
 }
 
 async function upsertLead({ tenantId, email = null, phone = null, externalId = null, name = null, attributesPatch = null, stage = null, lastSeenAt = null } = {}) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
   const Model = MarketingLead();
-  const t = String(tenantId || '').trim();
+  const t = safeStr(tenantId || '');
   if (!t) return { ok: false, error: 'tenant_required' };
 
   const e = normalizeEmail(email);
@@ -117,8 +131,8 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
     ...(p ? { phone: p } : {}),
     ...(x ? { external_id: x } : {}),
     ...(nm ? { name: nm } : {}),
-    ...(stage ? { stage: String(stage) } : {}),
-    ...(lastSeenAt ? { last_seen_at: lastSeenAt instanceof Date ? lastSeenAt : new Date(String(lastSeenAt)) } : { last_seen_at: now }),
+    ...(stage ? { stage: safeToString(stage) } : {}),
+    ...(lastSeenAt ? { last_seen_at: lastSeenAt instanceof Date ? lastSeenAt : new Date(safeToString(lastSeenAt)) } : { last_seen_at: now }),
   };
 
   if (row) {
@@ -136,7 +150,7 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
     phone: p,
     external_id: x,
     name: nm,
-    stage: stage ? String(stage) : (e || p ? 'lead' : 'visitor'),
+    stage: stage ? safeToString(stage) : (e || p ? 'lead' : 'visitor'),
     score: 0,
     attributes: attrs0 || {},
     last_seen_at: now,
@@ -150,7 +164,7 @@ async function listScoringRules({ tenantId }) {
   if (!dbAvailable()) return [];
   const Model = MarketingScoringRule();
   const rows = await Model.findAll({
-    where: { tenant_key: String(tenantId) },
+    where: { tenant_key: safeStr(tenantId) },
     order: [['updated_at', 'DESC']],
     limit: 5000,
   });
@@ -160,14 +174,14 @@ async function listScoringRules({ tenantId }) {
 async function upsertScoringRule({ tenantId, id = null, name, enabled = true, eventType, delta = 0, conditions = null }) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
   const Model = MarketingScoringRule();
-  const t = String(tenantId || '').trim();
+  const t = safeStr(tenantId || '');
   if (!t) return { ok: false, error: 'tenant_required' };
   const n = safeStr(name);
   const et = safeStr(eventType);
   if (!n) return { ok: false, error: 'name_required' };
   if (!et) return { ok: false, error: 'event_type_required' };
 
-  const existing = id ? await Model.findOne({ where: { tenant_key: t, id: String(id) } }) : null;
+  const existing = id ? await Model.findOne({ where: { tenant_key: t, id: safeToString(id) } }) : null;
   const row = existing
     ? await existing.update({
       name: n,
@@ -196,7 +210,7 @@ async function applyScoring({ tenantId, leadId, eventType, payload = {} }) {
   const LeadModel = MarketingLead();
 
   const rules = await RuleModel.findAll({
-    where: { tenant_key: String(tenantId), enabled: true, event_type: String(eventType) },
+    where: { tenant_key: safeStr(tenantId), enabled: true, event_type: safeToString(eventType) },
     order: [['created_at', 'ASC']],
     limit: 1000,
   }).catch(() => []);
@@ -204,32 +218,32 @@ async function applyScoring({ tenantId, leadId, eventType, payload = {} }) {
   const delta = (rules || []).reduce((sum, r) => sum + (Number(r.delta) || 0), 0);
   if (!delta) return { ok: true, applied: rules.length, delta: 0 };
 
-  const leadRow = await LeadModel.findOne({ where: { tenant_key: String(tenantId), id: String(leadId) } });
+  const leadRow = await LeadModel.findOne({ where: { tenant_key: safeStr(tenantId), id: safeToString(leadId) } });
   if (!leadRow) return { ok: false, error: 'lead_not_found' };
   await leadRow.update({ score: (Number(leadRow.score) || 0) + delta, updated_at: new Date() });
   return { ok: true, applied: rules.length, delta };
 }
 
 async function recordMarketingEvent({ tenantId, eventType, correlationId = null, lead = null, payload = {} } = {}) {
-  const leadId = lead && lead.id ? String(lead.id) : null;
+  const leadId = lead && lead.id ? safeToString(lead.id) : null;
   const subject = leadId ? { type: 'marketing_lead', id: leadId } : { type: 'marketing', id: 'anonymous' };
-  const idemKey = payload && payload.idempotencyKey ? String(payload.idempotencyKey) : null;
+  const idemKey = payload && payload.idempotencyKey ? safeToString(payload.idempotencyKey) : null;
   return appendEventV1({
     tenantId,
-    type: String(eventType),
+    type: safeToString(eventType),
     source: 'marketing.v1',
     occurredAt: new Date(),
-    correlationId: correlationId ? String(correlationId) : null,
+    correlationId: correlationId ? safeToString(correlationId) : null,
     subject,
     actor: { type: 'system', id: 'marketing' },
-    idempotencyKey: idemKey ? `marketing:${tenantId}:${idemKey}:${String(eventType)}` : null,
+    idempotencyKey: idemKey ? `marketing:${tenantId}:${idemKey}:${safeToString(eventType)}` : null,
     payload: payload && typeof payload === 'object' ? payload : {},
   }).catch(() => null);
 }
 
 async function submitForm({ tenantId, slug, submissionId = null, data = {}, ipAddress = null, userAgent = null } = {}) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
-  const t = String(tenantId || '').trim();
+  const t = safeStr(tenantId || '');
   const s = safeStr(slug).toLowerCase();
   if (!t) return { ok: false, error: 'tenant_required' };
   if (!s) return { ok: false, error: 'slug_required' };
@@ -260,14 +274,14 @@ async function submitForm({ tenantId, slug, submissionId = null, data = {}, ipAd
       lead_id: lead ? lead.id : null,
       external_submission_id: externalSubmissionId || null,
       data: payload,
-      ip_address: ipAddress ? String(ipAddress).slice(0, 64) : null,
-      user_agent: userAgent ? String(userAgent).slice(0, 4000) : null,
+      ip_address: ipAddress ? safeToString(ipAddress).slice(0, 64) : null,
+      user_agent: userAgent ? safeToString(userAgent).slice(0, 4000) : null,
     });
     submission = row.toJSON ? row.toJSON() : row;
   } catch (err) {
     // Idempotência: unique (tenant, external_submission_id)
-    const msg = String(err?.message || '');
-    const pgCode = String(err?.original?.code || '');
+    const msg = safeToString(err?.message || '');
+    const pgCode = safeToString(err?.original?.code || '');
     const unique = pgCode === '23505' || msg.includes('marketing_form_submissions_tenant_external_submission_uq');
     if (unique && externalSubmissionId) {
       const row = await SubModel.findOne({ where: { tenant_key: t, external_submission_id: externalSubmissionId } });
@@ -296,8 +310,8 @@ async function listLeads({ tenantId, stage = null, minScore = null, limit = 200,
   if (!dbAvailable()) return { total: 0, items: [] };
   const Model = MarketingLead();
   const Op2 = Model.sequelize.constructor.Op;
-  const where = { tenant_key: String(tenantId) };
-  if (stage) where.stage = String(stage);
+  const where = { tenant_key: safeStr(tenantId) };
+  if (stage) where.stage = safeToString(stage);
   if (minScore != null && Number.isFinite(Number(minScore))) where.score = { [Op2.gte]: Number(minScore) };
 
   const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 2000);
@@ -321,7 +335,7 @@ async function getLeadStats({ tenantId }) {
      WHERE tenant_key = :tenantKey
      GROUP BY stage
      ORDER BY stage ASC`,
-    { replacements: { tenantKey: String(tenantId) } },
+    { replacements: { tenantKey: safeStr(tenantId) } },
   );
   return { ok: true, items: Array.isArray(rows) ? rows : [] };
 }
@@ -329,10 +343,10 @@ async function getLeadStats({ tenantId }) {
 async function createEmailCampaign({ tenantId, name, subject, bodyText, bodyHtml = null, minScore = null }) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
   const Model = MarketingEmailCampaign();
-  const t = String(tenantId || '').trim();
+  const t = safeStr(tenantId || '');
   const n = safeStr(name);
   const sub = safeStr(subject);
-  const bt = bodyText != null ? String(bodyText) : '';
+  const bt = bodyText != null ? safeToString(bodyText) : '';
   if (!t) return { ok: false, error: 'tenant_required' };
   if (!n) return { ok: false, error: 'name_required' };
   if (!sub) return { ok: false, error: 'subject_required' };
@@ -344,7 +358,7 @@ async function createEmailCampaign({ tenantId, name, subject, bodyText, bodyHtml
     name: n,
     subject: sub,
     body_text: bt,
-    body_html: bodyHtml != null ? String(bodyHtml) : null,
+    body_html: bodyHtml != null ? safeToString(bodyHtml) : null,
     status: 'draft',
     min_score: (minScore != null && Number.isFinite(Number(minScore))) ? Number(minScore) : null,
   });
@@ -356,8 +370,8 @@ async function sendEmailCampaignNow({ tenantId, campaignId, limit = 2000 } = {})
   const CampModel = MarketingEmailCampaign();
   const SendModel = MarketingEmailSend();
   const LeadModel = MarketingLead();
-  const t = String(tenantId || '').trim();
-  const cid = String(campaignId || '').trim();
+  const t = safeStr(tenantId || '');
+  const cid = safeStr(campaignId || '');
   if (!t) return { ok: false, error: 'tenant_required' };
   if (!cid) return { ok: false, error: 'campaign_id_required' };
 
