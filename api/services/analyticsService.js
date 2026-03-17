@@ -31,6 +31,11 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
 /**
  * Calcula métricas gerais do sistema.
  * @param {Object} options
@@ -375,19 +380,19 @@ function getQueueMetrics(options = {}) {
   const queueNames = new Set();
   try {
     for (const t of tickets) {
-      if (t?.queue) queueNames.add(String(t.queue));
+      if (t?.queue) queueNames.add(safeToString(t.queue));
     }
   } catch (_) {}
   try {
     if (tenantId) {
       for (const q of queueDefinitionService.listQueues({ tenantId, activeOnly: false })) {
-        if (q?.name) queueNames.add(String(q.name));
+        if (q?.name) queueNames.add(safeToString(q.name));
       }
     }
   } catch (_) {}
   // Compat: inclui filas do runtime legado (pode conter nomes globais)
   try {
-    for (const qName of (listQueues() || [])) queueNames.add(String(qName));
+    for (const qName of (listQueues() || [])) queueNames.add(safeToString(qName));
   } catch (_) {}
   
   // Filtra por período
@@ -418,7 +423,7 @@ function getQueueMetrics(options = {}) {
   
   // Processa tickets
   for (const ticket of tickets) {
-    const queueName = ticket.queue;
+    const queueName = safeToString(ticket?.queue);
     if (queueStats[queueName]) {
       queueStats[queueName].totalTickets++;
       
@@ -443,7 +448,7 @@ function getQueueMetrics(options = {}) {
   
   // Calcula tempos médios por fila
   for (const queueName in queueStats) {
-    const queueTickets = tickets.filter(t => t.queue === queueName);
+    const queueTickets = tickets.filter(t => safeToString(t?.queue) === queueName);
     const closedTickets = queueTickets.filter(t => t.status === 'closed' && t.createdAt && t.updatedAt);
     
     if (closedTickets.length > 0) {
