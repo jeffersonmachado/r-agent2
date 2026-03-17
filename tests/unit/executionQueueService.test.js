@@ -82,4 +82,29 @@ describe('ExecutionQueueService', () => {
     // Verify query was called (finishJob calls it to check attempts)
     expect(mockQuery).toHaveBeenCalled();
   });
+
+  test('enqueueJob tolera erro hostil no rate limiter', async () => {
+    const mockCreate = jest.fn(async (payload) => ({ toJSON: () => ({ id: 'job-1', ...payload }) }));
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({ query: jest.fn() })) }));
+    jest.doMock('../../api/db/models', () => ({ ExecutionJob: jest.fn(() => ({ create: mockCreate })) }));
+
+    const { checkRateLimit } = require('../../infra/rate-limit');
+
+    checkRateLimit.mockRejectedValueOnce({
+      get message() {
+        throw new Error('boom-message-getter');
+      },
+      code: null,
+    });
+
+    const svc = require('../../api/services/executionQueueService');
+    const out = await svc.enqueueJob({ tenantId: 'tenant-1', kind: 'scan_sla', payload: {} });
+
+    expect(out).toEqual(expect.objectContaining({
+      id: expect.any(String),
+      kind: 'scan_sla',
+      tenant_key: 'tenant-1',
+    }));
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
 });

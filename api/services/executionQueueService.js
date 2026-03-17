@@ -112,7 +112,7 @@ async function enqueueJob({
       // Se o rate limiter falhar, não bloqueia por enquanto (best-effort),
       // mas loga como alerta operacional.
       if (safeToString(safeGet(err, 'code', '')) === 'exec_queue_quota_exceeded') throw err;
-      logger.warn('[ExecutionQueue] Falha ao aplicar quota por tenant (ignored)', { tenantId, error: err.message });
+      logger.warn('[ExecutionQueue] Falha ao aplicar quota por tenant (ignored)', { tenantId, error: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
     }
   }
 
@@ -517,10 +517,10 @@ function startExecutionQueueWorker({ intervalMs = 800 } = {}) {
         await processJob(job);
         await finishJob({ jobId: job.id, status: 'done' });
       } catch (err) {
-        await finishJob({ jobId: job.id, status: 'failed', errorMessage: err.message || safeToString(err) });
+        await finishJob({ jobId: job.id, status: 'failed', errorMessage: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
       }
     } catch (err) {
-      logger.warn('[ExecutionQueue] tick failed (ignored)', { error: err.message });
+      logger.warn('[ExecutionQueue] tick failed (ignored)', { error: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
     }
   };
   _timer = setInterval(() => { tick(); }, Math.max(200, Number(intervalMs) || 800));
