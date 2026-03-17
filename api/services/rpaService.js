@@ -6,6 +6,21 @@ const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeTrim(value, fallback);
+  try { return str.toLowerCase(); } catch (_) { return fallback; }
+}
+
 // Importação lazy do overlayInjector (apenas quando necessário para evitar erros de sintaxe)
 let INJECTABLE_SCRIPT = null;
 function getInjectableScript() {
@@ -1266,7 +1281,7 @@ function deleteRecording(recordingId) {
   }
 
   // Remove .json se presente
-  let sanitizedId = recordingId.trim();
+  let sanitizedId = safeTrim(recordingId);
   if (sanitizedId.endsWith('.json')) {
     sanitizedId = sanitizedId.slice(0, -'.json'.length);
   }
@@ -1307,9 +1322,9 @@ function deleteRecording(recordingId) {
             const recording = JSON.parse(content);
             
             // Verifica se o ID interno corresponde (comparação case-insensitive e sem espaços)
-            const recordingIdNormalized = recording.id ? String(recording.id).trim().toLowerCase() : '';
-            const searchIdNormalized = sanitizedId.trim().toLowerCase();
-            const originalIdNormalized = recordingId.trim().toLowerCase();
+            const recordingIdNormalized = recording.id ? safeTrimLower(recording.id) : '';
+            const searchIdNormalized = safeTrimLower(sanitizedId);
+            const originalIdNormalized = safeTrimLower(recordingId);
             
             if (recordingIdNormalized === searchIdNormalized || recordingIdNormalized === originalIdNormalized) {
               // eslint-disable-next-line no-console
