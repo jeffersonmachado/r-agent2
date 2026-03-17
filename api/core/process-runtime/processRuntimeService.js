@@ -37,6 +37,74 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeIsArray(value) {
+  try {
+    return Array.isArray(value);
+  } catch (_) {
+    return false;
+  }
+}
+
+function isSafeObjectRecord(value) {
+  if (!value || typeof value !== 'object') return false;
+  return !safeIsArray(value);
+}
+
+function safeShallowCloneRecord(value) {
+  if (!isSafeObjectRecord(value)) return {};
+  try {
+    return { ...value };
+  } catch (_) {
+    return {};
+  }
+}
+
+function safeCloneArray(value) {
+  if (!safeIsArray(value)) return [];
+  try {
+    return value.slice();
+  } catch (_) {
+    return [];
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function sanitizeRuntimeInput(input) {
+  const source = safeShallowCloneRecord(input);
+  const sanitized = { ...source };
+  sanitized.metadata = safeShallowCloneRecord(safeGet(source, 'metadata'));
+  sanitized.variables = safeShallowCloneRecord(safeGet(source, 'variables'));
+  sanitized.history = safeCloneArray(safeGet(source, 'history'));
+
+  const executionId = safeGet(source, 'executionId');
+  if (executionId != null && executionId !== '') {
+    sanitized.executionId = safeToString(executionId, '');
+  }
+
+  const tenantId = safeGet(source, 'tenantId');
+  if (tenantId != null && tenantId !== '') {
+    sanitized.tenantId = safeToString(tenantId, null);
+  }
+
+  return sanitized;
+}
+
 function buildProcessRegistryKey(processId, processVersion) {
   return `${String(processId || '')}:${Number.isFinite(Number(processVersion)) ? Number(processVersion) : 1}`;
 }
@@ -134,16 +202,20 @@ class ProcessRuntimeService {
     if (!this.compiledProcessRepository || typeof this.compiledProcessRepository.saveCompiledProcess !== 'function') {
       return null;
     }
-    const tenantId = input.tenantId || input.metadata?.tenantId || compiledProcess.metadata?.tenantId || null;
+    const safeInput = sanitizeRuntimeInput(input);
+    const safeMetadata = safeShallowCloneRecord(safeGet(safeInput, 'metadata'));
+    const compiledMetadata = safeShallowCloneRecord(safeGet(compiledProcess, 'metadata'));
+    const sourceDefinition = safeGet(safeInput, 'processDefinition', null);
+    const tenantId = safeGet(safeInput, 'tenantId') || safeGet(safeMetadata, 'tenantId') || safeGet(compiledMetadata, 'tenantId') || null;
     return this.compiledProcessRepository.saveCompiledProcess({
       tenantId,
       compiledProcess,
-      sourceDefinition: looksLikeCompiledProcessDefinition(input.processDefinition)
-        ? input.processDefinition.canonical || input.processDefinition
-        : input.processDefinition || null,
-      sourceType: looksLikeEngineFlow(input.processDefinition)
+      sourceDefinition: looksLikeCompiledProcessDefinition(sourceDefinition)
+        ? sourceDefinition.canonical || sourceDefinition
+        : sourceDefinition || null,
+      sourceType: looksLikeEngineFlow(sourceDefinition)
         ? 'engine'
-        : looksLikeCanonicalProcessDefinition(input.processDefinition)
+        : looksLikeCanonicalProcessDefinition(sourceDefinition)
           ? 'canonical'
           : 'compiled',
     });
@@ -165,20 +237,25 @@ class ProcessRuntimeService {
   }
 
   createExecutionId(compiledProcess, input = {}) {
-    return String(input.executionId || `${compiledProcess.id}:${Date.now()}:${Math.random().toString(16).slice(2)}`);
+    const providedExecutionId = safeGet(input, 'executionId');
+    const fallbackExecutionId = `${safeToString(safeGet(compiledProcess, 'id'), '')}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+    return safeToString(providedExecutionId || fallbackExecutionId, fallbackExecutionId);
   }
 
   createContext(compiledProcess, input = {}) {
+    const safeInput = sanitizeRuntimeInput(input);
+    const safeMetadata = safeShallowCloneRecord(safeGet(safeInput, 'metadata'));
+    const compiledMetadata = safeShallowCloneRecord(safeGet(compiledProcess, 'metadata'));
     return new ProcessExecutionContext({
       processId: compiledProcess.id,
       processVersion: compiledProcess.version || 1,
-      executionId: this.createExecutionId(compiledProcess, input),
+      executionId: this.createExecutionId(compiledProcess, safeInput),
       currentNodeId: compiledProcess.executionGraph.startNode ? String(compiledProcess.executionGraph.startNode) : null,
-      variables: input.variables && typeof input.variables === 'object' ? input.variables : {},
-      history: Array.isArray(input.history) ? input.history : [],
+      variables: safeShallowCloneRecord(safeGet(safeInput, 'variables')),
+      history: safeCloneArray(safeGet(safeInput, 'history')),
       metadata: {
-        ...(input.metadata && typeof input.metadata === 'object' ? input.metadata : {}),
-        tenantId: input.tenantId || compiledProcess.metadata?.tenantId || null,
+        ...safeMetadata,
+        tenantId: safeGet(safeInput, 'tenantId') || safeGet(compiledMetadata, 'tenantId') || null,
         runtime: 'durable-canonical',
         processDefinitionKey: buildProcessRegistryKey(compiledProcess.id, compiledProcess.version || 1),
       },
@@ -236,12 +313,13 @@ class ProcessRuntimeService {
   }
 
   async prepareExecution(processOrFlow, input = {}, options = {}) {
+    const safeInput = sanitizeRuntimeInput(input);
     const compiledProcess = this.ensureCompiledProcess(processOrFlow, options);
     await this.persistCompiledProcess(compiledProcess, {
-      ...input,
+      ...safeInput,
       processDefinition: processOrFlow,
     });
-    const context = this.createContext(compiledProcess, input);
+    const context = this.createContext(compiledProcess, safeInput);
     this._contexts.set(context.executionId, context);
     this._processes.set(context.executionId, compiledProcess);
     await this.createProcessInstance(compiledProcess, context);
@@ -249,7 +327,8 @@ class ProcessRuntimeService {
   }
 
   async startProcess(processOrFlow, input = {}, options = {}) {
-    const { compiledProcess, context } = await this.prepareExecution(processOrFlow, input, options);
+    const safeInput = sanitizeRuntimeInput(input);
+    const { compiledProcess, context } = await this.prepareExecution(processOrFlow, safeInput, options);
     context.status = PROCESS_INSTANCE_STATUSES.RUNNING;
     await this.persistContextSnapshot(context);
     await this.emitProcessEvent('PROCESS_STARTED', {
@@ -261,7 +340,7 @@ class ProcessRuntimeService {
       },
       metadata: { runtime: 'durable' },
     });
-    return this.executeNextNode(context.executionId, input);
+    return this.executeNextNode(context.executionId, safeInput);
   }
 
   async loadContextForExecution(executionId) {
@@ -302,6 +381,7 @@ class ProcessRuntimeService {
   }
 
   async resumeProcess(executionId, input = {}) {
+    let safeInput = sanitizeRuntimeInput(input);
     const { context, compiledProcess, instance } = await this.loadContextForExecution(executionId);
     const process = compiledProcess || this._processes.get(String(executionId)) || null;
     if (!process) {
@@ -319,7 +399,7 @@ class ProcessRuntimeService {
     const validation = this.payloadValidator.validatePayload({
       node: currentNode,
       waitingState,
-      payload: input || {},
+      payload: safeInput || {},
     });
     if (!validation.ok) {
       const error = new Error('resume_payload_invalid');
@@ -329,10 +409,10 @@ class ProcessRuntimeService {
     }
     if (waitingState?.type === 'timer') {
       const readyTimer = this.timerService.consumeReadyTimer(context.executionId, waitingState.nodeId || context.currentNodeId);
-      if (!readyTimer && input?.timerFired !== true) {
+      if (!readyTimer && safeInput?.timerFired !== true) {
         return this.buildResult(context.executionId, process, context, null);
       }
-      input = { ...(input || {}), timerFired: true, ...(readyTimer || {}) };
+      safeInput = { ...(safeInput || {}), timerFired: true, ...(readyTimer || {}) };
     }
 
     context.clearWaitingState();
@@ -342,7 +422,7 @@ class ProcessRuntimeService {
       context,
       compiledProcess: process,
       payload: {
-        resumeType: input?.resumeType || waitingState?.type || 'manual',
+        resumeType: safeInput?.resumeType || waitingState?.type || 'manual',
         currentNodeId: context.currentNodeId,
         variablesSnapshot: clone(context.variables),
       },
@@ -354,10 +434,10 @@ class ProcessRuntimeService {
       payload: {
         currentNodeId: context.currentNodeId,
         variablesSnapshot: clone(context.variables),
-        input: clone(input || {}),
+        input: clone(safeInput || {}),
       },
     });
-    return this.executeNextNode(context.executionId, input);
+    return this.executeNextNode(context.executionId, safeInput);
   }
 
   async handleTimerElapsed(timerPayload = {}) {
@@ -689,6 +769,7 @@ class ProcessRuntimeService {
   }
 
   async executeNextNode(contextOrExecutionId, input = {}) {
+    input = sanitizeRuntimeInput(input);
     const executionId = typeof contextOrExecutionId === 'string'
       ? String(contextOrExecutionId)
       : String(contextOrExecutionId?.executionId || '');

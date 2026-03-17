@@ -41,6 +41,25 @@ describe('Process durable runtime', () => {
     expect(instance.lastEventSequence).toBeGreaterThan(0);
   }, 5000));
 
+  test('startProcess tolera input revogado e aplica fallback seguro', withTimeout(async () => {
+    const compiled = buildCompiledProcess({
+      nodes: [
+        { id: 'start-1', type: 'start', label: 'Start', config: {}, metadata: {} },
+        { id: 'end-1', type: 'end', label: 'End', config: {}, metadata: {} },
+      ],
+      edges: [{ id: 'e1', source: 'start-1', target: 'end-1', priority: 0, metadata: { sourcePort: 'out' } }],
+    });
+    const runtime = new ProcessRuntimeService({ useDatabasePersistence: false });
+    const { proxy: hostileInput, revoke } = Proxy.revocable({ executionId: 'exec-hostile-start' }, {});
+    revoke();
+
+    const result = await runtime.startProcess(compiled, hostileInput);
+
+    expect(result.status).toBe('completed');
+    expect(typeof result.executionId).toBe('string');
+    expect(result.executionId.length).toBeGreaterThan(0);
+  }, 5000));
+
   test('persist failure', withTimeout(async () => {
     const compiled = buildCompiledProcess({
       nodes: [
@@ -82,6 +101,33 @@ describe('Process durable runtime', () => {
 
     expect(started.status).toBe('waiting');
     expect(waiting.waitingState.type).toBe('message');
+    expect(resumed.status).toBe('completed');
+    expect(resumed.context.variables.answer).toBe('hello');
+  }, 5000));
+
+  test('resumeProcess tolera payload revogado e mantém waiting sem quebrar execução', withTimeout(async () => {
+    const compiled = buildCompiledProcess({
+      nodes: [
+        { id: 'start-1', type: 'start', label: 'Start', config: {}, metadata: {} },
+        { id: 'receive-1', type: 'task.message.receive', label: 'Receive', config: { variable: 'answer' }, metadata: {} },
+        { id: 'end-1', type: 'end', label: 'End', config: {}, metadata: {} },
+      ],
+      edges: [
+        { id: 'e1', source: 'start-1', target: 'receive-1', priority: 0, metadata: { sourcePort: 'out' } },
+        { id: 'e2', source: 'receive-1', target: 'end-1', priority: 0, metadata: { sourcePort: 'out' } },
+      ],
+    });
+    const runtime = new ProcessRuntimeService({ useDatabasePersistence: false });
+
+    const started = await runtime.startProcess(compiled, { executionId: 'exec-hostile-resume' });
+    expect(started.status).toBe('waiting');
+
+    const { proxy: hostilePayload, revoke } = Proxy.revocable({ text: 'hello' }, {});
+    revoke();
+    const guardedResume = await runtime.resumeProcess('exec-hostile-resume', hostilePayload);
+    expect(guardedResume.status).toBe('waiting');
+
+    const resumed = await runtime.resumeProcess('exec-hostile-resume', { text: 'hello' });
     expect(resumed.status).toBe('completed');
     expect(resumed.context.variables.answer).toBe('hello');
   }, 5000));
