@@ -11,6 +11,13 @@ const { enqueueJob } = require('./executionQueueService');
 const { appendEventV1 } = require('./eventLedgerService');
 const { Op } = require('sequelize');
 
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -37,7 +44,7 @@ async function tickScheduler({ batchSize = 10 } = {}) {
   for (const s of due || []) {
     const schedule = s.toJSON ? s.toJSON() : s;
     const tenantId = schedule.tenant_key || 'system';
-    const kind = String(schedule.kind || '').trim();
+    const kind = safeToString(schedule.kind).trim();
     if (!kind) continue;
     const payload = schedule.payload || {};
 
@@ -51,7 +58,7 @@ async function tickScheduler({ batchSize = 10 } = {}) {
         correlationId: `sched:${schedule.id}`,
         subject: { type: 'schedule', id: schedule.id },
         actor: { type: 'system', id: 'scheduler' },
-        idempotencyKey: `scheduled_trigger:${schedule.id}:${schedule.next_run_at ? String(schedule.next_run_at) : ''}`,
+        idempotencyKey: `scheduled_trigger:${schedule.id}:${safeToString(schedule.next_run_at)}`,
         payload: { scheduleId: schedule.id, kind, name: schedule.name || null },
       }).catch(() => {});
 
@@ -62,7 +69,7 @@ async function tickScheduler({ batchSize = 10 } = {}) {
         runAt: now,
         priority: 0,
         maxAttempts: 5,
-        idempotencyKey: `sched_job:${schedule.id}:${schedule.next_run_at ? String(schedule.next_run_at) : ''}`,
+        idempotencyKey: `sched_job:${schedule.id}:${safeToString(schedule.next_run_at)}`,
       }).catch(() => {});
     } catch (_) {}
 

@@ -1,3 +1,20 @@
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeGet(obj, key, fallback = undefined) {
+  if (obj == null) return fallback;
+  try { const v = obj[key]; return v === undefined ? fallback : v; } catch (_) { return fallback; }
+}
+
+function safeSafeArray(value) {
+  if (!Array.isArray(value)) return [];
+  try { return [...value]; } catch (_) { return []; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const schedulesByTenant = new Map();
 
 function genScheduleId() {
@@ -5,7 +22,7 @@ function genScheduleId() {
 }
 
 function getTenantStore(tenantId) {
-  const key = String(tenantId || 'default');
+  const key = safeToString(tenantId, 'default') || 'default';
   if (!schedulesByTenant.has(key)) schedulesByTenant.set(key, new Map());
   return schedulesByTenant.get(key);
 }
@@ -27,26 +44,26 @@ function createSchedule({ tenantId, payload }) {
   const id = genScheduleId();
   const schedule = {
     id,
-    tenantId: String(tenantId || 'default'),
-    contextType: String(payload?.contextType || 'custom'),
-    contextId: String(payload?.contextId || ''),
-    contactId: payload?.contactId || null,
-    conversationId: payload?.conversationId || null,
-    channel: payload?.channel || 'whatsapp',
-    mode: payload?.mode || 'agent_based',
-    startAt: payload?.startAt || now,
-    endAt: payload?.endAt || now,
-    timezone: payload?.timezone || 'UTC',
-    purpose: payload?.purpose || 'compromisso',
-    notes: payload?.notes || null,
-    origin: payload?.origin || 'human',
+    tenantId: safeToString(tenantId, 'default') || 'default',
+    contextType: safeToString(safeGet(payload, 'contextType'), 'custom') || 'custom',
+    contextId: safeToString(safeGet(payload, 'contextId'), ''),
+    contactId: safeGet(payload, 'contactId', null),
+    conversationId: safeGet(payload, 'conversationId', null),
+    channel: safeGet(payload, 'channel', 'whatsapp'),
+    mode: safeGet(payload, 'mode', 'agent_based'),
+    startAt: safeGet(payload, 'startAt', now),
+    endAt: safeGet(payload, 'endAt', now),
+    timezone: safeGet(payload, 'timezone', 'UTC'),
+    purpose: safeGet(payload, 'purpose', 'compromisso'),
+    notes: safeGet(payload, 'notes', null),
+    origin: safeGet(payload, 'origin', 'human'),
     status: 'scheduled',
-    confirmationStatus: payload?.requiresConfirmation ? 'pending' : 'not_required',
-    requiresConfirmation: !!payload?.requiresConfirmation,
-    ownerId: payload?.ownerId || null,
-    teamId: payload?.teamId || null,
-    reminders: Array.isArray(payload?.reminders) ? payload.reminders : [],
-    metadata: payload?.metadata || {},
+    confirmationStatus: safeGet(payload, 'requiresConfirmation') ? 'pending' : 'not_required',
+    requiresConfirmation: !!safeGet(payload, 'requiresConfirmation'),
+    ownerId: safeGet(payload, 'ownerId', null),
+    teamId: safeGet(payload, 'teamId', null),
+    reminders: safeSafeArray(safeGet(payload, 'reminders')),
+    metadata: safeGet(payload, 'metadata', {}),
     createdAt: now,
     updatedAt: now,
   };
@@ -55,12 +72,12 @@ function createSchedule({ tenantId, payload }) {
 }
 
 function getSchedule({ tenantId, scheduleId }) {
-  return getTenantStore(tenantId).get(String(scheduleId)) || null;
+  return getTenantStore(tenantId).get(safeToString(scheduleId)) || null;
 }
 
 function deleteSchedule({ tenantId, scheduleId }) {
   const store = getTenantStore(tenantId);
-  return store.delete(String(scheduleId));
+  return store.delete(safeToString(scheduleId));
 }
 
 function updateScheduleStatus({ tenantId, scheduleId, action, payload = {} }) {
@@ -97,7 +114,7 @@ function updateScheduleStatus({ tenantId, scheduleId, action, payload = {} }) {
   }
 
   schedule.updatedAt = now;
-  getTenantStore(tenantId).set(String(scheduleId), schedule);
+  getTenantStore(tenantId).set(safeToString(scheduleId), schedule);
   return schedule;
 }
 
