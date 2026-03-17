@@ -6,21 +6,58 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function isObjectRecord(value) {
+  return !!(value && typeof value === 'object');
+}
+
+function safeGet(value, key) {
+  try {
+    return value?.[key];
+  } catch (_) {
+    return undefined;
+  }
+}
+
+function safeHasKeys(value) {
+  if (!isObjectRecord(value)) return false;
+  try {
+    return Object.keys(value).length > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+function buildValidationDetails(error) {
+  if (!error) {
+    return [{ path: '', message: 'invalid', keyword: null }];
+  }
+  return [{
+    path: '',
+    message: error.message || String(error),
+    keyword: error.code || 'validation_exception',
+  }];
+}
+
 class ProcessPayloadValidator {
   constructor() {
     this._ajv = new Ajv({ allErrors: true, strict: false });
-    this._cache = new Map();
+    this._cache = new WeakMap();
   }
 
   getSchema(node = null, waitingState = null) {
-    if (waitingState?.metadata?.resumeSchema && typeof waitingState.metadata.resumeSchema === 'object') {
-      return waitingState.metadata.resumeSchema;
+    const waitingMetadata = safeGet(waitingState, 'metadata');
+    const waitingResumeSchema = safeGet(waitingMetadata, 'resumeSchema');
+    if (isObjectRecord(waitingResumeSchema)) {
+      return waitingResumeSchema;
     }
-    if (node?.config?.resumeSchema && typeof node.config.resumeSchema === 'object') {
-      return node.config.resumeSchema;
+    const nodeConfig = safeGet(node, 'config');
+    const nodeResumeSchema = safeGet(nodeConfig, 'resumeSchema');
+    if (isObjectRecord(nodeResumeSchema)) {
+      return nodeResumeSchema;
     }
-    if (node?.inputSchema && typeof node.inputSchema === 'object' && Object.keys(node.inputSchema).length > 0) {
-      return node.inputSchema;
+    const inputSchema = safeGet(node, 'inputSchema');
+    if (safeHasKeys(inputSchema)) {
+      return inputSchema;
     }
     return null;
   }
@@ -30,13 +67,33 @@ class ProcessPayloadValidator {
     if (!schema) {
       return { ok: true, schema: null, payload };
     }
-    const cacheKey = JSON.stringify(schema);
-    let validator = this._cache.get(cacheKey) || null;
+    let validator = this._cache.get(schema) || null;
     if (!validator) {
-      validator = this._ajv.compile(schema);
-      this._cache.set(cacheKey, validator);
+      try {
+        validator = this._ajv.compile(schema);
+        this._cache.set(schema, validator);
+      } catch (error) {
+        return {
+          ok: false,
+          schema: null,
+          error: 'resume_schema_invalid',
+          details: buildValidationDetails(error),
+        };
+      }
     }
-    const valid = validator(payload);
+
+    let valid = false;
+    try {
+      valid = validator(payload);
+    } catch (error) {
+      return {
+        ok: false,
+        schema: clone(schema),
+        error: 'resume_payload_invalid',
+        details: buildValidationDetails(error),
+      };
+    }
+
     if (valid) {
       return { ok: true, schema: clone(schema), payload };
     }
