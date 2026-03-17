@@ -84,6 +84,16 @@ function createNodeRegistry() {
   return registry;
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const s = safeToString(value, fallback);
+  try { return s.trim(); } catch (_) { return fallback; }
+}
+
 function intEnv(name, def) {
   const raw = process.env[name];
   const n = raw ? Number(raw) : NaN;
@@ -107,39 +117,39 @@ function resolvePositiveStepLimit(value, fallback) {
 function resolveStartNodeId(flow) {
   const nodes = Array.isArray(flow?.nodes) ? flow.nodes : [];
   const startNode = nodes.find((n) => n && n.type === 'start');
-  return startNode ? String(startNode.id) : null;
+  return startNode ? safeToString(startNode.id) : null;
 }
 
 function normalizeTrigger(trigger) {
   if (!trigger || typeof trigger !== 'object') return null;
   return {
-    type: trigger.type ? String(trigger.type) : null,
-    source: trigger.source ? String(trigger.source) : null,
-    subjectType: trigger.subjectType ? String(trigger.subjectType) : null,
-    subjectId: trigger.subjectId ? String(trigger.subjectId) : null,
-    actorType: trigger.actorType ? String(trigger.actorType) : null,
-    actorId: trigger.actorId ? String(trigger.actorId) : null,
+    type: trigger.type ? safeToString(trigger.type) : null,
+    source: trigger.source ? safeToString(trigger.source) : null,
+    subjectType: trigger.subjectType ? safeToString(trigger.subjectType) : null,
+    subjectId: trigger.subjectId ? safeToString(trigger.subjectId) : null,
+    actorType: trigger.actorType ? safeToString(trigger.actorType) : null,
+    actorId: trigger.actorId ? safeToString(trigger.actorId) : null,
   };
 }
 
 function triggerMatchesEvent(trigger, event) {
   if (!trigger) return false;
-  const evType = event?.type ? String(event.type) : '';
+  const evType = event?.type ? safeToString(event.type) : '';
   if (trigger.type && trigger.type !== evType && trigger.type !== '*') return false;
-  if (trigger.source && trigger.source !== String(event?.source || '')) return false;
-  if (trigger.subjectType && trigger.subjectType !== String(event?.subject?.type || '')) return false;
-  if (trigger.subjectId && trigger.subjectId !== String(event?.subject?.id || '')) return false;
-  if (trigger.actorType && trigger.actorType !== String(event?.actor?.type || '')) return false;
-  if (trigger.actorId && trigger.actorId !== String(event?.actor?.id || '')) return false;
+  if (trigger.source && trigger.source !== safeToString(event?.source || '')) return false;
+  if (trigger.subjectType && trigger.subjectType !== safeToString(event?.subject?.type || '')) return false;
+  if (trigger.subjectId && trigger.subjectId !== safeToString(event?.subject?.id || '')) return false;
+  if (trigger.actorType && trigger.actorType !== safeToString(event?.actor?.type || '')) return false;
+  if (trigger.actorId && trigger.actorId !== safeToString(event?.actor?.id || '')) return false;
   return true;
 }
 
 async function listMatchingFlows({ tenantId, event }) {
   const flows = await persistence.getFlows();
-  const safeTenant = String(tenantId || '');
+  const safeTenant = safeToString(tenantId || '');
   return flows.filter((flow) => {
     if (!flow || !flow.id) return false;
-    if (safeTenant && String(flow.tenantId || '') !== safeTenant) return false;
+    if (safeTenant && safeToString(flow.tenantId || '') !== safeTenant) return false;
     const triggers = flow?.metadata?.eventTriggers;
     if (!Array.isArray(triggers) || triggers.length === 0) return false;
     return triggers.map(normalizeTrigger).some((t) => triggerMatchesEvent(t, event));
@@ -154,9 +164,9 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
   const startNodeId = resolveStartNodeId(compiled);
   if (!startNodeId) return { ok: false, reason: 'start_node_missing' };
 
-  const correlationId = event?.correlationId ? String(event.correlationId) : `event:${String(event?.id || '')}`;
-  const subjectType = event?.subject?.type ? String(event.subject.type) : 'event';
-  const subjectId = event?.subject?.id ? String(event.subject.id) : String(event?.id || '');
+  const correlationId = event?.correlationId ? safeToString(event.correlationId) : `event:${safeToString(event?.id || '')}`;
+  const subjectType = event?.subject?.type ? safeToString(event.subject.type) : 'event';
+  const subjectId = event?.subject?.id ? safeToString(event.subject.id) : safeToString(event?.id || '');
 
   const sessionId = `event_${tenantId}_${flowId}_${Date.now()}`;
   const start = await startFlowExecution({
@@ -220,8 +230,8 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
 
   try {
     while (state.currentNodeId && steps < stepsLimit) {
-      const currentNodeId = String(state.currentNodeId);
-      const node = Array.isArray(compiled.nodes) ? compiled.nodes.find((n) => n && String(n.id) === currentNodeId) : null;
+      const currentNodeId = safeToString(state.currentNodeId);
+      const node = Array.isArray(compiled.nodes) ? compiled.nodes.find((n) => n && safeToString(n.id) === currentNodeId) : null;
       const nodeType = node?.type || null;
 
       if (nodeType === 'user_input') {
@@ -257,7 +267,7 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
         tenantId,
         executionId,
         status: 'failed',
-        metaPatch: { error: err.message || String(err) },
+        metaPatch: { error: err.message || safeToString(err) },
       }).catch(() => {});
     }
     throw err;
@@ -297,13 +307,13 @@ async function dispatchFlowsForEvent({ tenantId, event }) {
       failed += 1;
       failures.push({
         flowId: flow?.id || null,
-        error: err?.message || String(err),
+        error: err?.message || safeToString(err),
       });
       logger.warn('[EventTrigger] Falha ao executar flow para evento', {
         tenantId,
         flowId: flow?.id || null,
         eventId: event?.id || null,
-        error: err.message || String(err),
+        error: err.message || safeToString(err),
       });
     }
   }
