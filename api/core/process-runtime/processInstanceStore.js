@@ -8,6 +8,140 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function safeClone(value, fallbackValue = null) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeNumber(value, fallbackValue = 0) {
+  const coerced = Number(value);
+  return Number.isFinite(coerced) ? coerced : fallbackValue;
+}
+
+function safeHasOwn(value, key) {
+  try {
+    return Object.prototype.hasOwnProperty.call(value, key);
+  } catch (_) {
+    return false;
+  }
+}
+
+function safeShallowCloneRecord(value) {
+  if (!value || typeof value !== 'object') return {};
+  try {
+    return { ...value };
+  } catch (_) {
+    return {};
+  }
+}
+
+function normalizeFilterString(value) {
+  if (value == null) return null;
+  const normalized = safeToString(value, '');
+  return normalized || null;
+}
+
+function resolveFilterString(filters, key) {
+  if (!safeHasOwn(filters, key)) return null;
+  const rawValue = safeGet(filters, key, null);
+  if (rawValue == null) return '';
+  return safeToString(rawValue, '');
+}
+
+function sanitizeWaitingState(waitingState) {
+  if (!waitingState || typeof waitingState !== 'object') return null;
+  const normalized = {
+    type: normalizeFilterString(safeGet(waitingState, 'type')),
+    resumeAt: safeGet(waitingState, 'resumeAt', null),
+    correlationKey: normalizeFilterString(safeGet(waitingState, 'correlationKey')),
+    externalRef: normalizeFilterString(safeGet(waitingState, 'externalRef')),
+    nodeId: normalizeFilterString(safeGet(waitingState, 'nodeId')),
+    metadata: safeClone(safeGet(waitingState, 'metadata', {}), {}) ?? {},
+  };
+  if (!normalized.type && !normalized.resumeAt && !normalized.correlationKey && !normalized.externalRef && !normalized.nodeId && Object.keys(normalized.metadata).length === 0) {
+    return null;
+  }
+  return normalized;
+}
+
+function sanitizeProcessInstance(instance) {
+  if (!instance || typeof instance !== 'object') return {};
+  return {
+    executionId: safeToString(safeGet(instance, 'executionId', ''), ''),
+    processId: safeToString(safeGet(instance, 'processId', ''), ''),
+    processVersion: safeNumber(safeGet(instance, 'processVersion', 1), 1),
+    status: safeToString(safeGet(instance, 'status', PROCESS_INSTANCE_STATUSES.PENDING), PROCESS_INSTANCE_STATUSES.PENDING),
+    currentNodeId: safeGet(instance, 'currentNodeId', null) != null ? safeToString(safeGet(instance, 'currentNodeId'), null) : null,
+    variablesSnapshot: safeClone(safeGet(instance, 'variablesSnapshot', {}), {}) ?? {},
+    waitingState: sanitizeWaitingState(safeGet(instance, 'waitingState', null)),
+    startedAt: safeGet(instance, 'startedAt', null),
+    updatedAt: safeGet(instance, 'updatedAt', null),
+    completedAt: safeGet(instance, 'completedAt', null),
+    failedAt: safeGet(instance, 'failedAt', null),
+    lastEventSequence: safeNumber(safeGet(instance, 'lastEventSequence', 0), 0),
+    metadata: safeClone(safeGet(instance, 'metadata', {}), {}) ?? {},
+  };
+}
+
+function normalizeProcessInstance(instance) {
+  return createProcessInstance(sanitizeProcessInstance(instance));
+}
+
+function normalizeError(error) {
+  if (error && typeof error === 'object') {
+    return {
+      message: safeGet(error, 'message') || safeToString(error, 'Unknown error'),
+      code: safeGet(error, 'code', null),
+    };
+  }
+  return { message: safeToString(error, 'Unknown error') };
+}
+
+function mergeMetadata(currentMetadata, extraMetadata) {
+  return {
+    ...(safeClone(currentMetadata, {}) || {}),
+    ...(safeClone(extraMetadata, {}) || {}),
+  };
+}
+
+function matchesWaitingFilters(instance, { type, correlationKey, externalRef, processId }) {
+  const waitingState = safeGet(instance, 'waitingState', null);
+  return safeToString(safeGet(instance, 'status', ''), '') === PROCESS_INSTANCE_STATUSES.WAITING
+    && !!waitingState
+    && (type == null || safeToString(safeGet(waitingState, 'type', ''), '') === type)
+    && (correlationKey == null || safeToString(safeGet(waitingState, 'correlationKey', ''), '') === correlationKey)
+    && (externalRef == null || safeToString(safeGet(waitingState, 'externalRef', ''), '') === externalRef)
+    && (processId == null || safeToString(safeGet(instance, 'processId', ''), '') === processId);
+}
+
+function matchesInstanceFilters(instance, { status, processId, tenantId }) {
+  const metadata = safeGet(instance, 'metadata', null);
+  return (status == null || safeToString(safeGet(instance, 'status', ''), '') === status)
+    && (processId == null || safeToString(safeGet(instance, 'processId', ''), '') === processId)
+    && (tenantId == null || safeToString(safeGet(metadata, 'tenantId', ''), '') === tenantId);
+}
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -18,43 +152,44 @@ class InMemoryProcessInstanceStore {
   }
 
   async createInstance(instance) {
-    const normalized = createProcessInstance(instance);
+    const normalized = normalizeProcessInstance(instance);
     normalized.updatedAt = new Date().toISOString();
     this._instances.set(normalized.executionId, normalized);
-    return createProcessInstance(normalized);
+    return normalizeProcessInstance(normalized);
   }
 
   async loadInstance(executionId) {
-    const found = this._instances.get(String(executionId || ''));
-    return found ? createProcessInstance(found) : null;
+    const found = this._instances.get(safeToString(executionId || '', ''));
+    return found ? normalizeProcessInstance(found) : null;
   }
 
   async saveInstance(instance) {
-    const normalized = createProcessInstance(instance);
+    const normalized = normalizeProcessInstance(instance);
     normalized.updatedAt = new Date().toISOString();
     this._instances.set(normalized.executionId, normalized);
-    return createProcessInstance(normalized);
+    return normalizeProcessInstance(normalized);
   }
 
   async updateInstance(executionId, partial = {}) {
     const current = await this.loadInstance(executionId);
     if (!current) return null;
-    const next = createProcessInstance({
+    const safePartial = safeShallowCloneRecord(partial);
+    const next = normalizeProcessInstance({
       ...current,
-      ...partial,
-      waitingState: Object.prototype.hasOwnProperty.call(partial, 'waitingState')
-        ? createWaitingState(partial.waitingState)
+      ...safePartial,
+      waitingState: safeHasOwn(safePartial, 'waitingState')
+        ? sanitizeWaitingState(safeGet(safePartial, 'waitingState', null))
         : current.waitingState,
       updatedAt: new Date().toISOString(),
     });
     this._instances.set(next.executionId, next);
-    return createProcessInstance(next);
+    return normalizeProcessInstance(next);
   }
 
   async markWaiting(executionId, waitingState) {
     return this.updateInstance(executionId, {
       status: PROCESS_INSTANCE_STATUSES.WAITING,
-      waitingState: createWaitingState(waitingState),
+      waitingState: sanitizeWaitingState(waitingState),
     });
   }
 
@@ -65,10 +200,7 @@ class InMemoryProcessInstanceStore {
       status: PROCESS_INSTANCE_STATUSES.COMPLETED,
       waitingState: null,
       completedAt: new Date().toISOString(),
-      metadata: {
-        ...(current.metadata || {}),
-        ...(metadata && typeof metadata === 'object' ? metadata : {}),
-      },
+      metadata: mergeMetadata(current.metadata, metadata),
       currentNodeId: null,
     });
   }
@@ -81,10 +213,8 @@ class InMemoryProcessInstanceStore {
       waitingState: null,
       failedAt: new Date().toISOString(),
       metadata: {
-        ...(current.metadata || {}),
-        error: error && typeof error === 'object'
-          ? { message: error.message || String(error), code: error.code || null }
-          : { message: String(error) },
+        ...mergeMetadata(current.metadata, {}),
+        error: normalizeError(error),
       },
     });
   }
@@ -96,10 +226,9 @@ class InMemoryProcessInstanceStore {
       status: PROCESS_INSTANCE_STATUSES.CANCELLED,
       waitingState: null,
       metadata: {
-        ...(current.metadata || {}),
-        ...(metadata && typeof metadata === 'object' ? metadata : {}),
+        ...mergeMetadata(current.metadata, metadata),
         cancellation: {
-          reason: reason ? String(reason) : null,
+          reason: reason ? safeToString(reason, null) : null,
           cancelledAt: new Date().toISOString(),
         },
       },
@@ -107,31 +236,25 @@ class InMemoryProcessInstanceStore {
   }
 
   async listWaitingInstances(filters = {}) {
-    const type = filters.type ? String(filters.type) : null;
-    const correlationKey = filters.correlationKey ? String(filters.correlationKey) : null;
-    const externalRef = filters.externalRef ? String(filters.externalRef) : null;
-    const processId = filters.processId ? String(filters.processId) : null;
+    const type = resolveFilterString(filters, 'type');
+    const correlationKey = resolveFilterString(filters, 'correlationKey');
+    const externalRef = resolveFilterString(filters, 'externalRef');
+    const processId = resolveFilterString(filters, 'processId');
 
     return Array.from(this._instances.values())
-      .filter((instance) => instance.status === PROCESS_INSTANCE_STATUSES.WAITING && instance.waitingState)
-      .filter((instance) => !type || String(instance.waitingState.type) === type)
-      .filter((instance) => !correlationKey || String(instance.waitingState.correlationKey || '') === correlationKey)
-      .filter((instance) => !externalRef || String(instance.waitingState.externalRef || '') === externalRef)
-      .filter((instance) => !processId || String(instance.processId || '') === processId)
-      .map((instance) => createProcessInstance(instance));
+      .filter((instance) => matchesWaitingFilters(instance, { type, correlationKey, externalRef, processId }))
+      .map((instance) => normalizeProcessInstance(instance));
   }
 
   async listInstances(filters = {}) {
-    const status = filters.status ? String(filters.status) : null;
-    const processId = filters.processId ? String(filters.processId) : null;
-    const tenantId = filters.tenantId ? String(filters.tenantId) : null;
+    const status = resolveFilterString(filters, 'status');
+    const processId = resolveFilterString(filters, 'processId');
+    const tenantId = resolveFilterString(filters, 'tenantId');
     return Array.from(this._instances.values())
-      .filter((instance) => !status || String(instance.status) === status)
-      .filter((instance) => !processId || String(instance.processId || '') === processId)
-      .filter((instance) => !tenantId || String(instance.metadata?.tenantId || '') === tenantId)
-      .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
-      .slice(0, Math.min(Math.max(Number(filters.limit) || 100, 1), 500))
-      .map((instance) => createProcessInstance(instance));
+      .filter((instance) => matchesInstanceFilters(instance, { status, processId, tenantId }))
+      .sort((a, b) => safeToString(safeGet(b, 'updatedAt', ''), '').localeCompare(safeToString(safeGet(a, 'updatedAt', ''), '')))
+      .slice(0, Math.min(Math.max(safeNumber(safeGet(filters, 'limit', 100), 100), 1), 500))
+      .map((instance) => normalizeProcessInstance(instance));
   }
 }
 
@@ -146,28 +269,28 @@ class SequelizeProcessInstanceStore {
 
   async createInstance(instance) {
     if (!dbAvailable()) return this._fallback.createInstance(instance);
-    const normalized = createProcessInstance(instance);
+    const normalized = normalizeProcessInstance(instance);
     const row = await this.model.create({
       execution_id: normalized.executionId,
       status: normalized.status,
-      data: clone(normalized),
+      data: safeClone(normalized, normalized),
     });
     const json = row.toJSON ? row.toJSON() : row;
-    return createProcessInstance(json.data || normalized);
+    return normalizeProcessInstance(json.data || normalized);
   }
 
   async loadInstance(executionId) {
     if (!dbAvailable()) return this._fallback.loadInstance(executionId);
-    const row = await this.model.findByPk(String(executionId || ''));
+    const row = await this.model.findByPk(safeToString(executionId || '', ''));
     if (!row) return null;
     const json = row.toJSON ? row.toJSON() : row;
-    return createProcessInstance(json.data || {});
+    return normalizeProcessInstance(json.data || {});
   }
 
   async saveInstance(instance) {
     if (!dbAvailable()) return this._fallback.saveInstance(instance);
-    const normalized = createProcessInstance({
-      ...instance,
+    const normalized = normalizeProcessInstance({
+      ...safeShallowCloneRecord(instance),
       updatedAt: new Date().toISOString(),
     });
     const existing = await this.model.findByPk(normalized.executionId);
@@ -175,19 +298,20 @@ class SequelizeProcessInstanceStore {
       return this.createInstance(normalized);
     }
     existing.status = normalized.status;
-    existing.data = clone(normalized);
+    existing.data = safeClone(normalized, normalized);
     await existing.save();
-    return createProcessInstance(normalized);
+    return normalizeProcessInstance(normalized);
   }
 
   async updateInstance(executionId, partial = {}) {
     const current = await this.loadInstance(executionId);
     if (!current) return null;
+    const safePartial = safeShallowCloneRecord(partial);
     return this.saveInstance({
       ...current,
-      ...partial,
-      waitingState: Object.prototype.hasOwnProperty.call(partial, 'waitingState')
-        ? createWaitingState(partial.waitingState)
+      ...safePartial,
+      waitingState: safeHasOwn(safePartial, 'waitingState')
+        ? sanitizeWaitingState(safeGet(safePartial, 'waitingState', null))
         : current.waitingState,
     });
   }
@@ -195,7 +319,7 @@ class SequelizeProcessInstanceStore {
   async markWaiting(executionId, waitingState) {
     return this.updateInstance(executionId, {
       status: PROCESS_INSTANCE_STATUSES.WAITING,
-      waitingState: createWaitingState(waitingState),
+      waitingState: sanitizeWaitingState(waitingState),
     });
   }
 
@@ -206,10 +330,7 @@ class SequelizeProcessInstanceStore {
       status: PROCESS_INSTANCE_STATUSES.COMPLETED,
       waitingState: null,
       completedAt: new Date().toISOString(),
-      metadata: {
-        ...(current.metadata || {}),
-        ...(metadata && typeof metadata === 'object' ? metadata : {}),
-      },
+      metadata: mergeMetadata(current.metadata, metadata),
       currentNodeId: null,
     });
   }
@@ -222,10 +343,8 @@ class SequelizeProcessInstanceStore {
       waitingState: null,
       failedAt: new Date().toISOString(),
       metadata: {
-        ...(current.metadata || {}),
-        error: error && typeof error === 'object'
-          ? { message: error.message || String(error), code: error.code || null }
-          : { message: String(error) },
+        ...mergeMetadata(current.metadata, {}),
+        error: normalizeError(error),
       },
     });
   }
@@ -237,10 +356,9 @@ class SequelizeProcessInstanceStore {
       status: PROCESS_INSTANCE_STATUSES.CANCELLED,
       waitingState: null,
       metadata: {
-        ...(current.metadata || {}),
-        ...(metadata && typeof metadata === 'object' ? metadata : {}),
+        ...mergeMetadata(current.metadata, metadata),
         cancellation: {
-          reason: reason ? String(reason) : null,
+          reason: reason ? safeToString(reason, null) : null,
           cancelledAt: new Date().toISOString(),
         },
       },
@@ -258,35 +376,29 @@ class SequelizeProcessInstanceStore {
     });
     const items = rows
       .map((row) => (row.toJSON ? row.toJSON() : row))
-      .map((row) => createProcessInstance(row.data || {}));
-    const type = filters.type ? String(filters.type) : null;
-    const correlationKey = filters.correlationKey ? String(filters.correlationKey) : null;
-    const externalRef = filters.externalRef ? String(filters.externalRef) : null;
-    const processId = filters.processId ? String(filters.processId) : null;
+      .map((row) => normalizeProcessInstance(row.data || {}));
+    const type = resolveFilterString(filters, 'type');
+    const correlationKey = resolveFilterString(filters, 'correlationKey');
+    const externalRef = resolveFilterString(filters, 'externalRef');
+    const processId = resolveFilterString(filters, 'processId');
     return items
-      .filter((instance) => instance.status === PROCESS_INSTANCE_STATUSES.WAITING && instance.waitingState)
-      .filter((instance) => !type || String(instance.waitingState.type) === type)
-      .filter((instance) => !correlationKey || String(instance.waitingState.correlationKey || '') === correlationKey)
-      .filter((instance) => !externalRef || String(instance.waitingState.externalRef || '') === externalRef)
-      .filter((instance) => !processId || String(instance.processId || '') === processId);
+      .filter((instance) => matchesWaitingFilters(instance, { type, correlationKey, externalRef, processId }));
   }
 
   async listInstances(filters = {}) {
     if (!dbAvailable()) return this._fallback.listInstances(filters);
     const rows = await this.model.findAll({
       order: [['updated_at', 'DESC']],
-      limit: Math.min(Math.max(Number(filters.limit) || 100, 1), 500),
+      limit: Math.min(Math.max(safeNumber(safeGet(filters, 'limit', 100), 100), 1), 500),
     });
     const items = rows
       .map((row) => (row.toJSON ? row.toJSON() : row))
-      .map((row) => createProcessInstance(row.data || {}));
-    const status = filters.status ? String(filters.status) : null;
-    const processId = filters.processId ? String(filters.processId) : null;
-    const tenantId = filters.tenantId ? String(filters.tenantId) : null;
+      .map((row) => normalizeProcessInstance(row.data || {}));
+    const status = resolveFilterString(filters, 'status');
+    const processId = resolveFilterString(filters, 'processId');
+    const tenantId = resolveFilterString(filters, 'tenantId');
     return items
-      .filter((instance) => !status || String(instance.status) === status)
-      .filter((instance) => !processId || String(instance.processId || '') === processId)
-      .filter((instance) => !tenantId || String(instance.metadata?.tenantId || '') === tenantId);
+      .filter((instance) => matchesInstanceFilters(instance, { status, processId, tenantId }));
   }
 }
 
