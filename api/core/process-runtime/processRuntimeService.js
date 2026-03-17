@@ -85,6 +85,15 @@ function safeToString(value, fallbackValue = '') {
   }
 }
 
+function safeFiniteNumber(value, fallbackValue = 0) {
+  try {
+    const coerced = Number(value);
+    return Number.isFinite(coerced) ? coerced : fallbackValue;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
 function sanitizeRuntimeInput(input) {
   const source = safeShallowCloneRecord(input);
   const sanitized = { ...source };
@@ -160,41 +169,60 @@ class ProcessRuntimeService {
   }
 
   registerCompiledProcess(compiledProcess) {
-    if (!compiledProcess || !compiledProcess.id) return null;
-    const key = buildProcessRegistryKey(compiledProcess.id, compiledProcess.version || 1);
+    const safeCompiled = safeShallowCloneRecord(compiledProcess);
+    const processId = safeToString(safeGet(safeCompiled, 'id', ''), '');
+    if (!processId) return null;
+    const processVersion = safeFiniteNumber(safeGet(safeCompiled, 'version', 1), 1);
+    const key = buildProcessRegistryKey(processId, processVersion);
     this._processRegistry.set(key, compiledProcess);
     return compiledProcess;
   }
 
   async resolveCompiledProcessForInstance(instance) {
-    if (!instance) return null;
-    const key = buildProcessRegistryKey(instance.processId, instance.processVersion || 1);
+    const safeInstance = safeShallowCloneRecord(instance);
+    const processId = safeToString(safeGet(safeInstance, 'processId', ''), '');
+    if (!processId) return null;
+    const processVersion = safeFiniteNumber(safeGet(safeInstance, 'processVersion', 1), 1);
+    const key = buildProcessRegistryKey(processId, processVersion);
     if (this._processRegistry.has(key)) {
       return this._processRegistry.get(key);
     }
+
     if (this.compiledProcessRepository && typeof this.compiledProcessRepository.loadCompiledProcess === 'function') {
-      const persisted = await this.compiledProcessRepository.loadCompiledProcess({
-        tenantId: instance.metadata?.tenantId || null,
-        processId: instance.processId,
-        processVersion: instance.processVersion || 1,
-      });
-      if (persisted) {
-        this.registerCompiledProcess(persisted);
-        return persisted;
+      const metadata = safeShallowCloneRecord(safeGet(safeInstance, 'metadata', null));
+      const tenantId = safeGet(metadata, 'tenantId', null) || null;
+      try {
+        const persisted = await this.compiledProcessRepository.loadCompiledProcess({
+          tenantId,
+          processId,
+          processVersion,
+        });
+        if (persisted) {
+          this.registerCompiledProcess(persisted);
+          return persisted;
+        }
+      } catch (_) {
+        // Best-effort fallback to custom resolver below.
       }
     }
+
     if (this.compiledProcessResolver) {
-      const resolved = await this.compiledProcessResolver({
-        executionId: instance.executionId,
-        processId: instance.processId,
-        processVersion: instance.processVersion || 1,
-        instance,
-      });
-      if (resolved) {
-        this.registerCompiledProcess(resolved);
-        return resolved;
+      try {
+        const resolved = await this.compiledProcessResolver({
+          executionId: safeToString(safeGet(safeInstance, 'executionId', ''), ''),
+          processId,
+          processVersion,
+          instance: safeInstance,
+        });
+        if (resolved) {
+          this.registerCompiledProcess(resolved);
+          return resolved;
+        }
+      } catch (_) {
+        return null;
       }
     }
+
     return null;
   }
 

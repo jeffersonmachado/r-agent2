@@ -108,4 +108,53 @@ describe('ProcessRuntimeService', () => {
     expect(result.ok).toBe(true);
     expect(result.status).toBe('completed');
   }, 5000));
+
+  test('resolveCompiledProcessForInstance tolera instancia revogada sem lançar', withTimeout(async () => {
+    const runtime = new ProcessRuntimeService();
+    const { proxy: hostileInstance, revoke } = Proxy.revocable({
+      processId: 'proc-hostile',
+      processVersion: 1,
+      metadata: { tenantId: 'tenant-1' },
+    }, {});
+    revoke();
+
+    const resolved = await runtime.resolveCompiledProcessForInstance(hostileInstance);
+    expect(resolved).toBeNull();
+  }, 5000));
+
+  test('resolveCompiledProcessForInstance faz fallback para resolver quando repositorio falha', withTimeout(async () => {
+    const compiledFromResolver = buildCompiledProcess({
+      id: 'proc-resolver',
+      version: 3,
+      metadata: { tenantId: 'tenant-2' },
+      entrypoints: ['start-1'],
+      nodes: [
+        { id: 'start-1', type: 'start', subtype: 'start', label: 'Start', config: {}, metadata: {} },
+      ],
+      edges: [],
+    });
+
+    const runtime = new ProcessRuntimeService({
+      compiledProcessRepository: {
+        loadCompiledProcess: jest.fn(async () => {
+          throw new Error('repository unavailable');
+        }),
+      },
+      compiledProcessResolver: jest.fn(async () => compiledFromResolver),
+    });
+
+    const instance = {
+      executionId: 'exec-resolver-1',
+      processId: 'proc-resolver',
+      processVersion: 3,
+      metadata: { tenantId: 'tenant-2' },
+    };
+
+    const first = await runtime.resolveCompiledProcessForInstance(instance);
+    const second = await runtime.resolveCompiledProcessForInstance(instance);
+
+    expect(first && first.id).toBe('proc-resolver');
+    expect(second && second.id).toBe('proc-resolver');
+    expect(runtime.compiledProcessResolver).toHaveBeenCalledTimes(1);
+  }, 5000));
 });
