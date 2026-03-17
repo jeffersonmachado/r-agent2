@@ -46,8 +46,33 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeGet(obj, path, fallback = null) {
+  if (!obj || typeof obj !== 'object') return fallback;
+  try {
+    const parts = path.split('.');
+    let v = obj;
+    for (const part of parts) {
+      v = v?.[part];
+      if (v === undefined) return fallback;
+    }
+    return v ?? fallback;
+  } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function sha256Hex(value) {
-  return crypto.createHash('sha256').update(String(value)).digest('hex');
+  return crypto.createHash('sha256').update(safeToString(value)).digest('hex');
 }
 
 function hashPassword(password) {
@@ -82,7 +107,7 @@ function generateToken() {
 
 function normalizeRole(role) {
   if (!role) return 'operator';
-  const r = String(role).trim();
+  const r = safeTrimLower(role);
   if (r === 'agent') return 'operator';
   if (r === 'supervisor') return 'manager';
   if (r === 'superadmin') return 'super_admin';
@@ -106,23 +131,28 @@ function toAgentSafe(agent) {
 }
 
 function buildAgentFromUserRow(userRow) {
-  const isSuper = !!userRow.is_superadmin;
-  const role = isSuper ? 'super_admin' : normalizeRole(userRow.role);
+  if (!userRow || typeof userRow !== 'object') return null;
+  try {
+    const isSuper = !!safeGet(userRow, 'is_superadmin');
+    const role = isSuper ? 'super_admin' : normalizeRole(safeGet(userRow, 'role'));
+    const email = safeGet(userRow, 'email', '');
+    const username = safeGet(userRow, 'username') || (email ? email.split('@')[0] : null);
 
-  return {
-    id: userRow.id,
-    tenantId: userRow.tenant_key || null,
-    username: userRow.username || (userRow.email ? userRow.email.split('@')[0] : null),
-    email: userRow.email,
+    return {
+    id: safeGet(userRow, 'id'),
+    tenantId: safeGet(userRow, 'tenant_key', null),
+    username,
+    email,
     role,
-    name: userRow.name,
-    active: userRow.is_active !== false,
-    status: userRow.status || 'active',
-    mfaEnabled: !!userRow.mfa_enabled,
-    createdAt: userRow.created_at ? new Date(userRow.created_at).toISOString() : (userRow.createdAt?.toISOString?.() || null),
-    updatedAt: userRow.updated_at ? new Date(userRow.updated_at).toISOString() : (userRow.updatedAt?.toISOString?.() || null),
-    lastLoginAt: userRow.last_login_at ? new Date(userRow.last_login_at).toISOString() : (userRow.lastLoginAt?.toISOString?.() || null),
-  };
+    name: safeGet(userRow, 'name'),
+    active: safeGet(userRow, 'is_active', true) !== false,
+    status: safeGet(userRow, 'status', 'active'),
+    mfaEnabled: !!safeGet(userRow, 'mfa_enabled'),
+    createdAt: safeGet(userRow, 'created_at') ? new Date(safeGet(userRow, 'created_at')).toISOString() : (safeGet(userRow, 'createdAt')?.toISOString?.() || null),
+    updatedAt: safeGet(userRow, 'updated_at') ? new Date(safeGet(userRow, 'updated_at')).toISOString() : (safeGet(userRow, 'updatedAt')?.toISOString?.() || null),
+    lastLoginAt: safeGet(userRow, 'last_login_at') ? new Date(safeGet(userRow, 'last_login_at')).toISOString() : (safeGet(userRow, 'lastLoginAt')?.toISOString?.() || null),
+    };
+  } catch (_) { return null; }
 }
 
 async function ensureDefaultAdminIfEmpty() {
@@ -434,19 +464,23 @@ async function login(username, password, ipAddress = 'unknown', userAgent = 'unk
 
   await initialize();
 
-  const usernameLower = String(username).trim().toLowerCase();
+  const usernameLower = safeTrimLower(username);
 
   // Busca usuário no cache para validação rápida
   let agent = null;
   for (const a of agents.values()) {
-    if (a.username && a.username.toLowerCase() === usernameLower) {
-      agent = a;
-      break;
-    }
-    if (a.email && a.email.toLowerCase() === usernameLower) {
-      agent = a;
-      break;
-    }
+    try {
+      const aUsername = safeGet(a, 'username', '');
+      const aEmail = safeGet(a, 'email', '');
+      if (aUsername && aUsername.toLowerCase() === usernameLower) {
+        agent = a;
+        break;
+      }
+      if (aEmail && aEmail.toLowerCase() === usernameLower) {
+        agent = a;
+        break;
+      }
+    } catch (_) { /* skip poisoned entry */ }
   }
 
   // Se DB está disponível, confirma no DB (fonte de verdade)
